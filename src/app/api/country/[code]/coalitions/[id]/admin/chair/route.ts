@@ -7,6 +7,7 @@ import { handleRouteError, badRequest, notFound, errorResponse } from "@/lib/api
 import type { Coalition } from "@/lib/db/types/coalition";
 import type { PoliticalParty } from "@/lib/db/types/party";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 const appointChairSchema = z.object({
   partySequentialId: z.number().int().positive(),
@@ -43,9 +44,10 @@ export async function POST(
       throw notFound("Coalition not found.");
     }
 
-    const party = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ sequentialId: partySequentialId, countryId });
+    const party = await politicalPartiesCollection(db).findOne({
+      sequentialId: partySequentialId,
+      countryId,
+    });
     if (!party) {
       throw notFound("Party not found.");
     }

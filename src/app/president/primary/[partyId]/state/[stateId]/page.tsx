@@ -39,6 +39,7 @@ import { NppAbbr } from "@/components/elections/NppAbbr";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 // This page is a live view over turn-processed delegate awards and per-state
 // projections. It must render from current DB state every request so its
@@ -78,14 +79,13 @@ async function findParty(
 ): Promise<PoliticalParty | null> {
   const seqId = Number(partyId);
   if (Number.isFinite(seqId)) {
-    const byId = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ countryId: "US", sequentialId: seqId });
+    const byId = await politicalPartiesCollection(db).findOne({
+      countryId: "US",
+      sequentialId: seqId,
+    });
     if (byId) return byId;
   }
-  return await db
-    .collection<PoliticalParty>("politicalParties")
-    .findOne({ countryId: "US", abbreviation: partyId });
+  return await politicalPartiesCollection(db).findOne({ countryId: "US", abbreviation: partyId });
 }
 
 export default async function PartyPrimaryStatePage({ params }: PageProps) {

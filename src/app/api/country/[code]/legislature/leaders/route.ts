@@ -15,6 +15,7 @@ import {
   resolveOppositionLeader,
 } from "@/lib/turn/parliamentaryGovernment";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ code: string }> }) {
   try {
@@ -74,9 +75,10 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
       const partySeqId = hogChar.party ? Number.parseInt(hogChar.party, 10) : Number.NaN;
       let partyLabel: string | null = hogChar.party || null;
       if (!Number.isNaN(partySeqId)) {
-        const partyDoc = await db
-          .collection<PoliticalParty>("politicalParties")
-          .findOne({ sequentialId: partySeqId, countryId });
+        const partyDoc = await politicalPartiesCollection(db).findOne({
+          sequentialId: partySeqId,
+          countryId,
+        });
         if (partyDoc) partyLabel = partyDoc.name;
       }
 
@@ -108,8 +110,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
         .map((k) => Number.parseInt(k, 10))
         .filter((n) => !Number.isNaN(n));
       const partyDocs = partySeqNums.length
-        ? await db
-            .collection<PoliticalParty>("politicalParties")
+        ? await politicalPartiesCollection(db)
             .find({ countryId, sequentialId: { $in: partySeqNums } })
             .toArray()
         : [];

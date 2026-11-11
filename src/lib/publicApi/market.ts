@@ -6,6 +6,7 @@ import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import type { CountryId } from "@/lib/constants/countries";
 import { fetchExchangeRateMap, getRateDoc, toInternalAmount } from "@/lib/world/forex";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -105,8 +106,7 @@ export async function queryLeaderboard(
 
   const parties =
     partyKeys.length > 0
-      ? await db
-          .collection<PoliticalParty>("politicalParties")
+      ? await politicalPartiesCollection(db)
           .find({
             $or: partyKeys.map((k) => ({ countryId: k.countryId, sequentialId: k.sequentialId })),
           } as Filter<PoliticalParty>)

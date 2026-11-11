@@ -22,6 +22,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -101,8 +102,7 @@ export async function GET(request: Request) {
 
     const [parties, states, userDocs, activeCandidacies] = await Promise.all([
       partyLookups.length > 0
-        ? db
-            .collection<PoliticalParty>("politicalParties")
+        ? politicalPartiesCollection(db)
             .find({
               $or: partyLookups.map((l) => ({
                 countryId: l.countryId,

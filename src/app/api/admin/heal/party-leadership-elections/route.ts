@@ -18,6 +18,7 @@ import type {
 import type { CountryId } from "@/lib/constants/countries";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 interface OrphanedCandidate {
   candidateId: string;
@@ -50,7 +51,7 @@ export async function GET() {
       stateCountryMap.get(stateId) ?? "US";
 
     // Get all parties for lookup - key by country:sequentialId
-    const parties = await db.collection<PoliticalParty>("politicalParties").find({}).toArray();
+    const parties = await politicalPartiesCollection(db).find({}).toArray();
     const partyByCountryAndSeqId = new Map<string, PoliticalParty>();
     for (const p of parties) {
       partyByCountryAndSeqId.set(`${p.countryId}:${p.sequentialId}`, p);
@@ -238,7 +239,7 @@ export async function POST() {
       stateCountryMap.get(stateId) ?? "US";
 
     // Get all parties for lookup - key by country:sequentialId
-    const parties = await db.collection<PoliticalParty>("politicalParties").find({}).toArray();
+    const parties = await politicalPartiesCollection(db).find({}).toArray();
     const partyByCountryAndSeqId = new Map<string, PoliticalParty>();
     for (const p of parties) {
       partyByCountryAndSeqId.set(`${p.countryId}:${p.sequentialId}`, p);

@@ -31,6 +31,8 @@ import {
   NON_PARTY_SENTINELS,
   buildPartyIdMap,
 } from "./partyMigrationCollections";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import type { Document } from "mongodb";
 
 export interface MergePartiesArgs {
   fromCountryId: CountryId;
@@ -68,8 +70,7 @@ export async function mergePartiesIntoCountry(
     return { ...empty, ok: false, error: "A country cannot absorb its own parties." };
   }
 
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const parties = await politicalPartiesCollection(db)
     .find<PartyDoc>({ countryId: fromCountryId })
     .toArray();
 
@@ -79,8 +80,7 @@ export async function mergePartiesIntoCountry(
   // there installs the WRONG party rather than failing loudly. Rebuilt from the
   // `mergedFrom` stamp, which is the whole reason the stamp is written.
   if (parties.length === 0) {
-    const alreadyMoved = await db
-      .collection<PoliticalParty>("politicalParties")
+    const alreadyMoved = await politicalPartiesCollection(db)
       .find<PartyDoc>({ countryId: toCountryId, "mergedFrom.countryId": fromCountryId })
       .toArray();
     if (alreadyMoved.length === 0) return empty;
@@ -114,7 +114,7 @@ export async function mergePartiesIntoCountry(
   // reads it back off the target country and rebuilds the same map without
   // reserving a second block of ids.
   for (const m of moved) {
-    await db.collection<PoliticalParty>("politicalParties").updateOne(
+    await politicalPartiesCollection(db).updateOne(
       { _id: m.doc._id },
       {
         $set: {
@@ -289,10 +289,11 @@ async function convertMovedPartyTreasuries(
   };
   const stamp = { "mergedFrom.treasuryConverted": true, updatedAt: new Date() };
   if (scale === 1) {
-    await db.collection("politicalParties").updateMany(filter, { $set: stamp });
+    await politicalPartiesCollection<Document>(db).updateMany(filter, { $set: stamp });
     return;
   }
-  await db
-    .collection("politicalParties")
-    .updateMany(filter, { $mul: { treasury: scale }, $set: stamp });
+  await politicalPartiesCollection<Document>(db).updateMany(filter, {
+    $mul: { treasury: scale },
+    $set: stamp,
+  });
 }

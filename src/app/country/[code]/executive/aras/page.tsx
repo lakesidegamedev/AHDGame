@@ -13,6 +13,7 @@ import type { Character, ElectedOfficial, PoliticalParty } from "@/lib/db/types"
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export const dynamic = "force-dynamic";
 
@@ -50,9 +51,10 @@ export default async function ArasPage({ params }: PageProps) {
     if (uachtaran?.party) {
       const seq = Number.parseInt(uachtaran.party, 10);
       if (!Number.isNaN(seq)) {
-        uachtaranParty = await db
-          .collection<PoliticalParty>("politicalParties")
-          .findOne({ countryId: "IE", sequentialId: seq });
+        uachtaranParty = await politicalPartiesCollection(db).findOne({
+          countryId: "IE",
+          sequentialId: seq,
+        });
       }
     }
   }

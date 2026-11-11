@@ -13,6 +13,7 @@ import {
   normalizeCoalitionPriorities,
 } from "./priorities";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 const LIVE_PRIORITY_BILL_STATUSES: ReadonlySet<Bill["status"]> = new Set([
   "active",
@@ -63,8 +64,7 @@ export async function loadCoalitionPriorityContext(
 
   const memberPartyObjectIds = coalition.members.map((member) => member.partyId);
   const memberParties = memberPartyObjectIds.length
-    ? await db
-        .collection<PoliticalParty>("politicalParties")
+    ? await politicalPartiesCollection(db)
         .find({ _id: { $in: memberPartyObjectIds }, countryId })
         .toArray()
     : [];

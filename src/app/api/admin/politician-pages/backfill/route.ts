@@ -18,6 +18,7 @@ import type { PoliticianOverride, PoliticianElectionEntry } from "@/lib/db/types
 import { formatElectionTypeLabel, MULTI_SEAT_TYPES } from "@/lib/utils/electionLabels";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export async function POST() {
   try {
@@ -30,7 +31,7 @@ export async function POST() {
     const [characters, states, parties] = await Promise.all([
       charactersCollection(db).find({}).toArray(),
       statesCollection(db).find({}).toArray(),
-      db.collection<PoliticalParty>("politicalParties").find({}).toArray(),
+      politicalPartiesCollection(db).find({}).toArray(),
     ]);
 
     const stateMap = new Map(states.map((s) => [String(s._id), s]));

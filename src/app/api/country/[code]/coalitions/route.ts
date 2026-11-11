@@ -15,6 +15,7 @@ import { canInviteToCoalition, isBannedParty } from "@/lib/turn/onePartyConstrai
 import { getCountryState } from "@/lib/countryState";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 const createCoalitionSchema = z.object({
   name: z.string().min(3).max(60).trim(),
@@ -56,9 +57,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
     }
 
     // Look up the character's party
-    const party = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ sequentialId: Number(character.party), countryId });
+    const party = await politicalPartiesCollection(db).findOne({
+      sequentialId: Number(character.party),
+      countryId,
+    });
 
     if (!party) {
       throw badRequest("Your party could not be found.");
@@ -113,7 +115,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
     // Atomic claim — match the acting-chair identity (either seated chair
     // or VC when chair is vacant) to mirror the upstream `canActAsChair`
     // check. Combined with the coalition-membership guard.
-    const reservedParty = await db.collection<PoliticalParty>("politicalParties").findOneAndUpdate(
+    const reservedParty = await politicalPartiesCollection(db).findOneAndUpdate(
       {
         _id: party._id,
         countryId,
@@ -140,12 +142,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
     );
 
     if (actionDebit.matchedCount === 0) {
-      await db
-        .collection<PoliticalParty>("politicalParties")
-        .updateOne(
-          { _id: party._id, coalitionId },
-          { $set: { coalitionId: null, updatedAt: now } }
-        );
+      await politicalPartiesCollection(db).updateOne(
+        { _id: party._id, coalitionId },
+        { $set: { coalitionId: null, updatedAt: now } }
+      );
       throw badRequest(`You need 25 actions to create a coalition. You have ${character.actions}.`);
     }
 
@@ -177,12 +177,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
       await db.collection<Coalition>("coalitions").insertOne(newCoalition);
     } catch (error) {
       await Promise.all([
-        db
-          .collection<PoliticalParty>("politicalParties")
-          .updateOne(
-            { _id: party._id, coalitionId },
-            { $set: { coalitionId: null, updatedAt: now } }
-          ),
+        politicalPartiesCollection(db).updateOne(
+          { _id: party._id, coalitionId },
+          { $set: { coalitionId: null, updatedAt: now } }
+        ),
         charactersCollection(db).updateOne(
           { _id: character._id },
           { $inc: { actions: 25 }, $set: { updatedAt: now } }
@@ -231,8 +229,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
 
     // Fetch party details and chair character names in parallel
     const [parties, chairCharacters] = await Promise.all([
-      db
-        .collection<PoliticalParty>("politicalParties")
+      politicalPartiesCollection(db)
         .find({ _id: { $in: allPartyIds } })
         .toArray(),
       charactersCollection(db)

@@ -38,6 +38,7 @@ import type {
   PoliticalParty,
 } from "@/lib/db/types";
 import { ObjectId } from "mongodb";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 /**
  * `electionType` is intentionally an open string here rather than a hardcoded
@@ -142,8 +143,7 @@ export async function POST(request: Request) {
 
     // Resolve party names from politicalParties collection (Bug 2 fix)
     const uniqueCountryIds = [...new Set(recentElections.map((e) => e.countryId ?? "US"))];
-    const partyDocs = await db
-      .collection<PoliticalParty>("politicalParties")
+    const partyDocs = await politicalPartiesCollection(db)
       .find({ countryId: { $in: uniqueCountryIds } })
       .toArray();
     const partyNameMap = new Map<string, string>();

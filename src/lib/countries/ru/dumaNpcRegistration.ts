@@ -10,6 +10,7 @@ import { DEFAULT_CANDIDATE_SUPPORT } from "@/lib/elections/engine/electionFormul
 import { loadPendingRussianCouncilOwners } from "./pendingCouncilMandates";
 import { russianDumaConvocationOfficeCompatible } from "./rules/dumaConvocation";
 import { planRussianDumaNpcSlates } from "./rules/assemblyNpcSlates";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export async function registerRussianDumaNpcSlates(input: {
   db: Db;
@@ -24,8 +25,7 @@ export async function registerRussianDumaNpcSlates(input: {
   const { db, session, cohortId, elections, now } = input;
   if (!session.inTransaction() || !Number.isSafeInteger(now.getTime()) || now.getTime() < 0)
     throw new Error("Duma slate registration needs an active transaction and time");
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const parties = await politicalPartiesCollection(db)
     .find(
       { countryId: "RU", regimeStatus: { $ne: "banned" } },
       { session, projection: { sequentialId: 1 } }

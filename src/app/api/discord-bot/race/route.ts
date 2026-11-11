@@ -33,6 +33,7 @@ import type {
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -162,8 +163,7 @@ export async function GET(request: Request) {
             .find({ _id: { $in: nppIds } })
             .toArray()
         : [],
-      db
-        .collection<PoliticalParty>("politicalParties")
+      politicalPartiesCollection(db)
         .find({ countryId: election.countryId ?? "US" })
         .toArray(),
       db

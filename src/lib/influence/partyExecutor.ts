@@ -39,6 +39,7 @@ import { getOfficeLabel } from "@/lib/utils/officeTitle";
 import { formatElectionTypeLabel } from "@/lib/utils/electionLabels";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export type { PartyInfluenceCalculation } from "./partyExecutorCalculations";
 export type { ExecutePartyInfluenceInput } from "./partyExecutorTypes";
@@ -68,12 +69,13 @@ async function findPartyForInfluence(
 ): Promise<PoliticalParty | null> {
   const parsedPartyId = Number.parseInt(input.partyId, 10);
   if (input.partyObjectId) {
-    return db.collection<PoliticalParty>("politicalParties").findOne({ _id: input.partyObjectId });
+    return politicalPartiesCollection(db).findOne({ _id: input.partyObjectId });
   }
   if (!Number.isNaN(parsedPartyId) && input.countryId) {
-    return db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ countryId: input.countryId, sequentialId: parsedPartyId });
+    return politicalPartiesCollection(db).findOne({
+      countryId: input.countryId,
+      sequentialId: parsedPartyId,
+    });
   }
   return null;
 }
@@ -458,16 +460,14 @@ async function executeNationalPartyInfluenceCore(
   // regenerated game) to the full tier cap, so the atomic `$gte` debit can match.
   if (party.nppActionPoints == null) {
     const apCap = nppActionPointCap("national", resolvePartyTier(party));
-    await db
-      .collection<PoliticalParty>("politicalParties")
-      .updateOne(
-        { _id: party._id, nppActionPoints: { $exists: false } },
-        { $set: { nppActionPoints: apCap } }
-      );
+    await politicalPartiesCollection(db).updateOne(
+      { _id: party._id, nppActionPoints: { $exists: false } },
+      { $set: { nppActionPoints: apCap } }
+    );
     party.nppActionPoints = apCap;
   }
 
-  const resourceDebit = await db.collection<PoliticalParty>("politicalParties").updateOne(
+  const resourceDebit = await politicalPartiesCollection(db).updateOne(
     {
       _id: party._id,
       nppActionPoints: { $gte: totalActionCost },
@@ -505,7 +505,7 @@ async function executeNationalPartyInfluenceCore(
   if (outcome === "success") {
     effectResult = await applyPartyInfluenceEffects(input, npp, party);
     if (input.influenceType === "withdraw_election" && effectResult.withdrawApplied === false) {
-      await db.collection<PoliticalParty>("politicalParties").updateOne(
+      await politicalPartiesCollection(db).updateOne(
         { _id: party._id },
         {
           $inc: { nppActionPoints: totalActionCost, treasury: totalFundCost },

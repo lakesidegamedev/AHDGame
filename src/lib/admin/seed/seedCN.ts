@@ -14,6 +14,7 @@ import { getNextSequentialId } from "@/lib/db/sequentialId";
 import { resolveSeedPartyTier } from "@/lib/seeds/defaultPartyTiers";
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 const CN_REGION_IDS = ["DB", "HB", "HD", "HZ", "HN", "XN", "XB"];
 
@@ -42,14 +43,16 @@ export async function seedCNParties(db: Db, log: (msg: string) => void) {
   const now = new Date();
   for (const party of cnParties as PartySeed[]) {
     const { seedOrder: _seedOrder, ...partyData } = party;
-    const existing = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ name: party.name, countryId: party.countryId });
+    const existing = await politicalPartiesCollection(db).findOne({
+      name: party.name,
+      countryId: party.countryId,
+    });
 
     if (existing) {
-      await db
-        .collection<PoliticalParty>("politicalParties")
-        .updateOne({ _id: existing._id }, { $set: { ...partyData, updatedAt: now } });
+      await politicalPartiesCollection(db).updateOne(
+        { _id: existing._id },
+        { $set: { ...partyData, updatedAt: now } }
+      );
     } else {
       const sequentialId = await getNextSequentialId(db, "party", party.countryId);
       const doc: PoliticalParty = {
@@ -61,7 +64,7 @@ export async function seedCNParties(db: Db, log: (msg: string) => void) {
         createdAt: now,
         updatedAt: now,
       } as PoliticalParty;
-      await db.collection<PoliticalParty>("politicalParties").insertOne(doc);
+      await politicalPartiesCollection(db).insertOne(doc);
     }
   }
   log(`Seeded ${cnParties.length} CN parties`);

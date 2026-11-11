@@ -2,6 +2,7 @@ import { ObjectId, type Db } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import type { NewsPost, NewsCategory } from "@/lib/db/types";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 const SYSTEM_AUTHOR_NAME = "National Wire Service";
 
@@ -73,8 +74,11 @@ export async function generateElectionNews(outcomes: ElectionOutcome[]): Promise
 
   const partyNameMap = new Map<string, string>();
   if (partyLookups.length > 0) {
-    const parties = await db
-      .collection<{ sequentialId: number; countryId: string; name: string }>("politicalParties")
+    const parties = await politicalPartiesCollection<{
+      sequentialId: number;
+      countryId: string;
+      name: string;
+    }>(db)
       .find({
         $or: partyLookups.map((p) => ({ countryId: p.countryId, sequentialId: p.sequentialId })),
       })

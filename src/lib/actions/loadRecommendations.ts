@@ -20,6 +20,7 @@ import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFla
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 interface StateEconomySector {
   type: string;
@@ -364,7 +365,7 @@ export async function loadRecommendationsForUser(
   const [homeState, party, statePartyOrg] = await Promise.all([
     statesCollection(db).findOne({ _id: character.homeState, countryId: character.countryId }),
     character.party
-      ? db.collection<PoliticalParty>("politicalParties").findOne({
+      ? politicalPartiesCollection(db).findOne({
           sequentialId: Number(character.party),
           countryId: character.countryId,
         })

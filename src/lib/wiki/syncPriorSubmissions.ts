@@ -4,6 +4,7 @@ import type { PoliticalParty, WikiPage } from "@/lib/db/types";
 import { corporationWikiSlug, partyWikiSlug, playerWikiSlug } from "./playerPages";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 const OBJECT_ID_HEX_RE = /^[a-f0-9]{24}$/;
 const PLAYER_LEGACY_RE = /^player-([a-f0-9]{24})$/;
@@ -107,9 +108,10 @@ export async function syncPriorWikiSubmissions(
       }
       newSlug = corporationWikiSlug(corp.sequentialId);
     } else {
-      const party = await db
-        .collection<PoliticalParty>("politicalParties")
-        .findOne({ _id: entityId }, { projection: { sequentialId: 1, countryId: 1 } });
+      const party = await politicalPartiesCollection(db).findOne(
+        { _id: entityId },
+        { projection: { sequentialId: 1, countryId: 1 } }
+      );
       if (!party) {
         skipped.push({ oldSlug: page.slug, reason: "Party no longer exists" });
         continue;

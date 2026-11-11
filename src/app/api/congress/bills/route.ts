@@ -32,6 +32,7 @@ import { getBillProposalAutoFailWarning } from "@/lib/legislature/billAutoFailWa
 import { loadBillLegislationTypes } from "@/lib/legislature/queries/loadBillLegislationTypes";
 import { proposeNationalBill } from "@/lib/legislature/commands/proposeNationalBill";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 export type { BillDisplay, BillsResponse } from "@/lib/legislature/dto/billDisplay";
 
 // GET /api/congress/bills — Returns a paginated list of bills, optionally filtered by chamber and status.
@@ -98,7 +99,7 @@ export async function GET(request: Request) {
         ])
         .toArray(),
       // Congress bills are US-only - filter parties by countryId to avoid cross-country collisions
-      db.collection<PoliticalParty>("politicalParties").find({ countryId: "US" }).toArray(),
+      politicalPartiesCollection(db).find({ countryId: "US" }).toArray(),
       db.collection<Bill>("bills").countDocuments(query),
     ]);
 

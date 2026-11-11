@@ -41,6 +41,7 @@ import type { BgFoundingMajorityBallot } from "./rules/foundingMajority1990";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export const BG_GRAND_BY_ELECTIONS_COLLECTION = "bgGrandConstituencyByElections";
 export interface BgGrandByElectionRecord {
@@ -267,8 +268,7 @@ export async function openBgGrandConstituencyByElections(
         )
         .sort({ _id: 1 })
         .toArray();
-      const parties = await db
-        .collection<PoliticalParty>("politicalParties")
+      const parties = await politicalPartiesCollection(db)
         .find(
           { countryId: "BG", regimeStatus: { $ne: "banned" } },
           { session, projection: { sequentialId: 1 } }

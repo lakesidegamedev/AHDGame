@@ -141,6 +141,7 @@ import {
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export async function _enrichElection(
   election: Election,
@@ -1448,7 +1449,7 @@ export async function fetchDepsForElection(
           )
           .toArray()
       : Promise.resolve([] as NPP[]),
-    db.collection<PoliticalParty>("politicalParties").find({ countryId }).toArray(),
+    politicalPartiesCollection(db).find({ countryId }).toArray(),
     isFull
       ? db
           .collection<NPPEndorsement>("nppEndorsements")

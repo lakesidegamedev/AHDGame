@@ -14,6 +14,7 @@ import {
   expandRefusalSeeds,
   type CoalitionRefusal,
 } from "./rules/coalitionRefusals";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 /** Seats keyed by party abbreviation instead of sequential id. */
 function seatsByAbbreviation(
@@ -80,8 +81,7 @@ export async function syncCoalitionRefusals(
   const memoKey = gov.coalitionRefusalElection?.key ?? null;
   if (initialised && (electionKey === null || electionKey === memoKey)) return refusals;
 
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const parties = await politicalPartiesCollection(db)
     .find({ countryId }, { projection: { sequentialId: 1, abbreviation: 1 } })
     .toArray();
   const seats = seatsByAbbreviation(gov.seatsByParty ?? {}, parties);

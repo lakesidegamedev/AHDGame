@@ -41,6 +41,7 @@ import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 const MIN_BASE_ACTIONS_PER_TURN = 4;
 
@@ -119,7 +120,7 @@ async function handleGET() {
       db.collection<GameConfig>("gameConfig").findOne({ _id: "default" }),
       statesCollection(db).findOne({ _id: character.homeState, countryId: character.countryId }),
       character.party && Number.isFinite(Number(character.party))
-        ? db.collection<PoliticalParty>("politicalParties").findOne({
+        ? politicalPartiesCollection(db).findOne({
             sequentialId: Number(character.party),
             countryId: character.countryId,
           })

@@ -43,6 +43,7 @@ import {
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export interface StateLegislatureBillsPage {
   blockedProvisions: { legislationTypeId: string; policyOptionId: string }[];
@@ -75,7 +76,7 @@ export async function listStateLegislatureBills(
       .sort({ proposedAt: -1 })
       .limit(100)
       .toArray(),
-    db.collection<PoliticalParty>("politicalParties").find({ countryId }).toArray(),
+    politicalPartiesCollection(db).find({ countryId }).toArray(),
   ]);
   const partyMap = new Map(parties.map((party) => [String(party.sequentialId), party]));
 
@@ -342,10 +343,7 @@ export async function getStateLegislatureBillDetail(
       )
     : 0;
 
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
-    .find({ countryId })
-    .toArray();
+  const parties = await politicalPartiesCollection(db).find({ countryId }).toArray();
   const partyMap = new Map(parties.map((party) => [String(party.sequentialId), party]));
 
   const legislationTypeIds = bill.legislationTypeId ? [bill.legislationTypeId] : [];

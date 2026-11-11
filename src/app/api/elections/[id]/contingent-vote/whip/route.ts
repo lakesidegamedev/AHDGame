@@ -15,6 +15,7 @@ import {
   partyWhipKey,
 } from "@/lib/elections/contingentHouseStandings";
 import type { Coalition, ElectionVoteTally, PoliticalParty } from "@/lib/db/types";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -86,8 +87,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const wanted = parsed.data.sequentialId;
     const chaired: Array<{ sequentialId: number; name: string }> =
       scope === "party"
-        ? await db
-            .collection<PoliticalParty>("politicalParties")
+        ? await politicalPartiesCollection(db)
             .find({ countryId, chairId: character._id })
             .project<Pick<PoliticalParty, "sequentialId" | "name">>({ sequentialId: 1, name: 1 })
             .toArray()

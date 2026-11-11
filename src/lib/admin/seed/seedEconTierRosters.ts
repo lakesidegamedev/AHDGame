@@ -11,6 +11,7 @@ import type { PoliticalParty, State, StatePartyOrg } from "@/lib/db/types";
 import { buildProportionalChamberSeats } from "@/lib/seeds/proportionalChamberSeats";
 import { getGameStatePreset } from "@/lib/db/collections/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 /**
  * Economy-tier ("ECON") democracies enabled for live economy + NPP politics but
@@ -161,8 +162,7 @@ export async function seedEconTierRostersForCountry(
   // Default parties actually seeded for this preset, in ascending sequentialId
   // (≈ seed order, so the first two are the majors — same convention as
   // challengerSupply's top-2 default parties).
-  const parties = (await db
-    .collection<PoliticalParty>("politicalParties")
+  const parties = (await politicalPartiesCollection(db)
     .find({ countryId, isDefault: true }, { projection: { sequentialId: 1, name: 1 } })
     .sort({ sequentialId: 1 })
     .toArray()) as unknown as RosterParty[];

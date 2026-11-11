@@ -10,6 +10,7 @@ import {
 } from "@/lib/auth/identitySignals";
 import { loadRecentIdentityValues } from "@/lib/identityHistory/recentValues";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export interface UserWithCharacter {
   id: string;
@@ -86,8 +87,7 @@ export const GET = withAdminAuth(async (_auth, request: Request) => {
     }
 
     // Build party name lookup: "countryId:sequentialId" → party name
-    const parties = await db
-      .collection<PoliticalParty>("politicalParties")
+    const parties = await politicalPartiesCollection(db)
       .find({}, { projection: { sequentialId: 1, countryId: 1, name: 1 } })
       .toArray();
     const partyNameMap = new Map<string, string>(

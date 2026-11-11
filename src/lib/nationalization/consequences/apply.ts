@@ -36,6 +36,7 @@ import type {
   PrivatizationConsequenceContext,
 } from "./types";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export async function applyNationalizationConsequences(
   db: Db,
@@ -270,9 +271,10 @@ async function resolveIdeologyMultiplier(
   if (!governingPartyId) return computeIdeologyMultiplier(null);
   const seq = Number(governingPartyId);
   if (!Number.isFinite(seq)) return computeIdeologyMultiplier(null);
-  const party = await db
-    .collection<PoliticalParty>("politicalParties")
-    .findOne({ countryId, sequentialId: seq }, { projection: { economicPosition: 1 } });
+  const party = await politicalPartiesCollection(db).findOne(
+    { countryId, sequentialId: seq },
+    { projection: { economicPosition: 1 } }
+  );
   if (!party || typeof party.economicPosition !== "number") return computeIdeologyMultiplier(null);
   return computeIdeologyMultiplier(party.economicPosition / 5); // [-5,5] → [-1,1]
 }

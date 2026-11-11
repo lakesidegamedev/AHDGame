@@ -70,6 +70,7 @@ import { getElectionsCollection } from "@/lib/db/collections/elections";
 import { getStatesCollection } from "@/lib/db/collections/states";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 /**
  * Record a primary standings snapshot for every election currently in primary phase.
@@ -130,7 +131,7 @@ export async function recordPrimarySnapshots(
     existingPrimaryTallies,
     snapshotGameState,
   ] = await Promise.all([
-    db.collection<PoliticalPartyType>("politicalParties").find({}).toArray(),
+    politicalPartiesCollection<PoliticalPartyType>(db).find({}).toArray(),
     // The presidential path needs every state's org rows; ballot accrual only
     // needs the rows for the regions actually holding a primary this turn.
     hasPresident

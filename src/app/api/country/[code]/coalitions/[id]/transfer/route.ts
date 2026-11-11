@@ -11,6 +11,7 @@ import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { requirePlayerTransfersEnabled } from "@/lib/api/requirePlayerTransfers";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 const transferSchema = z.object({
   partySequentialId: z.number().int().positive(),
@@ -62,9 +63,10 @@ export async function POST(
     }
 
     // Find target party
-    const targetParty = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ sequentialId: parsed.data.partySequentialId, countryId });
+    const targetParty = await politicalPartiesCollection(db).findOne({
+      sequentialId: parsed.data.partySequentialId,
+      countryId,
+    });
     if (!targetParty) {
       throw notFound("Target party not found.");
     }

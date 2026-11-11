@@ -13,6 +13,7 @@ import { isBannedParty } from "@/lib/turn/onePartyConstraints";
 import { getCountryState } from "@/lib/countryState";
 import { admitPartyToCoalition } from "@/lib/coalitions/admitParty";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 const acceptSchema = z.object({
   partySequentialId: z.number().int().positive(),
@@ -61,9 +62,10 @@ export async function POST(
     }
 
     // Find the requesting party
-    const requestingParty = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ sequentialId: parsed.data.partySequentialId, countryId });
+    const requestingParty = await politicalPartiesCollection(db).findOne({
+      sequentialId: parsed.data.partySequentialId,
+      countryId,
+    });
     if (!requestingParty) {
       throw notFound("Requesting party not found.");
     }

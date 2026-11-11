@@ -24,6 +24,7 @@ import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export async function GET(request: Request, { params }: { params: Promise<{ code: string }> }) {
   try {
@@ -105,8 +106,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
 
     // Get party details — filter by countryId to avoid cross-country collisions
     const partySeqIds = Array.from(partySeats.keys()).map(Number).filter(Boolean);
-    const parties = await db
-      .collection<PoliticalParty>("politicalParties")
+    const parties = await politicalPartiesCollection(db)
       .find({ sequentialId: { $in: partySeqIds }, countryId })
       .toArray();
 

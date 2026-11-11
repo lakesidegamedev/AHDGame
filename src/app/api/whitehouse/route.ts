@@ -17,6 +17,7 @@ import { executiveStatusPayload } from "@/lib/elections/rules/successionFill";
 import { pastRealTimestampToLarpDate } from "@/lib/utils/formatters";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 // GET /api/whitehouse — Returns the current President and Vice President details along with caller admin and president flags.
 // Country-scoped via ?country= (default US) so any presidential country renders the surface.
@@ -91,9 +92,10 @@ export async function GET(request: Request) {
         presidentCurrentTerm = Math.max(1, getExecutiveTermsServed(char, countryId));
         const charCountry: CountryId = char.countryId ?? countryId;
         const party = char.party
-          ? await db
-              .collection<PoliticalParty>("politicalParties")
-              .findOne({ sequentialId: Number(char.party), countryId: charCountry })
+          ? await politicalPartiesCollection(db).findOne({
+              sequentialId: Number(char.party),
+              countryId: charCountry,
+            })
           : null;
         president = {
           id: presidentOfficial!._id.toString(),
@@ -138,9 +140,10 @@ export async function GET(request: Request) {
       if (char) {
         const charCountry: CountryId = char.countryId ?? countryId;
         const party = char.party
-          ? await db
-              .collection<PoliticalParty>("politicalParties")
-              .findOne({ sequentialId: Number(char.party), countryId: charCountry })
+          ? await politicalPartiesCollection(db).findOne({
+              sequentialId: Number(char.party),
+              countryId: charCountry,
+            })
           : null;
         vicePresident = {
           id: vicePresidentOfficial!._id.toString(),

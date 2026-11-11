@@ -102,6 +102,7 @@ import { getElectionsCollection } from "@/lib/db/collections/elections";
 import { getStatesCollection } from "@/lib/db/collections/states";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export type { ElectionSweepScope } from "./electionSweepScope";
 export { recordPrimarySnapshots } from "./primarySnapshots";
@@ -151,7 +152,7 @@ export async function resolvePrimariesIfNeeded(
   // presidential path still reads primaryDelegates from the same map.
   const [parties, allCandidates, statePartyOrgs, pastPrimaryTallies, stateDocs] = await Promise.all(
     [
-      db.collection<PoliticalPartyType>("politicalParties").find({}).toArray(),
+      politicalPartiesCollection<PoliticalPartyType>(db).find({}).toArray(),
       db
         .collection<ElectionCandidate>("electionCandidates")
         .find({ electionId: { $in: electionIds }, status: "active" })

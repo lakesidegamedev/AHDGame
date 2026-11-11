@@ -2,6 +2,7 @@ import type { Db } from "mongodb";
 import type { ElectedOfficial, PoliticalParty } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export interface MapGovernorState {
   leadingParty: string;
@@ -33,7 +34,7 @@ export async function computeGovernorMap(
 ): Promise<Record<string, MapGovernorState>> {
   // Query without countryId filter since older records may not have it set
   const [parties, allGovernors] = await Promise.all([
-    db.collection<PoliticalParty>("politicalParties").find({ countryId }).toArray(),
+    politicalPartiesCollection(db).find({ countryId }).toArray(),
     electedOfficialsCollection(db).find({ officeType: "governor" }).toArray(),
   ]);
   // Filter to correct country using countryId field

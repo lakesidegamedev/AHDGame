@@ -62,6 +62,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 // GET /api/client-status — Returns status bar enrichment data (funds, corp, election stats, income).
 // Auth: requireBasicAuth
@@ -471,7 +472,7 @@ export async function handleClientStatus(request: Request) {
     ] = await Promise.all([
       statesCollection(db).findOne({ _id: character.homeState, countryId: character.countryId }),
       hasParty && !Number.isNaN(partySeqId)
-        ? db.collection<PoliticalParty>("politicalParties").findOne({
+        ? politicalPartiesCollection(db).findOne({
             sequentialId: partySeqId,
             countryId: character.countryId ?? "US",
           })

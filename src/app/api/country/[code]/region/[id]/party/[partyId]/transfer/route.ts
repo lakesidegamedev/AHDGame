@@ -17,6 +17,7 @@ import { emitTreasuryTransaction } from "@/lib/treasury/emit";
 import { isSameCountry } from "@/lib/api/sameCountry";
 import { TreasuryExecutionUncertainError } from "@/lib/treasury/executionUncertain";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; partyId: string }>;
@@ -141,9 +142,11 @@ export async function POST(request: Request, { params }: RouteParams) {
         throw badRequest(`Insufficient treasury balance. Available: $${treasury.toLocaleString()}`);
       }
 
-      const creditResult = await db
-        .collection<PoliticalParty>("politicalParties")
-        .updateOne({ _id: party._id }, nationalPartyCredit, { session });
+      const creditResult = await politicalPartiesCollection(db).updateOne(
+        { _id: party._id },
+        nationalPartyCredit,
+        { session }
+      );
 
       if (creditResult.matchedCount === 0) {
         throw notFound("Party not found");
@@ -200,9 +203,10 @@ export async function POST(request: Request, { params }: RouteParams) {
 
       let creditResult;
       try {
-        creditResult = await db
-          .collection<PoliticalParty>("politicalParties")
-          .updateOne({ _id: party._id }, nationalPartyCredit);
+        creditResult = await politicalPartiesCollection(db).updateOne(
+          { _id: party._id },
+          nationalPartyCredit
+        );
       } catch (creditError) {
         await refundDebit("credit threw", creditError);
         throw creditError;

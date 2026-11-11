@@ -19,6 +19,7 @@ import { withPartyTerritoryMutation } from "@/lib/parties/territoryMutation";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import type { Document } from "mongodb";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 // POST /api/country/[code]/parties/[id]/leave — Leave a political party and become independent
 // Auth: requireAuthWithCharacter
@@ -177,7 +178,7 @@ export async function POST(
         }
 
         // Update party: decrement member count and clear leadership if needed
-        await db.collection<PoliticalParty>("politicalParties").updateOne(
+        await politicalPartiesCollection(db).updateOne(
           { _id: party._id },
           {
             $inc: { memberCount: -1 },

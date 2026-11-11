@@ -12,6 +12,7 @@ import { recordCountryEvent } from "@/lib/turn/history/recordCountryEvent";
 import { ensureInitialEscalationState } from "@/lib/turn/regimeEscalationTurn";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 /**
  * Turn a country into a one-party state.
@@ -73,10 +74,7 @@ export async function installOnePartyState(
   currentTurn: number,
   opts?: InstallOnePartyStateOptions
 ): Promise<void> {
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
-    .find({ countryId })
-    .toArray();
+  const parties = await politicalPartiesCollection(db).find({ countryId }).toArray();
 
   const explicit =
     opts?.rulingPartyId != null && parties.some((p) => p.sequentialId === opts.rulingPartyId)
@@ -99,7 +97,7 @@ export async function installOnePartyState(
   });
 
   if (rulingPartyId != null) {
-    const col = db.collection<PoliticalParty>("politicalParties");
+    const col = politicalPartiesCollection(db);
     const now = new Date();
     // Only ids that name a real party of this country, and never the ruling one
     // -- a party cannot be both `ruling` and `approved`, and the two

@@ -6,6 +6,8 @@ import type { GameState } from "@/lib/db/types";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import type { Document } from "mongodb";
 
 export async function GET(request: Request) {
   const denied = requireSingleplayer(request);
@@ -18,7 +20,7 @@ export async function GET(request: Request) {
     ),
     charactersCollection(db).countDocuments({ retiredAt: { $exists: false } }),
     corporationsCollection(db).countDocuments(),
-    db.collection("politicalParties").countDocuments(),
+    politicalPartiesCollection<Document>(db).countDocuments(),
   ]);
   if (!state) return errorResponse(409, "No local world");
   return NextResponse.json(

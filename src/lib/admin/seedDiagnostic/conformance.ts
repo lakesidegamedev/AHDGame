@@ -60,6 +60,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import type { Document } from "mongodb";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 /** Readiness check names that are expected-empty pre-founding / pre-seat. */
 const PRE_FOUNDING_READINESS = new Set(["NPPs", "ElectedOfficials", "GovernmentFormation"]);
@@ -667,7 +668,7 @@ async function checkPartyRosters(
 
   for (const countryId of electionCountries) {
     if (!seeded.has(countryId)) continue; // not part of this preset's world
-    const count = await db.collection("politicalParties").countDocuments({ countryId });
+    const count = await politicalPartiesCollection<Document>(db).countDocuments({ countryId });
     checks.push(
       emptyCountries === null || emptyCountries.has(countryId)
         ? check(
@@ -703,8 +704,7 @@ async function checkPartyEra(db: Db, expect: SeedExpectations): Promise<SeedDiag
     const seeds = partySeedsForPreset(countryId, expect.preset);
     if (seeds.length > 0) rosters.set(countryId, new Set(seeds.map((seed) => seed.name)));
   }
-  const persisted = await db
-    .collection<{ countryId: string; name: string }>("politicalParties")
+  const persisted = await politicalPartiesCollection<{ countryId: string; name: string }>(db)
     .find({ isDefault: true, countryId: { $in: [...rosters.keys()] } })
     .project<{ countryId: string; name: string }>({ countryId: 1, name: 1 })
     .toArray();

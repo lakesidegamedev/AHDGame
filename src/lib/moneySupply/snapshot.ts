@@ -30,6 +30,8 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import type { Document } from "mongodb";
 
 export { PERSONS_PER_HOUSEHOLD, HOUSEHOLD_LIQUID_RATIO, HOUSEHOLD_SAVINGS_RATIO };
 
@@ -136,8 +138,7 @@ export async function snapshotMoneySupply(db: Db, turn: number): Promise<number>
         }
       )
       .toArray(),
-    db
-      .collection("politicalParties")
+    politicalPartiesCollection<Document>(db)
       .find({}, { projection: { countryId: 1, treasury: 1 } })
       .toArray(),
     federalBudgetCollection(db)

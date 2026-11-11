@@ -30,6 +30,7 @@ import type {
 } from "./types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 /** Bill statuses that count as "passed" (enacted) for the recap. */
 const PASSED_BILL_STATUSES = ["signed", "enrolled", "veto_override", "override_shugiin"];
@@ -321,8 +322,7 @@ export async function buildSeasonRecaps(
   ];
   const partyDocs =
     partyKeys.length > 0
-      ? await db
-          .collection<PoliticalParty>("politicalParties")
+      ? await politicalPartiesCollection(db)
           .find({
             $or: partyKeys.map((k) => ({ countryId: k.countryId, sequentialId: k.sequentialId })),
           })

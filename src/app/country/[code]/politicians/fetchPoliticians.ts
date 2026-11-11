@@ -5,6 +5,7 @@ import type { Character, NPP, PoliticalParty } from "@/lib/db/types";
 import type { PoliticianData } from "@/lib/politicians/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export interface PoliticiansResult {
   politicians: PoliticianData[];
@@ -105,8 +106,7 @@ export async function fetchPoliticians(countryId: CountryId): Promise<Politician
     statesCollection<{ _id: string; name: string }>(db)
       .find({ _id: { $in: allHomeStateIds } }, { projection: { name: 1 } })
       .toArray(),
-    db
-      .collection<PoliticalParty>("politicalParties")
+    politicalPartiesCollection(db)
       .find({ countryId }, { projection: { sequentialId: 1, name: 1, color: 1, countryId: 1 } })
       .toArray(),
   ]);

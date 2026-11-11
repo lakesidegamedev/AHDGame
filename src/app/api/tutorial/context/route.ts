@@ -17,6 +17,7 @@ import { regionNoun } from "@/lib/onboarding/checklist";
 import type { TutorialFacts } from "@/lib/tutorial/facts";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 /**
  * GET /api/tutorial/context — live world numbers for the tutorial coach.
@@ -70,7 +71,7 @@ async function handleGET() {
             { projection: { "economic.unemploymentRate.value": 1 } }
           ),
         // The collection is "politicalParties", not "parties" (seedManifest.ts).
-        db.collection<PoliticalParty>("politicalParties").countDocuments({ countryId }),
+        politicalPartiesCollection(db).countDocuments({ countryId }),
         db.collection<Election>("elections").countDocuments({
           countryId,
           state: character.homeState,

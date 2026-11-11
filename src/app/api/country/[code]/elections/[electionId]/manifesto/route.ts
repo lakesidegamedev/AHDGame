@@ -25,6 +25,7 @@ import {
   validateManifestoPledges,
 } from "@/lib/db/collections/manifestos";
 import { MANIFESTO_PLEDGE_COUNT, type Pledge } from "@/lib/db/types/manifesto";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 const bodySchema = z.object({
   pledges: z.array(z.string().min(1)).max(MANIFESTO_PLEDGE_COUNT),
@@ -53,9 +54,10 @@ async function resolveContext(request: Request, code: string, electionId: string
     return { error: errorResponse(404, "Election not found") };
   }
   // The caller's chaired party (leaders author manifestos).
-  const party = await db
-    .collection<PoliticalParty>("politicalParties")
-    .findOne({ countryId, chairId: auth.user.character._id });
+  const party = await politicalPartiesCollection(db).findOne({
+    countryId,
+    chairId: auth.user.character._id,
+  });
 
   return {
     db,

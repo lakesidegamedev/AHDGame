@@ -9,6 +9,7 @@ import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { canActAsChair } from "@/lib/parties/actingChair";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 // POST /api/coalitions/[id]/invite/decline — Decline a coalition invite
 export async function POST(
@@ -48,9 +49,10 @@ export async function POST(
     }
 
     // Find the character's party
-    const party = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ sequentialId: Number(character.party), countryId });
+    const party = await politicalPartiesCollection(db).findOne({
+      sequentialId: Number(character.party),
+      countryId,
+    });
     if (!party) {
       throw notFound("Your party could not be found.");
     }

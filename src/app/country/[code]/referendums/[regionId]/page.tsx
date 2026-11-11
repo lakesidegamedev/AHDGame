@@ -35,6 +35,7 @@ import { buildConsentBillViews, type ConsentBillView } from "@/lib/referendum/co
 import type { ObjectId } from "mongodb";
 import { turnoutTargetLabel } from "@/lib/demographics/turnoutTarget";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 /**
  * Display name for a cohort. Cohorts are Layer-1 buckets
@@ -143,8 +144,7 @@ export default async function ReferendumDetailPage({
     .toArray();
   const orgPartyIds = regionStateParties.map((sp) => String(sp.partyId));
   const partyDocs = orgPartyIds.length
-    ? await db
-        .collection<PoliticalParty>("politicalParties")
+    ? await politicalPartiesCollection(db)
         .find({ countryId, sequentialId: { $in: orgPartyIds.map(Number) } })
         .toArray()
     : [];
@@ -186,9 +186,7 @@ export default async function ReferendumDetailPage({
   if (ref.status === "campaigning" && user?.character?.party) {
     const viewerParty = String(user.character.party);
     const [viewerPartyDoc, viewerStateParty] = await Promise.all([
-      db
-        .collection<PoliticalParty>("politicalParties")
-        .findOne({ countryId, sequentialId: Number(viewerParty) }),
+      politicalPartiesCollection(db).findOne({ countryId, sequentialId: Number(viewerParty) }),
       db
         .collection<StatePartyOrg>("statePartyOrg")
         .findOne({ countryId, stateId: regionId.toUpperCase(), partyId: viewerParty }),

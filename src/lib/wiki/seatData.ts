@@ -11,6 +11,7 @@ import { buildCharacterHref, buildNppHref } from "@/lib/utils/profileUrls";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export type SeatSlugType = "governor" | "senate" | "house";
 
@@ -130,10 +131,7 @@ export async function getSeatData(slug: string): Promise<SeatData | null> {
           .toArray()
       : [],
     // Filter parties by country derived from state to avoid cross-country collisions
-    db
-      .collection<PoliticalParty>("politicalParties")
-      .find({ countryId: state.countryId })
-      .toArray(),
+    politicalPartiesCollection(db).find({ countryId: state.countryId }).toArray(),
   ]);
 
   const charMap = new Map(characters.map((c) => [c._id.toString(), c]));

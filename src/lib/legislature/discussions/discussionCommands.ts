@@ -14,6 +14,7 @@ import { canPostBillDiscussion } from "./discussionEligibility";
 import { serializeBillDiscussion } from "./dto/discussionView";
 import type { BillDiscussionScope, BillDiscussionView } from "./types";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 interface CreateInput {
   scope: BillDiscussionScope;
@@ -48,12 +49,10 @@ export async function createBillDiscussion(
   const partySeq = parseInt(character.party ?? "", 10);
   const party = Number.isNaN(partySeq)
     ? null
-    : await db
-        .collection<PoliticalParty>("politicalParties")
-        .findOne(
-          { sequentialId: partySeq, countryId: scope.countryId },
-          { projection: { name: 1, color: 1 } }
-        );
+    : await politicalPartiesCollection(db).findOne(
+        { sequentialId: partySeq, countryId: scope.countryId },
+        { projection: { name: 1, color: 1 } }
+      );
 
   // Resolve region display label.
   const state = await statesCollection(db).findOne(

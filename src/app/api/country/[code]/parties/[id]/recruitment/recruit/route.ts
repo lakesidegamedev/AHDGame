@@ -35,6 +35,7 @@ import {
   recruitmentCooldownReadyFilter,
 } from "@/lib/npp/recruitmentCooldown";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 // POST /api/country/[code]/parties/[id]/recruitment/recruit — Recruit an NPP into the party in a specified state
 // Auth: requireAuthWithCharacter
@@ -248,17 +249,15 @@ export async function POST(
       // Heal a never-initialized AP pool (paused / never-regenerated game) to the
       // tier cap so the atomic `$gte` deduct can match. Idempotent via `$exists:false`.
       if (party.nppActionPoints == null) {
-        await db
-          .collection<PoliticalParty>("politicalParties")
-          .updateOne(
-            { _id: party._id, nppActionPoints: { $exists: false } },
-            { $set: { nppActionPoints: availableAp } }
-          );
+        await politicalPartiesCollection(db).updateOne(
+          { _id: party._id, nppActionPoints: { $exists: false } },
+          { $set: { nppActionPoints: availableAp } }
+        );
       }
 
       await runWithOptionalTransaction(
         async (session) => {
-          const deductResult = await db.collection<PoliticalParty>("politicalParties").updateOne(
+          const deductResult = await politicalPartiesCollection(db).updateOne(
             {
               _id: party._id,
               nppActionPoints: { $gte: recruitCost },
@@ -279,7 +278,7 @@ export async function POST(
           await db.collection<NPP>("npps").insertOne(npp, { session });
         },
         async () => {
-          const deductResult = await db.collection<PoliticalParty>("politicalParties").updateOne(
+          const deductResult = await politicalPartiesCollection(db).updateOne(
             {
               _id: party._id,
               nppActionPoints: { $gte: recruitCost },
@@ -338,9 +337,7 @@ export async function POST(
               rollbackUpdate.$unset = rollbackUnset;
             }
 
-            await db
-              .collection<PoliticalParty>("politicalParties")
-              .updateOne({ _id: party._id }, rollbackUpdate);
+            await politicalPartiesCollection(db).updateOne({ _id: party._id }, rollbackUpdate);
             throw error;
           }
         }

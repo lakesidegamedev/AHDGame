@@ -18,6 +18,7 @@ import {
   STATE_LEADERSHIP_RELOCATION_DELAY_TURNS,
 } from "@/lib/parties/leadershipTenure";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -175,9 +176,10 @@ export async function POST(request: Request, { params }: RouteParams) {
         skipRelocationGate: true,
       });
       if (validation) return validation;
-      await db
-        .collection<PoliticalParty>("politicalParties")
-        .updateOne({ _id: party._id }, { $set: { campaignerIds: requestedIds, updatedAt: now } });
+      await politicalPartiesCollection(db).updateOne(
+        { _id: party._id },
+        { $set: { campaignerIds: requestedIds, updatedAt: now } }
+      );
       await logCampaignerChange(db, party, authUser, true, `set to ${requestedIds.length}`);
       return NextResponse.json({
         ok: true,
@@ -222,9 +224,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     if (removedIds.length > 0) {
-      await db
-        .collection<PoliticalParty>("politicalParties")
-        .updateOne({ _id: party._id }, { $set: { campaignerIds: keptIds, updatedAt: now } });
+      await politicalPartiesCollection(db).updateOne(
+        { _id: party._id },
+        { $set: { campaignerIds: keptIds, updatedAt: now } }
+      );
     }
 
     const createdNominations: string[] = [];

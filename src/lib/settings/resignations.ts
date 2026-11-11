@@ -37,6 +37,7 @@ import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 const PARTY_LEADERSHIP_FIELDS = ["chairId", "viceChairId", "treasurerId"] as const;
 type PartyLeadershipField = (typeof PARTY_LEADERSHIP_FIELDS)[number];
@@ -246,10 +247,7 @@ async function discoverPositions(db: Db, character: Character): Promise<Position
       partyFilters.push({ countryId: organization.countryId, sequentialId });
     }
   }
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
-    .find({ $or: partyFilters })
-    .toArray();
+  const parties = await politicalPartiesCollection(db).find({ $or: partyFilters }).toArray();
 
   const positions: PositionRecord[] = [];
 
@@ -527,12 +525,10 @@ async function resignNationalPartyRole(
   field: PartyLeadershipField,
   now: Date
 ): Promise<boolean> {
-  const result = await db
-    .collection<PoliticalParty>("politicalParties")
-    .updateOne(
-      { _id: party._id, [field]: character._id },
-      { $set: { [field]: null, updatedAt: now } }
-    );
+  const result = await politicalPartiesCollection(db).updateOne(
+    { _id: party._id, [field]: character._id },
+    { $set: { [field]: null, updatedAt: now } }
+  );
   if (!hasChanged(result)) return false;
   if (field === "chairId") {
     await db
@@ -795,12 +791,10 @@ export async function resignAllPositions(db: Db, character: Character): Promise<
       ),
       Promise.all(
         PARTY_LEADERSHIP_FIELDS.map((field) =>
-          db
-            .collection<PoliticalParty>("politicalParties")
-            .updateMany(
-              { [field]: freshCharacter._id },
-              { $set: { [field]: null, updatedAt: now } }
-            )
+          politicalPartiesCollection(db).updateMany(
+            { [field]: freshCharacter._id },
+            { $set: { [field]: null, updatedAt: now } }
+          )
         )
       ),
       db.collection<StatePartyOrg>("statePartyOrg").updateMany(

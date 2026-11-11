@@ -41,6 +41,7 @@ import { ELECTORAL_VOTE_UNITS } from "@/lib/constants/states";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 const ALL_STATE_IDS = [...new Set(ELECTORAL_VOTE_UNITS.map((u) => u.stateId))];
 
@@ -73,14 +74,16 @@ export async function GET(req: Request) {
     if (partyIdParam) {
       const seq = Number(partyIdParam);
       if (Number.isFinite(seq)) {
-        party = await db
-          .collection<PoliticalParty>("politicalParties")
-          .findOne({ countryId: "US", sequentialId: seq });
+        party = await politicalPartiesCollection(db).findOne({
+          countryId: "US",
+          sequentialId: seq,
+        });
       }
       if (!party) {
-        party = await db
-          .collection<PoliticalParty>("politicalParties")
-          .findOne({ countryId: "US", abbreviation: partyIdParam });
+        party = await politicalPartiesCollection(db).findOne({
+          countryId: "US",
+          abbreviation: partyIdParam,
+        });
       }
     }
 
@@ -89,8 +92,7 @@ export async function GET(req: Request) {
     const partyKeysWithCandidates = (await db
       .collection<ElectionCandidate>("electionCandidates")
       .distinct("party", { electionId: election._id, status: "active" })) as string[];
-    const candidateParties = await db
-      .collection<PoliticalParty>("politicalParties")
+    const candidateParties = await politicalPartiesCollection(db)
       .find({ countryId: "US", sequentialId: { $in: partyKeysWithCandidates.map(Number) } })
       .project<{ sequentialId: number; abbreviation: string; name: string }>({
         sequentialId: 1,

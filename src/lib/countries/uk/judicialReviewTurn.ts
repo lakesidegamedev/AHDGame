@@ -18,6 +18,7 @@ import {
   type JrCaseEffect,
   type JrCaseAxis,
 } from "@/lib/countries/uk/judicialReview/surpriseTemplates";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export interface UkJrSurpriseCaseRecord {
   _id: ObjectId;
@@ -50,14 +51,12 @@ async function resolveUkProxyCourtLean(db: Db, axis: JrCaseAxis): Promise<-1 | 0
   let social = 0;
   if (partyId) {
     const seq = Number(partyId);
-    const party = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne(
-        Number.isFinite(seq)
-          ? { countryId: "UK", sequentialId: seq }
-          : { countryId: "UK", _id: partyId as unknown as ObjectId },
-        { projection: { economicPosition: 1, socialPosition: 1 } }
-      );
+    const party = await politicalPartiesCollection(db).findOne(
+      Number.isFinite(seq)
+        ? { countryId: "UK", sequentialId: seq }
+        : { countryId: "UK", _id: partyId as unknown as ObjectId },
+      { projection: { economicPosition: 1, socialPosition: 1 } }
+    );
     if (party) {
       economic = party.economicPosition ?? 0;
       social = party.socialPosition ?? 0;

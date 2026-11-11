@@ -6,6 +6,7 @@ import { buildCharacterHref } from "@/lib/utils/profileUrls";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import type { Document } from "mongodb";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -28,13 +29,11 @@ export async function queryParty(
   } = params;
   const seqId = Number(id);
 
-  const party = await db
-    .collection<PoliticalParty>("politicalParties")
-    .findOne(
-      (isNaN(seqId)
-        ? { _id: id as unknown as PoliticalParty["_id"], countryId: country }
-        : { sequentialId: seqId, countryId: country }) as Filter<PoliticalParty>
-    );
+  const party = await politicalPartiesCollection(db).findOne(
+    (isNaN(seqId)
+      ? { _id: id as unknown as PoliticalParty["_id"], countryId: country }
+      : { sequentialId: seqId, countryId: country }) as Filter<PoliticalParty>
+  );
   if (!party) return null;
 
   const partySeqStr = String(party.sequentialId);
@@ -132,8 +131,7 @@ export async function queryParty(
 export async function queryPartyList(db: Db, params: { country: string }) {
   const cid = params.country.toUpperCase() as CountryId;
 
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const parties = await politicalPartiesCollection(db)
     .find({ countryId: cid })
     .sort({ memberCount: -1 })
     .toArray();

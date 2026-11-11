@@ -3,6 +3,7 @@ import type { CabinetMember } from "@/lib/db/types/cabinet";
 import type { ElectedOfficial, PoliticalParty } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 const VOCATIONAL_SEATS = 43;
 const TAOISEACH_PICKS = 11;
@@ -74,10 +75,7 @@ export async function deriveSeanadComposition(
 ): Promise<SeanadComposition> {
   // Party label/color lookup keyed by sequentialId string (matches how
   // electedOfficials.party is stored).
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
-    .find({ countryId })
-    .toArray();
+  const parties = await politicalPartiesCollection(db).find({ countryId }).toArray();
   const partyByKey = new Map<string, PoliticalParty>();
   for (const p of parties) {
     if (p.sequentialId != null) partyByKey.set(String(p.sequentialId), p);

@@ -11,6 +11,7 @@ import { getCountryState } from "@/lib/countryState";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { canActAsChair } from "@/lib/parties/actingChair";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 // POST /api/coalitions/[id]/join — Request to join a coalition
 export async function POST(
@@ -42,9 +43,10 @@ export async function POST(
     const db = await getDb();
 
     // Find user's party
-    const party = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ sequentialId: Number(character.party), countryId });
+    const party = await politicalPartiesCollection(db).findOne({
+      sequentialId: Number(character.party),
+      countryId,
+    });
     if (!party) {
       throw notFound("Your party could not be found.");
     }

@@ -62,6 +62,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 /**
  * What `runSeed`'s reset branch deletes, and how far.
@@ -550,15 +551,17 @@ export async function runSeed(
   for (const party of sortedParties) {
     const { seedOrder: _seedOrder, ...partyData } = party;
     // Check if party already exists by name + country
-    const existing = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ name: party.name, countryId: party.countryId });
+    const existing = await politicalPartiesCollection(db).findOne({
+      name: party.name,
+      countryId: party.countryId,
+    });
 
     if (existing) {
       // Update existing party (preserve _id and sequentialId)
-      await db
-        .collection<PoliticalParty>("politicalParties")
-        .updateOne({ _id: existing._id }, { $set: { ...partyData, updatedAt: now } });
+      await politicalPartiesCollection(db).updateOne(
+        { _id: existing._id },
+        { $set: { ...partyData, updatedAt: now } }
+      );
     } else {
       // Insert new party with generated _id and sequentialId
       const sequentialId = await getNextSequentialId(db, "party", party.countryId);
@@ -570,7 +573,7 @@ export async function runSeed(
         createdAt: now,
         updatedAt: now,
       };
-      await db.collection<PoliticalParty>("politicalParties").insertOne(doc);
+      await politicalPartiesCollection(db).insertOne(doc);
     }
   }
   log(`Seeded ${politicalParties.length} political parties`);

@@ -19,6 +19,7 @@ import type { ElectedOfficial, PoliticalParty, State } from "@/lib/db/types";
 import { PRIORITY_REGION_LOCKOUT_TURNS } from "@/lib/turn/politicalStrength/strengthConstants";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 /**
  * Returns the state IDs in this country where the given party holds the
@@ -191,7 +192,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     // updateOne filter so two concurrent setters racing against an
     // expired lockout don't both win.
     const now = new Date();
-    const result = await db.collection<PoliticalParty>("politicalParties").updateOne(
+    const result = await politicalPartiesCollection(db).updateOne(
       {
         _id: party._id,
         // Guard: only set if currently unlocked. `priorityRegion` either

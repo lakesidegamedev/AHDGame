@@ -37,6 +37,7 @@ import type {
 import { raceHref } from "@/lib/campaignManager/links";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 const NEUTRAL_PARTY_COLOR = "#6b6b7a";
 
@@ -95,7 +96,7 @@ export async function getStateOverview(
     gameStateDoc,
   ] = await Promise.all([
     db.collection<StatePartyOrg>("statePartyOrg").find({ countryId, stateId }).toArray(),
-    db.collection<PoliticalParty>("politicalParties").find({ countryId }).toArray(),
+    politicalPartiesCollection(db).find({ countryId }).toArray(),
     statesCollection(db).findOne({ _id: stateId, countryId }),
     getRegionalExecutive(db, countryId, stateId),
     db

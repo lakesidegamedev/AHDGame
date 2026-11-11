@@ -13,6 +13,7 @@ import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { getPartyRoleLabel } from "@/lib/parties/partyRoleLabels";
 import { z } from "zod";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 const POSITION_FIELD = {
   chair: "chairId",
@@ -87,7 +88,7 @@ export const POST = withAdminRoute(
     }
 
     // Update the party
-    await db.collection<PoliticalParty>("politicalParties").updateOne(
+    await politicalPartiesCollection(db).updateOne(
       { _id: party._id },
       {
         $set: {

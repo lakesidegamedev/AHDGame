@@ -33,6 +33,7 @@ import { getGameStateCollection } from "@/lib/db/collections/gameState";
 import { getStatesCollection } from "@/lib/db/collections/states";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 /**
  * Canonical US seed name for each seeded abbreviation, used as a fallback when
@@ -135,10 +136,7 @@ export async function seedAdmittedStatePolitics(
     // Fetch the whole US roster rather than filtering on the seed's
     // abbreviations: a live world can rename a party, and the renamed row must
     // still be reachable by the name fallback below.
-    const parties = await db
-      .collection<PoliticalParty>("politicalParties")
-      .find({ countryId: "US" })
-      .toArray();
+    const parties = await politicalPartiesCollection(db).find({ countryId: "US" }).toArray();
     const partyByAbbr = new Map(
       parties.map((party) => [party.abbreviation?.toUpperCase(), party] as const)
     );

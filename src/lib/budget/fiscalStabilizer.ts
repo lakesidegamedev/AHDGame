@@ -37,6 +37,7 @@ import {
   type StabilizerTaxLine,
 } from "./rules/fiscalStabilizer";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 /** Party economic positions run on a -5..+5 scale (see formNppCabinet). */
 const PARTY_POSITION_SCALE = 5;
@@ -80,8 +81,7 @@ export async function loadRulingEconomicPositions(
     }
   }
   if (partyByCountry.size === 0) return out;
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const parties = await politicalPartiesCollection(db)
     .find(
       {
         countryId: { $in: [...partyByCountry.keys()] as CountryId[] },

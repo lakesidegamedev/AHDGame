@@ -64,6 +64,7 @@ import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export type { PrimaryPartyDetail, PrimaryViewerCampaign };
 
@@ -129,7 +130,7 @@ export async function loadPrimaryPartyData(
 
   const countryId = election.countryId;
   const sequentialId = Number(partyId);
-  const parties = db.collection<PoliticalParty>("politicalParties");
+  const parties = politicalPartiesCollection(db);
   const party =
     (Number.isFinite(sequentialId) ? await parties.findOne({ countryId, sequentialId }) : null) ??
     (await parties.findOne({ countryId, abbreviation: partyId }));

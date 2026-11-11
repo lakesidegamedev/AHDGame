@@ -32,6 +32,7 @@ import {
 import { loadPrimaryPartyData, type PrimaryDetailViewer } from "@/lib/elections/primaryPartyDetail";
 import { NppAbbr } from "@/components/elections/NppAbbr";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 // Presidential primary standings can change every turn and after live player
 // actions (endorsements, surge, in-state campaigning), so cached route output
@@ -51,20 +52,16 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const sequentialId = Number(partyId);
   let party: PoliticalParty | null = null;
   if (Number.isFinite(sequentialId)) {
-    party = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne(
-        { countryId: "US", sequentialId },
-        { projection: { name: 1, abbreviation: 1, logoUrl: 1 } }
-      );
+    party = await politicalPartiesCollection(db).findOne(
+      { countryId: "US", sequentialId },
+      { projection: { name: 1, abbreviation: 1, logoUrl: 1 } }
+    );
   }
   if (!party) {
-    party = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne(
-        { countryId: "US", abbreviation: partyId },
-        { projection: { name: 1, abbreviation: 1, logoUrl: 1 } }
-      );
+    party = await politicalPartiesCollection(db).findOne(
+      { countryId: "US", abbreviation: partyId },
+      { projection: { name: 1, abbreviation: 1, logoUrl: 1 } }
+    );
   }
   if (!party) return {};
 

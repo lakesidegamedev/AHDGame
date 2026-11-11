@@ -15,6 +15,7 @@ import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import type { CongressMember, CongressMembersResponse } from "@/lib/congress/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 // Re-export for any consumer that still imports types from the route file.
 // New consumers should import from "@/lib/congress/types" directly.
@@ -48,10 +49,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
         .find(officialFilter)
         .sort({ state: 1, senateClass: 1, district: 1 })
         .toArray(),
-      db
-        .collection<PoliticalParty>("politicalParties")
-        .find({ countryId: requestedCountry })
-        .toArray(),
+      politicalPartiesCollection(db).find({ countryId: requestedCountry }).toArray(),
     ]);
 
     // Only real (filled) seats — vacant DB rows are discarded here.

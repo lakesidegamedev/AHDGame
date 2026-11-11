@@ -1,5 +1,6 @@
 import type { Db, ObjectId } from "mongodb";
 import type { Election, ElectionVoteTally, PoliticalParty } from "@/lib/db/types";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 /**
  * County drift from the world's own history.
@@ -95,8 +96,7 @@ async function statePviForRace(
   if (!byUnit || !tally.candidateParties) return null;
 
   const seqIds = [...new Set(Object.values(tally.candidateParties))].map(Number).filter(Boolean);
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const parties = await politicalPartiesCollection(db)
     .find(
       { sequentialId: { $in: seqIds }, countryId: countryId as PoliticalParty["countryId"] },
       { projection: { sequentialId: 1, economicPosition: 1 } }

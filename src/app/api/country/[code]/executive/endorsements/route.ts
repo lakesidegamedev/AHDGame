@@ -28,6 +28,7 @@ import type {
 import { buildPartyIdResolver } from "@/lib/parties/partyMatch";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 // Re-uses electionLabels via the constants/countries re-export.
 // Import resolved inline above to keep this file self-contained.
@@ -162,8 +163,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
       playerCharacters.map((c) => [c._id.toString(), c.party ?? null])
     );
 
-    const partyDocs = await db
-      .collection<PoliticalParty>("politicalParties")
+    const partyDocs = await politicalPartiesCollection(db)
       .find({ countryId })
       .project<{ sequentialId: number; name: string; color: string; logoUrl?: string }>({
         sequentialId: 1,

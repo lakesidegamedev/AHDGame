@@ -8,6 +8,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import type { Character, PoliticalParty } from "@/lib/db/types";
 import { PartyTerritoryError } from "./territoryErrors";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export interface TerritoryParty {
   countryId: CountryId;
@@ -34,14 +35,11 @@ async function claimTerritory(db: Db, identities: PartyIdentity[], token: string
   // updateMany is atomic per party, not across parties. A partial acquisition
   // never runs work: prove every existing requested party has our token,
   // otherwise release only our claims and return a retryable conflict.
-  await db
-    .collection<PoliticalParty>("politicalParties")
-    .updateMany(
-      { $or: identities, territoryMutation: { $exists: false } },
-      { $set: { territoryMutation: { token, startedAt: new Date() } } }
-    );
-  const blocked = await db
-    .collection<PoliticalParty>("politicalParties")
+  await politicalPartiesCollection(db).updateMany(
+    { $or: identities, territoryMutation: { $exists: false } },
+    { $set: { territoryMutation: { token, startedAt: new Date() } } }
+  );
+  const blocked = await politicalPartiesCollection(db)
     .find(
       { $or: identities, "territoryMutation.token": { $ne: token } },
       { projection: { _id: 1 } }
@@ -56,12 +54,10 @@ async function claimTerritory(db: Db, identities: PartyIdentity[], token: string
 }
 
 async function releaseTerritory(db: Db, identities: PartyIdentity[], token: string): Promise<void> {
-  await db
-    .collection<PoliticalParty>("politicalParties")
-    .updateMany(
-      { $or: identities, "territoryMutation.token": token },
-      { $unset: { territoryMutation: "" } }
-    );
+  await politicalPartiesCollection(db).updateMany(
+    { $or: identities, "territoryMutation.token": token },
+    { $unset: { territoryMutation: "" } }
+  );
 }
 
 export async function withPartyTerritoryMutation<T>(

@@ -17,6 +17,7 @@ import { getContestRoundsCollection } from "./collection";
 import { CONTEST_KINDS, CORP_CONTEST_KINDS, contestPrizeAnchor } from "./rules";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 const LEADERS_SHOWN = 10;
 const PAST_ROUNDS_SHOWN = 12;
@@ -236,8 +237,7 @@ async function loadEntryImages(
           .toArray(),
     partyIds.size === 0
       ? []
-      : db
-          .collection<PoliticalParty>("politicalParties")
+      : politicalPartiesCollection(db)
           .find(
             { _id: { $in: toIds(partyIds) } },
             { projection: { logoUrl: 1, sequentialId: 1, countryId: 1, color: 1 } }

@@ -28,6 +28,7 @@ import { insertManyIgnoringDuplicateKey } from "@/lib/elections/duplicateKey";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export const ELECTION_DURATION_TURNS = 72; // 72 turns = 72 hours
 
@@ -177,7 +178,7 @@ export async function createMissingElections(
   const scopedActiveElectionQuery = applyOptionalCountryScope({ status: "voting" }, countryId);
 
   const [parties, initialStatePartyOrgs, activeElections, usPolitics] = await Promise.all([
-    db.collection<PoliticalParty>("politicalParties").find({}).toArray(),
+    politicalPartiesCollection(db).find({}).toArray(),
     db.collection<StatePartyOrg>("statePartyOrg").find(scopedStatePartyOrgQuery).toArray(),
     db
       .collection<StatePartyElection>("statePartyElections")

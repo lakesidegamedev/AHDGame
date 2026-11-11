@@ -2,6 +2,7 @@ import { ObjectId, type Db, type Filter } from "mongodb";
 import type { PoliticalParty, Referendum, State } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 function iso(value: Date | null | undefined): string | null {
   return value instanceof Date && !Number.isNaN(value.getTime()) ? value.toISOString() : null;
@@ -28,8 +29,7 @@ async function hydrateReferendums(db: Db, rows: Referendum[]) {
           .toArray()
       : Promise.resolve([]),
     partyFilters.length
-      ? db
-          .collection<PoliticalParty>("politicalParties")
+      ? politicalPartiesCollection(db)
           .find({ $or: partyFilters } as Filter<PoliticalParty>)
           .toArray()
       : Promise.resolve([]),

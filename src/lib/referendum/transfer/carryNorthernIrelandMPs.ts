@@ -8,6 +8,7 @@ import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import type { Document } from "mongodb";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export async function carryNorthernIrelandMPs(
   db: Db,
@@ -26,8 +27,7 @@ export async function carryNorthernIrelandMPs(
   if (government) await unformGovernmentAndVacatePM(db, "UK", now, { reason: "lost-seat" });
   await electedOfficialsCollection<Document>(db).deleteMany({ countryId: "UK", $or: holders });
   await db.collection("cabinetMembers").deleteMany({ countryId: "UK", $or: holders });
-  const parties = await db
-    .collection("politicalParties")
+  const parties = await politicalPartiesCollection<Document>(db)
     .find(
       { countryId: { $in: ["UK", "IE"] } },
       { projection: { countryId: 1, sequentialId: 1, abbreviation: 1 } }

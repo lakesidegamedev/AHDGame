@@ -60,6 +60,7 @@ import { COUNTRY_CONFIGS as COUNTRY_CFGS_FOR_MOOD } from "@/lib/constants/countr
 import { computePopularTurnDrift } from "@/lib/turn/popularLegitimacyTurn";
 import { collectEconomicSignalsForCountry } from "@/lib/turn/popularLegitimacyDriverCollectors";
 import { popularLegitimacyBleedIntoParty } from "@/lib/turn/rulingPartyPriorities";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 const PROJECTION_TURNS = 48;
 
@@ -232,10 +233,11 @@ export async function GET(request: Request, { params }: RouteParams) {
       legalizeCooldownUntil?: number;
     }[] = [];
     try {
-      bannedParties = await db
-        .collection<{ sequentialId: number; name: string; abbreviation?: string }>(
-          "politicalParties"
-        )
+      bannedParties = await politicalPartiesCollection<{
+        sequentialId: number;
+        name: string;
+        abbreviation?: string;
+      }>(db)
         .find({ countryId, regimeStatus: "banned" })
         .project<{ sequentialId: number; name: string; abbreviation?: string }>({
           _id: 0,

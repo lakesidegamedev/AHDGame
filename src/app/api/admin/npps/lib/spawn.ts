@@ -10,6 +10,7 @@ import { errorResponse } from "@/lib/api/errors";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import type { Document } from "mongodb";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export async function handleSpawnNPPs(
   db: Db,
@@ -37,13 +38,13 @@ export async function handleSpawnNPPs(
   if (!isNaN(seqId)) {
     if (countryId) {
       // Use explicit countryId for precise lookup (sequentialId is only unique within a country)
-      partyDoc = await db
-        .collection<PoliticalParty>("politicalParties")
-        .findOne({ sequentialId: seqId, countryId: countryId.toUpperCase() as CountryId });
+      partyDoc = await politicalPartiesCollection(db).findOne({
+        sequentialId: seqId,
+        countryId: countryId.toUpperCase() as CountryId,
+      });
     } else {
       // No countryId provided - check if sequentialId is unambiguous
-      const matchingParties = await db
-        .collection<PoliticalParty>("politicalParties")
+      const matchingParties = await politicalPartiesCollection(db)
         .find({ sequentialId: seqId })
         .toArray();
       if (matchingParties.length === 1) {

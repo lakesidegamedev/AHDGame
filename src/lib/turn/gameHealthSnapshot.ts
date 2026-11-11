@@ -34,6 +34,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import type { Document } from "mongodb";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 type SeatScopedOfficial = ElectedOfficial & { seatId?: string };
 
@@ -213,14 +214,12 @@ async function runIntegrityChecks(
     collectSeatIntegrity(db),
     // 3. Parties with neither human nor active NPC members. memberCount is
     // the human cache; NPC affiliations use the party sequentialId string.
-    db
-      .collection("politicalParties")
+    politicalPartiesCollection<Document>(db)
       .countDocuments({ memberCount: 0 })
       .then(async (humanless) => {
         const npcBacked =
           humanless > 0
-            ? await db
-                .collection("politicalParties")
+            ? await politicalPartiesCollection<Document>(db)
                 .aggregate<{ count: number }>([
                   { $match: { memberCount: 0 } },
                   { $project: { sequentialId: 1, countryId: 1 } },
@@ -544,7 +543,7 @@ async function collectPopulationStats(db: Db): Promise<PopulationStats> {
     charactersCollection<Document>(db).countDocuments(),
     db.collection("npps").countDocuments(),
     db.collection("seats").countDocuments(),
-    db.collection("politicalParties").countDocuments(),
+    politicalPartiesCollection<Document>(db).countDocuments(),
     db.collection("elections").countDocuments({ status: "active" }),
     electedOfficialsCollection<Document>(db).countDocuments(),
     // Simulated roster for the per-country breakdown below.
@@ -593,8 +592,7 @@ async function collectPopulationStats(db: Db): Promise<PopulationStats> {
         { $group: { _id: "$countryId", count: { $sum: 1 } } },
       ])
       .toArray() as Promise<{ _id: string | null; count: number }[]>,
-    db
-      .collection("politicalParties")
+    politicalPartiesCollection<Document>(db)
       .aggregate([
         { $match: { countryId: { $in: activeCountryIds } } },
         { $group: { _id: "$countryId", count: { $sum: 1 } } },

@@ -62,6 +62,8 @@ import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
 import { getCorporationsCollection } from "@/lib/db/collections/corporations";
 import { getCorporateSectorsCollection } from "@/lib/db/collections/corporateSectors";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import type { Document } from "mongodb";
 
 /**
  * Command-economy macro turn phase. Advances shortage-economy state on
@@ -143,8 +145,7 @@ export async function processCommandEconomyTurn(
     const partyFilter = Array.from(governingPartyIdByCountry.entries()).map(
       ([countryId, sequentialId]) => ({ countryId, sequentialId })
     );
-    const parties = await db
-      .collection("politicalParties")
+    const parties = await politicalPartiesCollection<Document>(db)
       .find(
         { $or: partyFilter },
         { projection: { countryId: 1, sequentialId: 1, economicPosition: 1 } }

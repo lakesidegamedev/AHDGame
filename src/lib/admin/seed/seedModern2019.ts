@@ -18,6 +18,7 @@ import {
 } from "@/lib/seeds/reference/modernRegions2019";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 const COUNTRY_IDS = [
   "RU",
@@ -97,7 +98,7 @@ export async function seedModern2019(
       const { seedOrder: _order, validForPresets: _presets, ...data } = seed;
       void _order;
       void _presets;
-      const collection = db.collection<PoliticalParty>("politicalParties");
+      const collection = politicalPartiesCollection(db);
       const existing = await collection.findOne({ countryId, name: seed.name });
       if (existing && !existing.isDefault) continue;
       if (existing) {
@@ -117,8 +118,7 @@ export async function seedModern2019(
         } as PoliticalParty);
       }
     }
-    const parties = await db
-      .collection<PoliticalParty>("politicalParties")
+    const parties = await politicalPartiesCollection(db)
       .find({ countryId, isDefault: true })
       .toArray();
     for (const region of regions) {

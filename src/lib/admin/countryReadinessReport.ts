@@ -8,6 +8,7 @@ import { getReadinessExpectations } from "@/lib/constants/readinessExpectations"
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 /** Best-effort preset lookup; null when the world has no gameState yet. */
 async function readPreset(db: Db): Promise<string | null> {
@@ -85,7 +86,7 @@ export async function buildCountryReadinessReport(
     detail: `Expected ${expectedRegions}, found ${regionCount}`,
   });
 
-  const partyCount = await db.collection("politicalParties").countDocuments({ countryId });
+  const partyCount = await politicalPartiesCollection<Document>(db).countDocuments({ countryId });
   checks.push({
     name: "Parties",
     status:

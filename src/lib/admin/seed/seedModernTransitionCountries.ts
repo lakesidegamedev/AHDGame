@@ -18,6 +18,7 @@ import { withUniformMetricSet } from "@/lib/seeds/shared/uniformStateMetrics";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export type ModernTransitionCountryId = "PL" | "RO" | "RU" | "BG";
 
@@ -121,13 +122,15 @@ export async function seedModernTransitionParties(
     const { seedOrder: _seedOrder, validForPresets: _validForPresets, ...partyData } = party;
     void _seedOrder;
     void _validForPresets;
-    const existing = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ name: party.name, countryId: party.countryId });
+    const existing = await politicalPartiesCollection(db).findOne({
+      name: party.name,
+      countryId: party.countryId,
+    });
     if (existing) {
-      await db
-        .collection<PoliticalParty>("politicalParties")
-        .updateOne({ _id: existing._id }, { $set: { ...partyData, updatedAt: now } });
+      await politicalPartiesCollection(db).updateOne(
+        { _id: existing._id },
+        { $set: { ...partyData, updatedAt: now } }
+      );
     } else {
       const sequentialId = await getNextSequentialId(db, "party", party.countryId);
       const doc: PoliticalParty = {
@@ -139,7 +142,7 @@ export async function seedModernTransitionParties(
         createdAt: now,
         updatedAt: now,
       } as PoliticalParty;
-      await db.collection<PoliticalParty>("politicalParties").insertOne(doc);
+      await politicalPartiesCollection(db).insertOne(doc);
     }
   }
   log(`Seeded ${filtered.length} ${countryId} parties (preset: ${activePreset})`);
@@ -439,8 +442,7 @@ export async function seedModernTransitionStatePartyOrg(
     await db.collection("statePartyOrg").deleteMany({ countryId });
   }
   const bundle = await loadRegionBundle(countryId);
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const parties = await politicalPartiesCollection(db)
     .find({ countryId, isDefault: true })
     .toArray();
   const now = new Date();

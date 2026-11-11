@@ -17,6 +17,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import type { Document } from "mongodb";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export interface RelocationOutcome {
   resignedFromOffice: string | null;
@@ -259,9 +260,10 @@ export async function performRelocation(
   let leftPartyName: string | null = null;
   if (leaveParty && character.party && character.party !== "independent") {
     const oldPartyId = character.party;
-    const oldParty = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ sequentialId: parseInt(oldPartyId, 10), countryId: oldCountryId });
+    const oldParty = await politicalPartiesCollection(db).findOne({
+      sequentialId: parseInt(oldPartyId, 10),
+      countryId: oldCountryId,
+    });
 
     if (oldParty) {
       leftPartyName = oldParty.name;
@@ -274,9 +276,10 @@ export async function performRelocation(
     await cleanupPartyPositionsOnSwitch(characterId, oldPartyId, "independent", oldCountryId);
 
     if (oldParty) {
-      await db
-        .collection<PoliticalParty>("politicalParties")
-        .updateOne({ _id: oldParty._id }, { $inc: { memberCount: -1 }, $set: { updatedAt: now } });
+      await politicalPartiesCollection(db).updateOne(
+        { _id: oldParty._id },
+        { $inc: { memberCount: -1 }, $set: { updatedAt: now } }
+      );
     }
     if (!countryChanged) {
       await cleanupCaucusParticipationForCharacters(db, [characterId], {

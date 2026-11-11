@@ -16,6 +16,7 @@ import { getPresetSeats, type HistoricalSeat } from "@/lib/constants/historicalS
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 /**
  * Slug → party-name lookup used at resolve time. Exported so tests can
@@ -456,9 +457,7 @@ async function resolvePartyId(
   // Try to find by name
   const partyName = SLUG_TO_NAME[partySlug];
   if (partyName) {
-    const party = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ name: partyName, countryId });
+    const party = await politicalPartiesCollection(db).findOne({ name: partyName, countryId });
     if (party) {
       partyCache.set(cacheKey, party);
       return String(party.sequentialId);
@@ -474,9 +473,10 @@ async function resolvePartyId(
   // capture group and never match the literally-parenthesised stored name,
   // silently defaulting the whole delegation to "independent". Not anchored:
   // substring matching is load-bearing for the bare-slug callers above.
-  const fallbackParty = await db
-    .collection<PoliticalParty>("politicalParties")
-    .findOne({ name: { $regex: new RegExp(escapeRegex(partySlug), "i") }, countryId });
+  const fallbackParty = await politicalPartiesCollection(db).findOne({
+    name: { $regex: new RegExp(escapeRegex(partySlug), "i") },
+    countryId,
+  });
   if (fallbackParty) {
     partyCache.set(cacheKey, fallbackParty);
     return String(fallbackParty.sequentialId);

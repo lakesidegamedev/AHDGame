@@ -12,6 +12,7 @@ import { isBannedParty } from "@/lib/turn/onePartyConstraints";
 import { getCountryState } from "@/lib/countryState";
 import { admitPartyToCoalition } from "@/lib/coalitions/admitParty";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 // POST /api/coalitions/[id]/invite/accept — Accept a coalition invite
 export async function POST(
@@ -51,9 +52,10 @@ export async function POST(
     }
 
     // Find the character's party
-    const party = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ sequentialId: Number(character.party), countryId });
+    const party = await politicalPartiesCollection(db).findOne({
+      sequentialId: Number(character.party),
+      countryId,
+    });
     if (!party) {
       throw notFound("Your party could not be found.");
     }

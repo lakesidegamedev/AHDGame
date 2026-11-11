@@ -1,6 +1,7 @@
 import type { Db } from "mongodb";
 import type { PoliticalParty, StatePartyOrg } from "@/lib/db/types";
 import { type CountryId } from "@/lib/constants/countriesCore";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 /**
  * Look up a party by its sequential ID and country.
@@ -14,7 +15,7 @@ export async function findPartyBySequentialId(
   const seqId = typeof sequentialId === "string" ? parseInt(sequentialId, 10) : sequentialId;
   if (isNaN(seqId)) return null;
 
-  return db.collection<PoliticalParty>("politicalParties").findOne({
+  return politicalPartiesCollection(db).findOne({
     countryId,
     sequentialId: seqId,
   });

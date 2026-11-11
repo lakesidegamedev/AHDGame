@@ -74,6 +74,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 type PlayerCharacter = Pick<
   Character,
@@ -250,8 +251,7 @@ interface PartyRow {
 
 /** Parties by id, or every party when no ids are given. */
 async function loadParties(db: Db, partyIds?: string[]): Promise<Map<string, PartyRow>> {
-  const docs = await db
-    .collection<PoliticalParty>("politicalParties")
+  const docs = await politicalPartiesCollection(db)
     .find(partyIds ? { _id: { $in: partyIds.map((id) => new ObjectId(id)) } } : {}, {
       projection: { _id: 1, name: 1, chairId: 1, memberCount: 1 },
     })

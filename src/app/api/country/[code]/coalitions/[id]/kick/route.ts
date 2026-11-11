@@ -10,6 +10,7 @@ import type { PoliticalParty } from "@/lib/db/types/party";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 const kickSchema = z.object({
   partySequentialId: z.number().int().positive(),
@@ -59,9 +60,10 @@ export async function POST(
     }
 
     // Find target party
-    const targetParty = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ sequentialId: parsed.data.partySequentialId, countryId });
+    const targetParty = await politicalPartiesCollection(db).findOne({
+      sequentialId: parsed.data.partySequentialId,
+      countryId,
+    });
     if (!targetParty) {
       throw notFound("Target party not found.");
     }
@@ -92,9 +94,10 @@ export async function POST(
     // Pre-fix data could have a party listed in coalition A.members[] while coalitionId
     // points at coalition B; an unconditional clear would orphan them from B.
     if (targetParty.coalitionId && targetParty.coalitionId.equals(coalition._id)) {
-      await db
-        .collection<PoliticalParty>("politicalParties")
-        .updateOne({ _id: targetParty._id }, { $set: { coalitionId: null } });
+      await politicalPartiesCollection(db).updateOne(
+        { _id: targetParty._id },
+        { $set: { coalitionId: null } }
+      );
     }
 
     // Notify the kicked party's chair

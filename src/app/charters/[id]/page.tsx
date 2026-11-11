@@ -12,6 +12,7 @@ import type { PartyCharter, PartyCharterStatus, PoliticalParty } from "@/lib/db/
 
 import { resolveCountryIdentity } from "@/lib/country/countryIdentity";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 const STATUS_VARIANT: Record<PartyCharterStatus, "default" | "warning" | "success" | "error"> = {
   draft: "default",
@@ -57,9 +58,10 @@ export default async function CharterDetailPage({ params }: PageParams) {
       })
       .toArray(),
     charter.status === "ratified" && charter.partyId
-      ? db
-          .collection<PoliticalParty>("politicalParties")
-          .findOne({ countryId: charter.countryId, sequentialId: Number(charter.partyId) })
+      ? politicalPartiesCollection(db).findOne({
+          countryId: charter.countryId,
+          sequentialId: Number(charter.partyId),
+        })
       : Promise.resolve(null),
     resolveCountryIdentity(db, charter.countryId),
   ]);

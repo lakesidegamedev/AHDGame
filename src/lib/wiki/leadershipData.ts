@@ -6,6 +6,7 @@ import type { CongressLeader, NPP, PoliticalParty } from "@/lib/db/types";
 import { LEADERSHIP_ROLES } from "@/lib/congress/leadershipRoles";
 import { buildCharacterHref, buildNppHref } from "@/lib/utils/profileUrls";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export type LeadershipRole = (typeof LEADERSHIP_ROLES)[number]["role"];
 
@@ -38,10 +39,7 @@ export async function getLeadershipData(role: string): Promise<LeadershipData | 
   const db = await getDb();
   const doc = await db.collection<CongressLeader>("congressLeaders").findOne({ role: entry.role });
   // Congress leadership is US-only, so filter parties by US countryId
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
-    .find({ countryId: "US" })
-    .toArray();
+  const parties = await politicalPartiesCollection(db).find({ countryId: "US" }).toArray();
   const partyMap = new Map(parties.map((p) => [String(p.sequentialId), p]));
 
   const vacant = !doc?.characterId;

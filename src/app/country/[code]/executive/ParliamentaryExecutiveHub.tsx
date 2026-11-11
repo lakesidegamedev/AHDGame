@@ -58,6 +58,7 @@ import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 type PartyRowMeta = {
   seqKey: string;
@@ -306,8 +307,7 @@ export async function ParliamentaryExecutiveHub({ countryId }: { countryId: Coun
   const partySeqNums = [
     ...new Set(sortedParties.map(([k]) => Number.parseInt(k, 10)).filter((n) => !Number.isNaN(n))),
   ];
-  const partyDocs = await db
-    .collection<PoliticalParty>("politicalParties")
+  const partyDocs = await politicalPartiesCollection(db)
     .find({ countryId, sequentialId: { $in: partySeqNums } })
     .toArray();
   const partyBySeq = new Map(partyDocs.map((p) => [String(p.sequentialId), p]));
@@ -323,7 +323,7 @@ export async function ParliamentaryExecutiveHub({ countryId }: { countryId: Coun
   const governingPartyDoc =
     govPartyId && !Number.isNaN(governingPartySeq)
       ? (partyBySeq.get(govPartyId) ??
-        (await db.collection<PoliticalParty>("politicalParties").findOne({
+        (await politicalPartiesCollection(db).findOne({
           countryId,
           sequentialId: governingPartySeq,
         })))
@@ -337,7 +337,7 @@ export async function ParliamentaryExecutiveHub({ countryId }: { countryId: Coun
     if (Number.isNaN(seq)) return null;
     return (
       partyBySeq.get(character.party) ??
-      (await db.collection<PoliticalParty>("politicalParties").findOne({
+      (await politicalPartiesCollection(db).findOne({
         countryId,
         sequentialId: seq,
       }))

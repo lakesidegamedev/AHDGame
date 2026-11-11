@@ -39,6 +39,7 @@ import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 // ─── Context Types ─────────────────────────────────────────────────────────────
 
@@ -432,7 +433,7 @@ export async function loadNPPContext(now: Date, options?: NPPContextOptions): Pr
       })
       .toArray(),
     db.collection<StatePartyOrg>("statePartyOrg").find({}).toArray(),
-    db.collection<PoliticalParty>("politicalParties").find({}).toArray(),
+    politicalPartiesCollection(db).find({}).toArray(),
     // Phase 4: cross-pressure inputs. Projected to only the fields NPP
     // behavior actually reads (see NPPContext comment) — `legislationTypes`
     // averages 3.9 KB/doc unprojected vs <200 bytes for the policyOptions

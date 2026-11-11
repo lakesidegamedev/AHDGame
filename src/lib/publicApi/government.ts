@@ -8,6 +8,7 @@ import { getGovernmentFormationsCollection } from "@/lib/db/collections/governme
 import { buildCharacterHref } from "@/lib/utils/profileUrls";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -107,8 +108,7 @@ export async function queryGovernment(db: Db, country: string) {
 
   const parties =
     partyLookups.length > 0
-      ? await db
-          .collection<PoliticalParty>("politicalParties")
+      ? await politicalPartiesCollection(db)
           .find({
             $or: partyLookups.map((l) => ({
               countryId: l.countryId,
@@ -189,8 +189,7 @@ export async function queryGovernment(db: Db, country: string) {
       .filter(Boolean);
     const partyDocs =
       partySeqIds.length > 0
-        ? await db
-            .collection<PoliticalParty>("politicalParties")
+        ? await politicalPartiesCollection(db)
             .find({
               sequentialId: { $in: partySeqIds },
               countryId: country,

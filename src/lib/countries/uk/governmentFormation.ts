@@ -38,6 +38,7 @@ import {
   resetParliamentaryGovernmentAfterElection,
 } from "@/lib/turn/parliamentaryGovernment";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 // ---------------------------------------------------------------------------
 // Exported helpers — delegate to shared system, maintain original signatures
@@ -169,7 +170,7 @@ async function seedGovernmentFormation(db: Db): Promise<void> {
   if (legacyPmId && pmChar) {
     const pmParty =
       pmChar?.party != null
-        ? await db.collection<PoliticalParty>("politicalParties").findOne({
+        ? await politicalPartiesCollection(db).findOne({
             sequentialId:
               typeof pmChar.party === "number" ? pmChar.party : parseInt(String(pmChar.party), 10),
             countryId: "UK",

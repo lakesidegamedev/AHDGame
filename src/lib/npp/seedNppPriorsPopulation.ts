@@ -67,6 +67,7 @@ import {
   allocateSeatsByWeights,
 } from "@/lib/sim/backfillMissingSeats";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export interface SeedNppPriorsPopulationResult {
   nppsCreated: number;
@@ -233,8 +234,7 @@ export async function seedNppPriorsPopulation(
     return { nppsCreated: 0, byCountry: {} };
   }
 
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const parties = await politicalPartiesCollection(db)
     .find(
       {},
       {

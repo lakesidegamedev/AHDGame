@@ -1,6 +1,7 @@
 import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { OrgRegLedger, PoliticalParty, StatePartyOrg } from "@/lib/db/types";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export interface StateRegLedgerResult {
   seeded: boolean;
@@ -38,7 +39,7 @@ export async function getStateRegLedger(
 
   const [rows, parties] = await Promise.all([
     db.collection<StatePartyOrg>("statePartyOrg").find({ countryId, stateId }).toArray(),
-    db.collection<PoliticalParty>("politicalParties").find({ countryId }).toArray(),
+    politicalPartiesCollection(db).find({ countryId }).toArray(),
   ]);
 
   const partyBySeq = new Map(parties.map((p) => [String(p.sequentialId), p]));

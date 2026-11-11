@@ -18,6 +18,7 @@ import { cleanupCaucusParticipationForCharacters } from "@/lib/caucus/cleanupCau
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import type { Document } from "mongodb";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export interface StripPartyMembershipResult {
   charactersUpdated: number;
@@ -125,7 +126,7 @@ export async function stripPartyMembershipForBannedUser(
     const politicalParty = await findPartyBySequentialId(db, oldParty, countryId);
 
     if (politicalParty) {
-      await db.collection<PoliticalParty>("politicalParties").updateOne(
+      await politicalPartiesCollection(db).updateOne(
         { _id: politicalParty._id },
         {
           $inc: { memberCount: -1 },

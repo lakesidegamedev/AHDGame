@@ -78,6 +78,7 @@ import { getPoliticalPartiesCollection } from "@/lib/db/collections/politicalPar
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 type StoredPartyBudget = PartyBudget & { countryId?: CountryId };
 
@@ -455,7 +456,7 @@ export async function processPartyGOTV(
 
     const [statePartyOrgs, parties, allCharacters, allNPPs, allStates] = await Promise.all([
       db.collection<StatePartyOrg>("statePartyOrg").find({}).toArray(),
-      db.collection<PoliticalParty>("politicalParties").find({}).toArray(),
+      politicalPartiesCollection(db).find({}).toArray(),
       charactersCollection(db)
         .find(
           {},
@@ -1084,7 +1085,7 @@ export async function processPartyGOTV(
         },
       };
     });
-    await db.collection<PoliticalParty>("politicalParties").bulkWrite(ops);
+    await politicalPartiesCollection(db).bulkWrite(ops);
 
     for (const [key, amount] of nationalPartyGotvDeductions.entries()) {
       const [cidRaw, seqStr] = key.split(":");

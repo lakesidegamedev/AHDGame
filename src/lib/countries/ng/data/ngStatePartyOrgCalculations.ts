@@ -43,6 +43,7 @@ import {
   NG_REGION_VOTE_SHARES_1991,
   NG_REGION_VOTE_SHARES_2019,
 } from "@/lib/seeds/ng/ngRegionVoteShares";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 function calculateNGPartyOrg(voteShare: number): number {
   const scaled = MIN_ORG + (voteShare / 50) * (MAX_ORG - MIN_ORG);
@@ -55,8 +56,7 @@ function calculateNGPartyOrg(voteShare: number): number {
  * actually exist under the active preset.
  */
 export async function buildNGPartySlugToSeqId(db: Db): Promise<Record<string, string>> {
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const parties = await politicalPartiesCollection(db)
     .find({ countryId: "NG" })
     .project<{ name: string; sequentialId: number }>({ name: 1, sequentialId: 1 })
     .toArray();

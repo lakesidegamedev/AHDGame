@@ -35,6 +35,7 @@ type FilingCharacter = Pick<
 import { russianDumaBoundRoot } from "./dumaConvocationAuthority";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 export async function validateRussianCouncilPlayerFiling(input: {
   db: Db;
   election: Election;
@@ -105,12 +106,10 @@ export async function validateRussianCouncilPlayerFiling(input: {
     Number.isSafeInteger(partySequence) &&
     partySequence > 0 &&
     String(partySequence) === character.party
-      ? await db
-          .collection<PoliticalParty>("politicalParties")
-          .findOne(
-            { countryId: "RU", sequentialId: partySequence, regimeStatus: { $ne: "banned" } },
-            { session, projection: { countryId: 1, sequentialId: 1, regimeStatus: 1 } }
-          )
+      ? await politicalPartiesCollection(db).findOne(
+          { countryId: "RU", sequentialId: partySequence, regimeStatus: { $ne: "banned" } },
+          { session, projection: { countryId: 1, sequentialId: 1, regimeStatus: 1 } }
+        )
       : null;
   const candidates = await db
     .collection<ElectionCandidate>("electionCandidates")

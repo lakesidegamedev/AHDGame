@@ -8,6 +8,7 @@ import Link from "next/link";
 import { resolveCampaignRedirect } from "@/lib/campaigns/queries/campaignRedirect";
 import { standaloneCampaignHref } from "@/lib/campaignManager/links";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 /** The viewer's campaign on its race page in Campaign mode, else the standalone page. */
 async function campaignDestination(db: Db, campaignId: string) {
@@ -79,8 +80,7 @@ export default async function CampaignPage() {
       .project({ _id: 1, countryId: 1 })
       .toArray();
     if (presElections.length > 0) {
-      const officerParties = await db
-        .collection<PoliticalParty>("politicalParties")
+      const officerParties = await politicalPartiesCollection(db)
         .find({
           countryId: { $in: presElections.map((e) => e.countryId) },
           $or: [

@@ -13,6 +13,7 @@ import type {
 import { getManifestosCollection } from "@/lib/db/collections/manifestos";
 import { getPledgeCatalogEntry } from "@/lib/countries/uk/manifesto/pledgeCatalog";
 import { deriveElectoralMandate, type MandatePledge } from "./rules/electoralMandate";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 type MandateGovernment = Pick<
   GovernmentFormation,
@@ -44,12 +45,10 @@ export async function loadElectoralMandate(
   const sequentialId = Number(partyId);
   if (!Number.isFinite(sequentialId)) return null;
 
-  const party = await db
-    .collection<PoliticalParty>("politicalParties")
-    .findOne(
-      { countryId, sequentialId },
-      { projection: { economicPosition: 1, socialPosition: 1 } }
-    );
+  const party = await politicalPartiesCollection(db).findOne(
+    { countryId, sequentialId },
+    { projection: { economicPosition: 1, socialPosition: 1 } }
+  );
   if (!party) return null;
 
   const latest = await getManifestosCollection(db)

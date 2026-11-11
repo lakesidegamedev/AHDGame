@@ -20,6 +20,7 @@ import {
   type SeatCycleInput,
 } from "@/lib/campaignManager/rules";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 const paramsSchema = z.object({ id: z.string().min(1).max(128) });
 
@@ -126,8 +127,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     // Party ids repeat across countries; legacy rows without one are US (as enrichElection treats them).
     const countryId = resolved.election.countryId ?? "US";
     const [parties, gameState] = await Promise.all([
-      db
-        .collection<PoliticalParty>("politicalParties")
+      politicalPartiesCollection(db)
         .find({
           countryId,
           sequentialId: { $in: [...partyIds].filter(Number.isFinite) },

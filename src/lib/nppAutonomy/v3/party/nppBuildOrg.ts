@@ -40,6 +40,7 @@ import {
   resolveOrgBuildSizeMultiplier,
 } from "@/lib/politicalStrength/orgBuildStateSize";
 import { buildOrganizationBucket } from "@/lib/parties/commands/buildOrganizationBucket";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export type NppBuildOrgResult =
   { ok: true; orgGain: number; newOrg: number; psCost: number } | { ok: false; reason: string };
@@ -87,8 +88,7 @@ export async function preloadNppBuildOrgSweepCache(
   if (countryIds.length === 0) return cache;
   cache.orgBuildLedger = await loadOrgBuildLedgerContext(db);
 
-  const partyDocs = await db
-    .collection<PoliticalParty>("politicalParties")
+  const partyDocs = await politicalPartiesCollection(db)
     .find(
       { countryId: { $in: countryIds } },
       {

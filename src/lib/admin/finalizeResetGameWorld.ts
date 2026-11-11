@@ -28,6 +28,7 @@ import type { ResetGameWorldResult } from "@/lib/admin/resetGameWorld";
 import { backfillMissingRegionLeans } from "./seed/backfillMissingRegionLeans";
 import { purgeAbsentCountryRegions } from "./seed/purgeAbsentCountryRegions";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export interface FinalizeResetOptions {
   /** 1991 only: leave political offices vacant for player-created parties. */
@@ -201,22 +202,21 @@ export async function finalizeResetGameWorld(
   let customPartiesResult;
 
   if (deleteAllParties) {
-    customPartiesResult = await db.collection<PoliticalParty>("politicalParties").deleteMany({});
+    customPartiesResult = await politicalPartiesCollection(db).deleteMany({});
     await resetPartyCounters(db);
     // Phase 6 reset: drop ALL charter rows so stale ratified / migrated
     // charters can't immunize newly-resequenced parties from cleanup, and
     // so the migration script can re-run idempotently on the fresh seed.
     await db.collection("partyCharters").deleteMany({});
   } else {
-    customPartiesResult = await db
-      .collection<PoliticalParty>("politicalParties")
-      .deleteMany({ isDefault: { $ne: true } });
+    customPartiesResult = await politicalPartiesCollection(db).deleteMany({
+      isDefault: { $ne: true },
+    });
     // Phase 6 reset: drop charters tied to the deleted custom parties.
     // Default parties don't carry charter rows (they bypass the system
     // per D5), so this is safe to run unconditionally — a default-only
     // DB will simply match nothing.
-    const survivingPartyIds = await db
-      .collection<PoliticalParty>("politicalParties")
+    const survivingPartyIds = await politicalPartiesCollection(db)
       .find({ isDefault: true })
       .project<{ sequentialId: number; countryId: string }>({ sequentialId: 1, countryId: 1 })
       .toArray();
@@ -240,7 +240,7 @@ export async function finalizeResetGameWorld(
       await db.collection("partyCharters").deleteMany({ _id: { $in: staleIds } });
     }
 
-    await db.collection<PoliticalParty>("politicalParties").updateMany(
+    await politicalPartiesCollection(db).updateMany(
       { isDefault: true },
       {
         $set: {
@@ -307,9 +307,7 @@ export async function finalizeResetGameWorld(
         name,
         isDefault: true,
       }));
-      const deletedMismatched = await db
-        .collection<PoliticalParty>("politicalParties")
-        .deleteMany({ $or: orFilter });
+      const deletedMismatched = await politicalPartiesCollection(db).deleteMany({ $or: orFilter });
       if (deletedMismatched.deletedCount > 0) {
         // Was a bare console.log with a hand-written "[reset]" prefix, so it
         // reached the container's stdout but never the admin's stream. The sink
@@ -320,9 +318,9 @@ export async function finalizeResetGameWorld(
       }
     }
 
-    const existingDefaultCount = await db
-      .collection<PoliticalParty>("politicalParties")
-      .countDocuments({ isDefault: true });
+    const existingDefaultCount = await politicalPartiesCollection(db).countDocuments({
+      isDefault: true,
+    });
 
     if (existingDefaultCount === 0) {
       await resetPartyCounters(db);
@@ -342,8 +340,7 @@ export async function finalizeResetGameWorld(
   if (deleteAllParties) {
     partyOrgCleanupResult = await db.collection<StatePartyOrg>("statePartyOrg").deleteMany({});
   } else {
-    const defaultParties = await db
-      .collection<PoliticalParty>("politicalParties")
+    const defaultParties = await politicalPartiesCollection(db)
       .find({ isDefault: true })
       .project<{ sequentialId: number; countryId: string }>({ sequentialId: 1, countryId: 1 })
       .toArray();

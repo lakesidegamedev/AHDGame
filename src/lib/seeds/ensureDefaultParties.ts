@@ -12,6 +12,7 @@ import { ieParties } from "./ie/ieParties";
 import { cnParties } from "./cn/cnParties";
 import { resolveSeedPartyTier } from "./defaultPartyTiers";
 import { getNextSequentialId } from "@/lib/db/sequentialId";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 /**
  * True when this party seed should be created under the given preset.
@@ -115,7 +116,7 @@ export async function prunePresetMismatchedDefaultParties(
     )
     .map((seed) => ({ countryId: seed.countryId, name: seed.name }));
   if (mismatched.length === 0) return 0;
-  const result = await db.collection<PoliticalParty>("politicalParties").deleteMany({
+  const result = await politicalPartiesCollection(db).deleteMany({
     $or: mismatched.map(({ countryId, name }) => ({
       countryId,
       name,
@@ -161,8 +162,7 @@ export async function ensureDefaultParties(db: Db, preset: string): Promise<numb
   // draftCharter reservation guard was added, then admin switches to
   // 1991-default) doesn't end up with a duplicate-name row inserted
   // alongside it. Defensive partner to the reservation in `draftCharter.ts`.
-  const existingParties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const existingParties = await politicalPartiesCollection(db)
     .find({})
     .project({ name: 1, countryId: 1, isDefault: 1 })
     .toArray();
@@ -204,7 +204,7 @@ export async function ensureDefaultParties(db: Db, preset: string): Promise<numb
       updatedAt: now,
     };
 
-    await db.collection<PoliticalParty>("politicalParties").insertOne(party);
+    await politicalPartiesCollection(db).insertOne(party);
     partiesCreated++;
   }
 

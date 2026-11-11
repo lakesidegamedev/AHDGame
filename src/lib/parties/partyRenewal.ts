@@ -60,6 +60,7 @@ import {
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 /** Renewal looks for newly resolved cycles this often. */
 export const PARTY_RENEWAL_CHECK_INTERVAL_TURNS = 6;
@@ -189,8 +190,7 @@ export async function processPartyRenewal(
         { projection: { electionId: 1, totalVotes: 1, candidateParties: 1, finalized: 1 } }
       )
       .toArray(),
-    db
-      .collection<PartyRow>("politicalParties")
+    politicalPartiesCollection<PartyRow>(db)
       .find(
         { countryId: { $in: dueCountries }, isDefunct: { $ne: true } },
         {
@@ -551,7 +551,7 @@ async function applySplinter(
 ): Promise<string> {
   const seq = await getNextSequentialId(db, "party", countryId);
   const partyId = String(seq);
-  await db.collection<PoliticalParty>("politicalParties").insertOne(
+  await politicalPartiesCollection(db).insertOne(
     newPartyDoc(countryId, seq, plan, currentTurn, parent.nationalTaxRate ?? 0, {
       kind: "splinter",
       cycle,
@@ -635,9 +635,9 @@ async function applyFounding(
 
   const seq = await getNextSequentialId(db, "party", countryId);
   const partyId = String(seq);
-  await db
-    .collection<PoliticalParty>("politicalParties")
-    .insertOne(newPartyDoc(countryId, seq, plan, currentTurn, 0, { kind: "founding", cycle }));
+  await politicalPartiesCollection(db).insertOne(
+    newPartyDoc(countryId, seq, plan, currentTurn, 0, { kind: "founding", cycle })
+  );
   if (!base) return partyId;
   await db
     .collection<StatePartyOrg>("statePartyOrg")

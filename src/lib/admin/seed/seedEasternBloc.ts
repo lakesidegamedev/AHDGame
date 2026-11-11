@@ -12,6 +12,7 @@ import { upsertCountryOwnedCorpEntries } from "./upsertCountryOwnedCorps";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export interface EasternBlocSeedConfig {
   countryId: CountryId;
@@ -73,16 +74,18 @@ export async function seedEasternBlocCountry(
     const { seedOrder: _s, validForPresets: _v, ...partyData } = party;
     void _s;
     void _v;
-    const existing = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ name: party.name, countryId: party.countryId });
+    const existing = await politicalPartiesCollection(db).findOne({
+      name: party.name,
+      countryId: party.countryId,
+    });
     if (existing) {
-      await db
-        .collection<PoliticalParty>("politicalParties")
-        .updateOne({ _id: existing._id }, { $set: { ...partyData, updatedAt: now } });
+      await politicalPartiesCollection(db).updateOne(
+        { _id: existing._id },
+        { $set: { ...partyData, updatedAt: now } }
+      );
     } else {
       const sequentialId = await getNextSequentialId(db, "party", party.countryId);
-      await db.collection<PoliticalParty>("politicalParties").insertOne({
+      await politicalPartiesCollection(db).insertOne({
         _id: new ObjectId(),
         sequentialId,
         ...partyData,

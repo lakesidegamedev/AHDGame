@@ -2,6 +2,7 @@ import type { Db } from "@/lib/mongodb";
 import type { ElectedOfficial, NPP, PoliticalParty } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export interface ExecutiveHolder {
   /** Character _id or NPP _id (whichever backs the seat), as a string. */
@@ -37,9 +38,10 @@ export async function resolveExecutiveHolder(
 
   const lookupParty = async (party: string | undefined) => {
     if (!party) return { name: undefined, color: undefined };
-    const p = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ sequentialId: Number(party), countryId });
+    const p = await politicalPartiesCollection(db).findOne({
+      sequentialId: Number(party),
+      countryId,
+    });
     return { name: p?.name, color: p?.color };
   };
 

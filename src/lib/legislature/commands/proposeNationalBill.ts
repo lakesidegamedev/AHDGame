@@ -57,6 +57,7 @@ import { getGovernmentFormationsCollection } from "@/lib/db/collections/governme
 import { caretakerBlocksBill, CARETAKER_BILL_MESSAGE } from "@/lib/elections/rules/caretaker";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 const VOTING_DURATION_HOURS = 24;
 const VOTING_DURATION_MS = VOTING_DURATION_HOURS * 60 * 60 * 1000;
@@ -256,9 +257,10 @@ export async function proposeNationalBill(
   // lifts the banned-party restriction.
   const runtimeState = await getCountryState(db, countryId);
   if (runtimeState.governmentType === "onePartyState" && character.party) {
-    const sponsorParty = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ sequentialId: parseInt(character.party, 10), countryId });
+    const sponsorParty = await politicalPartiesCollection(db).findOne({
+      sequentialId: parseInt(character.party, 10),
+      countryId,
+    });
     // RUNTIME shape, not `config` — see the note in `nationalBillActions`: the
     // static config never learns about a conversion, so it would silently
     // disable this guard for a runtime-converted one-party state.

@@ -26,6 +26,7 @@ import { materializeRussianCouncilRepeatOpening } from "./councilRepeatOpening";
 import { planRussianCouncilNpcSlates } from "./rules/councilNpcSlates";
 import { GAME_STATE_PRE_ITERATION_FIELDS } from "@/lib/db/collections/gameState";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export async function materializeRussianCouncilNpcAdmission(input: {
   db: Db;
@@ -155,8 +156,7 @@ export async function materializeRussianCouncilNpcAdmission(input: {
     )
   )
     return null;
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const parties = await politicalPartiesCollection(db)
     .find(
       { countryId: "RU", regimeStatus: { $ne: "banned" } },
       { session, projection: { sequentialId: 1 } }

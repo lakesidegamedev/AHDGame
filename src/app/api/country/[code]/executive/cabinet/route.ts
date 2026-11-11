@@ -28,6 +28,7 @@ import { getGameTime } from "@/lib/time/gameTime";
 import { getCountryState } from "@/lib/countryState";
 import { canReshuffle, getReshuffleIdentity } from "@/lib/countries/uk/cabinet/reshuffleLimit";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ code: string }> }) {
   try {
@@ -92,8 +93,7 @@ async function handleParliamentaryCabinet(countryId: CountryId) {
         ],
       })
       .toArray(),
-    db
-      .collection<PoliticalParty>("politicalParties")
+    politicalPartiesCollection(db)
       .find({ countryId })
       .project({ sequentialId: 1, name: 1, color: 1, logoUrl: 1 })
       .toArray(),

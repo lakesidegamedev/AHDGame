@@ -22,6 +22,8 @@ import type {
 import { detectAutomationTiming } from "./automationDetection";
 import { getCharactersCollection } from "@/lib/db/collections/characters";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import type { Document } from "mongodb";
 
 export interface SuspiciousDetectionResult {
   flagged: number;
@@ -898,8 +900,7 @@ async function detectCoordinatedFunding(
 
   // Resolve party names for display
   const involvedPartyIds = [...new Set([...charEvidence.values()].flat().map((e) => e.partyId))];
-  const parties = await db
-    .collection("politicalParties")
+  const parties = await politicalPartiesCollection<Document>(db)
     .find(
       { _id: { $in: involvedPartyIds.map((id) => new ObjectId(id)) } },
       { projection: { _id: 1, name: 1 } }

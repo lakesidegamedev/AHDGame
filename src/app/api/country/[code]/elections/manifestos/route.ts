@@ -23,6 +23,7 @@ import type { PoliticalParty } from "@/lib/db/types";
 import { pledgeCatalogFor } from "@/lib/countries/uk/manifesto/pledgeCatalog";
 import { getManifestosForElections } from "@/lib/db/collections/manifestos";
 import { MANIFESTO_PLEDGE_COUNT, MAX_MANIFESTO_ELECTION_IDS } from "@/lib/db/types/manifesto";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 // withNoStore: the body is per-user (your party, your pledges). The header also
 // carries `no-transform`, which stops Cloudflare re-compressing the JSON with
@@ -68,9 +69,10 @@ export const GET = withNoStore(
       if (!auth.ok) return auth.response;
 
       const db = await getDb();
-      const party = await db
-        .collection<PoliticalParty>("politicalParties")
-        .findOne({ countryId, chairId: auth.user.character._id });
+      const party = await politicalPartiesCollection(db).findOne({
+        countryId,
+        chairId: auth.user.character._id,
+      });
 
       const catalog = pledgeCatalogFor(countryId).map((e) => ({
         id: e.id,

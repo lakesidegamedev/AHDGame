@@ -16,6 +16,7 @@ import type {
 import { formatElectionTypeLabel, MULTI_SEAT_TYPES } from "@/lib/utils/electionLabels";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export async function updatePoliticianPagesAfterElection(
   db: Db,
@@ -61,7 +62,7 @@ export async function updatePoliticianPagesAfterElection(
     // cand.party stores the sequentialId as a string.
     const candPartySeqId = Number(cand.party);
     const party = Number.isFinite(candPartySeqId)
-      ? await db.collection<PoliticalParty>("politicalParties").findOne({
+      ? await politicalPartiesCollection(db).findOne({
           sequentialId: candPartySeqId,
           countryId: election.countryId ?? "US",
         })

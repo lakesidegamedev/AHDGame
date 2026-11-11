@@ -5,6 +5,7 @@ import type { ElectedOfficial, NPP, PoliticalParty } from "@/lib/db/types";
 import { buildVotesByParty, type VoteByParty } from "@/lib/congress/billVoting";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export type { VoteByParty };
 
@@ -119,10 +120,7 @@ export async function computeParliamentaryGovernmentTally(
     return { votesFor: 0, votesAgainst: 0, voteByParty: [] };
   }
 
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
-    .find({ countryId })
-    .toArray();
+  const parties = await politicalPartiesCollection(db).find({ countryId }).toArray();
   const partyMap = new Map(parties.map((p) => [String(p.sequentialId), p]));
 
   const keys = Object.keys(votes);
@@ -295,10 +293,7 @@ export async function computeCongressLeadershipTally(
     return { votesFor: 0, votesAgainst: 0, voteByParty: [] };
   }
 
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
-    .find({ countryId: "US" })
-    .toArray();
+  const parties = await politicalPartiesCollection(db).find({ countryId: "US" }).toArray();
   const partyMap = new Map(parties.map((p) => [String(p.sequentialId), p]));
 
   const keys = Object.keys(votes);

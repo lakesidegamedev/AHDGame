@@ -26,6 +26,7 @@ import { isCountryEnabledForPlayers } from "@/lib/countryAccess";
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export type CheckSeverity = "required" | "recommended";
 
@@ -67,7 +68,10 @@ export async function assessCountryV1Readiness(
 
   const [npps, parties, lowerChamberNppSeats, states, enabledForPlayers] = await Promise.all([
     db.collection("npps").countDocuments({ countryId, retiredAt: null }),
-    db.collection("politicalParties").countDocuments({ countryId, isDefunct: { $ne: true } }),
+    politicalPartiesCollection<Document>(db).countDocuments({
+      countryId,
+      isDefunct: { $ne: true },
+    }),
     electedOfficialsCollection<Document>(db).countDocuments({
       countryId,
       officeType: lowerOffice,

@@ -13,6 +13,7 @@ import {
   PRESSURE_LADDER_MAX_VALUE,
   effectivePsCost,
 } from "@/lib/turn/politicalStrength/strengthConstants";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 /**
  * Shared command that debits Political Strength for a party action and
@@ -150,7 +151,7 @@ export async function spendPoliticalStrength(
     updatedPS = updated.politicalStrength;
     currentPS = updatedPS;
   } else {
-    const partyCol = db.collection<PoliticalParty>("politicalParties");
+    const partyCol = politicalPartiesCollection(db);
     const partyFilter = {
       countryId: input.countryId,
       sequentialId: Number(input.partyId),

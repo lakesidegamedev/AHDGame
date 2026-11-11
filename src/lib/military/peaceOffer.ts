@@ -6,6 +6,8 @@ import type { CountryId, GovernmentType } from "@/lib/constants/countries";
 import { validatePeaceTerm, type PeaceTerm } from "@/lib/military/peaceTerm";
 import { isConflictConcluded } from "@/lib/military/conflictLifecycle";
 import { opposedBelligerents, progressForSide, type Side } from "@/lib/military/occupation";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import type { Document } from "mongodb";
 
 export type PeaceOfferCheck = { ok: true } | { ok: false; error: string };
 
@@ -238,8 +240,7 @@ export async function loadPartyChoicesFor(
   const out = new Map<CountryId, PeaceTermPartyChoice[]>(wanted.map((id) => [id, []]));
   if (wanted.length === 0) return out;
 
-  const parties = await db
-    .collection("politicalParties")
+  const parties = await politicalPartiesCollection<Document>(db)
     .find<{
       countryId?: CountryId;
       sequentialId?: number;

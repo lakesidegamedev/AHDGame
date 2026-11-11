@@ -16,6 +16,7 @@ import { canCharacterJoinParty } from "@/lib/parties/partyFrontier";
 import { isSameCountry } from "@/lib/api/sameCountry";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 const bodySchema = z.object({
   action: z.enum(["accept", "decline"]),
@@ -82,12 +83,10 @@ export async function POST(
 
     // Helper to drop the request (used by every terminal branch below).
     const removeRequest = () =>
-      db
-        .collection<PoliticalParty>("politicalParties")
-        .updateOne(
-          { _id: party._id },
-          { $pull: { pendingJoinRequests: { characterId: requesterId } }, $set: { updatedAt: now } }
-        );
+      politicalPartiesCollection(db).updateOne(
+        { _id: party._id },
+        { $pull: { pendingJoinRequests: { characterId: requesterId } }, $set: { updatedAt: now } }
+      );
 
     const requester = await charactersCollection(db).findOne({ _id: requesterId });
 

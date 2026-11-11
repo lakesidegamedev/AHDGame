@@ -16,6 +16,7 @@ import {
 } from "./rules/listVacancies1991";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export const HU_1991_LIST_REPLACEMENTS_COLLECTION = "hu1991ListReplacements";
 interface ReplacementReceipt {
@@ -184,7 +185,7 @@ export async function designateHu1991ListDeputy(input: {
     const context = await readContext(db, turn, session);
     const vacancy = context?.vacancies.find((row) => row.slotPersonId === input.slotPersonId);
     if (!context || context.parent._id !== input.receiptId || !vacancy) return false;
-    const party = await db.collection<PoliticalParty>("politicalParties").findOne(
+    const party = await politicalPartiesCollection(db).findOne(
       {
         countryId: "HU",
         $expr: { $eq: [{ $toString: "$sequentialId" }, vacancy.mandate.partyId] },
@@ -395,8 +396,7 @@ export async function advanceHu1991ListVacancy(db: Db, turn: number, now: Date):
     )
   )
     return false;
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const parties = await politicalPartiesCollection(db)
     .find(
       {
         countryId: "HU",

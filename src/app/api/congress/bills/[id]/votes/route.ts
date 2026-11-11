@@ -23,6 +23,7 @@ import {
 } from "@/lib/congress/billVoteChamberScope";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 interface IndividualVote {
   id: string;
@@ -123,8 +124,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     ]);
 
     // Build slug→sequentialId reverse map for NPP party slug resolution
-    const allParties = await db
-      .collection<PoliticalParty>("politicalParties")
+    const allParties = await politicalPartiesCollection(db)
       .find({ countryId: country })
       .project({ sequentialId: 1, slug: 1 })
       .toArray();

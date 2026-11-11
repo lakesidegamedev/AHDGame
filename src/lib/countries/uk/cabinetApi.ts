@@ -54,6 +54,7 @@ import { canReshuffle, getReshuffleIdentity } from "@/lib/countries/uk/cabinet/r
 import { captureOfficeTransition } from "@/lib/analytics/officeTransitionAnalytics";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export {
   reselectionRiskFor,
@@ -285,9 +286,10 @@ export async function appointCabinetMemberHandler(request: Request, countryId: C
     // cabinet, even when the seat requirement is lifted.
     if (isOps) {
       const appointeePartySeqId = parseInt(targetChar.party ?? "0", 10);
-      const appointeeParty = await db
-        .collection<PoliticalParty>("politicalParties")
-        .findOne({ sequentialId: appointeePartySeqId, countryId });
+      const appointeeParty = await politicalPartiesCollection(db).findOne({
+        sequentialId: appointeePartySeqId,
+        countryId,
+      });
       // RUNTIME shape, not `config`. `isOps` above is already read from runtime;
       // passing the static config here re-tested `isOnePartyState` against a
       // value that never learns about a conversion, so the ban never bit for a
@@ -846,9 +848,10 @@ export async function reshuffleCabinetHandler(request: Request, countryId: Count
       }
       if (isOps) {
         const appointeePartySeqId = parseInt(targetChar.party ?? "0", 10);
-        const appointeeParty = await db
-          .collection<PoliticalParty>("politicalParties")
-          .findOne({ sequentialId: appointeePartySeqId, countryId });
+        const appointeeParty = await politicalPartiesCollection(db).findOne({
+          sequentialId: appointeePartySeqId,
+          countryId,
+        });
         if (isBannedParty({ governmentType: runtime.governmentType }, appointeeParty)) {
           throw forbidden("Members of banned parties cannot be appointed to cabinet.");
         }

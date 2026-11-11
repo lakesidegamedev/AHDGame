@@ -5,6 +5,7 @@ import type { NationalPartyElection, NationalPartyVote, PoliticalParty } from "@
 import { type CountryId } from "@/lib/constants/countries";
 import { applyOptionalCountryScope } from "./nationalPartyElectionScope";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 // ─── Quorum Acceleration ─────────────────────────────────────────────────────
 
@@ -66,8 +67,7 @@ export async function applyQuorumAcceleration(
     countryId
   );
   const [parties, priorCompletedChairs] = await Promise.all([
-    db
-      .collection<PoliticalParty>("politicalParties")
+    politicalPartiesCollection(db)
       .find({
         sequentialId: { $in: partySequentialIds },
         countryId: { $in: partyCountryIds },

@@ -17,6 +17,7 @@ import { getPartyRoleLabel } from "@/lib/parties/partyRoleLabels";
 import { createTurnBackedWindow } from "@/lib/time/turnBackedWindow";
 import { insertManyIgnoringDuplicateKey } from "@/lib/elections/duplicateKey";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export const COMMITTEE_ELECTION_DURATION_TURNS = 168; // 168 turns = 1 week
 export const COMMITTEE_SIZE = 6; // Maximum committee members
@@ -56,7 +57,7 @@ async function findPartyByElectionPartyId(
     return null;
   }
   // Always use countryId to find the correct party (sequentialId is only unique within a country)
-  return db.collection<PoliticalParty>("politicalParties").findOne({ sequentialId, countryId });
+  return politicalPartiesCollection(db).findOne({ sequentialId, countryId });
 }
 
 export async function createMissingCommitteeElections(
@@ -72,7 +73,7 @@ export async function createMissingCommitteeElections(
   const scopedActiveElectionQuery = applyOptionalCountryScope({ status: "voting" }, countryId);
 
   const [parties, activeElections] = await Promise.all([
-    db.collection<PoliticalParty>("politicalParties").find(scopedPartiesQuery).toArray(),
+    politicalPartiesCollection(db).find(scopedPartiesQuery).toArray(),
     db
       .collection<NationalCommitteeElection>("nationalCommitteeElections")
       .find(scopedActiveElectionQuery)
@@ -196,7 +197,7 @@ export async function processCompletedCommitteeElections(
       .find({ electionId: { $in: electionIds } })
       .toArray(),
     partyQueries.length > 0
-      ? db.collection<PoliticalParty>("politicalParties").find({ $or: partyQueries }).toArray()
+      ? politicalPartiesCollection(db).find({ $or: partyQueries }).toArray()
       : Promise.resolve([] as PoliticalParty[]),
   ]);
 
@@ -351,7 +352,7 @@ export async function processCompletedCommitteeElections(
       { $set: { status: "completed", resolvedAt: now } }
     );
 
-  await db.collection<PoliticalParty>("politicalParties").bulkWrite(partyOps);
+  await politicalPartiesCollection(db).bulkWrite(partyOps);
   await Promise.all(notifications);
 
   if (endedElections.length > 0) {

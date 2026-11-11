@@ -13,6 +13,7 @@ import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 // GET /api/country/[code]/region/[id]/legislature — Return the state senate composition and current officials for a region
 // Auth: public
@@ -41,10 +42,7 @@ export async function GET(
       .toArray();
 
     // Filter parties by country to avoid cross-country sequential ID collisions
-    const parties = await db
-      .collection<PoliticalParty>("politicalParties")
-      .find({ countryId })
-      .toArray();
+    const parties = await politicalPartiesCollection(db).find({ countryId }).toArray();
     const partyMap = new Map(parties.map((p) => [String(p.sequentialId), p]));
 
     const composition: Record<

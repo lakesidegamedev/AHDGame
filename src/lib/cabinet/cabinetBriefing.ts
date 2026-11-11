@@ -150,6 +150,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 /** Assembles the cabinet position briefing payload for the viewing user. */
 export async function buildCabinetBriefing(
@@ -181,12 +182,10 @@ export async function buildCabinetBriefing(
   const [partyDoc, holderChar] = member
     ? await Promise.all([
         member.party
-          ? db
-              .collection<PoliticalParty>("politicalParties")
-              .findOne(
-                { countryId, sequentialId: Number(member.party) },
-                { projection: { name: 1, color: 1, logoUrl: 1 } }
-              )
+          ? politicalPartiesCollection(db).findOne(
+              { countryId, sequentialId: Number(member.party) },
+              { projection: { name: 1, color: 1, logoUrl: 1 } }
+            )
           : null,
         member.characterId
           ? charactersCollection(db).findOne(

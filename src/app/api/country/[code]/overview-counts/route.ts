@@ -19,6 +19,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export type { OverviewCounts } from "@/lib/country/overviewCounts";
 
@@ -188,7 +189,10 @@ async function assembleOverviewCounts(db: Db, countryId: CountryId): Promise<Ove
     navairFormations,
   ] = await Promise.all([
     orNull(
-      db.collection("politicalParties").countDocuments({ countryId, isDefunct: { $ne: true } })
+      politicalPartiesCollection<Document>(db).countDocuments({
+        countryId,
+        isDefunct: { $ne: true },
+      })
     ),
     orNull(countPoliticians(db, countryId)),
     orNull(db.collection("elections").countDocuments({ countryId, status: "active" })),

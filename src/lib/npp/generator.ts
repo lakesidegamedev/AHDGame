@@ -35,6 +35,7 @@ import { holdPartyTerritory, withPartyTerritoryMutation } from "@/lib/parties/te
 import fs from "fs";
 import path from "path";
 import { JP_ETHNICITY_WEIGHTS } from "@/lib/countries/jp/data/jpNppEthnicity";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 // ── Politician image pool (country/gender/ethnicity-gated) ───────────────────
 
@@ -451,9 +452,7 @@ async function generatePolicyPositions(
   const party = !Number.isFinite(seqId)
     ? null
     : (context?.partyPositions?.get(`${countryId}:${seqId}`) ??
-      (await db
-        .collection<PoliticalParty>("politicalParties")
-        .findOne({ sequentialId: seqId, countryId })));
+      (await politicalPartiesCollection(db).findOne({ sequentialId: seqId, countryId })));
 
   // Default positions if party not found
   let baseEconomic = 0;

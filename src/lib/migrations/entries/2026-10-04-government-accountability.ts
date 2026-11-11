@@ -12,6 +12,7 @@ import {
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export const migration: Migration = {
   id: "2026-10-04-government-accountability",
@@ -39,8 +40,7 @@ export const migration: Migration = {
       gameStateCollection<{ _id: string; currentTurn?: number; preset?: string }>(db).findOne({
         _id: "current",
       }),
-      db
-        .collection<PoliticalParty>("politicalParties")
+      politicalPartiesCollection(db)
         .find({
           isDefault: false,
           createdTurn: { $exists: false },
@@ -141,7 +141,7 @@ export const migration: Migration = {
       // already-earned maturity, and begin observing younger parties now.
       const matureAtTurn = Number.isFinite(age) && age >= 48 * 3600000 ? turn : turn + 48;
       if (!dryRun)
-        await db.collection<PoliticalParty>("politicalParties").updateOne(
+        await politicalPartiesCollection(db).updateOne(
           {
             _id: party._id,
             createdTurn: { $exists: false },

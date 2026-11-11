@@ -3,6 +3,7 @@ import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { handleRouteError } from "@/lib/api/errors";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 // Maps CountryId to the ISO 3166-1 numeric code used by the world map
 const COUNTRY_TO_ISO: Record<string, string> = {
@@ -82,13 +83,12 @@ export async function GET() {
 
     const parties =
       partyLookupPairs.length > 0
-        ? await db
-            .collection<{
-              countryId: string;
-              sequentialId: number;
-              name: string;
-              color?: string;
-            }>("politicalParties")
+        ? await politicalPartiesCollection<{
+            countryId: string;
+            sequentialId: number;
+            name: string;
+            color?: string;
+          }>(db)
             .find(
               { $or: partyLookupPairs },
               { projection: { countryId: 1, sequentialId: 1, name: 1, color: 1 } }

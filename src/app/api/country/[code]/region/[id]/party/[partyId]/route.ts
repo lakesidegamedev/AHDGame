@@ -50,6 +50,7 @@ import { getTreasuryForecast, getTreasuryReserveSummary } from "@/lib/partyTreas
 import { countDistinctOfficers } from "@/lib/treasury/payoutCapValues";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; partyId: string }>;
@@ -358,8 +359,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
       .toArray();
     const rivalSeqIds = rivalRows.map((r) => Number(r.partyId)).filter(Boolean);
     const rivalParties = rivalSeqIds.length
-      ? await db
-          .collection<PoliticalParty>("politicalParties")
+      ? await politicalPartiesCollection(db)
           .find({ sequentialId: { $in: rivalSeqIds }, countryId })
           .toArray()
       : [];

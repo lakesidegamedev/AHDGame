@@ -6,6 +6,7 @@ import { getOfficeLabel } from "@/lib/utils/officeTitle";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export type PoliticianType = "character" | "npp";
 
@@ -52,9 +53,10 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
         const partySeqId = parseInt(character.party, 10);
         const charCountry = character.countryId ?? "US";
         if (!isNaN(partySeqId)) {
-          party = await db
-            .collection<PoliticalParty>("politicalParties")
-            .findOne({ sequentialId: partySeqId, countryId: charCountry });
+          party = await politicalPartiesCollection(db).findOne({
+            sequentialId: partySeqId,
+            countryId: charCountry,
+          });
         }
       }
       return NextResponse.json({
@@ -88,9 +90,10 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
         const partySeqId = parseInt(npp.party, 10);
         const nppCountry = npp.countryId ?? "US";
         if (!isNaN(partySeqId)) {
-          party = await db
-            .collection<PoliticalParty>("politicalParties")
-            .findOne({ sequentialId: partySeqId, countryId: nppCountry });
+          party = await politicalPartiesCollection(db).findOne({
+            sequentialId: partySeqId,
+            countryId: nppCountry,
+          });
         }
       }
       return NextResponse.json({

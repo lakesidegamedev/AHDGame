@@ -55,6 +55,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 interface Props {
   params: Promise<{ code: string; id: string }>;
@@ -150,12 +151,10 @@ export default async function GovernorOfficePage({ params }: Props) {
         )
       : Promise.resolve(null),
     hasHolderParty
-      ? db
-          .collection<PoliticalParty>("politicalParties")
-          .findOne(
-            { sequentialId: Number(officeHolder?.party), countryId },
-            { projection: { name: 1, abbreviation: 1, color: 1 } }
-          )
+      ? politicalPartiesCollection(db).findOne(
+          { sequentialId: Number(officeHolder?.party), countryId },
+          { projection: { name: 1, abbreviation: 1, color: 1 } }
+        )
       : Promise.resolve(null),
     getOfficeState(db, countryId, stateId),
     db
@@ -251,8 +250,7 @@ export default async function GovernorOfficePage({ params }: Props) {
         isActive: true,
       })
       .toArray(),
-    db
-      .collection<PoliticalParty>("politicalParties")
+    politicalPartiesCollection(db)
       .find({ countryId })
       .project<{ sequentialId: number; name: string; color: string; logoUrl?: string }>({
         sequentialId: 1,

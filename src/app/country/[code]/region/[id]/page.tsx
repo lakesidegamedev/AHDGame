@@ -56,6 +56,7 @@ import { getRegionOfficialBuckets } from "@/lib/legislature/chamberOfficeType";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 interface Props {
   params: Promise<{ code: string; id: string }>;
@@ -389,8 +390,7 @@ async function renderGenericRegion(countryId: CountryId, regionCode: string) {
       // major parties and are the only records that reliably carry econ/social
       // positions; the semantic `majorPartyIds` codes have no PoliticalParty field
       // to match against, so we select by `isDefault` here.
-      db
-        .collection<PoliticalParty>("politicalParties")
+      politicalPartiesCollection(db)
         .find({ countryId, isDefault: true })
         .project<
           Pick<

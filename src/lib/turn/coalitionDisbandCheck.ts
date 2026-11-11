@@ -4,6 +4,7 @@ import type { Coalition } from "@/lib/db/types/coalition";
 import type { PoliticalParty } from "@/lib/db/types/party";
 import { getGameState } from "@/lib/gameState";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export async function resolveExpiredDisbandVotes(referenceNow = new Date()): Promise<{
   resolved: number;
@@ -47,16 +48,13 @@ export async function resolveExpiredDisbandVotes(referenceNow = new Date()): Pro
       // points at *this* coalition. Pre-fix data could have a party listed here while
       // their coalitionId points elsewhere — unconditional clear would orphan them.
       const memberPartyIds = coalition.members.map((m) => m.partyId);
-      await db
-        .collection<PoliticalParty>("politicalParties")
-        .updateMany(
-          { _id: { $in: memberPartyIds }, coalitionId: coalition._id },
-          { $set: { coalitionId: null } }
-        );
+      await politicalPartiesCollection(db).updateMany(
+        { _id: { $in: memberPartyIds }, coalitionId: coalition._id },
+        { $set: { coalitionId: null } }
+      );
 
       // Notify all member chairs
-      const memberParties = await db
-        .collection<PoliticalParty>("politicalParties")
+      const memberParties = await politicalPartiesCollection(db)
         .find({ _id: { $in: memberPartyIds } })
         .project({ chairId: 1 })
         .toArray();

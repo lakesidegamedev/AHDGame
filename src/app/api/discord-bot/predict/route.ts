@@ -20,6 +20,7 @@ import type {
   PoliticalParty,
 } from "@/lib/db/types";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 interface PredictPartySeats {
   party: string;
@@ -89,8 +90,7 @@ export async function GET(request: Request) {
           $or: [{ countryId: country as CountryId }, { countryId: null as unknown as CountryId }],
         })
         .toArray(),
-      db
-        .collection<PoliticalParty>("politicalParties")
+      politicalPartiesCollection(db)
         .find({ countryId: country as CountryId })
         .toArray(),
       db

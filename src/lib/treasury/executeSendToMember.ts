@@ -31,6 +31,7 @@ import { checkPlayerPayoutCap } from "@/lib/treasury/payoutCap";
 import { countDistinctOfficers } from "@/lib/treasury/payoutCapValues";
 import { TreasuryExecutionUncertainError } from "@/lib/treasury/executionUncertain";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export interface ExecuteSendToMemberArgs {
   db: Db;
@@ -113,9 +114,11 @@ export async function executeSendToMember(
   };
 
   const applyInTransaction = async (session: ClientSession) => {
-    const debitResult = await db
-      .collection<PoliticalParty>("politicalParties")
-      .updateOne({ _id: party._id, treasury: { $gte: amount } }, partyDebit, { session });
+    const debitResult = await politicalPartiesCollection(db).updateOne(
+      { _id: party._id, treasury: { $gte: amount } },
+      partyDebit,
+      { session }
+    );
     if (debitResult.matchedCount === 0) {
       throw badRequest("Insufficient treasury funds");
     }
@@ -130,9 +133,10 @@ export async function executeSendToMember(
   };
 
   const applyWithoutTransaction = async (): Promise<NextResponse | null> => {
-    const debitResult = await db
-      .collection<PoliticalParty>("politicalParties")
-      .updateOne({ _id: party._id, treasury: { $gte: amount } }, partyDebit);
+    const debitResult = await politicalPartiesCollection(db).updateOne(
+      { _id: party._id, treasury: { $gte: amount } },
+      partyDebit
+    );
     if (debitResult.matchedCount === 0) {
       return errorResponse(400, "Insufficient treasury funds");
     }
@@ -142,12 +146,10 @@ export async function executeSendToMember(
     // lets a retry debit again.
     const refundDebit = async (reason: string, cause?: unknown): Promise<void> => {
       try {
-        await db
-          .collection<PoliticalParty>("politicalParties")
-          .updateOne(
-            { _id: party._id },
-            { $inc: { treasury: amount }, $set: { updatedAt: new Date() } }
-          );
+        await politicalPartiesCollection(db).updateOne(
+          { _id: party._id },
+          { $inc: { treasury: amount }, $set: { updatedAt: new Date() } }
+        );
       } catch (refundError) {
         console.error(
           JSON.stringify({

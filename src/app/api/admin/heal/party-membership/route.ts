@@ -6,6 +6,7 @@ import type { NPP, PoliticalParty, State } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 // Map old slug values to party names for migration
 const SLUG_TO_NAME: Record<string, string> = {
@@ -69,7 +70,7 @@ export async function GET() {
         .collection<NPP>("npps")
         .find({ party: { $exists: true, $ne: "independent" } })
         .toArray(),
-      db.collection<PoliticalParty>("politicalParties").find({}).toArray(),
+      politicalPartiesCollection(db).find({}).toArray(),
     ]);
 
     // Build party lookup maps - key by country:sequentialId for uniqueness
@@ -259,7 +260,7 @@ export async function POST() {
         .collection<NPP>("npps")
         .find({ party: { $exists: true, $ne: "independent" } })
         .toArray(),
-      db.collection<PoliticalParty>("politicalParties").find({}).toArray(),
+      politicalPartiesCollection(db).find({}).toArray(),
     ]);
 
     // Build party lookup maps - key by country:sequentialId for uniqueness

@@ -21,6 +21,7 @@ import { isUKDevolutionRegion } from "@/lib/constants/devolution";
 import { applyFirstMinisterHighDesireBonus } from "@/lib/elections/rules/highDesireElectionBonus";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 /** Election types where the hook is applied. */
 const HOOKED_ELECTION_TYPES = new Set(["commons", "snap_commons", "regionalCouncil", "governor"]);
@@ -214,8 +215,7 @@ function distributeWithinParty(
  * slug-keyed config. Returns a Map<sequentialIdString, slug>.
  */
 export async function buildUKPartySlugMap(db: Db): Promise<Map<string, string>> {
-  const ukParties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const ukParties = await politicalPartiesCollection(db)
     .find({ countryId: "UK" })
     .project<{ sequentialId: number; name: string; abbreviation: string }>({
       sequentialId: 1,

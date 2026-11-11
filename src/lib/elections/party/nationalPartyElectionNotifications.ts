@@ -5,6 +5,7 @@ import type { NationalPartyElectionPosition, PoliticalParty } from "@/lib/db/typ
 import { type CountryId } from "@/lib/constants/countries";
 import { getPartyRoleLabel } from "@/lib/parties/partyRoleLabels";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 async function findPartyByElectionPartyId(
   db: Db,
@@ -16,7 +17,7 @@ async function findPartyByElectionPartyId(
     return null;
   }
   // Always use countryId to find the correct party (sequentialId is only unique within a country)
-  return db.collection<PoliticalParty>("politicalParties").findOne({ sequentialId, countryId });
+  return politicalPartiesCollection(db).findOne({ sequentialId, countryId });
 }
 
 // ─── Notification helpers ────────────────────────────────────────────────────

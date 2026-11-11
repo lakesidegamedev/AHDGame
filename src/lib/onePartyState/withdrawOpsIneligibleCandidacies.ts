@@ -19,6 +19,7 @@ import {
   canFieldLegislativeCandidate,
 } from "@/lib/turn/onePartyConstraints";
 import { removeWithdrawnCandidateFromTally } from "@/lib/elections/engine/tallyCleaner";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export async function withdrawOpsIneligibleCandidacies(
   db: Db,
@@ -54,8 +55,7 @@ export async function withdrawOpsIneligibleCandidacies(
   }
   if (opsConfigByCountry.size === 0) return { withdrawn: 0 };
 
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const parties = await politicalPartiesCollection(db)
     .find({ countryId: { $in: [...opsConfigByCountry.keys()] } })
     .toArray();
   const partyByKey = new Map<string, Pick<PoliticalParty, "regimeStatus">>();

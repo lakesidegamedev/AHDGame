@@ -20,6 +20,7 @@ import { getActingChairId } from "@/lib/parties/actingChair";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 // POST /api/country/[code]/parties/[id]/join — Join a political party
 // Auth: requireAuthWithCharacter
@@ -130,7 +131,7 @@ export async function POST(
         (r) => String(r.characterId) === String(auth.character._id)
       );
       if (!alreadyRequested) {
-        await db.collection<PoliticalParty>("politicalParties").updateOne(
+        await politicalPartiesCollection(db).updateOne(
           { _id: party._id },
           {
             $push: {

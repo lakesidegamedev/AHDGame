@@ -37,6 +37,7 @@ import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import type { Document } from "mongodb";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export type NationalBillActionInput =
   | { action: "vote"; vote: "for" | "against" | "abstain" }
@@ -97,9 +98,10 @@ export async function performNationalBillAction(
   // lifts the banned-party restriction.
   const runtimeState = await getCountryState(db, countryId);
   if (runtimeState.governmentType === "onePartyState" && character.party) {
-    const voterParty = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ sequentialId: parseInt(character.party, 10), countryId });
+    const voterParty = await politicalPartiesCollection(db).findOne({
+      sequentialId: parseInt(character.party, 10),
+      countryId,
+    });
     // RUNTIME shape, not `config`. `isBannedParty` re-tests `isOnePartyState`
     // itself, and the static config never learns about a conversion — so passing
     // it here would make this whole guard inert for a country converted at
