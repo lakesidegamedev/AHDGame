@@ -57,6 +57,7 @@ import { UKR_ECONOMY } from "@/lib/countries/ukr/economy";
 import { BAL_ECONOMY } from "@/lib/countries/bal/economy";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { CA_ECONOMY } from "@/lib/countries/ca/economy";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 /**
  * Shared national policy-record assembly — extracted verbatim from
@@ -164,8 +165,7 @@ export async function loadCountryLegislationTypes(
   db: Db,
   countryId: CountryId
 ): Promise<CountryLegislationTypes> {
-  const dbLegislationTypes = await db
-    .collection<LegislationType>("legislationTypes")
+  const dbLegislationTypes = await legislationTypesCollection(db)
     .find(getCountryLegislationTypeQuery(countryId))
     .toArray();
   const legislationTypeMap = new Map<string, LegislationType>();

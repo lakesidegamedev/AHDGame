@@ -17,6 +17,8 @@ import { getMultiSeatMinShare } from "@/lib/elections/resolution/seatAllocation"
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 
 /**
  * True for single-winner legislative races that use the officeholder-based flat
@@ -103,15 +105,13 @@ async function loadIncumbencyHistory(
     return { tallyByElection: new Map(), candidatesByElection: new Map() };
   }
   const [tallies, candidates] = await Promise.all([
-    db
-      .collection<ElectionVoteTally>("electionVoteTallies")
+    electionVoteTalliesCollection(db)
       .find(
         { electionId: { $in: electionIds } },
         { projection: { electionId: 1, finalized: 1, totalVotes: 1 } }
       )
       .toArray(),
-    db
-      .collection<ElectionCandidate>("electionCandidates")
+    electionCandidatesCollection(db)
       .find(
         { electionId: { $in: electionIds } },
         { projection: { electionId: 1, characterId: 1, nppId: 1 } }

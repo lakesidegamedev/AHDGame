@@ -48,6 +48,7 @@ import {
 import { enactAutomaticOrganizationWar } from "@/lib/internationalOrganizations/enactAutomaticWarDeclaration";
 import { loadPolicyHeadSponsors } from "@/lib/internationalOrganizations/policyHeadSponsors";
 import { getNppsCollection } from "@/lib/db/collections/npps";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 
 async function getPolicyHeadSponsor(
   db: Db,
@@ -56,8 +57,7 @@ async function getPolicyHeadSponsor(
   const playerHead = await getHeadOfGovernmentCharacter(db, countryId);
   if (playerHead) return { ...playerHead, isNpp: false };
 
-  const formation = await db
-    .collection<GovernmentFormation>("governmentFormations")
+  const formation = await governmentFormationsCollection(db)
     .findOne({ _id: countryId, status: "formed" });
   const headNppId = formation?.presidentNppId ?? formation?.pmNppId ?? null;
   if (!headNppId) return null;

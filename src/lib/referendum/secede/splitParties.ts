@@ -31,6 +31,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 /** Region-party ledger collections dissolved on secession (the new country reseeds). */
 const REGION_PARTY_LEDGERS = [
@@ -62,8 +63,7 @@ export async function splitParties(
   const officials = await electedOfficialsCollection(db)
     .find({ countryId: fromCountryId })
     .toArray();
-  const orgs = await db
-    .collection<StatePartyOrg>("statePartyOrg")
+  const orgs = await statePartyOrgCollection(db)
     .find({ countryId: fromCountryId })
     .toArray();
 
@@ -261,8 +261,8 @@ export async function splitParties(
       refunds.set(oldSeq, (refunds.get(oldSeq) ?? 0) + (org.treasury ?? 0));
     }
   }
-  if (movedOrgs.length) await db.collection<StatePartyOrg>("statePartyOrg").insertMany(movedOrgs);
-  await db.collection<StatePartyOrg>("statePartyOrg").deleteMany({
+  if (movedOrgs.length) await statePartyOrgCollection(db).insertMany(movedOrgs);
+  await statePartyOrgCollection(db).deleteMany({
     countryId: fromCountryId,
     $or: [{ stateId: regionId }, { partyId: { $in: plan.wholesale.map(String) } }],
   });

@@ -25,6 +25,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import type { Document } from "mongodb";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 export async function GET(
   request: Request,
@@ -147,8 +148,7 @@ async function serveRegionalBudget(
   // Fetch legislation types to look up policyDomain and annualCostPerCapita
   // (legacy policies only — v2 laws price through the shared cost engine).
   const legTypeIds = spendingPolicies.map((p) => p.legislationTypeId);
-  const legTypes = await db
-    .collection<LegislationType>("legislationTypes")
+  const legTypes = await legislationTypesCollection(db)
     .find({ _id: { $in: legTypeIds } })
     .toArray();
 

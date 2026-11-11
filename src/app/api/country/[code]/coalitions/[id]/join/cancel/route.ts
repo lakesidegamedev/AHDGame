@@ -8,6 +8,7 @@ import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { canActAsChair } from "@/lib/parties/actingChair";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
 
 // POST /api/coalitions/[id]/join/cancel — Cancel a pending join request
 export async function POST(
@@ -55,8 +56,7 @@ export async function POST(
     }
 
     // Find the coalition
-    const coalition = await db
-      .collection<Coalition>("coalitions")
+    const coalition = await coalitionsCollection(db)
       .findOne({ sequentialId: Number(id), countryId });
     if (!coalition) {
       throw notFound("Coalition not found.");
@@ -70,7 +70,7 @@ export async function POST(
 
     const now = new Date();
 
-    await db.collection<Coalition>("coalitions").updateOne(
+    await coalitionsCollection(db).updateOne(
       { _id: coalition._id },
       {
         $pull: { joinRequests: { partyId: party._id } },

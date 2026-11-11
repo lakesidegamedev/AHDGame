@@ -23,6 +23,7 @@ import CrisisAdminActions from "./CrisisAdminActions";
 import CrisisV2Detail from "./CrisisV2Detail";
 import { loadCrisisV2Detail } from "@/lib/crises/queries/crisisV2View";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { crisesCollection } from "@/lib/db/repositories/crises";
 
 // UN General Assembly — shared with the crises list hero so the two surfaces
 // read as one section. https://unsplash.com/photos/41Wj4KxB7BA
@@ -161,8 +162,7 @@ export async function generateMetadata({
   if (!ObjectId.isValid(id)) return {};
 
   const db = await getDb();
-  const crisis = await db
-    .collection<Crisis>("crises")
+  const crisis = await crisesCollection(db)
     .findOne(
       { _id: new ObjectId(id) },
       { projection: { name: 1, description: 1, scope: 1, countryIds: 1 } }
@@ -208,7 +208,7 @@ export default async function CrisisDetailPage({ params }: { params: Promise<{ i
 
   const db = await getDb();
   const [crisis, gameState, admin, viewer] = await Promise.all([
-    db.collection<Crisis>("crises").findOne({ _id: new ObjectId(id) }),
+    crisesCollection(db).findOne({ _id: new ObjectId(id) }),
     getGameState(db),
     getAuthAdmin(),
     getAuthUserWithCharacter(),

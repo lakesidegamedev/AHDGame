@@ -11,6 +11,7 @@ import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
 
 const declineSchema = z.object({
   partySequentialId: z.number().int().positive(),
@@ -47,8 +48,7 @@ export async function POST(
     const db = await getDb();
 
     // Find coalition, verify caller is coalition chair
-    const coalition = await db
-      .collection<Coalition>("coalitions")
+    const coalition = await coalitionsCollection(db)
       .findOne({ sequentialId: Number(id), countryId });
     if (!coalition) {
       throw notFound("Coalition not found.");
@@ -77,7 +77,7 @@ export async function POST(
 
     const now = new Date();
 
-    await db.collection<Coalition>("coalitions").updateOne(
+    await coalitionsCollection(db).updateOne(
       { _id: coalition._id },
       {
         $pull: { joinRequests: { partyId: requestingParty._id } },

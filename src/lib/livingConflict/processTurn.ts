@@ -39,6 +39,7 @@ import { loadActiveSevereCrisisRows } from "@/lib/crises/severeCrisisLoad";
 import { syncCampaignCrises, type CampaignTurnState } from "./campaignCrisis";
 import { mergeSevereLoads, severeLoadByCountry } from "@/lib/crises/rules/severeLoad";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { crisesCollection } from "@/lib/db/repositories/crises";
 
 function roleMapForEvent(
   def: ReturnType<typeof allLivingConflictDefs>[number],
@@ -104,19 +105,16 @@ export async function materializeLivingConflictEvent(
   driven: DrivenEvent,
   currentTurn: number
 ): Promise<{ opened: boolean; blockedByActiveWindow: boolean }> {
-  const existing = await db
-    .collection<Crisis>("crises")
+  const existing = await crisesCollection(db)
     .findOne({ livingConflictEventId: driven.fired.id }, { projection: { _id: 1 } });
   if (existing) return { opened: false, blockedByActiveWindow: false };
-  const activeGlobalWindow = await db
-    .collection<Crisis>("crises")
+  const activeGlobalWindow = await crisesCollection(db)
     .findOne(
       { "globalResponse.conflictKey": def.key, status: "active" },
       { projection: { _id: 1, startTurn: 1, durationTurns: 1 }, sort: { startTurn: -1 } }
     );
   const activeNegotiationWindow = driven.fired.event.negotiation
-    ? await db
-        .collection<Crisis>("crises")
+    ? await crisesCollection(db)
         .findOne(
           { livingConflictEventId: { $regex: `^${def.key}:` }, status: "active" },
           { projection: { _id: 1, startTurn: 1, durationTurns: 1 }, sort: { startTurn: -1 } }

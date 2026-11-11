@@ -21,6 +21,7 @@ import {
   type CountryId,
 } from "@/lib/constants/countries";
 import type { GovernmentFormation, NoConfidenceVote } from "@/lib/db/types/governmentFormation";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 
 /** Hours the no-confidence vote stays open. Mirrors the player-driven path. */
 const SYSTEM_NO_CONFIDENCE_HOURS = 24;
@@ -45,8 +46,7 @@ export async function triggerSystemNoConfidence(
     return { triggered: false, reason: "no-confidence-mechanism" };
   }
 
-  const formation = await db
-    .collection<GovernmentFormation>("governmentFormations")
+  const formation = await governmentFormationsCollection(db)
     .findOne({ _id: countryId });
 
   if (!formation || formation.status !== "formed" || !formation.pmCharacterId) {
@@ -83,8 +83,7 @@ export async function triggerSystemNoConfidence(
 
   // Stamp the active vote on the formation row so player-driven
   // proposeNoConfidence can't double-fire while this is in progress.
-  await db
-    .collection<GovernmentFormation>("governmentFormations")
+  await governmentFormationsCollection(db)
     .updateOne({ _id: countryId }, { $set: { activeVoteId: voteId, updatedAt: now } });
 
   return { triggered: true, voteId: voteId.toString() };

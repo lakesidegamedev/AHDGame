@@ -30,6 +30,11 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import type { Document } from "mongodb";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -72,8 +77,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(400, "Cannot start general for completed or cancelled election");
     }
 
-    const candidates = await db
-      .collection<ElectionCandidate>("electionCandidates")
+    const candidates = await electionCandidatesCollection(db)
       .find({ electionId: electionObjectId, status: "active" })
       .toArray();
 
@@ -105,7 +109,7 @@ export async function POST(request: Request, { params }: RouteParams) {
               .find({ _id: { $in: nppIds } })
               .toArray()
           : [],
-        db.collection<StatePartyOrg>("statePartyOrg").find({}).toArray(),
+        statePartyOrgCollection(db).find({}).toArray(),
       ]);
       const charMap = new Map(chars.map((c) => [c._id.toString(), c]));
       // Dead leftover: presidential NPP scoring reads from `enriched`, not this map. Cleanup tracked.
@@ -166,8 +170,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       }
 
       if (loserIds.length > 0) {
-        await db
-          .collection("electionCandidates")
+        await electionCandidatesCollection<Document>(db)
           .updateMany(
             { _id: { $in: loserIds.map((id) => new ObjectId(id)) } },
             { $set: { status: "withdrawn", withdrawnAt: now } }
@@ -181,7 +184,7 @@ export async function POST(request: Request, { params }: RouteParams) {
           .filter((c) => loserIds.includes(c._id.toString()) && c.characterId && !c.isNPP)
           .map((c) => c.characterId!);
         if (loserCharIds.length > 0) {
-          await db.collection("campaigns").updateMany(
+          await campaignsCollection<Document>(db).updateMany(
             {
               electionId: electionObjectId,
               candidateId: { $in: loserCharIds },
@@ -200,13 +203,11 @@ export async function POST(request: Request, { params }: RouteParams) {
       }
     }
 
-    const generalCandidates = await db
-      .collection<ElectionCandidate>("electionCandidates")
+    const generalCandidates = await electionCandidatesCollection(db)
       .find({ electionId: electionObjectId, status: "active" })
       .toArray();
 
-    const existingTally = await db
-      .collection("electionVoteTallies")
+    const existingTally = await electionVoteTalliesCollection<Document>(db)
       .findOne({ electionId: electionObjectId });
 
     if (!existingTally && generalCandidates.length > 0) {

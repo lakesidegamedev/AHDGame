@@ -69,6 +69,9 @@ import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import type { Document } from "mongodb";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 
 /**
  * Derive the canonical LARP end-turn, primary-end-turn, and start-turn for
@@ -238,8 +241,7 @@ export const POST = withAdminRoute(async (_auth) => {
     // already-resolved elections without a per-election round trip.
     const candidateIds = recentCompleted.map((e) => e._id);
     const [finalizedTallies, sittingOfficials] = await Promise.all([
-      db
-        .collection<{ electionId: Election["_id"]; finalized?: boolean }>("electionVoteTallies")
+      electionVoteTalliesCollection<{ electionId: Election["_id"]; finalized?: boolean }>(db)
         .find({ electionId: { $in: candidateIds }, finalized: true })
         .project({ electionId: 1 })
         .toArray(),
@@ -396,11 +398,9 @@ export const POST = withAdminRoute(async (_auth) => {
       await electionsCollection(db).bulkWrite(renumberOps);
     }
     if (toDeletePremature.length > 0) {
-      await db
-        .collection("electionCandidates")
+      await electionCandidatesCollection<Document>(db)
         .deleteMany({ electionId: { $in: toDeletePremature } });
-      await db
-        .collection("electionVoteTallies")
+      await electionVoteTalliesCollection<Document>(db)
         .deleteMany({ electionId: { $in: toDeletePremature } });
       await electionsCollection(db).deleteMany({ _id: { $in: toDeletePremature } });
     }
@@ -688,8 +688,8 @@ export const POST = withAdminRoute(async (_auth) => {
 
   // Delete pruned elections and their candidates
   if (toDelete.length > 0) {
-    await db.collection("electionCandidates").deleteMany({ electionId: { $in: toDelete } });
-    await db.collection("electionVoteTallies").deleteMany({ electionId: { $in: toDelete } });
+    await electionCandidatesCollection<Document>(db).deleteMany({ electionId: { $in: toDelete } });
+    await electionVoteTalliesCollection<Document>(db).deleteMany({ electionId: { $in: toDelete } });
     await electionsCollection(db).deleteMany({ _id: { $in: toDelete } });
   }
 

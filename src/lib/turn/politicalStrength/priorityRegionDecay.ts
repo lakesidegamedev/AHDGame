@@ -2,6 +2,7 @@ import type { Db } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import type { PoliticalParty, StatePartyOrg } from "@/lib/db/types";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 /**
  * Per-turn validator for `Party.priorityRegion`. Auto-evicts ineligible
@@ -46,8 +47,7 @@ export async function processPriorityRegionDecay(
     result.partiesWithCluster += 1;
 
     const partyIdString = String(party.sequentialId);
-    const rows = await db
-      .collection<StatePartyOrg>("statePartyOrg")
+    const rows = await statePartyOrgCollection(db)
       .find({
         countryId: party.countryId,
         partyId: partyIdString,

@@ -7,6 +7,7 @@ import { applyEffectsForCrisis } from "@/lib/crises/interactionEngine";
 import { applyCrisisEffects } from "@/lib/crises/applyEffects";
 import { logWireEvent } from "@/lib/wireEvent";
 import type { CrisisEffect } from "@/lib/db/types/crisis";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 /**
  * Classify a bill status as a resolved aid outcome, or null if still in flight.
@@ -109,7 +110,7 @@ export async function processCrisisAidResolutions(
   let passed = 0;
   let failed = 0;
   for (const c of pending) {
-    const bill = await db.collection<Bill>("bills").findOne({ _id: c.billId });
+    const bill = await billsCollection(db).findOne({ _id: c.billId });
     if (!bill) continue;
     const outcome = isResolvedBillStatus(bill.status);
     if (!outcome) continue;

@@ -21,6 +21,7 @@ import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficia
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 // GET /api/admin/npps — Returns NPP statistics including totals, counts by state and party, and recent NPPs
 // Auth: requireAdmin
@@ -91,8 +92,7 @@ export async function GET() {
       count: p.count,
     }));
 
-    const nppCandidates = await db
-      .collection<ElectionCandidate>("electionCandidates")
+    const nppCandidates = await electionCandidatesCollection(db)
       .countDocuments({
         isNPP: true,
         status: "active",
@@ -234,8 +234,7 @@ export async function DELETE(request: Request) {
       }
 
       // Find all election candidates for these Independent NPPs
-      const independentCandidates = await db
-        .collection<ElectionCandidate>("electionCandidates")
+      const independentCandidates = await electionCandidatesCollection(db)
         .find({
           isNPP: true,
           nppId: { $in: independentNppIds },
@@ -257,8 +256,7 @@ export async function DELETE(request: Request) {
       let candidatesRemoved = 0;
       if (independentCandidates.length > 0) {
         const candidateIds = independentCandidates.map((c) => c._id);
-        const result = await db
-          .collection<ElectionCandidate>("electionCandidates")
+        const result = await electionCandidatesCollection(db)
           .deleteMany({ _id: { $in: candidateIds } });
         candidatesRemoved = result.deletedCount;
       }
@@ -314,13 +312,13 @@ export async function DELETE(request: Request) {
         .toArray();
       const electionIds = elections.map((e) => e._id);
 
-      const result = await db.collection<ElectionCandidate>("electionCandidates").deleteMany({
+      const result = await electionCandidatesCollection(db).deleteMany({
         electionId: { $in: electionIds },
         isNPP: true,
       });
       candidatesRemoved = result.deletedCount;
     } else {
-      const result = await db.collection<ElectionCandidate>("electionCandidates").deleteMany({
+      const result = await electionCandidatesCollection(db).deleteMany({
         isNPP: true,
       });
       candidatesRemoved = result.deletedCount;

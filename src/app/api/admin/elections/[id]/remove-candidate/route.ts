@@ -12,6 +12,9 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { z } from "zod";
 import type { Election, ElectionCandidate } from "@/lib/db/types";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import type { Document } from "mongodb";
 
 const removeCandidateSchema = z.object({
   candidateId: z.string().min(1),
@@ -65,7 +68,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(400, "Invalid candidate ID");
     }
 
-    const candidate = await db.collection<ElectionCandidate>("electionCandidates").findOne({
+    const candidate = await electionCandidatesCollection(db).findOne({
       _id: candidateObjectId,
       electionId: electionObjectId,
       status: "active",
@@ -75,14 +78,13 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(404, "Candidate not found or already withdrawn");
     }
 
-    await db
-      .collection<ElectionCandidate>("electionCandidates")
+    await electionCandidatesCollection(db)
       .updateOne({ _id: candidateObjectId }, { $set: { status: "withdrawn", withdrawnAt: now } });
 
     // Archive (not delete) their campaign so it survives until the election
     // resolves and a re-entry can reactivate it.
     if (candidate.characterId) {
-      await db.collection("campaigns").updateOne(
+      await campaignsCollection<Document>(db).updateOne(
         {
           electionId: electionObjectId,
           candidateId: candidate.characterId,

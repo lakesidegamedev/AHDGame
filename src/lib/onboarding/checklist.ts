@@ -17,6 +17,10 @@ import {
   type TutorialPlan,
 } from "@/lib/onboarding/tutorialPlan";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import type { Document } from "mongodb";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { unionsCollection } from "@/lib/db/repositories/unions";
 
 /**
  * Canonical new-player onboarding checklist.
@@ -304,7 +308,7 @@ export function deriveOnboardingChecklist(
 export async function hasVotedOnAnyBill(db: Db, characterId: ObjectId): Promise<boolean> {
   const key = characterId.toString();
   const [national, state] = await Promise.all([
-    db.collection("bills").countDocuments(
+    billsCollection<Document>(db).countDocuments(
       {
         $or: [
           { [`votes.${key}`]: { $exists: true } },
@@ -336,8 +340,7 @@ export async function loadOnboardingSignals(
     organizedUnion,
   ] = await Promise.all([
     hasVotedOnAnyBill(db, characterId),
-    db
-      .collection("electionCandidates")
+    electionCandidatesCollection<Document>(db)
       .countDocuments({ characterId }, { limit: 1 })
       .then((n) => n > 0),
     corporationsCollection(db)
@@ -367,8 +370,7 @@ export async function loadOnboardingSignals(
         { limit: 1 }
       )
       .then((n) => n > 0),
-    db
-      .collection("unions")
+    unionsCollection<Document>(db)
       .countDocuments({ ownerId: characterId }, { limit: 1 })
       .then((n) => n > 0),
     db

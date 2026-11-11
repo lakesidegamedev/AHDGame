@@ -39,6 +39,7 @@ import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 type SeatScopedOfficial = ElectedOfficial & { seatId?: string };
 
@@ -196,8 +197,7 @@ async function runIntegrityChecks(
     // Orphaned candidates: electionCandidates whose electionId has no matching
     // election. Project to the join key so full documents never cross the join;
     // only existence matters.
-    db
-      .collection("electionCandidates")
+    electionCandidatesCollection<Document>(db)
       .aggregate([
         { $project: { electionId: 1 } },
         {

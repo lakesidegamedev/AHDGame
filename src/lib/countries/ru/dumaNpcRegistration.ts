@@ -12,6 +12,7 @@ import { russianDumaConvocationOfficeCompatible } from "./rules/dumaConvocation"
 import { planRussianDumaNpcSlates } from "./rules/assemblyNpcSlates";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 export async function registerRussianDumaNpcSlates(input: {
   db: Db;
@@ -50,8 +51,7 @@ export async function registerRussianDumaNpcSlates(input: {
       }
     )
     .toArray();
-  const active = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const active = await electionCandidatesCollection(db)
     .find(
       { electionId: { $in: elections.map((row) => row._id) }, status: "active" },
       {
@@ -125,8 +125,7 @@ export async function registerRussianDumaNpcSlates(input: {
     };
   });
   if (documents.length)
-    await db
-      .collection<ElectionCandidate>("electionCandidates")
+    await electionCandidatesCollection(db)
       .insertMany(documents, { session, ordered: true });
   return { created: documents.length, unrepresentedParties: plan.unrepresentedParties };
 }

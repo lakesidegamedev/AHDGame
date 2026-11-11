@@ -10,6 +10,9 @@ import type { RecruitmentSlate, SlateCandidate } from "@/lib/db/types";
 import type { NPPContext } from "./context";
 import { isNppSlateCompliant } from "@/lib/slateAssignments";
 import { removeWithdrawnCandidateFromTally } from "@/lib/elections/engine/tallyCleaner";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import type { Document } from "mongodb";
 
 export interface SlateOverrideMaps {
   /** `${partyId}:${electionId}` for every race a chair is actively slating. */
@@ -149,8 +152,7 @@ export async function reconcileSlateMoves(
   }
   if (compliantNppIds.length === 0) return 0;
 
-  const activeCandidacies = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const activeCandidacies = await electionCandidatesCollection(db)
     .find({ nppId: { $in: compliantNppIds }, status: "active" })
     .toArray();
 
@@ -166,11 +168,10 @@ export async function reconcileSlateMoves(
     // never a race the chair never engaged with (preserves NPP autonomy there).
     if (!maps.chairManagedByPartyElection.has(partyElectionKey(npp.party, electionId))) continue;
 
-    await db
-      .collection<ElectionCandidate>("electionCandidates")
+    await electionCandidatesCollection(db)
       .updateOne({ _id: cand._id }, { $set: { status: "withdrawn", withdrawnAt: now } });
     await removeWithdrawnCandidateFromTally(db, cand.electionId, cand._id.toString());
-    await db.collection("campaigns").updateOne(
+    await campaignsCollection<Document>(db).updateOne(
       { electionId: cand.electionId, candidateId: cand.characterId, status: { $ne: "archived" } },
       {
         $set: {

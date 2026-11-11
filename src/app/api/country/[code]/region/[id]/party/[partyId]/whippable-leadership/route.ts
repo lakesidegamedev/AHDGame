@@ -20,6 +20,7 @@ import { getGameState } from "@/lib/gameState";
 import { impeachmentStageChamberKey } from "@/lib/impeachment/impeachmentTally";
 import type { Impeachment } from "@/lib/db/types/impeachment";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; partyId: string }>;
@@ -63,8 +64,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
 
     const partyKey = getPartyIdString(party);
     const statePartyKey = getStatePartyOrgDocumentId(stateId, party);
-    const statePartyOrg = await db
-      .collection<StatePartyOrg>("statePartyOrg")
+    const statePartyOrg = await statePartyOrgCollection(db)
       .findOne({ _id: statePartyKey });
 
     if (!statePartyOrg) {

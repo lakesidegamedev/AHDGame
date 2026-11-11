@@ -125,6 +125,10 @@ import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 // ─── Accumulate one turn of votes into a tally ───────────────────────────────
 
@@ -200,12 +204,10 @@ export async function accumulateVoteTurn(
 
   const [tally, candidates]: [ElectionVoteTally | null, ElectionCandidate[]] = await Promise.all([
     options?.tally ??
-      db
-        .collection<ElectionVoteTally>("electionVoteTallies")
+      electionVoteTalliesCollection(db)
         .findOne({ electionId }, { projection: TALLY_WITH_SNAPSHOT_TURNS_ONLY }),
     options?.candidates ??
-      db
-        .collection<ElectionCandidate>("electionCandidates")
+      electionCandidatesCollection(db)
         .find({ electionId, status: "active" })
         .toArray(),
   ]);
@@ -271,8 +273,7 @@ export async function accumulateVoteTurn(
       db
         .collection<StateDemographics>("stateDemographics")
         .findOne({ _id: stateId, countryId: election.countryId }),
-      db
-        .collection<StatePartyOrg>("statePartyOrg")
+      statePartyOrgCollection(db)
         .find({ stateId, countryId: election.countryId })
         .toArray(),
       db
@@ -930,8 +931,7 @@ export async function accumulateVoteTurn(
   if (isPrStv) validateRankedBallots(rankedBallots, newTotals);
 
   if (countryHasFeature("ruElections", election.countryId) && election.russianPresidentialRound) {
-    const campaigns = await db
-      .collection<Campaign>("campaigns")
+    const campaigns = await campaignsCollection(db)
       .find({ electionId }, { projection: { candidateId: 1, campaignStrength: 1 } })
       .toArray();
     const strengths = new Map(
@@ -1291,8 +1291,7 @@ export async function accumulateVoteTurn(
     options.tallyWrites.push({ updateOne: { filter: tallyFilter, update: tallyUpdate } });
     return;
   }
-  const write = await db
-    .collection<ElectionVoteTally>("electionVoteTallies")
+  const write = await electionVoteTalliesCollection(db)
     .updateOne(tallyFilter, tallyUpdate);
   if (isPrStv && write.matchedCount !== 1)
     throw new Error("PR-STV accumulation lost its tally revision; retry from persisted ballots");
@@ -1323,7 +1322,7 @@ export async function initElectionVoteTally(
   // Primary ballots accrued during the primary window live on the same doc,
   // and this init runs replaceOne — carry them across or the general-phase
   // re-init silently erases the primary's entire count.
-  const existing = await db.collection<ElectionVoteTally>("electionVoteTallies").findOne(
+  const existing = await electionVoteTalliesCollection(db).findOne(
     { electionId },
     {
       projection: {
@@ -1381,12 +1380,11 @@ export async function initElectionVoteTally(
     if (!existing) {
       // A concurrent initializer can create or accrue the tally while this
       // call validates the race. Never replace the document it produced.
-      await db
-        .collection<ElectionVoteTally>("electionVoteTallies")
+      await electionVoteTalliesCollection(db)
         .updateOne({ electionId }, { $setOnInsert: doc }, { upsert: true });
       return;
     }
-    const replaced = await db.collection<ElectionVoteTally>("electionVoteTallies").replaceOne(
+    const replaced = await electionVoteTalliesCollection(db).replaceOne(
       {
         electionId,
         finalized: false,
@@ -1399,7 +1397,6 @@ export async function initElectionVoteTally(
       throw new Error("Cannot reinitialize a PR-STV tally after its revision changed");
     return;
   }
-  await db
-    .collection<ElectionVoteTally>("electionVoteTallies")
+  await electionVoteTalliesCollection(db)
     .replaceOne({ electionId }, doc, { upsert: true });
 }

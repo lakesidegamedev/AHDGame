@@ -24,6 +24,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { crisesCollection } from "@/lib/db/repositories/crises";
 
 /** Trade partner the page reports against: the player country. */
 const TRADE_PARTNER = COUNTRY_CONFIGS.US.id;
@@ -169,8 +170,7 @@ export async function loadBackgroundCountryView(
         .collection<MembershipDoc>("organizationMemberships")
         .find({ countryId }, { projection: { organizationId: 1, countryId: 1 } })
         .toArray(),
-      db
-        .collection<CrisisDoc & { status?: string; countryIds?: string[] }>("crises")
+      crisesCollection<CrisisDoc & { status?: string; countryIds?: string[] }>(db)
         .find(
           { status: "active", countryIds: countryId },
           {

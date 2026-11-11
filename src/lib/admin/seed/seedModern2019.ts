@@ -19,6 +19,8 @@ import {
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 
 const COUNTRY_IDS = [
   "RU",
@@ -52,7 +54,7 @@ export async function seedModern2019(
       await statesCollection(db).deleteMany({ countryId });
       await db.collection<StateDemographics>("stateDemographics").deleteMany({ countryId });
       await db.collection("stateDemographicTurnout").deleteMany({ countryId });
-      await db.collection<StatePartyOrg>("statePartyOrg").deleteMany({ countryId });
+      await statePartyOrgCollection(db).deleteMany({ countryId });
       await db
         .collection<StateMetrics>("macroMetrics")
         .deleteMany({ _id: { $in: regions.map((r) => r._id) } });
@@ -124,7 +126,7 @@ export async function seedModern2019(
     for (const region of regions) {
       for (const party of parties) {
         const partyId = String(party.sequentialId);
-        await db.collection<StatePartyOrg>("statePartyOrg").updateOne(
+        await statePartyOrgCollection(db).updateOne(
           { _id: `${region._id}_${partyId}` },
           {
             $set: { countryId, stateId: String(region._id), partyId, updatedAt: now },
@@ -170,8 +172,7 @@ export async function seedModern2019(
         formedTurn: null,
         collapsedAt: null,
       };
-      await db
-        .collection<GovernmentFormation>("governmentFormations")
+      await governmentFormationsCollection(db)
         .updateOne(
           { _id: countryId },
           { $set: { ...formation, updatedAt: now }, $setOnInsert: { createdAt: now } },

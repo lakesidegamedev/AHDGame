@@ -25,6 +25,9 @@ import { planRussianCouncilDistricts } from "./rules/councilDistricts";
 import { hasAuthorizedPostSovietTransition } from "./rules/postSovietTransition";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 export const RUSSIAN_COUNCIL_RESULTS_COLLECTION = "russianCouncilElectionResults";
 export interface RussianCouncilResultRecord {
   _id: string;
@@ -78,7 +81,7 @@ export async function materializeRussianCouncilElectionResult(input: {
     { _id: "current" },
     { session, projection: { preset: 1 } }
   );
-  const countries = db.collection<CountryGameState>("countryGameStates");
+  const countries = countryGameStatesCollection(db);
   const country = await countries.findOne(
     { _id: "RU" },
     {
@@ -178,7 +181,7 @@ export async function materializeRussianCouncilElectionResult(input: {
     await loadRussianCouncilCertificationInputs({ db, session, cohort, country });
   const result = resolveRussianCouncilCohort(ballots);
   const outcomes = new Map(result.map((row) => [row.electionId, row.decision.outcome]));
-  const tallies = db.collection<ElectionVoteTally>("electionVoteTallies");
+  const tallies = electionVoteTalliesCollection(db);
   const finalized = await tallies.bulkWrite(
     counted.map((row) => {
       const ballot = ballots.find((ballot) => ballot.id === row.electionId.toHexString())!;
@@ -219,7 +222,7 @@ export async function materializeRussianCouncilElectionResult(input: {
     { session }
   );
   if (resolved.matchedCount !== 89) throw new Error("Council ballots changed during certification");
-  const retired = await db.collection<ElectionCandidate>("electionCandidates").updateMany(
+  const retired = await electionCandidatesCollection(db).updateMany(
     {
       electionId: { $in: cohort.map((row) => row._id) },
       status: "active",

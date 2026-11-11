@@ -20,6 +20,7 @@ import { EXTERNAL_ATTACK_PREMIUM, priceExternalBoost, quoteSelfActionsForGain } 
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 
 /**
  * Maximum NET favorability any one target can be moved by player support/attack
@@ -229,8 +230,7 @@ async function isTargetMediaSustainedAtCap(db: Db, target: Character | NPP): Pro
   // keep those whose per-turn favorability clears the decay-at-cap threshold
   // (mediaLevel × 0.5 ≥ 2.0), with a legacy-level fallback.
   const MEDIA_SUSTAIN_FAV_PER_TURN = MEDIA_SUSTAIN_THRESHOLD * 0.5;
-  const allCampaigns = await db
-    .collection<Campaign>("campaigns")
+  const allCampaigns = await campaignsCollection(db)
     .find(
       { candidateId: target._id },
       { projection: { electionId: 1, mediaSpendingLevel: 1, mediaSpendingTree: 1 } }

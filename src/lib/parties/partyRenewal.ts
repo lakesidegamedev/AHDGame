@@ -63,6 +63,12 @@ import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficia
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import type { Document } from "mongodb";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 
 /** Renewal looks for newly resolved cycles this often. */
 export const PARTY_RENEWAL_CHECK_INTERVAL_TURNS = 6;
@@ -184,8 +190,7 @@ export async function processPartyRenewal(
   const dueCountries = [...due.keys()];
 
   const [tallies, parties, officials, formations, approvals, legacyPoints] = await Promise.all([
-    db
-      .collection<ElectionVoteTally>("electionVoteTallies")
+    electionVoteTalliesCollection(db)
       .find(
         { electionId: { $in: [...due.values()].flatMap((d) => d.electionIds) } },
         { projection: { electionId: 1, totalVotes: 1, candidateParties: 1, finalized: 1 } }
@@ -219,8 +224,7 @@ export async function processPartyRenewal(
         { projection: { countryId: 1, officeType: 1, party: 1, state: 1, seatsHeld: 1, nppId: 1 } }
       )
       .toArray(),
-    db
-      .collection<GovernmentFormation>("governmentFormations")
+    governmentFormationsCollection(db)
       .find(
         { _id: { $in: dueCountries } },
         { projection: { _id: 1, governingPartyId: 1, pmNppId: 1, status: 1 } }
@@ -560,8 +564,7 @@ async function applySplinter(
   );
   const regions = plan.baseRegions.slice(0, MAX_SPLINTER_BASE_REGIONS);
   if (regions.length > 0) {
-    await db
-      .collection<StatePartyOrg>("statePartyOrg")
+    await statePartyOrgCollection(db)
       .insertMany(regions.map((stateId) => baseOrgRow(countryId, stateId, partyId, currentTurn)));
   }
   const nppIds = plan.nppIds.map((id) => new ObjectId(id));
@@ -578,21 +581,18 @@ async function applySplinter(
       { $set: { party: partyId } }
     ),
     // NPP candidacies carry the NPP id as characterId; live ones run under the new banner.
-    db
-      .collection("electionCandidates")
+    electionCandidatesCollection<Document>(db)
       .updateMany(
         { party: parentId, status: "active", characterId: { $in: nppIds } },
         { $set: { party: partyId } }
       ),
-    db
-      .collection("campaigns")
+    campaignsCollection<Document>(db)
       .updateMany(
         { party: parentId, candidateId: { $in: nppIds }, status: { $ne: "archived" } },
         { $set: { party: partyId, updatedAt: now } }
       ),
   ]);
-  const gov = await db
-    .collection<GovernmentFormation>("governmentFormations")
+  const gov = await governmentFormationsCollection(db)
     .findOne({ _id: countryId }, { projection: { _id: 1 } });
   if (gov) {
     const { updateParliamentaryGovernmentSeats } =
@@ -614,8 +614,7 @@ async function applyFounding(
     statesCollection<{ _id: string }>(db)
       .find({ countryId }, { projection: { _id: 1 } })
       .toArray(),
-    db
-      .collection<StatePartyOrg>("statePartyOrg")
+    statePartyOrgCollection(db)
       .find({ countryId }, { projection: { stateId: 1, organization: 1 } })
       .toArray(),
     nppsCollection(db)
@@ -636,8 +635,7 @@ async function applyFounding(
     newPartyDoc(countryId, seq, plan, currentTurn, 0, { kind: "founding", cycle })
   );
   if (!base) return partyId;
-  await db
-    .collection<StatePartyOrg>("statePartyOrg")
+  await statePartyOrgCollection(db)
     .insertOne(baseOrgRow(countryId, base, partyId, currentTurn));
   const context: NPPGenerationContext = { existingNames: new Set(names.map((n) => n.name)) };
   for (let i = 0; i < FOUNDING_BENCH_SIZE; i++) {

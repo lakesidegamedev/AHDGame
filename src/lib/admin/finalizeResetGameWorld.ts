@@ -29,6 +29,7 @@ import { backfillMissingRegionLeans } from "./seed/backfillMissingRegionLeans";
 import { purgeAbsentCountryRegions } from "./seed/purgeAbsentCountryRegions";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 export interface FinalizeResetOptions {
   /** 1991 only: leave political offices vacant for player-created parties. */
@@ -338,7 +339,7 @@ export async function finalizeResetGameWorld(
 
   let partyOrgCleanupResult;
   if (deleteAllParties) {
-    partyOrgCleanupResult = await db.collection<StatePartyOrg>("statePartyOrg").deleteMany({});
+    partyOrgCleanupResult = await statePartyOrgCollection(db).deleteMany({});
   } else {
     const defaultParties = await politicalPartiesCollection(db)
       .find({ isDefault: true })
@@ -346,8 +347,7 @@ export async function finalizeResetGameWorld(
       .toArray();
     const defaultPartyIds = defaultParties.map((p) => String(p.sequentialId));
 
-    partyOrgCleanupResult = await db
-      .collection<StatePartyOrg>("statePartyOrg")
+    partyOrgCleanupResult = await statePartyOrgCollection(db)
       .deleteMany({ partyId: { $nin: defaultPartyIds } });
     // `partyId` is a per-country sequence number, so the filter above keeps a
     // row for a removed party whenever another country has a party with the
@@ -355,7 +355,7 @@ export async function finalizeResetGameWorld(
     // party budgets `seedPartyBudgets` wrote before the era cleanup ran.
     const defaultPartyKeys = new Set(defaultParties.map((p) => `${p.countryId}:${p.sequentialId}`));
     const strandedOrgRows = await deleteRowsOfRemovedParties(
-      db.collection("statePartyOrg"),
+      statePartyOrgCollection<Document>(db),
       defaultPartyKeys
     );
     partyOrgCleanupResult = {
@@ -364,7 +364,7 @@ export async function finalizeResetGameWorld(
     };
     await deleteRowsOfRemovedParties(db.collection("partyBudget"), defaultPartyKeys);
 
-    await db.collection<StatePartyOrg>("statePartyOrg").updateMany(
+    await statePartyOrgCollection(db).updateMany(
       { partyId: { $in: defaultPartyIds } },
       {
         $set: {

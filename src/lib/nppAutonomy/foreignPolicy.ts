@@ -66,6 +66,8 @@ import { voteCandidates, bilateralCandidates, warCandidates } from "./foreignPol
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 function buildOpinion(context: ForeignPolicyContext, targetCountryId: CountryId): CountryOpinion {
   const factors: OpinionFactor[] = [];
   const sourceAlignment = context.alignments.find(
@@ -297,8 +299,7 @@ async function loadContext(
   countryId: CountryId,
   currentTurn: number
 ): Promise<ForeignPolicyContext | null> {
-  const government = await db
-    .collection<GovernmentFormation>("governmentFormations")
+  const government = await governmentFormationsCollection(db)
     .findOne({ _id: countryId });
   if (!government || government.status !== "formed") return null;
   const headNppId = government.presidentNppId ?? government.pmNppId ?? null;
@@ -352,8 +353,7 @@ async function loadContext(
       .toArray(),
     db.collection<TradeEmbargo>("tradeEmbargoes").find({}).toArray(),
     db.collection<Tariff>("tariffs").find({}).toArray(),
-    db
-      .collection<Bill>("bills")
+    billsCollection(db)
       .find({
         ...buildActiveNationalBillFilter(countryId, NATIONAL_TERMINAL_STATUSES as BillStatus[]),
         "provisions.type": "tariff",

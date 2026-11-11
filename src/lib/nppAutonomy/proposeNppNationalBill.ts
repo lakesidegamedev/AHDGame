@@ -38,6 +38,7 @@ import { resetSystemVersionsForCountry } from "@/lib/resetVersions/rules";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 const VOTING_DURATION_HOURS = NPP_BILL_VOTING_DURATION_HOURS;
 
@@ -258,7 +259,7 @@ export async function proposeNppNationalBill(
   };
 
   try {
-    const result = await db.collection<Omit<Bill, "_id">>("bills").insertOne(bill);
+    const result = await billsCollection<Omit<Bill, "_id">>(db).insertOne(bill);
     return { ok: true, billId: result.insertedId.toString() };
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);

@@ -43,6 +43,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { unionsCollection } from "@/lib/db/repositories/unions";
 
 export interface UnionsTurnResult {
   unionsProcessed: number;
@@ -71,8 +72,7 @@ export async function adoptUnrepresentedSectors(db: Db): Promise<number> {
     .toArray();
   if (unrepresented.length === 0) return 0;
 
-  const seededUnions = await db
-    .collection<Union>("unions")
+  const seededUnions = await unionsCollection(db)
     .find(
       // Seeded roster only. Vacant (`ownerId: null`) and NPP-led still adopt;
       // a player-claimed seeded union must organize new shops itself.
@@ -153,7 +153,7 @@ export async function processUnionsTurn(db: Db, turn?: number): Promise<UnionsTu
   // missing slots and preserves every existing (possibly claimed) union.
   // Comparing against the expected total, not just 0, is what heals a partial
   // roster, a single stray doc must never permanently block the backfill.
-  const unionCount = await db.collection<Union>("unions").countDocuments({});
+  const unionCount = await unionsCollection(db).countDocuments({});
   const preset = await getGameStatePresetOrDefault(db);
   // Same country set seedUnions writes: background countries (#5702) have none.
   const seededCountryIds = (
@@ -186,14 +186,12 @@ export async function processUnionsTurn(db: Db, turn?: number): Promise<UnionsTu
   const bannedCountryList = Array.from(bannedUnionCountryIds);
   const suspendedUnionFilter =
     bannedCountryList.length > 0 ? { countryId: { $in: bannedCountryList } } : { suspended: true };
-  const suspendedUnionIds = await db
-    .collection<Union>("unions")
+  const suspendedUnionIds = await unionsCollection(db)
     .distinct("_id", suspendedUnionFilter);
   const strengthDecayMultiplier = 1 - UNION_STRENGTH_DECAY_PER_TURN;
   const decayStamp = new Date();
   await Promise.all([
-    db
-      .collection<Union>("unions")
+    unionsCollection(db)
       .updateMany(
         { _id: { $nin: suspendedUnionIds }, strength: { $gt: 0 } },
         { $mul: { strength: strengthDecayMultiplier }, $set: { updatedAt: decayStamp } }
@@ -226,8 +224,7 @@ export async function processUnionsTurn(db: Db, turn?: number): Promise<UnionsTu
     );
   }
 
-  const owned = await db
-    .collection<Union>("unions")
+  const owned = await unionsCollection(db)
     .find(
       // Union ban (player suggestion #93): suspended unions (country under an
       // enacted ban) are frozen, no dues, no services, no approval trend, no
@@ -313,8 +310,7 @@ export async function processUnionsTurn(db: Db, turn?: number): Promise<UnionsTu
   }
 
   if (vacatedUnionIds.length > 0) {
-    await db
-      .collection<Union>("unions")
+    await unionsCollection(db)
       .updateMany({ _id: { $in: vacatedUnionIds } }, { $set: { ownerId: null, updatedAt: now } });
     await charactersCollection(db).updateMany(
       { _id: { $in: vacatedCharacterIds } },
@@ -448,7 +444,7 @@ export async function processUnionsTurn(db: Db, turn?: number): Promise<UnionsTu
         },
       };
     });
-    await db.collection<Union>("unions").bulkWrite(ops);
+    await unionsCollection(db).bulkWrite(ops);
     if (characterOps.length > 0) {
       await charactersCollection(db).bulkWrite(characterOps);
     }

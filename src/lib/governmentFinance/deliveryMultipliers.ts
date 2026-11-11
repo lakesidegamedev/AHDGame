@@ -8,6 +8,7 @@ import { withLawAdministration } from "./lawAdministrationCatalog";
 import { clampRatio } from "./rules/implementation";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 export interface DepartmentDeliveryMultiplierInput {
   currentTurn: number;
@@ -120,8 +121,7 @@ export async function loadDepartmentDeliveryMultipliersByCountry(
   const types =
     activeTypeIds.length === 0
       ? []
-      : await db
-          .collection<LegislationType>("legislationTypes")
+      : await legislationTypesCollection(db)
           .find(
             { _id: { $in: activeTypeIds } },
             { projection: { _id: 1, administration: 1, policyOptions: 1 } }

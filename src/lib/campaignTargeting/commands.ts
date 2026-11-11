@@ -34,11 +34,13 @@ import {
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 
 type Actor = AuthUserWithCharacter & { hasCharacter: true; character: Character };
 
 export async function loadTargetedAdContext(db: Db, campaignId: ObjectId, user: Actor) {
-  const campaign = await db.collection<Campaign>("campaigns").findOne({ _id: campaignId });
+  const campaign = await campaignsCollection(db).findOne({ _id: campaignId });
   if (!campaign) throw notFound("Campaign not found");
   if (
     !isCampaignManagerUser(campaign, user.userId) &&
@@ -47,7 +49,7 @@ export async function loadTargetedAdContext(db: Db, campaignId: ObjectId, user: 
     throw forbidden("Not authorized");
   const [election, candidate, time] = await Promise.all([
     electionsCollection(db).findOne({ _id: campaign.electionId }),
-    db.collection<ElectionCandidate>("electionCandidates").findOne({
+    electionCandidatesCollection(db).findOne({
       electionId: campaign.electionId,
       characterId: campaign.candidateId,
       status: "active",
@@ -229,8 +231,7 @@ export async function purchaseTargetedAds(
     if (!result.modifiedCount) throw conflict("Insufficient personal actions or campaign funds");
   };
   const write = async (session?: ClientSession) => {
-    const result = await db
-      .collection<ElectionCandidate>("electionCandidates")
+    const result = await electionCandidatesCollection(db)
       .updateOne(
         candidateFilter,
         { $set: { targetedAds: ads }, $inc: { targetedAdsRevision: 1 } },

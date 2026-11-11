@@ -17,6 +17,7 @@ import type { RussianConstitutionalCalendar } from "./constitutionalProposals";
 import { STATE_POPULATION_FIELDS } from "@/lib/db/collections/states";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 
 export const RUSSIAN_COUNCIL_OPENINGS_COLLECTION = "russianCouncilElectionOpenings";
 export interface RussianCouncilOpeningRecord {
@@ -69,7 +70,7 @@ export async function materializeRussianCouncilElectionOpening(input: {
     ru1993LegislatureStage(calendarTurn(turn, clock)) === "congress"
   )
     return null;
-  const countries = db.collection<CountryGameState>("countryGameStates");
+  const countries = countryGameStatesCollection(db);
   const country = await countries.findOne(
     { _id: "RU" },
     {

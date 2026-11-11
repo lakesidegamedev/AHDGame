@@ -9,6 +9,7 @@ import { findPartyBySequentialId, getStatePartyOrgDocumentId } from "@/lib/db/pa
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 const heroSchema = z.object({
   heroImageUrl: z
@@ -61,7 +62,7 @@ export async function POST(
     }
 
     const orgId = getStatePartyOrgDocumentId(stateId, party);
-    const statePartyOrg = await db.collection<StatePartyOrg>("statePartyOrg").findOne({
+    const statePartyOrg = await statePartyOrgCollection(db).findOne({
       _id: orgId,
     });
 
@@ -78,8 +79,7 @@ export async function POST(
       return errorResponse(403, "Only the state party chair can update the hero image");
     }
 
-    await db
-      .collection<StatePartyOrg>("statePartyOrg")
+    await statePartyOrgCollection(db)
       .updateOne({ _id: orgId }, { $set: { heroImageUrl } });
 
     return NextResponse.json({ message: "Hero image updated successfully" });

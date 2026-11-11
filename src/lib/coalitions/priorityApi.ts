@@ -14,6 +14,7 @@ import {
 } from "./priorities";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
 
 const LIVE_PRIORITY_BILL_STATUSES: ReadonlySet<Bill["status"]> = new Set([
   "active",
@@ -57,8 +58,7 @@ export async function loadCoalitionPriorityContext(
   countryId: CountryId,
   sequentialId: number
 ): Promise<CoalitionPriorityContext | null> {
-  const coalition = await db
-    .collection<Coalition>("coalitions")
+  const coalition = await coalitionsCollection(db)
     .findOne({ countryId, sequentialId });
   if (!coalition) return null;
 

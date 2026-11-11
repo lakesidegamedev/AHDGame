@@ -40,6 +40,7 @@ import {
 } from "@/lib/parties/surplusSourcing";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 // Re-exported so existing importers (and tests) keep their entry point while
 // the implementation lives in the DB-free `surplusSourcing` module.
@@ -649,8 +650,7 @@ export async function processRegDriftDecay(
   // updates, ledger inserts) instead of per-pool round-trips.
   const countryIds = Array.from(new Set(pools.map((p) => p.countryId)));
 
-  const allParties = await db
-    .collection<StatePartyOrg>("statePartyOrg")
+  const allParties = await statePartyOrgCollection(db)
     .find({ countryId: { $in: countryIds } })
     .toArray();
   const partiesByStateKey = new Map<string, StatePartyOrg[]>();
@@ -764,7 +764,7 @@ export async function processRegDriftDecay(
   }
 
   if (partyOps.length > 0) {
-    await db.collection<StatePartyOrg>("statePartyOrg").bulkWrite(partyOps);
+    await statePartyOrgCollection(db).bulkWrite(partyOps);
   }
   if (poolOps.length > 0) {
     await db.collection<StateRegistrationPool>("stateRegistrationPool").bulkWrite(poolOps);

@@ -25,6 +25,7 @@ import { resolveCrisisDefinition } from "@/lib/turn/crisisV2/ensureContent";
 import { leverBlock } from "./availability";
 import { crisisCountryIds, governsAffectedState, leverInActorJurisdiction } from "./jurisdiction";
 import { resolveLeverRoles, type LeverActor } from "./roles";
+import { crisesCollection } from "@/lib/db/repositories/crises";
 
 const COMPONENT = "crisisLeverCommand";
 
@@ -94,8 +95,7 @@ type LiveCrisis = Pick<Crisis, "_id" | "scope" | "countryIds" | "regionIds"> &
   Required<Pick<Crisis, "v2">>;
 
 export function loadLiveCrisis(db: Db, crisisId: ObjectId): Promise<LiveCrisis | null> {
-  return db
-    .collection<Crisis>("crises")
+  return crisesCollection(db)
     .findOne(
       { _id: crisisId, status: "active", "v2.definitionId": { $exists: true } },
       { projection: { scope: 1, countryIds: 1, regionIds: 1, v2: 1 } }
@@ -103,8 +103,7 @@ export function loadLiveCrisis(db: Db, crisisId: ObjectId): Promise<LiveCrisis |
 }
 
 export function loadLiveCrises(db: Db, crisisIds: ObjectId[]): Promise<LiveCrisis[]> {
-  return db
-    .collection<Crisis>("crises")
+  return crisesCollection(db)
     .find(
       { _id: { $in: crisisIds }, status: "active", "v2.definitionId": { $exists: true } },
       { projection: { scope: 1, countryIds: 1, regionIds: 1, v2: 1 } }

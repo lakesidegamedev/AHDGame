@@ -1,6 +1,7 @@
 import type { Db } from "mongodb";
 import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
 import { getCountryConfig } from "@/lib/constants/countries";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 
 /** Open the 1991 constituent parliament's prime-minister formation cycle. */
 export async function seedROGovernmentFormation1991(
@@ -35,8 +36,7 @@ export async function seedROGovernmentFormation1991(
     formedTurn: null,
     collapsedAt: null,
   };
-  await db
-    .collection<GovernmentFormation>("governmentFormations")
+  await governmentFormationsCollection(db)
     .updateOne(
       { _id: "RO" },
       { $set: { ...formation, updatedAt: now }, $setOnInsert: { createdAt: now } },

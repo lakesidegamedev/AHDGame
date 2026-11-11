@@ -7,6 +7,8 @@ import { archiveCampaignsForCandidates } from "@/lib/campaigns/archiveWithdrawnC
 import type { Election, GameState } from "@/lib/db/types";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import type { Document } from "mongodb";
 
 /**
  * GET /api/admin/heal/presidential-election
@@ -134,12 +136,10 @@ export async function POST() {
     // Also withdraw any candidates from the old bugged election
     // (they can re-enter the healed primary; re-entry reactivates the
     // archived campaign with funds/levels intact)
-    const healedRows = await db
-      .collection("electionCandidates")
+    const healedRows = await electionCandidatesCollection<Document>(db)
       .find({ electionId: liveElection._id, status: "active" })
       .toArray();
-    const withdrawn = await db
-      .collection("electionCandidates")
+    const withdrawn = await electionCandidatesCollection<Document>(db)
       .updateMany(
         { electionId: liveElection._id, status: "active" },
         { $set: { status: "withdrawn", withdrawnAt: now } }

@@ -22,6 +22,7 @@ import type { ResetLawProgramDocument } from "@/lib/resetLegislation/program";
 import { buildResetRegionalProgramClaims } from "@/lib/resetLegislation/rules/regionalClaims";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -173,9 +174,7 @@ export async function processJPRegionalBudgets(
   const nationalLegTypeIds = new Set(nationalPolicies.map((p) => p.legislationTypeId));
   const allLegTypeIds = [...new Set([...regionalLegTypeIds, ...nationalLegTypeIds])];
 
-  const legTypes = await db
-    // full-read(legislationTypes): policyOptions tables price every regional law
-    .collection<LegislationType>("legislationTypes")
+  const legTypes = await legislationTypesCollection(db)
     .find({ _id: { $in: allLegTypeIds } })
     .toArray();
   const materializedLegTypes = regionalFinanceEnabled ? withLawAdministration(legTypes) : legTypes;

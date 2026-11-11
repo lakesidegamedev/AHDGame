@@ -8,6 +8,7 @@ import { getGameTime } from "@/lib/time/gameTime";
 import type { CountryId } from "@/lib/constants/countries";
 import type { Election, ElectionCandidate, PlayerEndorsement } from "@/lib/db/types";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 export interface EndorsementPromptCandidate {
   /** electionCandidates row id: what POST /endorse expects as `candidateId`. */
@@ -90,8 +91,7 @@ export async function GET(request: Request) {
     });
     if (existing) return noStore(EMPTY);
 
-    const candidates = await db
-      .collection<ElectionCandidate>("electionCandidates")
+    const candidates = await electionCandidatesCollection(db)
       .find({ electionId: election._id, status: "active" })
       .toArray();
     if (candidates.length === 0) return noStore(EMPTY);

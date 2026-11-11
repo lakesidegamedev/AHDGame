@@ -3,6 +3,7 @@ import type { ElectedOfficial, StatePartyOrg, PartyBudget, NPP } from "@/lib/db/
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 /**
  * Check if a party has presence in a state.
@@ -59,8 +60,7 @@ export async function updatePartyPresence(db: Db, stateId: string, partyId: stri
   const hasPresence = await checkPartyPresence(db, stateId, partyId);
 
   // Update presence flag
-  await db
-    .collection<StatePartyOrg>("statePartyOrg")
+  await statePartyOrgCollection(db)
     .updateOne({ _id: key }, { $set: { hasPresence, updatedAt: new Date() } });
 
   // If presence lost, reset org building budget to 0

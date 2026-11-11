@@ -86,6 +86,7 @@ import { computeRegionalConditionMargin } from "@/lib/states/conditions/marginEf
 import type { WithId } from "mongodb";
 import type { StateMetrics } from "@/lib/db/types";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { crisesCollection } from "@/lib/db/repositories/crises";
 
 /** Builds extraction capacity utilisation, corporate portfolio values and the remaining per-corporation lookups. */
 export async function buildExtractionAndPortfolioLookups({
@@ -327,7 +328,7 @@ export async function buildExtractionAndPortfolioLookups({
   // crisis to its affected states: global → every real state, country → that
   // country's states, region → its `regionIds`. So an economic crisis (Pandemic,
   // Recession, …) hits every corp in scope, not just region disasters.
-  const disasterCrises = await db.collection<Crisis>("crises").find({ status: "active" }).toArray();
+  const disasterCrises = await crisesCollection(db).find({ status: "active" }).toArray();
   const realStateIds: string[] = [];
   const stateIdsByCountry = new Map<string, string[]>();
   for (const s of states) {

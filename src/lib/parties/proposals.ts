@@ -38,6 +38,10 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 
 // ─── Pure helpers ────────────────────────────────────────────────────────────
 
@@ -668,7 +672,7 @@ export async function mergePartyInto(
       // 4. Merge state org. Organization percentages are cached bucket shares, so
       // transfer half of the absorbed party's durable units rather than mutating
       // the percentage directly.
-      const statePartyOrgCol = db.collection<StatePartyOrg>("statePartyOrg");
+      const statePartyOrgCol = statePartyOrgCollection(db);
       const proposingOrgs = await statePartyOrgCol
         .find({ partyId: proposingStrId, countryId })
         .toArray();
@@ -851,8 +855,7 @@ export async function mergePartyInto(
 
       const selectCull = async (): Promise<ObjectId[]> => {
         // Surviving party's POST-merge org per state (re-read after step 4 merged it).
-        const targetOrgs = await db
-          .collection<StatePartyOrg>("statePartyOrg")
+        const targetOrgs = await statePartyOrgCollection(db)
           .find({ partyId: targetStrId, countryId })
           .toArray();
         const targetOrgByState = new Map<string, number>(
@@ -928,10 +931,10 @@ export async function mergePartyInto(
         }
         // Live NPP candidacies also use characterId; do not leave a deleted NPP
         // on the ballot or permit its campaign to continue accumulating votes.
-        await db.collection("electionCandidates").deleteMany({
+        await electionCandidatesCollection<Document>(db).deleteMany({
           $or: [{ nppId: { $in: cullIds } }, { characterId: { $in: cullIds } }],
         });
-        await db.collection("campaigns").updateMany(
+        await campaignsCollection<Document>(db).updateMany(
           { candidateId: { $in: cullIds }, status: { $ne: "archived" } },
           {
             $set: {
@@ -956,13 +959,12 @@ export async function mergePartyInto(
         ...proposingActiveNpps.map((n) => n._id).filter((id) => !cullIdSet.has(id.toString())),
       ];
       if (movedCandidateIds.length > 0) {
-        await db
-          .collection("electionCandidates")
+        await electionCandidatesCollection<Document>(db)
           .updateMany(
             { party: proposingStrId, status: "active", characterId: { $in: movedCandidateIds } },
             { $set: { party: targetStrId } }
           );
-        await db.collection("campaigns").updateMany(
+        await campaignsCollection<Document>(db).updateMany(
           {
             party: proposingStrId,
             candidateId: { $in: movedCandidateIds },
@@ -988,7 +990,7 @@ export async function mergePartyInto(
       // 7. Rebuild the parliamentary seat snapshot from the re-pointed officials and
       //    updated coalition membership. Only when the country tracks a government
       //    formation (parliamentary systems); presidential systems read seats live.
-      const govCol = db.collection<GovernmentFormation>("governmentFormations");
+      const govCol = governmentFormationsCollection(db);
       const gov = await govCol.findOne({ _id: countryId });
       if (gov) {
         const govSet: Record<string, unknown> = {};

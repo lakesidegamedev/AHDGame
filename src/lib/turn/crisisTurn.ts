@@ -40,6 +40,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { crisesCollection } from "@/lib/db/repositories/crises";
 
 /**
  * Process active crises for the current turn.
@@ -85,7 +86,7 @@ export async function processCrisisTurn(
   await retireLegacyVietnamCrises(db);
   // Fetch after living-conflict materialization so new response events receive
   // their start-turn effects, interaction, wire item, and notifications now.
-  const crises = await db.collection<Crisis>("crises").find({ status: "active" }).toArray();
+  const crises = await crisesCollection(db).find({ status: "active" }).toArray();
   const vietnam = await livingVietnamAsLegacyState(db);
   setVietnamEscalationLevel(normalizeVietnamLevel(vietnam.level));
   // The ladder decides how deep the superpowers are in; the front is what that
@@ -232,8 +233,7 @@ export async function finalizeResolvedCrises(
   toResolve = resolvable;
   if (toResolve.length === 0) return;
   const ids = toResolve.map((c) => c._id);
-  await db
-    .collection<Crisis>("crises")
+  await crisesCollection(db)
     .updateMany(
       { _id: { $in: ids } },
       { $set: { status: "resolved", endTurn: turn, resolvedAt: new Date() } }

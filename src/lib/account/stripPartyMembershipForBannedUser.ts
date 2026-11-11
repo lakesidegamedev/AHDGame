@@ -19,6 +19,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import type { Document } from "mongodb";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
 
 export interface StripPartyMembershipResult {
   charactersUpdated: number;
@@ -136,8 +137,7 @@ export async function stripPartyMembershipForBannedUser(
 
       const isChair = politicalParty.chairId?.toString() === char._id.toString();
       if (isChair) {
-        await db
-          .collection("coalitions")
+        await coalitionsCollection<Document>(db)
           .updateMany(
             { chairPartyId: politicalParty._id },
             { $set: { chairCharacterId: null, updatedAt: now } }

@@ -45,6 +45,8 @@ import type { PoliticalMediaPayer } from "@/lib/politicalMedia/journal";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 
 export interface CampaignTurnResults {
   campaignsProcessed: number;
@@ -147,8 +149,7 @@ export async function processCampaignTurn(turnNumber: number): Promise<CampaignT
           ])
         );
 
-        const campaigns = await db
-          .collection<Campaign>("campaigns")
+        const campaigns = await campaignsCollection(db)
           // activityHistory is write-only for the turn engine: it pushes
           // insolvency downgrades and never reads the array back. Excluding it
           // keeps the hourly read flat as the history deepens, rather than
@@ -202,8 +203,7 @@ export async function processCampaignTurn(turnNumber: number): Promise<CampaignT
             .map((c) => ({ electionId: c.electionId, characterId: c.candidateId }));
 
           if (candidatePairs.length > 0) {
-            const electionCandidateDocs = await db
-              .collection<ElectionCandidate>("electionCandidates")
+            const electionCandidateDocs = await electionCandidatesCollection(db)
               .find({
                 $or: candidatePairs.map((p) => ({
                   electionId: p.electionId,
@@ -323,8 +323,7 @@ export async function processCampaignTurn(turnNumber: number): Promise<CampaignT
         // each campaign's candidate row once so the aggregate below can join
         // correctly, then translate results back to the identity-id eKey space
         // shared with the NPP/governor/executive endorsement maps.
-        const candidateRows = await db
-          .collection<ElectionCandidate>("electionCandidates")
+        const candidateRows = await electionCandidatesCollection(db)
           .find({
             electionId: { $in: campaignElectionIds },
             characterId: { $in: campaignCandidateIds },
@@ -879,7 +878,7 @@ export async function processCampaignTurn(turnNumber: number): Promise<CampaignT
 
         // Execute bulkWrite for campaigns
         if (campaignOps.length > 0) {
-          await db.collection<Campaign>("campaigns").bulkWrite(campaignOps);
+          await campaignsCollection(db).bulkWrite(campaignOps);
         }
 
         for (const intent of politicalMediaOrders) {
@@ -912,7 +911,7 @@ export async function processCampaignTurn(turnNumber: number): Promise<CampaignT
         // enforced at schedule-time above (only queue an op if current < cap),
         // so the stored value cannot exceed PRIMARY_CAMPAIGN_TICK_CAP.
         if (candidateOps.length > 0) {
-          await db.collection<ElectionCandidate>("electionCandidates").bulkWrite(candidateOps);
+          await electionCandidatesCollection(db).bulkWrite(candidateOps);
         }
 
         // Apply passive effects using bulkWrite

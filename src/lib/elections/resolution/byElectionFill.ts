@@ -28,6 +28,7 @@ import { openNppCreationBatch } from "@/lib/npp/generator";
 import { buildNppElectionEligiblePartyKeys } from "@/lib/parties/antiAbuseGuards";
 import { getChallengerSupplyPolicy } from "@/lib/turn/npp/rules/challengerSupply";
 import { processByElectionWatcher } from "@/lib/turn/byElections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 const SPECIAL_COMMONS = "special_commons";
 const SPECIAL_GOVERNOR = "special_governor";
@@ -101,7 +102,7 @@ export async function fillUncontestedByElections(
     .toArray();
   if (closing.length === 0) return 0;
 
-  const candidateCol = db.collection<ElectionCandidate>("electionCandidates");
+  const candidateCol = electionCandidatesCollection(db);
   const activeCandidates = await candidateCol
     .find({ status: "active" }, { projection: { electionId: 1, nppId: 1 } })
     .toArray();

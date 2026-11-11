@@ -44,6 +44,11 @@ import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficia
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 
 export const BG_GRAND_BY_ELECTIONS_COLLECTION = "bgGrandConstituencyByElections";
 export interface BgGrandByElectionRecord {
@@ -87,7 +92,7 @@ function stableId(key: string) {
   return new ObjectId(createHash("sha256").update(key).digest("hex").slice(0, 24));
 }
 async function context(db: Db, turn: number, session?: ClientSession, full = false) {
-  const country = await db.collection<Country>("countryGameStates").findOne(
+  const country = await countryGameStatesCollection<Country>(db).findOne(
     { _id: "BG" },
     {
       session,
@@ -129,11 +134,9 @@ async function context(db: Db, turn: number, session?: ClientSession, full = fal
   };
 }
 async function lockChamber(db: Db, session: ClientSession, parent: Parent) {
-  const country = await db
-    .collection<Country>("countryGameStates")
+  const country = await countryGameStatesCollection<Country>(db)
     .updateOne({ _id: "BG" }, { $inc: { bgGrandByElectionGeneration: 1 } }, { session });
-  const chamber = await db
-    .collection<{ _id: string; bg1991MandateGeneration?: number }>("governmentFormations")
+  const chamber = await governmentFormationsCollection<{ _id: string; bg1991MandateGeneration?: number }>(db)
     .updateOne({ _id: "BG" }, { $inc: { bg1991MandateGeneration: 1 } }, { session });
   const receipt = await db
     .collection<Parent>(BG_FOUNDING_COUNTS_COLLECTION)
@@ -166,8 +169,7 @@ async function cancelJobs(
     { $set: { status: "cancelled", resolving: false, updatedAt: now } },
     { session }
   );
-  await db
-    .collection<ElectionCandidate>("electionCandidates")
+  await electionCandidatesCollection(db)
     .updateMany(
       { electionId: { $in: ids }, status: "active" },
       { $set: { status: "withdrawn", withdrawnAt: now } },
@@ -429,11 +431,9 @@ export async function openBgGrandConstituencyByElections(
       await journal.insertMany(records, { session });
       await electionsCollection(db).insertMany(polls, { session });
       if (candidates.length)
-        await db
-          .collection<ElectionCandidate>("electionCandidates")
+        await electionCandidatesCollection(db)
           .insertMany(candidates, { session });
-      await db
-        .collection<ElectionVoteTally>("electionVoteTallies")
+      await electionVoteTalliesCollection(db)
         .insertMany(tallies, { session });
       return records.length;
     },
@@ -489,12 +489,10 @@ export async function resolveBgGrandConstituencyByElections(
       const ready = usable.filter((row) =>
         polls.some((poll) => poll._id.equals(row.activeElectionId))
       );
-      const candidates = await db
-        .collection<ElectionCandidate>("electionCandidates")
+      const candidates = await electionCandidatesCollection(db)
         .find({ electionId: { $in: ready.flatMap((row) => row.electionIds) } }, { session })
         .toArray();
-      const tallies = await db
-        .collection<ElectionVoteTally>("electionVoteTallies")
+      const tallies = await electionVoteTalliesCollection(db)
         .find(
           { electionId: { $in: polls.map((row) => row._id) } },
           { session, projection: TALLY_WITH_LATEST_SNAPSHOT_ONLY }
@@ -990,31 +988,27 @@ export async function resolveBgGrandConstituencyByElections(
       }
       if (newPolls.length) await electionsCollection(db).insertMany(newPolls, { session });
       if (newCandidates.length)
-        await db
-          .collection<ElectionCandidate>("electionCandidates")
+        await electionCandidatesCollection(db)
           .insertMany(newCandidates, { session });
       if (newTallies.length)
-        await db
-          .collection<ElectionVoteTally>("electionVoteTallies")
+        await electionVoteTalliesCollection(db)
           .insertMany(newTallies, { session });
       if (renewedIds.length)
-        await db
-          .collection<ElectionCandidate>("electionCandidates")
+        await electionCandidatesCollection(db)
           .updateMany(
             { _id: { $in: renewedIds } },
             { $set: { status: "withdrawn", withdrawnAt: now } },
             { session }
           );
       if (campaignUpdates.length)
-        await db.collection("campaigns").bulkWrite(campaignUpdates, { session });
+        await campaignsCollection<Document>(db).bulkWrite(campaignUpdates, { session });
       if (completedIds.length) {
         await electionsCollection(db).updateMany(
           { _id: { $in: completedIds } },
           { $set: { status: "resolved", resolving: false, updatedAt: now } },
           { session }
         );
-        await db
-          .collection<ElectionCandidate>("electionCandidates")
+        await electionCandidatesCollection(db)
           .updateMany(
             { electionId: { $in: completedIds }, status: "active" },
             { $set: { status: "withdrawn", withdrawnAt: now } },
@@ -1022,8 +1016,7 @@ export async function resolveBgGrandConstituencyByElections(
           );
       }
       if (tallyUpdates.length)
-        await db
-          .collection<ElectionVoteTally>("electionVoteTallies")
+        await electionVoteTalliesCollection(db)
           .bulkWrite(tallyUpdates, { session });
       if (jobUpdates.length) await journal.bulkWrite(jobUpdates, { session });
       return resolved;

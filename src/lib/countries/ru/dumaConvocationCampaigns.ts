@@ -23,6 +23,7 @@ import {
   type RussianDumaResultRecord,
 } from "./dumaElectionResult";
 import { planRussianAssemblyCampaign } from "./rules/assemblyCampaign";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 export async function processRussianDumaConvocationCampaigns(input: {
   db: Db;
   game: RussianConstitutionalCalendar;
@@ -34,8 +35,7 @@ export async function processRussianDumaConvocationCampaigns(input: {
   if (input.game.preset !== "1991-default") return result;
   const opened = await openRussianDumaConvocation(input);
   if (opened?.created) result.opened++;
-  const country = await db
-    .collection<CountryGameState>("countryGameStates")
+  const country = await countryGameStatesCollection(db)
     .findOne(
       { _id: "RU" },
       { projection: { ...RUSSIAN_DUMA_AUTHORITY_PROJECTION, ruDumaNpcAdmissionCohortId: 1 } }

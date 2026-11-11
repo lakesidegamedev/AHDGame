@@ -44,6 +44,7 @@ import {
 import { createCrisisFromTemplate } from "@/lib/crises/createCrisisFromTemplate";
 import { warEmergencyTemplateForEventKind } from "@/lib/crises/warEmergencyCrises";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { crisesCollection } from "@/lib/db/repositories/crises";
 
 export interface WorldEventsTurnResult {
   offered: number;
@@ -232,7 +233,7 @@ async function offerScheduledEventForCountry(
 
       // A country may face different staggered wartime crises at once, but the
       // same crisis must never stack with itself while an earlier copy is live.
-      const alreadyActive = await db.collection<Crisis>("crises").findOne(
+      const alreadyActive = await crisesCollection(db).findOne(
         {
           templateKey: crisisDefinition.templateKey,
           status: "active",

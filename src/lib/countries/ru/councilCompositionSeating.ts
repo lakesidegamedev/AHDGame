@@ -34,6 +34,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 
 const RUSSIAN_COUNCIL_COMPOSITION_SEATINGS_COLLECTION = "russianCouncilCompositionSeatings";
 export interface RussianCouncilCompositionSeating {
@@ -74,7 +75,7 @@ export async function materializeRussianCouncilCompositionSeating(input: {
     { session, projection: GAME_STATE_PRE_ITERATION_FIELDS }
   );
   if (game?.preset !== "1991-default") return false;
-  const countries = db.collection<CountryGameState>("countryGameStates");
+  const countries = countryGameStatesCollection(db);
   const country = await countries.findOne(
     { _id: "RU" },
     {

@@ -37,6 +37,7 @@ import {
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 // POST /api/country/[code]/parties/[id]/recruitment/recruit — Recruit an NPP into the party in a specified state
 // Auth: requireAuthWithCharacter
@@ -128,8 +129,7 @@ export async function POST(
       // resources gate this — letting national chairs back-fill states that are
       // led by an inactive or recently-installed local chair, or where players
       // are already present, was the original missing capability.
-      const statePartyOrg = await db
-        .collection<StatePartyOrg>("statePartyOrg")
+      const statePartyOrg = await statePartyOrgCollection(db)
         .findOne({ stateId, partyId: partyIdStr });
 
       // Calculate slots and cost

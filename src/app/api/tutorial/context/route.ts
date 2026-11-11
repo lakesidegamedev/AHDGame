@@ -19,6 +19,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { unionsCollection } from "@/lib/db/repositories/unions";
 
 /**
  * GET /api/tutorial/context — live world numbers for the tutorial coach.
@@ -83,8 +84,8 @@ async function handleGET() {
           corporationsCollection(db).countDocuments({ countryId, ceoVacant: true }),
         ]),
         Promise.all([
-          db.collection<Union>("unions").countDocuments({ countryId }),
-          db.collection<Union>("unions").countDocuments({ countryId, ownerId: null }),
+          unionsCollection(db).countDocuments({ countryId }),
+          unionsCollection(db).countDocuments({ countryId, ownerId: null }),
         ]),
       ]);
 

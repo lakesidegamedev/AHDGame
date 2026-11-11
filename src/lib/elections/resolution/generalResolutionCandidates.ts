@@ -22,6 +22,7 @@ import { isPresidentialElectionType } from "@/lib/elections/nationwideExecutive"
 import { applyConversionVotePenalty } from "./conversionTerms";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 /** Loads the candidates, drops the ineligible ones and adjusts the vote totals to match. */
 export async function loadGeneralElectionCandidates({
@@ -60,8 +61,7 @@ export async function loadGeneralElectionCandidates({
         : []),
     ]),
   ];
-  const candidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidates = await electionCandidatesCollection(db)
     .find({
       ...(isJapanMixedShugiin
         ? {

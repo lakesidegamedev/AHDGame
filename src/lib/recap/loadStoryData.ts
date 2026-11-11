@@ -22,6 +22,9 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { crisesCollection } from "@/lib/db/repositories/crises";
 
 /**
  * I/O for the v2 Wrapped sections. Reads the runtime collections the reset is
@@ -233,8 +236,7 @@ export async function loadStoryData(
       if (e.electionId) careerElectionIds.add(String(e.electionId));
 
   const raceData = await section("races", warn, null, async () => {
-    const candidacies = await db
-      .collection("electionCandidates")
+    const candidacies = await electionCandidatesCollection<Document>(db)
       .find(
         { characterId: { $in: ids } },
         { projection: { _id: 1, electionId: 1, characterId: 1 } }
@@ -286,8 +288,7 @@ export async function loadStoryData(
       for (const c of s.candidates ?? [])
         if (!c.isNPP && ObjectId.isValid(c.id)) opponentCandidateIds.push(new ObjectId(c.id));
     const identities = opponentCandidateIds.length
-      ? await db
-          .collection("electionCandidates")
+      ? await electionCandidatesCollection<Document>(db)
           .find({ _id: { $in: opponentCandidateIds } }, { projection: { characterId: 1 } })
           .toArray()
       : [];
@@ -375,7 +376,7 @@ export async function loadStoryData(
       proposedTurn: 1,
     };
     const [bills, stateBills, npps] = await Promise.all([
-      db.collection<BillRow>("bills").find({}, { projection }).toArray(),
+      billsCollection<BillRow>(db).find({}, { projection }).toArray(),
       db.collection<BillRow>("stateBills").find({}, { projection }).toArray(),
       nppsCollection<Document>(db)
         .find({}, { projection: { party: 1, countryId: 1 } })
@@ -502,7 +503,7 @@ export async function loadStoryData(
       const [electionsHeld, conflicts, crises] = await Promise.all([
         electionsCollection<Document>(db).countDocuments({ status: { $in: FINISHED_ELECTION } }),
         db.collection("conflicts").countDocuments({}),
-        db.collection("crises").countDocuments({}),
+        crisesCollection<Document>(db).countDocuments({}),
       ]);
       let closestRace: RecapWorld["closestRace"] = null;
       for (const races of racesByChar.values()) {

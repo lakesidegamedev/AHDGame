@@ -10,6 +10,7 @@ import { standaloneCampaignHref } from "@/lib/campaignManager/links";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 
 /** The viewer's campaign on its race page in Campaign mode, else the standalone page. */
 async function campaignDestination(db: Db, campaignId: string) {
@@ -39,8 +40,7 @@ export default async function CampaignPage() {
   // US senate / governor / house / state-senate; the redirect prefers the
   // highest-priority eligible race (president > governor > senate > house >
   // stateSenate) per typical career importance.
-  const candidateCampaigns = await db
-    .collection<Campaign>("campaigns")
+  const candidateCampaigns = await campaignsCollection(db)
     .find(
       {
         $or: [
@@ -104,8 +104,7 @@ export default async function CampaignPage() {
             electionId: { $in: electionByCountry.get(p.countryId)! },
           }));
         if (orClauses.length > 0) {
-          const officerCampaign = await db
-            .collection<Campaign>("campaigns")
+          const officerCampaign = await campaignsCollection(db)
             .findOne({ $or: orClauses });
           if (officerCampaign) {
             redirect(await campaignDestination(db, officerCampaign._id.toString()));

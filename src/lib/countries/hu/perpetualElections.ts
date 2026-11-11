@@ -16,6 +16,7 @@ import { huAssemblyElectionSystem } from "./rules/electoralTransition2011";
 import { calendarTurn } from "@/lib/utils/gameDate";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 
 /** Hungary National Assembly. */
 export async function ensureHUElections(now: Date, inFlightTurn?: number): Promise<void> {
@@ -34,8 +35,7 @@ export async function ensureHUElections(now: Date, inFlightTurn?: number): Promi
   );
   const country =
     game?.preset === "1991-default"
-      ? await db
-          .collection<CountryGameState>("countryGameStates")
+      ? await countryGameStatesCollection(db)
           .findOne({ _id: "HU" }, { projection: { huElectoralSystem2011SinceTurn: 1 } })
       : null;
   const turn = inFlightTurn ?? game?.currentTurn ?? 1;

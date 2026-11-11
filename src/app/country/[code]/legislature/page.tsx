@@ -10,6 +10,7 @@ import { bgAssemblyName } from "@/lib/countries/bg/rules/assemblyTransition";
 import { getCountryConfigForRuntime } from "@/lib/constants/countries";
 import LegislatureClient from "./LegislatureClient";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 
 export const dynamic = "force-dynamic";
 
@@ -21,14 +22,13 @@ async function bgLegislaturePresentation(): Promise<{ name: string; seats: numbe
   const db = await getDb();
   const [preset, country, seats] = await Promise.all([
     getGameStatePreset(db),
-    db
-      .collection<{
+    countryGameStatesCollection<{
         _id: string;
         bgOrdinaryAssemblySinceTurn?: number;
         bgGrandAssemblyContinuationSinceTurn?: number;
         bgConstitution1991SinceTurn?: number;
         bgGrandAssemblyDissolutionSinceTurn?: number;
-      }>("countryGameStates")
+      }>(db)
       .findOne(
         { _id: "BG" },
         { projection: { bgOrdinaryAssemblySinceTurn: 1, bgGrandAssemblyContinuationSinceTurn: 1 } }
@@ -49,15 +49,14 @@ async function ruLegislaturePresentation(): Promise<{
   const db = await getDb();
   const [preset, country] = await Promise.all([
     getGameStatePreset(db),
-    db
-      .collection<{
+    countryGameStatesCollection<{
         _id: string;
         ruSovietSuccessionSinceTurn?: number;
         ruProvisionalCongressSeats?: number;
         ruPresidencySinceTurn?: number;
         ruCongressDissolvedSinceTurn?: number;
         ruFederalAssemblySinceTurn?: number;
-      }>("countryGameStates")
+      }>(db)
       .findOne({ _id: "RU" }),
   ]);
   const config = getCountryConfigForRuntime("RU", preset, country);

@@ -75,6 +75,7 @@ import { projectStrategyRevenuePerTurn } from "@/lib/corporations/strategyRevenu
 import { calculatePlantSectorSplit } from "@/lib/corporations/plantSectorSplit";
 import { capacityRescaleRatio } from "@/lib/constants/capacityEconomy";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { crisesCollection } from "@/lib/db/repositories/crises";
 export { buildSectorPlantsSection } from "./sectorDetailPlants";
 export { computeSectorMarketPosition, computeSectorMarginSection } from "./sectorDetailMarket";
 
@@ -188,8 +189,7 @@ export async function buildSectorCrisisSection(
   sectorCountryId: string,
   currentTurn: number
 ) {
-  const activeStateCrises = await db
-    .collection<Crisis>("crises")
+  const activeStateCrises = await crisesCollection(db)
     .find({
       status: "active",
       $or: [

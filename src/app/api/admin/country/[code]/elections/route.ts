@@ -26,6 +26,9 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import type { Document } from "mongodb";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 
 // GET - List all elections
 export async function GET(request: Request, { params }: { params: Promise<{ code: string }> }) {
@@ -64,8 +67,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
 
     // Get candidate counts for each election
     const electionIds = elections.map((e) => e._id);
-    const candidateCounts = await db
-      .collection("electionCandidates")
+    const candidateCounts = await electionCandidatesCollection<Document>(db)
       .aggregate([
         { $match: { electionId: { $in: electionIds }, status: "active" } },
         { $group: { _id: "$electionId", count: { $sum: 1 } } },
@@ -375,9 +377,9 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ c
 
     // Delete all election-linked data for this cycle
     const [candidatesResult, talliesResult, campaignsResult] = await Promise.all([
-      db.collection("electionCandidates").deleteMany({ electionId: { $in: electionIds } }),
-      db.collection("electionVoteTallies").deleteMany({ electionId: { $in: electionIds } }),
-      db.collection("campaigns").deleteMany({ electionId: { $in: electionIds } }),
+      electionCandidatesCollection<Document>(db).deleteMany({ electionId: { $in: electionIds } }),
+      electionVoteTalliesCollection<Document>(db).deleteMany({ electionId: { $in: electionIds } }),
+      campaignsCollection<Document>(db).deleteMany({ electionId: { $in: electionIds } }),
     ]);
 
     // Delete all elections for this cycle

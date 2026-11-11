@@ -26,6 +26,7 @@ import { russianDumaConvocationOfficeCompatible } from "./rules/dumaConvocation"
 import { decideRussianDumaFiling } from "./rules/assemblyFiling";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 export async function validateRussianDumaPlayerFiling(input: {
   db: Db;
   election: Election;
@@ -41,7 +42,7 @@ export async function validateRussianDumaPlayerFiling(input: {
     { _id: "current" },
     { projection: { preset: 1 } }
   );
-  const country = await db.collection<CountryGameState>("countryGameStates").findOne(
+  const country = await countryGameStatesCollection(db).findOne(
     { _id: "RU" },
     {
       projection: {

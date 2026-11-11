@@ -7,6 +7,7 @@ import { raceLabel } from "@/components/state/overview/raceLabel";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 const NEUTRAL_PARTY_COLOR = "#6b6b7a";
 
@@ -158,8 +159,7 @@ export async function getStateRoster(
   const needsRaceLookup = rows.filter((r) => !r.currentOffice).map((r) => r._id);
   const raceLabelByCharacterId = new Map<string, string>();
   if (needsRaceLookup.length > 0) {
-    const candidates = await db
-      .collection<ElectionCandidate>("electionCandidates")
+    const candidates = await electionCandidatesCollection(db)
       .find({ characterId: { $in: needsRaceLookup }, status: "active" })
       .sort({ enteredAt: -1 })
       .toArray();

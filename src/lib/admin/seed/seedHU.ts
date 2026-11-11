@@ -16,6 +16,8 @@ import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 
 const HU_REGION_IDS = ["HU_BUD", "HU_PES", "HU_TRW", "HU_TRS", "HU_NOR", "HU_ALF"];
 
@@ -207,7 +209,7 @@ export async function seedHUStatePartyOrg(
     log(`[HU] skipping modern state party org (preset ${preset})`);
     return;
   }
-  if (reset) await db.collection("statePartyOrg").deleteMany({ countryId: "HU" });
+  if (reset) await statePartyOrgCollection<Document>(db).deleteMany({ countryId: "HU" });
 
   const { huRegions2027 } = await import("@/lib/countries/hu/data/huRegions2027");
   const parties = await politicalPartiesCollection(db)
@@ -219,7 +221,7 @@ export async function seedHUStatePartyOrg(
     for (const party of parties) {
       const partyId = String(party.sequentialId);
       const _id = `${String(region._id)}_${partyId}`;
-      await db.collection<StatePartyOrg>("statePartyOrg").updateOne(
+      await statePartyOrgCollection(db).updateOne(
         { _id },
         {
           $set: {
@@ -279,8 +281,7 @@ export async function seedHUGovernmentFormation(
     formedTurn: null,
     collapsedAt: null,
   };
-  await db
-    .collection<GovernmentFormation>("governmentFormations")
+  await governmentFormationsCollection(db)
     .updateOne(
       { _id: "HU" },
       { $set: { ...formation, updatedAt: now }, $setOnInsert: { createdAt: now } },

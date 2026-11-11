@@ -3,6 +3,8 @@ import { onBillEnacted } from "@/lib/billEnactment";
 import type { PolicyProvision } from "@/lib/db/types/legislation";
 import type { EnactedLaw } from "@/lib/db/types/budget";
 import type { CountryId } from "@/lib/constants/countries";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import type { Document } from "mongodb";
 
 export interface RulingBillInput {
   /** Display title, already suffixed by the caller (e.g. "... (Surprise SCOTUS Ruling)"). */
@@ -76,7 +78,7 @@ export async function enactRulingBill(
     updatedAt: now,
   };
 
-  await db.collection("bills").insertOne(billDoc as never);
+  await billsCollection<Document>(db).insertOne(billDoc as never);
 
   await onBillEnacted(
     db,

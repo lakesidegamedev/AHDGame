@@ -53,6 +53,9 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; partyId: string }>;
@@ -103,8 +106,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const partyKey = getPartyIdString(party);
     const statePartyKey = getStatePartyOrgDocumentId(stateId, party);
 
-    const statePartyOrg = await db
-      .collection<StatePartyOrg>("statePartyOrg")
+    const statePartyOrg = await statePartyOrgCollection(db)
       .findOne({ _id: statePartyKey });
 
     if (!statePartyOrg) {
@@ -160,7 +162,7 @@ export async function POST(request: Request, { params }: RouteParams) {
               stateId,
               status: { $in: ["active", "veto_override"] },
             })
-          : await db.collection<Bill>("bills").findOne({
+          : await billsCollection(db).findOne({
               _id: targetOid,
               status: {
                 $in: ["active", "active_other", "active_both", "veto_override", "override_shugiin"],
@@ -311,8 +313,7 @@ export async function POST(request: Request, { params }: RouteParams) {
         // type, all state demographics, and the current turn for the snapshot.
         const [legislationType, stateDemographicsArr, gameStateDoc] = await Promise.all([
           bill.legislationTypeId
-            ? db
-                .collection<LegislationType>("legislationTypes")
+            ? legislationTypesCollection(db)
                 .findOne({ _id: bill.legislationTypeId })
             : Promise.resolve(null),
           db
@@ -350,14 +351,13 @@ export async function POST(request: Request, { params }: RouteParams) {
         ignored = r.ignored;
         if (authData.character.stats) await grantStatecraftXp();
       } else {
-        const bill = await db.collection<Bill>("bills").findOne({ _id: targetOid });
+        const bill = await billsCollection(db).findOne({ _id: targetOid });
         if (!bill || (bill.countryId && bill.countryId !== countryId)) {
           return errorResponse(404, "Bill not found or voting not open");
         }
         const [legislationType, stateDemographicsArr, gameStateDoc] = await Promise.all([
           bill.legislationTypeId
-            ? db
-                .collection<LegislationType>("legislationTypes")
+            ? legislationTypesCollection(db)
                 .findOne({ _id: bill.legislationTypeId })
             : Promise.resolve(null),
           db

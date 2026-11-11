@@ -31,6 +31,7 @@ import { getEraContext } from "@/lib/era/context";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 /** Era year for the cost basis; defensive so a mock db (no gameState) ⇒ flag off. */
 async function resolveEraYear(db: Db): Promise<number | null> {
@@ -96,8 +97,7 @@ async function calculateBillAnnualCost(
   const legislationTypeIds = [
     ...new Set(selections.map((selection) => selection.legislationTypeId)),
   ];
-  const legislationTypes = await db
-    .collection<LegislationType>("legislationTypes")
+  const legislationTypes = await legislationTypesCollection(db)
     .find({ _id: { $in: legislationTypeIds } })
     .toArray();
   const legislationTypeMap = new Map(

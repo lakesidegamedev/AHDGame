@@ -10,6 +10,7 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { canActAsChair } from "@/lib/parties/actingChair";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
 
 // POST /api/coalitions/[id]/leave?country= — Leave a coalition
 export async function POST(
@@ -53,8 +54,7 @@ export async function POST(
     }
 
     // Find coalition
-    const coalition = await db
-      .collection<Coalition>("coalitions")
+    const coalition = await coalitionsCollection(db)
       .findOne({ sequentialId: Number(id), countryId });
     if (!coalition) {
       throw notFound("Coalition not found.");
@@ -74,7 +74,7 @@ export async function POST(
 
     if (remainingMembers.length === 0) {
       // Last member — delete the coalition entirely
-      await db.collection<Coalition>("coalitions").deleteOne({ _id: coalition._id });
+      await coalitionsCollection(db).deleteOne({ _id: coalition._id });
     } else if (isChairParty) {
       // Chair leaves with others remaining — promote next most senior member
       const sorted = [...remainingMembers].sort(
@@ -89,7 +89,7 @@ export async function POST(
 
       const newChairCharacterId = newChairParty?.chairId ?? null;
 
-      await db.collection<Coalition>("coalitions").updateOne(
+      await coalitionsCollection(db).updateOne(
         { _id: coalition._id },
         {
           $pull: { members: { partyId: party._id } },
@@ -124,7 +124,7 @@ export async function POST(
       }
     } else {
       // Non-chair leaves — just remove from members
-      await db.collection<Coalition>("coalitions").updateOne(
+      await coalitionsCollection(db).updateOne(
         { _id: coalition._id },
         {
           $pull: { members: { partyId: party._id } },

@@ -6,6 +6,7 @@ import { stepScars, type ScarStep } from "@/lib/crises/v2/scars";
 import type { Crisis } from "@/lib/db/types/crisis";
 import { logger } from "@/lib/observability/logger";
 import { routeEffectIntents } from "./intents";
+import { crisesCollection } from "@/lib/db/repositories/crises";
 
 const COMPONENT = "crisisV2Scars";
 
@@ -75,7 +76,7 @@ export interface ScarPassResult {
  */
 export async function processCrisisScars(db: Db, turn: number): Promise<ScarPassResult> {
   const result: ScarPassResult = { advanced: 0, failed: 0 };
-  const crises = db.collection<Crisis>("crises");
+  const crises = crisesCollection(db);
   const unclaimed = { scarsHealUntil: { $gte: turn }, "v2.lastScarTurn": { $not: { $gte: turn } } };
   const candidates = await crises.find(unclaimed, { projection: { _id: 1 } }).toArray();
   if (candidates.length === 0) return result;

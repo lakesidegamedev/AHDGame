@@ -37,6 +37,10 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 export async function validateRussianCouncilPlayerFiling(input: {
   db: Db;
   election: Election;
@@ -56,7 +60,7 @@ export async function validateRussianCouncilPlayerFiling(input: {
     { _id: "current" },
     { session, projection: { preset: 1 } }
   );
-  const country = await db.collection<CountryGameState>("countryGameStates").findOne(
+  const country = await countryGameStatesCollection(db).findOne(
     { _id: "RU" },
     {
       session,
@@ -112,8 +116,7 @@ export async function validateRussianCouncilPlayerFiling(input: {
           { session, projection: { countryId: 1, sequentialId: 1, regimeStatus: 1 } }
         )
       : null;
-  const candidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidates = await electionCandidatesCollection(db)
     .find(
       {
         status: "active",
@@ -276,13 +279,12 @@ export async function materializeRussianCouncilPlayerFiling(input: {
     session,
   });
   if (!decision.allowed) return decision;
-  const tally = await db
-    .collection<ElectionVoteTally>("electionVoteTallies")
+  const tally = await electionVoteTalliesCollection(db)
     .findOne({ electionId }, { session, projection: { totalVotes: 1 } });
   if (Object.values(tally?.totalVotes ?? {}).some((votes) => votes !== 0))
     return { allowed: false as const, reason: "filing-closed" as const };
   const binding = election.russianCouncilRound!;
-  const guard = await db.collection<CountryGameState>("countryGameStates").updateOne(
+  const guard = await countryGameStatesCollection(db).updateOne(
     {
       _id: "RU",
       ruFirstCouncilElectionCohortId: binding.rootCohortId ?? binding.cohortId,
@@ -293,7 +295,7 @@ export async function materializeRussianCouncilPlayerFiling(input: {
   );
   if (guard.matchedCount !== 1) throw new Error("Council filing mandate changed during admission");
   if (decision.withdrawIds.length) {
-    const withdrawn = await db.collection<ElectionCandidate>("electionCandidates").updateMany(
+    const withdrawn = await electionCandidatesCollection(db).updateMany(
       {
         _id: { $in: decision.withdrawIds.map((id) => new ObjectId(id)) },
         electionId,
@@ -311,18 +313,15 @@ export async function materializeRussianCouncilPlayerFiling(input: {
         )
       )
     );
-    await db
-      .collection<ElectionVoteTally>("electionVoteTallies")
+    await electionVoteTalliesCollection(db)
       .updateOne({ electionId }, { $unset: unset, $set: { updatedAt: now } }, { session });
   }
-  await db
-    .collection<ElectionCandidate>("electionCandidates")
+  await electionCandidatesCollection(db)
     .insertOne(
       { ...candidate, _id: candidateId, russianCouncilNomination: decision.nomination },
       { session }
     );
-  await db
-    .collection<Campaign>("campaigns")
+  await campaignsCollection(db)
     .updateOne(
       { electionId, candidateId: candidate.characterId, status: { $ne: "archived" } },
       { $set: { party: candidate.party, updatedAt: now } },

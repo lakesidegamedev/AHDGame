@@ -43,6 +43,7 @@ import {
   type DocketCaseLookupEntry,
 } from "@/lib/demographics/eraCheckpoints";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 export interface EraCheckpointTurnResult {
   checkpointsActive: number;
@@ -151,7 +152,7 @@ export async function processEraCheckpointsTurn(
   ] as string[];
   const [legTypes, demographicsDocs, defaultsDocs, metricsDocs] = await Promise.all([
     // full-read(legislationTypes): the era checkpoint re-applies every law through the policy-effects map
-    db.collection<LegislationType>("legislationTypes").find({}).toArray(),
+    legislationTypesCollection(db).find({}).toArray(),
     db
       .collection<StateDemographics>("stateDemographics")
       .find({ _id: { $in: [...stateIds] } })

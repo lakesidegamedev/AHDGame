@@ -12,6 +12,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 export async function processRo1992ElectoralNpcProposal(
   db: Db,
   game: GameState,
@@ -30,8 +31,7 @@ export async function processRo1992ElectoralNpcProposal(
     return false;
   const decision = await loadRo1992ElectoralDecision(db, game, turn);
   if (!decision?.available || decision.proposal) return false;
-  const government = await db
-    .collection<GovernmentFormation>("governmentFormations")
+  const government = await governmentFormationsCollection(db)
     .findOne({ _id: "RO" }, { projection: { status: 1, pmCharacterId: 1, pmNppId: 1 } });
   if (government?.status !== "formed" || government.pmCharacterId || !government.pmNppId)
     return false;

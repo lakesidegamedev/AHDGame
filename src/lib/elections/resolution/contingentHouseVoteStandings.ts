@@ -20,6 +20,8 @@ import {
 import { loadContingentElectionData } from "@/lib/elections/resolution/loadContingentElectionData";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
 
 export type ContingentHouseVoteRecord = NonNullable<ElectionVoteTally["contingentHouseVote"]>;
 
@@ -39,8 +41,7 @@ export async function partitionEligibleCandidates(
   db: Db,
   eligibleCandidateIds: string[]
 ): Promise<{ active: ElectionCandidate[]; droppedIds: string[] }> {
-  const candidacies = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidacies = await electionCandidatesCollection(db)
     .find({ _id: { $in: eligibleCandidateIds.map((id) => new ObjectId(id)) } })
     .toArray();
   const charIds = candidacies
@@ -86,8 +87,7 @@ export async function loadPartyCoalitions(
 ): Promise<Record<string, string>> {
   let coalitions: Pick<Coalition, "sequentialId" | "members">[] = [];
   try {
-    coalitions = await db
-      .collection<Coalition>("coalitions")
+    coalitions = await coalitionsCollection(db)
       .find({ countryId: countryId as CountryId })
       .project<Pick<Coalition, "sequentialId" | "members">>({ sequentialId: 1, members: 1 })
       .toArray();

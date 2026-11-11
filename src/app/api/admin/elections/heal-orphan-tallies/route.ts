@@ -4,6 +4,7 @@ import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError } from "@/lib/api/errors";
 import type { Election, ElectionCandidate } from "@/lib/db/types";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 export async function GET() {
   try {
@@ -17,8 +18,7 @@ export async function GET() {
     const electionIds = new Set(allElections.map((e) => e._id.toString()));
 
     // Get all candidates and check if their election exists
-    const allCandidates = await db
-      .collection<ElectionCandidate>("electionCandidates")
+    const allCandidates = await electionCandidatesCollection(db)
       .find({})
       .project({ electionId: 1 })
       .toArray();
@@ -60,7 +60,7 @@ export async function POST() {
     const electionIds = allElections.map((e) => e._id);
 
     // Delete candidates whose election doesn't exist
-    const result = await db.collection<ElectionCandidate>("electionCandidates").deleteMany({
+    const result = await electionCandidatesCollection(db).deleteMany({
       electionId: { $nin: electionIds },
     });
 

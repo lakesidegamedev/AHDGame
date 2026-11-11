@@ -26,6 +26,8 @@ import type { Campaign, ElectionCandidate, GameState } from "@/lib/db/types";
 import { z } from "zod";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 
 const schema = z.object({
   stateId: z.string().min(1),
@@ -103,7 +105,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     // Resolve the ticket by the running-mate link: the mate has no candidate row
     // of their own; they act on the nominee's row.
-    const candidate = await db.collection<ElectionCandidate>("electionCandidates").findOne({
+    const candidate = await electionCandidatesCollection(db).findOne({
       electionId: election._id,
       runningMateId: character._id,
       status: "active",
@@ -118,7 +120,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     // The ticket's Campaign holds the shared per-day surrogate pool.
-    const campaign = await db.collection<Campaign>("campaigns").findOne(
+    const campaign = await campaignsCollection(db).findOne(
       {
         electionId: election._id,
         candidateId: candidate.characterId,
@@ -191,8 +193,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     // double-counted a pool action.)
     const poolAvailable = recovering
       ? null
-      : await db
-          .collection<Campaign>("campaigns")
+      : await campaignsCollection(db)
           .findOne(
             { _id: campaign._id, runningMateSurrogateActionsRemaining: { $gte: 1 } },
             { projection: { _id: 1 } }
@@ -202,8 +203,8 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     const characters = charactersCollection(db);
-    const campaigns = db.collection<Campaign>("campaigns");
-    const candidates = db.collection<ElectionCandidate>("electionCandidates");
+    const campaigns = campaignsCollection(db);
+    const candidates = electionCandidatesCollection(db);
     const mapRmTravelError = (step: MoneyFlowStepRef, outcome: MoneyFlowLegOutcome): Error => {
       if (step.index === 0) return new Error("SURROGATE_POOL_EMPTY");
       if (step.index === 1) return new Error("INSUFFICIENT_ACTIONS");

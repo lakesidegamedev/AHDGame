@@ -25,6 +25,7 @@ import type { Bill } from "@/lib/db/types/legislation";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import type { Document } from "mongodb";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 const bodySchema = z.object({
   negotiatedCustodians: z.record(z.string(), z.string()).default({}),
@@ -64,7 +65,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
         .toArray()
     )[0];
     const bill = proposal
-      ? await db.collection<Bill>("bills").findOne({ _id: proposal.billId })
+      ? await billsCollection(db).findOne({ _id: proposal.billId })
       : null;
     const consents = proposal
       ? await db

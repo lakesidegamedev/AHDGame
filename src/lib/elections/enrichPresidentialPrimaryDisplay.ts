@@ -40,6 +40,7 @@ import {
   summarizePrimaryProjection,
 } from "./presidentialPrimaryDisplay";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 export async function applyPresidentialPrimaryDisplay(
   db: Db,
@@ -81,8 +82,7 @@ export async function applyPresidentialPrimaryDisplay(
       ? Promise.resolve(
           preloadedStatePartyOrgs.filter((org) => (org.countryId ?? "US") === countryId)
         )
-      : db
-          .collection<StatePartyOrg>("statePartyOrg")
+      : statePartyOrgCollection(db)
           .find({ countryId: countryId as CountryId })
           .toArray(),
     // Full engine enrichment (partyInfluence + chair roles) — must match the

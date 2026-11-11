@@ -37,6 +37,7 @@ import {
 } from "@/lib/npp/recruitmentCooldown";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 // GET /api/country/[code]/region/[id]/party/[partyId]/recruitment — Return NPP recruitment status and slot info for state leadership
 // Auth: requireAuthWithCharacter
@@ -79,8 +80,7 @@ export async function GET(
     const partyIdStr = String(party.sequentialId);
 
     // Check if caller is state Chair/VC
-    const statePartyOrg = await db
-      .collection<StatePartyOrg>("statePartyOrg")
+    const statePartyOrg = await statePartyOrgCollection(db)
       .findOne({ stateId, partyId: partyIdStr });
 
     const charId = auth.character._id.toString();
@@ -229,8 +229,7 @@ export async function POST(
       const partyIdStr = String(party.sequentialId);
 
       // Check if caller is state Chair/VC
-      const statePartyOrg = await db
-        .collection<StatePartyOrg>("statePartyOrg")
+      const statePartyOrg = await statePartyOrgCollection(db)
         .findOne({ stateId, partyId: partyIdStr });
 
       const charId = auth.character._id.toString();
@@ -387,8 +386,7 @@ export async function POST(
       // Heal a never-initialized AP pool (paused / never-regenerated game) to the
       // tier cap so the atomic `$gte` deduct can match. Idempotent via `$exists:false`.
       if (statePartyOrg && statePartyOrg.nppActionPoints == null) {
-        await db
-          .collection<StatePartyOrg>("statePartyOrg")
+        await statePartyOrgCollection(db)
           .updateOne(
             { stateId, partyId: partyIdStr, nppActionPoints: { $exists: false } },
             { $set: { nppActionPoints: availableAp } }
@@ -397,7 +395,7 @@ export async function POST(
 
       await runWithOptionalTransaction(
         async (session) => {
-          const deductResult = await db.collection<StatePartyOrg>("statePartyOrg").updateOne(
+          const deductResult = await statePartyOrgCollection(db).updateOne(
             {
               stateId,
               partyId: partyIdStr,
@@ -419,7 +417,7 @@ export async function POST(
           await nppsCollection(db).insertOne(npp, { session });
         },
         async () => {
-          const deductResult = await db.collection<StatePartyOrg>("statePartyOrg").updateOne(
+          const deductResult = await statePartyOrgCollection(db).updateOne(
             {
               stateId,
               partyId: partyIdStr,
@@ -480,8 +478,7 @@ export async function POST(
               rollbackUpdate.$unset = rollbackUnset;
             }
 
-            await db
-              .collection<StatePartyOrg>("statePartyOrg")
+            await statePartyOrgCollection(db)
               .updateOne({ stateId, partyId: partyIdStr }, rollbackUpdate);
             throw error;
           }

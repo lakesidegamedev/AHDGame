@@ -73,6 +73,7 @@ import {
   listCrisisOpenCandidateProviders,
   type CrisisOpenCandidate,
 } from "./crisisV2/registry";
+import { crisesCollection } from "@/lib/db/repositories/crises";
 
 const COMPONENT = "crisisV2Turn";
 
@@ -220,7 +221,7 @@ async function loadHolders(
  * claim means another run already stepped it.
  */
 async function claimTurn(db: Db, crisisId: ObjectId, turn: number): Promise<boolean> {
-  const claimed = await db.collection<Crisis>("crises").updateOne(
+  const claimed = await crisesCollection(db).updateOne(
     {
       _id: crisisId,
       status: "active",
@@ -271,7 +272,7 @@ async function openApproved(
     });
   }
   if (docs.length === 0) return 0;
-  await db.collection<Crisis>("crises").insertMany(docs, { ordered: false });
+  await crisesCollection(db).insertMany(docs, { ordered: false });
   for (const doc of docs) {
     try {
       await logWireEvent("crisis_start", doc.wireMessageOnStart, {
@@ -404,8 +405,7 @@ async function finalizeScripted(
 ): Promise<void> {
   if (ids.length === 0) return;
   try {
-    const docs = await db
-      .collection<Crisis>("crises")
+    const docs = await crisesCollection(db)
       .find({ _id: { $in: [...ids] } })
       .toArray();
     const gameState = await getGameState(db);
@@ -442,8 +442,7 @@ function deliveryTarget(
  */
 async function retryClosedDeliveries(db: Db, turn: number): Promise<void> {
   try {
-    const closed = (await db
-      .collection<Crisis>("crises")
+    const closed = (await crisesCollection(db)
       .find(
         { status: "resolved", "v2.pendingDelivery": { $exists: true } },
         { projection: LIVE_PROJECTION }
@@ -481,8 +480,7 @@ export async function processCrisisV2Turn(db: Db, turn: number): Promise<CrisisV
   ensureCampaignCrisisContent();
   await retryClosedDeliveries(db, turn);
   const loadLive = async () =>
-    (await db
-      .collection<Crisis>("crises")
+    (await crisesCollection(db)
       .find(
         { status: "active", "v2.definitionId": { $exists: true } },
         { projection: LIVE_PROJECTION }
@@ -763,7 +761,7 @@ export async function processCrisisV2Turn(db: Db, turn: number): Promise<CrisisV
 
     if (writes.length > 0) {
       try {
-        await db.collection<Crisis>("crises").bulkWrite(writes, { ordered: false });
+        await crisesCollection(db).bulkWrite(writes, { ordered: false });
         if (consumedUseIds.length > 0) {
           await db
             .collection<CrisisLeverUse>("crisisLeverUses")

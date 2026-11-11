@@ -27,6 +27,7 @@ import { emitTx } from "@/lib/financialTxLog/emit";
 import { TreasuryExecutionUncertainError } from "@/lib/treasury/executionUncertain";
 import { getGameState } from "@/lib/gameState";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 export interface ExecuteTransferToStateArgs {
   db: Db;
@@ -83,8 +84,7 @@ export async function executeTransferToStateParty(
     if (debitResult.matchedCount === 0) {
       throw badRequest(`Insufficient treasury balance. Available: $${treasury.toLocaleString()}`);
     }
-    await db
-      .collection<StatePartyOrg>("statePartyOrg")
+    await statePartyOrgCollection(db)
       .updateOne({ _id: statePartyKey }, statePartyCredit, { upsert: true, session });
   };
 
@@ -100,8 +100,7 @@ export async function executeTransferToStateParty(
       );
     }
     try {
-      await db
-        .collection<StatePartyOrg>("statePartyOrg")
+      await statePartyOrgCollection(db)
         .updateOne({ _id: statePartyKey }, statePartyCredit, { upsert: true });
     } catch (error) {
       // Refund on failure. If the refund ALSO fails the treasury is

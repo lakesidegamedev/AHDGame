@@ -76,6 +76,7 @@ import {
   applyResolutionEffect,
   captureDiplomaticExpiry,
 } from "./internationalOrganizationsEffects";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 
 /*
  * Voting roster for one ballot. Shadow/off preserve the player-only baseline.
@@ -250,8 +251,7 @@ export async function foundDueOrganizations(db: Db, currentTurn: number): Promis
 
     // "World news": countryHistory is per-country, so broadcast the founding
     // to every player-enabled country's history.
-    const countries = await db
-      .collection<{ _id: CountryId }>("countryGameStates")
+    const countries = await countryGameStatesCollection<{ _id: CountryId }>(db)
       .find({ enabledForPlayers: true })
       .project<{ _id: CountryId }>({ _id: 1 })
       .toArray();

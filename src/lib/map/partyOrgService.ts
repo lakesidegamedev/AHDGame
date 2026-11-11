@@ -3,6 +3,7 @@ import type { StatePartyOrg, PoliticalParty } from "@/lib/db/types";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { UK_REGIONS } from "@/lib/constants/uk";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 export interface MapPartyOrgState {
   leadingParty: string;
@@ -54,8 +55,7 @@ export async function computePartyOrgMap(
 
   // Fetch statePartyOrg records for this country
   // Filter by countryId to ensure we only get orgs for the correct country
-  const allPartyOrgs = await db
-    .collection<StatePartyOrg>("statePartyOrg")
+  const allPartyOrgs = await statePartyOrgCollection(db)
     .find({ countryId })
     .toArray();
 

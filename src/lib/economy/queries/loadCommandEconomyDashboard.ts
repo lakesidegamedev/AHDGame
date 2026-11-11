@@ -35,6 +35,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 
 export async function loadCommandEconomyDashboard(
   db: Db,
@@ -69,8 +70,7 @@ export async function loadCommandEconomyDashboard(
     corporationsCollection(db)
       .find({ countryId, soe: { $exists: true } }, { projection: { _id: 1, name: 1, soe: 1 } })
       .toArray(),
-    db
-      .collection<GovernmentFormation>("governmentFormations")
+    governmentFormationsCollection(db)
       .findOne({ _id: countryId } as { _id: string }, { projection: { commandStance: 1 } }),
     cabinet.findOne({ countryId, positionId: offices.plannerCabinetId }),
     cabinet.findOne({ countryId, positionId: offices.bankCabinetId }),

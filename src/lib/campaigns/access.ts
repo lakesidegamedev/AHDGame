@@ -1,6 +1,7 @@
 import { ObjectId, type Db } from "mongodb";
 import type { Campaign, ElectionCandidate } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 export async function isCampaignNomineeUser(
   db: Db,
@@ -42,8 +43,7 @@ export async function isCampaignRunningMateUser(
 ): Promise<boolean> {
   if (campaign.candidateIsNPP) return false;
 
-  const candidateRow = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidateRow = await electionCandidatesCollection(db)
     .findOne(
       { electionId: campaign.electionId, characterId: campaign.candidateId, status: "active" },
       { projection: { runningMateId: 1 } }

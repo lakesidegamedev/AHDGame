@@ -22,6 +22,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -91,7 +92,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(400, "Election is not active");
     }
 
-    const myCandidate = await db.collection<ElectionCandidate>("electionCandidates").findOne({
+    const myCandidate = await electionCandidatesCollection(db).findOne({
       electionId: election._id,
       characterId: character._id,
       status: "active",
@@ -119,7 +120,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     if (runningMateId === null || runningMateId === undefined || runningMateId === "") {
-      const changed = await db.collection<ElectionCandidate>("electionCandidates").updateOne(
+      const changed = await electionCandidatesCollection(db).updateOne(
         {
           _id: myCandidate._id,
           ...(election.russianPresidentialRound ? { russianTicketLocked: { $ne: true } } : {}),
@@ -187,8 +188,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     // A candidate who suspended their own campaign to endorse is allowed to be a
     // running mate; only a genuinely-active (non-suspended) candidate is blocked.
-    const isAlreadyCandidate = await db
-      .collection<ElectionCandidate>("electionCandidates")
+    const isAlreadyCandidate = await electionCandidatesCollection(db)
       .findOne({
         electionId: election._id,
         characterId: runningMateObjectId,
@@ -199,7 +199,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(400, "That character is already a candidate in this election");
     }
 
-    const changed = await db.collection<ElectionCandidate>("electionCandidates").updateOne(
+    const changed = await electionCandidatesCollection(db).updateOne(
       {
         _id: myCandidate._id,
         ...(election.russianPresidentialRound ? { russianTicketLocked: { $ne: true } } : {}),

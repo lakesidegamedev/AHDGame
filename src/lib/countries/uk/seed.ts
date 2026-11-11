@@ -28,6 +28,7 @@ import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficia
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 export async function seedUKRegions(
   db: Db,
@@ -242,7 +243,7 @@ export async function seedUKStatePartyOrg(
   preset?: string
 ) {
   if (reset) {
-    await db.collection("statePartyOrg").deleteMany({ countryId: "UK" });
+    await statePartyOrgCollection<Document>(db).deleteMany({ countryId: "UK" });
   }
 
   // Resolve preset: explicit arg wins, otherwise read from gameState
@@ -257,8 +258,7 @@ export async function seedUKStatePartyOrg(
   const orgs = await calculateUKStatePartyOrgs(db, activePreset);
   for (const org of orgs) {
     const { _id, ...orgData } = org;
-    await db
-      .collection<StatePartyOrg>("statePartyOrg")
+    await statePartyOrgCollection(db)
       .updateOne(
         { _id },
         { $set: { ...orgData, updatedAt: now }, $setOnInsert: { createdAt: now } },
@@ -294,8 +294,7 @@ export async function ensureMissingUKStatePartyOrgRows(
 
   // ── Insert missing expected rows ──────────────────────────────────────────
   const ids = orgs.map((o) => o._id);
-  const existing = await db
-    .collection<StatePartyOrg>("statePartyOrg")
+  const existing = await statePartyOrgCollection(db)
     // _id is a string composite ("REGION_partyId") — cast for the typed filter.
     /* eslint-disable @typescript-eslint/no-explicit-any */
     .find({ _id: { $in: ids as any } } as any)
@@ -307,8 +306,7 @@ export async function ensureMissingUKStatePartyOrgRows(
   let inserted = 0;
   for (const org of orgs) {
     if (existingIds.has(org._id)) continue;
-    await db
-      .collection<StatePartyOrg>("statePartyOrg")
+    await statePartyOrgCollection(db)
       .insertOne({ ...org, createdAt: now, updatedAt: now });
     inserted++;
   }

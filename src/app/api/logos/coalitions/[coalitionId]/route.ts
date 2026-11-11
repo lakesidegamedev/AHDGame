@@ -4,6 +4,7 @@ import { handleRouteError, badRequest } from "@/lib/api/errors";
 import { parseCountryParam } from "@/lib/db/partyLookup";
 import type { Coalition } from "@/lib/db/types/coalition";
 import { redirectToFirstAvailableImage, redirectToFallbackImage } from "@/lib/publicImageProxy";
+import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
 
 const CACHE_CONTROL = "public, max-age=3600, stale-while-revalidate=86400";
 
@@ -29,8 +30,7 @@ export async function GET(
 
     const db = await getDb();
 
-    const coalition = await db
-      .collection<Coalition>("coalitions")
+    const coalition = await coalitionsCollection(db)
       .findOne({ sequentialId, countryId }, { projection: { logoUrl: 1 } });
 
     if (!coalition || !coalition.logoUrl) {

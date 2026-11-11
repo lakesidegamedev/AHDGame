@@ -35,6 +35,9 @@ import {
 import { hasAuthorizedPostSovietTransition } from "./rules/postSovietTransition";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 
 export async function materializeRussianDumaRepeatResult(input: {
   db: Db;
@@ -90,7 +93,7 @@ export async function materializeRussianDumaRepeatResult(input: {
     { session, projection: { preset: 1 } }
   );
   if (game?.preset !== "1991-default") throw new Error("No Duma repeat mandate in this world");
-  const countries = db.collection<CountryGameState>("countryGameStates");
+  const countries = countryGameStatesCollection(db);
   const country = await countries.findOne(
     { _id: "RU" },
     {
@@ -200,7 +203,7 @@ export async function materializeRussianDumaRepeatResult(input: {
     combined.result.constituencyResults.map((row) => [row.electionId, row.decision.outcome])
   );
   outcomes.set(combined.result.listElectionId, combined.result.listDecision.outcome);
-  const finalized = await db.collection<ElectionVoteTally>("electionVoteTallies").bulkWrite(
+  const finalized = await electionVoteTalliesCollection(db).bulkWrite(
     loaded.counted.map((row) => ({
       updateOne: {
         filter: { _id: row._id, finalized: false },
@@ -230,8 +233,7 @@ export async function materializeRussianDumaRepeatResult(input: {
   );
   if (resolved.matchedCount !== cohort.length)
     throw new Error("Duma repeat ballots changed during certification");
-  const retired = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const retired = await electionCandidatesCollection(db)
     .updateMany(
       { electionId: { $in: opening.electionIds }, status: "active" },
       { $set: { status: "withdrawn", withdrawnAt: now } },

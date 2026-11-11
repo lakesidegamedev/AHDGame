@@ -36,6 +36,8 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 
 export async function materializeRussianDumaConvocationSeating(input: {
   db: Db;
@@ -56,8 +58,7 @@ export async function materializeRussianDumaConvocationSeating(input: {
     { session, projection: { preset: 1 } }
   );
   if (game?.preset !== "1991-default") return false;
-  const country = await db
-    .collection<CountryGameState>("countryGameStates")
+  const country = await countryGameStatesCollection(db)
     .findOne(
       { _id: "RU" },
       { session, projection: { ...RUSSIAN_DUMA_AUTHORITY_PROJECTION, ruCouncilComposition: 1 } }
@@ -562,8 +563,7 @@ export async function materializeRussianDumaConvocationSeating(input: {
     if (result.matchedCount !== selected.length)
       throw new Error("Duma owner changed during seating");
   }
-  const formation = await db
-    .collection<GovernmentFormation>("governmentFormations")
+  const formation = await governmentFormationsCollection(db)
     .findOne({ _id: "RU" }, { session, projection: { coalitionPartyIds: 1, governingPartyId: 1 } });
   if (formation) {
     const supporting = new Set(
@@ -577,7 +577,7 @@ export async function materializeRussianDumaConvocationSeating(input: {
       (sum, [party, count]) => sum + (supporting.has(party) ? count : 0),
       0
     );
-    await db.collection<GovernmentFormation>("governmentFormations").updateOne(
+    await governmentFormationsCollection(db).updateOne(
       { _id: "RU" },
       {
         $set: {
@@ -597,7 +597,7 @@ export async function materializeRussianDumaConvocationSeating(input: {
     { $set: { seatedOnTurn: turn } },
     { session }
   );
-  const claimed = await db.collection<CountryGameState>("countryGameStates").updateOne(
+  const claimed = await countryGameStatesCollection(db).updateOne(
     {
       _id: "RU",
       ruDumaConvocationCohortId: root,

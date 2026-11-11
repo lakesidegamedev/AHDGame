@@ -33,6 +33,8 @@ import { launchGovernmentProspect } from "@/lib/extraction/commands/launchGovern
 import { buildSyntheticActorPlan } from "./syntheticActors";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { crisesCollection } from "@/lib/db/repositories/crises";
+import type { Document } from "mongodb";
 
 export interface DriveSyntheticActorsOptions {
   seed: string;
@@ -99,7 +101,7 @@ async function driveCrisisDecision(
       )
         continue;
       const crisis = interaction.crisisId
-        ? await db.collection("crises").findOne({ _id: interaction.crisisId })
+        ? await crisesCollection<Document>(db).findOne({ _id: interaction.crisisId })
         : null;
       const countryId =
         (crisis?.countryId as string | undefined) ?? (character.countryId as string);

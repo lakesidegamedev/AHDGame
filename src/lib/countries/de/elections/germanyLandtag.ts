@@ -49,6 +49,9 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import type { Document } from "mongodb";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 
 const LANDTAG_THRESHOLD = 0.05;
 
@@ -472,8 +475,7 @@ export async function resolveDELandtagElection(
   const landId = election.state;
 
   // Vote tallies for this election (per-candidate vote totals)
-  const tally = await db
-    .collection<ElectionVoteTally>("electionVoteTallies")
+  const tally = await electionVoteTalliesCollection(db)
     .findOne({ electionId: election._id });
   if (!tally) {
     await electedOfficialsCollection(db).deleteMany({ officeType: "landtag", state: landId });
@@ -487,8 +489,7 @@ export async function resolveDELandtagElection(
   const tallyCandidateObjectIds = Object.keys(tally.totalVotes)
     .filter((id) => ObjectId.isValid(id))
     .map((id) => new ObjectId(id));
-  const candidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidates = await electionCandidatesCollection(db)
     .find({ _id: { $in: tallyCandidateObjectIds }, electionId: election._id })
     .toArray();
 
@@ -599,7 +600,7 @@ export async function resolveDELandtagElection(
 
   await sweepStaleLandtagOffice(db, landId, now, currentTurn);
 
-  await db.collection<ElectionVoteTally>("electionVoteTallies").updateOne(
+  await electionVoteTalliesCollection(db).updateOne(
     { _id: tally._id },
     {
       $set: {
@@ -667,8 +668,7 @@ export async function resolveDELandtagElection(
       })
   );
 
-  await db
-    .collection("electionCandidates")
+  await electionCandidatesCollection<Document>(db)
     .updateMany(
       { electionId: election._id, status: "active" },
       { $set: { status: "withdrawn", withdrawnAt: now } }

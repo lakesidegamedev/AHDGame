@@ -42,6 +42,10 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 // This page is a live view over turn-processed delegate awards and per-state
 // projections. It must render from current DB state every request so its
@@ -114,11 +118,10 @@ export default async function PartyPrimaryStatePage({ params }: PageProps) {
   });
 
   const [candidates, tally] = await Promise.all([
-    db
-      .collection<ElectionCandidate>("electionCandidates")
+    electionCandidatesCollection(db)
       .find({ electionId: election._id, party: partyKey, status: "active" })
       .toArray(),
-    db.collection<ElectionVoteTally>("electionVoteTallies").findOne({ electionId: election._id }),
+    electionVoteTalliesCollection(db).findOne({ electionId: election._id }),
   ]);
 
   const candidateKeys = candidates
@@ -139,13 +142,11 @@ export default async function PartyPrimaryStatePage({ params }: PageProps) {
         _id: { $in: candidates.filter((c) => c.isNPP && c.nppId).map((c) => c.nppId!) },
       })
       .toArray(),
-    db
-      .collection<StatePartyOrg>("statePartyOrg")
+    statePartyOrgCollection(db)
       .find({ countryId: "US", partyId: partyKey })
       .toArray(),
     candidateKeys.length
-      ? db
-          .collection<Campaign>("campaigns")
+      ? campaignsCollection(db)
           .find({ electionId: election._id, candidateId: { $in: candidateKeys } })
           .project<{ candidateId: (typeof candidateKeys)[number]; color?: string | null }>({
             candidateId: 1,

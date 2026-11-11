@@ -22,6 +22,7 @@ import {
 } from "./rules";
 import type { PriorityTarget } from "./schema";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 export function priorityOverrideId({ countryId, regionId, bucketId }: PriorityTarget): string {
   return `${countryId}:${regionId}:${bucketId}`;
@@ -35,8 +36,7 @@ export async function loadPriorityLaws(
 ): Promise<PriorityLaw[]> {
   const countryScope = countryId.toLowerCase();
   if (countryScope !== "us" && countryScope !== "uk" && countryScope !== "jp") return [];
-  const laws = await db
-    .collection<LegislationType>("legislationTypes")
+  const laws = await legislationTypesCollection(db)
     .find(
       { countryScope, ...(ids ? { _id: { $in: ids } } : {}) },
       {

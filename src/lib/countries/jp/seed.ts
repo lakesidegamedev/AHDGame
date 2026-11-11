@@ -21,6 +21,8 @@ import type { Document } from "mongodb";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 
 export async function seedJPRegions(
   db: Db,
@@ -158,7 +160,7 @@ export async function seedJPStatePartyOrg(
   preset?: string
 ) {
   if (reset) {
-    await db.collection("statePartyOrg").deleteMany({ countryId: "JP" });
+    await statePartyOrgCollection<Document>(db).deleteMany({ countryId: "JP" });
   }
 
   // Resolve preset: explicit arg wins, otherwise read from gameState
@@ -174,8 +176,7 @@ export async function seedJPStatePartyOrg(
   const now = new Date();
   for (const org of orgs) {
     const { _id, ...orgData } = org;
-    await db
-      .collection<StatePartyOrg>("statePartyOrg")
+    await statePartyOrgCollection(db)
       .updateOne({ _id }, { $set: { ...orgData, updatedAt: now } }, { upsert: true });
   }
   log(`Seeded ${orgs.length} JP state party org records (preset: ${activePreset})`);
@@ -203,8 +204,7 @@ export async function ensureMissingJPStatePartyOrgRows(
   const orgs = await calculateJPStatePartyOrgs(db, activePreset);
 
   const ids = orgs.map((o) => o._id);
-  const existing = await db
-    .collection<StatePartyOrg>("statePartyOrg")
+  const existing = await statePartyOrgCollection(db)
     /* eslint-disable @typescript-eslint/no-explicit-any */
     .find({ _id: { $in: ids as any } } as any)
     /* eslint-enable @typescript-eslint/no-explicit-any */
@@ -215,8 +215,7 @@ export async function ensureMissingJPStatePartyOrgRows(
   if (missing.length > 0) {
     for (const org of missing) {
       const { _id, ...orgData } = org;
-      await db
-        .collection<StatePartyOrg>("statePartyOrg")
+      await statePartyOrgCollection(db)
         .updateOne(
           { _id },
           { $set: { ...orgData, updatedAt: now }, $setOnInsert: { createdAt: now } },
@@ -322,8 +321,7 @@ export async function seedJPGovernmentFormation(db: Db, log: (msg: string) => vo
   const { jpGovernmentFormation } = await import("@/lib/countries/jp/data/jpGovernmentFormation");
   const now = new Date();
   const { _id, ...formationData } = jpGovernmentFormation;
-  await db
-    .collection<GovernmentFormation>("governmentFormations")
+  await governmentFormationsCollection(db)
     .updateOne(
       { _id },
       { $set: { ...formationData, createdAt: now, updatedAt: now } },

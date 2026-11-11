@@ -18,6 +18,8 @@
  */
 import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import type { Document } from "mongodb";
 
 export async function rescopeLegislationCatalogue(
   db: Db,
@@ -27,8 +29,7 @@ export async function rescopeLegislationCatalogue(
   if (fromCountryId === toCountryId) return { typesRescoped: 0 };
   // `countryScope` is lower-case throughout the collection ("dd", "de", "us"),
   // unlike CountryId.
-  const res = await db
-    .collection("legislationTypes")
+  const res = await legislationTypesCollection<Document>(db)
     .updateMany(
       { countryScope: fromCountryId.toLowerCase() },
       { $set: { countryScope: toCountryId.toLowerCase(), updatedAt: new Date() } }

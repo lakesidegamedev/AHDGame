@@ -4,6 +4,7 @@ import type { Bill, BillProvision } from "@/lib/db/types/legislation";
 import { validateBudget } from "@/lib/countries/uk/budget/budgetValidation";
 import { applyConfidenceEventToGov } from "@/lib/countries/uk/confidence/confidenceGaugeStore";
 import { getNationalDocId } from "@/lib/constants/nationalScope";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 /** Hours a Budget vote runs — mirrors the UK bill voting window. */
 const BUDGET_VOTING_HOURS = 24;
@@ -171,7 +172,7 @@ export async function createBudgetBill(
     createdAt: args.now,
     updatedAt: args.now,
   };
-  const res = await db.collection<Omit<Bill, "_id">>("bills").insertOne(bill);
+  const res = await billsCollection<Omit<Bill, "_id">>(db).insertOne(bill);
   return res.insertedId;
 }
 
@@ -194,7 +195,7 @@ export async function tableBudgetWithBill(
   } catch (error) {
     let existingBill: Pick<Bill, "_id"> | null;
     try {
-      existingBill = await db.collection<Bill>("bills").findOne(
+      existingBill = await billsCollection(db).findOne(
         {
           countryId: "UK",
           budgetFiscalYear: args.fiscalYear,

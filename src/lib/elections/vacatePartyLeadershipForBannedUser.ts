@@ -21,6 +21,9 @@ import type { Db, ObjectId } from "mongodb";
 import type { PoliticalParty, StatePartyOrg } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
+import type { Document } from "mongodb";
 
 export interface VacateResult {
   characterIds: string[];
@@ -118,8 +121,7 @@ export async function vacatePartyLeadershipForBannedUser(
 
   // State party leadership — every statePartyOrg doc that seats one of the
   // banned characters in any of the three positions.
-  const stateOrgs = await db
-    .collection<StatePartyOrg>("statePartyOrg")
+  const stateOrgs = await statePartyOrgCollection(db)
     .find({
       $or: [
         { chairId: { $in: characterIds } },
@@ -150,15 +152,13 @@ export async function vacatePartyLeadershipForBannedUser(
     }
 
     if (touched) {
-      await db
-        .collection<StatePartyOrg>("statePartyOrg")
+      await statePartyOrgCollection(db)
         .updateOne({ _id: org._id }, { $set: setOps });
     }
   }
 
   // Coalitions where the banned character is the named chair.
-  const coalitionDirect = await db
-    .collection("coalitions")
+  const coalitionDirect = await coalitionsCollection<Document>(db)
     .updateMany(
       { chairCharacterId: { $in: characterIds } },
       { $set: { chairCharacterId: null, updatedAt: now } }
@@ -169,8 +169,7 @@ export async function vacatePartyLeadershipForBannedUser(
   // chairCharacterId so the coalition doesn't keep pointing at a banned
   // account through the chairPartyId chain.
   if (partiesLosingChair.length > 0) {
-    const coalitionCascade = await db
-      .collection("coalitions")
+    const coalitionCascade = await coalitionsCollection<Document>(db)
       .updateMany(
         { chairPartyId: { $in: partiesLosingChair } },
         { $set: { chairCharacterId: null, updatedAt: now } }

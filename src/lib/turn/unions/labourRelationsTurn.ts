@@ -19,6 +19,7 @@ import { closeDueRatificationVotes } from "@/lib/unions/commands/ratifySettlemen
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { unionsCollection } from "@/lib/db/repositories/unions";
 
 export interface LabourRelationsTurnResult {
   campaignsMovedToDispute: number;
@@ -127,8 +128,7 @@ async function notifyLabourRelationsEvents(
   if (events.length === 0) return;
 
   const [unions, corporations] = await Promise.all([
-    db
-      .collection<Union>("unions")
+    unionsCollection(db)
       .find(
         { _id: { $in: events.map((event) => event.unionId) } },
         { projection: { name: 1, ownerId: 1, ownerType: 1 } }
@@ -306,8 +306,7 @@ async function refreshOpenCampaigns(
         { projection: MANDATE_LOCAL_PROJECTION }
       )
       .toArray(),
-    db
-      .collection<Union>("unions")
+    unionsCollection(db)
       .find(
         { _id: { $in: campaigns.map((c) => c.unionId) } },
         { projection: { treasury: 1, countryId: 1 } }
@@ -415,7 +414,7 @@ async function refreshOpenCampaigns(
       },
     });
   }
-  if (treasuryOps.length > 0) await db.collection<Union>("unions").bulkWrite(treasuryOps);
+  if (treasuryOps.length > 0) await unionsCollection(db).bulkWrite(treasuryOps);
 
   return counters;
 }

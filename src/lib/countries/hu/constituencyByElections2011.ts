@@ -32,6 +32,9 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 
 export const HU_2011_BY_ELECTIONS_COLLECTION = "hu2011ConstituencyByElections";
 export interface HuModernByElectionRecord {
@@ -84,8 +87,7 @@ async function cancelJobs(
     { $set: { status: "cancelled", resolving: false, updatedAt: now } },
     { session }
   );
-  await db
-    .collection<ElectionCandidate>("electionCandidates")
+  await electionCandidatesCollection(db)
     .updateMany(
       { electionId: { $in: ids }, status: "active" },
       { $set: { status: "withdrawn", withdrawnAt: now } },
@@ -298,8 +300,7 @@ async function materializeHuModernByElectionOpening(input: {
       });
     }
   }
-  const chamberLock = await db
-    .collection<{ _id: string; hu1991MandateGeneration?: number }>("governmentFormations")
+  const chamberLock = await governmentFormationsCollection<{ _id: string; hu1991MandateGeneration?: number }>(db)
     .updateOne({ _id: "HU" }, { $inc: { hu1991MandateGeneration: 1 } }, { session });
   if (chamberLock.matchedCount !== 1)
     throw new Error("Modern Hungarian chamber authority is missing");
@@ -333,10 +334,9 @@ async function materializeHuModernByElectionOpening(input: {
   );
   await electionsCollection(db).insertMany(polls, { session });
   if (candidates.length)
-    await db
-      .collection<ElectionCandidate>("electionCandidates")
+    await electionCandidatesCollection(db)
       .insertMany(candidates, { session });
-  await db.collection<ElectionVoteTally>("electionVoteTallies").insertMany(
+  await electionVoteTalliesCollection(db).insertMany(
     polls.map((poll) => ({
       _id: stableId(`${id}:tally:${poll.seatId}`),
       electionId: poll._id,
@@ -378,8 +378,7 @@ async function materializeHuModernByElectionResolution(input: {
   const journal = db.collection<HuModernByElectionRecord>(HU_2011_BY_ELECTIONS_COLLECTION);
   const job = await journal.findOne({ _id: receiptId }, { session });
   if (!job || job.completedAtTurn != null) return 0;
-  const chamber = await db
-    .collection<{ _id: string; hu1991MandateGeneration?: number }>("governmentFormations")
+  const chamber = await governmentFormationsCollection<{ _id: string; hu1991MandateGeneration?: number }>(db)
     .updateOne({ _id: "HU" }, { $inc: { hu1991MandateGeneration: 1 } }, { session });
   if (chamber.matchedCount !== 1) throw new Error("Modern Hungarian chamber authority is missing");
   const parent = await db
@@ -428,8 +427,7 @@ async function materializeHuModernByElectionResolution(input: {
     )
   )
     throw new Error("Modern Hungarian vacancy ballot lost its frozen authority");
-  const candidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidates = await electionCandidatesCollection(db)
     .find(
       { electionId: { $in: ids } },
       {
@@ -446,8 +444,7 @@ async function materializeHuModernByElectionResolution(input: {
       }
     )
     .toArray();
-  const tallies = await db
-    .collection<ElectionVoteTally>("electionVoteTallies")
+  const tallies = await electionVoteTalliesCollection(db)
     .find(
       { electionId: { $in: ids } },
       {
@@ -701,14 +698,13 @@ async function materializeHuModernByElectionResolution(input: {
     { $set: { status: "resolved", resolving: false, updatedAt: now } },
     { session }
   );
-  await db
-    .collection<ElectionCandidate>("electionCandidates")
+  await electionCandidatesCollection(db)
     .updateMany(
       { electionId: { $in: ids }, status: "active" },
       { $set: { status: "withdrawn", withdrawnAt: now } },
       { session }
     );
-  await db.collection<ElectionVoteTally>("electionVoteTallies").bulkWrite(
+  await electionVoteTalliesCollection(db).bulkWrite(
     polls.map((poll) => {
       const local = candidates.filter((row) => row.electionId.equals(poll._id));
       const winners = officials.filter(

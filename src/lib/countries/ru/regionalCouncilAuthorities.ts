@@ -28,6 +28,7 @@ import { GAME_STATE_PRE_ITERATION_FIELDS } from "@/lib/db/collections/gameState"
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 
 export const RUSSIAN_REGIONAL_AUTHORITIES_COLLECTION = "russianRegionalAuthorities";
 export interface RussianRegionalAuthorityRecord extends RussianCouncilRegionalAuthority {
@@ -120,7 +121,7 @@ export async function materializeRussianRegionalAuthorities(input: {
     { session, projection: GAME_STATE_PRE_ITERATION_FIELDS }
   );
   if (game?.preset !== "1991-default") return { kind: "wait" as const, reason: "other-era" };
-  const country = await db.collection<CountryGameState>("countryGameStates").findOne(
+  const country = await countryGameStatesCollection(db).findOne(
     { _id: "RU" },
     {
       session,

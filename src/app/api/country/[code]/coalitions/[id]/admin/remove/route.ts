@@ -8,6 +8,7 @@ import type { Coalition } from "@/lib/db/types/coalition";
 import type { PoliticalParty } from "@/lib/db/types/party";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
 
 const removePartySchema = z.object({
   partySequentialId: z.number().int().positive(),
@@ -37,8 +38,7 @@ export async function POST(
 
     const db = await getDb();
 
-    const coalition = await db
-      .collection<Coalition>("coalitions")
+    const coalition = await coalitionsCollection(db)
       .findOne({ sequentialId: parseInt(id, 10), countryId });
     if (!coalition) {
       throw notFound("Coalition not found.");
@@ -64,7 +64,7 @@ export async function POST(
 
     if (remainingMembers.length === 0) {
       // Last member — delete the coalition entirely
-      await db.collection<Coalition>("coalitions").deleteOne({ _id: coalition._id });
+      await coalitionsCollection(db).deleteOne({ _id: coalition._id });
     } else if (String(coalition.chairPartyId) === String(party._id)) {
       // Chair is being removed — promote next most senior member
       const sorted = [...remainingMembers].sort(
@@ -78,7 +78,7 @@ export async function POST(
 
       const newChairCharacterId = newChairParty?.chairId ?? null;
 
-      await db.collection<Coalition>("coalitions").updateOne(
+      await coalitionsCollection(db).updateOne(
         { _id: coalition._id },
         {
           $pull: { members: { partyId: party._id } },
@@ -91,7 +91,7 @@ export async function POST(
       );
     } else {
       // Non-chair removal — just pull from members
-      await db.collection<Coalition>("coalitions").updateOne(
+      await coalitionsCollection(db).updateOne(
         { _id: coalition._id },
         {
           $pull: { members: { partyId: party._id } },

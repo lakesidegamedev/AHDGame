@@ -12,6 +12,7 @@ import { checkLegislationFreeze } from "@/lib/api/parliamentaryFreeze";
 import { ObjectId } from "mongodb";
 import type { Bill } from "@/lib/db/types";
 import { z } from "zod";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 const cabinetVoteSchema = z.object({
   vote: z.enum(["for", "against"]),
@@ -51,8 +52,7 @@ export async function POST(
     const db = await getDb();
 
     // Find the cabinet bill
-    const bill = await db
-      .collection<Bill>("bills")
+    const bill = await billsCollection(db)
       .findOne({ _id: new ObjectId(id), countryId, status: "cabinet_review" });
     if (!bill) {
       return NextResponse.json(notFound("Cabinet bill not found or not in review").toJson(), {
@@ -93,7 +93,7 @@ export async function POST(
 
     // Cast vote
     const incField = vote === "for" ? "votesFor" : "votesAgainst";
-    const voteResult = await db.collection<Bill>("bills").updateOne(
+    const voteResult = await billsCollection(db).updateOne(
       {
         _id: bill._id,
         status: "cabinet_review",

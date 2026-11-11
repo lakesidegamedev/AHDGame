@@ -1,6 +1,7 @@
 import type { Db, ObjectId } from "mongodb";
 import type { Election, ElectionCandidate } from "@/lib/db/types";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 /**
  * Shared preload for the two endorsement-withdrawal turn phases.
@@ -38,8 +39,7 @@ export async function preloadEndorsementTargets(
     electionsCollection(db)
       .find({ _id: { $in: electionIds } }, { projection: { status: 1 } })
       .toArray(),
-    db
-      .collection<ElectionCandidate>("electionCandidates")
+    electionCandidatesCollection(db)
       .find({ _id: { $in: candidateIds } }, { projection: { status: 1 } })
       .toArray(),
   ]);

@@ -18,6 +18,7 @@ import { getNationalBillDetail } from "@/lib/legislature/queries/nationalBillQue
 import { performNationalBillAction } from "@/lib/legislature/commands/nationalBillActions";
 import type { Bill } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 // GET /api/congress/bills/[id] — Returns full detail for a single bill including vote breakdowns.
 // Auth: public
@@ -79,7 +80,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       return errorResponse(400, "No character");
     }
 
-    const bill = await db.collection<Bill>("bills").findOne({ _id: new ObjectId(id) });
+    const bill = await billsCollection(db).findOne({ _id: new ObjectId(id) });
     if (!bill) {
       logRequest("POST", path, 404, Date.now() - start);
       return errorResponse(404, "Bill not found");

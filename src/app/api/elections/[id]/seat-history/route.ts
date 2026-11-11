@@ -22,6 +22,8 @@ import {
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 
 const paramsSchema = z.object({ id: z.string().min(1).max(128) });
 
@@ -93,8 +95,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     const ids: ObjectId[] = elections.map((e) => e._id);
 
     const [candidates, tallies] = await Promise.all([
-      db
-        .collection<ElectionCandidate>("electionCandidates")
+      electionCandidatesCollection(db)
         .find({ electionId: { $in: ids } })
         .project<Pick<ElectionCandidate, "_id" | "electionId" | "characterName" | "party">>({
           _id: 1,
@@ -103,8 +104,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
           party: 1,
         })
         .toArray(),
-      db
-        .collection<ElectionVoteTally>("electionVoteTallies")
+      electionVoteTalliesCollection(db)
         .find({ electionId: { $in: ids } })
         .project<SeatTally>({
           electionId: 1,

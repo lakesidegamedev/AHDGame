@@ -30,6 +30,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 export class DirectActionBalanceConflictError extends Error {}
 
@@ -125,7 +126,7 @@ export async function applyNppDirectAction(
   }
 
   if (action === "request_endorsement") {
-    const candidacy = await db.collection<ElectionCandidate>("electionCandidates").findOne({
+    const candidacy = await electionCandidatesCollection(db).findOne({
       _id: new ObjectId(candidacyId!),
       characterId,
       status: "active",
@@ -234,8 +235,7 @@ export async function applyNppDirectAction(
     const context: CapitalActionLog["context"] = {};
     if (plan.sideEffects.createEndorsement) {
       const candidacyOid = new ObjectId(plan.sideEffects.createEndorsement.candidacyId);
-      const candidacy = await db
-        .collection<ElectionCandidate>("electionCandidates")
+      const candidacy = await electionCandidatesCollection(db)
         .findOne({ _id: candidacyOid, status: "active" }, session ? { session } : undefined);
       if (candidacy) {
         const [election, candidateCountAtDecision] = await Promise.all([
@@ -243,8 +243,7 @@ export async function applyNppDirectAction(
             { _id: candidacy.electionId },
             session ? { session } : undefined
           ),
-          db
-            .collection<ElectionCandidate>("electionCandidates")
+          electionCandidatesCollection(db)
             .countDocuments(
               { electionId: candidacy.electionId, status: "active" },
               session ? { session } : undefined
@@ -315,7 +314,7 @@ export async function applyNppDirectAction(
     async () => {
       const rollbackSnapshot: DirectActionRollbackSnapshot = { relationship: relationshipDoc };
       if (plan.sideEffects.createEndorsement) {
-        const candidacy = await db.collection<ElectionCandidate>("electionCandidates").findOne({
+        const candidacy = await electionCandidatesCollection(db).findOne({
           _id: new ObjectId(plan.sideEffects.createEndorsement.candidacyId),
         });
         if (candidacy) {

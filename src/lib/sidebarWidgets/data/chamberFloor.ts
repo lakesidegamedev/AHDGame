@@ -11,6 +11,7 @@ import {
 import { resolveBillVoteField } from "@/lib/congress/billVoteField";
 import { loadViewerCharacter, loadWidgetGameState, turnsUntil } from "./viewerContext";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 export type FloorVote = "for" | "against" | "abstain";
 
@@ -69,8 +70,7 @@ export async function loadChamberFloor(
       : (config.legislature.upperChamber?.shortName ?? config.legislature.upperChamber?.name);
 
   const key = character._id.toString();
-  const bills = await db
-    .collection<Bill>("bills")
+  const bills = await billsCollection(db)
     .find(
       { countryId, status: { $in: FLOOR_STATUSES } },
       {

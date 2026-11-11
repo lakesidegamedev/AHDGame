@@ -53,6 +53,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; partyId: string }>;
@@ -354,8 +355,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     // Rival parties present in this state — read-only, powers the Contest panel
     // on the party sub-page. Sorted by Org desc (strongest first) via the shared
     // buildStateRivals mapper.
-    const rivalRows = await db
-      .collection<StatePartyOrg>("statePartyOrg")
+    const rivalRows = await statePartyOrgCollection(db)
       .find({ stateId })
       .toArray();
     const rivalSeqIds = rivalRows.map((r) => Number(r.partyId)).filter(Boolean);

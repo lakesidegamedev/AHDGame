@@ -33,6 +33,7 @@ import { STATE_POPULATION_FIELDS } from "@/lib/db/collections/states";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 
 export async function materializeRussianCouncilRepeatOpening(input: {
   db: Db;
@@ -57,7 +58,7 @@ export async function materializeRussianCouncilRepeatOpening(input: {
     { session, projection: GAME_STATE_PRE_ITERATION_FIELDS }
   );
   if (game?.preset !== "1991-default") return null;
-  const countries = db.collection<CountryGameState>("countryGameStates");
+  const countries = countryGameStatesCollection(db);
   const country = await countries.findOne(
     { _id: "RU" },
     {

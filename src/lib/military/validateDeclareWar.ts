@@ -6,6 +6,7 @@ import { isSelectableWarGoal, WAR_DECLARATION_COOLDOWN_TURNS } from "@/lib/milit
 import { isCountryEnabledForPlayers } from "@/lib/countryAccess";
 import { allianceBarBetween } from "@/lib/military/allianceBar";
 import type { Bill } from "@/lib/db/types/legislation";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 export type DeclareWarCheck = { ok: true } | { ok: false; status: number; error: string };
 
@@ -69,8 +70,7 @@ export async function validateDeclareWar(
   // a declaration the chambers rejected still spent the country's capital, so
   // re-filing it immediately would make the vote meaningless.
   if (currentTurn != null) {
-    const last = await db
-      .collection<Bill>("bills")
+    const last = await billsCollection(db)
       .find({ countryId: sourceCountry, "provisions.type": "declare_war" })
       .sort({ proposedTurn: -1 })
       .limit(1)

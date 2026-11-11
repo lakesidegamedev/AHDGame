@@ -76,6 +76,8 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 type PlayerCharacter = Pick<
   Character,
@@ -279,8 +281,7 @@ async function loadEnactedBillCounts(
 ): Promise<Map<string, number>> {
   const window = { $gt: since, $lte: until };
   const [national, state] = await Promise.all([
-    db
-      .collection<Bill>("bills")
+    billsCollection(db)
       .find(
         { status: "signed", enactedAt: window, sponsorId: { $ne: null } },
         { projection: { sponsorId: 1 } }
@@ -436,8 +437,7 @@ async function loadKingmakerCalls(
   if (endorsements.length === 0) return new Map();
 
   const [candidates, officials] = await Promise.all([
-    db
-      .collection<ElectionCandidate>("electionCandidates")
+    electionCandidatesCollection(db)
       .find(
         { _id: { $in: endorsements.map((e) => e.candidateId) } },
         { projection: { _id: 1, characterId: 1, isNPP: 1, nppId: 1 } }

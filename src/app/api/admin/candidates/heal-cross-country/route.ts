@@ -6,6 +6,7 @@ import { archiveCampaignsForCandidates } from "@/lib/campaigns/archiveWithdrawnC
 import type { NPP, Election, ElectionCandidate } from "@/lib/db/types";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 /**
  * GET /api/admin/candidates/heal-cross-country
@@ -34,8 +35,7 @@ export async function GET() {
 
     // Find NPP candidates in these elections
     const electionIds = activeElections.map((e) => e._id);
-    const nppCandidates = await db
-      .collection<ElectionCandidate>("electionCandidates")
+    const nppCandidates = await electionCandidatesCollection(db)
       .find({
         electionId: { $in: electionIds },
         isNPP: true,
@@ -101,8 +101,7 @@ export async function POST() {
 
     // Find and withdraw cross-country candidates
     const electionIds = activeElections.map((e) => e._id);
-    const nppCandidates = await db
-      .collection<ElectionCandidate>("electionCandidates")
+    const nppCandidates = await electionCandidatesCollection(db)
       .find({
         electionId: { $in: electionIds },
         isNPP: true,
@@ -127,7 +126,7 @@ export async function POST() {
     }
 
     const withdrawIds = toWithdraw.map((c) => c._id);
-    await db.collection<ElectionCandidate>("electionCandidates").updateMany(
+    await electionCandidatesCollection(db).updateMany(
       { _id: { $in: withdrawIds } },
       {
         $set: {

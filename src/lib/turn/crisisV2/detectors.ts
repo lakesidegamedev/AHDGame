@@ -25,6 +25,7 @@ import {
   type CrisisOpenCandidate,
   type CrisisOpenCandidateProvider,
 } from "./registry";
+import { crisesCollection } from "@/lib/db/repositories/crises";
 
 export const DETECTOR_STREAK_COLLECTION = "crisisDetectorStreaks";
 
@@ -254,8 +255,7 @@ async function loadRecentlyResolved(
   if (!needed) return [];
   const cooldown =
     getCrisisDefinition(spec.definitionId)?.reopenCooldownTurns ?? DEFAULT_REOPEN_COOLDOWN_TURNS;
-  const rows = await db
-    .collection<Crisis>("crises")
+  const rows = await crisesCollection(db)
     .find(
       {
         status: "resolved",

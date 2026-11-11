@@ -28,6 +28,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 /**
  * Coerce a Mongo timestamp field to an ISO string for client serialization.
@@ -193,8 +194,7 @@ export async function getStatePartyBudgets(
 export async function getRegionPartyOrg(stateId: string, countryId: CountryId) {
   try {
     const db = await getDb();
-    const partyOrg = await db
-      .collection<StatePartyOrg>("statePartyOrg")
+    const partyOrg = await statePartyOrgCollection(db)
       .find({ countryId, stateId })
       .toArray();
 

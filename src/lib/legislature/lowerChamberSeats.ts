@@ -32,6 +32,7 @@ import { japanShugiinCurrentChamberCapacity } from "@/lib/countries/jp/rules/shu
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 
 /** Active world preset, when present — drives era-conditional chamber sizes. */
 async function readActivePreset(db: Db): Promise<string | undefined> {
@@ -64,15 +65,14 @@ export async function getLiveLowerChamberSeats(db: Db, countryId: CountryId): Pr
     }
   }
   if (countryHasFeature("bgLib", countryId) && preset === "1991-default") {
-    const countryState = await db
-      .collection<CountryGameState>("countryGameStates")
+    const countryState = await countryGameStatesCollection(db)
       .findOne({ _id: "BG" }, { projection: { bgOrdinaryAssemblySinceTurn: 1 } });
     if (countryState?.bgOrdinaryAssemblySinceTurn != null) {
       return BG_ORDINARY_ASSEMBLY_TOTAL_SEATS;
     }
   }
   if (countryId === COUNTRY_CONFIGS.JP.id && preset === "1991-default") {
-    const countryState = await db.collection<CountryGameState>("countryGameStates").findOne(
+    const countryState = await countryGameStatesCollection(db).findOne(
       { _id: COUNTRY_CONFIGS.JP.id },
       {
         projection: {
@@ -86,8 +86,7 @@ export async function getLiveLowerChamberSeats(db: Db, countryId: CountryId): Pr
     }
   }
   if (countryHasFeature("roLib", countryId) && preset === "1991-default") {
-    const countryState = await db
-      .collection<CountryGameState>("countryGameStates")
+    const countryState = await countryGameStatesCollection(db)
       .findOne({ _id: "RO" }, { projection: { roParliament1992SinceTurn: 1 } });
     if (countryState?.roParliament1992SinceTurn != null) {
       const regions = await statesCollection(db)
@@ -99,7 +98,7 @@ export async function getLiveLowerChamberSeats(db: Db, countryId: CountryId): Pr
     }
   }
   if (countryHasFeature("ruLib", countryId) && preset === "1991-default") {
-    const countryState = await db.collection<CountryGameState>("countryGameStates").findOne(
+    const countryState = await countryGameStatesCollection(db).findOne(
       { _id: "RU" },
       {
         projection: {
@@ -192,8 +191,7 @@ function isUpperChamberRegionApportioned(countryId: CountryId, preset?: string):
 export async function getLiveUpperChamberSeats(db: Db, countryId: CountryId): Promise<number> {
   const preset = await readActivePreset(db);
   if (countryHasFeature("roLib", countryId) && preset === "1991-default") {
-    const countryState = await db
-      .collection<CountryGameState>("countryGameStates")
+    const countryState = await countryGameStatesCollection(db)
       .findOne({ _id: "RO" }, { projection: { roParliament1992SinceTurn: 1 } });
     if (countryState?.roParliament1992SinceTurn != null) {
       const regions = await statesCollection(db)
@@ -205,8 +203,7 @@ export async function getLiveUpperChamberSeats(db: Db, countryId: CountryId): Pr
     }
   }
   if (countryHasFeature("ruLib", countryId) && preset === "1991-default") {
-    const countryState = await db
-      .collection<CountryGameState>("countryGameStates")
+    const countryState = await countryGameStatesCollection(db)
       .findOne({ _id: "RU" }, { projection: { ruFederalAssemblySinceTurn: 1 } });
     return countryState?.ruFederalAssemblySinceTurn != null ? 178 : 0;
   }

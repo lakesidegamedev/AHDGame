@@ -17,6 +17,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 export const BG_FOUNDING_FILING_LOCKS_COLLECTION = "bgFoundingAssemblyFilingLocks";
 export type BgFoundingFilingFailure =
   | "invalid-ballot"
@@ -185,15 +186,14 @@ export async function materializeBgFoundingPlayerFiling(input: {
       (requestedDistrictId && requestedDistrictId !== saved.constituencyId)
     )
       return reject("party-changed");
-    const prior = await db
-      .collection<ElectionCandidate>("electionCandidates")
+    const prior = await electionCandidatesCollection(db)
       .findOne(
         { _id: saved.candidateId, characterId: candidate.characterId, electionId },
         { session }
       );
     if (!prior) throw new Error("Bulgarian filing reservation has lost its original candidate");
     if (prior.status === "active") return reject("already-filed");
-    await db.collection<ElectionCandidate>("electionCandidates").updateOne(
+    await electionCandidatesCollection(db).updateOne(
       { _id: prior._id, status: "withdrawn" },
       {
         $set: { status: "active" },
@@ -205,8 +205,7 @@ export async function materializeBgFoundingPlayerFiling(input: {
   }
   if (receipt?.nominations.people.some((person) => !person.isNpc && person.ownerId === ownerId))
     return reject("already-filed");
-  const legacy = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const legacy = await electionCandidatesCollection(db)
     .find(
       { electionId, characterId: candidate.characterId, isNPP: { $ne: true } },
       {
@@ -268,7 +267,7 @@ export async function materializeBgFoundingPlayerFiling(input: {
   if (candidate.party !== "independent")
     await locks.insertOne({ ...reservation, _id: partyKey }, { session });
   if (prior) {
-    await db.collection<ElectionCandidate>("electionCandidates").updateOne(
+    await electionCandidatesCollection(db).updateOne(
       { _id: prior._id, status: "withdrawn" },
       {
         $set: {
@@ -281,7 +280,7 @@ export async function materializeBgFoundingPlayerFiling(input: {
     );
     return { allowed: true, insertedId: prior._id };
   }
-  await db.collection<ElectionCandidate>("electionCandidates").insertOne(
+  await electionCandidatesCollection(db).insertOne(
     {
       ...candidate,
       _id: candidateId,

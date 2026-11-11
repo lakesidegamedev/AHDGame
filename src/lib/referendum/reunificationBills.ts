@@ -16,6 +16,7 @@ import type { Referendum } from "@/lib/db/types/referendum";
 import { getCountryConfig, type CountryId } from "@/lib/constants/countries";
 import { CONVERSION_WINDOW_TURNS } from "@/lib/constants/referendum";
 import { isCountryEnabledForPlayers } from "@/lib/countryAccess";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 /** Display-only votingEndsAt offset; turn-based resolution uses votingEndsOnTurn. */
 const APPROX_TURN_MS = 3_600_000;
@@ -71,7 +72,7 @@ async function createConsentBill(
     createdAt: now,
     updatedAt: now,
   } as unknown as Bill;
-  await db.collection<Bill>("bills").insertOne(bill);
+  await billsCollection(db).insertOne(bill);
   return billId;
 }
 

@@ -65,6 +65,9 @@ import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficia
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 // GET /api/client-status — Returns status bar enrichment data (funds, corp, election stats, income).
 // Auth: requireBasicAuth
@@ -479,11 +482,10 @@ export async function handleClientStatus(request: Request) {
           })
         : Promise.resolve(null),
       hasParty
-        ? db.collection<StatePartyOrg>("statePartyOrg").findOne({ _id: statePartyKey })
+        ? statePartyOrgCollection(db).findOne({ _id: statePartyKey })
         : Promise.resolve(null),
       includeElection
-        ? db
-            .collection<ElectionCandidate>("electionCandidates")
+        ? electionCandidatesCollection(db)
             .findOne({ characterId: character._id, status: "active" }, { sort: { enteredAt: -1 } })
         : Promise.resolve(null),
       includeCorp
@@ -801,8 +803,7 @@ export async function handleClientStatus(request: Request) {
           _id: myCandidate.electionId,
           status: { $in: ["upcoming", "active", "completed"] },
         }),
-        db
-          .collection<ElectionVoteTally>("electionVoteTallies")
+        electionVoteTalliesCollection(db)
           .findOne(
             { electionId: myCandidate.electionId },
             { projection: { totalVotes: 1, seatsEstimate: 1, turnSnapshots: { $slice: -12 } } }

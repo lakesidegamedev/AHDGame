@@ -17,6 +17,8 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -277,12 +279,10 @@ export async function queryElectionList(
 
   const electionIds = elections.map((e) => e._id);
   const [allCandidates, allTallies] = await Promise.all([
-    db
-      .collection<ElectionCandidate>("electionCandidates")
+    electionCandidatesCollection(db)
       .find({ electionId: { $in: electionIds } })
       .toArray(),
-    db
-      .collection<ElectionVoteTally>("electionVoteTallies")
+    electionVoteTalliesCollection(db)
       .find({ electionId: { $in: electionIds } })
       .toArray(),
   ]);
@@ -397,11 +397,10 @@ export async function queryElectionDetail(db: Db, electionId: string) {
   const electionOid = election._id;
 
   const [allCandidateRows, tally, snapshots] = await Promise.all([
-    db
-      .collection<ElectionCandidate>("electionCandidates")
+    electionCandidatesCollection(db)
       .find({ electionId: electionOid })
       .toArray(),
-    db.collection<ElectionVoteTally>("electionVoteTallies").findOne({ electionId: electionOid }),
+    electionVoteTalliesCollection(db).findOne({ electionId: electionOid }),
     db
       .collection<PrimarySnapshot>("primarySnapshots")
       .find({ electionId: electionOid })
@@ -592,12 +591,10 @@ export async function queryElectionArchives(
 
   const electionIds = elections.map((e) => e._id);
   const [allCandidates, allTallies] = await Promise.all([
-    db
-      .collection<ElectionCandidate>("electionCandidates")
+    electionCandidatesCollection(db)
       .find({ electionId: { $in: electionIds } })
       .toArray(),
-    db
-      .collection<ElectionVoteTally>("electionVoteTallies")
+    electionVoteTalliesCollection(db)
       .find({ electionId: { $in: electionIds } })
       .toArray(),
   ]);

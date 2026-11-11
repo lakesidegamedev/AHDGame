@@ -55,6 +55,9 @@ import type { ResetCountry } from "@/lib/resetLegislation/fundingOwner";
 import { getNationalDocId } from "@/lib/constants/nationalScope";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import type { Document } from "mongodb";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 const CABINET_VOTE_DURATION_MS = 24 * 3_600_000; // 24 hours
 type BillListProvisionDisplay = NonNullable<BillDisplay["provisions"]>[number];
@@ -87,14 +90,12 @@ export async function listCabinetBills(countryId: CountryId) {
       getBillProposalAutoFailWarning(db, countryId, "cabinet"),
       getAuthUser().catch(() => null),
       getGovernmentFormationsCollection(db).findOne({ _id: countryId }),
-      db
-        .collection<Bill>("bills")
+      billsCollection(db)
         .find({ countryId, originChamber: "cabinet" })
         .sort({ createdAt: -1 })
         .limit(20)
         .toArray(),
-      db
-        .collection<Bill>("bills")
+      billsCollection(db)
         .find(
           { countryId, status: { $nin: NATIONAL_TERMINAL_STATUSES as BillStatus[] } },
           { projection: { provisions: 1 } }
@@ -122,7 +123,7 @@ export async function listCabinetBills(countryId: CountryId) {
       const character = await getCharacterByUserId(db, authUser.userId);
       if (character) {
         myCharacterId = character._id.toString();
-        const existingActiveBill = await db.collection<Bill>("bills").findOne({
+        const existingActiveBill = await billsCollection(db).findOne({
           sponsorId: character._id,
           countryId,
           status: { $nin: NATIONAL_TERMINAL_STATUSES as BillStatus[] },
@@ -166,8 +167,7 @@ export async function listCabinetBills(countryId: CountryId) {
   const myVoteMap = new Map<string, "for" | "against" | "abstain" | null>();
   if (myCharacterId && bills.length > 0) {
     const billIds = bills.map((bill) => bill._id);
-    const voteRows = await db
-      .collection("bills")
+    const voteRows = await billsCollection<Document>(db)
       .find(
         { _id: { $in: billIds } },
         {
@@ -388,7 +388,7 @@ export async function proposeCabinetBill({
 
   // Constraint 1: one active bill per sponsor in this country's national legislature (admins bypass)
   if (!isAdmin) {
-    const existingActiveBill = await db.collection<Bill>("bills").findOne({
+    const existingActiveBill = await billsCollection(db).findOne({
       sponsorId: character._id,
       countryId,
       status: { $nin: NATIONAL_TERMINAL_STATUSES as BillStatus[] },
@@ -420,8 +420,7 @@ export async function proposeCabinetBill({
     if (mechanicsFound) {
       const allowedDomains = new Set(unionLegislativeDomains(domainLists));
       // Look up the legislation type to check its category
-      const legType = await db
-        .collection<LegislationType>("legislationTypes")
+      const legType = await legislationTypesCollection(db)
         .findOne({ _id: legislationTypeId });
       if (legType) {
         const billDomain = legType.policyDomain;
@@ -449,8 +448,7 @@ export async function proposeCabinetBill({
   }
 
   // Check limit: only 1 cabinet bill in "cabinet_review" at a time
-  const existingReview = await db
-    .collection<Bill>("bills")
+  const existingReview = await billsCollection(db)
     .findOne({ countryId, status: "cabinet_review", originChamber: "cabinet" });
   if (existingReview) {
     return NextResponse.json(badRequest("A cabinet bill is already under review").toJson(), {
@@ -639,7 +637,7 @@ export async function proposeCabinetBill({
       updatedAt: now,
     };
     try {
-      const result = await db.collection<Bill>("bills").insertOne(resetBill as Bill);
+      const result = await billsCollection(db).insertOne(resetBill as Bill);
       return NextResponse.json({
         success: true,
         billId: result.insertedId.toString(),
@@ -747,7 +745,7 @@ export async function proposeCabinetBill({
       updatedAt: now,
     };
     try {
-      const result = await db.collection<Bill>("bills").insertOne(natBill as Bill);
+      const result = await billsCollection(db).insertOne(natBill as Bill);
       return NextResponse.json({
         success: true,
         billId: result.insertedId.toString(),
@@ -774,8 +772,7 @@ export async function proposeCabinetBill({
     });
   }
 
-  const selectedLegislationType = await db
-    .collection<LegislationType>("legislationTypes")
+  const selectedLegislationType = await legislationTypesCollection(db)
     .findOne({ _id: legislationTypeId });
   if (!selectedLegislationType) {
     return NextResponse.json(badRequest("Unknown legislation type.").toJson(), {
@@ -914,7 +911,7 @@ export async function proposeCabinetBill({
   };
 
   try {
-    const result = await db.collection<Bill>("bills").insertOne(bill as Bill);
+    const result = await billsCollection(db).insertOne(bill as Bill);
     return NextResponse.json({
       success: true,
       billId: result.insertedId.toString(),

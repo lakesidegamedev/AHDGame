@@ -22,6 +22,8 @@ import {
   parseCoalitionCountry,
   resolveCoalitionPriorityViewer,
 } from "@/lib/coalitions/priorityApi";
+import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
+import type { Document } from "mongodb";
 
 const objectIdString = z.string().regex(/^[0-9a-fA-F]{24}$/);
 
@@ -93,8 +95,7 @@ export async function GET(
     );
 
     if (changed) {
-      await db
-        .collection("coalitions")
+      await coalitionsCollection<Document>(db)
         .updateOne(
           { _id: context.coalition._id },
           { $set: { priorities: normalizedPriorities, updatedAt: now } }
@@ -230,8 +231,7 @@ export async function POST(
     }
 
     const priorities = [...existingPriorities, nextPriority];
-    await db
-      .collection("coalitions")
+    await coalitionsCollection<Document>(db)
       .updateOne({ _id: context.coalition._id }, { $set: { priorities, updatedAt: now } });
 
     return NextResponse.json({

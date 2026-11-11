@@ -30,6 +30,7 @@ import {
   type LeverUseSummary,
   type PullLeverInput,
 } from "./leverCommand";
+import { crisesCollection } from "@/lib/db/repositories/crises";
 
 const COMPONENT = "crisisLegacyLever";
 
@@ -60,7 +61,7 @@ export async function pullLeverWithDecision(
   if (!ref) return pullLever(db, input);
 
   const [crisis, interaction, character] = await Promise.all([
-    db.collection<Crisis>("crises").findOne({ _id: input.crisisId }),
+    crisesCollection(db).findOne({ _id: input.crisisId }),
     db.collection<CrisisInteraction>("crisisInteractions").findOne({ crisisId: input.crisisId }),
     getCharactersCollection(db).then((characters) =>
       characters.findOne({ _id: input.characterId })

@@ -15,6 +15,7 @@ import {
   type CrisisHolderProvider,
 } from "./registry";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 
 export const HEAD_OF_STATE_OFFICES = [
   "president",
@@ -77,8 +78,7 @@ async function loadOfficeCharacters(db: Db, countryIds: string[], draft: Draft):
 }
 
 async function loadFormedGovernments(db: Db, countryIds: string[], draft: Draft): Promise<void> {
-  const formations = await db
-    .collection<{ _id: string; pmCharacterId?: unknown }>("governmentFormations")
+  const formations = await governmentFormationsCollection<{ _id: string; pmCharacterId?: unknown }>(db)
     .find(
       { _id: { $in: countryIds }, status: "formed", pmCharacterId: { $ne: null } },
       { projection: { pmCharacterId: 1 } }

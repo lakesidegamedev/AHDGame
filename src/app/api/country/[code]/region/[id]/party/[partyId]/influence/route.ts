@@ -24,6 +24,7 @@ import {
 } from "@/lib/influence";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { NPP_MANAGEMENT_LIMITS, checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; partyId: string }>;
@@ -60,8 +61,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
       return errorResponse(404, "Party not found");
     }
 
-    const statePartyOrg = await db
-      .collection<StatePartyOrg>("statePartyOrg")
+    const statePartyOrg = await statePartyOrgCollection(db)
       .findOne({ _id: `${stateId.toUpperCase()}_${partyId}` });
     if (!statePartyOrg) {
       return errorResponse(404, "State party not found");
@@ -202,8 +202,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
     const result = results[0];
 
-    const updatedStateParty = await db
-      .collection<StatePartyOrg>("statePartyOrg")
+    const updatedStateParty = await statePartyOrgCollection(db)
       .findOne({ _id: `${stateId.toUpperCase()}_${partyId}` });
 
     return NextResponse.json({

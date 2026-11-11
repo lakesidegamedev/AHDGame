@@ -31,6 +31,7 @@ import {
 } from "@/lib/government/rules/leaderLegacy";
 import { createSystemNewsPost } from "@/lib/news";
 import type { CrisisBlameShift } from "@/lib/elections/engine/crisisBlame";
+import { crisesCollection } from "@/lib/db/repositories/crises";
 
 /** Turns of history read when the term start is unknown. */
 const UNKNOWN_START_LOOKBACK_TURNS = 192;
@@ -95,8 +96,7 @@ export async function recordLeaderDeparture(
         { projection: { enactedByBillId: 1 } }
       )
       .toArray(),
-    db
-      .collection<CrisisSliceForLegacy>("crises")
+    crisesCollection<CrisisSliceForLegacy>(db)
       .find(
         {
           // A global crisis is resolved to every country when it runs, so its

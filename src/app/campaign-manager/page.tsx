@@ -16,6 +16,7 @@ import {
 import CampaignManagerClient from "./CampaignManagerClient";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 
 export const metadata: Metadata = { title: "Campaign Manager" };
 
@@ -55,8 +56,7 @@ export default async function CampaignManagerPage({
       .find({ countryId }, { projection: { _id: 1, name: 1 } })
       .toArray(),
     getGameStatePreset(db),
-    db
-      .collection<{ _id: string } & NonNullable<CountryRuntimeState>>("countryGameStates")
+    countryGameStatesCollection<{ _id: string } & NonNullable<CountryRuntimeState>>(db)
       .findOne({ _id: countryId }),
     loadCountryNameOverrides(db),
   ]);

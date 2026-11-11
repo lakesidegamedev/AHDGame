@@ -18,6 +18,7 @@ import { getNppsCollection } from "@/lib/db/collections/npps";
 import { getStatesCollection } from "@/lib/db/collections/states";
 import { getPoliticalPartiesCollection } from "@/lib/db/collections/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 /**
  * Max updates per bulkWrite. Sized well under MongoDB's 16MB per-command BSON
@@ -103,9 +104,7 @@ export async function processNppStanceDrift(
     .toArray();
   const partyByKey = new Map(parties.map((p) => [`${p.countryId}:${p.sequentialId}`, p]));
 
-  const legislationTypes = await db
-    // full-read(legislationTypes): deriveDomainPositions derives a stance from every type
-    .collection<LegislationType>("legislationTypes")
+  const legislationTypes = await legislationTypesCollection(db)
     .find({})
     .toArray();
 

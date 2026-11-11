@@ -7,6 +7,8 @@ import { adminLawTypesCreateSchema } from "@/lib/api/schemas/admin";
 import type { LegislationType, Bill, BillStatus } from "@/lib/db/types";
 import { legislationTypes as seedLegislationTypes } from "@/lib/seeds/reference/legislationTypes";
 import type { LegislationTypePosition } from "@/lib/db/types/legislation";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 // Partial schema for updates (all fields optional except we need at least one)
 const adminLawTypesUpdateSchema = adminLawTypesCreateSchema.omit({ _id: true }).partial();
@@ -40,7 +42,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 
     // Check if this ID exists (either as seed or admin type)
     const seedType = seedLegislationTypes.find((t) => t._id === id);
-    const adminType = await db.collection<LegislationType>("legislationTypes").findOne({ _id: id });
+    const adminType = await legislationTypesCollection(db).findOne({ _id: id });
 
     if (!seedType && !adminType) {
       return errorResponse(404, `Law type "${id}" not found`);
@@ -73,8 +75,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         updatedAt: now,
       } as LegislationType;
 
-      await db
-        .collection<LegislationType>("legislationTypes")
+      await legislationTypesCollection(db)
         .updateOne({ _id: id }, { $set: updatedType }, { upsert: true });
 
       const isNew = !adminType;
@@ -91,12 +92,10 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         updatedAt: now,
       } as Partial<LegislationType>;
 
-      await db
-        .collection<LegislationType>("legislationTypes")
+      await legislationTypesCollection(db)
         .updateOne({ _id: id, source: "admin" }, { $set: updatedType });
 
-      const finalType = await db
-        .collection<LegislationType>("legislationTypes")
+      const finalType = await legislationTypesCollection(db)
         .findOne({ _id: id });
 
       return NextResponse.json({
@@ -122,12 +121,12 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
 
     // Check if this is a seed type
     const seedType = seedLegislationTypes.find((t) => t._id === id);
-    const adminType = await db.collection<LegislationType>("legislationTypes").findOne({ _id: id });
+    const adminType = await legislationTypesCollection(db).findOne({ _id: id });
 
     if (seedType) {
       if (adminType) {
         // Delete the admin override, reverting to seed definition
-        await db.collection<LegislationType>("legislationTypes").deleteOne({ _id: id });
+        await legislationTypesCollection(db).deleteOne({ _id: id });
         return NextResponse.json({
           message: "Admin override removed; law type reverted to seed definition",
         });
@@ -144,7 +143,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
 
     // Check for active bills using this legislation type
     // Active = not in terminal status (signed, failed, vetoed, withdrawn)
-    const activeBillCount = await db.collection<Bill>("bills").countDocuments({
+    const activeBillCount = await billsCollection(db).countDocuments({
       $or: [{ legislationTypeId: id }, { "provisions.legislationTypeId": id }],
       status: { $nin: TERMINAL_STATUSES },
     });
@@ -158,7 +157,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     }
 
     // Delete the admin type
-    await db.collection<LegislationType>("legislationTypes").deleteOne({ _id: id });
+    await legislationTypesCollection(db).deleteOne({ _id: id });
 
     return NextResponse.json({
       message: "Law type deleted successfully",

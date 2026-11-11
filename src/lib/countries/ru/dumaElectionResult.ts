@@ -23,6 +23,9 @@ import {
 import { hasAuthorizedPostSovietTransition } from "./rules/postSovietTransition";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 
 export const RUSSIAN_DUMA_RESULTS_COLLECTION = "russianDumaElectionResults";
 export interface RussianDumaResultRecord {
@@ -80,7 +83,7 @@ export async function materializeRussianDumaElectionResult(input: {
     { session, projection: { preset: 1 } }
   );
   if (game?.preset !== "1991-default") throw new Error("No first-Duma mandate in this world");
-  const countries = db.collection<CountryGameState>("countryGameStates");
+  const countries = countryGameStatesCollection(db);
   const country = await countries.findOne(
     { _id: "RU" },
     {
@@ -151,7 +154,7 @@ export async function materializeRussianDumaElectionResult(input: {
       convocationNumber: authority.number,
     });
   const electionIds = cohort.map((row) => row._id);
-  const tallies = db.collection<ElectionVoteTally>("electionVoteTallies");
+  const tallies = electionVoteTalliesCollection(db);
   const result = resolveRussianDumaCohort(ballots);
   const outcomes = new Map(
     result.constituencyResults.map((row) => [row.electionId, row.decision.outcome])
@@ -184,8 +187,7 @@ export async function materializeRussianDumaElectionResult(input: {
   // Release the global active-candidacy index for future and repeat ballots.
   // The immutable result above retains the nominees and counted votes.
   const expectedActive = candidates.filter((row) => row.status === "active").length;
-  const retired = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const retired = await electionCandidatesCollection(db)
     .updateMany(
       { electionId: { $in: electionIds }, status: "active" },
       { $set: { status: "withdrawn", withdrawnAt: now } },

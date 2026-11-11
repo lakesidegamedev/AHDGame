@@ -12,6 +12,8 @@ import {
   russianConstitutionalDecisionAvailability,
   type RussianConstitutionalDecisionKind,
 } from "./rules/constitutionalDecisions";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 
 const RUSSIAN_CONSTITUTIONAL_PROPOSALS_COLLECTION = "russianConstitutionalProposals";
 export interface RussianConstitutionalProposal {
@@ -60,7 +62,7 @@ export async function materializeRussianConstitutionalProposal(input: {
   const { db, session, game, turn, now, kind, sponsor, sponsorParty } = input;
   if (!session.inTransaction() || !Number.isFinite(now.getTime()))
     throw new Error("Russian constitutional proposal needs an active transaction and time");
-  const countries = db.collection<CountryGameState>("countryGameStates");
+  const countries = countryGameStatesCollection(db);
   const country = await countries.findOne({ _id: "RU" }, { session, projection: markerProjection });
   const available = russianConstitutionalDecisionAvailability({
     preset: game.preset,
@@ -82,8 +84,7 @@ export async function materializeRussianConstitutionalProposal(input: {
   const proposalId = `1991-default:ru-constitution:${kind}`;
   const existing = await proposals.findOne({ _id: proposalId }, { session });
   if (existing) {
-    const oldBill = await db
-      .collection<Bill>("bills")
+    const oldBill = await billsCollection(db)
       .findOne(
         { _id: existing.billId },
         { session, projection: { status: 1, russianConstitutionalMandate: 1, countryId: 1 } }
@@ -147,7 +148,7 @@ export async function materializeRussianConstitutionalProposal(input: {
   );
   if (existing && updated.matchedCount !== 1)
     throw new RussianConstitutionalDecisionConflict("Constitutional proposal changed");
-  await db.collection<Bill>("bills").insertOne(bill, { session });
+  await billsCollection(db).insertOne(bill, { session });
   return proposal;
 }
 
@@ -187,7 +188,7 @@ export async function authorizeRussianConstitutionalMandate(input: {
     proposal.revision < 1
   )
     throw new RussianConstitutionalDecisionConflict("Invalid constitutional proposal identity");
-  const bill = await db.collection<Bill>("bills").findOne(
+  const bill = await billsCollection(db).findOne(
     {
       _id: proposal.billId,
       countryId: "RU",
@@ -209,7 +210,7 @@ export async function authorizeRussianConstitutionalMandate(input: {
     throw new RussianConstitutionalDecisionConflict(
       "Enacted constitutional bill does not match its proposal"
     );
-  const countries = db.collection<CountryGameState>("countryGameStates");
+  const countries = countryGameStatesCollection(db);
   const country = await countries.findOne({ _id: "RU" }, { session, projection: markerProjection });
   const available = russianConstitutionalDecisionAvailability({
     preset: game.preset,
@@ -297,8 +298,7 @@ export async function loadRussianConstitutionalDecisions(
 ) {
   if (game.preset !== "1991-default") return [];
   const kinds: RussianConstitutionalDecisionKind[] = ["presidency", "federalAssembly"];
-  const country = await db
-    .collection<CountryGameState>("countryGameStates")
+  const country = await countryGameStatesCollection(db)
     .findOne({ _id: "RU" }, { projection: markerProjection });
   const proposals = await db
     .collection<RussianConstitutionalProposal>(RUSSIAN_CONSTITUTIONAL_PROPOSALS_COLLECTION)
@@ -308,8 +308,7 @@ export async function loadRussianConstitutionalDecisions(
     )
     .toArray();
   const bills = proposals.length
-    ? await db
-        .collection<Bill>("bills")
+    ? await billsCollection(db)
         .find(
           { _id: { $in: proposals.map((proposal) => proposal.billId) } },
           { projection: { status: 1 } }

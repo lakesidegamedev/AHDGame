@@ -14,14 +14,15 @@ import { bgNationwideEligibleParties } from "@/lib/countries/bg/rules/ordinaryEl
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 
 /** Read the full 1991 slate once before any regional race is seated. */
 export async function readBgOrdinaryEligibleParties(db: Db): Promise<ReadonlySet<string> | null> {
   const elections = await electionsCollection(db)
     .find({ countryId: "BG", electionType: "nationalAssembly", cycle: 1 })
     .toArray();
-  const tallies = await db
-    .collection<ElectionVoteTally>("electionVoteTallies")
+  const tallies = await electionVoteTalliesCollection(db)
     .find({ electionId: { $in: elections.map((e) => e._id) } })
     .toArray();
   const talliesById = new Map(tallies.map((tally) => [tally.electionId.toString(), tally]));
@@ -112,12 +113,10 @@ export async function readBgOrdinaryElectionPlan(
     .map((row) => row._id.toHexString());
   const ids = elections.map((row) => row._id);
   const [tallies, candidates] = await Promise.all([
-    db
-      .collection<ElectionVoteTally>("electionVoteTallies")
+    electionVoteTalliesCollection(db)
       .find({ electionId: { $in: ids } }, { projection: TALLY_WITH_LATEST_SNAPSHOT_ONLY })
       .toArray(),
-    db
-      .collection<ElectionCandidate>("electionCandidates")
+    electionCandidatesCollection(db)
       .find(
         { electionId: { $in: ids } },
         {

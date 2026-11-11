@@ -8,6 +8,7 @@ import { getCountryConfigForRuntime, type CountryId } from "@/lib/constants/coun
 import type { CountryGameState } from "@/lib/db/types/gameState";
 import { getGameStatePreset } from "@/lib/db/collections/gameState";
 import { resolveCountryOfficeLayout } from "./rules/officeLayout";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 
 export async function loadRuntimeCountryOffices(
   db: Db,
@@ -18,7 +19,7 @@ export async function loadRuntimeCountryOffices(
   const activePreset = preset ?? (await getGameStatePreset(db));
   const country =
     (countryId === "RU" || countryId === "BG") && activePreset === "1991-default"
-      ? await db.collection<CountryGameState>("countryGameStates").findOne(
+      ? await countryGameStatesCollection(db).findOne(
           { _id: countryId },
           {
             session,

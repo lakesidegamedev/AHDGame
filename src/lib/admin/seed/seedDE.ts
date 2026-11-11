@@ -21,6 +21,8 @@ import type { Document } from "mongodb";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 
 /**
  * The region roster DE actually governs in a given preset.
@@ -186,7 +188,7 @@ export async function seedDEStatePartyOrg(
   preset?: string
 ) {
   if (reset) {
-    await db.collection("statePartyOrg").deleteMany({ countryId: "DE" });
+    await statePartyOrgCollection<Document>(db).deleteMany({ countryId: "DE" });
   }
 
   // Resolve preset: explicit arg wins, otherwise read from gameState
@@ -200,8 +202,7 @@ export async function seedDEStatePartyOrg(
   const orgs = await calculateDEStatePartyOrgs(db, activePreset);
   const now = new Date();
   for (const org of orgs) {
-    await db
-      .collection<StatePartyOrg>("statePartyOrg")
+    await statePartyOrgCollection(db)
       .updateOne(
         { _id: org._id },
         { $set: { ...org, updatedAt: now }, $setOnInsert: { createdAt: now } },
@@ -233,8 +234,7 @@ export async function ensureMissingDEStatePartyOrgRows(
   const orgs = await calculateDEStatePartyOrgs(db, activePreset);
 
   const ids = orgs.map((o) => o._id);
-  const existing = await db
-    .collection<StatePartyOrg>("statePartyOrg")
+  const existing = await statePartyOrgCollection(db)
     /* eslint-disable @typescript-eslint/no-explicit-any */
     .find({ _id: { $in: ids as any } } as any)
     /* eslint-enable @typescript-eslint/no-explicit-any */
@@ -244,8 +244,7 @@ export async function ensureMissingDEStatePartyOrgRows(
   const missing = orgs.filter((o) => !existingIds.has(o._id));
   if (missing.length > 0) {
     for (const org of missing) {
-      await db
-        .collection<StatePartyOrg>("statePartyOrg")
+      await statePartyOrgCollection(db)
         .updateOne(
           { _id: org._id },
           { $set: { ...org, updatedAt: now }, $setOnInsert: { createdAt: now } },
@@ -359,7 +358,7 @@ export async function seedDEGovernmentFormation(
   // 1953 Bundestag had 402 seats (pre-1957 electoral reform expanded it).
   // Majority threshold: 202 (floor(402/2) + 1).
   const eraOverride = preset === "1953-default" ? { totalSeats: 402, majorityThreshold: 202 } : {};
-  await db.collection<GovernmentFormation>("governmentFormations").updateOne(
+  await governmentFormationsCollection(db).updateOne(
     { _id: deGovernmentFormation._id },
     {
       $set: { ...deGovernmentFormation, ...eraOverride, updatedAt: now },

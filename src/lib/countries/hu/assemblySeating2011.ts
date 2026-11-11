@@ -26,6 +26,9 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 
 const HU_2011_OFFICE_ARCHIVES_COLLECTION = "hu2011AssemblyOfficeArchives";
 interface Hu2011AssemblyArchive {
@@ -92,8 +95,7 @@ async function materializeHu2011AssemblySeating(input: {
     new Set(elections.map((row) => row.state)).size !== 6
   )
     throw new Error("Hungarian certified cohort is incomplete or changed");
-  const candidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidates = await electionCandidatesCollection(db)
     .find(
       { electionId: { $in: ids } },
       {
@@ -291,7 +293,7 @@ async function materializeHu2011AssemblySeating(input: {
       { session }
     );
   }
-  const finalizedTallies = await db.collection<ElectionVoteTally>("electionVoteTallies").bulkWrite(
+  const finalizedTallies = await electionVoteTalliesCollection(db).bulkWrite(
     elections.map((election) => ({
       updateOne: {
         filter: {
@@ -339,7 +341,7 @@ async function materializeHu2011AssemblySeating(input: {
   );
   if (finalizedTallies.matchedCount !== ids.length)
     throw new Error("Hungarian handover lost tally custody");
-  await db.collection<ElectionCandidate>("electionCandidates").updateMany(
+  await electionCandidatesCollection(db).updateMany(
     { electionId: { $in: ids }, status: "active" },
     {
       $set: { status: "withdrawn", withdrawnAt: now },
@@ -374,7 +376,7 @@ async function materializeHu2011AssemblySeating(input: {
     { session }
   );
   if (resized.matchedCount !== 6) throw new Error("Hungarian handover requires all six regions");
-  const formation = await db.collection<GovernmentFormation>("governmentFormations").updateOne(
+  const formation = await governmentFormationsCollection(db).updateOne(
     { _id: "HU" },
     {
       $set: { totalSeats: 199, majorityThreshold: 100, updatedAt: now },

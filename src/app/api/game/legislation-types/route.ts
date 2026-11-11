@@ -18,6 +18,7 @@ import { attachPoliticalLegislationEstimates } from "@/lib/politicalLegislation/
 import { marketAtLeast } from "@/lib/market/featureFlag";
 import { isMediaOwnershipBillAvailable } from "@/lib/mediaRegulation/rules";
 import { loadUSMediaOutletDelivery } from "@/lib/mediaRegulation/turnData";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 // Legislation types are near-static — written only by admin seed / law-type
 // edit routes, never by gameplay or turn processing. We cache the read with a
@@ -79,8 +80,7 @@ async function fetchLegislationTypes(
     }
   }
 
-  const cursor = db
-    .collection<LegislationType>("legislationTypes")
+  const cursor = legislationTypesCollection(db)
     .find(query)
     .sort({ policyDomain: 1, subCategory: 1 });
   if (minimal)

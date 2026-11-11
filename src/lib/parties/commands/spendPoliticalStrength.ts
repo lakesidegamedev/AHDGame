@@ -14,6 +14,7 @@ import {
   effectivePsCost,
 } from "@/lib/turn/politicalStrength/strengthConstants";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 /**
  * Shared command that debits Political Strength for a party action and
@@ -115,7 +116,7 @@ export async function spendPoliticalStrength(
   let updatedPS: number | null = null;
   let currentPS = 0;
   if (input.scope === "state") {
-    const spoCol = db.collection<StatePartyOrg>("statePartyOrg");
+    const spoCol = statePartyOrgCollection(db);
     const spoFilter = {
       countryId: input.countryId,
       partyId: input.partyId,

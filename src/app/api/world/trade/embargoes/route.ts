@@ -24,6 +24,7 @@ import {
 } from "@/lib/cabinet/ministerialActionPool";
 import { TRADE_MINISTER_POSITION_BY_COUNTRY } from "@/lib/constants/internationalOrganizations";
 import { TRADE_EMBARGO_MAX_DURATION_TURNS } from "@/lib/trade/constants";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 const imposeSchema = z.object({
   sourceCountry: z.enum(ZOD_COUNTRY_ENUM),
@@ -148,8 +149,7 @@ export async function GET(request: Request) {
       .find(ministerFilter)
       .toArray();
 
-    const signedEmbargoBills = await db
-      .collection<Bill>("bills")
+    const signedEmbargoBills = await billsCollection(db)
       .find(
         {
           status: "signed",
@@ -190,8 +190,7 @@ export async function GET(request: Request) {
     // In-flight embargo legislation: bills carrying an embargo/end_embargo
     // provision that haven't been enacted (or rejected) yet. Once signed they
     // terminalize and reappear above as active embargoes (resolved read-only).
-    const pendingBills = await db
-      .collection<Bill>("bills")
+    const pendingBills = await billsCollection(db)
       .find(
         {
           status: { $nin: NATIONAL_TERMINAL_STATUSES },

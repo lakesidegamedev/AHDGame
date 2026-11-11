@@ -1,5 +1,7 @@
 import type { Db } from "mongodb";
 import type { Migration, MigrationResult } from "../types";
+import { crisesCollection } from "@/lib/db/repositories/crises";
+import type { Document } from "mongodb";
 
 /**
  * Repair the crises_living_event unique index and the null keys that break it.
@@ -25,7 +27,7 @@ import type { Migration, MigrationResult } from "../types";
  */
 async function repairLivingEventIndex(db: Db, dryRun: boolean): Promise<MigrationResult> {
   const notes: string[] = [];
-  const crises = db.collection("crises");
+  const crises = crisesCollection<Document>(db);
 
   const nullKeyed = await crises.countDocuments({ livingConflictEventId: null });
   const indexes = await crises.indexes().catch(() => []);

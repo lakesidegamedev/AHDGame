@@ -39,6 +39,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
 import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 export const STOCK_HOLDING_MIGRATION_ID = "2026-10-16-stock-holding-tax-tiers";
 function ownerKey(
@@ -137,8 +138,7 @@ async function migrate(db: Db, ctx: MigrationContext): Promise<MigrationResult> 
       stateBudgetsCollection(db)
         .find({}, { projection: { countryId: 1, taxRates: 1 } })
         .toArray(),
-      db
-        .collection<LegislationType>("legislationTypes")
+      legislationTypesCollection(db)
         .find({
           $or: [{ "taxRateChange.taxType": "incomeTax" }, { "taxSlider.taxType": "incomeTax" }],
         })
@@ -389,7 +389,7 @@ async function migrate(db: Db, ctx: MigrationContext): Promise<MigrationResult> 
       },
     ]);
   if (clones.length)
-    await db.collection<LegislationType>("legislationTypes").bulkWrite(
+    await legislationTypesCollection(db).bulkWrite(
       clones.map((type) => ({
         updateOne: { filter: { _id: type._id }, update: { $setOnInsert: type }, upsert: true },
       }))

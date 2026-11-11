@@ -11,6 +11,8 @@ import type { RussianDumaResultRecord } from "./dumaElectionResult";
 import type { RussianDumaCohortBallot } from "./rules/assemblyCohort";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 
 export async function loadRussianDumaCertificationInputs(input: {
   db: Db;
@@ -22,7 +24,7 @@ export async function loadRussianDumaCertificationInputs(input: {
 }) {
   const { db, session, cohort } = input;
   const electionIds = cohort.map((row) => row._id);
-  const tallies = db.collection<ElectionVoteTally>("electionVoteTallies");
+  const tallies = electionVoteTalliesCollection(db);
   const counted = await tallies
     .find(
       { electionId: { $in: electionIds } },
@@ -45,8 +47,7 @@ export async function loadRussianDumaCertificationInputs(input: {
     counted.some((row) => row.finalized || row.russianDumaBallot?.certifiedCohortId)
   )
     throw new Error("The Duma needs one unique unfinalized tally per ballot");
-  const candidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidates = await electionCandidatesCollection(db)
     .find(
       { electionId: { $in: electionIds } },
       {

@@ -1,6 +1,7 @@
 import type { Db } from "mongodb";
 import type { GovernorExecutiveOrder, LegislationType, StatePolicy } from "@/lib/db/types";
 import { buildOrderRevertPolicyFields } from "@/lib/governorOffice/orders/revertPolicy";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 /**
  * Turn phase: process active executive orders.
@@ -54,8 +55,7 @@ export async function processGovernorExecutiveOrders(
       // effectDirection from the type's own ladder — 5-level new-generation
       // ladders center at 2; the old hardcoded center-3 misdirects them
       // (political-legislation spec §10 option-count sweep).
-      const legislationType = await db
-        .collection<LegislationType>("legislationTypes")
+      const legislationType = await legislationTypesCollection(db)
         .findOne({ _id: order.legislationTypeId }, { projection: { policyOptions: 1 } });
       await db.collection<StatePolicy>("statePolicies").updateOne(
         { stateId: order.stateId, legislationTypeId: order.legislationTypeId },

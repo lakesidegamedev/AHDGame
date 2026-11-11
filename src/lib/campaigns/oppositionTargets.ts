@@ -2,6 +2,7 @@ import type { Db, ObjectId } from "mongodb";
 import type { Election, ElectionCandidate } from "@/lib/db/types";
 import { computeElectionPhase } from "@/lib/elections/phases";
 import type { GameTimeContext } from "@/lib/time/gameTime";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 export interface OppositionTarget {
   /** characters._id (or npps._id), which is what the retarget route takes. */
@@ -64,8 +65,7 @@ export async function loadOppositionTargets(
     }
   );
 
-  const candidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidates = await electionCandidatesCollection(db)
     .find({ electionId: election._id, status: "active" })
     .toArray();
 

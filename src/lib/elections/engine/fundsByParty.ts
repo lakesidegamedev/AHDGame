@@ -17,6 +17,7 @@
 
 import type { Db, ObjectId } from "mongodb";
 import type { Campaign } from "@/lib/db/types";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 
 /**
  * Aggregate `Campaign.spendStock` + `Campaign.spendThisTurn` by party for
@@ -33,8 +34,7 @@ export async function loadFundsByPartyForElections(
 ): Promise<Map<string, Map<string, number>>> {
   const out = new Map<string, Map<string, number>>();
   if (electionIds.length === 0) return out;
-  const campaigns = await db
-    .collection<Campaign>("campaigns")
+  const campaigns = await campaignsCollection(db)
     .find({ electionId: { $in: electionIds } })
     .project<{ electionId: ObjectId; party: string; spendStock?: number; spendThisTurn?: number }>({
       electionId: 1,
@@ -60,8 +60,7 @@ export async function getFundsByPartyForElection(
   electionId: ObjectId,
   db: Db
 ): Promise<Map<string, number>> {
-  const campaigns = await db
-    .collection<Campaign>("campaigns")
+  const campaigns = await campaignsCollection(db)
     .find({ electionId })
     .project<{ party: string; spendStock?: number; spendThisTurn?: number }>({
       party: 1,

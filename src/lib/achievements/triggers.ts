@@ -10,6 +10,9 @@ import { getDb } from "@/lib/mongodb";
 import type { ActionType } from "@/lib/db/types/gameState";
 import { awardAchievement, awardAchievements } from "./index";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import type { Document } from "mongodb";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 export async function checkActionAchievements(
   userId: ObjectId,
@@ -120,8 +123,7 @@ export async function checkElectionEntryAchievements(
     const db = await getDb();
     const slugs: string[] = [];
 
-    const totalCandidacies = await db
-      .collection("electionCandidates")
+    const totalCandidacies = await electionCandidatesCollection<Document>(db)
       .countDocuments({ characterId });
     if (totalCandidacies >= 1) slugs.push("first_candidate");
 
@@ -265,7 +267,7 @@ export async function checkBillSponsoredAchievements(
 ): Promise<void> {
   try {
     const db = await getDb();
-    const count = await db.collection("bills").countDocuments({ sponsorId: characterId });
+    const count = await billsCollection<Document>(db).countDocuments({ sponsorId: characterId });
     if (count >= 1) await awardAchievement(userId, "first_bill", characterId);
   } catch (error) {
     console.error("[achievements] checkBillSponsoredAchievements error:", error);

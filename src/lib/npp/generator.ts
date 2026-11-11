@@ -37,6 +37,7 @@ import path from "path";
 import { JP_ETHNICITY_WEIGHTS } from "@/lib/countries/jp/data/jpNppEthnicity";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 // ── Politician image pool (country/gender/ethnicity-gated) ───────────────────
 
@@ -423,8 +424,7 @@ async function getLegislationTypesCached(
   if (cached && now - cached.at < LEGISLATION_TYPE_CACHE_TTL_MS) {
     return cached.rows;
   }
-  const rows = await db
-    .collection<LegislationType>("legislationTypes")
+  const rows = await legislationTypesCollection(db)
     .find(
       {},
       {

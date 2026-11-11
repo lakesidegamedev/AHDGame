@@ -2,6 +2,7 @@ import type { Db, ObjectId } from "mongodb";
 import type { GovernorExecutiveOrder, LegislationType, StatePolicy } from "@/lib/db/types";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { buildOrderRevertPolicyFields } from "./revertPolicy";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 export interface RescindOrderInput {
   orderId: ObjectId;
@@ -44,8 +45,7 @@ export async function rescindOrder(
     // State Policy page which matches by axes) read the correct base option.
     // effectDirection comes from the type's own ladder (5-level new-generation
     // ladders center at 2 — the old hardcoded center-3 misdirects them).
-    const legislationType = await db
-      .collection<LegislationType>("legislationTypes")
+    const legislationType = await legislationTypesCollection(db)
       .findOne({ _id: order.legislationTypeId }, { projection: { policyOptions: 1 } });
     await db.collection<StatePolicy>("statePolicies").updateOne(
       { stateId: order.stateId, legislationTypeId: order.legislationTypeId },

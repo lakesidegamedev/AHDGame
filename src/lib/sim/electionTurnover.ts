@@ -11,6 +11,8 @@ import {
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import type { Document } from "mongodb";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 type ElectionRow = Omit<ElectionRecord, "_id"> & { _id: ObjectId; status: string };
 type CandidateRow = Omit<CandidateRecord, "_id" | "electionId" | "characterId" | "nppId"> & {
   _id: ObjectId;
@@ -68,8 +70,7 @@ export async function collectElectionTurnoverReport(db: Db, window: ElectionTurn
   const ids = elections.map((election) => election._id);
   const [tallies, candidates, snapshots, history, gameState, config, runs, seedDiagnostics] =
     await Promise.all([
-      db
-        .collection<TallyRow>("electionVoteTallies")
+      electionVoteTalliesCollection<TallyRow>(db)
         .find(
           { electionId: { $in: ids } },
           {
@@ -87,8 +88,7 @@ export async function collectElectionTurnoverReport(db: Db, window: ElectionTurn
           }
         )
         .toArray(),
-      db
-        .collection<CandidateRow>("electionCandidates")
+      electionCandidatesCollection<CandidateRow>(db)
         .find(
           { electionId: { $in: ids } },
           { projection: { electionId: 1, party: 1, isNPP: 1, characterId: 1, nppId: 1 } }

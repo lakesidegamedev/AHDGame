@@ -43,6 +43,7 @@ import {
 } from "@/lib/currency/corporationCapital";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { unionsCollection } from "@/lib/db/repositories/unions";
 
 export { PENSION_SCHEMES };
 
@@ -161,8 +162,7 @@ export async function runPensionTurn(db: Db, currentTurn: number): Promise<Pensi
   const unionIds = [...new Set(agreements.map((a) => a.unionId.toString()))].map(
     (id) => new ObjectId(id)
   );
-  const unions = await db
-    .collection<Union>("unions")
+  const unions = await unionsCollection(db)
     .find({ _id: { $in: unionIds } }, { projection: { name: 1, countryId: 1 } })
     .toArray();
   const unionById = new Map(unions.map((u) => [u._id.toString(), u]));

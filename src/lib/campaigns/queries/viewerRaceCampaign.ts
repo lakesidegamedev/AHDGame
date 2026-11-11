@@ -5,6 +5,8 @@ import {
   type RaceCampaignRow,
 } from "@/lib/campaigns/rules/viewerRaceCampaign";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 
 /**
  * The viewer's own campaign in one race: as candidate, appointed manager or
@@ -27,8 +29,7 @@ export async function findViewerRaceCampaignId(
 
   const mateRows =
     ownedIds.length > 0
-      ? await db
-          .collection<ElectionCandidate>("electionCandidates")
+      ? await electionCandidatesCollection(db)
           .find(
             { electionId, status: "active", runningMateId: { $in: ownedIds } },
             { projection: { characterId: 1 } }
@@ -37,8 +38,7 @@ export async function findViewerRaceCampaignId(
       : [];
   const mateTicketIds = mateRows.map((r) => r.characterId);
 
-  const campaigns = await db
-    .collection<Campaign>("campaigns")
+  const campaigns = await campaignsCollection(db)
     .find(
       {
         electionId,

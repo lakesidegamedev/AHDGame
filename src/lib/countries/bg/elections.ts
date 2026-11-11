@@ -14,6 +14,7 @@ import { bindBgFoundingCampaigns } from "./foundingCampaignBinding1990";
 import { bgAssemblyCohortCanSpawn, bgGrandAssemblyRegularAnchor } from "./rules/assemblyClock1991";
 import { loadBgGrandAssemblyClock } from "./grandAssemblyClock1991";
 import { buildBg1991AssemblySpawn } from "./assemblyClock1991";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 
 export function bgAssemblySeatMapForPreset(
   regions: Parameters<typeof seatsFromRegionField>[0],
@@ -41,7 +42,7 @@ export async function ensureBGElections(now: Date, inFlightTurn?: number): Promi
   const { ctx, currentTurn } = await getCurrentTurnAndCtx(db);
   const country =
     ctx.preset === "1991-default"
-      ? await db.collection<CountryGameState>("countryGameStates").findOne(
+      ? await countryGameStatesCollection(db).findOne(
           { _id: "BG" },
           {
             projection: {

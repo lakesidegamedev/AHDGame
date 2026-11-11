@@ -17,6 +17,7 @@ import {
   evaluateTier1NppDecisionSchedule,
   type Tier1DecisionScheduleVerdict,
 } from "./tier1DecisionSchedule";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 
 export interface ClaimTier1NppDecisionSlotOptions {
   /** When true, refuse the slot — humans own this decision surface. */
@@ -36,7 +37,7 @@ export async function claimTier1NppDecisionSlot(
 ): Promise<Tier1DecisionScheduleVerdict> {
   const playerControlled = options?.playerControlled === true;
 
-  const col = db.collection<CountryGameState>("countryGameStates");
+  const col = countryGameStatesCollection(db);
   const existing = await col.findOne(
     { _id: countryId },
     { projection: { lastNppStrategicDecisionCycle: 1 } }

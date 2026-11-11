@@ -8,6 +8,7 @@ import type { Election, ElectionCandidate, NPP } from "@/lib/db/types";
 import { chooseRussianNpcRunningMate } from "./rules/presidentialTicket";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 export async function materializeRussianPresidentialTickets(input: {
   db: Db;
   session: ClientSession;
@@ -22,8 +23,7 @@ export async function materializeRussianPresidentialTickets(input: {
     !election.russianPresidentialRound
   )
     return;
-  const candidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidates = await electionCandidatesCollection(db)
     .find(
       { electionId: election._id, status: "active", russianTicketLocked: { $ne: true } },
       {
@@ -105,8 +105,7 @@ export async function materializeRussianPresidentialTickets(input: {
       },
     });
   }
-  const saved = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const saved = await electionCandidatesCollection(db)
     .bulkWrite(writes, { session });
   if (saved.matchedCount !== writes.length)
     throw new Error("Russian presidential ticket changed during registration");

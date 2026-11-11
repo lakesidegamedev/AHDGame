@@ -3,6 +3,7 @@ import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { getNationalDocId } from "@/lib/constants/nationalScope";
 import type { Bill, BillChamber } from "@/lib/db/types";
 import { getGameState } from "@/lib/gameState";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 /** Fast-track window, in turns, for a bill answering a live crisis. */
 export const EMERGENCY_BILL_VOTING_TURNS = 12;
@@ -64,6 +65,6 @@ export async function proposeCrisisEmergencyBill(
     updatedAt: now,
   };
 
-  const result = await db.collection<Omit<Bill, "_id">>("bills").insertOne(bill);
+  const result = await billsCollection<Omit<Bill, "_id">>(db).insertOne(bill);
   return result.insertedId;
 }

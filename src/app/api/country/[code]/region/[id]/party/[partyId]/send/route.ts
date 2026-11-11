@@ -36,6 +36,7 @@ import { getGameTime } from "@/lib/time/gameTime";
 import { isSameCountry } from "@/lib/api/sameCountry";
 import { TreasuryExecutionUncertainError } from "@/lib/treasury/executionUncertain";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; partyId: string }>;
@@ -86,7 +87,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const partyKey = getPartyIdString(party);
     const statePartyKey = getStatePartyOrgDocumentId(stateId, party);
-    const statePartyOrg = await db.collection<StatePartyOrg>("statePartyOrg").findOne({
+    const statePartyOrg = await statePartyOrgCollection(db).findOne({
       _id: statePartyKey,
     });
 
@@ -194,8 +195,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     };
 
     const applySendInTransaction = async (session: ClientSession) => {
-      const debitResult = await db
-        .collection<StatePartyOrg>("statePartyOrg")
+      const debitResult = await statePartyOrgCollection(db)
         .updateOne({ _id: statePartyKey, treasury: { $gte: sendAmount } }, statePartyDebit, {
           session,
         });
@@ -216,8 +216,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     };
 
     const applySendWithoutTransaction = async () => {
-      const debitResult = await db
-        .collection<StatePartyOrg>("statePartyOrg")
+      const debitResult = await statePartyOrgCollection(db)
         .updateOne({ _id: statePartyKey, treasury: { $gte: sendAmount } }, statePartyDebit);
 
       if (debitResult.matchedCount === 0) {
@@ -228,8 +227,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       // here must either complete the credit or refund.
       const refundDebit = async (reason: string, cause?: unknown): Promise<void> => {
         try {
-          const refundResult = await db
-            .collection<StatePartyOrg>("statePartyOrg")
+          const refundResult = await statePartyOrgCollection(db)
             .updateOne(
               { _id: statePartyKey },
               { $inc: { treasury: sendAmount }, $set: { updatedAt: new Date() } }

@@ -20,6 +20,8 @@ import { getOfficeTypeForChamber } from "@/lib/legislature/chamberOfficeType";
 import { getGameState } from "@/lib/gameState";
 import { isBillWhipInCurrentPhase } from "@/lib/congress/billWhipPhase";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; partyId: string }>;
@@ -65,8 +67,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     }
     const partyKey = getPartyIdString(party);
     const statePartyKey = getStatePartyOrgDocumentId(stateId, party);
-    const statePartyOrg = await db
-      .collection<StatePartyOrg>("statePartyOrg")
+    const statePartyOrg = await statePartyOrgCollection(db)
       .findOne({ _id: statePartyKey });
 
     if (!statePartyOrg) {
@@ -115,8 +116,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     };
 
     const [activeFederalBills, activeLocalBills, partyOfficials] = await Promise.all([
-      db
-        .collection<Bill>("bills")
+      billsCollection(db)
         .find({
           $and: [
             federalBillCountryFilter,

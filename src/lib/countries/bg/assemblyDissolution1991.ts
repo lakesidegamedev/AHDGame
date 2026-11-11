@@ -21,6 +21,8 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 
 export const BG_CONTINUED_ASSEMBLY_DISSOLUTION_ID =
   "1991-default:bg-constitutional:dissolution1991";
@@ -31,7 +33,7 @@ async function availability(db: Db, turn: number, session?: ClientSession) {
       { session, projection: { preset: 1, preIteration: 1 } }
     );
   const readCountry = () =>
-    db.collection<CountryGameState>("countryGameStates").findOne(
+    countryGameStatesCollection(db).findOne(
       { _id: "BG" },
       {
         session,
@@ -72,8 +74,7 @@ export async function loadBg1991AssemblyDissolutionDecision(db: Db, turn: number
     .collection<Bg1991ConstitutionalProposal>(BG_1991_PROPOSALS_COLLECTION)
     .findOne({ _id: BG_CONTINUED_ASSEMBLY_DISSOLUTION_ID });
   const bill = proposal
-    ? await db
-        .collection<Bill>("bills")
+    ? await billsCollection(db)
         .findOne({ _id: proposal.billId }, { projection: { status: 1 } })
     : null;
   return {
@@ -112,7 +113,7 @@ export async function openBg1991AssemblyDissolution(input: {
         { session }
       );
       if (prior) {
-        const bill = await db.collection<Bill>("bills").findOne(
+        const bill = await billsCollection(db).findOne(
           { _id: prior.billId },
           {
             session,
@@ -212,7 +213,7 @@ export async function openBg1991AssemblyDissolution(input: {
       );
       if (prior && claimed.matchedCount !== 1)
         throw new Bg1991ConstitutionalConflict("Dissolution motion changed concurrently");
-      await db.collection<Bill>("bills").insertOne(bill, { session });
+      await billsCollection(db).insertOne(bill, { session });
       return proposal;
     },
     { client: db.client }
@@ -235,8 +236,7 @@ export async function processBg1991AssemblyDissolution(
   );
   if (
     !pending ||
-    !(await db
-      .collection<Bill>("bills")
+    !(await billsCollection(db)
       .findOne({ _id: pending.billId, status: "signed" }, { projection: { _id: 1 } }))
   )
     return false;
@@ -250,7 +250,7 @@ export async function processBg1991AssemblyDissolution(
       if (!proposal || proposal.capacity !== 400) return false;
       if (!Number.isSafeInteger(proposal.revision) || proposal.revision < 1)
         throw new Bg1991ConstitutionalConflict("Invalid dissolution revision");
-      const bill = await db.collection<Bill>("bills").findOne(
+      const bill = await billsCollection(db).findOne(
         {
           _id: proposal.billId,
           countryId: "BG",
@@ -275,8 +275,7 @@ export async function processBg1991AssemblyDissolution(
       )
         throw new Bg1991ConstitutionalConflict("Dissolution lacks a frozen quorate majority vote");
       await rebindBg1991PrimaryCohort(db, game, turn, now, session);
-      const changed = await db
-        .collection<CountryGameState>("countryGameStates")
+      const changed = await countryGameStatesCollection(db)
         .updateOne(
           { _id: "BG", bgGrandAssemblyDissolutionSinceTurn: { $exists: false } },
           { $set: { bgGrandAssemblyDissolutionSinceTurn: turn } },

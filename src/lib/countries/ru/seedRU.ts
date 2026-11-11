@@ -7,6 +7,7 @@ import { resolveSeedPartyTier } from "@/lib/seeds/defaultPartyTiers";
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 
 /**
  * Seeds USSR regions. The USSR (`SU`) exists in the 1953 and 1979 presets (it
@@ -250,8 +251,7 @@ export async function seedRUGovernmentFormation(
     return;
   }
   const { _id, ...formationData } = doc;
-  await db
-    .collection("governmentFormations")
+  await governmentFormationsCollection<Document>(db)
     .updateOne(
       { _id: _id as never },
       { $set: { ...formationData, createdAt: now, updatedAt: now } },

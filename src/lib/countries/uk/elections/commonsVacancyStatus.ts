@@ -23,6 +23,7 @@ import {
 } from "@/lib/turn/commonsByElections";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 export interface CommonsVacancyDto {
   id: string;
@@ -151,8 +152,7 @@ export async function loadCommonsVacancyStatus(
   const electionIds = elections.map((e) => e._id);
   const candidates =
     electionIds.length > 0
-      ? await db
-          .collection<ElectionCandidate>("electionCandidates")
+      ? await electionCandidatesCollection(db)
           .find({ electionId: { $in: electionIds } })
           .toArray()
       : [];

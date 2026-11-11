@@ -8,6 +8,7 @@ import type {
   PartyAnalyticsStateMetric,
 } from "./types";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 interface StateOrgBudgetSummary {
   stateId: string;
@@ -53,8 +54,7 @@ export async function buildPartyOrgAnalytics(
   countryId: CountryId,
   partyId: string
 ): Promise<PartyAnalyticsOrgSection> {
-  const statePartyOrgs = await db
-    .collection<StatePartyOrg>("statePartyOrg")
+  const statePartyOrgs = await statePartyOrgCollection(db)
     .find({ countryId, partyId })
     .toArray();
 
@@ -127,8 +127,7 @@ export async function buildStatePartyOrgAnalytics(
   partyId: string,
   stateId: string
 ): Promise<PartyAnalyticsStateMetric | null> {
-  const statePartyOrg = await db
-    .collection<StatePartyOrg>("statePartyOrg")
+  const statePartyOrg = await statePartyOrgCollection(db)
     .findOne({ countryId, partyId, stateId });
   if (!statePartyOrg) return null;
 

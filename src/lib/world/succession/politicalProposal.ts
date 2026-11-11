@@ -20,6 +20,7 @@ import {
   type FederationPoliticalTerms,
 } from "./settlementIntent";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 export const FEDERATION_POLITICAL_PROPOSALS_COLLECTION = "federationPoliticalProposals";
 const VOTING_DURATION_TURNS = 24;
@@ -235,7 +236,7 @@ export async function openFederationPoliticalProposal(input: {
     createdAt: stored.createdAt,
     updatedAt: stored.createdAt,
   };
-  const bills = db.collection<Bill>("bills");
+  const bills = billsCollection(db);
   await bills.updateOne({ _id: stored.billId }, { $setOnInsert: bill }, { upsert: true });
   const savedBill = await bills.findOne({ _id: stored.billId });
   if (

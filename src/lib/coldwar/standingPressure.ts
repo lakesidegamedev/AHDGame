@@ -13,6 +13,8 @@ import {
   type WarPressureInput,
   type WarPressureSummary,
 } from "./tension";
+import { crisesCollection } from "@/lib/db/repositories/crises";
+import type { Document } from "mongodb";
 
 export interface StandingPressureInputs {
   escalationLevel: number;
@@ -104,7 +106,7 @@ export async function readStandingPressureSnapshot(
 ): Promise<StandingPressureSnapshot> {
   const [vietnam, activeCrises, programs, conflicts] = await Promise.all([
     livingVietnamAsLegacyState(db),
-    db.collection("crises").countDocuments({ status: "active" }),
+    crisesCollection<Document>(db).countDocuments({ status: "active" }),
     listNuclearPrograms(db),
     listActiveConflicts(db),
   ]);

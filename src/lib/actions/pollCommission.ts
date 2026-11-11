@@ -45,6 +45,7 @@ import {
 import { getPresidentialConsecutiveTerms } from "@/lib/elections/resolution/presidentialTenureLedger";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 // Poll pricing lives in the shared rules module: quotePollAction is the single
 // source of truth the effect, validation and the POST debit all call.
@@ -75,8 +76,7 @@ export async function buildPollOverview({
 
   const [state, statePartyOrgs, turnoutDoc, forexEnabled] = await Promise.all([
     statesCollection(db).findOne({ _id: character.homeState, countryId: character.countryId }),
-    db
-      .collection<StatePartyOrg>("statePartyOrg")
+    statePartyOrgCollection(db)
       .find({ countryId: character.countryId, stateId: character.homeState })
       .toArray(),
     db
@@ -269,8 +269,7 @@ export async function commissionPoll({ userId, pollType }: { userId: string; pol
   // Compute the poll results now so we can persist them
   const [state, statePartyOrgs, turnoutDoc] = await Promise.all([
     statesCollection(db).findOne({ _id: character.homeState, countryId: character.countryId }),
-    db
-      .collection<StatePartyOrg>("statePartyOrg")
+    statePartyOrgCollection(db)
       .find({ countryId: character.countryId, stateId: character.homeState })
       .toArray(),
     db.collection<StateDemographicTurnout>("stateDemographicTurnout").findOne({

@@ -9,6 +9,7 @@ import type { Crisis } from "@/lib/db/types/crisis";
 import { createSystemNewsPost } from "@/lib/news";
 import { MARKET_ADJUSTMENT_TEMPLATE_KEY } from "./template";
 import { MARKET_ADJUSTMENT_SIGNALS } from "./signals";
+import { crisesCollection } from "@/lib/db/repositories/crises";
 
 const HEADLINE_OPEN_AT = 3;
 const HEADLINE_CLOSE_BELOW = 2;
@@ -21,8 +22,7 @@ export function nextHeadlineState(wasOpen: boolean, countriesOpen: number): bool
 }
 
 export async function syncWorldHeadline(db: Db): Promise<"opened" | "closed" | null> {
-  const crises = await db
-    .collection<Crisis>("crises")
+  const crises = await crisesCollection(db)
     .find(
       { templateKey: MARKET_ADJUSTMENT_TEMPLATE_KEY, status: "active" },
       { projection: { countryIds: 1 } }

@@ -2,6 +2,7 @@ import type { Bill, NPPVotePrediction, StateBill } from "@/lib/db/types";
 import type { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { CrossPressureForceBar } from "@/components/CrossPressureForceBar";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 /**
  * Server component — loads the most recent cross-pressure prediction this NPP
@@ -24,8 +25,7 @@ async function loadLatestPrediction(nppId: ObjectId): Promise<{
   if (!prediction) return null;
 
   const bill = prediction.billId
-    ? await db
-        .collection<Bill>("bills")
+    ? await billsCollection(db)
         .findOne(
           { _id: prediction.billId },
           { projection: { _id: 1, title: 1, status: 1, currentChamber: 1 } }

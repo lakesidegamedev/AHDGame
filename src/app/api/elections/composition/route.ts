@@ -37,6 +37,8 @@ import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 
 export type { PartySeats, CompositionResponse } from "@/lib/elections/electionResponseTypes";
 
@@ -177,12 +179,10 @@ export async function GET(request: Request) {
       if (generalElections.length > 0) {
         const electionIds = generalElections.map((e) => e._id);
         const [tallies, candidates] = await Promise.all([
-          db
-            .collection<ElectionVoteTally>("electionVoteTallies")
+          electionVoteTalliesCollection(db)
             .find({ electionId: { $in: electionIds } })
             .toArray(),
-          db
-            .collection<ElectionCandidate>("electionCandidates")
+          electionCandidatesCollection(db)
             .find({ electionId: { $in: electionIds }, status: "active" })
             .toArray(),
         ]);

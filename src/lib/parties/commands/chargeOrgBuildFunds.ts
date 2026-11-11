@@ -6,6 +6,7 @@ import { emitTreasuryTransaction } from "@/lib/treasury/emit";
 import type { OrgBuildFundingScope } from "@/lib/politicalStrength/buildOrgFunding";
 import { witnessOrgBuildCharge, type OrgBuildLedgerOptions } from "@/lib/parties/orgBuildLedger";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 /**
  * Cash side of the Build Org action, counterpart to `spendPoliticalStrength`.
@@ -84,7 +85,7 @@ export async function chargeOrgBuildFunds(
     // (`US_CA_1`) so today's caller could not address a foreign row, but party
     // sequentialIds repeat across countries and a debit should fail
     // closed on a mismatch rather than rely on how its caller built the id.
-    before = await db.collection<StatePartyOrg>("statePartyOrg").findOneAndUpdate(
+    before = await statePartyOrgCollection(db).findOneAndUpdate(
       {
         _id: input.stateRowId,
         countryId: input.countryId,

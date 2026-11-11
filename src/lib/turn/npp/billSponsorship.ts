@@ -89,6 +89,8 @@ import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 /**
  * Conservative catalog of legislation types that are clearly market-liberalizing
@@ -121,7 +123,7 @@ async function countActiveNppSponsoredBills(
   sponsorParty?: string
 ): Promise<number> {
   const TERMINAL_STATUSES: Bill["status"][] = ["failed", "withdrawn", "signed", "override_failed"];
-  const count = await db.collection<Bill>("bills").countDocuments({
+  const count = await billsCollection(db).countDocuments({
     countryId,
     nppSponsored: true,
     // Foreign-policy calls use their own diplomatic cadence. Counting them
@@ -145,7 +147,7 @@ async function lastNppSponsoredBillTurn(
   countryId: CountryId,
   sponsorParty?: string
 ): Promise<number | null> {
-  const doc = await db.collection<Bill>("bills").findOne(
+  const doc = await billsCollection(db).findOne(
     {
       countryId,
       nppSponsored: true,
@@ -177,8 +179,7 @@ async function recentNppSponsoredLegislationTypeIds(
 ): Promise<Set<string>> {
   const earliestVotingEnd =
     currentTurn - NPP_SPONSOR_TYPE_REPEAT_COOLDOWN_TURNS + NPP_BILL_VOTING_DURATION_HOURS;
-  const recent = await db
-    .collection<Bill>("bills")
+  const recent = await billsCollection(db)
     .find(
       {
         countryId,
@@ -209,8 +210,7 @@ async function loadActiveProposalKeys(db: Db, countryId: CountryId): Promise<Set
     countryId,
     NATIONAL_TERMINAL_STATUSES as BillStatus[]
   );
-  const bills = await db
-    .collection<Bill>("bills")
+  const bills = await billsCollection(db)
     .find(filter as import("mongodb").Filter<Bill>, { projection: { provisions: 1 } })
     .toArray();
   const keys = new Set<string>();
@@ -486,9 +486,7 @@ async function loadNationalLegislationTypes(
   };
 
   return (
-    db
-      // Selection scores every option, but not their large downstream effect payloads.
-      .collection<LegislationType>("legislationTypes")
+    legislationTypesCollection(db)
       .find(query as import("mongodb").Filter<LegislationType>, {
         projection: {
           _id: 1,

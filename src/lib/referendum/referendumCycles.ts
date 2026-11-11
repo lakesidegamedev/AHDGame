@@ -9,6 +9,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import type { Referendum } from "@/lib/db/types/referendum";
 import type { PollPoint } from "@/lib/referendum/pollSnapshot";
 import { getReferendumCollection } from "@/lib/db/collections/referendum";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 const TERMINAL = new Set(["declined", "settled", "completed", "cancelled"]);
 
@@ -88,8 +89,7 @@ export async function listCountryReferendums(
     ...new Set(all.filter((r) => r.status === "campaigning").map((r) => r.regionId)),
   ];
   const orgRows = activeRegionIds.length
-    ? await db
-        .collection<{ stateId: string }>("statePartyOrg")
+    ? await statePartyOrgCollection<{ stateId: string }>(db)
         .find({ countryId, stateId: { $in: activeRegionIds } })
         .toArray()
     : [];

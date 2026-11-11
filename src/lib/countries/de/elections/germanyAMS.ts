@@ -36,6 +36,8 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 
 const VOTE_THRESHOLD = BUNDESTAG_VOTE_THRESHOLD;
 
@@ -234,8 +236,7 @@ export async function computeZweitstimmen(db: Db, cycle: number): Promise<Zweits
   }
 
   const electionById = new Map(elections.map((e) => [e._id.toString(), e]));
-  const tallies = await db
-    .collection<ElectionVoteTally>("electionVoteTallies")
+  const tallies = await electionVoteTalliesCollection(db)
     .find({ electionId: { $in: elections.map((e) => e._id) } })
     .toArray();
 
@@ -544,7 +545,7 @@ export async function maybeReconcileBundestag(
     )
     .toArray();
   if (elections.length)
-    await db.collection<ElectionVoteTally>("electionVoteTallies").bulkWrite(
+    await electionVoteTalliesCollection(db).bulkWrite(
       elections.map((election) => {
         const resolvedSeatHolders = holders
           .filter((holder) => holder.state === election.state)
@@ -593,15 +594,13 @@ export async function captureBundestagElectionWinners(
   try {
     const electionIds = elections.map((election) => election._id);
     const [candidates, tallies] = await Promise.all([
-      db
-        .collection<ElectionCandidate>("electionCandidates")
+      electionCandidatesCollection(db)
         .find(
           { electionId: { $in: electionIds } },
           { projection: { _id: 1, electionId: 1, characterId: 1, isNPP: 1 } }
         )
         .toArray(),
-      db
-        .collection<ElectionVoteTally>("electionVoteTallies")
+      electionVoteTalliesCollection(db)
         .find(
           { electionId: { $in: electionIds } },
           { projection: { electionId: 1, totalVotes: 1 } }

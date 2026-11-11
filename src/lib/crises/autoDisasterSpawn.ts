@@ -32,6 +32,8 @@ import { legacyDefinitionFor } from "@/lib/turn/crisisV2/legacyContent";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { crisesCollection } from "@/lib/db/repositories/crises";
 
 interface ResilienceRow {
   _id: string;
@@ -156,8 +158,7 @@ export async function processAutoDisasterSpawn(
 
   const pressure = Math.max(0, Math.min(1, opts.climatePressure ?? 0));
 
-  const cgs = await db
-    .collection<CountryGameState>("countryGameStates")
+  const cgs = await countryGameStatesCollection(db)
     .findOne({ _id: countryId });
 
   const baselineDue = shouldSpawn(
@@ -175,7 +176,7 @@ export async function processAutoDisasterSpawn(
     return;
   }
 
-  const existing = await db.collection<Crisis>("crises").findOne({
+  const existing = await crisesCollection(db).findOne({
     autoSource: "disaster",
     countryIds: countryId,
     $or: [{ status: "active" }, { startTurn: currentTurn }],
@@ -194,8 +195,7 @@ export async function processAutoDisasterSpawn(
     }
     // An interrupted first attempt may have inserted the crisis but failed
     // before stamping cadence. Reconcile both writes from the stored event.
-    await db
-      .collection<CountryGameState>("countryGameStates")
+    await countryGameStatesCollection(db)
       .updateOne(
         { _id: countryId },
         { $max: { lastDisasterTurn: existing.startTurn } },
@@ -338,10 +338,9 @@ export async function processAutoDisasterSpawn(
     ...(fiscalCost > 0 ? { autoDisasterFiscalCost: fiscalCost } : {}),
   };
 
-  await db.collection<Crisis>("crises").insertOne(crisis);
+  await crisesCollection(db).insertOne(crisis);
   await chargeDisasterFiscalLoss(db, crisis);
   await stampCooldown(db, cooldowns, key, countryId, currentTurn);
-  await db
-    .collection<CountryGameState>("countryGameStates")
+  await countryGameStatesCollection(db)
     .updateOne({ _id: countryId }, { $set: { lastDisasterTurn: currentTurn } }, { upsert: true });
 }

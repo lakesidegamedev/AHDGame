@@ -51,6 +51,8 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 export const caucusWhipSchema = z
   .object({
@@ -148,8 +150,7 @@ async function buildCaucusPlayerWhipMessage(
   const prefix = isSoft ? `${caucusName} suggests` : `${caucusName} has whipped you`;
 
   if (targetType === "bill" && targetId instanceof ObjectId) {
-    const bill = await db
-      .collection<Bill>("bills")
+    const bill = await billsCollection(db)
       .findOne({ _id: targetId }, { projection: { title: 1 } });
     const title = bill?.title ?? "a bill";
     return {
@@ -283,7 +284,7 @@ export async function issueCaucusWhip({
     if (!targetOid) {
       return NextResponse.json(badRequest("Invalid target ID").toJson(), { status: 400 });
     }
-    const bill = await db.collection<Bill>("bills").findOne({
+    const bill = await billsCollection(db).findOne({
       _id: targetOid,
       status: {
         $in: ["active", "active_other", "active_both", "veto_override", "override_shugiin"],
@@ -674,14 +675,12 @@ export async function issueCaucusWhip({
     );
   };
   if (targetType === "bill") {
-    const bill = await db
-      .collection<Bill>("bills")
+    const bill = await billsCollection(db)
       .findOne({ _id: requireTargetObjectId(), countryId });
     if (bill) {
       const [legislationType, stateDemographicsArr, gameStateDoc] = await Promise.all([
         bill.legislationTypeId
-          ? db
-              .collection<LegislationType>("legislationTypes")
+          ? legislationTypesCollection(db)
               .findOne({ _id: bill.legislationTypeId })
           : Promise.resolve(null),
         db

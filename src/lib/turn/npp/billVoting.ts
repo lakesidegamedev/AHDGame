@@ -78,6 +78,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 export async function processBillVoting(ctx: NPPContext): Promise<number> {
   const {
@@ -673,7 +674,7 @@ export async function processBillVoting(ctx: NPPContext): Promise<number> {
       if (abstainKey) incFields[abstainKey] = b.abstainW;
     }
 
-    await db.collection<Bill>("bills").updateOne(
+    await billsCollection(db).updateOne(
       { _id: bill._id },
       {
         $set: setFields,

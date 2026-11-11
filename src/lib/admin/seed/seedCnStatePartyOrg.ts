@@ -2,6 +2,8 @@ import type { Db } from "mongodb";
 import type { StatePartyOrg } from "@/lib/db/types";
 import { getCnRegionOrg, getCnPartyTreasury } from "@/lib/seeds/cn/cnStatePartyOrgCalculations";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import type { Document } from "mongodb";
 
 /**
  * China state party organization seeder.
@@ -54,7 +56,7 @@ export async function seedCnStatePartyOrg(
   const activePreset = preset ?? (await getGameStatePresetOrDefault(db));
 
   if (reset) {
-    await db.collection("statePartyOrg").deleteMany({ countryId: "CN" });
+    await statePartyOrgCollection<Document>(db).deleteMany({ countryId: "CN" });
   }
 
   const regionOrg = getCnRegionOrg(activePreset);
@@ -94,8 +96,7 @@ export async function seedCnStatePartyOrg(
   let upserted = 0;
   for (const org of orgs) {
     const { _id, ...orgData } = org;
-    const result = await db
-      .collection<StatePartyOrg>("statePartyOrg")
+    const result = await statePartyOrgCollection(db)
       .updateOne(
         { _id },
         { $set: { ...orgData, updatedAt: now }, $setOnInsert: { createdAt: now } },

@@ -48,6 +48,10 @@ import { loadSurvivingPartyResolver } from "@/lib/parties/survivingParty";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import type { Document } from "mongodb";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 
 function recoverUnitVotesFromSnapshots(
   unitTurnSnapshots: ElectionVoteTally["unitTurnSnapshots"],
@@ -104,11 +108,9 @@ async function vacatePresidency(
   reason: string,
   currentTurn: number
 ): Promise<void> {
-  await db
-    .collection<ElectionVoteTally>("electionVoteTallies")
+  await electionVoteTalliesCollection(db)
     .updateOne({ electionId: election._id }, { $set: { finalized: true, updatedAt: now } });
-  await db
-    .collection("electionCandidates")
+  await electionCandidatesCollection<Document>(db)
     .updateMany(
       { electionId: election._id, status: "active" },
       { $set: { status: "withdrawn", withdrawnAt: now } }
@@ -213,7 +215,7 @@ async function finalizePresidentTally(
   contingentResult: ContingentElectionResult | undefined,
   now: Date
 ): Promise<{ finalized: boolean; concurrentWinner: boolean }> {
-  const tallyWrite = await db.collection<ElectionVoteTally>("electionVoteTallies").updateOne(
+  const tallyWrite = await electionVoteTalliesCollection(db).updateOne(
     { electionId: election._id, finalized: { $ne: true } },
     {
       $set: {
@@ -258,16 +260,14 @@ async function runPostFinalizeCleanup(
   electoralVotesByCandidate: Record<string, number>,
   now: Date
 ): Promise<void> {
-  await db
-    .collection("electionCandidates")
+  await electionCandidatesCollection<Document>(db)
     .updateMany(
       { electionId: election._id, status: "active" },
       { $set: { status: "withdrawn", withdrawnAt: now } }
     );
-  await db
-    .collection<Campaign>("campaigns")
+  await campaignsCollection(db)
     .updateMany({ electionId: election._id }, { $set: { campaignStrength: 0, updatedAt: now } });
-  await db.collection("campaigns").deleteMany({ electionId: election._id });
+  await campaignsCollection<Document>(db).deleteMany({ electionId: election._id });
 
   // Half-up rounding via floor(x + 0.5) to match the previous Math.round behavior
   // ($round would use banker's rounding).
@@ -300,7 +300,7 @@ async function terminalizeMissingWinner(
   contingentResult: ContingentElectionResult | undefined,
   now: Date
 ): Promise<void> {
-  await db.collection<ElectionVoteTally>("electionVoteTallies").updateOne(
+  await electionVoteTalliesCollection(db).updateOne(
     { electionId: election._id },
     {
       $set: {
@@ -400,8 +400,7 @@ export async function resolvePresidentElection(
     return false;
   }
 
-  const candidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidates = await electionCandidatesCollection(db)
     .find({
       _id: { $in: Object.keys(electoralVotesByCandidate).map((id) => new ObjectId(id)) },
       // A seating retry needs the rows withdrawn after tally finalization, but
@@ -533,8 +532,7 @@ export async function resolvePresidentElection(
         `[Turn] President election ${election._id}: acting presidency seating failed — will retry next turn`,
         err
       );
-      await db
-        .collection<ElectionVoteTally>("electionVoteTallies")
+      await electionVoteTalliesCollection(db)
         .updateOne(
           { electionId: election._id },
           { $set: { executiveSeatingPending: true, updatedAt: now } }
@@ -595,8 +593,7 @@ export async function resolvePresidentElection(
       `[Turn] President election ${election._id}: executive seating failed — will retry next turn`,
       err
     );
-    await db
-      .collection<ElectionVoteTally>("electionVoteTallies")
+    await electionVoteTalliesCollection(db)
       .updateOne(
         { electionId: election._id },
         { $set: { executiveSeatingPending: true, updatedAt: now } }
@@ -604,8 +601,7 @@ export async function resolvePresidentElection(
     return false;
   }
 
-  await db
-    .collection<ElectionVoteTally>("electionVoteTallies")
+  await electionVoteTalliesCollection(db)
     .updateOne(
       { electionId: election._id },
       { $set: { executiveSeatingPending: false, updatedAt: now } }

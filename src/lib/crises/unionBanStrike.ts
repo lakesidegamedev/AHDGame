@@ -16,6 +16,8 @@ import {
 import { announceUnionBanStrikeEnd, announceUnionBanStrikeStart } from "./unionBanStrikeWire";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { crisesCollection } from "@/lib/db/repositories/crises";
+import { unionsCollection } from "@/lib/db/repositories/unions";
 
 /**
  * Wildcat general strike triggered by an enacted union ban.
@@ -149,8 +151,7 @@ export function diminishEffects(effects: CrisisEffect[], factor: number): Crisis
 
 /** Mean `Union.approval` across a country's unions; 50 when it has none. */
 async function countryLabourApproval(db: Db, countryId: string): Promise<number> {
-  const unions = await db
-    .collection<Union>("unions")
+  const unions = await unionsCollection(db)
     .find({ countryId: countryId as CountryId }, { projection: { approval: 1 } })
     .toArray();
   if (unions.length === 0) return 50;
@@ -160,15 +161,14 @@ async function countryLabourApproval(db: Db, countryId: string): Promise<number>
 
 /** True when the country has at least one union to be banned. */
 async function countryHasUnions(db: Db, countryId: string): Promise<boolean> {
-  const union = await db
-    .collection<Union>("unions")
+  const union = await unionsCollection(db)
     .findOne({ countryId: countryId as CountryId }, { projection: { _id: 1 } });
   return union !== null;
 }
 
 /** The live wildcat strike in a country, if one is running. */
 async function getActiveUnionBanStrike(db: Db, countryId: string): Promise<Crisis | null> {
-  return db.collection<Crisis>("crises").findOne({
+  return crisesCollection(db).findOne({
     templateKey: UNION_BAN_STRIKE_TEMPLATE_KEY,
     countryIds: countryId,
     status: "active",
@@ -181,7 +181,7 @@ export async function extendUnionBanStrikeFromUnderground(
   countryId: CountryId,
   currentTurn: number
 ): Promise<boolean> {
-  const result = await db.collection<Crisis>("crises").updateOne(
+  const result = await crisesCollection(db).updateOne(
     {
       templateKey: UNION_BAN_STRIKE_TEMPLATE_KEY,
       countryIds: countryId,
@@ -256,7 +256,7 @@ export async function triggerUnionBanStrike(
   // module reaches this file through the template registry, and a static import
   // back would close the cycle.
   const { announceCrisisStart } = await import("@/lib/turn/crisisTurn");
-  const crisis = await db.collection<Crisis>("crises").findOne({ _id: crisisId });
+  const crisis = await crisesCollection(db).findOne({ _id: crisisId });
   if (crisis) await announceCrisisStart(db, crisis);
   await announceUnionBanStrikeStart(countryId);
 
@@ -278,8 +278,7 @@ async function endUnionBanStrike(
   outcome: string
 ): Promise<void> {
   const now = new Date();
-  await db
-    .collection<Crisis>("crises")
+  await crisesCollection(db)
     .updateOne(
       { _id: crisis._id, status: "active" },
       { $set: { status: "resolved", endTurn: currentTurn, resolvedAt: now } }
@@ -370,7 +369,7 @@ async function respondWithArmy(
   // Troops restore production at once, but create new clandestine sympathy.
   // Budget law is authoritative even when the Union.suspended mirror is stale.
   if (await isUnionsBanned(db, countryId as CountryId)) {
-    await db.collection<Union>("unions").updateMany(
+    await unionsCollection(db).updateMany(
       { countryId: countryId as CountryId },
       {
         $inc: { undergroundStrength: ARMY_UNDERGROUND_SYMPATHY_GAIN },
@@ -440,8 +439,7 @@ async function respondByRidingItOut(
   countryId: string
 ): Promise<UnionBanStrikeResponseResult> {
   const intensity = await countryUndergroundIntensity(db, countryId as CountryId);
-  await db
-    .collection<Crisis>("crises")
+  await crisesCollection(db)
     .updateOne(
       { _id: crisis._id },
       { $set: { effects: diminishEffects(crisis.effects, rideOutEffectRetention(intensity)) } }
@@ -499,7 +497,7 @@ export async function runUnionBanStrikeResponse(args: {
   // The crisis on the context is a snapshot taken when the decision was
   // submitted. Re-read it so a strike that expired or was already resolved on
   // another path cannot be resolved a second time.
-  const live = await db.collection<Crisis>("crises").findOne({ _id: crisis._id, status: "active" });
+  const live = await crisesCollection(db).findOne({ _id: crisis._id, status: "active" });
   if (!live) return { nextNodeId: UNION_BAN_STRIKE_NODES.alreadyOver };
 
   switch (response) {

@@ -3,6 +3,8 @@ import type { CountryId } from "@/lib/constants/countries";
 import type { Coalition } from "@/lib/db/types/coalition";
 import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
 import type { ParliamentaryGovernment } from "@/lib/db/types/parliamentaryGovernment";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
 
 /** Resolve every party participating in the current national government. */
 export async function resolveGoverningPartyIdsFromDocuments(
@@ -24,8 +26,7 @@ export async function resolveGoverningPartyIdsFromDocuments(
 
   const coalitionId = govFormation?.coalitionId;
   if (coalitionId != null) {
-    const coalition = await db
-      .collection<Coalition>("coalitions")
+    const coalition = await coalitionsCollection(db)
       .findOne({ sequentialId: coalitionId, countryId });
     if (coalition?.members?.length) {
       return new Set([
@@ -38,7 +39,7 @@ export async function resolveGoverningPartyIdsFromDocuments(
   // Some minority formations store their supporting bloc only in `coalitions`.
   // A coalition led by the governing party is part of the government; an
   // opposition-led coalition is not.
-  const coalitions = await db.collection<Coalition>("coalitions").find({ countryId }).toArray();
+  const coalitions = await coalitionsCollection(db).find({ countryId }).toArray();
   const governingCoalition = coalitions.find(
     (coalition) =>
       coalition.members?.length > 0 &&
@@ -57,7 +58,7 @@ export async function resolveGoverningPartyIdsFromDocuments(
 /** Load the active formation documents and resolve the national government. */
 export async function resolveGoverningPartyIds(db: Db, countryId: CountryId): Promise<Set<string>> {
   const [formation, parliamentary] = await Promise.all([
-    db.collection<GovernmentFormation>("governmentFormations").findOne({ _id: countryId }),
+    governmentFormationsCollection(db).findOne({ _id: countryId }),
     db.collection<ParliamentaryGovernment>("parliamentaryGovernments").findOne({
       _id: countryId,
     }),

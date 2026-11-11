@@ -18,6 +18,9 @@ import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficia
 import type { Document } from "mongodb";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 
 interface ReadinessCheck {
   name: string;
@@ -67,7 +70,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     });
 
     // 3. Party org rows (parties × regions)
-    const orgCount = await db.collection("statePartyOrg").countDocuments({ countryId });
+    const orgCount = await statePartyOrgCollection<Document>(db).countDocuments({ countryId });
     const expectedOrgCount = partyCount * regionCount;
     checks.push({
       name: "StatePartyOrg",
@@ -77,8 +80,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     });
 
     // 4. Government formation doc
-    const gov = await db
-      .collection<{ _id: string; status?: string; cycle?: number }>("governmentFormations")
+    const gov = await governmentFormationsCollection<{ _id: string; status?: string; cycle?: number }>(db)
       .findOne({ _id: countryId });
     checks.push({
       name: "GovernmentFormation",
@@ -143,7 +145,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     });
 
     // 10. Legislation types
-    const legTypeCount = await db.collection("legislationTypes").countDocuments({ countryId });
+    const legTypeCount = await legislationTypesCollection<Document>(db).countDocuments({ countryId });
     checks.push({
       name: "LegislationTypes",
       status: legTypeCount > 0 ? "ok" : "missing",

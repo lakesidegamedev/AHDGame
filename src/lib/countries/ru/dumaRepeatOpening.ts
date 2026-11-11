@@ -35,6 +35,7 @@ import { STATE_POPULATION_FIELDS } from "@/lib/db/collections/states";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 
 export const RUSSIAN_DUMA_REPEAT_OPENINGS_COLLECTION = "russianDumaRepeatOpenings";
 export interface RussianDumaRepeatOpeningRecord {
@@ -78,7 +79,7 @@ export async function materializeRussianDumaRepeatOpening(input: {
     { session, projection: GAME_STATE_PRE_ITERATION_FIELDS }
   );
   if (game?.preset !== "1991-default") return null;
-  const country = await db.collection<CountryGameState>("countryGameStates").findOne(
+  const country = await countryGameStatesCollection(db).findOne(
     { _id: "RU" },
     {
       session,
@@ -260,7 +261,7 @@ export async function materializeRussianDumaRepeatOpening(input: {
   };
   await electionsCollection(db).insertMany(ballots, { session });
   await openings.insertOne(record, { session });
-  const bound = await db.collection<CountryGameState>("countryGameStates").updateOne(
+  const bound = await countryGameStatesCollection(db).updateOne(
     {
       _id: "RU",
       ...russianDumaRootFilter(country, rootCohortId),

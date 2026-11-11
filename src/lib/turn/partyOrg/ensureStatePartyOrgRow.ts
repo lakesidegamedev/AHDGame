@@ -9,6 +9,7 @@ import {
 import { isUsPartyOrganizationJurisdiction } from "@/lib/constants/states";
 import { loadUsPoliticalStateIds } from "@/lib/elections/usPoliticalHome";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 export interface EnsureStatePartyOrgRowArgs {
   countryId: CountryId;
@@ -50,7 +51,7 @@ export async function ensureStatePartyOrgRow(
 
   const _id = getStatePartyOrgDocumentId(args.stateId, args.party as PoliticalParty);
   const partyId = getPartyIdString(args.party as PoliticalParty);
-  const col = db.collection<StatePartyOrg>("statePartyOrg");
+  const col = statePartyOrgCollection(db);
 
   const existing = await findStatePartyOrgRow(db, args.countryId, args.stateId, args.party);
   if (existing) {

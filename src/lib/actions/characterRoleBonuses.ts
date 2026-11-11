@@ -18,6 +18,7 @@ import {
   type CeoNiTier,
 } from "./positionNiBonus";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 export interface CharacterRoleBonusInput {
   character: {
@@ -66,8 +67,7 @@ export async function loadCharacterRoleBonuses(
         { projection: { officeType: 1 } }
       )
       .toArray(),
-    db
-      .collection<StatePartyOrg>("statePartyOrg")
+    statePartyOrgCollection(db)
       .findOne({ chairId: character._id }, { projection: { _id: 1 } }),
     loadOrganizationHeads(db, { characterId: character._id }).catch(() => []),
     resolveOppositionLeaderForCountry(db, countryId).catch(() => null),

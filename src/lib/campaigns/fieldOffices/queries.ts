@@ -29,6 +29,7 @@ import {
 import { loadFieldOfficeRegionMap } from "./subdivisions";
 import { countyLeanSourceLabel } from "@/lib/maps/countyLeans";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 
 export interface FieldOfficeDto {
   id: string;
@@ -98,7 +99,7 @@ export async function getFieldOfficeView(
   user: AuthUserWithCharacter | null,
   requestedRegion: string | null
 ): Promise<FieldOfficeView> {
-  const campaign = await db.collection<Campaign>("campaigns").findOne(
+  const campaign = await campaignsCollection(db).findOne(
     { _id: campaignId },
     {
       projection: {

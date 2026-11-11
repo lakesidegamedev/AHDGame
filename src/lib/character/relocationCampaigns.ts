@@ -6,6 +6,7 @@ import type {
   StatePartyElection,
 } from "@/lib/db/types";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 /**
  * Summarize the candidacies that a relocation will auto-withdraw.
@@ -18,8 +19,7 @@ export async function getActiveCandidacySummary(
   generalElections: number;
   statePartyElections: number;
 }> {
-  const generalRows = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const generalRows = await electionCandidatesCollection(db)
     .find({ characterId, status: "active" })
     .project({ electionId: 1 })
     .toArray();

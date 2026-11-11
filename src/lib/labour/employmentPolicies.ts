@@ -29,6 +29,7 @@ import {
 } from "./rules/employmentPolicy";
 import type { EmploymentPolicy } from "./rules/employment";
 import type { CountryId } from "@/lib/constants/countries";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 export interface EmploymentRegion {
   _id: string;
@@ -92,8 +93,7 @@ export async function loadEmploymentLawBook(
   // Option names identify explicit jobs guarantees; option ordering determines
   // intensity, and finance uses implementation metadata to fail closed.
   const types = ids.length
-    ? await db
-        .collection<LegislationType>("legislationTypes")
+    ? await legislationTypesCollection(db)
         .find(
           { _id: { $in: ids } },
           {

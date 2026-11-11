@@ -10,6 +10,7 @@ import { resolveOptionLabel } from "./optionLabel";
 import { resolveProvisionPolicyOption, type ResolvableProvision } from "./resolvePolicyOption";
 import { policyStoreId, type SnapshotFields } from "./currentLaw";
 import type { FiscalScope } from "./types";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 export type SnapshottableProvision = ResolvableProvision &
   SnapshotFields & { legislationTypeId: string };
@@ -94,8 +95,7 @@ export async function snapshotBillPolicyProvisions<T extends SnapshottableProvis
   ];
 
   const [legislationTypes, currentPolicies] = await Promise.all([
-    db
-      .collection<LegislationType>("legislationTypes")
+    legislationTypesCollection(db)
       .find({ _id: { $in: equivalents } })
       .toArray(),
     db

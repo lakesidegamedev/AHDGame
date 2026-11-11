@@ -3,6 +3,7 @@ import { logWarning } from "@/lib/utils/errorLog";
 import type { LegislationType } from "@/lib/db/types";
 import { legislationTypes } from "@/lib/seeds/reference/legislationTypes";
 import { getProjectedPoliticalLegislationTypes } from "./seedPoliticalLegislation";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 export async function seedLegislationTypes(
   db: Db,
@@ -24,7 +25,7 @@ export async function seedLegislationTypes(
     await db.collection("stateBills").deleteMany({});
   }
 
-  const collection = db.collection<LegislationType>("legislationTypes");
+  const collection = legislationTypesCollection(db);
 
   // Every law is projected, windowed or not: a window gates filing at runtime,
   // so a later-era type must already exist when the world reaches its year.

@@ -50,6 +50,9 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import type { Document } from "mongodb";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 
 // Sync-date bootstrap anchors are now derived from the active preset's
 // `getCycleAnchors(ctx)` inside the POST handler (see ctx-build below).
@@ -782,9 +785,9 @@ export const POST = withAdminRoute(async (_auth) => {
   let deletedCount = 0;
   if (oldElectionIds.length > 0) {
     await Promise.all([
-      db.collection("electionCandidates").deleteMany({ electionId: { $in: oldElectionIds } }),
-      db.collection("electionVoteTallies").deleteMany({ electionId: { $in: oldElectionIds } }),
-      db.collection("campaigns").deleteMany({ electionId: { $in: oldElectionIds } }),
+      electionCandidatesCollection<Document>(db).deleteMany({ electionId: { $in: oldElectionIds } }),
+      electionVoteTalliesCollection<Document>(db).deleteMany({ electionId: { $in: oldElectionIds } }),
+      campaignsCollection<Document>(db).deleteMany({ electionId: { $in: oldElectionIds } }),
       // Clear election-linked data that persists beyond the elections collection:
       // primary snapshots captured at primary close, and NPP/player endorsements tied
       // to specific races — all become orphaned when elections are deleted.

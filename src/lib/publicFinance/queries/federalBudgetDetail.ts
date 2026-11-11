@@ -39,6 +39,7 @@ import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 /** One point on the fiscal-year trend series (stat strip compare + debt sparkline). */
 export interface FyHistoryPoint {
@@ -476,8 +477,7 @@ export async function loadFederalBudgetDetail(params: {
   );
   const revenueTaxTypeByLegId = new Map<string, string>();
   if (legislationTypeIds.length > 0) {
-    const legislationTypes = await db
-      .collection<{ _id: string; taxRateChange?: { taxType?: string } }>("legislationTypes")
+    const legislationTypes = await legislationTypesCollection<{ _id: string; taxRateChange?: { taxType?: string } }>(db)
       .find({ _id: { $in: legislationTypeIds } }, { projection: { "taxRateChange.taxType": 1 } })
       .toArray();
     for (const t of legislationTypes) {

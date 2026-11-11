@@ -49,6 +49,8 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 
 // ─── Route handler ────────────────────────────────────────────────────────────
 
@@ -86,12 +88,10 @@ export async function GET(request: Request) {
 
     const [allCandidates, allTallies, latestSnapshotRows, allParties, allStates] =
       await Promise.all([
-        db
-          .collection<ElectionCandidate>("electionCandidates")
+        electionCandidatesCollection(db)
           .find({ electionId: { $in: electionIds } })
           .toArray(),
-        db
-          .collection<ElectionVoteTally>("electionVoteTallies")
+        electionVoteTalliesCollection(db)
           .find({ electionId: { $in: electionIds } })
           .toArray(),
         // One document per election — avoid loading every snapshot row (was O(total snapshots))

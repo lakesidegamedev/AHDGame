@@ -12,6 +12,7 @@ import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { BILL_PROPOSE_ACTION_COST } from "@shared/constants/legislation";
 import { recordOrgHistoryEvent } from "@/lib/internationalOrganizations/service";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 function buildOrganizationWithdrawalBill(
   countryId: CountryId,
@@ -84,7 +85,7 @@ export async function proposeInternationalOrganizationLeave(params: {
       };
 }) {
   const { db, countryId, orgId, organizationName, actor, input } = params;
-  const openInternationalBill = await db.collection<Bill>("bills").findOne({
+  const openInternationalBill = await billsCollection(db).findOne({
     sponsorId: actor.characterId,
     countryId,
     status: { $nin: NATIONAL_TERMINAL_STATUSES },
@@ -166,7 +167,7 @@ export async function proposeInternationalOrganizationLeave(params: {
     };
   }
 
-  const duplicate = await db.collection<Bill>("bills").findOne(duplicateFilter);
+  const duplicate = await billsCollection(db).findOne(duplicateFilter);
   if (duplicate) {
     return {
       ok: false as const,
@@ -217,7 +218,7 @@ export async function proposeInternationalOrganizationLeave(params: {
 
   const billId = new ObjectId();
   try {
-    await db.collection<Bill>("bills").insertOne({
+    await billsCollection(db).insertOne({
       _id: billId,
       countryId,
       stateId: nationalStateId,

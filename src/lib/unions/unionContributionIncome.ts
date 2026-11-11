@@ -26,6 +26,7 @@ import {
   politicalContributionPerTurn,
 } from "./unionPoliticalContributions";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { unionsCollection } from "@/lib/db/repositories/unions";
 
 export async function unionContributionIncomePerTurn(
   db: Db,
@@ -43,8 +44,7 @@ export async function unionContributionIncomePerTurn(
   if (!(await isLabourFullMode(config))) return 0;
 
   const unionIds = mine.map((row) => row.unionId);
-  const unions = await db
-    .collection<Union>("unions")
+  const unions = await unionsCollection(db)
     .find(
       {
         _id: { $in: unionIds },

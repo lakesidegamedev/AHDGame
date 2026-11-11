@@ -41,6 +41,8 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 
 export async function appointCampaignManager(params: {
   db: Db;
@@ -65,7 +67,7 @@ export async function appointCampaignManager(params: {
   const existing = campaign.managers ?? legacyManagersAsList(campaign);
 
   if (managerCharacterId === null) {
-    await db.collection<Campaign>("campaigns").updateOne(
+    await campaignsCollection(db).updateOne(
       { _id: campaign._id },
       {
         $set: { managerId: null, managerCharacterId: null, managers: [], updatedAt: now },
@@ -124,7 +126,7 @@ export async function appointCampaignManager(params: {
   // Mirror the first manager onto the legacy pair so un-migrated readers and
   // the existing UI still resolve someone, and no backfill is needed.
   const head = next[0] ?? null;
-  await db.collection<Campaign>("campaigns").updateOne(
+  await campaignsCollection(db).updateOne(
     { _id: campaign._id },
     {
       $set: {
@@ -257,7 +259,7 @@ export async function contributeCampaignStrength(params: {
   const csCampaignFundsField = forexEnabled ? "currencyBalances.campaign" : "funds";
   const targetCandidateId = campaign.candidateId?.toString?.() ?? null;
   const targetCandidate = campaign.candidateId
-    ? await db.collection<ElectionCandidate>("electionCandidates").findOne(
+    ? await electionCandidatesCollection(db).findOne(
         {
           electionId: campaign.electionId,
           characterId: campaign.candidateId,
@@ -286,7 +288,7 @@ export async function contributeCampaignStrength(params: {
     throw badRequest("Insufficient resources — may have changed since page load");
   }
 
-  const campaignUpdate = await db.collection<Campaign>("campaigns").updateOne(
+  const campaignUpdate = await campaignsCollection(db).updateOne(
     { _id: campaignId },
     {
       $inc: { campaignStrength: strengthAdded },
@@ -464,7 +466,7 @@ export async function retargetOppositionResearch(params: {
   const OPPOSITION_RESEARCH_COOLDOWN_TURNS = 6; // 6 turns = 6h at standard cadence
   const cooldownUntil = new Date(now.getTime() + 6 * 60 * 60 * 1000);
   const cooldownUntilTurn = currentTurn + OPPOSITION_RESEARCH_COOLDOWN_TURNS;
-  await db.collection<Campaign>("campaigns").updateOne(
+  await campaignsCollection(db).updateOne(
     { _id: campaignId },
     {
       $set: {
@@ -545,7 +547,7 @@ export async function resetOppositionResearch(params: {
     turnNumber,
   };
 
-  await db.collection<Campaign>("campaigns").updateOne(
+  await campaignsCollection(db).updateOne(
     { _id: campaignId },
     {
       $set: {
@@ -605,8 +607,7 @@ export async function setCampaignColor(params: {
   }
 
   const now = new Date();
-  await db
-    .collection<Campaign>("campaigns")
+  await campaignsCollection(db)
     .updateOne(
       { _id: campaign._id },
       color === null
@@ -622,7 +623,7 @@ export async function setCampaignColor(params: {
 }
 
 export async function getCampaignOrThrow(db: Db, campaignId: ObjectId): Promise<Campaign> {
-  const campaign = await db.collection<Campaign>("campaigns").findOne({ _id: campaignId });
+  const campaign = await campaignsCollection(db).findOne({ _id: campaignId });
   if (!campaign) {
     throw notFound("Campaign not found");
   }
@@ -640,7 +641,7 @@ async function assertCampaignActiveForManagement(db: Db, campaign: Campaign): Pr
   }
 
   if (!campaign.candidateIsNPP) {
-    const candidateRow = await db.collection<ElectionCandidate>("electionCandidates").findOne(
+    const candidateRow = await electionCandidatesCollection(db).findOne(
       {
         electionId: campaign.electionId,
         characterId: campaign.candidateId,
@@ -766,7 +767,7 @@ export async function fireRallyOneShot(params: {
 
   // Lookup the candidate row so we can read prior `support` and
   // `lastRallyTurn` to enforce the one-per-turn throttle.
-  const candidate = await db.collection<ElectionCandidate>("electionCandidates").findOne({
+  const candidate = await electionCandidatesCollection(db).findOne({
     electionId: campaign.electionId,
     characterId: campaign.candidateId,
     status: "active",
@@ -792,7 +793,7 @@ export async function fireRallyOneShot(params: {
       ? { lastRallyTurn: candidate.lastRallyTurn }
       : { lastRallyTurn: { $exists: false } };
 
-  const campaignResult = await db.collection<Campaign>("campaigns").updateOne(
+  const campaignResult = await campaignsCollection(db).updateOne(
     { _id: campaignId, actions: { $gte: actionCost } },
     {
       $inc: { actions: -actionCost },
@@ -803,7 +804,7 @@ export async function fireRallyOneShot(params: {
     throw new ApiError(409, "Campaign actions changed since page load. Please refresh.");
   }
 
-  const candidateResult = await db.collection<ElectionCandidate>("electionCandidates").updateOne(
+  const candidateResult = await electionCandidatesCollection(db).updateOne(
     { _id: candidate._id, ...lastRallyMatch },
     {
       $set: { support: nextSupport, lastRallyTurn: currentTurn },
@@ -812,8 +813,7 @@ export async function fireRallyOneShot(params: {
   );
   if (candidateResult.modifiedCount === 0) {
     // Roll back the campaign action deduction.
-    await db
-      .collection<Campaign>("campaigns")
+    await campaignsCollection(db)
       .updateOne({ _id: campaignId }, { $inc: { actions: actionCost } });
     throw new ApiError(409, "Rally state changed since page load. Please refresh.");
   }
@@ -859,7 +859,7 @@ export async function setRallyTourActive(params: {
     throw badRequest("Rallies are not available for this race");
   }
 
-  const candidate = await db.collection<ElectionCandidate>("electionCandidates").findOne({
+  const candidate = await electionCandidatesCollection(db).findOne({
     electionId: campaign.electionId,
     characterId: campaign.candidateId,
     status: "active",
@@ -869,12 +869,10 @@ export async function setRallyTourActive(params: {
   }
 
   if (active) {
-    await db
-      .collection<ElectionCandidate>("electionCandidates")
+    await electionCandidatesCollection(db)
       .updateOne({ _id: candidate._id }, { $set: { rallyTourActive: true } });
   } else {
-    await db
-      .collection<ElectionCandidate>("electionCandidates")
+    await electionCandidatesCollection(db)
       .updateOne({ _id: candidate._id }, { $unset: { rallyTourActive: "" } });
   }
 

@@ -90,6 +90,9 @@ import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import type { Document } from "mongodb";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 
 export { HOUSE_SEATS, UK_COMMONS_SEATS };
 export { spawnHouseElection, spawnCommonsElection };
@@ -137,13 +140,11 @@ export async function resolveGeneralElections(
     .filter((e) => !isNativeRussianAssemblyElection(e))
     .map((e) => e._id);
   const [tallies, completedCandidates, gameStateDoc, devolutionBonusContexts] = await Promise.all([
-    db
-      .collection<ElectionVoteTally>("electionVoteTallies")
+    electionVoteTalliesCollection(db)
       .find({ electionId: { $in: electionIds } }, { projection: TALLY_WITH_LATEST_SNAPSHOT_ONLY })
       .toArray(),
     genericElectionIds.length
-      ? db
-          .collection("electionCandidates")
+      ? electionCandidatesCollection<Document>(db)
           .find(
             { electionId: { $in: genericElectionIds }, status: "active" },
             { projection: { electionId: 1, isNPP: 1 } }
@@ -767,8 +768,7 @@ export async function resolveGeneralElections(
     .map((election) => election._id);
   const finalPresidentTallies =
     resolvedPresidentIds.length > 0
-      ? await db
-          .collection<ElectionVoteTally>("electionVoteTallies")
+      ? await electionVoteTalliesCollection(db)
           .find(
             { electionId: { $in: resolvedPresidentIds } },
             {

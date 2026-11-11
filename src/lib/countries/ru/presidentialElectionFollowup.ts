@@ -21,6 +21,10 @@ import {
 import { GAME_STATE_PRE_ITERATION_FIELDS } from "@/lib/db/collections/gameState";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 
 export async function materializeRussianPresidentialFollowup(input: {
   db: Db;
@@ -47,8 +51,7 @@ export async function materializeRussianPresidentialFollowup(input: {
   if (result.nextElectionId) return result.nextElectionId;
   if (!Number.isSafeInteger(turn) || turn < result.resolvedOnTurn)
     throw new Error("Russian followup cannot precede its result");
-  const country = await db
-    .collection<CountryGameState>("countryGameStates")
+  const country = await countryGameStatesCollection(db)
     .findOne(
       { _id: "RU", ruPresidencyMandateSinceTurn: result.mandateSinceTurn },
       { session, projection: { _id: 1 } }
@@ -75,8 +78,7 @@ export async function materializeRussianPresidentialFollowup(input: {
     if (candidateIds[0].equals(candidateIds[1]))
       throw new Error("Runoff candidates need distinct ids");
     const finalistIds = result.decision.finalistCandidateIds;
-    const finalists = await db
-      .collection<ElectionCandidate>("electionCandidates")
+    const finalists = await electionCandidatesCollection(db)
       .find(
         {
           electionId: predecessorElectionId,
@@ -152,10 +154,9 @@ export async function materializeRussianPresidentialFollowup(input: {
     { session }
   );
   if (nextCandidates.length) {
-    await db
-      .collection<ElectionCandidate>("electionCandidates")
+    await electionCandidatesCollection(db)
       .insertMany(nextCandidates, { session });
-    await db.collection<Campaign>("campaigns").updateMany(
+    await campaignsCollection(db).updateMany(
       {
         electionId: predecessorElectionId,
         candidateId: {
@@ -168,7 +169,7 @@ export async function materializeRussianPresidentialFollowup(input: {
       { $set: { electionId, updatedAt: now } },
       { session }
     );
-    await db.collection<ElectionVoteTally>("electionVoteTallies").insertOne(
+    await electionVoteTalliesCollection(db).insertOne(
       {
         _id: electionId,
         electionId,

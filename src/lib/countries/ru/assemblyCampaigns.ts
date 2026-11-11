@@ -39,6 +39,7 @@ import {
   RUSSIAN_ASSEMBLY_SEATINGS_COLLECTION,
   type RussianAssemblySeatingRecord,
 } from "./assemblySeating";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 
 export async function processRussianAssemblyCampaigns(input: {
   db: Db;
@@ -63,7 +64,7 @@ export async function processRussianAssemblyCampaigns(input: {
     ) === "congress"
   )
     return result;
-  const country = await db.collection<CountryGameState>("countryGameStates").findOne(
+  const country = await countryGameStatesCollection(db).findOne(
     { _id: "RU" },
     {
       projection: {

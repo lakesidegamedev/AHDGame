@@ -31,6 +31,17 @@ export const FRONT_DOOR_COLLECTIONS = [
   "stateBudgets",
   "imperialCharacters",
   "exchangeRates",
+  "electionCandidates",
+  "bills",
+  "electionVoteTallies",
+  "campaigns",
+  "statePartyOrg",
+  "countryGameStates",
+  "legislationTypes",
+  "crises",
+  "governmentFormations",
+  "unions",
+  "coalitions",
 ] as const;
 
 export const UNTYPED = "untyped";

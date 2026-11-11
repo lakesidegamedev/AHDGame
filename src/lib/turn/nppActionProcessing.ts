@@ -84,6 +84,7 @@ import { getNppsCollection } from "@/lib/db/collections/npps";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 export {
   NPP_FOUNDING_FEE_ANCHOR,
   sellNppStockSurplus,
@@ -516,7 +517,7 @@ async function runNppActions(db: Db, currentTurn: number): Promise<NppActionProc
     await (await getNppsCollection(db)).bulkWrite(nppOps);
   }
   if (rallyOps.length > 0) {
-    await db.collection<ElectionCandidate>("electionCandidates").bulkWrite(rallyOps, {
+    await electionCandidatesCollection(db).bulkWrite(rallyOps, {
       ordered: false,
     });
   }

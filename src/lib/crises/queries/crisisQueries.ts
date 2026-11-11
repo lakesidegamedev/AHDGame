@@ -4,6 +4,7 @@ import { STARTING_YEAR } from "@/lib/constants/turnTime";
 import type { Crisis } from "@/lib/db/types/crisis";
 import { ObjectId, type Db } from "mongodb";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { crisesCollection } from "@/lib/db/repositories/crises";
 
 export interface CrisisListResult {
   crises: Crisis[];
@@ -39,7 +40,7 @@ export async function listCrises(
   }
 
   const [crises, gameState] = await Promise.all([
-    db.collection<Crisis>("crises").find(filter).sort({ startTurn: -1 }).toArray(),
+    crisesCollection(db).find(filter).sort({ startTurn: -1 }).toArray(),
     getGameState(db),
   ]);
 
@@ -71,7 +72,7 @@ export async function getCrisisDetail(db: Db, crisisId: string): Promise<Crisis>
     throw notFound("Crisis not found");
   }
 
-  const crisis = await db.collection<Crisis>("crises").findOne({ _id: new ObjectId(crisisId) });
+  const crisis = await crisesCollection(db).findOne({ _id: new ObjectId(crisisId) });
   if (!crisis) {
     throw notFound("Crisis not found");
   }

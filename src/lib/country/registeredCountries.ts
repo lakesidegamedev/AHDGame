@@ -1,6 +1,7 @@
 import type { Db } from "mongodb";
 import { COUNTRY_ORDER, type CountryId } from "@/lib/constants/countries";
 import type { CountryGameState } from "@/lib/db/types/gameState";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 
 /**
  * The runtime "registered countries" set: the static COUNTRY_ORDER base PLUS any
@@ -28,8 +29,7 @@ function dissolvedIdsFrom(docs: CountryGameState[]): Set<string> {
  * dead state tests THIS, never registry membership.
  */
 export async function getDissolvedCountryIds(db: Db): Promise<Set<string>> {
-  const docs = await db
-    .collection<CountryGameState>("countryGameStates")
+  const docs = await countryGameStatesCollection(db)
     .find({ dissolvedTurn: { $ne: null } })
     .project<CountryGameState>({ _id: 1, dissolvedTurn: 1 })
     .toArray();
@@ -39,8 +39,7 @@ export async function getDissolvedCountryIds(db: Db): Promise<Set<string>> {
 export async function getRegisteredCountryIds(db: Db): Promise<CountryId[]> {
   // Three queries' worth of rows in one read: the actives that widen the base,
   // and the dissolved and era-absent that narrow it.
-  const docs = await db
-    .collection<CountryGameState>("countryGameStates")
+  const docs = await countryGameStatesCollection(db)
     .find({
       $or: [{ status: "active" }, { dissolvedTurn: { $ne: null } }, { absentInEra: true }],
     })
@@ -106,8 +105,7 @@ export async function getRegisteredCountryIdSet(db: Db): Promise<Set<string>> {
  * getRegisteredCountryIds + the access layer both read this row at runtime.
  */
 export async function activateCountry(db: Db, countryId: CountryId): Promise<void> {
-  await db
-    .collection<CountryGameState>("countryGameStates")
+  await countryGameStatesCollection(db)
     .updateOne(
       { _id: countryId },
       { $set: { status: "active", enabledForPlayers: true, updatedAt: new Date() } },

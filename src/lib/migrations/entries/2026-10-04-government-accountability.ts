@@ -14,6 +14,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 
 export const migration: Migration = {
   id: "2026-10-04-government-accountability",
@@ -22,8 +23,7 @@ export const migration: Migration = {
   idempotent: true,
   async execute(db, { dryRun }) {
     const [formations, presidents, runtimes, game, parties] = await Promise.all([
-      db
-        .collection<GovernmentFormation>("governmentFormations")
+      governmentFormationsCollection(db)
         .find({ status: "formed" })
         .toArray(),
       electedOfficialsCollection(db)
@@ -111,8 +111,7 @@ export const migration: Migration = {
       if (Object.keys(repair).length) {
         repaired++;
         if (!dryRun)
-          await db
-            .collection<GovernmentFormation>("governmentFormations")
+          await governmentFormationsCollection(db)
             .updateOne({ _id: gov._id, status: "formed" }, { $set: repair });
       }
       if (gov.pmNppId && runtime?.hasLeaderConfidenceModel) {

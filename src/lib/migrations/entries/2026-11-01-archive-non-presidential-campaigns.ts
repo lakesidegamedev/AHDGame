@@ -3,6 +3,7 @@ import { isCampaignEligibleElection } from "@/lib/campaigns/isCampaignEligible";
 import type { Campaign, Election } from "@/lib/db/types";
 import type { Migration, MigrationResult } from "../types";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 
 /**
  * Archive campaigns in races Campaign Manager no longer covers.
@@ -17,8 +18,7 @@ export const migration: Migration = {
   description: "Archive campaigns in races Campaign Manager no longer covers (non-presidential)",
   idempotent: true,
   async execute(db: Db, ctx): Promise<MigrationResult> {
-    const campaigns = await db
-      .collection<Campaign>("campaigns")
+    const campaigns = await campaignsCollection(db)
       .find({ status: { $ne: "archived" } }, { projection: { _id: 1, electionId: 1, funds: 1 } })
       .toArray();
     if (campaigns.length === 0) {
@@ -60,8 +60,7 @@ export const migration: Migration = {
       return { documentsScanned: campaigns.length, documentsUpdated: 0, notes };
     }
 
-    const res = await db
-      .collection<Campaign>("campaigns")
+    const res = await campaignsCollection(db)
       .updateMany(
         { _id: { $in: targets }, status: { $ne: "archived" } },
         { $set: { status: "archived", archivedAt: new Date(), archivedReason: "ineligible" } }

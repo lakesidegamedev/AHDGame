@@ -14,6 +14,8 @@ import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficia
 import type { Document } from "mongodb";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 export const HU_1991_FILING_LOCKS_COLLECTION = "hu1991AssemblyFilingLocks";
 export type Hu1991FilingFailure =
   | "invalid-ballot"
@@ -175,8 +177,7 @@ export async function materializeHu1991PlayerFiling(input: {
       Math.max(turn, game.currentTurn) >= job.termEndTurn
     )
       return reject("invalid-ballot");
-    const chamberLock = await db
-      .collection<{ _id: string; hu1991MandateGeneration?: number }>("governmentFormations")
+    const chamberLock = await governmentFormationsCollection<{ _id: string; hu1991MandateGeneration?: number }>(db)
       .updateOne({ _id: "HU" }, { $inc: { hu1991MandateGeneration: 1 } }, { session });
     if (chamberLock.matchedCount !== 1)
       throw new Error("Hungarian filing lost its chamber authority");
@@ -230,15 +231,14 @@ export async function materializeHu1991PlayerFiling(input: {
       (requestedDistrictId && requestedDistrictId !== saved.constituencyId)
     )
       return reject("party-changed");
-    const prior = await db
-      .collection<ElectionCandidate>("electionCandidates")
+    const prior = await electionCandidatesCollection(db)
       .findOne(
         { _id: saved.candidateId, characterId: candidate.characterId, electionId },
         { session }
       );
     if (!prior) throw new Error("Hungarian filing reservation has lost its original candidate");
     if (prior.status === "active") return reject("already-filed");
-    await db.collection<ElectionCandidate>("electionCandidates").updateOne(
+    await electionCandidatesCollection(db).updateOne(
       { _id: prior._id, status: "withdrawn" },
       {
         $set: { status: "active" },
@@ -248,8 +248,7 @@ export async function materializeHu1991PlayerFiling(input: {
     );
     return { allowed: true, insertedId: prior._id };
   }
-  const legacy = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const legacy = await electionCandidatesCollection(db)
     .find(
       { electionId, characterId: candidate.characterId, isNPP: { $ne: true } },
       {
@@ -304,7 +303,7 @@ export async function materializeHu1991PlayerFiling(input: {
   if (candidate.party !== "independent")
     await locks.insertOne({ ...reservation, _id: partyKey }, { session });
   if (prior) {
-    await db.collection<ElectionCandidate>("electionCandidates").updateOne(
+    await electionCandidatesCollection(db).updateOne(
       { _id: prior._id, status: "withdrawn" },
       {
         $set: {
@@ -317,7 +316,7 @@ export async function materializeHu1991PlayerFiling(input: {
     );
     return { allowed: true, insertedId: prior._id };
   }
-  await db.collection<ElectionCandidate>("electionCandidates").insertOne(
+  await electionCandidatesCollection(db).insertOne(
     {
       ...candidate,
       _id: candidateId,

@@ -39,6 +39,8 @@ import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 
 /**
  * What each kind costs and does, so the gate, the debit and the stored row all
@@ -135,7 +137,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const character = auth.user.character;
 
-    const actor = await db.collection<ElectionCandidate>("electionCandidates").findOne({
+    const actor = await electionCandidatesCollection(db).findOne({
       electionId: election._id,
       characterId: character._id,
       status: "active",
@@ -147,7 +149,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(400, "You cannot attack yourself");
     }
 
-    const target = await db.collection<ElectionCandidate>("electionCandidates").findOne({
+    const target = await electionCandidatesCollection(db).findOne({
       _id: new ObjectId(targetCandidateId),
       electionId: election._id,
       status: "active",
@@ -172,8 +174,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(409, "You already have an attack running on them there");
     }
 
-    const campaign = await db
-      .collection<Campaign>("campaigns")
+    const campaign = await campaignsCollection(db)
       .findOne({ electionId: election._id, candidateId: character._id });
     if (!campaign) {
       return errorResponse(403, "You have no campaign in this race");
@@ -198,8 +199,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     // The target's Rapid Response, stamped onto the row now so a later retune
     // of their tree cannot rewrite an attack already paid for.
-    const targetCampaign = await db
-      .collection<Campaign>("campaigns")
+    const targetCampaign = await campaignsCollection(db)
       .findOne({ electionId: election._id, candidateId: target.characterId });
     const shieldTree = targetCampaign?.mediaSpendingTree;
     const shieldApplied =

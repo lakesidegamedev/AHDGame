@@ -50,6 +50,9 @@ import type {
 } from "@/lib/elections/dto/stateOperations";
 import type { Campaign } from "@/lib/db/types";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 
 export type { StateOperationsView };
 
@@ -75,8 +78,7 @@ export async function buildStateOperations(
   // general's own levers take over.
   if (isPrimaryEnded(election, currentTurn, gameTime)) return null;
 
-  const roster = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const roster = await electionCandidatesCollection(db)
     .find({ electionId: election._id, party: character.party, status: "active" })
     .toArray();
 
@@ -124,8 +126,7 @@ export async function buildStateOperations(
     }));
 
   // ── The field ─────────────────────────────────────────────────────────────
-  const tally = await db
-    .collection<ElectionVoteTally>("electionVoteTallies")
+  const tally = await electionVoteTalliesCollection(db)
     .findOne({ electionId: election._id });
   const delegatesByCandidate = tally?.primaryDelegates?.[character.party ?? ""] ?? {};
 
@@ -137,8 +138,7 @@ export async function buildStateOperations(
     .map((c) => (c.isNPP ? c.nppId : c.characterId))
     .filter((id): id is NonNullable<typeof id> => id != null);
   const rosterCampaigns = candidateKeys.length
-    ? await db
-        .collection<Campaign>("campaigns")
+    ? await campaignsCollection(db)
         .find({ electionId: election._id, candidateId: { $in: candidateKeys } })
         .project<{ candidateId: (typeof candidateKeys)[number]; color?: string | null }>({
           candidateId: 1,
@@ -206,8 +206,7 @@ export async function buildStateOperations(
   // ── The viewer's shield ───────────────────────────────────────────────────
   // The same Rapid Response branch that blunts the national oppo drain. Read so
   // the panel can say why a hit landed softer than advertised.
-  const myCampaign = await db
-    .collection<Campaign>("campaigns")
+  const myCampaign = await campaignsCollection(db)
     .findOne({ electionId: election._id, candidateId: character._id });
   const shieldTree = myCampaign?.mediaSpendingTree;
   const shieldPct =

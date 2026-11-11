@@ -29,6 +29,8 @@ import { captureOfficeTransition } from "@/lib/analytics/officeTransitionAnalyti
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 
 export interface SeatPresidentialExecutiveParams {
   election: Election;
@@ -377,8 +379,7 @@ export async function seatPresidentialExecutive(
   if (vpCharId) execIdentityOr.push({ characterId: vpCharId });
   if (vpNppId) execIdentityOr.push({ nppId: vpNppId });
   if (execIdentityOr.length > 0) {
-    await db
-      .collection<ElectionCandidate>("electionCandidates")
+    await electionCandidatesCollection(db)
       .updateMany(
         { status: "active", $or: execIdentityOr },
         { $set: { status: "withdrawn", withdrawnAt: now } }
@@ -391,8 +392,7 @@ export async function seatPresidentialExecutive(
     "parliamentary";
   // Keep the government record aligned with elected presidential handovers.
   // This includes background NPP governments created by the vacancy fallback.
-  await db
-    .collection<import("@/lib/db/types").GovernmentFormation>("governmentFormations")
+  await governmentFormationsCollection<import("@/lib/db/types").GovernmentFormation>(db)
     .updateOne(
       { _id: electionCountry },
       {

@@ -24,6 +24,7 @@ import { archiveCampaignsForCandidates } from "@/lib/campaigns/archiveWithdrawnC
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 export interface CascadeResult {
   sharesReleased: number;
@@ -218,14 +219,12 @@ export async function cascadeCharacterDeletion(
   // hard-delete flows (self-delete / admin force-delete) route through here.
   // Read the rows first: archiving their campaigns needs each row's electionId,
   // and after the update they are no longer `status: "active"`.
-  const activeCandidacies = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const activeCandidacies = await electionCandidatesCollection(db)
     .find({ characterId, status: "active" })
     .project<{ _id: ObjectId; electionId: ObjectId }>({ _id: 1, electionId: 1 })
     .toArray();
 
-  const candidacyRes = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidacyRes = await electionCandidatesCollection(db)
     .updateMany(
       { characterId, status: "active" },
       { $set: { status: "withdrawn", withdrawnAt: now } }

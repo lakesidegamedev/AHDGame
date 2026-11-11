@@ -15,6 +15,8 @@ import { BG_1990_LIST_DISTRICTS } from "./data/foundingDistricts1990";
 import type { BgFoundingBallots } from "./rules/foundingBallots1990";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 
 export const BG_FOUNDING_COUNTS_COLLECTION = "bgFoundingAssemblyCounts";
 export interface BgFoundingAssemblyRecord {
@@ -116,8 +118,7 @@ async function materializeBgFoundingFirstCount(input: {
   )
     throw new Error("Bulgarian certification has a changed electorate or receipt");
   const ids = elections.map((row) => row._id);
-  const tallies = await db
-    .collection<ElectionVoteTally>("electionVoteTallies")
+  const tallies = await electionVoteTalliesCollection(db)
     .find(
       { electionId: { $in: ids } },
       {
@@ -126,8 +127,7 @@ async function materializeBgFoundingFirstCount(input: {
       }
     )
     .toArray();
-  const candidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidates = await electionCandidatesCollection(db)
     .find(
       { electionId: { $in: ids } },
       {

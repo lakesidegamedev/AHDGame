@@ -4,6 +4,7 @@ import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import type { LegislationType } from "@/lib/db/types";
 import { writeAdminSeedFile, ADMIN_SEED_FILE } from "@/lib/admin/seedFileGenerator";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 // POST /api/admin/law-types/[id]/remove-permanent — Removes permanent status from a law type and regenerates the admin seed file.
 // Auth: requireAdmin
@@ -17,20 +18,18 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const db = await getDb();
 
     // Check if law type exists
-    const lawType = await db.collection<LegislationType>("legislationTypes").findOne({ _id: id });
+    const lawType = await legislationTypesCollection(db).findOne({ _id: id });
 
     if (!lawType) {
       return errorResponse(404, `Law type "${id}" not found`);
     }
 
     // Set isPermanent to false
-    await db
-      .collection<LegislationType>("legislationTypes")
+    await legislationTypesCollection(db)
       .updateOne({ _id: id }, { $set: { isPermanent: false, updatedAt: new Date() } });
 
     // Get remaining permanent types from DB
-    const permanentTypes = await db
-      .collection<LegislationType>("legislationTypes")
+    const permanentTypes = await legislationTypesCollection(db)
       .find({ source: "admin", isPermanent: true })
       .toArray();
 

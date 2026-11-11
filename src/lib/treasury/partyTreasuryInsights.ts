@@ -9,6 +9,7 @@ import type {
 import type { CountryId } from "@/lib/constants/countries";
 import { regionPartyUrl } from "@/lib/urls";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 export interface TreasuryStateFundingMetric {
   stateId: string;
@@ -78,7 +79,7 @@ export async function buildNationalTreasuryInsights(
   partyName: string
 ): Promise<NationalTreasuryInsights> {
   const [statePartyOrgs, budgets, states, transferRows, overrideLogs] = await Promise.all([
-    db.collection<StatePartyOrg>("statePartyOrg").find({ countryId, partyId }).toArray(),
+    statePartyOrgCollection(db).find({ countryId, partyId }).toArray(),
     db
       .collection<PartyBudget>("partyBudget")
       .find({ countryId, partyId, scope: "state" })

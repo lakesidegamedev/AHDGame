@@ -27,6 +27,7 @@ import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficia
 import type { Document } from "mongodb";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 /** A unique index that constrains `field`, as the fuse needs to see it. */
 interface UniqueIndexOverField {
@@ -262,7 +263,7 @@ export async function mergeRegion(db: Db, args: MergeRegionArgs): Promise<MergeR
     treasury?: number;
     updatedAt?: Date;
   }
-  const partyOrgs = db.collection<RegionPartyOrg>("statePartyOrg");
+  const partyOrgs = statePartyOrgCollection<RegionPartyOrg>(db);
   const sourceOrgs = await partyOrgs.find({ stateId: fromRegionId }).toArray();
   // One read of the target's orgs up front, not a collision probe per source org.
   const targetOrgsByParty = new Map(

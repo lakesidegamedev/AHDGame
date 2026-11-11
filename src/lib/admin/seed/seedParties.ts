@@ -5,6 +5,7 @@ import { politicalParties } from "@/lib/seeds/reference/politicalParties";
 import { generateStatePartyOrg } from "@/lib/seeds/reference/statePartyOrg";
 import { fillAbsentSeedFields } from "./fillAbsentSeedFields";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 export async function seedParties(db: Db, log: (msg: string) => void) {
   // NOTE: Never drop politicalParties collection - it would delete player-created third parties
@@ -72,8 +73,7 @@ export async function seedStatePartyOrg(db: Db, log: (msg: string) => void, pres
   // `organization` back to the lean-derived baseline and its `treasury` to 0,
   // and dropped elected state chairs — the single most destructive write in
   // the reseed path, since Org is the stat players spend whole games building.
-  const existingRows = await db
-    .collection<StatePartyOrg>("statePartyOrg")
+  const existingRows = await statePartyOrgCollection(db)
     .find({ _id: { $in: statePartyOrg.map((org) => org._id) } })
     .toArray();
   const existingById = new Map(existingRows.map((row) => [row._id, row]));
@@ -114,7 +114,7 @@ export async function seedStatePartyOrg(db: Db, log: (msg: string) => void, pres
   }
 
   if (ops.length > 0) {
-    await db.collection<StatePartyOrg>("statePartyOrg").bulkWrite(ops, { ordered: false });
+    await statePartyOrgCollection(db).bulkWrite(ops, { ordered: false });
   }
 
   log(

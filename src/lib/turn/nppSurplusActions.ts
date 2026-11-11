@@ -54,6 +54,7 @@ import { getNppsCollection } from "@/lib/db/collections/npps";
 import { getCorporationsCollection } from "@/lib/db/collections/corporations";
 import { getGameStateCollection } from "@/lib/db/collections/gameState";
 import { getCorporateSectorsCollection } from "@/lib/db/collections/corporateSectors";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 // v3 party-org building: counteracts processPartyOrgTurn's unconditional
 // per-turn Org decay, which nothing has ever offset autonomously (growth was
@@ -123,8 +124,7 @@ export async function buildNppPartyOrgSurplus(
   currentTurn: number,
   countryScope: CountryId[] | null = null
 ): Promise<void> {
-  const rows = await db
-    .collection<StatePartyOrg>("statePartyOrg")
+  const rows = await statePartyOrgCollection(db)
     .find(
       { hasPresence: true, ...countryScopeFilter(countryScope) },
       { projection: { countryId: 1, stateId: 1, partyId: 1 } }

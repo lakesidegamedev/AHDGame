@@ -32,6 +32,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 /**
  * Maximum accepted `q` length (after trimming). Longer queries are rejected
@@ -396,8 +397,7 @@ export async function runUniversalSearch({
             ? [{ countryScope: { $exists: false } }]
             : []),
         ];
-  const legislationMatches = await db
-    .collection<LegislationType>("legislationTypes")
+  const legislationMatches = await legislationTypesCollection(db)
     .find({
       $and: [
         ...legislationTokenBranches,

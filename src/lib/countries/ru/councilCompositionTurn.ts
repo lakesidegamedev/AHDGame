@@ -15,6 +15,7 @@ import {
 import { materializeRussianRegionalAuthorities } from "./regionalCouncilAuthorities";
 import { materializeRussianCouncilCompositionSeating } from "./councilCompositionSeating";
 import type { CountryGameState } from "@/lib/db/types";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 
 export async function processRussianCouncilComposition(input: {
   db: Db;
@@ -46,8 +47,7 @@ export async function processRussianCouncilComposition(input: {
       )
     )
       result.authorized++;
-  const country = await db
-    .collection<CountryGameState>("countryGameStates")
+  const country = await countryGameStatesCollection(db)
     .findOne({ _id: "RU" }, { projection: { ruCouncilFormationMandate: 1 } });
   if (!country?.ruCouncilFormationMandate) return result;
   const settlement = await runRequiredTransaction(

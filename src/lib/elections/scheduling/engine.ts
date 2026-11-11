@@ -41,6 +41,9 @@ import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import type { Document } from "mongodb";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 
 /**
  * NG elections run once Nigeria is off "coming-soon". Gated on the RUNTIME
@@ -363,13 +366,12 @@ export async function cleanupDuplicateElections(
     // Withdraw first. If cancellation then fails, the next turn still sees the
     // live duplicate and retries. The opposite order could strand an active
     // candidacy on an already-cancelled election.
-    await db
-      .collection("electionCandidates")
+    await electionCandidatesCollection<Document>(db)
       .updateMany(
         { electionId: { $in: toCancel }, status: "active" },
         { $set: { status: "withdrawn", withdrawnAt: now } }
       );
-    await db.collection("campaigns").updateMany(
+    await campaignsCollection<Document>(db).updateMany(
       { electionId: { $in: toCancel }, status: { $ne: "archived" } },
       {
         $set: {
@@ -956,8 +958,7 @@ export async function cleanupStaleElectionCandidates(now: Date): Promise<void> {
 
   // Read the rows before the update — archiving their campaigns needs each
   // row's electionId + candidate identity, and the update clears `active`.
-  const staleCandidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const staleCandidates = await electionCandidatesCollection(db)
     .find({ electionId: { $in: completedElectionIds }, status: "active" })
     .project<{
       _id: ObjectId;
@@ -968,8 +969,7 @@ export async function cleanupStaleElectionCandidates(now: Date): Promise<void> {
     }>({ _id: 1, electionId: 1, characterId: 1, nppId: 1, isNPP: 1 })
     .toArray();
 
-  const result = await db
-    .collection("electionCandidates")
+  const result = await electionCandidatesCollection<Document>(db)
     .updateMany(
       { electionId: { $in: completedElectionIds }, status: "active" },
       { $set: { status: "withdrawn", withdrawnAt: now } }

@@ -9,6 +9,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import type { Document } from "mongodb";
+import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
 
 // GET /api/coalitions/[id]?country=us — Returns full coalition details
 export async function GET(
@@ -29,8 +30,7 @@ export async function GET(
 
     const db = await getDb();
 
-    const coalition = await db
-      .collection<Coalition>("coalitions")
+    const coalition = await coalitionsCollection(db)
       .findOne({ sequentialId, countryId });
 
     if (!coalition) {

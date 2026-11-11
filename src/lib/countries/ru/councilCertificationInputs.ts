@@ -20,6 +20,8 @@ import {
 import { russianDumaBoundRoot } from "./dumaConvocationAuthority";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 export async function loadRussianCouncilCertificationInputs(input: {
   db: Db;
   session: ClientSession;
@@ -28,8 +30,7 @@ export async function loadRussianCouncilCertificationInputs(input: {
 }) {
   const { db, session, cohort, country } = input;
   const electionIds = cohort.map((row) => row._id);
-  const counted = await db
-    .collection<ElectionVoteTally>("electionVoteTallies")
+  const counted = await electionVoteTalliesCollection(db)
     .find(
       { electionId: { $in: electionIds } },
       {
@@ -51,8 +52,7 @@ export async function loadRussianCouncilCertificationInputs(input: {
     counted.some((row) => row.finalized || row.russianCouncilBallot?.certifiedCohortId)
   )
     throw new Error("Council certification needs one unique unfinalized tally per subject");
-  const candidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidates = await electionCandidatesCollection(db)
     .find(
       { electionId: { $in: electionIds } },
       {

@@ -15,6 +15,7 @@ import { loadCooldownMap } from "@/lib/crises/autoCrisisCooldown";
 import { floorCrisisDuration } from "@/lib/crises/crisisDuration";
 import { resolveCrisisLocationName, interpolateLocation } from "@/lib/crises/crisisLocation";
 import { ObjectId } from "mongodb";
+import { crisesCollection } from "@/lib/db/repositories/crises";
 
 /** Mirrors {@link CrisisEffect}; nullable fields default to null to match the stored shape. */
 const crisisEffectSchema = z.object({
@@ -63,7 +64,7 @@ export async function GET() {
     if (!adminResult.ok) return adminResult.response;
 
     const db = await getDb();
-    const crises = await db.collection<Crisis>("crises").find({}).sort({ createdAt: -1 }).toArray();
+    const crises = await crisesCollection(db).find({}).sort({ createdAt: -1 }).toArray();
     // Surface the game's starting year so the admin client labels start dates
     // against the active preset's calendar (e.g. 1991-default) rather than the
     // 2019 fallback baked into turnToLarpDate.
@@ -195,7 +196,7 @@ export async function POST(req: Request) {
       crisis.wireMessageOnEnd = interpolateLocation(crisis.wireMessageOnEnd, locationName);
     }
 
-    const result = await db.collection<Crisis>("crises").insertOne(crisis as Crisis);
+    const result = await crisesCollection(db).insertOne(crisis as Crisis);
     const insertedCrisis: Crisis = { ...(crisis as Crisis), _id: result.insertedId };
 
     // Create the interaction document immediately rather than waiting for the

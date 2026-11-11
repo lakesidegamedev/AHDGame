@@ -3,6 +3,9 @@ import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import type { Document } from "mongodb";
 import { currencyOrdersCollection } from "@/lib/db/repositories/currencyOrders";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 
 /**
  * Propagate a character name change to all denormalized collections.
@@ -21,8 +24,7 @@ export async function propagateCharacterNameChange(
 ): Promise<void> {
   // ── 1. Election candidates ────────────────────────────────────────────────
   await Promise.all([
-    db
-      .collection("electionCandidates")
+    electionCandidatesCollection<Document>(db)
       .updateMany({ characterId }, { $set: { characterName: newName } }),
     db
       .collection("nationalCommitteeCandidates")
@@ -54,15 +56,13 @@ export async function propagateCharacterNameChange(
 
   // ── 3. Bills (sponsor and co-sponsors) ────────────────────────────────────
   await Promise.all([
-    db
-      .collection("bills")
+    billsCollection<Document>(db)
       .updateMany({ sponsorId: characterId }, { $set: { sponsorName: newName } }),
     db
       .collection("stateBills")
       .updateMany({ sponsorId: characterId }, { $set: { sponsorName: newName } }),
     // Co-sponsors are an embedded array — use arrayFilters
-    db
-      .collection("bills")
+    billsCollection<Document>(db)
       .updateMany(
         { "coSponsors.characterId": characterId },
         { $set: { "coSponsors.$[elem].characterName": newName } },
@@ -143,8 +143,7 @@ export async function propagateCharacterNameChange(
   // Look up all candidate row ids for this character — playerEndorsements.candidateId
   // and electionVoteTallies.candidateNames are both keyed by the electionCandidates
   // row _id, not characterId (ticket #868).
-  const charCandidates = await db
-    .collection("electionCandidates")
+  const charCandidates = await electionCandidatesCollection<Document>(db)
     .find({ characterId }, { projection: { _id: 1 } })
     .toArray();
   const ownCandidateIds = charCandidates.map((c) => c._id as ObjectId);
@@ -172,8 +171,7 @@ export async function propagateCharacterNameChange(
     await Promise.all(
       charCandidates.map((c) => {
         const candidateIdStr = (c._id as import("mongodb").ObjectId).toString();
-        return db
-          .collection("electionVoteTallies")
+        return electionVoteTalliesCollection<Document>(db)
           .updateMany(
             { [`candidateNames.${candidateIdStr}`]: { $exists: true } },
             { $set: { [`candidateNames.${candidateIdStr}`]: newName } }

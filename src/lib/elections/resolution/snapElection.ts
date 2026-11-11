@@ -58,6 +58,9 @@ import { getNppsCollection } from "@/lib/db/collections/npps";
 import { getElectionsCollection } from "@/lib/db/collections/elections";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import type { Document } from "mongodb";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 
 export const SNAP_ELECTION_LIMIT = 2;
 export const SNAP_ELECTION_COOLDOWN_TURNS = 336;
@@ -314,8 +317,7 @@ export async function triggerSnapElection(
       { _id: { $in: cancelledElectionIds } },
       { $set: { status: "cancelled" as ElectionStatus, updatedAt: now } }
     );
-    await db
-      .collection("electionCandidates")
+    await electionCandidatesCollection<Document>(db)
       .updateMany(
         { electionId: { $in: cancelledElectionIds }, status: "active" },
         { $set: { status: "withdrawn", withdrawnAt: now } }
@@ -344,8 +346,7 @@ export async function triggerSnapElection(
   const seatsByRegion = new Map(seats.map((s) => [s.state, s.totalSeats ?? 1]));
   const jpCountryState =
     countryId === COUNTRY_CONFIGS.JP.id
-      ? await db
-          .collection<CountryGameState>("countryGameStates")
+      ? await countryGameStatesCollection(db)
           .findOne({ _id: COUNTRY_CONFIGS.JP.id }, { projection: { jpShugiinElectoralMandate: 1 } })
       : null;
   const jpLegacySeats = gameState?.preset ? getJpShugiinSeats(gameState.preset) : {};

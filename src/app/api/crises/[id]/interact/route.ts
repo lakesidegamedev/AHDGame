@@ -16,6 +16,7 @@ import { submitCrisisAidPledge } from "@/lib/crises/aidPledge";
 import type { CountryId } from "@/lib/constants/countries";
 import type { Crisis } from "@/lib/db/types/crisis";
 import { ObjectId } from "mongodb";
+import { crisesCollection } from "@/lib/db/repositories/crises";
 
 const interactSchema = z.object({
   optionId: z.string().optional(),
@@ -90,7 +91,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
       }
       // Pledge: route to the aid-pledge command (schema already enforces a
       // positive finite number).
-      const crisis = await db.collection<Crisis>("crises").findOne({ _id: interaction.crisisId });
+      const crisis = await crisesCollection(db).findOne({ _id: interaction.crisisId });
       if (crisis && decisionAnsweredByLever(crisis, interaction.decisionTree, currentNode)) {
         return errorResponse(409, "This crisis is answered through its levers");
       }

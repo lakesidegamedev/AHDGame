@@ -24,6 +24,8 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 
 export const FEDERATION_ARCHIVED_POLITICAL_ROWS_COLLECTION = "federationArchivedPoliticalRows";
 const UNION_OFFICES = ["unionCongressDeputy", "chairmanOfCabinet", "sovietPresident"];
@@ -58,7 +60,7 @@ export async function materializeProvisionalRussianCongress(input: {
       "Russian political succession needs a transaction and approved retained territory"
     );
   }
-  const countries = db.collection<CountryGameState>("countryGameStates");
+  const countries = countryGameStatesCollection(db);
   const country = await countries.findOne(
     { _id: "RU" },
     {
@@ -233,7 +235,7 @@ export async function materializeProvisionalRussianCongress(input: {
       );
   await db.collection("cabinetMembers").deleteMany({ countryId: "RU" }, { session });
   await db.collection("ukCabinetCooldowns").deleteMany({ countryId: "RU" }, { session });
-  await db.collection<GovernmentFormation>("governmentFormations").updateOne(
+  await governmentFormationsCollection(db).updateOne(
     { _id: "RU" },
     {
       $set: {
@@ -412,7 +414,7 @@ async function preserveEstablishedRussianConstitution(input: {
     { $set: { status: "cancelled", updatedAt: now } },
     { session }
   );
-  const governments = db.collection<GovernmentFormation>("governmentFormations");
+  const governments = governmentFormationsCollection(db);
   const government = await governments.findOne({ _id: "RU" }, { session });
   const lostHolder = (characterId?: ObjectId | null, nppId?: ObjectId | null) =>
     (characterId != null && retiredPlayers.some((id) => id.equals(characterId))) ||
@@ -478,7 +480,7 @@ async function preserveEstablishedRussianConstitution(input: {
       { $set: { displayNameOverride: "Russia", flagEmojiOverride: "🇷🇺", updatedAt: now } },
       { session }
     );
-  const stamped = await db.collection<CountryGameState>("countryGameStates").updateOne(
+  const stamped = await countryGameStatesCollection(db).updateOne(
     {
       _id: "RU",
       $or: [

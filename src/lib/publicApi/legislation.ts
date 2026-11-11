@@ -1,6 +1,7 @@
 import type { Db } from "mongodb";
 import type { Bill, BillProvision } from "@/lib/db/types";
 import { isPolicyProvision } from "@/lib/db/types/legislation";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 type LegislationStatus = "pending" | "passed" | "failed";
 
@@ -47,8 +48,7 @@ export async function queryLegislation(
     query.status = { $in: STATUS_MAP[status as LegislationStatus] };
   }
 
-  const bills = await db
-    .collection<Bill>("bills")
+  const bills = await billsCollection(db)
     .find(query)
     .sort({ proposedAt: -1 })
     .limit(Math.min(limit, 100))

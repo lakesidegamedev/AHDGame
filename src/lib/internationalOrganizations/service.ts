@@ -68,6 +68,8 @@ import {
 } from "./founding";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 
 /**
  * Read-side aggregates used by the world page and per-org views.
@@ -278,8 +280,7 @@ export async function loadOrganizationSummaries(db: Db): Promise<OrganizationSum
     (await getOrganizationLegislationCollection(db))
       .find({ status: { $in: ["pending", "active"] } })
       .toArray(),
-    db
-      .collection("bills")
+    billsCollection<Document>(db)
       .find({
         status: { $nin: NATIONAL_TERMINAL_STATUSES },
         internationalAction: { $exists: true },
@@ -372,8 +373,7 @@ export async function loadOrganizationSummaries(db: Db): Promise<OrganizationSum
         .map((m) => m.countryId)
         .filter((c): c is CountryId => c in COUNTRY_CONFIGS && hasBillLifecycle(c as CountryId));
       if (members.length === 0) continue;
-      const formations = await db
-        .collection<GovernmentFormation>("governmentFormations")
+      const formations = await governmentFormationsCollection(db)
         .find({
           _id: { $in: members },
           status: "formed",

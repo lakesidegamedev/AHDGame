@@ -1,6 +1,8 @@
 import type { Db } from "mongodb";
 import type { StatePartyOrg } from "@/lib/db/types";
 import type { Migration, MigrationResult } from "../types";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import type { Document } from "mongodb";
 
 /**
  * Re-key `statePartyOrg` rows whose compound `_id` drifted from their
@@ -29,7 +31,7 @@ import type { Migration, MigrationResult } from "../types";
  */
 async function rekeyDriftedStatePartyOrgIds(db: Db, dryRun: boolean): Promise<MigrationResult> {
   const notes: string[] = [];
-  const col = db.collection<StatePartyOrg>("statePartyOrg");
+  const col = statePartyOrgCollection(db);
 
   const all = await col.find({}).toArray();
 
@@ -129,7 +131,7 @@ async function rekeyDriftedStatePartyOrgIds(db: Db, dryRun: boolean): Promise<Mi
   // The unique index is the recurrence guard: two rows for one
   // (country, state, party) can never exist again. Any future drift writer
   // throws instead of silently misattributing org.
-  await db.collection("statePartyOrg").createIndex(
+  await statePartyOrgCollection<Document>(db).createIndex(
     { countryId: 1, stateId: 1, partyId: 1 },
     {
       unique: true,

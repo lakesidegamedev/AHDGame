@@ -5,6 +5,8 @@ import type { Campaign, Election, ElectionCandidate } from "@/lib/db/types";
 import { getCalendarDayInTimezone, shouldApplyDailyReset } from "@/lib/time/dailyReset";
 import { presidentialRulesetFor } from "@/lib/elections/presidentialRuleset";
 import { getElectionsCollection } from "@/lib/db/collections/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 
 /**
  * Refill each active presidential ticket's shared running-mate surrogate action
@@ -38,8 +40,7 @@ export async function resetRunningMateSurrogateActions(
   }
   const electionIds = presidentialElections.map((election) => election._id);
 
-  const ticketsWithMate = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const ticketsWithMate = await electionCandidatesCollection(db)
     .find({
       electionId: { $in: electionIds },
       status: "active",
@@ -54,8 +55,7 @@ export async function resetRunningMateSurrogateActions(
     .toArray();
   if (ticketsWithMate.length === 0) return { surrogatePoolsReset: 0 };
 
-  const campaigns = await db
-    .collection<Campaign>("campaigns")
+  const campaigns = await campaignsCollection(db)
     .find({
       status: { $ne: "archived" },
       $or: ticketsWithMate.map((ticket) => ({
@@ -90,7 +90,7 @@ export async function resetRunningMateSurrogateActions(
   }
 
   if (bulkOps.length > 0) {
-    await db.collection<Campaign>("campaigns").bulkWrite(bulkOps);
+    await campaignsCollection(db).bulkWrite(bulkOps);
   }
 
   return { surrogatePoolsReset: bulkOps.length };

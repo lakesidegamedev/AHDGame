@@ -28,6 +28,7 @@ import { OPERATING_SECTOR_TYPE_LABELS, type CorporationType } from "@/lib/consta
 import type { Union, UnionOrganizer } from "@/lib/db/types";
 import { createNotifications, type NotificationInput } from "@/lib/notifications";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { unionsCollection } from "@/lib/db/repositories/unions";
 
 export interface UnionBustingNoticeInput {
   countryId: CountryId;
@@ -60,8 +61,7 @@ export async function notifyUnionOfBustingAttempt(
   input: UnionBustingNoticeInput
 ): Promise<number> {
   try {
-    const union = await db
-      .collection<Union>("unions")
+    const union = await unionsCollection(db)
       .findOne({ countryId: input.countryId, sectorType: input.sectorType as CorporationType });
     if (!union) return 0;
 

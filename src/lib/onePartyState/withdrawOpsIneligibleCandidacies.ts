@@ -21,6 +21,7 @@ import {
 import { removeWithdrawnCandidateFromTally } from "@/lib/elections/engine/tallyCleaner";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 export async function withdrawOpsIneligibleCandidacies(
   db: Db,
@@ -34,8 +35,7 @@ export async function withdrawOpsIneligibleCandidacies(
   const electionById = new Map(
     liveElections.map((election) => [election._id.toString(), election])
   );
-  const candidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidates = await electionCandidatesCollection(db)
     .find({
       electionId: { $in: liveElections.map((election) => election._id) },
       status: "active",
@@ -87,8 +87,7 @@ export async function withdrawOpsIneligibleCandidacies(
 
   if (toWithdraw.length === 0) return { withdrawn: 0 };
 
-  const result = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const result = await electionCandidatesCollection(db)
     .updateMany(
       { _id: { $in: toWithdraw.map((candidate) => candidate._id) } },
       { $set: { status: "withdrawn", withdrawnAt: now } }

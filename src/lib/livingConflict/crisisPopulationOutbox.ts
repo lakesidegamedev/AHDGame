@@ -7,6 +7,7 @@ import { ObjectId, type AnyBulkWriteOperation, type Db } from "mongodb";
 import type { Crisis } from "@/lib/db/types/crisis";
 import type { ConflictCivilianLossOrder } from "./rules/civilianLoss";
 import type { RefugeeReceptionOrder } from "./rules/refugeeReception";
+import { crisesCollection } from "@/lib/db/repositories/crises";
 
 /** Orders from live and just-closed crises whose effective turn has arrived. */
 export async function loadPendingCrisisPopulationOrders(
@@ -14,8 +15,7 @@ export async function loadPendingCrisisPopulationOrders(
   worldEpochId: string,
   turn: number
 ): Promise<{ civilianLoss: ConflictCivilianLossOrder[]; reception: RefugeeReceptionOrder[] }> {
-  const rows = await db
-    .collection<Crisis>("crises")
+  const rows = await crisesCollection(db)
     .find(
       { "populationOrders.epochId": worldEpochId, "populationOrders.pending": true },
       { projection: { populationOrders: 1 } }
@@ -62,7 +62,7 @@ export async function completeCrisisPopulationOrders(
     })),
   ];
   if (ops.length === 0) return;
-  const crises = db.collection<Crisis>("crises");
+  const crises = crisesCollection(db);
   await crises.bulkWrite(ops, { ordered: true });
   const touched = new Set([...done.civilianLoss, ...done.reception].map((order) => order.crisisId));
   await crises.updateMany(

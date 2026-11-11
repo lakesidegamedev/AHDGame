@@ -3,6 +3,7 @@ import type { Election, ElectionVoteTally, State } from "@/lib/db/types";
 import { buildHuMixedPlan, type HuMixedPlan } from "./rules/mixedElectionPlan";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 
 /** Return null until every regional race has finished and has a valid tally. */
 export async function readHuMixedElectionPlan(db: Db, cycle: number): Promise<HuMixedPlan | null> {
@@ -21,8 +22,7 @@ export async function readHuMixedElectionPlan(db: Db, cycle: number): Promise<Hu
   ) {
     return null;
   }
-  const tallies = await db
-    .collection<ElectionVoteTally>("electionVoteTallies")
+  const tallies = await electionVoteTalliesCollection(db)
     .find({ electionId: { $in: elections.map((election) => election._id) } })
     .toArray();
   const byElection = new Map(tallies.map((tally) => [tally.electionId.toString(), tally]));

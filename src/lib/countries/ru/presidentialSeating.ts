@@ -14,6 +14,9 @@ import {
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 const RUSSIAN_PRESIDENTIAL_ARCHIVES_COLLECTION = "russianPresidentialOfficeArchives";
 interface Archive {
   _id: string;
@@ -38,7 +41,7 @@ export async function materializeRussianPresidentialSeating(input: {
     !Number.isFinite(now.getTime())
   )
     throw new Error("Russian seating needs an active transaction, turn and time");
-  const countries = db.collection<CountryGameState>("countryGameStates");
+  const countries = countryGameStatesCollection(db);
   const country = await countries.findOne(
     { _id: "RU" },
     {
@@ -251,14 +254,13 @@ export async function materializeRussianPresidentialSeating(input: {
     if (updated.matchedCount !== people.length)
       throw new Error("Russian certified office holder changed");
   }
-  await db
-    .collection<ElectionCandidate>("electionCandidates")
+  await electionCandidatesCollection(db)
     .updateMany(
       { countryId: "RU", status: "active", $or: identities },
       { $set: { status: "withdrawn", withdrawnAt: now } },
       { session }
     );
-  await db.collection<GovernmentFormation>("governmentFormations").updateOne(
+  await governmentFormationsCollection(db).updateOne(
     { _id: "RU" },
     {
       $set: {
@@ -271,7 +273,7 @@ export async function materializeRussianPresidentialSeating(input: {
     { session }
   );
   // A PM elected to the national ticket vacates that job; other PMs retain it.
-  await db.collection<GovernmentFormation>("governmentFormations").updateOne(
+  await governmentFormationsCollection(db).updateOne(
     { _id: "RU", $or: [{ pmCharacterId: { $in: charIds } }, { pmNppId: { $in: nppIds } }] },
     {
       $set: {

@@ -38,6 +38,10 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
+import type { Document } from "mongodb";
 
 const PARTY_LEADERSHIP_FIELDS = ["chairId", "viceChairId", "treasurerId"] as const;
 type PartyLeadershipField = (typeof PARTY_LEADERSHIP_FIELDS)[number];
@@ -223,8 +227,7 @@ async function discoverPositions(db: Db, character: Character): Promise<Position
   ] = await Promise.all([
     electedOfficialsCollection(db).find({ characterId }).toArray(),
     db.collection<CabinetMember>("cabinetMembers").find({ characterId }).toArray(),
-    db
-      .collection<StatePartyOrg>("statePartyOrg")
+    statePartyOrgCollection(db)
       .find({
         $or: PARTY_LEADERSHIP_FIELDS.map((field) => ({ [field]: characterId })),
       })
@@ -531,8 +534,7 @@ async function resignNationalPartyRole(
   );
   if (!hasChanged(result)) return false;
   if (field === "chairId") {
-    await db
-      .collection("coalitions")
+    await coalitionsCollection<Document>(db)
       .updateMany(
         { chairPartyId: party._id },
         { $set: { chairCharacterId: null, updatedAt: now } }
@@ -548,8 +550,7 @@ async function resignStatePartyRole(
   field: PartyLeadershipField,
   now: Date
 ): Promise<boolean> {
-  const result = await db
-    .collection<StatePartyOrg>("statePartyOrg")
+  const result = await statePartyOrgCollection(db)
     .updateOne(
       { _id: organization._id, [field]: character._id },
       { $set: { [field]: null, updatedAt: now } }
@@ -692,7 +693,7 @@ export async function resignPosition(
     position.official.officeType !== "president" &&
     position.official.officeType !== "vicePresident"
   ) {
-    const activeElection = await db.collection<ElectionCandidate>("electionCandidates").findOne({
+    const activeElection = await electionCandidatesCollection(db).findOne({
       characterId: freshCharacter._id,
       electionId: { $exists: true },
       status: "active",
@@ -719,13 +720,11 @@ export async function resignPosition(
 }
 
 async function withdrawActiveCandidacies(db: Db, characterId: ObjectId, now: Date) {
-  const activeRows = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const activeRows = await electionCandidatesCollection(db)
     .find({ characterId, status: "active" })
     .toArray();
   const [elections, stateParty] = await Promise.all([
-    db
-      .collection<ElectionCandidate>("electionCandidates")
+    electionCandidatesCollection(db)
       .updateMany(
         { characterId, status: "active" },
         { $set: { status: "withdrawn", withdrawnAt: now } }
@@ -797,7 +796,7 @@ export async function resignAllPositions(db: Db, character: Character): Promise<
           )
         )
       ),
-      db.collection<StatePartyOrg>("statePartyOrg").updateMany(
+      statePartyOrgCollection(db).updateMany(
         {
           $or: PARTY_LEADERSHIP_FIELDS.map((field) => ({ [field]: freshCharacter._id })),
         },

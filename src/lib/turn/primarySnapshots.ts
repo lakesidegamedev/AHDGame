@@ -71,6 +71,9 @@ import { getStatesCollection } from "@/lib/db/collections/states";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 /**
  * Record a primary standings snapshot for every election currently in primary phase.
@@ -135,15 +138,13 @@ export async function recordPrimarySnapshots(
     // The presidential path needs every state's org rows; ballot accrual only
     // needs the rows for the regions actually holding a primary this turn.
     hasPresident
-      ? db.collection<StatePartyOrg>("statePartyOrg").find({}).toArray()
+      ? statePartyOrgCollection(db).find({}).toArray()
       : snapshotRegionIds.length > 0
-        ? db
-            .collection<StatePartyOrg>("statePartyOrg")
+        ? statePartyOrgCollection(db)
             .find({ stateId: { $in: snapshotRegionIds } })
             .toArray()
         : Promise.resolve([] as StatePartyOrg[]),
-    db
-      .collection<ElectionCandidate>("electionCandidates")
+    electionCandidatesCollection(db)
       .find({ electionId: { $in: electionIds }, status: "active" })
       .toArray(),
     uniqueSnapshotRegionKeys.size > 0
@@ -180,8 +181,7 @@ export async function recordPrimarySnapshots(
           .find({ _id: { $in: snapshotRegionIds } })
           .toArray()
       : Promise.resolve([] as StateDemographics[]),
-    db
-      .collection<ElectionVoteTally>("electionVoteTallies")
+    electionVoteTalliesCollection(db)
       .find({ electionId: { $in: electionIds } }, { projection: TALLY_WITH_SNAPSHOT_TURNS_ONLY })
       .project<Pick<ElectionVoteTally, "electionId" | "primaryVotes">>({
         electionId: 1,
@@ -705,7 +705,7 @@ export async function recordPrimarySnapshots(
     await db.collection<PrimarySnapshot>("primarySnapshots").insertMany(snapshots);
   }
   if (ballotTallyOps.length > 0) {
-    await db.collection<ElectionVoteTally>("electionVoteTallies").bulkWrite(ballotTallyOps);
+    await electionVoteTalliesCollection(db).bulkWrite(ballotTallyOps);
   }
 
   return snapshots.length;
@@ -756,8 +756,7 @@ async function recordPresidentialStatePollingSnapshots(
   // Win momentum per race, from the waves already run. One projected read for
   // every presidential race this turn, so the polling projection carries the
   // same momentum the next wave will.
-  const momentumTallies = await db
-    .collection<ElectionVoteTally>("electionVoteTallies")
+  const momentumTallies = await electionVoteTalliesCollection(db)
     .find(
       { electionId: { $in: presElections.map((e) => e._id) } },
       { projection: { electionId: 1, primaryWaveHistory: 1, primaryStateVotes: 1 } }
@@ -882,7 +881,7 @@ async function recordPresidentialStatePollingSnapshots(
   // One write for every presidential race's polling history, instead of one
   // round trip per race.
   if (pollingHistoryOps.length > 0) {
-    await db.collection<ElectionVoteTally>("electionVoteTallies").bulkWrite(pollingHistoryOps);
+    await electionVoteTalliesCollection(db).bulkWrite(pollingHistoryOps);
   }
 
   return projectionsByElection;

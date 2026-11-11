@@ -5,6 +5,7 @@
 import type { AnyBulkWriteOperation, Db } from "mongodb";
 import type { ElectionVoteTally } from "@/lib/db/types";
 import { logger } from "@/lib/observability/logger";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 
 export async function writeVoteTallies(
   db: Db,
@@ -13,8 +14,7 @@ export async function writeVoteTallies(
 ): Promise<void> {
   if (writes.length === 0) return;
   try {
-    const result = await db
-      .collection<ElectionVoteTally>("electionVoteTallies")
+    const result = await electionVoteTalliesCollection(db)
       .bulkWrite(writes, { ordered: false });
     if (hasPrStv && result.matchedCount !== writes.length)
       throw new Error("PR-STV ballot batch lost a tally revision; retry the turn");

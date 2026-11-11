@@ -49,6 +49,7 @@ import type { Document } from "mongodb";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { unionsCollection } from "@/lib/db/repositories/unions";
 
 /** Reads the state, country, tariff, sibling and market context for one sector. */
 export async function loadSectorDetailContext({
@@ -335,7 +336,7 @@ export async function loadSectorDetailContext({
       // kept for the existing wage-demand display, which predates rivals.
       // Which union actually represents THIS sector is a separate lookup
       // below, keyed on the sector's own `representingUnionId`.
-      db.collection<Union>("unions").findOne(
+      unionsCollection(db).findOne(
         {
           countryId: sectorCountryId,
           sectorType: sector.sectorType,
@@ -350,8 +351,7 @@ export async function loadSectorDetailContext({
   // all. The sector page needs it to say whether organizing here is a first
   // claim or a raid.
   const representingUnionDoc = sector.representingUnionId
-    ? await db
-        .collection<Union>("unions")
+    ? await unionsCollection(db)
         .findOne(
           { _id: sector.representingUnionId },
           { projection: { name: 1, undergroundStrength: 1 } }

@@ -70,6 +70,7 @@ import { logger } from "../../observability/logger";
 import { workerConfig } from "@/lib/config/worker";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 // Optional global salt so headless sim runs can vary this RNG across runs
 // while staying reproducible within a run (mirrors nppActionProcessing.ts).
@@ -187,7 +188,7 @@ export async function processElectionEntry(ctx: NPPContext): Promise<number> {
   const flushCandidateInserts = async (): Promise<number> => {
     if (pendingCandidateInserts.length === 0) return 0;
     const pending = pendingCandidateInserts.splice(0);
-    const result = await db.collection<ElectionCandidate>("electionCandidates").bulkWrite(
+    const result = await electionCandidatesCollection(db).bulkWrite(
       pending.map(({ doc }) => ({
         updateOne: {
           filter: { characterId: doc.characterId, status: "active" },
@@ -343,7 +344,7 @@ export async function processElectionEntry(ctx: NPPContext): Promise<number> {
       if (ctx.batchCandidateInserts) {
         pendingCandidateInserts.push({ doc: candidateDoc, npp, primary, key });
       } else {
-        await db.collection<ElectionCandidate>("electionCandidates").insertOne(candidateDoc);
+        await electionCandidatesCollection(db).insertOne(candidateDoc);
       }
     } catch (error) {
       // The partial unique index allows one active candidacy per character. If

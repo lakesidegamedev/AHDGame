@@ -41,6 +41,11 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import type { Document } from "mongodb";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 // POST /api/admin/elections/resolve-primaries — Eliminates primary losers and initializes vote tallies for elections whose primary phase has ended.
 // Auth: requireAdmin
@@ -91,8 +96,7 @@ export const POST = withAdminRoute(async (_auth) => {
 
   // Pre-batch: all active candidates for all elections at once
   const allPastPrimaryIds = pastPrimary.map((e) => e._id as ObjectId);
-  const allActiveCandidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const allActiveCandidates = await electionCandidatesCollection(db)
     .find({ electionId: { $in: allPastPrimaryIds }, status: "active" })
     .toArray();
   const candidatesByElection = new Map<string, ElectionCandidate[]>();
@@ -106,8 +110,7 @@ export const POST = withAdminRoute(async (_auth) => {
   // Pre-batch: which elections already have a vote tally
   const existingTallyElectionIds = new Set(
     (
-      await db
-        .collection("electionVoteTallies")
+      await electionVoteTalliesCollection<Document>(db)
         .find({ electionId: { $in: allPastPrimaryIds } }, { projection: { electionId: 1 } })
         .toArray()
     ).map((t) => (t.electionId as ObjectId).toString())
@@ -177,7 +180,7 @@ export const POST = withAdminRoute(async (_auth) => {
                 .find({ _id: { $in: characterIds } })
                 .toArray()
             : [],
-          db.collection<StatePartyOrg>("statePartyOrg").find({}).toArray(),
+          statePartyOrgCollection(db).find({}).toArray(),
         ]);
         charMap = new Map(chars.map((c) => [c._id.toString(), c]));
         partyChairMaps = buildPartyChairMaps(parties, statePartyOrgs);
@@ -246,8 +249,7 @@ export const POST = withAdminRoute(async (_auth) => {
       }
 
       if (loserIds.length > 0) {
-        await db
-          .collection("electionCandidates")
+        await electionCandidatesCollection<Document>(db)
           .updateMany(
             { _id: { $in: loserIds.map((id) => new ObjectId(id)) } },
             { $set: { status: "withdrawn", withdrawnAt: now } }
@@ -261,7 +263,7 @@ export const POST = withAdminRoute(async (_auth) => {
           .filter((c) => loserIds.includes(c._id.toString()) && c.characterId && !c.isNPP)
           .map((c) => c.characterId!);
         if (loserCharIds.length > 0) {
-          await db.collection("campaigns").updateMany(
+          await campaignsCollection<Document>(db).updateMany(
             { electionId, candidateId: { $in: loserCharIds }, status: { $ne: "archived" } },
             {
               $set: {
@@ -278,8 +280,7 @@ export const POST = withAdminRoute(async (_auth) => {
 
     // Ensure vote tally exists
     if (!existingTallyElectionIds.has(electionId.toString())) {
-      const generalCandidates = await db
-        .collection<ElectionCandidate>("electionCandidates")
+      const generalCandidates = await electionCandidatesCollection(db)
         .find({ electionId, status: "active" })
         .toArray();
       if (election.electionType === "president") {

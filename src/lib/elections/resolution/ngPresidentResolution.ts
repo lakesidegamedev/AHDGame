@@ -23,6 +23,9 @@ import { captureElectionWon } from "@/lib/analytics/electionAnalytics";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import type { Document } from "mongodb";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 
 /** Minimal candidate shape the decision needs (id + party key). */
 export interface NGPresidentCandidate {
@@ -125,8 +128,7 @@ export async function resolveNGPresidentElection(
   const candidateIds = Object.keys(candidateParties);
   if (candidateIds.length === 0) return false;
 
-  const candidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidates = await electionCandidatesCollection(db)
     .find({
       _id: { $in: candidateIds.map((id) => new ObjectId(id)) },
       status: "active",
@@ -189,8 +191,7 @@ export async function resolveNGPresidentElection(
       `[Turn] NG president election ${election._id}: executive seating failed — will retry next turn`,
       err
     );
-    await db
-      .collection<ElectionVoteTally>("electionVoteTallies")
+    await electionVoteTalliesCollection(db)
       .updateOne(
         { electionId: election._id },
         { $set: { executiveSeatingPending: true, updatedAt: now } }
@@ -198,7 +199,7 @@ export async function resolveNGPresidentElection(
     return false;
   }
 
-  await db.collection<ElectionVoteTally>("electionVoteTallies").updateOne(
+  await electionVoteTalliesCollection(db).updateOne(
     { electionId: election._id, finalized: { $ne: true } },
     {
       $set: {
@@ -211,13 +212,12 @@ export async function resolveNGPresidentElection(
   );
 
   // Post-finalize cleanup: withdraw remaining candidates and clear campaigns.
-  await db
-    .collection("electionCandidates")
+  await electionCandidatesCollection<Document>(db)
     .updateMany(
       { electionId: election._id, status: "active" },
       { $set: { status: "withdrawn", withdrawnAt: now } }
     );
-  await db.collection<Campaign>("campaigns").deleteMany({ electionId: election._id });
+  await campaignsCollection(db).deleteMany({ electionId: election._id });
 
   await captureElectionResultSnapshot(db, election, now);
 

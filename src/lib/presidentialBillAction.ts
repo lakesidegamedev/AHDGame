@@ -18,6 +18,7 @@ import { captureBillStatusChanged } from "@/lib/analytics/billStatusAnalytics";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 const OVERRIDE_WINDOW_HOURS = 24;
 const OVERRIDE_WINDOW_MS = OVERRIDE_WINDOW_HOURS * 60 * 60 * 1000;
@@ -43,7 +44,7 @@ export async function executePresidentialBillAction(
 ): Promise<PresidentialActionResult> {
   const now = new Date();
 
-  const bill = await db.collection<Bill>("bills").findOne({ _id: billId });
+  const bill = await billsCollection(db).findOne({ _id: billId });
   if (!bill) {
     return { success: false, message: "", error: "Bill not found" };
   }

@@ -1,6 +1,7 @@
 import type { Db, ObjectId } from "mongodb";
 import type { Election, ElectionCandidate } from "@/lib/db/types";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 /**
  * While an election is `completed`, general resolution may not have run yet — candidates
@@ -23,8 +24,7 @@ export async function findBlockingActiveCandidacy(
   characterId: ObjectId,
   excludeElectionId?: ObjectId
 ): Promise<{ candidate: ElectionCandidate; election: Election } | null> {
-  const candidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidates = await electionCandidatesCollection(db)
     .find({ characterId, status: "active" })
     .toArray();
 

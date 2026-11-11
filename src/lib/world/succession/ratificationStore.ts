@@ -7,6 +7,7 @@ import {
   type SuccessionApprovalInput,
   type SuccessionConsent,
 } from "./rules/decision";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 export const FEDERATION_RATIFICATIONS_COLLECTION = "federationRatifications";
 
@@ -53,8 +54,7 @@ export async function loadPersistedFederationApproval(input: {
     proposal.termsHash !== termsHash
   )
     throw new Error("Federation vote has no matching open political proposal");
-  const bills = await db
-    .collection<Bill>("bills")
+  const bills = await billsCollection(db)
     .find(
       {
         countryId: sourceEntityId,

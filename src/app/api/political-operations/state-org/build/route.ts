@@ -28,6 +28,7 @@ import {
 import type { Campaign, CharacterStateOrg } from "@/lib/db/types";
 import { MongoServerError, ObjectId } from "mongodb";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 
 const VALID_US_STATES = new Set(ELECTORAL_VOTE_UNITS.map((u) => u.stateId));
 
@@ -146,8 +147,7 @@ export async function POST(request: Request) {
       // campaign's own pools. A character with no active campaign has nothing to
       // build presence FOR, so this is a clean 400 rather than a silent fallback
       // onto personal action points.
-      campaign = await db
-        .collection<Campaign>("campaigns")
+      campaign = await campaignsCollection(db)
         .findOne(
           { candidateId: character._id, status: { $ne: "archived" } },
           { projection: { actions: 1, funds: 1 } }
@@ -210,7 +210,7 @@ export async function POST(request: Request) {
     try {
       await runWithOptionalTransaction(
         async (session) => {
-          const debitResult = await db.collection<Campaign>("campaigns").updateOne(
+          const debitResult = await campaignsCollection(db).updateOne(
             {
               _id: campaign._id,
               actions: { $gte: STATE_ORG_COST_ACTIONS },
@@ -265,7 +265,7 @@ export async function POST(request: Request) {
           if (!orgUpdate) throw new Error("ORG_RACE_OR_THROTTLE");
         },
         async () => {
-          const debitResult = await db.collection<Campaign>("campaigns").updateOne(
+          const debitResult = await campaignsCollection(db).updateOne(
             {
               _id: campaign._id,
               actions: { $gte: STATE_ORG_COST_ACTIONS },
@@ -313,7 +313,7 @@ export async function POST(request: Request) {
               );
             if (!orgUpdate) throw new Error("ORG_RACE_OR_THROTTLE");
           } catch (error) {
-            await db.collection<Campaign>("campaigns").updateOne(
+            await campaignsCollection(db).updateOne(
               { _id: campaign._id },
               {
                 $inc: {

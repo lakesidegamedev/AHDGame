@@ -22,6 +22,7 @@ import { mapElectionResponseToDisplay } from "@/lib/elections/mapElectionRespons
 import { getSlateAssignerRoleLabel, resolveSlateAuthority } from "@/lib/slateAuthority";
 import { countSlateAssignmentUsage } from "@/lib/slateAssignmentCap";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; electionId: string }>;
@@ -76,8 +77,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     // filed has no slate row behind it, so the board would otherwise show a
     // free slot the filing pass will refuse to use.
     const activeCandidacies = (
-      await db
-        .collection<ElectionCandidate>("electionCandidates")
+      await electionCandidatesCollection(db)
         .find(
           { electionId: electionObjId, party: partyId, status: "active" },
           { projection: { characterId: 1, status: 1, isNPP: 1, nppId: 1 } }

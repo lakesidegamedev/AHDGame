@@ -42,6 +42,7 @@ import {
   type WarSides,
 } from "./rules/foreignPolicy";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { crisesCollection } from "@/lib/db/repositories/crises";
 
 export type { MacroForeignPolicyState } from "./rules/foreignPolicy";
 
@@ -169,8 +170,7 @@ export async function loadBackgroundForeignContext(
           projection: { sourceCountry: 1, targetCountry: 1, commodity: 1, expiresTurn: 1 },
         })
         .toArray(),
-      db
-        .collection<Crisis>("crises")
+      crisesCollection(db)
         .find({ status: "active", globalResponse: { $exists: true } } as never, {
           projection: { name: 1, globalResponse: 1 },
         })

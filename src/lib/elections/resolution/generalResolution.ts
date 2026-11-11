@@ -61,6 +61,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 
 export type { OneElectionResult } from "./generalResolutionHelpers";
 
@@ -177,7 +178,7 @@ export async function resolveOneGeneralElection(
       );
       await voidDebateSessionsForElection(db, election._id, now);
       if (tally) {
-        await db.collection<ElectionVoteTally>("electionVoteTallies").updateOne(
+        await electionVoteTalliesCollection(db).updateOne(
           { _id: tally._id },
           {
             $set: {

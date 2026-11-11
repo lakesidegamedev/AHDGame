@@ -31,6 +31,9 @@ import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficia
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import type { Document } from "mongodb";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 /**
  * Directly-elected SINGLE-SEAT offices that need a bench challenger to be
@@ -238,8 +241,7 @@ export async function processChallengerGeneration(now: Date): Promise<number> {
   }
 
   // (election, party) pairs that already have an active candidate — don't double-file.
-  const cands = await db
-    .collection("electionCandidates")
+  const cands = await electionCandidatesCollection<Document>(db)
     .aggregate<{ _id: { e: unknown; p: string }; nppIds: unknown[] }>([
       { $match: { status: "active" } },
       { $group: { _id: { e: "$electionId", p: "$party" }, nppIds: { $addToSet: "$nppId" } } },
@@ -317,8 +319,7 @@ export async function processChallengerGeneration(now: Date): Promise<number> {
   };
 
   // statePartyOrg presence + org (for the challenger's quality bonus).
-  const spoRows = await db
-    .collection<StatePartyOrg>("statePartyOrg")
+  const spoRows = await statePartyOrgCollection(db)
     .find(
       {},
       { projection: { countryId: 1, stateId: 1, partyId: 1, hasPresence: 1, organization: 1 } }
@@ -399,8 +400,7 @@ export async function processChallengerGeneration(now: Date): Promise<number> {
           nppId: npp._id,
         };
         try {
-          await db
-            .collection<ElectionCandidate>("electionCandidates")
+          await electionCandidatesCollection(db)
             .insertOne(candidateDoc as ElectionCandidate);
           hasCandidate.add(`${String(primary._id)}_${party}`);
           electionsWithCandidate.add(String(primary._id));
@@ -453,8 +453,7 @@ export async function processChallengerGeneration(now: Date): Promise<number> {
             nppId: npp._id,
           };
           try {
-            await db
-              .collection<ElectionCandidate>("electionCandidates")
+            await electionCandidatesCollection(db)
               .insertOne(candidateDoc as ElectionCandidate);
             hasCandidate.add(`${String(primary._id)}_${party}`);
             electionsWithCandidate.add(String(primary._id));

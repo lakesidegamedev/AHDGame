@@ -17,6 +17,7 @@ import { orgBuildCashPrice, resolveOrgBuildFunding } from "@/lib/politicalStreng
 import { resolveOrgBuildSizeMultiplier } from "@/lib/politicalStrength/orgBuildStateSize";
 import { applyOrganizationBuild } from "@/lib/parties/rules/organizationBucket";
 import { ORG_BUILD_UNITS_PER_CLICK } from "@/lib/constants/partyOrg";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 /**
  * Canonical Build Org projection, shared by the
@@ -100,7 +101,7 @@ export async function computeBuildOrgPreview(
   // The spender row MAY be absent (seed deliberately omits e.g. CDU in Bayern).
   // Project from a virtual 0% row so the preview matches the POST's bootstrap —
   // read-only, no mutation. Presence (checked next) is the real gate.
-  const spenderRow = await db.collection<StatePartyOrg>("statePartyOrg").findOne({
+  const spenderRow = await statePartyOrgCollection(db).findOne({
     countryId,
     stateId: upperRegionId,
     partyId: String(spenderParty.sequentialId),
@@ -130,8 +131,7 @@ export async function computeBuildOrgPreview(
     };
   }
 
-  const allStateRows = await db
-    .collection<StatePartyOrg>("statePartyOrg")
+  const allStateRows = await statePartyOrgCollection(db)
     .find({ countryId, stateId: upperRegionId })
     .toArray();
   const previewRowId =

@@ -35,6 +35,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 export interface ExecuteInfluenceInput {
   characterId: ObjectId;
@@ -139,8 +140,7 @@ export async function validateInfluenceAttempt(
   }
 
   if (actionConfig.nppMustBeCandidate && context.electionId) {
-    const nppCandidate = await db
-      .collection<ElectionCandidate>("electionCandidates")
+    const nppCandidate = await electionCandidatesCollection(db)
       .findOne(activeNppElectionCandidacyFilter(new ObjectId(context.electionId), npp._id));
     if (!nppCandidate) {
       return { valid: false, error: "This NPP is not a candidate in the selected election." };
@@ -367,15 +367,14 @@ async function applyInfluenceEffects(
   switch (input.influenceType) {
     case "endorse_candidate": {
       if (!input.context.electionId || !input.context.candidateId) break;
-      const candidate = await db.collection<ElectionCandidate>("electionCandidates").findOne({
+      const candidate = await electionCandidatesCollection(db).findOne({
         _id: new ObjectId(input.context.candidateId),
         status: "active",
       });
       if (candidate) {
         const [election, candidateCountAtDecision] = await Promise.all([
           electionsCollection(db).findOne({ _id: candidate.electionId }),
-          db
-            .collection<ElectionCandidate>("electionCandidates")
+          electionCandidatesCollection(db)
             .countDocuments({ electionId: candidate.electionId, status: "active" }),
         ]);
         if (
@@ -409,12 +408,11 @@ async function applyInfluenceEffects(
 
       const electionObjId = new ObjectId(input.context.electionId);
       const filter = activeNppElectionCandidacyFilter(electionObjId, npp._id);
-      const withdrawCandidate = await db
-        .collection<ElectionCandidate>("electionCandidates")
+      const withdrawCandidate = await electionCandidatesCollection(db)
         .findOne(filter);
       if (!withdrawCandidate) break;
 
-      const updateResult = await db.collection<ElectionCandidate>("electionCandidates").updateOne(
+      const updateResult = await electionCandidatesCollection(db).updateOne(
         { _id: withdrawCandidate._id },
         {
           $set: {

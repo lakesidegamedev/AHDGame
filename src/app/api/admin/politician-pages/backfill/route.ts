@@ -20,6 +20,8 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 
 export async function POST() {
   try {
@@ -72,8 +74,7 @@ export async function POST() {
         isNPP: false,
       });
 
-      const candidates = await db
-        .collection<ElectionCandidate>("electionCandidates")
+      const candidates = await electionCandidatesCollection(db)
         .find({ characterId: new ObjectId(id), status: "withdrawn" })
         .toArray();
 
@@ -88,8 +89,7 @@ export async function POST() {
         : [];
 
       const electionMap = new Map(elections.map((e) => [e._id.toString(), e]));
-      const tallies = await db
-        .collection<ElectionVoteTally>("electionVoteTallies")
+      const tallies = await electionVoteTalliesCollection(db)
         .find({ electionId: { $in: elections.map((e) => e._id) }, finalized: true })
         .toArray();
       const tallyMap = new Map(tallies.map((t) => [t.electionId.toString(), t]));

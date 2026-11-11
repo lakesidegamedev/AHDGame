@@ -51,6 +51,7 @@ import { NPP_BILL_VOTING_DURATION_HOURS } from "./constants";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 const PRIVATIZATION_BILL_CATEGORY = "state ownership";
 
@@ -123,8 +124,7 @@ export async function proposeNppPrivatizationBill(
   }
 
   // One read answers the one-active cap, the cadence and the reselect window.
-  const recentBills = await db
-    .collection<Bill>("bills")
+  const recentBills = await billsCollection(db)
     .find(
       {
         countryId,
@@ -344,7 +344,7 @@ export async function proposeNppPrivatizationBill(
     updatedAt: now,
   };
   try {
-    const result = await db.collection<Omit<Bill, "_id">>("bills").insertOne(bill);
+    const result = await billsCollection<Omit<Bill, "_id">>(db).insertOne(bill);
     return { ok: true, billId: result.insertedId.toString(), sectors: sectorCount };
   } catch (error) {
     if ((error as { code?: number }).code === 11000)

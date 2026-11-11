@@ -59,6 +59,8 @@ import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficia
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 interface Props {
   params: Promise<{ code: string; id: string }>;
@@ -198,8 +200,7 @@ export default async function GovernorOfficePage({ params }: Props) {
       .limit(10)
       .toArray(),
     gameStateCollection(db).findOne({ _id: "current" }),
-    db
-      .collection<LegislationType>("legislationTypes")
+    legislationTypesCollection(db)
       .find({
         nationalOnly: { $ne: true },
         taxRateChange: { $exists: false },
@@ -291,8 +292,7 @@ export default async function GovernorOfficePage({ params }: Props) {
   const electionIds = stateElections.map((e) => e._id);
   const [stateCandidates, resolvePartyId] = await Promise.all([
     electionIds.length
-      ? db
-          .collection<ElectionCandidate>("electionCandidates")
+      ? electionCandidatesCollection(db)
           .find({ electionId: { $in: electionIds }, status: "active" })
           .toArray()
       : Promise.resolve([]),

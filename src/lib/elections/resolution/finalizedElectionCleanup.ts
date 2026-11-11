@@ -8,6 +8,9 @@ import { MULTI_SEAT_TYPES, isSpecialCommonsElection } from "@/lib/utils/election
 import { getChamberClass, sweepStaleOffice } from "./generalResolutionHelpers";
 import { updatePartyPresence } from "@/lib/turn/partyOrg";
 import { updatePoliticianPagesAfterElection } from "@/lib/wiki/updatePoliticianPageOnElection";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import type { Document } from "mongodb";
 
 export async function finishFinalizedElectionCleanup(
   db: Db,
@@ -15,14 +18,12 @@ export async function finishFinalizedElectionCleanup(
   tally: ElectionVoteTally,
   now: Date
 ): Promise<void> {
-  const candidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidates = await electionCandidatesCollection(db)
     .find({ electionId: election._id })
     .toArray();
   const seats = tally.seatsEstimate ?? {};
   const winners = candidates.filter((c) => (seats[c._id.toString()] ?? 0) > 0);
-  await db
-    .collection<ElectionCandidate>("electionCandidates")
+  await electionCandidatesCollection(db)
     .updateMany(
       { electionId: election._id, status: "active" },
       { $set: { status: "withdrawn", withdrawnAt: now } }
@@ -30,7 +31,7 @@ export async function finishFinalizedElectionCleanup(
   const characterIds = winners.flatMap((c) => (!c.isNPP && c.characterId ? [c.characterId] : []));
   const nppIds = winners.flatMap((c) => (c.isNPP && c.nppId ? [c.nppId] : []));
   if (characterIds.length || nppIds.length)
-    await db.collection<ElectionCandidate>("electionCandidates").updateMany(
+    await electionCandidatesCollection(db).updateMany(
       {
         electionId: { $ne: election._id },
         status: "active",
@@ -38,7 +39,7 @@ export async function finishFinalizedElectionCleanup(
       },
       { $set: { status: "withdrawn", withdrawnAt: now } }
     );
-  await db.collection("campaigns").deleteMany({ electionId: election._id });
+  await campaignsCollection<Document>(db).deleteMany({ electionId: election._id });
   if (election.state) {
     for (const party of new Set(candidates.map((c) => c.party).filter(Boolean)))
       await updatePartyPresence(db, election.state, party);

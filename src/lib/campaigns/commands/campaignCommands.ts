@@ -36,6 +36,7 @@ import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParti
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import type { Document } from "mongodb";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 export {
   appointCampaignManager,
   contributeCampaignStrength,
@@ -231,7 +232,7 @@ export async function upgradeCampaign(params: {
     guard[`${category}Tree.${branch}`] = currentBranchLevel;
   }
 
-  const updateResult = await db.collection<Campaign>("campaigns").updateOne(guard, {
+  const updateResult = await campaignsCollection(db).updateOne(guard, {
     $inc: incOnPurchase,
     $push: {
       activityHistory: { $each: [activity], $slice: -CAMPAIGN_ACTIVITY_HISTORY_CAP },
@@ -420,8 +421,7 @@ export async function donateToCampaign(params: {
       if (debitResult.matchedCount === 0) {
         throw badRequest("Insufficient party funds");
       }
-      const campaignUpdateResult = await db
-        .collection<Campaign>("campaigns")
+      const campaignUpdateResult = await campaignsCollection(db)
         .updateOne({ _id: campaignId }, campaignUpdate, { session });
       if (campaignUpdateResult.matchedCount === 0) {
         throw notFound("Campaign not found");
@@ -437,8 +437,7 @@ export async function donateToCampaign(params: {
         throw badRequest("Insufficient party funds");
       }
 
-      const campaignUpdateResult = await db
-        .collection<Campaign>("campaigns")
+      const campaignUpdateResult = await campaignsCollection(db)
         .updateOne({ _id: campaignId }, campaignUpdate);
       if (campaignUpdateResult.matchedCount === 0) {
         await politicalPartiesCollection(db).updateOne(
@@ -565,8 +564,7 @@ export async function donateToCampaign(params: {
         throw badRequest("Insufficient funds");
       }
 
-      const campaignUpdateResult = await db
-        .collection<Campaign>("campaigns")
+      const campaignUpdateResult = await campaignsCollection(db)
         .updateOne({ _id: campaignId }, campaignUpdate, { session });
       if (campaignUpdateResult.matchedCount === 0) {
         throw notFound("Campaign not found");
@@ -582,8 +580,7 @@ export async function donateToCampaign(params: {
       }
 
       try {
-        const campaignUpdateResult = await db
-          .collection<Campaign>("campaigns")
+        const campaignUpdateResult = await campaignsCollection(db)
           .updateOne({ _id: campaignId }, campaignUpdate);
         if (campaignUpdateResult.matchedCount === 0) {
           throw notFound("Campaign not found");

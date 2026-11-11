@@ -38,6 +38,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import type { Document } from "mongodb";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 /** Eligibility maps are loaded per chunk to bound query sizes; all player characters are processed. */
 const CHARACTER_CHUNK_SIZE = 200;
@@ -78,8 +79,7 @@ async function loadEligibilityMaps(
   }
 
   const [candidacies, officials, ceoCorps] = await Promise.all([
-    db
-      .collection("electionCandidates")
+    electionCandidatesCollection<Document>(db)
       .find({ characterId: { $in: characterIds }, status: "active" })
       .project({ characterId: 1 })
       .toArray(),

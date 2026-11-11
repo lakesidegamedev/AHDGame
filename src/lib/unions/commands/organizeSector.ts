@@ -30,6 +30,7 @@ import {
 } from "@/lib/unions/organizeSectorEconomy";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { unionsCollection } from "@/lib/db/repositories/unions";
 
 export {
   ORGANIZE_SECTOR_ACTION_COST,
@@ -200,8 +201,7 @@ export async function organizeSector(
 
   let incumbentApproval: number | null = null;
   if (currentRepresentingUnionId && currentRepresentingUnionId !== attackerId) {
-    const incumbentUnion = await db
-      .collection<Union>("unions")
+    const incumbentUnion = await unionsCollection(db)
       .findOne({ _id: sector.representingUnionId! }, { projection: { approval: 1 } });
     incumbentApproval = incumbentUnion ? unionApproval(incumbentUnion) : null;
   }
@@ -230,8 +230,7 @@ export async function organizeSector(
     };
   }
 
-  const treasurySpend = await db
-    .collection<Union>("unions")
+  const treasurySpend = await unionsCollection(db)
     .updateOne(
       { _id: union._id, treasury: { $gte: treasuryCost } },
       { $inc: { treasury: -treasuryCost }, $set: { updatedAt: now } }
@@ -287,8 +286,7 @@ export async function organizeSector(
       { _id: character._id },
       { $inc: { actions: ORGANIZE_SECTOR_ACTION_COST } }
     );
-    await db
-      .collection<Union>("unions")
+    await unionsCollection(db)
       .updateOne({ _id: union._id }, { $inc: { treasury: treasuryCost } });
     return { ok: false, status: 409, error: "Sector state changed, please retry." };
   }

@@ -39,6 +39,7 @@ import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import type { Document } from "mongodb";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 export interface SecedeRegionArgs {
   regionId: string;
@@ -100,7 +101,7 @@ async function secedeRegionInTransaction(
     )
     .toArray();
   const electionIds = oldRaces.map((row) => row._id);
-  await db.collection("electionCandidates").deleteMany({ electionId: { $in: electionIds } });
+  await electionCandidatesCollection<Document>(db).deleteMany({ electionId: { $in: electionIds } });
   await electionsCollection<Document>(db).deleteMany({ _id: { $in: electionIds } });
 
   // 2-3. Stand up the data + economy.

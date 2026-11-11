@@ -11,6 +11,7 @@ import { getReferendumCollection } from "@/lib/db/collections/referendum";
 import { canSpendOnStateParty } from "@/lib/parties/access";
 import { spendGroundGame } from "@/lib/referendum/groundGame";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 // POST /api/country/[code]/referendum/[refId]/ground-game
 // Auth: requireHumanSessionWithCharacter; nation-gated (the acting character must
@@ -67,8 +68,7 @@ export async function POST(
       }
       const [partyDoc, stateParty] = await Promise.all([
         politicalPartiesCollection(db).findOne({ countryId, sequentialId: Number(partyId) }),
-        db
-          .collection<StatePartyOrg>("statePartyOrg")
+        statePartyOrgCollection(db)
           .findOne({ countryId, stateId: ref.regionId, partyId: String(partyId) }),
       ]);
       if (!partyDoc || !canSpendOnStateParty(partyDoc, stateParty, auth.user)) {

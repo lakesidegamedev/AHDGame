@@ -41,6 +41,7 @@ import {
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { unionsCollection } from "@/lib/db/repositories/unions";
 
 /**
  * Minimum worker-weighted `unionization` (0-100) across an NPP union's scope
@@ -134,8 +135,7 @@ export async function processNppUnionBehavior(
   if (!nppAutonomyLevelAtLeast(autonomy, "v3")) return { ...EMPTY };
   if (!labourAtLeast(await getLabourSystemMode(), "full")) return { ...EMPTY };
 
-  const unions = await db
-    .collection<Union>("unions")
+  const unions = await unionsCollection(db)
     .find({ suspended: { $ne: true } })
     .toArray();
   if (unions.length === 0) return { ...EMPTY };
@@ -197,7 +197,7 @@ export async function processNppUnionBehavior(
       union.ownerType = "npp";
     }
     if (electionOps.length > 0) {
-      await db.collection<Union>("unions").bulkWrite(electionOps);
+      await unionsCollection(db).bulkWrite(electionOps);
       result.leadersElected = electionOps.length;
     }
   }
@@ -242,14 +242,13 @@ export async function processNppUnionBehavior(
     }
   }
   if (orphaned.length > 0) {
-    await db
-      .collection<Union>("unions")
+    await unionsCollection(db)
       .updateMany(
         { _id: { $in: orphaned } },
         { $set: { ownerId: null, updatedAt: now }, $unset: { ownerType: "" } }
       );
   }
-  if (clearOps.length > 0) await db.collection<Union>("unions").bulkWrite(clearOps);
+  if (clearOps.length > 0) await unionsCollection(db).bulkWrite(clearOps);
 
   steps.mark("leadershipCleanup");
   const activeLed = led.filter((union) => !orphaned.some((id) => id.equals(union._id)));

@@ -7,6 +7,7 @@ import { getPartyHex } from "@/lib/utils/politics";
 import { getPartyIdString } from "@/lib/db/partyLookup";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -41,8 +42,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
       .toArray();
 
     // Fetch existing party org records for this state
-    const existingPartyOrg = await db
-      .collection<StatePartyOrg>("statePartyOrg")
+    const existingPartyOrg = await statePartyOrgCollection(db)
       .find({ stateId })
       .toArray();
 

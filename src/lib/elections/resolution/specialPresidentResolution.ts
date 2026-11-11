@@ -19,6 +19,9 @@ import {
   decideTwoRoundPresident,
   SPECIAL_PRESIDENT_RUNOFF_TURNS,
 } from "@/lib/elections/rules/twoRoundPresident";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 
 const followupId = (source: string) =>
   new ObjectId(
@@ -33,7 +36,7 @@ async function openRunoff(
   turn: number
 ): Promise<void> {
   const electionId = followupId(String(election._id));
-  const candidates = db.collection<ElectionCandidate>("electionCandidates");
+  const candidates = electionCandidatesCollection(db);
   const nextCandidates = finalists.map((c) => ({
     ...c,
     _id: followupId(String(c._id)),
@@ -51,8 +54,7 @@ async function openRunoff(
     })),
     { ordered: false }
   );
-  const existingTally = await db
-    .collection<ElectionVoteTally>("electionVoteTallies")
+  const existingTally = await electionVoteTalliesCollection(db)
     .findOne({ electionId }, { projection: { _id: 1 } });
   if (!existingTally) {
     await initElectionVoteTally(electionId, nextCandidates, election.state, {
@@ -106,12 +108,11 @@ export async function resolveSpecialPresidentElection(
   turn: number
 ): Promise<boolean | null> {
   if (!tally) return null;
-  const candidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidates = await electionCandidatesCollection(db)
     .find({ electionId: election._id, ...(tally.finalized ? {} : { status: "active" }) })
     .toArray();
   if (tally.finalized) {
-    await db.collection<Campaign>("campaigns").deleteMany({ electionId: election._id });
+    await campaignsCollection(db).deleteMany({ electionId: election._id });
     await captureElectionResultSnapshot(db, election, now);
     await markResolved(db, election, now);
     return true;
@@ -144,19 +145,17 @@ export async function resolveSpecialPresidentElection(
       ...(winner.characterName ? { holderName: winner.characterName } : {}),
     });
   }
-  await db
-    .collection<ElectionCandidate>("electionCandidates")
+  await electionCandidatesCollection(db)
     .updateMany(
       { electionId: election._id, status: "active" },
       { $set: { status: "withdrawn", withdrawnAt: now } }
     );
-  await db
-    .collection<ElectionVoteTally>("electionVoteTallies")
+  await electionVoteTalliesCollection(db)
     .updateOne(
       { electionId: election._id },
       { $set: { finalized: true, resolvedAtTurn: turn, updatedAt: now } }
     );
-  await db.collection<Campaign>("campaigns").deleteMany({ electionId: election._id });
+  await campaignsCollection(db).deleteMany({ electionId: election._id });
   await captureElectionResultSnapshot(db, election, now);
   await markResolved(db, election, now);
   return true;

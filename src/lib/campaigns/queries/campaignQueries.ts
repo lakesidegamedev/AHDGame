@@ -67,6 +67,9 @@ import type { Document } from "mongodb";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 
 export interface CampaignListItem {
   id: string;
@@ -90,7 +93,7 @@ export async function getCampaignDetail(
   campaignId: ObjectId,
   user: AuthUserWithCharacter | null
 ): Promise<CampaignData> {
-  const campaign = await db.collection<Campaign>("campaigns").findOne({ _id: campaignId });
+  const campaign = await campaignsCollection(db).findOne({ _id: campaignId });
   if (!campaign) {
     throw notFound("Campaign not found");
   }
@@ -198,8 +201,7 @@ export async function getCampaignDetail(
   let runningMateName: string | null = null;
   let runningMateCharacterId: string | null = null;
   if (election?.electionType === "president") {
-    const ticketRow = await db
-      .collection<ElectionCandidate>("electionCandidates")
+    const ticketRow = await electionCandidatesCollection(db)
       .findOne(
         { electionId: campaign.electionId, characterId: campaign.candidateId },
         { projection: { runningMateId: 1 } }
@@ -334,8 +336,7 @@ export async function getCampaignDetail(
   // `candidateRow` prefers the active one and falls back to any row, which the
   // ownSupport/suspension panel expects. Endorsements do NOT fall back: see
   // `activeCandidateRow`.
-  const candidateRowCandidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidateRowCandidates = await electionCandidatesCollection(db)
     .find({
       electionId: campaign.electionId,
       characterId: campaign.candidateId,
@@ -473,8 +474,7 @@ export async function getCampaignDetail(
       suspendedAt = candidateRow.suspendedAt?.toISOString() ?? null;
       endorsementTargetWithdrawn = candidateRow.endorsementTargetWithdrawnAt != null;
       if (candidateRow.endorsedElectionCandidateId) {
-        const endorsedRow = await db
-          .collection<ElectionCandidate>("electionCandidates")
+        const endorsedRow = await electionCandidatesCollection(db)
           .findOne(
             { _id: candidateRow.endorsedElectionCandidateId },
             { projection: { _id: 1, characterName: 1 } }
@@ -500,8 +500,7 @@ export async function getCampaignDetail(
           user?.character?._id ?? null
         );
         if (isNominee || isAdmin) {
-          const targets = await db
-            .collection<ElectionCandidate>("electionCandidates")
+          const targets = await electionCandidatesCollection(db)
             .find(
               {
                 electionId: campaign.electionId,
@@ -662,8 +661,7 @@ async function buildBriefing(args: {
   let participationPlan: CampaignBriefing["participationPlan"];
 
   if (election?.electionType === "president") {
-    const tally = await db
-      .collection<ElectionVoteTally>("electionVoteTallies")
+    const tally = await electionVoteTalliesCollection(db)
       .findOne({ electionId: campaign.electionId });
     if (tally) {
       // The tally / ledger / delegate map are keyed by the electionCandidate row
@@ -785,7 +783,7 @@ export async function getViewerCampaigns(
   // for the activity array. A campaign now keeps 200 entries rather than 10.
   const campaignListProjection = { projection: { activityHistory: 0 } };
 
-  const myCampaignDoc = await db.collection<Campaign>("campaigns").findOne(
+  const myCampaignDoc = await campaignsCollection(db).findOne(
     {
       status: { $ne: "archived" },
       $or: [
@@ -798,7 +796,7 @@ export async function getViewerCampaigns(
 
   let partyCampaignDoc: Campaign | null = null;
   if (party && party !== "independent" && eligibleCountryElectionIds.length > 0) {
-    partyCampaignDoc = await db.collection<Campaign>("campaigns").findOne(
+    partyCampaignDoc = await campaignsCollection(db).findOne(
       {
         party,
         status: { $ne: "archived" },

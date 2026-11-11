@@ -3,6 +3,7 @@ import type { LegislationType } from "@/lib/db/types";
 import type { Migration, MigrationResult } from "../types";
 import { legislationTypes } from "@/lib/seeds/reference/legislationTypes";
 import { POLITICAL_LEGISLATION_RETAINED_OLD_IDS } from "@/lib/politicalMetrics/pipelinePreset";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 /**
  * Give a live world the three state redistricting laws back.
@@ -37,7 +38,7 @@ async function backfillRedistrictingAuthorityTypes(
     POLITICAL_LEGISLATION_RETAINED_OLD_IDS.has(lt._id)
   );
 
-  const collection = db.collection<LegislationType>("legislationTypes");
+  const collection = legislationTypesCollection(db);
   const existing = await collection
     .find({ _id: { $in: wanted.map((t) => t._id) } }, { projection: { _id: 1 } })
     .toArray();

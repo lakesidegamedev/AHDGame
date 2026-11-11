@@ -13,6 +13,8 @@ import { getGameStateCollection } from "@/lib/db/collections";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 
 export interface MapPresidentialState {
   leadingParty: string;
@@ -87,11 +89,9 @@ export async function computePresidentialMap(
   }
 
   const [voteTally, electionCandidates] = await Promise.all([
-    db
-      .collection<ElectionVoteTally>("electionVoteTallies")
+    electionVoteTalliesCollection(db)
       .findOne({ electionId: presidentElection._id }),
-    db
-      .collection<ElectionCandidate>("electionCandidates")
+    electionCandidatesCollection(db)
       .find({ electionId: presidentElection._id, status: { $in: ["active", "withdrawn"] } })
       .project({ _id: 1, characterName: 1 })
       .toArray(),

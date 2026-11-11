@@ -20,6 +20,7 @@ import {
   RALLY_SPREAD_TURNS,
 } from "@/lib/elections/engine/electionFormulaFactors";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 export interface SupportAccrualTickResult {
   candidatesUpdated: number;
@@ -99,8 +100,7 @@ export async function processSupportAccrualTick(
   if (activeElections.length === 0) return { candidatesUpdated: 0 };
 
   const electionIds = activeElections.map((e) => e._id);
-  const candidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidates = await electionCandidatesCollection(db)
     .find({
       electionId: { $in: electionIds },
       status: "active",
@@ -137,7 +137,7 @@ export async function processSupportAccrualTick(
   }
   if (ops.length === 0) return { candidatesUpdated: 0 };
 
-  await db.collection<ElectionCandidate>("electionCandidates").bulkWrite(ops);
+  await electionCandidatesCollection(db).bulkWrite(ops);
 
   return { candidatesUpdated: ops.length };
 }

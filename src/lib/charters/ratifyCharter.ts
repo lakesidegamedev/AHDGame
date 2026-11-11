@@ -20,6 +20,7 @@ import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficia
 import type { Document } from "mongodb";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 /**
  * Internal helper called by `signCharter` once the 3-of-3 threshold is hit.
@@ -208,8 +209,7 @@ export async function ratifyCharter(
     // Use ordered:false so existing partial provisioning (e.g. from a
     // crashed earlier ratify attempt) doesn't fail the whole insert.
     try {
-      await db
-        .collection<StatePartyOrg>("statePartyOrg")
+      await statePartyOrgCollection(db)
         .insertMany(orgRecords, { ordered: false });
     } catch {
       // Duplicate-key exceptions on retry are expected; partyOrg rows are

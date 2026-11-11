@@ -2,6 +2,9 @@ import type { Db } from "mongodb";
 import { invalidateGameTimeCache } from "@/lib/time/gameTime";
 import { getGameStateCollection } from "@/lib/db/collections/gameState";
 import { getElectionsCollection } from "@/lib/db/collections/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import type { Document } from "mongodb";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 
 /*
  * Detect completion of the pre-iteration founding phase and end it.
@@ -50,15 +53,13 @@ export async function detectPreIterationComplete(
   // two batched queries only when every race has otherwise finished.
   const resolvedIds = resolvedElections.map((election) => election._id);
   const [candidateCoverage, tallyCoverage] = await Promise.all([
-    db
-      .collection("electionCandidates")
+    electionCandidatesCollection<Document>(db)
       .aggregate([
         { $match: { electionId: { $in: resolvedIds } } },
         { $group: { _id: "$electionId", candidates: { $sum: 1 } } },
       ])
       .toArray(),
-    db
-      .collection("electionVoteTallies")
+    electionVoteTalliesCollection<Document>(db)
       .aggregate([
         {
           $match: {

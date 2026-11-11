@@ -8,6 +8,7 @@ import {
 } from "@/lib/budget/rules/incomeTaxPolicy";
 import type { Migration } from "../types";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 /** Align original seed policies with existing receipts, without changing rates or enacted laws. */
 export const migration: Migration = {
@@ -32,8 +33,7 @@ export const migration: Migration = {
           { projection: { countryId: 1, "taxRates.incomeTax": 1, "taxRatePhaseIn.incomeTax": 1 } }
         )
         .toArray(),
-      db
-        .collection<LegislationType>("legislationTypes")
+      legislationTypesCollection(db)
         .find(
           { _id: { $in: ids } },
           { projection: { "policyOptions.id": 1, "policyOptions.rate": 1 } }

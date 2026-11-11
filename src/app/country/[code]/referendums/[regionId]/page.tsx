@@ -36,6 +36,8 @@ import type { ObjectId } from "mongodb";
 import { turnoutTargetLabel } from "@/lib/demographics/turnoutTarget";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 /**
  * Display name for a cohort. Cohorts are Layer-1 buckets
@@ -138,8 +140,7 @@ export default async function ReferendumDetailPage({
       : "auto";
 
   // Org-present parties in the region = the "could declare / undeclared" set.
-  const regionStateParties = await db
-    .collection<StatePartyOrg>("statePartyOrg")
+  const regionStateParties = await statePartyOrgCollection(db)
     .find({ countryId, stateId: regionId.toUpperCase() })
     .toArray();
   const orgPartyIds = regionStateParties.map((sp) => String(sp.partyId));
@@ -187,8 +188,7 @@ export default async function ReferendumDetailPage({
     const viewerParty = String(user.character.party);
     const [viewerPartyDoc, viewerStateParty] = await Promise.all([
       politicalPartiesCollection(db).findOne({ countryId, sequentialId: Number(viewerParty) }),
-      db
-        .collection<StatePartyOrg>("statePartyOrg")
+      statePartyOrgCollection(db)
         .findOne({ countryId, stateId: regionId.toUpperCase(), partyId: viewerParty }),
     ]);
     if (viewerPartyDoc) {
@@ -286,8 +286,7 @@ export default async function ReferendumDetailPage({
       (x): x is ObjectId => x != null
     );
     if (orderedBillIds.length > 0) {
-      const billDocs = await db
-        .collection<Bill>("bills")
+      const billDocs = await billsCollection(db)
         .find({ _id: { $in: orderedBillIds } })
         .toArray();
       const byId = new Map(billDocs.map((b) => [String(b._id), b]));

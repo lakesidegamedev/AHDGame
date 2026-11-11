@@ -80,6 +80,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 type StoredPartyBudget = PartyBudget & { countryId?: CountryId };
 
@@ -456,7 +457,7 @@ export async function processPartyGOTV(
           .toArray();
 
     const [statePartyOrgs, parties, allCharacters, allNPPs, allStates] = await Promise.all([
-      db.collection<StatePartyOrg>("statePartyOrg").find({}).toArray(),
+      statePartyOrgCollection(db).find({}).toArray(),
       politicalPartiesCollection(db).find({}).toArray(),
       charactersCollection(db)
         .find(
@@ -1055,7 +1056,7 @@ export async function processPartyGOTV(
         update: { $inc: { treasury: -amount }, $set: { updatedAt: new Date() } },
       },
     }));
-    await db.collection<StatePartyOrg>("statePartyOrg").bulkWrite(ops);
+    await statePartyOrgCollection(db).bulkWrite(ops);
 
     for (const [key, amount] of statePartyTreasuryDeductions.entries()) {
       const sp = statePartyOrgMap.get(key);
@@ -1200,7 +1201,7 @@ export async function processPartyGOTV(
   // multiple parties in the same state compose without lost updates, and so this
   // phase composes with the later regDriftDecay phase in the same turn.
   if (db && registrationRegDeltas.size > 0) {
-    await db.collection<StatePartyOrg>("statePartyOrg").bulkWrite(
+    await statePartyOrgCollection(db).bulkWrite(
       [...registrationRegDeltas.entries()].map(([rowId, delta]) => ({
         updateOne: {
           filter: { _id: rowId },

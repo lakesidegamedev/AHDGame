@@ -2,6 +2,7 @@ import { ObjectId, type Db } from "mongodb";
 import type { Bill } from "@/lib/db/types";
 import type { TradeEmbargo } from "@/lib/db/types/tradeEmbargo";
 import type { CountryId } from "@/lib/constants/countries";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 type EmbargoBill = Pick<Bill, "_id" | "countryId" | "sponsorId" | "provisions">;
 
@@ -61,8 +62,7 @@ export async function reconcileSignedEmbargoBills(
   };
   if (countryId) query.countryId = countryId;
 
-  const signedBills = await db
-    .collection<Bill>("bills")
+  const signedBills = await billsCollection(db)
     .find(query)
     .sort({ enactedAt: 1, updatedAt: 1, _id: 1 })
     .toArray();

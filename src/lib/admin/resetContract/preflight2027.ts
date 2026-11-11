@@ -24,6 +24,7 @@ import { DE_LANDTAG_SPEC } from "@/lib/countries/de/elections/chamberSpecs";
 import { countriesByTier, type ShippingPreset } from "@/lib/world/eraRoster";
 import { assertKnownSeedPreset, dataPresetFor } from "@/lib/seeds/presetSelector";
 import { checkSeedContract } from "@/lib/seeds/contract/checkSeedContract";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 export const PREFLIGHT_PRESET: ShippingPreset = "2027-default";
 
@@ -180,7 +181,7 @@ export async function runPreflight2027(
   const [characters, npps, legislationTypes, priceIndexRows] = await Promise.all([
     characterCol.countDocuments(legacyApprovals),
     nppCol.countDocuments(legacyApprovals),
-    db.collection<Document>("legislationTypes").countDocuments({
+    legislationTypesCollection<Document>(db).countDocuments({
       $or: [
         { [`policyOptions.${LEGACY_APPROVAL_FIELD}`]: exists },
         { "policyOptions.groupApprovals": exists },

@@ -4,6 +4,7 @@ import { ObjectId, type Db } from "mongodb";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { getGameState } from "@/lib/gameState";
 import type { Bill, BillChamber } from "@/lib/db/types";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 const VOTING_DURATION_HOURS = 24;
 const VOTING_DURATION_MS = VOTING_DURATION_HOURS * 60 * 60 * 1000;
@@ -65,6 +66,6 @@ export async function proposeCrisisAidBill(
   };
 
   const _id = input.billId ?? new ObjectId();
-  await db.collection<Bill>("bills").insertOne({ _id, ...bill });
+  await billsCollection(db).insertOne({ _id, ...bill });
   return _id;
 }

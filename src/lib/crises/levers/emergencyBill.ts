@@ -16,6 +16,8 @@ import {
   type LeverResult,
 } from "./leverCommand";
 import { resolveCrisisDefinition } from "@/lib/turn/crisisV2/ensureContent";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { crisesCollection } from "@/lib/db/repositories/crises";
 
 const COMPONENT = "crisisEmergencyBill";
 
@@ -42,7 +44,7 @@ export async function proposeEmergencyBill(
   }
   if (!actor.countryId) return fail("out_of_jurisdiction", "You have no legislature to petition");
 
-  const pending = await db.collection<Bill>("bills").findOne(
+  const pending = await billsCollection(db).findOne(
     {
       "crisisEmergency.crisisId": crisis._id,
       "crisisEmergency.leverId": lever.id,
@@ -121,8 +123,7 @@ export async function processCrisisEmergencyBills(
   db: Db,
   turn: number
 ): Promise<{ passed: number; failed: number }> {
-  const bills = await db
-    .collection<Bill>("bills")
+  const bills = await billsCollection(db)
     .find({
       "crisisEmergency.crisisId": { $exists: true },
       "crisisEmergency.recordedTurn": { $exists: false },
@@ -136,7 +137,7 @@ export async function processCrisisEmergencyBills(
   if (resolved.length === 0) return counts;
 
   // Claim every outcome in one write first, so a retry never records one twice.
-  await db.collection<Bill>("bills").updateMany(
+  await billsCollection(db).updateMany(
     {
       _id: { $in: resolved.map(({ bill }) => bill._id) },
       "crisisEmergency.recordedTurn": { $exists: false },
@@ -178,7 +179,7 @@ export async function processCrisisEmergencyBills(
   }
   if (inaction.length > 0) {
     try {
-      await db.collection<Crisis>("crises").bulkWrite(inaction, { ordered: false });
+      await crisesCollection(db).bulkWrite(inaction, { ordered: false });
     } catch (error) {
       logger.error(COMPONENT, "recording failed emergency bills failed", error);
     }

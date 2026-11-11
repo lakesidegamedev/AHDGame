@@ -12,6 +12,7 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { canActAsChair } from "@/lib/parties/actingChair";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
 
 // POST /api/coalitions/[id]/join — Request to join a coalition
 export async function POST(
@@ -79,8 +80,7 @@ export async function POST(
     }
 
     // Find the target coalition
-    const coalition = await db
-      .collection<Coalition>("coalitions")
+    const coalition = await coalitionsCollection(db)
       .findOne({ sequentialId: Number(id), countryId });
     if (!coalition) {
       throw notFound("Coalition not found.");
@@ -93,8 +93,7 @@ export async function POST(
     }
 
     // Check if the party already has a pending join request to ANY coalition
-    const existingRequest = await db
-      .collection<Coalition>("coalitions")
+    const existingRequest = await coalitionsCollection(db)
       .findOne({ countryId, "joinRequests.partyId": party._id });
     if (existingRequest) {
       throw badRequest("Your party already has a pending join request to another coalition.");
@@ -102,7 +101,7 @@ export async function POST(
 
     const now = new Date();
 
-    await db.collection<Coalition>("coalitions").updateOne(
+    await coalitionsCollection(db).updateOne(
       { _id: coalition._id },
       {
         $push: {

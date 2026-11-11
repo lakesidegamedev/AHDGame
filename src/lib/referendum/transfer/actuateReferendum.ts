@@ -27,6 +27,7 @@ import { transferRegion } from "./transferRegion";
 import { secedeRegion } from "@/lib/referendum/secede/secedeRegion";
 import { isCountryEnabledForPlayers } from "@/lib/countryAccess";
 import { enterCountryForPlayers } from "@/lib/world/playerHandoff";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 /** Province grouping for NI under Ireland. */
 const NIR_PROVINCE = "Ulster";
@@ -43,8 +44,7 @@ async function withdrawActiveConsentBills(db: Db, ref: Referendum): Promise<void
     (x): x is NonNullable<typeof x> => x != null
   );
   if (ids.length === 0) return;
-  await db
-    .collection<Bill>("bills")
+  await billsCollection(db)
     .updateMany(
       { _id: { $in: ids }, status: "active" },
       { $set: { status: "withdrawn", updatedAt: new Date() } }
@@ -118,7 +118,7 @@ async function runReferendumActuationInTransaction(
   if (ref.kind === "independence") {
     // Gate: the single Westminster consent bill must be signed for actuation.
     const bill = ref.westminsterBillId
-      ? await db.collection<Bill>("bills").findOne({ _id: ref.westminsterBillId })
+      ? await billsCollection(db).findOne({ _id: ref.westminsterBillId })
       : null;
     if (bill == null || (bill.status !== "signed" && bill.enactedAt == null)) {
       return { ok: false, error: "Westminster consent bill is not signed." };
@@ -161,8 +161,7 @@ async function runReferendumActuationInTransaction(
   );
   if (ref.westminsterBillId == null)
     return { ok: false, error: "Westminster consent is required." };
-  const consentBills = await db
-    .collection<Bill>("bills")
+  const consentBills = await billsCollection(db)
     .find({ _id: { $in: consentIds } })
     .toArray();
   if (

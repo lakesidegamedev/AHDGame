@@ -4,10 +4,10 @@ import type { Character, Election, ElectionCandidate, State } from "@/lib/db/typ
 import { forbidden } from "@/lib/api/errors";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 async function standingAdRegions(db: Db, owner: Character) {
-  const candidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidates = await electionCandidatesCollection(db)
     .find(
       { characterId: owner._id, status: "active", campaignSuspended: { $ne: true } },
       { projection: { electionId: 1 } }

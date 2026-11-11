@@ -23,6 +23,7 @@ import type { ElectionCandidate, GameState } from "@/lib/db/types";
 import { z } from "zod";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 const schema = z.object({
   stateId: z.string().min(1),
@@ -82,7 +83,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const character = auth.user.character;
 
-    const candidate = await db.collection<ElectionCandidate>("electionCandidates").findOne({
+    const candidate = await electionCandidatesCollection(db).findOne({
       electionId: election._id,
       characterId: character._id,
       status: "active",
@@ -115,7 +116,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const flowKey = headerKey ?? randomUUID();
     const fingerprint = `${character._id.toHexString()}:${candidate._id.toHexString()}:travel:${stateId}:${actionCost}`;
     const characters = charactersCollection(db);
-    const candidates = db.collection<ElectionCandidate>("electionCandidates");
+    const candidates = electionCandidatesCollection(db);
     const receipts = await getMoneyFlowReceiptsCollection(db);
     const previousReceipt = headerKey ? await receipts.findOne({ _id: flowKey }) : null;
     if (previousReceipt && previousReceipt.fingerprint !== fingerprint) {

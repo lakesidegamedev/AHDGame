@@ -121,6 +121,10 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 /** Vote multiplier applied in a state when its sitting governor has endorsed
  *  the candidate. Half of the VP-home-state effect — a real in-state lift
@@ -252,8 +256,7 @@ export async function initPresidentVoteTally(
   // Preserve primary-phase fields across the primary→general tally reset so
   // the historical primary map and delegate tally remain visible after the
   // general phase begins. Only the general-phase counters are zeroed.
-  const existing = await db
-    .collection<ElectionVoteTally>("electionVoteTallies")
+  const existing = await electionVoteTalliesCollection(db)
     .findOne({ electionId });
 
   const doc: ElectionVoteTally = {
@@ -292,8 +295,7 @@ export async function initPresidentVoteTally(
     updatedAt: now,
   };
 
-  await db
-    .collection<ElectionVoteTally>("electionVoteTallies")
+  await electionVoteTalliesCollection(db)
     .replaceOne({ electionId }, doc, { upsert: true });
 }
 
@@ -373,9 +375,8 @@ export async function accumulatePresidentVoteTurn(
   const db = await getDb();
 
   const [tally, candidates, election] = await Promise.all([
-    db.collection<ElectionVoteTally>("electionVoteTallies").findOne({ electionId }),
-    db
-      .collection<ElectionCandidate>("electionCandidates")
+    electionVoteTalliesCollection(db).findOne({ electionId }),
+    electionCandidatesCollection(db)
       .find({ electionId, status: "active" })
       .toArray(),
     electionsCollection(db).findOne({ _id: electionId }),
@@ -419,8 +420,7 @@ export async function accumulatePresidentVoteTurn(
         .collection<StateDemographics>("stateDemographics")
         .find({ _id: { $in: uniqueStateIds } })
         .toArray(),
-      db
-        .collection<StatePartyOrg>("statePartyOrg")
+      statePartyOrgCollection(db)
         .find({ stateId: { $in: uniqueStateIds } })
         .toArray(),
       db
@@ -506,8 +506,7 @@ export async function accumulatePresidentVoteTurn(
   // election every turn, and a campaign now keeps 200 activity entries rather
   // than 10, so the array is projected away rather than carried through the
   // hourly vote accumulation.
-  const campaigns = await db
-    .collection<Campaign>("campaigns")
+  const campaigns = await campaignsCollection(db)
     .find({ electionId }, { projection: { activityHistory: 0 } })
     .toArray();
   const groundGameByCandidate = new Map<string, { swing: number; gotv: number }>();
@@ -1244,7 +1243,7 @@ export async function accumulatePresidentVoteTurn(
 
   // The write only lands on the tally state this run read: a concurrent run
   // that already banked this turn (or this half) leaves nothing to match.
-  await db.collection<ElectionVoteTally>("electionVoteTallies").updateOne(
+  await electionVoteTalliesCollection(db).updateOne(
     {
       electionId,
       turnSnapshots: {

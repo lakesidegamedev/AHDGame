@@ -17,6 +17,7 @@ import { applyEndorsementSupportBump } from "@/lib/elections/campaigns/supportEv
 import { partiesMatchInCountry } from "@/lib/parties/partyMatch";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 export interface CreateEndorsementInput {
   countryId: CountryId;
@@ -70,8 +71,7 @@ export async function createEndorsement(
     };
   }
 
-  const candidate = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidate = await electionCandidatesCollection(db)
     .findOne({ _id: candidateId, electionId });
   if (!candidate || candidate.status !== "active") {
     return { status: 400, body: { error: "Candidate is not active." } };

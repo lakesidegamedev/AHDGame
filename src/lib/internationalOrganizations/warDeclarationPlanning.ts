@@ -11,6 +11,7 @@ import { opposedBelligerents } from "@/lib/military/occupation";
 import { getTrucesCollection, trucePairId } from "@/lib/military/truce";
 import { WAR_DECLARATION_COOLDOWN_TURNS } from "@/lib/military/warGoals";
 import { planOrganizationWarDeclaration, type OrganizationWarPlan } from "./warDeclarationRules";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 export interface OrganizationWarPlanningResult extends OrganizationWarPlan {
   targetEnabled: boolean;
@@ -40,8 +41,7 @@ export async function loadOrganizationWarPlanningContext(
     getTrucesCollection(db)
       .find({ expiresTurn: { $gt: currentTurn } }, { projection: { _id: 1 } })
       .toArray(),
-    db
-      .collection<Bill>("bills")
+    billsCollection(db)
       .find(
         {
           countryId: { $in: countryIds },

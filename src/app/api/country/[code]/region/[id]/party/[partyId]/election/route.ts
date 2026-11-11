@@ -30,6 +30,7 @@ import { COUNTRY_CONFIGS, getCountryConfig, type CountryId } from "@/lib/constan
 import { pickCanonicalVotingElectionPerKey } from "@/lib/elections/canonicalVotingElection";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 /** Get position labels appropriate for the country (UK uses "Regional Chair") */
 function getPositionLabels(countryId: CountryId): Record<StatePartyElectionPosition, string> {
@@ -127,8 +128,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     let turnsUntilEligible: number | null = null;
 
     // Get statePartyOrg for current holders
-    const org = await db
-      .collection<StatePartyOrg>("statePartyOrg")
+    const org = await statePartyOrgCollection(db)
       .findOne({ _id: getStatePartyOrgDocumentId(stateId, party) });
 
     const holderMap: Record<StatePartyElectionPosition, string | null> = {

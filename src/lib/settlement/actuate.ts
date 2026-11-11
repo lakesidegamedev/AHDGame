@@ -60,6 +60,8 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 
 export interface ActuationResult {
   actuated: boolean;
@@ -202,8 +204,7 @@ export async function actuateSettlementOutcome(
   //     real accounts locked out of the country they had just won.
   let absorbedWasPlayable = crisis.absorbedWasPlayable ?? null;
   if (absorbedWasPlayable == null) {
-    const absorbedGameState = await db
-      .collection<CountryGameState>("countryGameStates")
+    const absorbedGameState = await countryGameStatesCollection(db)
       .findOne({ _id: absorbed }, { projection: { enabledForPlayers: 1, status: 1 } });
     absorbedWasPlayable = absorbedGameState?.enabledForPlayers === true;
     await crises.updateOne({ _id: crisis._id }, { $set: { absorbedWasPlayable } });
@@ -382,8 +383,7 @@ export async function actuateSettlementOutcome(
   //    which is the one dissolution marker everything honors (deliberately NOT
   //    a `CountryStatus` value — see that field's doc).
   if (absorbedWasPlayable) {
-    await db
-      .collection<CountryGameState>("countryGameStates")
+    await countryGameStatesCollection(db)
       .updateOne(
         { _id: survivor },
         { $set: { enabledForPlayers: true, status: "active", updatedAt: new Date() } },
@@ -441,8 +441,7 @@ async function creditReunificationToLeader(
   survivor: CountryId,
   currentTurn: number
 ): Promise<void> {
-  const gov = await db
-    .collection<GovernmentFormationHead>("governmentFormations")
+  const gov = await governmentFormationsCollection<GovernmentFormationHead>(db)
     .findOne({ _id: survivor });
   if (!gov?.pmCharacterId) return;
   await adjustLeaderConfidence(
@@ -624,7 +623,7 @@ async function retireNationalRemnants(
   // The winner's government stays: the winner is the shell, so its head of
   // government is already seated under the right office key. Only the losing
   // head of government needs standing down from a country that no longer exists.
-  const formations = db.collection<GovernmentFormationHead>("governmentFormations");
+  const formations = governmentFormationsCollection<GovernmentFormationHead>(db);
   const absorbedGov = await formations.findOne({ _id: absorbed });
 
   if (absorbedGov?.pmCharacterId || absorbedGov?.pmNppId) {

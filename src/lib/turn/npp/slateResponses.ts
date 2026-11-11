@@ -39,6 +39,9 @@ import {
 } from "@/lib/turn/onePartyConstraints";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import type { Document } from "mongodb";
 
 interface SlateResponseSummary {
   rowsConsidered: number;
@@ -522,8 +525,7 @@ export async function fileAcceptedSlateRows(ctx: NPPContext): Promise<SlateFilin
   );
   const activeCandidacies =
     candidateIds.length > 0
-      ? await db
-          .collection<ElectionCandidate>("electionCandidates")
+      ? await electionCandidatesCollection(db)
           .find({ characterId: { $in: candidateIds }, status: "active" })
           .toArray()
       : [];
@@ -700,7 +702,7 @@ export async function fileAcceptedSlateRows(ctx: NPPContext): Promise<SlateFilin
         // already filed elsewhere, the next filing pass moves them out of the
         // old race before seating them in the newly assigned one so the chair's
         // latest instruction wins without waiting for manual cleanup.
-        await db.collection<ElectionCandidate>("electionCandidates").updateOne(
+        await electionCandidatesCollection(db).updateOne(
           { _id: activeCandidacy._id },
           {
             $set: {
@@ -773,8 +775,7 @@ export async function fileAcceptedSlateRows(ctx: NPPContext): Promise<SlateFilin
         isNPP: true,
         nppId: npp._id,
       };
-      await db
-        .collection<ElectionCandidate>("electionCandidates")
+      await electionCandidatesCollection(db)
         .insertOne(candidateDoc as ElectionCandidate);
 
       // Mirror the new candidate into the in-memory map so the rest of
@@ -854,7 +855,7 @@ export async function withdrawCandidacyFromRace(
   tallyCache?: Map<string, ElectionVoteTally | null>
 ): Promise<boolean> {
   const { db, now } = ctx;
-  const result = await db.collection<ElectionCandidate>("electionCandidates").updateOne(
+  const result = await electionCandidatesCollection(db).updateOne(
     {
       _id: inMemoryCandidate._id,
       electionId: election._id,
@@ -870,7 +871,7 @@ export async function withdrawCandidacyFromRace(
     inMemoryCandidate._id.toString(),
     tallyCache
   );
-  await db.collection("campaigns").updateOne(
+  await campaignsCollection<Document>(db).updateOne(
     {
       electionId: election._id,
       candidateId: inMemoryCandidate.characterId,

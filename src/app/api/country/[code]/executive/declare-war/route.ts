@@ -22,6 +22,7 @@ import { MS_PER_TURN } from "@/lib/constants/calendar";
 import type { Bill } from "@/lib/db/types/legislation";
 import { BILL_PROPOSE_ACTION_COST } from "@shared/constants/legislation";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 const bodySchema = z.object({
   targetCountry: z.string().min(2).max(3),
@@ -97,7 +98,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
 
     // One live declaration at a time, so a chamber is never asked to ratify two
     // wars against the same country at once.
-    const existing = await db.collection<Bill>("bills").findOne({
+    const existing = await billsCollection(db).findOne({
       countryId,
       status: { $in: ["proposed", "active", "passed_origin", "active_other", "active_both"] },
       "provisions.type": "declare_war",
@@ -179,7 +180,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
     // that now does not exist, and nothing downstream would ever refund them.
     let result;
     try {
-      result = await db.collection<Bill>("bills").insertOne(bill as Bill);
+      result = await billsCollection(db).insertOne(bill as Bill);
     } catch (error) {
       if (!auth.user.isAdmin) {
         await charactersCollection(db).updateOne(

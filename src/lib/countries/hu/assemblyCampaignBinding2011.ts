@@ -21,11 +21,12 @@ import { huAssemblyElectionSystem } from "./rules/electoralTransition2011";
 import { STATE_POPULATION_FIELDS } from "@/lib/db/collections/states";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 
 export async function bindHu2011Campaigns(db: Db, game: GameState, turn: number, now: Date) {
   if (game.preset !== "1991-default") return false;
-  const country = await db
-    .collection<CountryGameState>("countryGameStates")
+  const country = await countryGameStatesCollection(db)
     .findOne({ _id: "HU" }, { projection: { huElectoralSystem2011SinceTurn: 1 } });
   if (
     huAssemblyElectionSystem({
@@ -130,8 +131,7 @@ async function materializeHu2011PrimaryCohorts(
     )
     .toArray();
   const frozen = new Set(receipts.map((row) => String(row._id)));
-  const tallies = await db
-    .collection<ElectionVoteTally>("electionVoteTallies")
+  const tallies = await electionVoteTalliesCollection(db)
     .find(
       {
         electionId: { $in: candidates.map((row) => row._id) },
@@ -163,7 +163,7 @@ async function materializeHu2011PrimaryCohorts(
   );
   const eligible = candidates.filter((row) => eligibleCycles.includes(row.cycle));
   if (!eligible.length) return;
-  await db.collection<ElectionVoteTally>("electionVoteTallies").updateMany(
+  await electionVoteTalliesCollection(db).updateMany(
     {
       electionId: { $in: eligible.map((row) => row._id) },
     },

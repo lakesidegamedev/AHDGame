@@ -13,6 +13,7 @@ import { stanceTradeoff } from "@/lib/crises/v2/stanceLevers";
 import { leverBlock } from "./availability";
 import { governsAffectedState, leverInActorJurisdiction } from "./jurisdiction";
 import { resolveLeverRoles } from "./roles";
+import { crisesCollection } from "@/lib/db/repositories/crises";
 
 /** Size bounds for an aid pledge, as shares of the sender's GDP. */
 export interface AidPledgeRange {
@@ -147,8 +148,7 @@ export async function getAvailableLevers(
   ).findOne({ _id: characterId }, { projection: { countryId: 1, currentOffice: 1 } });
   if (!actor) return [];
 
-  const crises = (await db
-    .collection<Crisis>("crises")
+  const crises = (await crisesCollection(db)
     .find(
       { status: "active", "v2.definitionId": { $exists: true } },
       { projection: { scope: 1, countryIds: 1, regionIds: 1, v2: 1 } }

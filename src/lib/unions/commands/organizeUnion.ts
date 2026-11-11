@@ -15,6 +15,7 @@ import {
   UNION_PROSECUTION_MESSAGE,
 } from "@/lib/unions/unionProsecutionBar";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { unionsCollection } from "@/lib/db/repositories/unions";
 
 export type OrganizeUnionResult =
   | {
@@ -85,8 +86,7 @@ export async function organizeUnion(
     };
   }
 
-  const updatedUnion = await db
-    .collection<Union>("unions")
+  const updatedUnion = await unionsCollection(db)
     .findOneAndUpdate(
       { _id: union._id },
       { $inc: { strength: ORGANIZE_STRENGTH_GAIN }, $set: { updatedAt: now } },

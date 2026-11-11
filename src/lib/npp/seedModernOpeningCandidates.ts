@@ -24,6 +24,8 @@ import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficia
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 /** Called only by fresh historical bootstrap, never by a turn or reference refresh. */
 export async function seedModernOpeningCandidates(
@@ -54,8 +56,7 @@ export async function seedModernOpeningCandidates(
     )
     .sort({ countryId: 1, state: 1, _id: 1 })
     .toArray();
-  const candidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidates = await electionCandidatesCollection(db)
     .find({ status: "active" }, { projection: { electionId: 1, nppId: 1, characterId: 1 } })
     .toArray();
   const covered = new Set(candidates.map((c) => String(c.electionId)));
@@ -69,8 +70,7 @@ export async function seedModernOpeningCandidates(
     .find({}, { projection: { _id: 1, countryId: 1 } })
     .sort({ _id: 1 })
     .toArray();
-  const orgs = await db
-    .collection<StatePartyOrg>("statePartyOrg")
+  const orgs = await statePartyOrgCollection(db)
     .find({}, { projection: { stateId: 1, partyId: 1, hasPresence: 1 } })
     .toArray();
   const orgByKey = new Map(orgs.map((o) => [`${o.stateId}:${o.partyId}`, o]));
@@ -195,7 +195,7 @@ export async function seedModernOpeningCandidates(
     });
     await nppsCollection(db).insertMany(generated);
   }
-  await db.collection<ElectionCandidate>("electionCandidates").insertMany(entries);
+  await electionCandidatesCollection(db).insertMany(entries);
   log(
     `Seeded ${entries.length} modern opening candidate fields with ${generated.length} new unseated actors`
   );

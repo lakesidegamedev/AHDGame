@@ -47,6 +47,9 @@ import { boardDeltaForLegacyEffect } from "@/lib/politicalLegislation/legacyEffe
 import { applyBoardDelta } from "@/lib/politicalLegislation/boardWrite";
 import type { PoliticalMetricsDoc } from "@/lib/db/types/politicalMetrics";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import type { Document } from "mongodb";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 /** National pseudo-state ids (federal, uk_national, …) vs real sub-national regions (XB, TX, …). */
 function getNonPolicyProvisionScope(stateId: string | undefined): "national" | "state" {
@@ -158,13 +161,11 @@ export async function applyLegislationEffect(
   );
   const legislationTypes = new Map<string, LegislationType>();
   if (policyTypeIds.length === 1) {
-    const legislationType = await db
-      .collection<LegislationType>("legislationTypes")
+    const legislationType = await legislationTypesCollection(db)
       .findOne({ _id: policyTypeIds[0] });
     if (legislationType) legislationTypes.set(legislationType._id, legislationType);
   } else if (policyTypeIds.length > 1) {
-    const loaded = await db
-      .collection<LegislationType>("legislationTypes")
+    const loaded = await legislationTypesCollection(db)
       .find({ _id: { $in: policyTypeIds } })
       .toArray();
     for (const legislationType of loaded) {
@@ -203,8 +204,7 @@ export async function applyLegislationEffect(
               snapshotTurn
             );
             if (snapshot && bill._id) {
-              await db
-                .collection("bills")
+              await billsCollection<Document>(db)
                 .updateOne(
                   { _id: bill._id },
                   { $set: { [`provisions.${provisionIndex}.nationalizationSnapshot`]: snapshot } }

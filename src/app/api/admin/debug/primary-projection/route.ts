@@ -44,6 +44,9 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 const ALL_STATE_IDS = [...new Set(ELECTORAL_VOTE_UNITS.map((u) => u.stateId))];
 
@@ -91,8 +94,7 @@ export async function GET(req: Request) {
 
     // List parties that actually have active candidates so the UI can populate
     // the dropdown without separately calling another endpoint.
-    const partyKeysWithCandidates = (await db
-      .collection<ElectionCandidate>("electionCandidates")
+    const partyKeysWithCandidates = (await electionCandidatesCollection(db)
       .distinct("party", { electionId: election._id, status: "active" })) as string[];
     const candidateParties = await politicalPartiesCollection(db)
       .find({ countryId: "US", sequentialId: { $in: partyKeysWithCandidates.map(Number) } })
@@ -128,11 +130,10 @@ export async function GET(req: Request) {
     });
 
     const [candidates, tally] = await Promise.all([
-      db
-        .collection<ElectionCandidate>("electionCandidates")
+      electionCandidatesCollection(db)
         .find({ electionId: election._id, party: partyKey, status: "active" })
         .toArray(),
-      db.collection<ElectionVoteTally>("electionVoteTallies").findOne({ electionId: election._id }),
+      electionVoteTalliesCollection(db).findOne({ electionId: election._id }),
     ]);
 
     if (candidates.length === 0) {
@@ -161,8 +162,7 @@ export async function GET(req: Request) {
             .find({ _id: { $in: nppIds } })
             .toArray()
         : Promise.resolve([] as NPP[]),
-      db
-        .collection<StatePartyOrg>("statePartyOrg")
+      statePartyOrgCollection(db)
         .find({ countryId: "US", partyId: partyKey })
         .toArray(),
       statesCollection(db)

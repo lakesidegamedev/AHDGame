@@ -13,6 +13,7 @@ import {
 import type { PolicyRecordResponse } from "./types";
 import type { PolicyProvenance } from "./policyRecordPayload";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 /** Enacted reset-era program laws for one country (national) or region, as display rows. */
 export async function loadResetLawProgramRows(
@@ -38,8 +39,7 @@ export async function loadResetLawProgramRows(
     .toArray();
   if (programs.length === 0) return [];
   const billIds = [...new Set(programs.map((program) => program.enactedByBillId.toString()))];
-  const bills = await db
-    .collection<Bill>("bills")
+  const bills = await billsCollection(db)
     .find(
       { _id: { $in: billIds.map((id) => new ObjectId(id)) } },
       { projection: { title: 1, enactedAt: 1 } }

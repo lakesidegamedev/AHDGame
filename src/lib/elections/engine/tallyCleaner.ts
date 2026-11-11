@@ -11,6 +11,7 @@ import { RU_1991_ECONOMIC_REGION_POPULATION } from "@/lib/countries/ru/data/ruPo
 import { invalidateSuspendEndorsementsForWithdrawnCandidate } from "@/lib/campaigns/suspendEndorseLifecycle";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 
 export async function removeWithdrawnCandidateFromTally(
   db: Db,
@@ -21,7 +22,7 @@ export async function removeWithdrawnCandidateFromTally(
   const electionKey = electionId.toString();
   let tally = tallyCache?.get(electionKey);
   if (tally === undefined) {
-    tally = await db.collection<ElectionVoteTally>("electionVoteTallies").findOne({ electionId });
+    tally = await electionVoteTalliesCollection(db).findOne({ electionId });
     tallyCache?.set(electionKey, tally);
   }
 
@@ -101,8 +102,7 @@ export async function removeWithdrawnCandidateFromTally(
   }
 
   if (Object.keys(unsetPaths).length)
-    await db
-      .collection<ElectionVoteTally>("electionVoteTallies")
+    await electionVoteTalliesCollection(db)
       .updateOne({ electionId }, { $unset: unsetPaths, $set: { updatedAt: new Date() } });
 
   if (ObjectId.isValid(candidateId)) {

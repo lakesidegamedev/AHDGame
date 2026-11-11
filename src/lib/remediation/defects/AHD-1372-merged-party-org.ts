@@ -17,6 +17,7 @@ import type { PoliticalParty, StatePartyOrg, StateRegistrationPool } from "@/lib
 import type { CountryId } from "@/lib/constants/countries";
 import type { Defect, DetectResult, HealPlan, HealResult, VerifyResult } from "../types";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 interface DefunctParty {
   countryId: CountryId;
@@ -85,8 +86,7 @@ async function survey(db: Db): Promise<Survey> {
     };
   }
 
-  const staleRows = await db
-    .collection<StatePartyOrg>("statePartyOrg")
+  const staleRows = await statePartyOrgCollection(db)
     .find(
       {
         $or: parties.map((party) => ({
@@ -126,7 +126,7 @@ async function survey(db: Db): Promise<Survey> {
   );
   const countryIds = [...new Set(affectedStates.map((state) => state.countryId))];
   const [allRows, activeParties, poolRows] = await Promise.all([
-    db.collection<StatePartyOrg>("statePartyOrg").find({ $or: affectedStates }).toArray(),
+    statePartyOrgCollection(db).find({ $or: affectedStates }).toArray(),
     politicalPartiesCollection(db)
       .find(
         { countryId: { $in: countryIds }, isDefunct: { $ne: true } },
@@ -267,8 +267,7 @@ async function apply(db: Db, healPlan: HealPlan, ctx: { now: Date }): Promise<He
 
   const approvedIds = new Set(payload.staleRows.map((row) => row.id));
   const approvedById = new Map(payload.staleRows.map((row) => [row.id, row]));
-  const currentRows = await db
-    .collection<StatePartyOrg>("statePartyOrg")
+  const currentRows = await statePartyOrgCollection(db)
     .find({ _id: { $in: [...approvedIds] } })
     .toArray();
   const partyPairs = Array.from(
@@ -329,7 +328,7 @@ async function apply(db: Db, healPlan: HealPlan, ctx: { now: Date }): Promise<He
   }
 
   const deleted = toDelete.length
-    ? await db.collection<StatePartyOrg>("statePartyOrg").deleteMany({
+    ? await statePartyOrgCollection(db).deleteMany({
         _id: { $in: toDelete.map((row) => row._id) },
       })
     : { deletedCount: 0 };

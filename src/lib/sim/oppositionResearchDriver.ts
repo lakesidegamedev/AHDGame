@@ -39,6 +39,7 @@ import { getEffectiveBranchCost } from "@/lib/campaigns/upgradeCosts";
 import { isCampaignUpgradeGeneralPhase } from "@/lib/elections/phases";
 import { assertKnownActorMechanic } from "./actorCoverage";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 
 /** World preset the bounded experiment runs against. */
 export const OPPO_DRIVER_PRESET = "1953-default";
@@ -269,8 +270,7 @@ export async function runOppositionResearchFlow(
     party: actors.party,
   });
 
-  const campaigns = await db
-    .collection<Campaign>("campaigns")
+  const campaigns = await campaignsCollection(db)
     .find({ _id: { $in: [buyerCampaignId, rivalCampaignId] } })
     .toArray();
   const buyerCampaign = campaigns.find((c) => c._id.equals(buyerCampaignId));
@@ -286,13 +286,12 @@ export async function runOppositionResearchFlow(
   }
 
   // Sandbox fixture grant, recorded in the evidence (live worlds accrue).
-  await db
-    .collection<Campaign>("campaigns")
+  await campaignsCollection(db)
     .updateOne(
       { _id: buyerCampaignId },
       { $set: { funds: options.fixtureFunds, actions: options.fixtureActions } }
     );
-  const before = await db.collection<Campaign>("campaigns").findOne({ _id: buyerCampaignId });
+  const before = await campaignsCollection(db).findOne({ _id: buyerCampaignId });
   if (!before) throw new OppoDriverError("buyer campaign unreadable after fixture grant");
   // Snapshot primitives now: the purchase mutates the stored document in
   // place, so holding the reference would alias the post-purchase read and
@@ -359,7 +358,7 @@ export async function runOppositionResearchFlow(
   const expectedFundsDebit = campaignAnchorToLocal(cost.funds, election.countryId ?? "US", rates);
   const expectedActionsDebit = cost.actions;
 
-  const after = await db.collection<Campaign>("campaigns").findOne({ _id: buyerCampaignId });
+  const after = await campaignsCollection(db).findOne({ _id: buyerCampaignId });
   if (!after) throw new OppoDriverError("buyer campaign unreadable after purchase");
   const actualFundsDebit = beforeFunds - after.funds;
   const actualActionsDebit = beforeActions - after.actions;

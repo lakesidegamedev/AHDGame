@@ -19,6 +19,7 @@ import { notifyHouseVoteOpened } from "./contingentHouseVoteNotices";
 import { logger } from "@/lib/observability/logger";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 
 /** How long the House keeps voting after a deadlock (hourly turns: about a day). */
 export const CONTINGENT_HOUSE_VOTE_TURNS = 24;
@@ -108,7 +109,7 @@ export async function seatActingPresidencyForHouseVote(
     eligibleCandidateIds: contingentResult.eligiblePresidentCandidateIds,
     votes: {},
   };
-  await db.collection<ElectionVoteTally>("electionVoteTallies").updateOne(
+  await electionVoteTalliesCollection(db).updateOne(
     { electionId: election._id },
     {
       $set: {

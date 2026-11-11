@@ -76,6 +76,9 @@ import { getPoliticalPartiesCollection } from "@/lib/db/collections/politicalPar
 import { openCaretaker } from "@/lib/elections/rules/caretaker";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import type { Document } from "mongodb";
+import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
 
 export { resolveGoverningPartyIdsFromDocuments };
 
@@ -184,7 +187,7 @@ export async function resolveOppositionLeader(
   }
 
   // Opposition coalitions (by combined seat total)
-  const coalitions = await db.collection<Coalition>("coalitions").find({ countryId }).toArray();
+  const coalitions = await coalitionsCollection(db).find({ countryId }).toArray();
 
   for (const coalition of coalitions) {
     const memberIds = coalition.members.map((m) => m.partySequentialId.toString());
@@ -371,8 +374,7 @@ export async function updateParliamentaryGovernmentSeats(
   // Track coalition seats when coalitionId is set — covers both "coalition" and
   // "minority" formation types that were formed by a coalition chair
   if (existing.coalitionId != null) {
-    const coalition = await db
-      .collection<Coalition>("coalitions")
+    const coalition = await coalitionsCollection(db)
       .findOne({ sequentialId: existing.coalitionId, countryId });
     const coalitionPartyIds = (coalition?.members ?? []).map((m) => String(m.partySequentialId));
     totalSeatsSupporting = coalitionPartyIds.reduce(
@@ -469,8 +471,7 @@ export async function resetParliamentaryGovernmentAfterElection(
     // Track coalition seats when coalitionId is set — covers both "coalition" and
     // "minority" formation types that were formed by a coalition chair
     if (existing.coalitionId != null) {
-      const coalition = await db
-        .collection<Coalition>("coalitions")
+      const coalition = await coalitionsCollection(db)
         .findOne({ sequentialId: existing.coalitionId, countryId });
       const coalitionPartyIds = (coalition?.members ?? []).map((m) => String(m.partySequentialId));
       totalSeatsSupporting = coalitionPartyIds.reduce(
@@ -1632,8 +1633,7 @@ export async function checkAppointmentEligibility(
   // A chair of both a party and a qualifying coalition nominates for the whole
   // coalition, so partner-party MPs are nominable; otherwise fall through to
   // the party-only bid below.
-  const chairCoalition = await db
-    .collection<Coalition>("coalitions")
+  const chairCoalition = await coalitionsCollection(db)
     .findOne({ countryId, chairCharacterId: characterId });
 
   if (chairCoalition) {
@@ -2038,15 +2038,14 @@ export async function failInProgressBills(
   const lowerChamberKey = offices.config.legislature.lowerChamber.key;
   if (!lowerChamberKey) return 0;
 
-  const telemetryBills = await db
-    .collection<Bill>("bills")
+  const telemetryBills = await billsCollection(db)
     .find(
       { countryId, currentChamber: lowerChamberKey, status: { $in: LOWER_CHAMBER_FAIL_STATUSES } },
       { projection: { status: 1, category: 1, "provisions.type": 1 } }
     )
     .toArray()
     .catch(() => []);
-  const result = await db.collection("bills").updateMany(
+  const result = await billsCollection<Document>(db).updateMany(
     {
       countryId,
       currentChamber: lowerChamberKey,
@@ -2056,8 +2055,7 @@ export async function failInProgressBills(
   );
   if (result.modifiedCount > 0 && telemetryBills.length > 0) {
     const [committed, gameState] = await Promise.all([
-      db
-        .collection<Bill>("bills")
+      billsCollection(db)
         .find(
           { _id: { $in: telemetryBills.map((bill) => bill._id) }, status: "failed", failedAt: now },
           { projection: { _id: 1 } }

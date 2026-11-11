@@ -33,6 +33,7 @@ import {
 import { enforcementTreasuryCostPerTurn } from "@/lib/unions/enforcementCosts";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { unionsCollection } from "@/lib/db/repositories/unions";
 
 const bodySchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("posture"), posture: z.enum(["tolerant", "normal", "crackdown"]) }),
@@ -109,8 +110,7 @@ export async function GET(_request: Request, { params }: Context) {
       return errorResponse(409, "Union enforcement is available only during an active ban.");
     }
     const turn = await getCurrentTurn(db);
-    const exposed = await db
-      .collection<Union>("unions")
+    const exposed = await unionsCollection(db)
       .find({ countryId, exposedUntilTurn: { $gte: turn } }, { projection: { _id: 1 } })
       .toArray();
     const organizers = exposed.length
@@ -211,7 +211,7 @@ export async function POST(request: Request, { params }: Context) {
     if (!ObjectId.isValid(parsed.data.unionId)) {
       return errorResponse(400, "Invalid union ID");
     }
-    const union = await db.collection<Union>("unions").findOne({
+    const union = await unionsCollection(db).findOne({
       _id: new ObjectId(parsed.data.unionId),
       countryId,
     });
@@ -320,7 +320,7 @@ export async function POST(request: Request, { params }: Context) {
       const raidId = randomUUID();
       let changed;
       try {
-        changed = await db.collection<Union>("unions").updateOne(
+        changed = await unionsCollection(db).updateOne(
           {
             _id: union._id,
             countryId,
@@ -342,8 +342,7 @@ export async function POST(request: Request, { params }: Context) {
       } catch (error) {
         // A standalone Mongo deployment cannot wrap these collections in a transaction.
         // If the write failed before applying, return the executive's spent points.
-        const persisted = await db
-          .collection<Union>("unions")
+        const persisted = await unionsCollection(db)
           .findOne({ _id: union._id, countryId }, { projection: { lastUndergroundRaidId: 1 } });
         if (persisted?.lastUndergroundRaidId !== raidId) {
           await charactersCollection(db).updateOne(

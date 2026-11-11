@@ -3,6 +3,7 @@ import type { Character, ElectionCandidate, Election } from "@/lib/db/types";
 import { getGameTime } from "@/lib/time/gameTime";
 import { isPrimaryEnded, isCampaignUpgradeGeneralPhase } from "@/lib/elections/phases";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 export type CanvassEligibility =
   | { ok: true; stateId: string; source: "home" | "travel" | "primaryCampaign" }
@@ -74,8 +75,7 @@ export async function resolveRunningMateCanvassState(
   db: Db,
   character: Character
 ): Promise<RunningMateCanvassEligibility> {
-  const mateRows = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const mateRows = await electionCandidatesCollection(db)
     .find({ runningMateId: character._id, status: "active" })
     .toArray();
   if (mateRows.length === 0) return { ok: false, reason: "not_running_mate" };
@@ -120,8 +120,7 @@ async function findActivePresidentialCandidacy(
   db: Db,
   characterId: ObjectId
 ): Promise<PresidentialCandidacy | null> {
-  const candidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidates = await electionCandidatesCollection(db)
     .find({ characterId, status: "active" })
     .toArray();
 

@@ -41,6 +41,7 @@ import {
 } from "@/lib/politicalStrength/orgBuildStateSize";
 import { buildOrganizationBucket } from "@/lib/parties/commands/buildOrganizationBucket";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 export type NppBuildOrgResult =
   { ok: true; orgGain: number; newOrg: number; psCost: number } | { ok: false; reason: string };
@@ -134,8 +135,7 @@ export async function nppBuildPartyOrg(
   const hasPresence = await checkPartyPresence(db, stateId, partyIdStr);
   if (!hasPresence) return { ok: false, reason: "No presence in this state." };
 
-  let spenderRow = await db
-    .collection<StatePartyOrg>("statePartyOrg")
+  let spenderRow = await statePartyOrgCollection(db)
     .findOne({ countryId, stateId, partyId: partyIdStr });
   if (!spenderRow) {
     spenderRow = await ensureStatePartyOrgRow(db, {

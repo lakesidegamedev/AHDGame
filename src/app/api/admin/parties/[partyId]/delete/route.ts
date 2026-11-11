@@ -28,6 +28,8 @@ import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficia
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 export async function POST(request: Request, { params }: { params: Promise<{ partyId: string }> }) {
   try {
@@ -91,8 +93,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ par
       const liveElectionIds = liveElections.map((e) => e._id);
 
       if (liveElectionIds.length > 0) {
-        const candRes = await db
-          .collection<ElectionCandidate>("electionCandidates")
+        const candRes = await electionCandidatesCollection(db)
           .deleteMany({ electionId: { $in: liveElectionIds }, nppId: { $in: partyNppIds } });
         nppCandidateRowsDeleted = candRes.deletedCount;
       }
@@ -129,8 +130,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ par
     }
 
     // Delete all associated state party organizations (must match both partyId AND countryId)
-    const statePartyResult = await db
-      .collection<StatePartyOrg>("statePartyOrg")
+    const statePartyResult = await statePartyOrgCollection(db)
       .deleteMany({ partyId: partySeqIdStr, countryId: partyCountryId });
 
     // Delete all party budgets (must match both partyId AND countryId)

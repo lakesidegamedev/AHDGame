@@ -19,6 +19,8 @@ import type { Bill, LegislationType, GameState } from "@/lib/db/types";
 import { isPolicyProvision } from "@/lib/db/types/legislation";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 const PRESIDENT_ACTION_MS = 10 * 60 * 60 * 1000;
 const VOTING_DURATION_HOURS = 24;
@@ -51,7 +53,7 @@ export const GET = withAdminRoute(
     // Country filter using the countryId field on bill documents
     query.countryId = countryId;
 
-    const collection = db.collection<Bill>("bills");
+    const collection = billsCollection(db);
     const [bills, total] = await Promise.all([
       collection
         .find(query)
@@ -72,8 +74,7 @@ export const GET = withAdminRoute(
     }
     const legislationTypes =
       legTypeIds.size > 0
-        ? await db
-            .collection<LegislationType>("legislationTypes")
+        ? await legislationTypesCollection(db)
             .find({ _id: { $in: [...legTypeIds] } })
             .project({ _id: 1, name: 1 })
             .toArray()
@@ -121,7 +122,7 @@ export const POST = withAdminRoute(
     const { action, billId } = parsed.data;
 
     const db = await getDb();
-    const bill = await db.collection<Bill>("bills").findOne({ _id: new ObjectId(billId) });
+    const bill = await billsCollection(db).findOne({ _id: new ObjectId(billId) });
     if (!bill) return errorResponse(404, "Bill not found.");
 
     const now = new Date();
@@ -161,8 +162,7 @@ export const POST = withAdminRoute(
     }
 
     if (action === "force_veto") {
-      await db
-        .collection<Bill>("bills")
+      await billsCollection(db)
         .updateOne(
           { _id: bill._id },
           { $set: { status: "vetoed", presidentAction: "vetoed", updatedAt: now } }
@@ -171,8 +171,7 @@ export const POST = withAdminRoute(
     }
 
     if (action === "force_fail") {
-      await db
-        .collection<Bill>("bills")
+      await billsCollection(db)
         .updateOne(
           { _id: bill._id },
           { $set: { status: "failed", failedAt: now, updatedAt: now } }
@@ -183,7 +182,7 @@ export const POST = withAdminRoute(
     if (action === "force_enroll") {
       // Skip remaining chamber and send directly to president
       const deadline = new Date(now.getTime() + PRESIDENT_ACTION_MS);
-      await db.collection<Bill>("bills").updateOne(
+      await billsCollection(db).updateOne(
         { _id: bill._id },
         {
           $set: {
@@ -208,7 +207,7 @@ export const POST = withAdminRoute(
       const otherEndsAt = new Date(now.getTime() + VOTING_DURATION_MS);
       const advanceGameState = await getGameState(db);
       const otherEndsOnTurn = (advanceGameState?.currentTurn ?? 0) + VOTING_DURATION_HOURS;
-      await db.collection<Bill>("bills").updateOne(
+      await billsCollection(db).updateOne(
         { _id: bill._id },
         {
           $set: {
@@ -237,7 +236,7 @@ export const POST = withAdminRoute(
       const votingEndsOnTurn = (resetGameState?.currentTurn ?? 0) + VOTING_DURATION_HOURS;
       const origin = bill.originChamber as "house" | "senate" | "joint";
       const currentChamber = origin === "joint" ? "house" : origin;
-      await db.collection<Bill>("bills").updateOne(
+      await billsCollection(db).updateOne(
         { _id: bill._id },
         {
           $set: {

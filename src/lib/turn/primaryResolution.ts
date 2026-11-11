@@ -103,6 +103,11 @@ import { getStatesCollection } from "@/lib/db/collections/states";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import type { Document } from "mongodb";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 export type { ElectionSweepScope } from "./electionSweepScope";
 export { recordPrimarySnapshots } from "./primarySnapshots";
@@ -153,15 +158,13 @@ export async function resolvePrimariesIfNeeded(
   const [parties, allCandidates, statePartyOrgs, pastPrimaryTallies, stateDocs] = await Promise.all(
     [
       politicalPartiesCollection<PoliticalPartyType>(db).find({}).toArray(),
-      db
-        .collection<ElectionCandidate>("electionCandidates")
+      electionCandidatesCollection(db)
         .find({ electionId: { $in: electionIds }, status: "active" })
         .toArray(),
       hasPresident
-        ? db.collection<StatePartyOrg>("statePartyOrg").find({}).toArray()
+        ? statePartyOrgCollection(db).find({}).toArray()
         : Promise.resolve([] as StatePartyOrg[]),
-      db
-        .collection<ElectionVoteTally>("electionVoteTallies")
+      electionVoteTalliesCollection(db)
         .find({ electionId: { $in: electionIds } }, { projection: TALLY_WITH_SNAPSHOT_TURNS_ONLY })
         .toArray(),
       uniqueRegionKeys.size > 0
@@ -573,8 +576,7 @@ export async function resolvePrimariesIfNeeded(
 
       if (loserIds.length > 0) {
         const loserObjectIds = loserIds.map((id) => new ObjectId(id));
-        await db
-          .collection("electionCandidates")
+        await electionCandidatesCollection<Document>(db)
           .updateMany(
             { _id: { $in: loserObjectIds } },
             { $set: { status: "withdrawn", withdrawnAt: now } }
@@ -590,8 +592,7 @@ export async function resolvePrimariesIfNeeded(
         // so a re-entry can reactivate it and an accidental wipe can't strand an
         // active candidate without a campaign. Campaigns are only hard-deleted
         // when the election itself resolves (presidentResolution / generalResolution).
-        const loserCandidateDocs = await db
-          .collection<ElectionCandidate>("electionCandidates")
+        const loserCandidateDocs = await electionCandidatesCollection(db)
           .find(
             { _id: { $in: loserObjectIds } },
             { projection: { characterId: 1, nppId: 1, isNPP: 1 } }
@@ -605,7 +606,7 @@ export async function resolvePrimariesIfNeeded(
           .map((c) => c.nppId!);
         const loserCandidateKeys = [...loserCharIds, ...loserNppIds];
         if (loserCandidateKeys.length > 0) {
-          await db.collection<Campaign>("campaigns").updateMany(
+          await campaignsCollection(db).updateMany(
             { electionId, candidateId: { $in: loserCandidateKeys }, status: { $ne: "archived" } },
             {
               $set: {
@@ -677,7 +678,7 @@ export async function resolvePrimariesIfNeeded(
       // the primary is over, so the badge and ticks should reset before general-phase
       // travel takes over. Only affects presidential (state primaries don't set these).
       if (usesLegacyPresidentialCampaign(election)) {
-        await db.collection<ElectionCandidate>("electionCandidates").updateMany(
+        await electionCandidatesCollection(db).updateMany(
           { electionId },
           {
             $set: {
@@ -690,8 +691,7 @@ export async function resolvePrimariesIfNeeded(
 
         // Clear primarySurge bumps on every state party org for this country —
         // the surge bonus exists only for the duration of the primary cycle.
-        await db
-          .collection<StatePartyOrg>("statePartyOrg")
+        await statePartyOrgCollection(db)
           .updateMany(
             { countryId: election.countryId, primarySurge: { $gt: 0 } },
             { $unset: { primarySurge: "" }, $set: { updatedAt: now } }
@@ -711,8 +711,7 @@ export async function resolvePrimariesIfNeeded(
           await import("@/lib/countries/ru/presidentialTickets");
         await prepareRussianPresidentialTickets({ db, election, now });
       }
-      const generalCandidates = await db
-        .collection<ElectionCandidate>("electionCandidates")
+      const generalCandidates = await electionCandidatesCollection(db)
         .find({ electionId, status: "active" })
         .toArray();
       if (usesLegacyPresidentialCampaign(election)) {
@@ -730,7 +729,7 @@ export async function resolvePrimariesIfNeeded(
         // replaces the whole tally doc), so the audit record survives. Additive
         // and president-only; never written for v1/v2 (map stays empty).
         if (Object.keys(nominationResolutionByParty).length > 0) {
-          await db.collection<ElectionVoteTally>("electionVoteTallies").updateOne(
+          await electionVoteTalliesCollection(db).updateOne(
             { electionId },
             {
               $set: {
@@ -845,8 +844,7 @@ export async function accumulateGeneralElectionVotes(
         ] = await Promise.all([
           (await getStatesCollection(db)).find(regionalScope).toArray(),
           db.collection<StateDemographics>("stateDemographics").find(regionalScope).toArray(),
-          db
-            .collection<StatePartyOrg>("statePartyOrg")
+          statePartyOrgCollection(db)
             .find(
               nationwideCountries.length > 0
                 ? {
@@ -944,12 +942,10 @@ export async function accumulateGeneralElectionVotes(
 
   const electionIds = generalElections.map((e) => e._id);
   const [existingTallies, allActiveCandidates] = await Promise.all([
-    db
-      .collection<ElectionVoteTally>("electionVoteTallies")
+    electionVoteTalliesCollection(db)
       .find({ electionId: { $in: electionIds } })
       .toArray(),
-    db
-      .collection<ElectionCandidate>("electionCandidates")
+    electionCandidatesCollection(db)
       .find({ electionId: { $in: electionIds }, status: "active" })
       .toArray(),
   ]);

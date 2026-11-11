@@ -31,6 +31,7 @@ import {
 } from "@/lib/world/countryRequirementLevel";
 import { NPP_AUTONOMY_LEVEL_RANK } from "@/lib/nppAutonomy/levels";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 
 export interface CountryAccess {
   enabledForPlayers: boolean;
@@ -146,8 +147,7 @@ export async function getCountryAccessFromDb(db: Db, countryId: CountryId): Prom
   const cached = snapshot?.[countryId];
   if (cached) return cached;
 
-  const doc = await db
-    .collection<CountryGameState>("countryGameStates")
+  const doc = await countryGameStatesCollection(db)
     .findOne({ _id: countryId });
 
   // A DISSOLVED country is out of the registry, matching `registeredBase()` for
@@ -238,7 +238,7 @@ function registeredBase(docs: CountryGameState[]): CountryId[] {
  */
 export async function getAllCountryAccess(dbArg?: Db): Promise<Record<CountryId, CountryAccess>> {
   const db = dbArg ?? (await getDb());
-  const docs = await db.collection<CountryGameState>("countryGameStates").find({}).toArray();
+  const docs = await countryGameStatesCollection(db).find({}).toArray();
   const docMap = new Map(docs.map((d) => [d._id, d]));
   const globalNppRank = await readGlobalNppLevelRank(db);
 
@@ -296,8 +296,7 @@ export async function getEnabledCountryIds(): Promise<CountryId[]> {
  * (a world with players must be simulated even if status was never flipped).
  */
 export async function getSimulatedCountryIds(db: Db): Promise<CountryId[]> {
-  const docs = await db
-    .collection<CountryGameState>("countryGameStates")
+  const docs = await countryGameStatesCollection(db)
     .find({}, { projection: { _id: 1, status: 1, enabledForPlayers: 1, backgroundCountry: 1 } })
     .toArray();
   const byId = new Map(docs.map((d) => [String(d._id), d]));
@@ -317,7 +316,7 @@ export async function getSimulatedCountryIds(db: Db): Promise<CountryId[]> {
 }
 
 export async function getEnabledCountryIdsFromDb(db: Db): Promise<CountryId[]> {
-  const docs = await db.collection<CountryGameState>("countryGameStates").find({}).toArray();
+  const docs = await countryGameStatesCollection(db).find({}).toArray();
 
   const docMap = new Map(docs.map((d) => [d._id, d]));
 
@@ -338,7 +337,7 @@ export async function getEnabledCountryIdsFromDb(db: Db): Promise<CountryId[]> {
  */
 export async function getEconomyVisibleCountryIds(): Promise<CountryId[]> {
   const db = await getDb();
-  const docs = await db.collection<CountryGameState>("countryGameStates").find({}).toArray();
+  const docs = await countryGameStatesCollection(db).find({}).toArray();
 
   const docMap = new Map(docs.map((d) => [d._id, d]));
 

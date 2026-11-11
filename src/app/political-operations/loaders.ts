@@ -4,6 +4,7 @@ import { ensureCampaignForCandidate } from "@/lib/campaigns/createInitialCampaig
 import type { ElectionCandidate, Election } from "@/lib/db/types";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 export interface PoliticalOperationsPageData {
   character: {
@@ -37,8 +38,7 @@ export async function loadPoliticalOperationsData(): Promise<PoliticalOperations
   if (!countryHasFeature("usUi", char.countryId)) return null;
 
   const db = await getDb();
-  const candidacies = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidacies = await electionCandidatesCollection(db)
     .find({ characterId: char._id, status: "active" })
     .toArray();
 

@@ -12,6 +12,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import type { Document } from "mongodb";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -32,7 +33,7 @@ export async function GET(request: Request, { params }: RouteParams) {
 
     const db = await getDb();
     const oid = new ObjectId(campaignId);
-    const campaign = await db.collection("campaigns").findOne({ _id: oid });
+    const campaign = await campaignsCollection<Document>(db).findOne({ _id: oid });
     if (!campaign) {
       return errorResponse(404, "Campaign not found");
     }
@@ -43,8 +44,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     // Compute current pullback for this campaign if we have an election context
     let pullbackPerTurn = 0;
     if (electionId) {
-      const electionCampaigns = await db
-        .collection("campaigns")
+      const electionCampaigns = await campaignsCollection<Document>(db)
         .find({ electionId: campaign.electionId, status: { $ne: "archived" } })
         .project({ _id: 1, campaignStrength: 1, status: 1, electionId: 1 })
         .toArray();

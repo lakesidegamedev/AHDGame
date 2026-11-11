@@ -21,6 +21,7 @@ import { canDirectRegionalPartyNpp, hasPartyNppSeats } from "../rules/partyNppPr
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 export async function resolvePartyNppProposalAccess(
   db: Db,
@@ -43,8 +44,7 @@ export async function resolvePartyNppProposalAccess(
       { countryId, sequentialId: partyNumber },
       { projection: { chairId: 1, sequentialId: 1 } }
     ),
-    db
-      .collection<StatePartyOrg>("statePartyOrg")
+    statePartyOrgCollection(db)
       .findOne({ countryId, stateId, partyId: character.party }, { projection: { chairId: 1 } }),
   ]);
   if (

@@ -3,6 +3,7 @@ import type { ElectedOfficial, PoliticalParty, StatePartyOrg } from "@/lib/db/ty
 import type { CountryId } from "@/lib/constants/countries";
 import { getCurrentOfficeHolder } from "@/lib/governorOffice/queries";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 export type OfficeActingRole =
   "holder" | "stateChair" | "stateViceChair" | "nationalChair" | "nationalViceChair";
@@ -69,8 +70,7 @@ export async function resolveOfficeAccess(
   const seq = Number(officeParty);
   if (!Number.isFinite(seq)) return base;
 
-  const stateOrg = await db
-    .collection<StatePartyOrg>("statePartyOrg")
+  const stateOrg = await statePartyOrgCollection(db)
     .findOne({ countryId, stateId, partyId: String(seq) });
 
   if (idEquals(stateOrg?.chairId ?? null, characterId)) {

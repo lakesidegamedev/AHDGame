@@ -17,6 +17,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import type { Document } from "mongodb";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 /**
  * True when `stateId` is eligible for US federal seat backfill (House,
@@ -301,8 +302,7 @@ async function backfillSubNationalChamber(
   // Seeded regional org presence → both-party split (a party with no presence in
   // a region gets no synthetic incumbents there — same rule as backfillChamber).
   const knownPartyIds = new Set(nameBySequentialId.keys());
-  const orgRows = await db
-    .collection<SeedStrengthRow>("statePartyOrg")
+  const orgRows = await statePartyOrgCollection<SeedStrengthRow>(db)
     .find(
       { countryId },
       {
@@ -461,8 +461,7 @@ async function backfillChamber(
   let weightsByState: Map<string, Map<string, number>> | null = null;
   if (existingByParty.length === 0) {
     const knownPartyIds = new Set(nameBySequentialId.keys());
-    const orgRows = await db
-      .collection<SeedStrengthRow>("statePartyOrg")
+    const orgRows = await statePartyOrgCollection<SeedStrengthRow>(db)
       .find(
         { countryId },
         {

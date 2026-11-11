@@ -31,6 +31,8 @@ import type { Document } from "mongodb";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
 
 export interface EmptyPartyCleanupResult {
   deletedParties: string[];
@@ -315,7 +317,7 @@ export async function cleanupEmptyParties(): Promise<EmptyPartyCleanupResult> {
   // 4. Delete state party organizations (has countryId field)
   const stateOrgResult =
     partyCountryPairs.length > 0
-      ? await db.collection<StatePartyOrg>("statePartyOrg").deleteMany({ $or: partyCountryPairs })
+      ? await statePartyOrgCollection(db).deleteMany({ $or: partyCountryPairs })
       : { deletedCount: 0 };
 
   // 5. Delete party budgets (has countryId field)
@@ -362,7 +364,7 @@ export async function cleanupEmptyParties(): Promise<EmptyPartyCleanupResult> {
   for (const party of emptyParties) {
     const partyOid = party._id;
 
-    const coalition = await db.collection<Coalition>("coalitions").findOne({
+    const coalition = await coalitionsCollection(db).findOne({
       "members.partyId": partyOid,
     });
 
@@ -371,7 +373,7 @@ export async function cleanupEmptyParties(): Promise<EmptyPartyCleanupResult> {
 
       if (remainingMembers.length === 0) {
         // Last member — delete coalition entirely
-        await db.collection<Coalition>("coalitions").deleteOne({ _id: coalition._id });
+        await coalitionsCollection(db).deleteOne({ _id: coalition._id });
       } else if (coalition.chairPartyId.equals(partyOid)) {
         // Chair's party is being deleted — pass to next most senior member
         const nextMember = [...remainingMembers].sort(
@@ -381,7 +383,7 @@ export async function cleanupEmptyParties(): Promise<EmptyPartyCleanupResult> {
 
         const newChairCharacterId = nextParty?.chairId ?? null;
 
-        await db.collection<Coalition>("coalitions").updateOne(
+        await coalitionsCollection(db).updateOne(
           { _id: coalition._id },
           {
             $pull: { members: { partyId: partyOid } },
@@ -394,7 +396,7 @@ export async function cleanupEmptyParties(): Promise<EmptyPartyCleanupResult> {
         );
       } else {
         // Non-chair member deleted — just remove from members list
-        await db.collection<Coalition>("coalitions").updateOne(
+        await coalitionsCollection(db).updateOne(
           { _id: coalition._id },
           {
             $pull: { members: { partyId: partyOid } },

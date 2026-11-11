@@ -17,6 +17,7 @@ import { getElectionSeatKey } from "@/lib/turn/autoReelectionEntry";
 import { SINGLE_WINNER_EXECUTIVE_ELECTION_TYPES } from "@/lib/constants/countries";
 import { isSingleSeatLegislativeRace } from "./singleSeatIncumbency";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 
 /**
  * False for the races that have a dedicated OFFICEHOLDER incumbency path, so
@@ -141,8 +142,7 @@ export async function getIncumbentSeatShareByParty(
   const prior = priorElections.find((p) => getElectionSeatKey(p) === seatKey);
   if (!prior) return new Map();
 
-  const tally = await db
-    .collection<ElectionVoteTally>("electionVoteTallies")
+  const tally = await electionVoteTalliesCollection(db)
     .findOne({ electionId: prior._id });
   if (!tally || !tally.finalized) return new Map();
 
@@ -193,8 +193,7 @@ export async function preloadIncumbentSeatShares(
   }
   if (priorByElection.size === 0) return result;
 
-  const tallies = await db
-    .collection<ElectionVoteTally>("electionVoteTallies")
+  const tallies = await electionVoteTalliesCollection(db)
     .find({ electionId: { $in: [...priorByElection.values()].map((p) => p._id) } })
     .toArray();
   const tallyByElection = new Map<string, ElectionVoteTally>();

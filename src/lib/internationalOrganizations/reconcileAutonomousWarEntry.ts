@@ -25,6 +25,8 @@ import {
 } from "@/lib/military/warEntryPolicy";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 
 type ActiveJoinResolution = OrganizationLegislation & {
   type: "join_conflict";
@@ -57,8 +59,7 @@ export async function reconcileAutonomousWarEntryBills(db: Db): Promise<number> 
   if (resolutions.length === 0) return 0;
 
   const resolutionIds = resolutions.map((resolution) => resolution._id.toString());
-  const existingBills = await db
-    .collection<Bill>("bills")
+  const existingBills = await billsCollection(db)
     .find({
       provisions: {
         $elemMatch: { type: "join_conflict", resolutionId: { $in: resolutionIds } },
@@ -116,8 +117,7 @@ export async function reconcileAutonomousWarEntryBills(db: Db): Promise<number> 
       if (chosen.includes(countryId)) {
         if (bill && bill.status !== "signed") {
           const now = new Date();
-          await db
-            .collection<Bill>("bills")
+          await billsCollection(db)
             .updateOne(
               { _id: bill._id, status: { $nin: ["signed", "failed", "withdrawn"] } },
               { $set: { status: "signed", enactedAt: now, updatedAt: now } }
@@ -138,8 +138,7 @@ export async function reconcileAutonomousWarEntryBills(db: Db): Promise<number> 
         });
         const now = new Date();
         if (bill && bill.status !== "signed") {
-          await db
-            .collection<Bill>("bills")
+          await billsCollection(db)
             .updateOne(
               { _id: bill._id, status: { $nin: ["signed", "failed", "withdrawn"] } },
               { $set: { status: "signed", enactedAt: now, updatedAt: now } }
@@ -167,7 +166,7 @@ export async function reconcileAutonomousWarEntryBills(db: Db): Promise<number> 
           stake,
           currentTurn,
         });
-        await db.collection<Bill>("bills").updateOne(
+        await billsCollection(db).updateOne(
           { _id: bill._id },
           {
             $set: {
@@ -193,8 +192,7 @@ export async function reconcileAutonomousWarEntryBills(db: Db): Promise<number> 
       if (!autonomousPolicyActive || bill || !hasBillLifecycle(countryId)) continue;
       if (!(await isNppAutonomyActive(db, countryId))) continue;
 
-      const formation = await db
-        .collection<GovernmentFormation>("governmentFormations")
+      const formation = await governmentFormationsCollection(db)
         .findOne({ _id: countryId, status: "formed" });
       const headId = formation?.presidentNppId ?? formation?.pmNppId ?? null;
       if (!headId) continue;

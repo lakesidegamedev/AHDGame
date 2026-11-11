@@ -56,6 +56,7 @@ import {
   OPERATING_SECTOR_TYPE_LABELS,
   type OperatingSectorType,
 } from "@/lib/constants/corporations";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 // Re-exported from billTargetPreview (the shared SSOT) for existing importers.
 export type { NationalizationProvisionDetail };
@@ -312,8 +313,7 @@ export async function resolveBillProvisions(
       ...new Set(canonicalLegTypeIds.flatMap((id) => getEquivalentLegislationTypeIds(id))),
     ];
     const legislationTypes = legTypeIds.length
-      ? await db
-          .collection<LegislationType>("legislationTypes")
+      ? await legislationTypesCollection(db)
           .find({ _id: { $in: legTypeIds } })
           .toArray()
       : [];
@@ -629,7 +629,7 @@ export async function resolveBillProvisions(
   }
 
   if (bill.legislationTypeId && !bill.provisions?.length) {
-    const lt = await db.collection<LegislationType>("legislationTypes").findOne({
+    const lt = await legislationTypesCollection(db).findOne({
       _id: { $in: getEquivalentLegislationTypeIds(bill.legislationTypeId) },
     });
     legislationTypeName = lt?.name ?? humanizeLegislationTypeId(bill.legislationTypeId) ?? null;

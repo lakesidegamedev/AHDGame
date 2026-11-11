@@ -31,6 +31,7 @@ import type {
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 /** Bill statuses that count as "passed" (enacted) for the recap. */
 const PASSED_BILL_STATUSES = ["signed", "enrolled", "veto_override", "override_shugiin"];
@@ -192,8 +193,7 @@ export async function buildSeasonRecaps(
           { $group: { _id: { c: "$characterId", t: "$actionType" }, n: { $sum: 1 } } },
         ])
         .toArray(),
-      db
-        .collection<Bill>("bills")
+      billsCollection(db)
         .aggregate<{ _id: ObjectId | null; sponsored: number; passed: number }>([
           { $match: { sponsorId: { $in: ids } } },
           {

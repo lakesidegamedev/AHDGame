@@ -55,6 +55,8 @@ import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficia
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 
 /**
  * Whether to show the "Campaign Manager" navbar link. Returns true for: admins,
@@ -84,7 +86,7 @@ async function computeCanSeeCampaignManager(args: {
   const userCampaignClauses: Filter<Campaign>[] = [{ managerId: userOid }];
   if (ownedIds.length > 0) userCampaignClauses.push({ candidateId: { $in: ownedIds } });
 
-  const directCampaignMatch = await db.collection<Campaign>("campaigns").findOne(
+  const directCampaignMatch = await campaignsCollection(db).findOne(
     {
       electionId: { $in: presidentElectionIds },
       $or: userCampaignClauses,
@@ -95,8 +97,7 @@ async function computeCanSeeCampaignManager(args: {
 
   if (ownedIds.length === 0 || !characterCountryId) return false;
 
-  const campaignPartyIds = await db
-    .collection<Campaign>("campaigns")
+  const campaignPartyIds = await campaignsCollection(db)
     .distinct("party", { electionId: { $in: presidentElectionIds } });
   const partySeqIds = [
     ...new Set(campaignPartyIds.map((party) => Number(party)).filter(Number.isFinite)),
@@ -373,8 +374,7 @@ export async function GET() {
           deletedByRecipient: false,
           blockedByRecipient: { $ne: true },
         }),
-        db
-          .collection<ElectionCandidate>("electionCandidates")
+        electionCandidatesCollection(db)
           .findOne(
             { characterId: character._id, status: "active" },
             { sort: { enteredAt: -1 }, projection: { electionId: 1 } }

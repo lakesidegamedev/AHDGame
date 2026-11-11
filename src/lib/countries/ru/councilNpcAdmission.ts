@@ -29,6 +29,8 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 
 export async function materializeRussianCouncilNpcAdmission(input: {
   db: Db;
@@ -51,7 +53,7 @@ export async function materializeRussianCouncilNpcAdmission(input: {
     { session, projection: GAME_STATE_PRE_ITERATION_FIELDS }
   );
   if (game?.preset !== "1991-default") return null;
-  const countries = db.collection<CountryGameState>("countryGameStates");
+  const countries = countryGameStatesCollection(db);
   const country = await countries.findOne(
     { _id: "RU" },
     {
@@ -181,7 +183,7 @@ export async function materializeRussianCouncilNpcAdmission(input: {
       }
     )
     .toArray();
-  const candidates = db.collection<ElectionCandidate>("electionCandidates");
+  const candidates = electionCandidatesCollection(db);
   const active = await candidates
     .find(
       { electionId: { $in: elections.map((row) => row._id) }, status: "active" },
@@ -290,7 +292,7 @@ export async function admitRussianCouncilNpcNominees(
     { projection: { preset: 1 } }
   );
   if (game?.preset !== "1991-default") return null;
-  const country = await input.db.collection<CountryGameState>("countryGameStates").findOne(
+  const country = await countryGameStatesCollection(input.db).findOne(
     { _id: "RU" },
     {
       projection: {

@@ -18,6 +18,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import type { Document } from "mongodb";
+import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
 
 const createCoalitionSchema = z.object({
   name: z.string().min(3).max(60).trim(),
@@ -101,7 +102,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
     }
 
     // Coalition name must be unique within the country (case-insensitive)
-    const existingCoalition = await db.collection<Coalition>("coalitions").findOne({
+    const existingCoalition = await coalitionsCollection(db).findOne({
       countryId,
       name: { $regex: new RegExp(`^${escapeRegex(name)}$`, "i") },
     });
@@ -176,7 +177,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
     };
 
     try {
-      await db.collection<Coalition>("coalitions").insertOne(newCoalition);
+      await coalitionsCollection(db).insertOne(newCoalition);
     } catch (error) {
       await Promise.all([
         politicalPartiesCollection(db).updateOne(
@@ -213,8 +214,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
 
     const db = await getDb();
 
-    const coalitions = await db
-      .collection<Coalition>("coalitions")
+    const coalitions = await coalitionsCollection(db)
       .find({ countryId })
       .sort({ createdAt: -1 })
       .toArray();

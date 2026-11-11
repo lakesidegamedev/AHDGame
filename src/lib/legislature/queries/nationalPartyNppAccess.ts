@@ -14,6 +14,7 @@ import { canDirectNationalPartyNpp, pickNationalPartySponsor } from "../rules/na
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 export async function resolveNationalPartyNppAccess(
   db: Db,
@@ -41,7 +42,7 @@ export async function resolveNationalPartyNppAccess(
     })
   )
     return denied;
-  const active = await db.collection<Bill>("bills").findOne(
+  const active = await billsCollection(db).findOne(
     {
       ...buildActiveNationalBillFilter(countryId, NATIONAL_TERMINAL_STATUSES),
       nppSponsored: true,

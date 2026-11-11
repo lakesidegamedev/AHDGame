@@ -8,6 +8,7 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import type { Bill, ElectedOfficial } from "@/lib/db/types";
 import { resolvePresidentialCountry } from "@/lib/executive/presidentialCountry";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 // GET /api/whitehouse/bills — Returns enrolled bills awaiting presidential action (President only).
 // Country-scoped via ?country= (default US).
@@ -40,8 +41,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ bills: [], isPresident: false });
     }
 
-    const bills = await db
-      .collection<Bill>("bills")
+    const bills = await billsCollection(db)
       .find({ status: "enrolled", countryId })
       .sort({ sentToPresidentAt: 1 })
       .limit(20)

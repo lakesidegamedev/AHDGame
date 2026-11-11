@@ -54,6 +54,8 @@ import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 /**
  * Runtime collections that `resetGameWorld` handles with bespoke logic instead
@@ -498,10 +500,10 @@ export async function resetGameWorld(
   // explicitly to capture deletedCount (and exclude them from the sweep).
   const officialsResult = await electedOfficialsCollection<Document>(db).deleteMany({});
   const electionsResult = await electionsCollection<Document>(db).deleteMany({});
-  const candidatesResult = await db.collection("electionCandidates").deleteMany({});
+  const candidatesResult = await electionCandidatesCollection<Document>(db).deleteMany({});
   const nppsResult = await nppsCollection<Document>(db).deleteMany({});
   const logsResult = await db.collection("actionLogs").deleteMany({});
-  const billsResult = await db.collection("bills").deleteMany({});
+  const billsResult = await billsCollection<Document>(db).deleteMany({});
   const stateBillsResult = await db.collection("stateBills").deleteMany({});
   const statePartyElectionsResult = await db.collection("statePartyElections").deleteMany({});
   await db

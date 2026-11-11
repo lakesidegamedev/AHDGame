@@ -30,6 +30,7 @@ import { isBillWhipInCurrentPhase } from "@/lib/congress/billWhipPhase";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 export interface WhipDefianceScope {
   countryId: CountryId;
@@ -475,8 +476,7 @@ async function buildWhipDefianceSnapshotsForScopes(
   ];
   const [bills, nominations, scotusNominations] = await Promise.all([
     billIds.length
-      ? db
-          .collection<Bill>("bills")
+      ? billsCollection(db)
           .find({ _id: { $in: billIds } })
           .toArray()
       : Promise.resolve([] as Bill[]),

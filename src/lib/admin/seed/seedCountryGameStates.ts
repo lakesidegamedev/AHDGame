@@ -6,6 +6,7 @@ import { isShippingPreset, tierFor, type CountryEraTier } from "@/lib/world/eraR
 import { isKnownPreset } from "@/lib/seeds/presetSelector";
 import { assertCanOpenCountryToPlayers } from "@/lib/world/countryReadinessContract";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 
 /**
  * Per-preset country enablement. `countryGameStates` rows are normally written
@@ -144,7 +145,7 @@ export async function seedCountryGameStates(
     if (tier.enabledForPlayers) {
       assertCanOpenCountryToPlayers(cid, preset);
     }
-    await db.collection<CountryGameState>("countryGameStates").updateOne(
+    await countryGameStatesCollection(db).updateOne(
       { _id: cid },
       {
         $set: {

@@ -13,6 +13,7 @@ import {
   postureDetectionChance,
   type UnionEnforcementPosture,
 } from "@/lib/unions/underground";
+import { unionsCollection } from "@/lib/db/repositories/unions";
 
 export interface UndergroundTurnResult {
   unionsChecked: number;
@@ -44,8 +45,7 @@ export async function processUndergroundTurn(
   const bannedCountries = Array.from(bannedCountryIds);
   const undergroundFilter =
     bannedCountries.length > 0 ? { countryId: { $in: bannedCountries } } : { suspended: true };
-  const docs = await db
-    .collection<Union>("unions")
+  const docs = await unionsCollection(db)
     .find(undergroundFilter, {
       projection: {
         countryId: 1,
@@ -123,7 +123,7 @@ export async function processUndergroundTurn(
   }
 
   if (writes.length > 0) {
-    await db.collection<Union>("unions").bulkWrite(writes.map((write) => ({ updateOne: write })));
+    await unionsCollection(db).bulkWrite(writes.map((write) => ({ updateOne: write })));
   }
   return { unionsChecked: cells.length, newlyExposed };
 }

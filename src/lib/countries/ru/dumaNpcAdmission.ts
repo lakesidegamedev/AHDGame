@@ -17,6 +17,7 @@ import {
 import { hasAuthorizedPostSovietTransition } from "./rules/postSovietTransition";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 export async function materializeRussianDumaNpcAdmission(input: {
   db: Db;
   session: ClientSession;
@@ -38,7 +39,7 @@ export async function materializeRussianDumaNpcAdmission(input: {
     { session, projection: { preset: 1 } }
   );
   if (game?.preset !== "1991-default") return null;
-  const countries = db.collection<CountryGameState>("countryGameStates");
+  const countries = countryGameStatesCollection(db);
   const country = await countries.findOne(
     { _id: "RU" },
     {
@@ -166,7 +167,7 @@ export async function admitRussianDumaNpcNominees(input: {
     { projection: { preset: 1 } }
   );
   if (game?.preset !== "1991-default") return null;
-  const country = await input.db.collection<CountryGameState>("countryGameStates").findOne(
+  const country = await countryGameStatesCollection(input.db).findOne(
     { _id: "RU" },
     {
       projection: {

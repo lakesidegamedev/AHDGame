@@ -34,6 +34,8 @@ import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 
 type TallyWithVote = ElectionVoteTally & {
   contingentHouseVote: NonNullable<ElectionVoteTally["contingentHouseVote"]>;
@@ -64,9 +66,8 @@ async function seatHouseElectedPresident(
   const vote = tally.contingentHouseVote;
   const winnerId = vote.presidentWinnerId;
   if (!winnerId) return false;
-  const tallies = db.collection<ElectionVoteTally>("electionVoteTallies");
-  const winnerCandidate = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const tallies = electionVoteTalliesCollection(db);
+  const winnerCandidate = await electionCandidatesCollection(db)
     .findOne({ _id: new ObjectId(winnerId) });
   if (!winnerCandidate) {
     logger.error(
@@ -188,7 +189,7 @@ export async function closeDueContingentHouseVotes(
   now: Date,
   currentTurn: number
 ): Promise<number> {
-  const tallies = db.collection<ElectionVoteTally>("electionVoteTallies");
+  const tallies = electionVoteTalliesCollection(db);
   const elections = electionsCollection(db);
   let handled = 0;
 
@@ -235,7 +236,7 @@ async function takeBallot(
   now: Date,
   currentTurn: number
 ): Promise<boolean> {
-  const tallies = db.collection<ElectionVoteTally>("electionVoteTallies");
+  const tallies = electionVoteTalliesCollection(db);
   const vote = tally.contingentHouseVote;
   const standings = await loadHouseVoteStandings(db, election, tally, vote);
   const winnerId = standings.majorityWinnerId;

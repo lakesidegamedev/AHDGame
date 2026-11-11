@@ -21,6 +21,8 @@ import type {
   StatePartyOrg,
 } from "@/lib/db/types";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 const BodySchema = z.object({ districtIndex: z.number().int().min(1) });
 const CAMPAIGN_BASE_PS_COST = 2;
@@ -50,8 +52,7 @@ export async function POST(
     const party = await findPartyBySequentialId(db, partyId, countryId as CountryId);
     if (!party) return errorResponse(404, "Party not found");
 
-    const spo = await db
-      .collection<StatePartyOrg>("statePartyOrg")
+    const spo = await statePartyOrgCollection(db)
       .findOne({ countryId: countryId as CountryId, stateId, partyId: String(party.sequentialId) });
     if (!canSpendOnStateParty(party, spo, auth.user)) {
       return errorResponse(
@@ -80,8 +81,7 @@ export async function POST(
     }
 
     // Efficiency: is the actor an active candidate in this race?
-    const isCandidate = await db
-      .collection<ElectionCandidate>("electionCandidates")
+    const isCandidate = await electionCandidatesCollection(db)
       .findOne({ electionId: election._id, characterId: character._id, status: "active" });
     const efficiency = isCandidate ? CAMPAIGN_SELF_EFFICIENCY : CAMPAIGN_ALLY_EFFICIENCY;
 

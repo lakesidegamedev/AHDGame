@@ -10,6 +10,8 @@ import type { Election, GameState } from "@/lib/db/types";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import type { Document } from "mongodb";
 
 const ENDED = ["completed", "resolved"] as const;
 
@@ -97,8 +99,7 @@ export const migration: Migration = {
     // Only a race that actually recorded votes has anything to freeze.
     const withTallies = new Set(
       (
-        await db
-          .collection("electionVoteTallies")
+        await electionVoteTalliesCollection<Document>(db)
           .find({})
           .project<{ electionId: ObjectId }>({ electionId: 1 })
           .toArray()

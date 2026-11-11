@@ -33,6 +33,7 @@ import { persistBargainingSettlement, restoreEscalationExpectations } from "./ba
 import { rejectIfTurnProcessing, type UnionActionResult } from "./unionActions";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { unionsCollection } from "@/lib/db/repositories/unions";
 
 export const RATIFICATION_BALLOTS = "bargainingRatificationBallots";
 
@@ -187,8 +188,7 @@ export async function castRatificationBallot(
   if (!campaign || !campaign.unionId.equals(new ObjectId(unionRouteId))) {
     return { ok: false, status: 404, error: "Bargaining campaign not found for this union." };
   }
-  const union = await db
-    .collection<Union>("unions")
+  const union = await unionsCollection(db)
     .findOne({ _id: campaign.unionId }, { projection: { name: 1, countryId: 1 } });
   if (!union) return { ok: false, status: 404, error: "Union not found" };
   // Same country gate the leadership ballot applies, and the same ban freeze.
@@ -409,8 +409,7 @@ async function notifyRatificationClosed(
   outcome: RatificationOutcome | "void",
   currentTurn: number
 ): Promise<void> {
-  const union = await db
-    .collection<Union>("unions")
+  const union = await unionsCollection(db)
     .findOne({ _id: campaign.unionId }, { projection: { name: 1, ownerId: 1, ownerType: 1 } });
   // An NPP-led union has no User behind its leader, and a vacant presidency has
   // nobody to tell. The vote still closed on schedule either way.
