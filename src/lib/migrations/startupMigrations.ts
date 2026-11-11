@@ -38,6 +38,7 @@ import { migration as navairBasingIndex } from "./entries/2026-11-10-navair-basi
 import { migration as subhourWikiCadence } from "./entries/2026-10-09-subhour-wiki-cadence";
 import { runMigrations, type RunSummary } from "./runner";
 import { migration as jpLawLeanEffects } from "./entries/2026-11-09-jp-law-lean-effects";
+import { migration as financialTxLogTurnOrderIndex } from "./entries/2026-11-10-financial-tx-log-turn-order-index";
 import { migration as scotusCareerAchievements } from "./entries/2026-10-16-scotus-career-achievements";
 import type { Migration } from "./types";
 
@@ -136,6 +137,9 @@ export const REQUIRED_STARTUP_INDEX_MIGRATIONS: readonly Migration[] = [
   // Turn-phase probes on bonds and money moves stay bounded by live work.
   turnGrowthIndexes,
   playerReadIndexes,
+  // The ledger listing sorts by turn, write time and id; without this index Mongo
+  // sorts the whole filtered log in memory on every page.
+  financialTxLogTurnOrderIndex,
 ];
 
 export async function runRequiredStartupMigrations(db: Db): Promise<RunSummary> {
