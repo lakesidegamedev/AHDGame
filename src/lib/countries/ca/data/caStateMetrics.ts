@@ -122,6 +122,9 @@ const OVERRIDES: Record<string, Partial<Record<MetricPath, number>>> = {
     "environment.carbonEmissions": 9.8,
     "social.housingAffordability": 62,
     "governance.voterTurnout": 66,
+    // Support for a Yes to sovereignty ran roughly 30 to 38 percent across
+    // 2025 Leger, Pallas Data and CROP polling; seeded inside that band.
+    "governance.independenceDesire": 35,
     "population.urbanizationRate": 81,
   },
   CA_BC: {

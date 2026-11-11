@@ -1,5 +1,5 @@
 /**
- * Independence and Reunification Desire advances once per turn for UK devolved regions.
+ * Independence and Reunification Desire advances once per turn for each sovereignty region.
  * processIndependenceDesireDrift loads shared previews and writes actual movement in one batch.
  */
 import type { Db } from "mongodb";

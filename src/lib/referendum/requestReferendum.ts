@@ -1,7 +1,7 @@
 import { withSessionDb, afterCommit } from "@/lib/db/sessionDb";
 /**
- * Domain logic for a UK First Minister requesting an independence /
- * reunification referendum. Mirrors the changeDevolutionPolicy contract:
+ * Domain logic for a regional head of government requesting an independence /
+ * reunification referendum for a region in the sovereignty registry. Mirrors the changeDevolutionPolicy contract:
  * validate inputs + eligibility + AP, write the referendum doc, decrement AP,
  * return a thin status/body for the API route.
  *
@@ -14,11 +14,10 @@ import type { GovernorOfficeState } from "@/lib/db/types/governorOfficeState";
 import type { Referendum, ReferendumKind, ReferendumStatus } from "@/lib/db/types/referendum";
 import { getReferendumCollection } from "@/lib/db/collections/referendum";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
-import { isUKDevolutionRegion } from "@/lib/constants/devolution";
 import { REQUEST_AP_COST, referendumRequestEligibility } from "@/lib/constants/referendum";
 import { announceReferendumRequested } from "@/lib/referendum/referendumWebhooks";
 import { recordWireEvent } from "@/lib/referendum/wire";
-import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { sovereigntyRegionIn } from "@/lib/referendum/rules/sovereigntyRegions";
 
 /** Non-terminal statuses that count as "a referendum is in progress". */
 const ACTIVE_STATUSES: ReferendumStatus[] = [
@@ -59,10 +58,15 @@ async function requestReferendumInTransaction(
   const stateId = input.stateId.toUpperCase();
   const adminOverride = input.adminOverride === true;
 
-  if (!countryHasFeature("ukLib", countryId))
-    return { status: 400, body: { error: "Referendums are UK-only." } };
-  if (!isUKDevolutionRegion(stateId)) {
+  const region = sovereigntyRegionIn(countryId, stateId);
+  if (!region) {
     return { status: 400, body: { error: "Region cannot hold an independence referendum." } };
+  }
+  if (!region.actuates) {
+    return {
+      status: 400,
+      body: { error: "This region's referendum cannot be held until its successor state exists." },
+    };
   }
 
   const currentTurn = await getCurrentTurn(db);
@@ -104,13 +108,13 @@ async function requestReferendumInTransaction(
     return { status: 400, body: { error: "Insufficient office action points." } };
   }
 
-  const kind: ReferendumKind = stateId === "NIR" ? "reunification" : "independence";
+  const kind: ReferendumKind = region.kind;
   const now = new Date();
   const doc: Referendum = {
     countryId,
     regionId: stateId,
     kind,
-    targetCountryId: stateId === "NIR" ? "IE" : null,
+    targetCountryId: region.targetCountryId,
     status: "requested",
     requestedTurn: currentTurn,
     grantedTurn: null,
@@ -149,7 +153,7 @@ async function requestReferendumInTransaction(
     regionId: stateId,
     turn: currentTurn,
     kind: "requested",
-    summary: `The First Minister requested a ${
+    summary: `The ${region.executiveTitle} requested a ${
       kind === "reunification" ? "reunification" : "independence"
     } referendum.`,
   }).catch(() => {});

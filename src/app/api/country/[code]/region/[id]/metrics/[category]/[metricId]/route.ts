@@ -13,7 +13,7 @@ import type { StatePolicy } from "@/lib/db/types/statePolicy";
 import { getMetricHistory } from "@/lib/metricHistory";
 import { computeNationalMetricTickRate, computeStateTickRates } from "@/lib/api/stateTickRates";
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
-import { isUKDevolutionRegion } from "@/lib/constants/devolution";
+import { isSovereigntyRegion } from "@/lib/referendum/rules/sovereigntyRegions";
 import {
   NATIONAL_SCOPE,
   NATIONAL_SCOPE_IDS,
@@ -267,7 +267,7 @@ export async function GET(
       metricVal === undefined &&
       category === "governance" &&
       metricId === "independenceDesire" &&
-      isUKDevolutionRegion(stateId)
+      isSovereigntyRegion(stateId)
     ) {
       metricVal = { value: 50, trend: 0 };
     }

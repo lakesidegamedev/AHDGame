@@ -104,10 +104,18 @@ describe("requestReferendum", () => {
     expect(insertArg.targetCountryId).toBe("IE");
   });
 
-  it("rejects non-UK country", async () => {
+  it("rejects a region claimed for another country", async () => {
     const r = await requestReferendum(db as unknown as Db, { countryId: "US", stateId: "SCO" });
     expect(r.status).toBe(400);
-    expect(r.body.error).toMatch(/UK-only/);
+    expect(r.body.error).toMatch(/cannot hold/i);
+  });
+
+  it("refuses Quebec until its successor state exists", async () => {
+    seed(db, { desire: 80, ap: 5 });
+    const r = await requestReferendum(db as unknown as Db, { countryId: "CA", stateId: "ca_qc" });
+    expect(r.status).toBe(400);
+    expect(r.body.error).toMatch(/successor state/);
+    expect(db.collectionMocks["referendums"].insertOne).not.toHaveBeenCalled();
   });
 
   it("rejects a non-devolution region", async () => {

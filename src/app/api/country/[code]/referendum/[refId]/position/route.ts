@@ -1,4 +1,4 @@
-import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { hostsSovereigntyReferendums } from "@/lib/referendum/rules/sovereigntyRegions";
 import { z } from "zod";
 import { requireHumanSessionWithCharacter } from "@/lib/api/requireAuth";
 import { handleRouteError, errorResponse, statusResponse } from "@/lib/api/errors";
@@ -27,8 +27,8 @@ export async function POST(
     if (!COUNTRY_CONFIGS[countryId]) {
       return errorResponse(400, "Invalid country");
     }
-    if (!countryHasFeature("ukDevolutionAndConference", countryId)) {
-      return errorResponse(400, "Referendums are UK-only.");
+    if (!hostsSovereigntyReferendums(countryId)) {
+      return errorResponse(400, "This country holds no sovereignty referendums.");
     }
 
     const auth = await requireHumanSessionWithCharacter(request);
