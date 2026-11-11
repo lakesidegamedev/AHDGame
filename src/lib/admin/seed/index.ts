@@ -136,6 +136,7 @@ export { seedGrBudgets } from "./seedGrBudgets";
 export { seedAtBudgets } from "./seedAtBudgets";
 export { seedFiBudgets } from "./seedFiBudgets";
 export { seedDdBudgets } from "./seedDdBudgets";
+export { seedCaBudgets } from "./seedCaBudgets";
 export { seedCNWiki } from "./seedCNWiki";
 export { seedNGWiki } from "./seedNGWiki";
 

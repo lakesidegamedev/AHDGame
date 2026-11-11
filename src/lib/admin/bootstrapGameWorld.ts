@@ -583,6 +583,10 @@ export async function seedAllCountryData(
       await seedBG2027(db, resetReference, log, preset);
     })(),
     pack(async (log) => {
+      const { seedCA2027 } = await import("./seed/seedCA2027");
+      await seedCA2027(db, resetReference, log, preset);
+    })(),
+    pack(async (log) => {
       if (preset !== "2019-default") return;
       const { seedModern2019 } = await import("./seed/seedModern2019");
       await seedModern2019(db, resetReference, log, preset);
@@ -755,6 +759,8 @@ export async function bootstrapGameWorld(options: BootstrapOptions) {
   await seedAtBudgets(db, resetReference, log, preset);
   await seedFiBudgets(db, resetReference, log, preset);
   await seedDdBudgets(db, resetReference, log, preset);
+  const { seedCaBudgets } = await import("./seed/seedCaBudgets");
+  await seedCaBudgets(db, resetReference, log, preset);
 
   // Warsaw-Pact BUDGETS. Countries are seeded in `seedAllCountryData`; only
   // budgets live here because budgets are region-CONSUMING and must follow the

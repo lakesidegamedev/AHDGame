@@ -1,6 +1,7 @@
 import type { Db } from "mongodb";
 import type { StatePartyOrg, PoliticalParty } from "@/lib/db/types";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { organizationFromVoteShare } from "@/lib/parties/rules/voteShareOrganization";
 
 /*
  * Calculate BR state party organization levels from estimated regional vote shares.
@@ -8,9 +9,6 @@ import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParti
  * Slug to sequentialId resolved at runtime against live `politicalParties`,
  * so preset-filtered seeds pick up live IDs without hardcoded ordering.
  */
-
-const MIN_ORG = 5;
-const MAX_ORG = 70;
 
 // BR party slug → DB name. Used by `buildBRPartySlugToSeqId` to look up
 // live sequentialIds. Slugs match the polling tables below.
@@ -90,11 +88,6 @@ export const BR_REGION_VOTE_SHARES_1953: Record<string, Record<string, number>> 
   SUL: { psd1945: 22, udn: 16, ptb: 32 },
 };
 
-function calculateBRPartyOrg(voteShare: number): number {
-  const scaled = MIN_ORG + (voteShare / 50) * (MAX_ORG - MIN_ORG);
-  return Math.min(Math.max(Math.round(scaled), MIN_ORG), MAX_ORG);
-}
-
 /**
  * Resolve each BR party slug to the matching `sequentialId` in the DB.
  * Robust to preset filtering — only returns mappings for parties that
@@ -138,7 +131,7 @@ export async function calculateBRStatePartyOrgs(
     for (const [partySlug, voteShare] of Object.entries(partyVotes)) {
       const partySeqId = slugToSeqId[partySlug];
       if (!partySeqId) continue; // party not in DB under this preset
-      const org = calculateBRPartyOrg(voteShare);
+      const org = organizationFromVoteShare(voteShare);
 
       orgs.push({
         _id: `${regionId}_${partySeqId}`,
