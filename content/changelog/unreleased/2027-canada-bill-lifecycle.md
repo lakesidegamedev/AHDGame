@@ -5,7 +5,7 @@ summary: >-
   Bills in Canada's House of Commons now pass or fail each turn, ready for
   when the country opens to players.
 tags: [canada, legislature]
-badges: [content]
+badges: [minor]
 areas: [backend]
 ---
 

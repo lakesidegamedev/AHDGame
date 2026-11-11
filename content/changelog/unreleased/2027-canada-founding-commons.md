@@ -5,7 +5,7 @@ summary: >-
   When Canada joins a 2027 world, its House of Commons starts full, with
   seats split the way Canadians voted in April 2025.
 tags: [canada, legislature]
-badges: [content]
+badges: [minor]
 areas: [backend]
 ---
 

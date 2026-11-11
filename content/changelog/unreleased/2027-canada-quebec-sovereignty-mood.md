@@ -5,7 +5,7 @@ summary: >-
   Quebec now carries a sovereignty mood that moves each turn, using the same
   rules as Scotland, Wales and Northern Ireland.
 tags: [canada, referendum]
-badges: [content]
+badges: [minor]
 areas: [backend]
 ---
 

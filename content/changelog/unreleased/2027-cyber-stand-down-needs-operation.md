@@ -6,7 +6,7 @@ summary: >-
   operation against since the last truce.
 tags: [intelligence, cyber]
 badges: [patch]
-areas: [gameplay, backend]
+areas: [engine, backend]
 ---
 
 Standing down opens a truce that blocks cyber operations both ways and eases

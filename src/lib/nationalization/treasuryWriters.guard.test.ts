@@ -113,7 +113,7 @@ const SPEND_REGISTRY: Record<string, Registered> = {
     witness: [{ kind: "flow", flows: ["crisis_aid"] }],
   },
   "src/lib/crises/aidFinalize.ts": {
-    writers: ["creditTreasury"],
+    writers: ["refundTreasurySpend"],
     witness: [{ kind: "flow", flows: ["crisis_aid"] }],
   },
   "src/lib/crises/interactionEngine.ts": {
@@ -125,7 +125,7 @@ const SPEND_REGISTRY: Record<string, Registered> = {
     witness: [{ kind: "flow", flows: ["frontier_programme"] }],
   },
   "src/lib/crises/levers/leverCommand.ts": {
-    writers: ["creditTreasury", "spendFromTreasury"],
+    writers: ["refundTreasurySpend", "spendFromTreasury"],
     witness: [{ kind: "flow", flows: ["crisis_response"] }],
   },
   "src/lib/crises/optionActions.ts": {
@@ -179,7 +179,7 @@ const TREASURY_WRITER = writerPattern([
   "remitToTreasury",
 ]);
 const IMPORTS_TREASURY = /from\s+["'](?:@\/lib\/nationalization\/treasury|\.{1,2}\/treasury)["']/;
-const SPEND_WRITER = writerPattern(["spendFromTreasury", "creditTreasury"]);
+const SPEND_WRITER = writerPattern(["spendFromTreasury", "creditTreasury", "refundTreasurySpend"]);
 const IMPORTS_SPEND = /from\s+["']@\/lib\/budget\/treasurySpend["']/;
 
 function sourceFiles(dir: string): string[] {
