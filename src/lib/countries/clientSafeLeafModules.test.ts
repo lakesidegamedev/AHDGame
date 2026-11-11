@@ -95,8 +95,8 @@ const INHERENTLY_HEAVY = ["src/lib/seeds/regionCensusData.ts"];
  * historical pairs out of this file; lower it when edges are removed.
  */
 const LEGACY_TRANSITIVE_COUNTRY_BOUNDARY = {
-  count: 76,
-  sha256: "4ede993b6d6e3496538e051a0cade16a795a0b6bcfa75ee541eabe0a8e5a7cea",
+  count: 48,
+  sha256: "900cf5b82c43a6b0dc8fe0f3b6ab8cf43b37c3c483952225b887b97933cd5ec2",
 } as const;
 
 /** `import ... from` that is not `import type ... from`, and not a bare side-effect import. */

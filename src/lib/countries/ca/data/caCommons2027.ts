@@ -1,5 +1,17 @@
 import type { HistoricalSeat } from "@/lib/seats/historicalSeat";
-import { CA_PARTY_SLUGS } from "./caParties";
+
+/**
+ * Party slugs as literals, like every other country's historical seat table:
+ * the seat tables are reachable from client code, so this file stays free of
+ * runtime imports. The test checks each slug against the Canadian roster.
+ */
+const PARTY = {
+  federalUnity: "ca_federal_unity",
+  nationalProsperity: "ca_national_prosperity",
+  labourCommons: "ca_labour_commons",
+  laurentian: "ca_laurentian",
+  greenHorizon: "ca_green_horizon",
+} as const;
 
 /**
  * Seats won at the April 2025 federal general election, by province and
@@ -9,7 +21,9 @@ import { CA_PARTY_SLUGS } from "./caParties";
  * table 7 (distribution of seats by political affiliation).
  * https://elections.ca/res/rep/off/ovrGE45/62/table7E.html
  */
-const SEATS_2025: Readonly<Record<string, Readonly<Record<string, number>>>> = {
+type SeatsByParty = Readonly<Partial<Record<keyof typeof PARTY, number>>>;
+
+const SEATS_2025: Readonly<Record<string, SeatsByParty>> = {
   CA_NL: { federalUnity: 4, nationalProsperity: 3 },
   CA_PE: { federalUnity: 4 },
   CA_NS: { federalUnity: 10, nationalProsperity: 1 },
@@ -30,7 +44,7 @@ export const CA_COMMONS_2027: HistoricalSeat[] = Object.entries(SEATS_2025).flat
     Object.entries(byParty).map(([party, seatsHeld]) => ({
       state,
       officeType: "caCommons" as const,
-      party: CA_PARTY_SLUGS[party as keyof typeof CA_PARTY_SLUGS],
+      party: PARTY[party as keyof typeof PARTY],
       seatsHeld,
     }))
 );
