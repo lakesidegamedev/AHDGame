@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { BSON } from "mongodb";
 import type { ResetRegionalOpeningBoard } from "@/lib/resetFinance/rules/regionalOpeningBoard";
 import type { OpeningLawReference } from "@/lib/resetLegislation/openingLaw";
 import type { ResetMetricSnapshot } from "@/lib/resetMetrics/rules/snapshot";
@@ -38,27 +39,35 @@ const reference = {
 } as unknown as OpeningLawReference;
 
 describe("successor reset v2 promotion rules", () => {
-  it("uses national metrics for the sovereign and departing region metrics for its sub-regions", () => {
-    const rows = buildSuccessorMetricRows({
-      countryId: "SCO",
-      aggregate: aggregateMetric,
-      national: {
-        ...aggregateMetric,
-        scope: "national",
-        observations: { inflation: { ...aggregateMetric.observations.unemployment!, value: 4 } },
-      },
-      regions: [
-        { id: "LOT", population: 2 },
-        { id: "HGL", population: 1 },
-      ],
-    });
+  it.each(["SCO", "WAL"] as const)(
+    "uses BSON-safe national metrics for %s and regional metrics for its sub-regions",
+    (countryId) => {
+      const rows = buildSuccessorMetricRows({
+        countryId,
+        aggregate: aggregateMetric,
+        national: {
+          ...aggregateMetric,
+          scope: "national",
+          observations: { inflation: { ...aggregateMetric.observations.unemployment!, value: 4 } },
+        },
+        regions: [
+          { id: "LOT", population: 2 },
+          { id: "HGL", population: 1 },
+        ],
+      });
 
-    expect(rows.map((row) => row._id)).toEqual(["SCO:national", "SCO:LOT", "SCO:HGL"]);
-    expect(rows[0]).toMatchObject({ countryId: "SCO", scope: "national" });
-    expect(rows[0]!.regionId).toBeUndefined();
-    expect(rows[0].observations.inflation.value).toBe(4);
-    expect(rows.slice(1).every((row) => row.observations.unemployment!.value === 8)).toBe(true);
-  });
+      expect(rows.map((row) => row._id)).toEqual([
+        `${countryId}:national`,
+        `${countryId}:LOT`,
+        `${countryId}:HGL`,
+      ]);
+      expect(rows[0]).toMatchObject({ countryId, scope: "national" });
+      expect(rows[0]!.regionId).toBeUndefined();
+      expect(BSON.deserialize(BSON.serialize(rows[0]))).not.toHaveProperty("regionId");
+      expect(rows[0].observations.inflation.value).toBe(4);
+      expect(rows.slice(1).every((row) => row.observations.unemployment!.value === 8)).toBe(true);
+    }
+  );
 
   it("conserves the aggregate fiscal book and assigns each sub-region only its share", () => {
     const rows = buildSuccessorRegionalRows({

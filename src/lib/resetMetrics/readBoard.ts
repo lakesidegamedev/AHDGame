@@ -2,7 +2,11 @@ import type { Db } from "mongodb";
 import type { GameState } from "@/lib/db/types/gameState";
 import { RESET_V2_READY } from "@/lib/resetVersions/availability";
 import { resetSystemVersionsForCountry, type ResetV2Readiness } from "@/lib/resetVersions/rules";
-import { buildResetMetricSnapshot, type ResetMetricSnapshot } from "./rules/snapshot";
+import {
+  buildResetMetricSnapshot,
+  normalizeNationalMetricBoard,
+  type ResetMetricSnapshot,
+} from "./rules/snapshot";
 
 export type ResetMetricBoardRead =
   | { status: "not_enabled" }
@@ -33,7 +37,7 @@ export async function readResetMetricBoard(
   const worldId = gameState?.resetWorldId;
   if (typeof worldId !== "string") return { status: "missing" };
   const id = `${countryId}:${regionId ?? "national"}`;
-  const board = await db.collection<ResetMetricSnapshot>("resetMetricSnapshots").findOne(
+  const stored = await db.collection<ResetMetricSnapshot>("resetMetricSnapshots").findOne(
     { _id: id, worldId },
     {
       projection: {
@@ -48,7 +52,8 @@ export async function readResetMetricBoard(
       },
     }
   );
-  if (!board) return { status: "missing" };
+  if (!stored) return { status: "missing" };
+  const board = normalizeNationalMetricBoard(stored);
   if (
     board.countryId !== countryId ||
     board.regionId !== regionId ||
