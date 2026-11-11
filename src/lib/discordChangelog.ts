@@ -327,7 +327,7 @@ async function notifyAllUsersOfUpdate(version: string): Promise<void> {
     // the character (characters.userId), not on the user document — users have
     // no characterId field, so the old users.characterId query matched nobody.
     const userIds = (await charactersCollection(db).distinct("userId", {
-      userId: { $exists: true, $ne: null },
+      userId: { $type: "objectId" },
     })) as ObjectId[];
 
     const notificationPromises = userIds.map((userId) =>
