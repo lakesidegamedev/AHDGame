@@ -8,13 +8,11 @@
  * laws are therefore left completely alone: rewriting a law's identity would
  * falsify the region's legislative history.
  *
- * What this fixes is what the survivor may NEWLY legislate. Germany's own 60
- * types are tax instruments (`de_income_tax_rate`, `de_vat_rate`); East
- * Germany's 115 are the socialist programme
+ * What this fixes is what the survivor may NEWLY legislate. Germany's book is
+ * the `de.*` metric laws; East Germany's is the socialist programme
  * (`dd.economy.workerSecurity.primary`, `dd.sec.machineTractorStations`). A
- * reunified one-party Germany that inherited only the first set could legislate
- * nothing but West German tax law, while the laws already on its books came from
- * a catalogue it could no longer touch. It takes the union of both.
+ * reunified one-party Germany that inherited only the first set could not
+ * continue the programme its enacted laws came from. It takes the union of both.
  */
 import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
