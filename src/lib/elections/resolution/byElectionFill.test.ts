@@ -37,7 +37,7 @@ vi.mock("@/lib/npp/generator", () => ({
 }));
 vi.mock("@/lib/turn/byElections", () => ({ processByElectionWatcher: vi.fn() }));
 
-import { fillUncontestedByElections } from "./byElectionFill";
+import { fillUncontestedByElections, processByElectionsWithFill } from "./byElectionFill";
 
 const now = new Date("2027-03-01T00:00:00Z");
 const toArray = (rows: unknown[]) => ({ toArray: async () => rows });
@@ -158,5 +158,13 @@ describe("fillUncontestedByElections", () => {
     await fillUncontestedByElections(db(), 100, now);
     expect(m.partyFind.mock.calls[0]![0]).toMatchObject({ isDefunct: { $ne: true } });
     expect(m.partyFind.mock.calls[0]![0]).not.toHaveProperty("defunct");
+  });
+});
+
+describe("processByElectionsWithFill", () => {
+  it("skips the fill guarantee when the world's switch is off", async () => {
+    await processByElectionsWithFill(db(), 100, now, {});
+    expect(m.electionFind).not.toHaveBeenCalled();
+    expect(m.candidateInsert).not.toHaveBeenCalled();
   });
 });

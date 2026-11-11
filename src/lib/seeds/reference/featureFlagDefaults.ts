@@ -120,6 +120,10 @@ export const FRESH_WORLD_GAME_CONFIG_FLAGS = {
   executiveSuccessionEnabled: true,
   leaderLegacyEnabled: true,
   campaignLiveGdpBasisEnabled: true,
+  byElectionFillEnabled: true,
+  scotusNppNominationsEnabled: true,
+  scotusPendingDocketEnabled: true,
+  preeGenericFallbackEnabled: true,
 } as const satisfies Partial<GameConfig>;
 
 export type FreshWorldGameConfigFlagKey = keyof typeof FRESH_WORLD_GAME_CONFIG_FLAGS;

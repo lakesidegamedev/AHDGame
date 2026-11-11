@@ -406,6 +406,30 @@ export interface GameConfig {
    */
   campaignLiveGdpBasisEnabled?: boolean;
   /**
+   * Operational switch for the by-election fill guarantee: an NPP candidate is
+   * filed for a live by-election nobody has entered before it closes. Fresh
+   * worlds seed true; absent or false leaves unentered by-elections empty.
+   */
+  byElectionFillEnabled?: boolean;
+  /**
+   * Operational switch for NPP Supreme Court nominations: a vacant seat gets a
+   * generated nominee when no player President is nominating. Fresh worlds
+   * seed true; absent or false waits for a player President.
+   */
+  scotusNppNominationsEnabled?: boolean;
+  /**
+   * Operational switch for the pending docket: a surprise case waits 12 to 36
+   * turns on the docket before the Court rules. Fresh worlds seed true; absent
+   * or false rules on the case the turn it is filed.
+   */
+  scotusPendingDocketEnabled?: boolean;
+  /**
+   * Operational switch for the undated random event fallback offered when a
+   * character has exhausted every dated pack. Fresh worlds seed true; absent or
+   * false offers nothing in that case.
+   */
+  preeGenericFallbackEnabled?: boolean;
+  /**
    * Funded producer market: >= 1 judges whether a cash-short company's run
    * pays for itself (the sales advance) with its inputs at last turn's
    * clearing price, never above the bid ceiling, instead of at the ceiling.
