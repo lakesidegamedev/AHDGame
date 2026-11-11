@@ -14,6 +14,10 @@ import { connectedGrowthFrontier } from "@/lib/parties/rules/territory";
 import { STATE_ADJACENCY } from "@/lib/constants/stateAdjacency";
 
 describe("expandFrontier", () => {
+  it.each(["DON", "KIL"])("connects Ulster to Irish parties in %s", (region) => {
+    expect(expandFrontier("IE", [region]).has("NIR")).toBe(true);
+    expect(expandFrontier("IE", ["NIR"]).has(region)).toBe(true);
+  });
   it("includes the presence state itself plus its neighbours", () => {
     const f = expandFrontier("US", ["TN"]);
     expect(f.has("TN")).toBe(true);

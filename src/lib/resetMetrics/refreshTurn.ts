@@ -117,6 +117,8 @@ export async function refreshResetMetricSnapshotsTurn(input: {
     )
     .toArray();
   const current = stored.map(normalizeNationalMetricBoard);
+  const storedById = new Map(stored.map((board) => [board._id, board]));
+  const currentById = new Map(current.map((board) => [board._id, board]));
   const ids = current.map((board) => board._id);
   const idSet = new Set(ids);
   if (current.length === 0 || idSet.size !== current.length) {
@@ -170,7 +172,12 @@ export async function refreshResetMetricSnapshotsTurn(input: {
           priorValues: board.priorValues,
           gameplayReferences: board.gameplayReferences,
         };
-        for (const id of changedIds) fields[`observations.${id}`] = board.observations[id];
+        const storedBoard = storedById.get(board._id)!;
+        const repairedIds = Object.keys(board.observations).filter(
+          (id) => storedBoard.observations[id] !== currentById.get(board._id)!.observations[id]
+        );
+        for (const id of new Set([...changedIds, ...repairedIds]))
+          fields[`observations.${id}`] = board.observations[id];
         if (board.housingState?.asOfTurn === turn) fields.housingState = board.housingState;
         if (board.householdProductionStatus?.evaluatedAtTurn === turn)
           fields.householdProductionStatus = board.householdProductionStatus;
