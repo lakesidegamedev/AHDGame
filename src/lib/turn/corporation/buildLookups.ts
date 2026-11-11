@@ -1,13 +1,6 @@
 import type { Db } from "mongodb";
 import { employmentStaffingTightness } from "@/lib/labour/rules/employment";
-import type {
-  Character,
-  CorporateSector,
-  FederalBudget,
-  CentralBank,
-  Bond,
-  GameState,
-} from "@/lib/db/types";
+import type { CorporateSector, FederalBudget, CentralBank, Bond, GameState } from "@/lib/db/types";
 import { excludePendingFederationFirms } from "@/lib/world/succession/rules/pendingFirmActivity";
 import {
   HONEST_LOANS_STAGE,
@@ -74,6 +67,7 @@ import { buildCommodityBalanceLookups } from "./buildLookupsCommodityBalances";
 import { buildExtractionAndPortfolioLookups } from "./buildLookupsExtraction";
 import { loadAutomationPolicies } from "@/lib/automationPolicy/policies";
 import { presetUsesSocietyPressures } from "@/lib/societyPressures/preset";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export async function buildCorporationLookups(
   db: Db,
@@ -293,8 +287,7 @@ export async function buildCorporationLookups(
     .filter((id, i, arr) => arr.findIndex((x) => x.equals(id)) === i);
   const ceoStatByCharId = new Map<string, number>();
   if (playerCeoIds.length > 0) {
-    const ceoChars = await db
-      .collection<Character>("characters")
+    const ceoChars = await charactersCollection(db)
       .find({ _id: { $in: playerCeoIds } }, { projection: { _id: 1, stats: 1 } })
       .toArray();
     for (const ch of ceoChars) {

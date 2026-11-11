@@ -41,7 +41,8 @@ import {
   type ChamberElectionRole,
 } from "@/lib/congress/leadership/openElection";
 import { openSpeakerElection } from "@/lib/congress/speaker/openSpeakerElection";
-import type { Character, CongressLeader, ElectedOfficial, LeadershipRole } from "@/lib/db/types";
+import type { CongressLeader, ElectedOfficial, LeadershipRole } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * The majority-party-gated roles, per chamber, paired with the per-chamber
@@ -114,8 +115,7 @@ export async function reconcileLeadershipPartyEligibility(
         $or: [{ characterId: { $in: holderIds } }, { nppId: { $in: holderIds } }],
       })
       .toArray(),
-    db
-      .collection<Character>("characters")
+    charactersCollection(db)
       .find({ _id: { $in: holderIds } }, { projection: { party: 1 } })
       .toArray(),
   ]);

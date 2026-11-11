@@ -16,7 +16,6 @@ import { resolveBundestagspraesidentElection } from "./resolveElection";
 import type {
   BundestagspraesidentElection,
   BundestagspraesidentNomination,
-  Character,
   ElectedOfficial,
   PoliticalParty,
 } from "@/lib/db/types";
@@ -26,6 +25,7 @@ import {
   isPartyEligible,
   POLICY_BY_ROLE,
 } from "@/lib/congress/leadership/rolePolicy";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const ELECTION_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -50,7 +50,7 @@ export async function handleBundestagspraesidentAction(ctx: ActionContext): Prom
 
   // declare, withdraw, vote require character + Bundestag membership
   const { db, bundestag, authUser, nominationId } = ctx;
-  const character = await db.collection<Character>("characters").findOne({
+  const character = await charactersCollection(db).findOne({
     userId: new ObjectId(authUser.userId),
   });
   if (!character) return { success: false, error: "No character", status: 400 };

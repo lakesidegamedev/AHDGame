@@ -5,7 +5,6 @@ import type {
   ElectionVoteTally,
   ElectedOfficial,
   NPP,
-  Character,
   CharacterStateOrg,
   Campaign,
 } from "@/lib/db/types";
@@ -46,6 +45,7 @@ import { logger } from "@/lib/observability/logger";
 import { captureOfficeTransition } from "@/lib/analytics/officeTransitionAnalytics";
 import { captureElectionWon } from "@/lib/analytics/electionAnalytics";
 import { loadSurvivingPartyResolver } from "@/lib/parties/survivingParty";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 function recoverUnitVotesFromSnapshots(
   unitTurnSnapshots: ElectionVoteTally["unitTurnSnapshots"],
@@ -112,15 +112,14 @@ async function vacatePresidency(
       { $set: { status: "withdrawn", withdrawnAt: now } }
     );
   const vacateCountryId = election.countryId ?? "US";
-  const departingPlayers = await db
-    .collection<Character>("characters")
+  const departingPlayers = await charactersCollection(db)
     .find(
       { countryId: vacateCountryId, "currentOffice.type": { $in: ["president", "vicePresident"] } },
       { projection: { party: 1, currentOffice: 1, careerHistory: 1 } }
     )
     .toArray()
     .catch(() => []);
-  await db.collection<Character>("characters").updateMany(
+  await charactersCollection(db).updateMany(
     {
       countryId: vacateCountryId,
       "currentOffice.type": { $in: ["president", "vicePresident"] },
@@ -630,8 +629,7 @@ export async function resolvePresidentElection(
     const runnerVotes = Object.entries(popularVotes)
       .filter(([candidateId]) => candidateId !== winnerId)
       .reduce((highest, [, votes]) => Math.max(highest, votes), 0);
-    const winnerAccount = await db
-      .collection<{ userId?: ObjectId }>("characters")
+    const winnerAccount = await charactersCollection<{ userId?: ObjectId }>(db)
       .findOne({ _id: winnerCandidate.characterId }, { projection: { userId: 1 } })
       .catch(() => null);
     await captureElectionWon({

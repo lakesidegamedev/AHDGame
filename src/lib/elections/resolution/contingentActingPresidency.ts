@@ -9,13 +9,7 @@
  */
 import { ObjectId } from "mongodb";
 import type { Db } from "@/lib/mongodb";
-import type {
-  Character,
-  Election,
-  ElectionCandidate,
-  ElectionVoteTally,
-  NPP,
-} from "@/lib/db/types";
+import type { Election, ElectionCandidate, ElectionVoteTally, NPP } from "@/lib/db/types";
 import { createNotifications, type NotificationInput } from "@/lib/notifications";
 import { DISCORD_COLORS, sendCountryGameEvent } from "@/lib/discordWebhooks";
 import type { ContingentElectionResult } from "@/lib/elections/contingentElection";
@@ -23,6 +17,7 @@ import { seatPresidentialExecutive } from "@/lib/elections/resolution/presidentE
 import { isNppContingentId, toCharacterObjectId, toNppObjectId } from "./contingentPersonIds";
 import { notifyHouseVoteOpened } from "./contingentHouseVoteNotices";
 import { logger } from "@/lib/observability/logger";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /** How long the House keeps voting after a deadlock (hourly turns: about a day). */
 export const CONTINGENT_HOUSE_VOTE_TURNS = 24;
@@ -49,9 +44,10 @@ async function loadActingPerson(
     return { characterId: null, nppId, name: npp.name, party: npp.party ?? "independent" };
   }
   const characterId = toCharacterObjectId(personId);
-  const char = await db
-    .collection<Character>("characters")
-    .findOne({ _id: characterId }, { projection: { name: 1, party: 1 } });
+  const char = await charactersCollection(db).findOne(
+    { _id: characterId },
+    { projection: { name: 1, party: 1 } }
+  );
   if (!char) throw new Error(`Acting president character ${personId} not found`);
   return { characterId, nppId: null, name: char.name, party: char.party ?? "independent" };
 }
@@ -156,9 +152,10 @@ export async function announceActingPresidency(
     const userOf = async (characterId: ObjectId | null | undefined) =>
       characterId
         ? ((
-            await db
-              .collection<Character>("characters")
-              .findOne({ _id: characterId }, { projection: { userId: 1 } })
+            await charactersCollection(db).findOne(
+              { _id: characterId },
+              { projection: { userId: 1 } }
+            )
           )?.userId ?? null)
         : null;
 

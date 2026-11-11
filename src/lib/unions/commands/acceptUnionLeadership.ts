@@ -9,6 +9,7 @@ import {
   isUnionProsecutionBarred,
   UNION_PROSECUTION_MESSAGE,
 } from "@/lib/unions/unionProsecutionBar";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export type AcceptUnionLeadershipResult =
   { ok: true; status: 200; unionId: ObjectId } | { ok: false; status: number; error: string };
@@ -84,7 +85,7 @@ export async function acceptUnionLeadership(
     );
     if (unionClaim.modifiedCount === 0) throw new Error("OFFER_GONE");
 
-    const charClaim = await db.collection<Character>("characters").updateOne(
+    const charClaim = await charactersCollection(db).updateOne(
       {
         _id: character._id,
         $or: [
@@ -99,13 +100,11 @@ export async function acceptUnionLeadership(
     if (charClaim.modifiedCount === 0) throw new Error("CHARACTER_ALREADY_LEADING");
 
     if (previousPlayerOwnerId && previousPlayerOwnerId.toString() !== character._id.toString()) {
-      await db
-        .collection<Character>("characters")
-        .updateOne(
-          { _id: previousPlayerOwnerId, unionLeaderOf: union._id },
-          { $set: { unionLeaderOf: null, updatedAt: now } },
-          opts
-        );
+      await charactersCollection(db).updateOne(
+        { _id: previousPlayerOwnerId, unionLeaderOf: union._id },
+        { $set: { unionLeaderOf: null, updatedAt: now } },
+        opts
+      );
     }
   }
 
@@ -133,12 +132,10 @@ export async function acceptUnionLeadership(
                 ...(union.ownerType ? {} : { $unset: { ownerType: "" } }),
               }
             );
-            await db
-              .collection<Character>("characters")
-              .updateOne(
-                { _id: character._id, unionLeaderOf: union._id },
-                { $set: { unionLeaderOf: null, updatedAt: now } }
-              );
+            await charactersCollection(db).updateOne(
+              { _id: character._id, unionLeaderOf: union._id },
+              { $set: { unionLeaderOf: null, updatedAt: now } }
+            );
           }
           throw error;
         }

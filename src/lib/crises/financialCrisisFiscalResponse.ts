@@ -1,6 +1,6 @@
 import type { Db } from "mongodb";
 import type { CrisisDecisionOption } from "@/lib/db/types/crisis";
-import type { FederalBudget, Character } from "@/lib/db/types";
+import type { FederalBudget } from "@/lib/db/types";
 import type { SovereignCrisisDecision } from "@/lib/db/types/sovereignCrisisDecision";
 import { getOfficeTypeConfig, type CountryId } from "@/lib/constants/countries";
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
@@ -16,6 +16,7 @@ import { buildInitialLegislativePhases } from "@/lib/sovereignDefault/legislativ
 import type { CrisisActionContext } from "./optionActions";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export type FinancialFiscalResponse =
   "stimulus" | "austerity" | "restructure" | "sovereign_support";
@@ -89,9 +90,7 @@ export async function applyFinancialFiscalResponse(
   if (response === "restructure") {
     // The global responder proposes; the existing lower/upper chamber pipeline
     // alone can authorize an actual haircut and creditor cascade.
-    const actor = await ctx.db
-      .collection<Character>("characters")
-      .findOne({ _id: ctx.characterId });
+    const actor = await charactersCollection(ctx.db).findOne({ _id: ctx.characterId });
     const office = actor?.currentOffice?.type;
     const config = office ? getOfficeTypeConfig(ctx.countryId as CountryId, office) : undefined;
     if (actor?.countryId !== ctx.countryId || !config?.isExecutive || config.isSubNational)

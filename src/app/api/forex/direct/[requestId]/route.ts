@@ -29,6 +29,7 @@ import {
   NEW_CHARACTER_TRANSFER_BARRIER_TURNS,
 } from "@/lib/character/newCharacterTransferBarrier";
 import type { CurrencyOrder, Character, TradeHistoryEntry, PlayerMail } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteParams {
   params: Promise<{ requestId: string }>;
@@ -77,9 +78,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     if (action === "decline") {
       const refundInc = buildPersonalBalanceInc(order.amount, order.fromCurrency, true);
-      const sender = await db
-        .collection<Character>("characters")
-        .findOne({ _id: order.characterId });
+      const sender = await charactersCollection(db).findOne({ _id: order.characterId });
 
       await runWithOptionalTransaction(
         async (session) => {
@@ -92,9 +91,11 @@ export async function POST(request: Request, { params }: RouteParams) {
             );
           if (!claimedOrder) throw badRequest("Trade request is no longer open");
 
-          await db
-            .collection("characters")
-            .updateOne({ _id: order.characterId }, { $inc: refundInc }, { session });
+          await charactersCollection(db).updateOne(
+            { _id: order.characterId },
+            { $inc: refundInc },
+            { session }
+          );
           const cancelResult = await db
             .collection<CurrencyOrder>("currencyOrders")
             .updateOne(
@@ -124,12 +125,13 @@ export async function POST(request: Request, { params }: RouteParams) {
           // unrefunded order safely can.
           const refundStamp = `direct-decline:${order._id.toString()}`;
           try {
-            const refundResult = await db
-              .collection<Character>("characters")
-              .updateOne({ _id: order.characterId, [SETTLED_KEYS_FIELD]: { $ne: refundStamp } }, {
+            const refundResult = await charactersCollection(db).updateOne(
+              { _id: order.characterId, [SETTLED_KEYS_FIELD]: { $ne: refundStamp } },
+              {
                 $inc: refundInc,
                 $push: settledKeyPush(refundStamp),
-              } as unknown as UpdateFilter<Character>);
+              } as unknown as UpdateFilter<Character>
+            );
             if (
               refundResult.matchedCount === 0 &&
               !(await documentHasStamp(db, "characters", { _id: order.characterId }, refundStamp))
@@ -354,7 +356,7 @@ export async function POST(request: Request, { params }: RouteParams) {
           );
         if (!claimedOrder) throw badRequest("Trade request is no longer open");
 
-        const targetUpdate = await db.collection("characters").updateOne(
+        const targetUpdate = await charactersCollection(db).updateOne(
           {
             _id: character._id,
             [`currencyBalances.personal.${order.toCurrency}`]: { $gte: targetCost },
@@ -368,9 +370,11 @@ export async function POST(request: Request, { params }: RouteParams) {
           );
         }
 
-        await db
-          .collection("characters")
-          .updateOne({ _id: order.characterId }, { $inc: senderCreditInc }, { session });
+        await charactersCollection(db).updateOne(
+          { _id: order.characterId },
+          { $inc: senderCreditInc },
+          { session }
+        );
 
         await distributeSpreadFees(session);
 
@@ -409,7 +413,7 @@ export async function POST(request: Request, { params }: RouteParams) {
         let spreadFeesApplied = 0;
 
         try {
-          const targetUpdate = await db.collection("characters").updateOne(
+          const targetUpdate = await charactersCollection(db).updateOne(
             {
               _id: character._id,
               [`currencyBalances.personal.${order.toCurrency}`]: { $gte: targetCost },
@@ -429,9 +433,10 @@ export async function POST(request: Request, { params }: RouteParams) {
           }
           targetDebited = true;
 
-          await db
-            .collection("characters")
-            .updateOne({ _id: order.characterId }, { $inc: senderCreditInc });
+          await charactersCollection(db).updateOne(
+            { _id: order.characterId },
+            { $inc: senderCreditInc }
+          );
           senderCredited = true;
 
           spreadFeesApplied = await distributeSpreadFees();
@@ -456,18 +461,20 @@ export async function POST(request: Request, { params }: RouteParams) {
           const compensationErrors = await reverseAppliedSpreadFees(spreadFeesApplied);
           if (senderCredited) {
             try {
-              await db
-                .collection("characters")
-                .updateOne({ _id: order.characterId }, { $inc: senderRollbackInc });
+              await charactersCollection(db).updateOne(
+                { _id: order.characterId },
+                { $inc: senderRollbackInc }
+              );
             } catch (compensationError) {
               compensationErrors.push(compensationError);
             }
           }
           if (targetDebited) {
             try {
-              await db
-                .collection("characters")
-                .updateOne({ _id: character._id }, { $inc: targetRollbackInc });
+              await charactersCollection(db).updateOne(
+                { _id: character._id },
+                { $inc: targetRollbackInc }
+              );
             } catch (compensationError) {
               compensationErrors.push(compensationError);
             }
@@ -488,7 +495,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       }
     );
 
-    const sender = await db.collection<Character>("characters").findOne({ _id: order.characterId });
+    const sender = await charactersCollection(db).findOne({ _id: order.characterId });
     if (sender) {
       const mail: Omit<PlayerMail, "_id"> = {
         fromCharacterId: character._id,

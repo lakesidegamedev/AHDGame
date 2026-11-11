@@ -40,6 +40,7 @@ import {
 } from "@/lib/lineOfCredit/controlledEquity";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const DEFAULT_PRIME = 2.5;
 
@@ -177,8 +178,7 @@ export async function buildLocSnapshot(
       ? Promise.resolve(null)
       : centralBanksCollection(db).findOne({ _id: poolBankId }),
     // Aggregate total outstanding LOC in the pool currency across all borrowers
-    db
-      .collection<Character>("characters")
+    charactersCollection(db)
       .aggregate<{ totalBalance: number; totalArrears: number }>([
         {
           $match: {

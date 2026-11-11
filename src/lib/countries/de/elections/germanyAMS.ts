@@ -32,6 +32,7 @@ import { buildDEPartySlugToSeqId } from "@/lib/seeds/de/deStatePartyOrgCalculati
 import { getLiveLowerChamberSeats } from "@/lib/legislature/lowerChamberSeats";
 import { captureElectionWon } from "@/lib/analytics/electionAnalytics";
 import { reconcileBundestagHolderOffices } from "./bundestagHolderOffices";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const VOTE_THRESHOLD = BUNDESTAG_VOTE_THRESHOLD;
 
@@ -354,8 +355,7 @@ async function buildCandidateMap(
     if (list && list.candidates.length > 0) {
       ids = list.candidates;
     } else {
-      const members = await db
-        .collection<Character>("characters")
+      const members = await charactersCollection(db)
         .find(
           { countryId: "DE", party: a.partyId, homeState: a.landId },
           { projection: { _id: 1, nationalInfluence: 1 } }
@@ -378,8 +378,7 @@ async function buildCandidateMap(
   // Resolve names for every referenced candidate in one batch.
   const nameById = new Map<string, string>();
   if (allIds.length > 0) {
-    const chars = await db
-      .collection<Character>("characters")
+    const chars = await charactersCollection(db)
       .find({ _id: { $in: allIds } }, { projection: { _id: 1, name: 1 } })
       .toArray();
     for (const c of chars) {

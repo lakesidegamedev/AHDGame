@@ -36,6 +36,7 @@ import type {
   State,
 } from "@/lib/db/types";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * What each kind costs and does, so the gate, the debit and the stored row all
@@ -184,8 +185,7 @@ export async function POST(request: Request, { params }: RouteParams) {
         `Not enough campaign funds. A local attack costs $${Math.round(costFundsLocal).toLocaleString("en-US")}.`
       );
     }
-    const freshChar = await db
-      .collection<Character>("characters")
+    const freshChar = await charactersCollection(db)
       .findOne({ _id: character._id }, { projection: { actions: 1 } });
     if (!freshChar || freshChar.actions < terms.costActions) {
       return errorResponse(400, `Not enough actions. That costs ${terms.costActions}.`);

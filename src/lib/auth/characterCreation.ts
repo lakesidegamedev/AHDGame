@@ -54,11 +54,13 @@ import { findPartyBySequentialId } from "@/lib/db/partyLookup";
 import { canCharacterJoinParty } from "@/lib/parties/partyFrontier";
 import { withPartyTerritoryMutation } from "@/lib/parties/territoryMutation";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import type { Document } from "mongodb";
 
 const MIN_STARTING_DONOR_BASE_LEVEL = 1;
 
 async function repairLegacyCharacterUserIdIndex(db: Db): Promise<boolean> {
-  const collection = db.collection("characters");
+  const collection = charactersCollection<Document>(db);
   const indexes = await collection.indexes();
   const userIdIndexes = indexes.filter((index) => index.key?.userId === 1);
   const legacyIndex = userIdIndexes.find((index) => index.unique === true);
@@ -415,14 +417,14 @@ export async function createCharacterForAccount(userId: string, data: CreateChar
 
     let result: { insertedId: ObjectId };
     try {
-      result = await db.collection("characters").insertOne(character);
+      result = await charactersCollection<Document>(db).insertOne(character);
     } catch (err) {
       // Older environments can still carry the legacy unique characters.userId index.
       // Admin/test-mode multi-character creation is the first place that stale index surfaces.
       if (isUserIdDuplicateKey(err)) {
         if ((isAdmin || isTestMode) && (await repairLegacyCharacterUserIdIndex(db))) {
           try {
-            result = await db.collection("characters").insertOne(character);
+            result = await charactersCollection<Document>(db).insertOne(character);
             // Retry succeeded after removing the stale unique userId index.
           } catch (retryErr) {
             await releaseSlot();
@@ -468,8 +470,7 @@ export async function createCharacterForAccount(userId: string, data: CreateChar
 
     // Reward referrer: +10 actions, +$500k personal capital, increment referralCount
     if (isReferred && userDoc?.referredBy) {
-      const referrerChar = await db
-        .collection("characters")
+      const referrerChar = await charactersCollection<Document>(db)
         .findOne({ userId: userDoc.referredBy });
       if (referrerChar) {
         const referrerCountry = (referrerChar.countryId as string) ?? "US";
@@ -481,7 +482,7 @@ export async function createCharacterForAccount(userId: string, data: CreateChar
         if (contestActive) referrerUserInc.referralContestCount = 1;
 
         await Promise.all([
-          db.collection("characters").updateOne(
+          charactersCollection<Document>(db).updateOne(
             { _id: referrerChar._id },
             {
               $inc: {
@@ -500,8 +501,7 @@ export async function createCharacterForAccount(userId: string, data: CreateChar
         // Clamp the post-bonus total at the referrer's Energy-scaled action cap
         // (matches actionRefresh), not the static baseline.
         const referrerCap = energyActionLimits(referrerChar.stats?.energy ?? STAT_MIN).cap;
-        await db
-          .collection("characters")
+        await charactersCollection<Document>(db)
           .updateOne({ _id: referrerChar._id }, [
             { $set: { actions: { $min: [referrerCap, "$actions"] } } },
           ]);

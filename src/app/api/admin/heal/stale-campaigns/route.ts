@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError } from "@/lib/api/errors";
-import type { Campaign, Election, ElectionCandidate, Character } from "@/lib/db/types";
+import type { Campaign, Election, ElectionCandidate } from "@/lib/db/types";
 import { ObjectId } from "mongodb";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * GET /api/admin/heal/stale-campaigns
@@ -55,8 +56,7 @@ export async function GET() {
 
     // Gather all referenced non-NPP candidate character IDs to check countryId
     const charIds = allCampaigns.filter((c) => !c.candidateIsNPP).map((c) => c.candidateId);
-    const characters = await db
-      .collection<Character>("characters")
+    const characters = await charactersCollection(db)
       .find({ _id: { $in: charIds } })
       .toArray();
     const charMap = new Map(characters.map((c) => [c._id.toString(), c]));
@@ -201,8 +201,7 @@ export async function POST() {
     );
 
     const charIds = allCampaigns.filter((c) => !c.candidateIsNPP).map((c) => c.candidateId);
-    const characters = await db
-      .collection<Character>("characters")
+    const characters = await charactersCollection(db)
       .find({ _id: { $in: charIds } })
       .toArray();
     const charMap = new Map(characters.map((c) => [c._id.toString(), c]));

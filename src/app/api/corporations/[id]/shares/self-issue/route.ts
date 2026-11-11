@@ -12,14 +12,7 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQuery";
 import { subsidiaryIssuanceBlockReason } from "@/lib/corporations/subsidiaries/issuanceGuard";
 import { CEO_SELF_ISSUANCE_PREMIUM, MAX_SELF_ISSUANCE_PERCENT } from "@/lib/constants/corporations";
-import type {
-  Character,
-  Corporation,
-  GameState,
-  ShareListing,
-  ShareOrder,
-  User,
-} from "@/lib/db/types";
+import type { Corporation, GameState, ShareListing, ShareOrder, User } from "@/lib/db/types";
 import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
 import type { CorporationVote } from "@/lib/db/types/corporationVote";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
@@ -47,6 +40,7 @@ import {
   refundImperialCash,
 } from "@/lib/financialTxLog/atomicCashGuard";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -177,7 +171,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       const characterQuery = userDoc?.activeCharacterId
         ? { _id: userDoc.activeCharacterId, userId: new ObjectId(auth.user.userId) }
         : { userId: new ObjectId(auth.user.userId) };
-      const character = await db.collection<Character>("characters").findOne(characterQuery);
+      const character = await charactersCollection(db).findOne(characterQuery);
       if (!character) {
         return errorResponse(404, "Character not found");
       }

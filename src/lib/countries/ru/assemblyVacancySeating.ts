@@ -4,7 +4,7 @@
  * commits list transfers atomically and journals unavailable winners for retry.
  */
 import { ObjectId, type ClientSession, type Db } from "mongodb";
-import type { Character, NPP, ElectedOfficial, CountryGameState } from "@/lib/db/types";
+import type { NPP, ElectedOfficial, CountryGameState } from "@/lib/db/types";
 import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
 import {
@@ -19,6 +19,7 @@ import { loadRussianAssemblySeatingInputs } from "./assemblySeatingInputs";
 import { russianAssemblyOfficialId } from "./assemblyOfficialIdentity";
 import { planRussianAssemblyVacancySeating } from "./rules/assemblyVacancySeating";
 import type { RussianAssemblySeat } from "./rules/assemblySeating";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export async function materializeRussianAssemblyVacancySeating(input: {
   db: Db;
@@ -323,7 +324,7 @@ export async function materializeRussianAssemblyVacancySeating(input: {
     (row) => !owners.has(`player:${row.ownerId}`) && !governmentOffices.has(`player:${row.ownerId}`)
   );
   if (clearMirrors.length)
-    await db.collection<Character>("characters").updateMany(
+    await charactersCollection(db).updateMany(
       {
         _id: { $in: clearMirrors.map((row) => new ObjectId(row.ownerId)) },
         "currentOffice.type": "dumaDeputy",
@@ -371,7 +372,7 @@ export async function materializeRussianAssemblyVacancySeating(input: {
     }));
     const updated = isNpc
       ? await db.collection<NPP>("npps").bulkWrite(operations, { session })
-      : await db.collection<Character>("characters").bulkWrite(operations, { session });
+      : await charactersCollection(db).bulkWrite(operations, { session });
     if (updated.matchedCount !== selected.length)
       throw new Error("Assembly vacancy owner changed during seating");
   }

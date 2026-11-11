@@ -4,8 +4,8 @@ import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import { z } from "zod";
-import type { Character } from "@/lib/db/types";
 import { awardAchievement } from "@/lib/achievements";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const bulkGrantSchema = z.object({
   achievementSlug: z.string().min(1),
@@ -32,7 +32,7 @@ export async function POST(request: Request) {
       return errorResponse(404, "Achievement not found");
     }
 
-    const characters = await db.collection<Character>("characters").find({}).toArray();
+    const characters = await charactersCollection(db).find({}).toArray();
     let granted = 0;
     for (const char of characters) {
       const ok = await awardAchievement(

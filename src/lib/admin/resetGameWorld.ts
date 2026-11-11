@@ -8,7 +8,7 @@ import { fetchExchangeRateMap } from "@/lib/world/forex";
 import { resolveStartingPartiesMode, type StartingPartiesMode } from "./startingParties";
 import { MongoServerError, ObjectId, type Db } from "mongodb";
 import { randomUUID } from "node:crypto";
-import type { Character, GameState, ImperialCharacter, User } from "@/lib/db/types";
+import type { GameState, ImperialCharacter, User } from "@/lib/db/types";
 import type { Counter } from "@/lib/db/types/counter";
 import type { GameConfig } from "@/lib/db/types/gameConfig";
 import { getStartingYearForPreset } from "@/lib/constants/turnTime";
@@ -46,6 +46,7 @@ import {
   type ResetVersionState,
 } from "@/lib/resetVersions/rules";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * Runtime collections that `resetGameWorld` handles with bespoke logic instead
@@ -381,7 +382,7 @@ export async function resetGameWorld(
       // A recap is a keepsake, not a precondition: if the build fails the reset
       // proceeds and characters retire without one.
       try {
-        const charsForRecap = await db.collection<Character>("characters").find({}).toArray();
+        const charsForRecap = await charactersCollection(db).find({}).toArray();
         log(`building season recaps for ${charsForRecap.length} characters`);
         seasonRecaps = await buildSeasonRecaps(
           db,
@@ -429,7 +430,7 @@ export async function resetGameWorld(
   let usersDeleted = 0;
 
   if (options.deleteProfiles) {
-    const deleteResult = await db.collection("characters").deleteMany({});
+    const deleteResult = await charactersCollection(db).deleteMany({});
     charactersDeleted = deleteResult.deletedCount;
 
     // Staff and banned accounts survive; see FULL_RESET_DELETABLE_USERS_FILTER.
@@ -451,7 +452,7 @@ export async function resetGameWorld(
         `staff and banned accounts kept`
     );
   } else {
-    const allCharacters = await db.collection<Character>("characters").find({}).toArray();
+    const allCharacters = await charactersCollection(db).find({}).toArray();
     charactersReset = allCharacters.length;
 
     // `retireCharacter` is ~25 sequential writes per character, so on a

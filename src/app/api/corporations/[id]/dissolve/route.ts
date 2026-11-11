@@ -54,6 +54,7 @@ import { writeGovBudgetLocal } from "@/lib/currency/govBudgetFields";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -314,8 +315,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
           const [shareholderChars, imperialShareholderChars, corpShareholderDocs] =
             await Promise.all([
               regularShareholderIds.length > 0
-                ? db
-                    .collection<Character>("characters")
+                ? charactersCollection(db)
                     .find(
                       { _id: { $in: regularShareholderIds } },
                       { projection: { _id: 1, name: 1, countryId: 1 } }
@@ -435,7 +435,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
           }
 
           if (characterOps.length > 0) {
-            await db.collection<Character>("characters").bulkWrite(characterOps);
+            await charactersCollection(db).bulkWrite(characterOps);
           }
           if (imperialOps.length > 0) {
             await db.collection<ImperialCharacter>("imperialCharacters").bulkWrite(imperialOps);

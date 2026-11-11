@@ -3,9 +3,10 @@ import { getDb } from "@/lib/mongodb";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { requireBotToken } from "@/lib/api/requireBotToken";
 import { checkRateLimit, rateLimitResponse, BOT_FINANCIAL_LIMITS } from "@/lib/api/rateLimit";
-import type { Character, User } from "@/lib/db/types";
+import type { User } from "@/lib/db/types";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { getTotalPersonalWealth } from "@/lib/currency/characterFunds";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 // GET /api/discord-bot/blackjack/balance?discordId=xxx
 // Returns the player's current liquid capital (cashOnHand) and character info.
@@ -40,7 +41,7 @@ export async function GET(request: Request) {
     }
 
     const [character, forexEnabled] = await Promise.all([
-      db.collection<Character>("characters").findOne({ userId: user._id }),
+      charactersCollection(db).findOne({ userId: user._id }),
       isForexEnabled(),
     ]);
 

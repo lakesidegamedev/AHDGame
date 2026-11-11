@@ -23,6 +23,7 @@ import { treasuryAdvanceMoneyDelta } from "@/lib/moneySupply/rules/assemble";
 import { getSovereignIssuerName, applySovereignDebtAdjustment } from "./sovereign";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * What happens to the part of a quarterly auction the pool would not take.
@@ -51,9 +52,10 @@ export async function handleSovereignShortfall(
   const annualCoupon = 0;
 
   if (bank?.chairCharacterId) {
-    const chair = await db
-      .collection<{ _id: ObjectId; userId?: ObjectId }>("characters")
-      .findOne({ _id: bank.chairCharacterId }, { projection: { userId: 1 } });
+    const chair = await charactersCollection<{ _id: ObjectId; userId?: ObjectId }>(db).findOne(
+      { _id: bank.chairCharacterId },
+      { projection: { userId: 1 } }
+    );
     if (chair?.userId) {
       const pct = Math.round((1 - args.unsoldTotal / Math.max(1, args.requestedTotal)) * 100);
       await createNotifications([

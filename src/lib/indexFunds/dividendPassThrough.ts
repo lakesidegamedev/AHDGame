@@ -39,6 +39,7 @@ import {
 } from "@/lib/indexFunds/fundTxLog";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * ₳ → fund-currency rate for a holder payout, matching what redeem applies.
@@ -172,8 +173,7 @@ export async function processIndexFundDividend(
   }[] = [];
   const [characterDocs, imperialDocs, nppDocs] = await Promise.all([
     characterIds.length > 0
-      ? db
-          .collection<Character>("characters")
+      ? charactersCollection(db)
           .find({ _id: { $in: characterIds } }, { projection: { _id: 1, name: 1 } })
           .toArray()
       : Promise.resolve([] as Pick<Character, "_id" | "name">[]),
@@ -522,8 +522,7 @@ export async function processIndexFundDividendsBatch(
           .toArray()
       : Promise.resolve([] as Corporation[]),
     charIds.length
-      ? db
-          .collection<Character>("characters")
+      ? charactersCollection(db)
           .find({ _id: { $in: charIds } }, { projection: { _id: 1, name: 1 } })
           .toArray()
       : Promise.resolve([] as Pick<Character, "_id" | "name">[]),

@@ -60,13 +60,13 @@ import { getCountryConfig } from "@/lib/constants/countries";
 import { DEFAULT_CUSTOM_ORG_CATEGORY } from "@/lib/constants/orgCategory";
 import { getStartingYearForPreset } from "@/lib/constants/turnTime";
 import { getHeadOfGovernmentCharacterId } from "@/lib/api/headOfGovernment";
-import type { Character } from "@/lib/db/types";
 import {
   isOrganizationFounded,
   loadOrgFoundingContext,
   resolveSeedRoster,
   type OrgFoundingContext,
 } from "./founding";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * Read-side aggregates used by the world page and per-org views.
@@ -245,9 +245,10 @@ async function resolvePermanentLeadership(
   if (!memberCountryIds.has(leaderCountry)) return vacant;
   const hogId = await getHeadOfGovernmentCharacterId(db, leaderCountry);
   if (!hogId) return vacant;
-  const character = await db
-    .collection<Character>("characters")
-    .findOne({ _id: hogId }, { projection: { name: 1 } });
+  const character = await charactersCollection(db).findOne(
+    { _id: hogId },
+    { projection: { name: 1 } }
+  );
   return {
     ...base,
     holderCharacterId: hogId,

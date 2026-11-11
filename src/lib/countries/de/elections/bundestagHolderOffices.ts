@@ -8,6 +8,7 @@ import type { Character, ElectedOfficial, NPP, OfficeType } from "@/lib/db/types
 import { captureOfficeTransition } from "@/lib/analytics/officeTransitionAnalytics";
 import { getExecutiveOfficeKeys } from "@/lib/elections/executiveOffice";
 import { preserveExecutiveOffice } from "@/lib/elections/resolution/generalResolutionHelpers";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export async function reconcileBundestagHolderOffices(
   db: Db,
@@ -25,8 +26,7 @@ export async function reconcileBundestagHolderOffices(
   const characterIds = officials.flatMap((o) => (o.characterId ? [o.characterId] : []));
   const nppIds = officials.flatMap((o) => (o.nppId ? [o.nppId] : []));
   const [characters, npps] = await Promise.all([
-    db
-      .collection<Character>("characters")
+    charactersCollection(db)
       .find(
         { _id: { $in: characterIds } },
         { projection: { _id: 1, currentOffice: 1, party: 1, userId: 1 } }
@@ -45,8 +45,7 @@ export async function reconcileBundestagHolderOffices(
   };
   const departingPlayers =
     currentTurn !== undefined
-      ? await db
-          .collection<Character>("characters")
+      ? await charactersCollection(db)
           .find(departingFilter, { projection: { _id: 1, party: 1 } })
           .toArray()
           .catch(() => [])
@@ -114,12 +113,11 @@ export async function reconcileBundestagHolderOffices(
   }
   if (vacancyWrites.length)
     await db.collection<ElectedOfficial>("electedOfficials").bulkWrite(vacancyWrites);
-  if (characterWrites.length)
-    await db.collection<Character>("characters").bulkWrite(characterWrites);
+  if (characterWrites.length) await charactersCollection(db).bulkWrite(characterWrites);
   if (nppWrites.length) await db.collection<NPP>("npps").bulkWrite(nppWrites);
-  await db
-    .collection<Character>("characters")
-    .updateMany(departingFilter, { $set: { currentOffice: null, updatedAt: now } });
+  await charactersCollection(db).updateMany(departingFilter, {
+    $set: { currentOffice: null, updatedAt: now },
+  });
   await db
     .collection<NPP>("npps")
     .updateMany(

@@ -13,6 +13,7 @@ import type {
 } from "../types";
 import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * Brazil's bondholders were force-converted out of BRL at a rate the engine
@@ -369,8 +370,7 @@ async function loadRecipients(
   const corporationIds = toObjectIds(credits, "corporation");
   const [characters, corporations] = await Promise.all([
     characterIds.length > 0
-      ? db
-          .collection<CharacterDoc>("characters")
+      ? charactersCollection<CharacterDoc>(db)
           .find({ _id: { $in: characterIds } })
           .toArray()
       : Promise.resolve([]),

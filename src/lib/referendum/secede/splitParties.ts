@@ -25,6 +25,8 @@ import { populationWeights } from "./apportion";
 import { SUB_REGION_SEEDS, CAPITAL_SUBREGION, type SecedingCountryId } from "./subRegions";
 import { planPartyRemap, type RegionParty } from "./partyRemap";
 import { remapRecruitmentSlates } from "./remapRecruitmentSlates";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import type { Document } from "mongodb";
 
 /** Region-party ledger collections dissolved on secession (the new country reseeds). */
 const REGION_PARTY_LEDGERS = [
@@ -100,8 +102,7 @@ export async function splitParties(
     regionParties.push({ sequentialId: seqId, isRegionHomed: !hasOutsidePresence(seqId) });
   }
 
-  const residentLeaders = await db
-    .collection("characters")
+  const residentLeaders = await charactersCollection<Document>(db)
     .find(
       { countryId: { $in: [fromCountryId, toCountryId] } },
       { projection: { _id: 1, countryId: 1, party: 1 } }
@@ -308,7 +309,7 @@ export async function splitParties(
     );
   const outsideMembers = { countryId: fromCountryId, party: { $in: wholesaleIds } };
   const independentize = { $set: { party: "independent", updatedAt: now } };
-  await db.collection("characters").updateMany(outsideMembers, independentize);
+  await charactersCollection<Document>(db).updateMany(outsideMembers, independentize);
   await db.collection("npps").updateMany(outsideMembers, independentize);
   const budgets = await db
     .collection("partyBudget")

@@ -13,11 +13,11 @@ import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError, badRequest, errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
-import type { Character } from "@/lib/db/types";
 import { ZOD_ACTIVE_CURRENCY_ENUM } from "@/lib/constants/currencies";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { isValidFundingSource } from "@/lib/lineOfCredit/fundingSource";
 import type { LoanFundingSource } from "@/lib/db/types/character";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const bodySchema = z.object({
   characterId: z.string().min(1),
@@ -46,7 +46,7 @@ export async function POST(request: Request) {
 
     const db = await getDb();
     const charObjectId = new ObjectId(characterId);
-    const res = await db.collection<Character>("characters").updateOne(
+    const res = await charactersCollection(db).updateOne(
       { _id: charObjectId, [`lineOfCredit.accountsOpened.${c}`]: true },
       {
         $set: {

@@ -16,7 +16,6 @@ import type {
   NPP,
   OfficeType,
   CareerEvent,
-  Character,
 } from "@/lib/db/types";
 import { createNotifications, type NotificationInput } from "@/lib/notifications";
 import {
@@ -58,6 +57,7 @@ import {
 import { loadGeneralElectionCandidates } from "./generalResolutionCandidates";
 import { selectGeneralElectionWinners } from "./generalResolutionWinners";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export type { OneElectionResult } from "./generalResolutionHelpers";
 
@@ -454,12 +454,10 @@ export async function resolveOneGeneralElection(
           }
 
           if (incumbent.characterId) {
-            await db
-              .collection<Character>("characters")
-              .updateOne(
-                { _id: incumbent.characterId, ...officeFilter },
-                { $set: { currentOffice: null, updatedAt: now } }
-              );
+            await charactersCollection(db).updateOne(
+              { _id: incumbent.characterId, ...officeFilter },
+              { $set: { currentOffice: null, updatedAt: now } }
+            );
             officeAnalytics.push({
               officeType: incumbent.officeType,
               transitionType: "lost",
@@ -502,8 +500,7 @@ export async function resolveOneGeneralElection(
 
     const [prefetchedChars, prefetchedNpps] = await Promise.all([
       allCandidateCharIds.length > 0
-        ? db
-            .collection<Character>("characters")
+        ? charactersCollection(db)
             .find({ _id: { $in: allCandidateCharIds } })
             .toArray()
         : Promise.resolve([]),
@@ -735,7 +732,7 @@ export async function resolveOneGeneralElection(
           electionId: election._id.toString(),
           date: now,
         };
-        await db.collection<Character>("characters").updateOne(
+        await charactersCollection(db).updateOne(
           { _id: candidate.characterId },
           {
             $set: { currentOffice: charFinalOfficeType, updatedAt: now },
@@ -921,18 +918,16 @@ export async function resolveOneGeneralElection(
           );
       } else {
         // Vacate office if the loser currently holds this seat
-        await db
-          .collection<Character>("characters")
-          .updateOne(
-            { _id: candidate.characterId, ...loserOfficeMatch },
-            { $set: { currentOffice: null, updatedAt: now } }
-          );
+        await charactersCollection(db).updateOne(
+          { _id: candidate.characterId, ...loserOfficeMatch },
+          { $set: { currentOffice: null, updatedAt: now } }
+        );
         // Record the loss in career history (always, regardless of incumbency)
         const lostOffice: OfficeType =
           election.electionType === "sangiin"
             ? { type: "sangiin", state: election.state, chamberClass: election.chamberClass }
             : { type: election.electionType, state: election.state };
-        await db.collection<Character>("characters").updateOne(
+        await charactersCollection(db).updateOne(
           { _id: candidate.characterId },
           {
             $push: {

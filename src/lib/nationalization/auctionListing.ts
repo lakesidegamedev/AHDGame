@@ -1,14 +1,10 @@
 import type { Db, ObjectId } from "mongodb";
-import type {
-  Character,
-  Corporation,
-  CorporateSector,
-  NationalizationAuction,
-} from "@/lib/db/types";
+import type { Corporation, CorporateSector, NationalizationAuction } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { CorporationType, OperatingSectorType } from "@/lib/constants/corporations";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * Enriched, display-ready view of one open privatization auction (spec §13.3).
@@ -163,8 +159,7 @@ export async function buildAuctionListings(
   }
   const [bidderChars, bidderCorps] = await Promise.all([
     bidderCharIds.length > 0
-      ? db
-          .collection<Character>("characters")
+      ? charactersCollection(db)
           .find({ _id: { $in: bidderCharIds } })
           .project<{ _id: ObjectId; name: string }>({ _id: 1, name: 1 })
           .toArray()

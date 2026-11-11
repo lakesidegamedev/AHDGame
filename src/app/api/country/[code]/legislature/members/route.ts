@@ -21,6 +21,7 @@ import {
 } from "@/lib/legislature/lowerChamberSeats";
 import type { PoliticalParty, ElectedOfficial, State, Character, NPP } from "@/lib/db/types";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export async function GET(request: Request, { params }: { params: Promise<{ code: string }> }) {
   try {
@@ -145,8 +146,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
 
     const [playerDocs, nppDocs] = await Promise.all([
       playerIds.length > 0
-        ? db
-            .collection<Character>("characters")
+        ? charactersCollection(db)
             .find(
               { _id: { $in: playerIds } },
               { projection: { _id: 1, avatarUrl: 1, sequentialId: 1 } }

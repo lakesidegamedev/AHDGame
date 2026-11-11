@@ -1,8 +1,9 @@
 import type { Db } from "mongodb";
 import type { ObjectId } from "mongodb";
-import type { Character, ElectedOfficial, User } from "@/lib/db/types";
+import type { ElectedOfficial, User } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { getOfficeTypeForChamber } from "@/lib/legislature/chamberOfficeType";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * Returns characterIds of seated, non-NPP, non-banned party members eligible
@@ -41,8 +42,7 @@ export async function getEligibleCharactersForWhip(
   if (characterIds.length === 0) return [];
 
   // Resolve characters → users so we can filter out banned users.
-  const characters = await db
-    .collection<Character>("characters")
+  const characters = await charactersCollection(db)
     .find({ _id: { $in: characterIds } })
     .project<{ _id: ObjectId; userId: ObjectId }>({ _id: 1, userId: 1 })
     .toArray();

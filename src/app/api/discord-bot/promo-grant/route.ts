@@ -24,6 +24,7 @@ import {
   type PromoGrant,
 } from "@/lib/promo/promoGrants";
 import type { Character, ExchangeRate, User } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const BOT_ADMIN_NAME = "Discord Bot";
 
@@ -99,9 +100,10 @@ async function creditCharacter(
   if (isRetry) {
     // A retry may target a different character than the attempt that died,
     // so look for the receipt on any character before paying again.
-    const paidEarlier = await db
-      .collection<Character>("characters")
-      .findOne({ promoGrantReceipts: receipt }, { projection: { _id: 1 } });
+    const paidEarlier = await charactersCollection(db).findOne(
+      { promoGrantReceipts: receipt },
+      { projection: { _id: 1 } }
+    );
     if (paidEarlier) return;
   }
   const setStage: Record<string, unknown> = credit.forexEnabled
@@ -112,14 +114,16 @@ async function creditCharacter(
   };
   setStage.updatedAt = new Date();
 
-  const result = await db
-    .collection<Character>("characters")
-    .updateOne({ _id: characterId, promoGrantReceipts: { $ne: receipt } }, [{ $set: setStage }]);
+  const result = await charactersCollection(db).updateOne(
+    { _id: characterId, promoGrantReceipts: { $ne: receipt } },
+    [{ $set: setStage }]
+  );
   if (result.matchedCount === 1) return;
 
-  const alreadyCredited = await db
-    .collection<Character>("characters")
-    .findOne({ _id: characterId, promoGrantReceipts: receipt }, { projection: { _id: 1 } });
+  const alreadyCredited = await charactersCollection(db).findOne(
+    { _id: characterId, promoGrantReceipts: receipt },
+    { projection: { _id: 1 } }
+  );
   if (!alreadyCredited) throw new Error("Promo grant target character not found");
 }
 
@@ -200,10 +204,8 @@ export async function POST(request: Request) {
     if (!user || user.isBanned) return errorResponse(404, "No linked account");
 
     const character = characterId
-      ? await db
-          .collection<Character>("characters")
-          .findOne({ _id: new ObjectId(characterId), userId: user._id })
-      : await db.collection<Character>("characters").findOne({ userId: user._id });
+      ? await charactersCollection(db).findOne({ _id: new ObjectId(characterId), userId: user._id })
+      : await charactersCollection(db).findOne({ userId: user._id });
     if (!character) return errorResponse(404, "No active character");
 
     const credit = await resolveCredit(db, character, campaign.amountAnchor);

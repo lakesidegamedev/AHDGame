@@ -55,6 +55,7 @@ import {
   ELECTION_SUMMARY_NPP_PROJECTION,
 } from "./electionSummaryProjections";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export type {
   PollingData,
@@ -288,8 +289,7 @@ export async function resolveElections(
           .findOne({ _id: "current" }, { projection: ELECTION_SUMMARY_GAME_STATE_PROJECTION }),
     getGameTime(),
     allCharIds.length > 0
-      ? db
-          .collection<Character>("characters")
+      ? charactersCollection(db)
           .find(
             { _id: { $in: allCharIds } },
             isFull ? undefined : { projection: ELECTION_SUMMARY_CHARACTER_PROJECTION }
@@ -314,8 +314,7 @@ export async function resolveElections(
       .find({ electionId: { $in: electionIds } })
       .toArray(),
     hasSingleSeat
-      ? db
-          .collection<Character>("characters")
+      ? charactersCollection(db)
           .find(
             {
               countryId: { $in: uniqueCountryIds },

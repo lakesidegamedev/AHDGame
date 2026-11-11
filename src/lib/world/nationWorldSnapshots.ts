@@ -5,7 +5,7 @@
 import type { Db } from "mongodb";
 import { COUNTRY_CONFIGS, type CountryId, isParliamentarySystem } from "@/lib/constants/countries";
 import { getRegisteredCountryIds } from "@/lib/country/registeredCountries";
-import type { Character, ElectedOfficial } from "@/lib/db/types";
+import type { ElectedOfficial } from "@/lib/db/types";
 import type { NPP } from "@/lib/db/types/npp";
 import { getHouseComposition } from "@/lib/congress/houseComposition";
 import { getPartyMap } from "@/lib/db/partyMap";
@@ -13,6 +13,7 @@ import { findPartyBySequentialId } from "@/lib/db/partyLookup";
 import { getGovernmentFormationsCollection } from "@/lib/db/collections/governmentFormation";
 import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
 import { tallySeatsByParty, getLargestParty } from "@/lib/turn/parliamentaryGovernment";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export type NationExecutiveSnapshot = {
   name: string;
@@ -61,9 +62,7 @@ async function resolvePresidentExecutive(db: Db): Promise<NationExecutiveSnapsho
   }
 
   if (official.characterId) {
-    const char = await db
-      .collection<Character>("characters")
-      .findOne({ _id: official.characterId });
+    const char = await charactersCollection(db).findOne({ _id: official.characterId });
     if (char) {
       return {
         name: char.name,
@@ -129,12 +128,10 @@ async function resolveParliamentaryExecutive(
     };
   }
 
-  const char = await db
-    .collection<Character>("characters")
-    .findOne(
-      { _id: gov.pmCharacterId },
-      { projection: { name: 1, avatarUrl: 1, borderKey: 1, tintColor: 1, sequentialId: 1 } }
-    );
+  const char = await charactersCollection(db).findOne(
+    { _id: gov.pmCharacterId },
+    { projection: { name: 1, avatarUrl: 1, borderKey: 1, tintColor: 1, sequentialId: 1 } }
+  );
   if (!char) {
     return {
       name: gov.pmName ?? "Vacant",

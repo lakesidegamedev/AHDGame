@@ -4,7 +4,6 @@ import { getGameTime } from "@/lib/time/gameTime";
 import { resolveLeadershipElection, isLeadershipElectionClosed } from "./leadershipElections";
 import type {
   CongressLeader,
-  Character,
   NPP,
   PoliticalParty,
   SenateLeadershipElection,
@@ -20,6 +19,7 @@ import {
   computeCongressLeadershipTally,
   type VoteByParty,
 } from "@/lib/congress/governmentVoteBreakdown";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface LeaderDisplay {
   characterId: string;
@@ -148,8 +148,7 @@ async function loadLeaderDisplays(
   if (seated.length === 0) return out;
 
   const holderIds = seated.map((doc) => doc.characterId);
-  const chars = await db
-    .collection<Character>("characters")
+  const chars = await charactersCollection(db)
     .find(
       { _id: { $in: holderIds } },
       { projection: { avatarUrl: 1, homeState: 1, sequentialId: 1, userId: 1 } }
@@ -256,8 +255,7 @@ async function loadNomineeDisplays(db: Db, nomineeIds: ObjectId[]): Promise<Nomi
   const borderByNominee: NomineeDisplay["borderByNominee"] = new Map();
   if (nomineeIds.length === 0) return { avatarByNominee, borderByNominee };
 
-  const nomineeChars = await db
-    .collection<Character>("characters")
+  const nomineeChars = await charactersCollection(db)
     .find({ _id: { $in: nomineeIds } }, { projection: { _id: 1, avatarUrl: 1, userId: 1 } })
     .toArray();
   for (const c of nomineeChars) avatarByNominee.set(c._id.toString(), c.avatarUrl);

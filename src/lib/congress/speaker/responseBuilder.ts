@@ -9,7 +9,6 @@ import type {
   SpeakerElection,
   SpeakerNomination,
   SpeakerVacateMotion,
-  Character,
   ElectedOfficial,
   NPP,
   PoliticalParty,
@@ -30,6 +29,7 @@ import {
   isPartyEligible,
   POLICY_BY_ROLE,
 } from "@/lib/congress/leadership/rolePolicy";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface BuildSpeakerResponseInput {
   db: Db;
@@ -48,7 +48,7 @@ export async function buildSpeakerResponse(
   let myParty: string | null = null;
 
   if (authUser) {
-    const char = await db.collection<Character>("characters").findOne({
+    const char = await charactersCollection(db).findOne({
       userId: new ObjectId(authUser.userId),
     });
     myCharacterId = char?._id?.toString() ?? null;
@@ -80,12 +80,10 @@ export async function buildSpeakerResponse(
   let currentSpeaker: SpeakerDisplay | null = null;
   if (leaderDoc?.characterId) {
     const p = partyMap.get(leaderDoc.party ?? "");
-    const char = await db
-      .collection<Character>("characters")
-      .findOne(
-        { _id: leaderDoc.characterId },
-        { projection: { avatarUrl: 1, homeState: 1, sequentialId: 1, userId: 1 } }
-      );
+    const char = await charactersCollection(db).findOne(
+      { _id: leaderDoc.characterId },
+      { projection: { avatarUrl: 1, homeState: 1, sequentialId: 1, userId: 1 } }
+    );
     const npp = char
       ? null
       : await db
@@ -120,8 +118,7 @@ export async function buildSpeakerResponse(
     .toArray();
 
   const nomineeIds = nomDocs.map((n) => n.nomineeId);
-  const nomineeChars = await db
-    .collection<Character>("characters")
+  const nomineeChars = await charactersCollection(db)
     .find(
       { _id: { $in: nomineeIds } },
       { projection: { _id: 1, avatarUrl: 1, sequentialId: 1, userId: 1 } }

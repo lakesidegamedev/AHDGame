@@ -37,6 +37,7 @@ import {
 } from "@/lib/campaigns/campaignStrength";
 import { emitRallyWire } from "@/lib/elections/raceWireEmit";
 import { CAMPAIGN_ACTIVITY_HISTORY_CAP } from "@/lib/campaigns/constants/activityHistory";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export async function appointCampaignManager(params: {
   db: Db;
@@ -80,9 +81,10 @@ export async function appointCampaignManager(params: {
     throw badRequest("The candidate cannot also be their own campaign manager");
   }
 
-  const managerChar = await db
-    .collection<Character>("characters")
-    .findOne({ _id: managerOid }, { projection: { _id: 1, name: 1, userId: 1, countryId: 1 } });
+  const managerChar = await charactersCollection(db).findOne(
+    { _id: managerOid },
+    { projection: { _id: 1, name: 1, userId: 1, countryId: 1 } }
+  );
   if (!managerChar) {
     throw notFound("Proposed manager character not found");
   }
@@ -182,12 +184,10 @@ export async function contributeCampaignStrength(params: {
     throw badRequest("You have no national influence to contribute");
   }
 
-  const character = await db
-    .collection<Character>("characters")
-    .findOne(
-      { _id: user.character._id },
-      { projection: { actions: 1, funds: 1, countryId: 1, currencyBalances: 1, name: 1 } }
-    );
+  const character = await charactersCollection(db).findOne(
+    { _id: user.character._id },
+    { projection: { actions: 1, funds: 1, countryId: 1, currencyBalances: 1, name: 1 } }
+  );
   if (!character) {
     throw notFound("Character not found");
   }
@@ -264,7 +264,7 @@ export async function contributeCampaignStrength(params: {
   const targetName = targetCandidate?.characterName ?? targetCandidateId ?? campaignId.toString();
   const auditTurn = await getCurrentTurn(db);
 
-  const charUpdate = await db.collection<Character>("characters").updateOne(
+  const charUpdate = await charactersCollection(db).updateOne(
     {
       _id: character._id,
       actions: { $gte: costActions },
@@ -290,7 +290,7 @@ export async function contributeCampaignStrength(params: {
     }
   );
   if (campaignUpdate.matchedCount === 0) {
-    await db.collection<Character>("characters").updateOne(
+    await charactersCollection(db).updateOne(
       { _id: character._id },
       {
         $inc: {
@@ -426,7 +426,7 @@ export async function retargetOppositionResearch(params: {
   }
 
   const targetOid = new ObjectId(targetId);
-  const targetChar = await db.collection<Character>("characters").findOne({ _id: targetOid });
+  const targetChar = await charactersCollection(db).findOne({ _id: targetOid });
   const targetNpp = !targetChar
     ? await db.collection<NPP>("npps").findOne({ _id: targetOid })
     : null;

@@ -12,6 +12,7 @@
 
 import type { Db, ObjectId } from "mongodb";
 import type { CharacterStateOrg, ElectionCandidate, NPP } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface RegionalBonusInput {
   /** Election-level candidate rows (player + NPP). */
@@ -102,8 +103,7 @@ export async function loadRegionalBonusMapsWithLookup(
 
   const [chars, npps] = await Promise.all([
     characterIds.length
-      ? db
-          .collection<{ _id: ObjectId; homeState?: string }>("characters")
+      ? charactersCollection<{ _id: ObjectId; homeState?: string }>(db)
           .find({ _id: { $in: characterIds } }, { projection: { homeState: 1 } })
           .toArray()
       : Promise.resolve([]),

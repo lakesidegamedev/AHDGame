@@ -19,7 +19,7 @@ import { getCharacterGeneralsCollection } from "@/lib/db/collections/characterGe
 import { isCommissioned } from "@/lib/db/types/characterGeneral";
 import { newGeneral } from "@/lib/military/generalsTree";
 import { DEFENSE_POSITION_BY_COUNTRY } from "@/lib/constants/military";
-import type { Character } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const bodySchema = z.object({ characterId: z.string().min(1) });
 
@@ -74,9 +74,9 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(400, "Invalid character ID");
     }
 
-    const character = await db
-      .collection<Character>("characters")
-      .findOne({ _id: new ObjectId(characterId) as never });
+    const character = await charactersCollection(db).findOne({
+      _id: new ObjectId(characterId) as never,
+    });
     if (!character) return errorResponse(404, "Character not found");
     // A defense minister commissions their own country's officers.
     if (character.countryId !== countryId) {

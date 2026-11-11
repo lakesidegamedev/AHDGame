@@ -14,6 +14,8 @@ import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError } from "@/lib/api/errors";
 import type { ElectedOfficial, Character } from "@/lib/db/types";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import type { Document } from "mongodb";
 
 export async function POST() {
   try {
@@ -48,8 +50,7 @@ export async function POST() {
     }
 
     // Find characters who claim to be US president but aren't
-    const fakePresidents = await db
-      .collection<Character>("characters")
+    const fakePresidents = await charactersCollection(db)
       .find({
         countryId: "US",
         "currentOffice.type": "president",
@@ -57,8 +58,7 @@ export async function POST() {
       .toArray();
 
     // Find characters who claim to be US VP but aren't
-    const fakeVPs = await db
-      .collection<Character>("characters")
+    const fakeVPs = await charactersCollection(db)
       .find({
         countryId: "US",
         "currentOffice.type": "vicePresident",
@@ -71,8 +71,7 @@ export async function POST() {
     // Clear fake presidents
     for (const char of fakePresidents) {
       if (!actualPresidentIds.has(char._id.toString())) {
-        await db
-          .collection("characters")
+        await charactersCollection<Document>(db)
           .updateOne({ _id: char._id }, { $set: { currentOffice: null, updatedAt: now } });
         clearedCount++;
         clearedNames.push(`${char.name} (was President)`);
@@ -82,8 +81,7 @@ export async function POST() {
     // Clear fake VPs
     for (const char of fakeVPs) {
       if (!actualVPIds.has(char._id.toString())) {
-        await db
-          .collection("characters")
+        await charactersCollection<Document>(db)
           .updateOne({ _id: char._id }, { $set: { currentOffice: null, updatedAt: now } });
         clearedCount++;
         clearedNames.push(`${char.name} (was VP)`);
@@ -150,8 +148,7 @@ export async function GET() {
       .toArray();
 
     // Find all US characters claiming executive offices
-    const claimingExecutive = await db
-      .collection<Character>("characters")
+    const claimingExecutive = await charactersCollection(db)
       .find({
         countryId: "US",
         "currentOffice.type": { $in: ["president", "vicePresident"] },

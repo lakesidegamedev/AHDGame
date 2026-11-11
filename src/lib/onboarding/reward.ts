@@ -6,6 +6,7 @@ import { getHomeCurrency } from "@/lib/currency/characterFunds";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { emitTx } from "@/lib/financialTxLog/emit";
 import { onboardingRewardLocalAmount } from "./rules";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * One-time payout for completing all seven onboarding checklist steps,
@@ -93,7 +94,7 @@ export async function grantOnboardingReward(
   }
 
   const now = new Date();
-  const result = await db.collection<Character>("characters").updateOne(
+  const result = await charactersCollection(db).updateOne(
     { _id: character._id, "onboarding.rewardGrantedAt": { $exists: false } },
     {
       $inc: inc,

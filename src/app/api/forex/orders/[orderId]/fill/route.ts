@@ -28,6 +28,7 @@ import { runWithOptionalTransaction } from "@/lib/db/runWithOptionalTransaction"
 import { newCharacterTransferBarrierResponse } from "@/lib/api/newCharacterTransferBarrier";
 import type { CurrencyOrder, GameConfig, GameState, TradeHistoryEntry } from "@/lib/db/types";
 import { recordAudit } from "@/lib/audit/recordAudit";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteParams {
   params: Promise<{ orderId: string }>;
@@ -278,7 +279,7 @@ export async function POST(request: Request, { params }: RouteParams) {
           throw badRequest("Order was already filled by another trader");
         }
 
-        const fillerResult = await db.collection("characters").updateOne(
+        const fillerResult = await charactersCollection(db).updateOne(
           {
             _id: auth.user.character._id,
             [`currencyBalances.personal.${order.toCurrency}`]: { $gte: fillerTotalCost },
@@ -290,9 +291,11 @@ export async function POST(request: Request, { params }: RouteParams) {
           throw badRequest(`Insufficient ${order.toCurrency} balance`);
         }
 
-        const posterResult = await db
-          .collection("characters")
-          .updateOne({ _id: order.characterId }, { $inc: posterCreditInc }, { session });
+        const posterResult = await charactersCollection(db).updateOne(
+          { _id: order.characterId },
+          { $inc: posterCreditInc },
+          { session }
+        );
         if (posterResult.matchedCount === 0) {
           throw notFound("Order owner not found");
         }

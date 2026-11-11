@@ -5,6 +5,7 @@ import { CEO_INITIAL_SHARES, DEFAULT_SHARE_PRICE } from "@/lib/constants/corpora
 import { getEraFounderShares } from "@/lib/constants/sectorSeedEra";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export class SeedImfInstitutionError extends Error {
   constructor(message: string) {
@@ -36,7 +37,7 @@ async function requirePlayableCharacter(
   db: Db,
   characterId: ObjectId
 ): Promise<{ _id: ObjectId; userId: ObjectId }> {
-  const doc = await db.collection("characters").findOne({ _id: characterId });
+  const doc = await charactersCollection(db).findOne({ _id: characterId });
   if (!doc) {
     throw new SeedImfInstitutionError(`Character not found: ${characterId.toHexString()}`);
   }

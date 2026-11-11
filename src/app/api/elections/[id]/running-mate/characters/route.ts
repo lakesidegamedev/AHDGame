@@ -9,7 +9,6 @@ import { getDb } from "@/lib/mongodb";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
 import type {
-  Character,
   Election,
   ElectionCandidate,
   ElectedOfficial,
@@ -20,6 +19,7 @@ import { isHexObjectIdString } from "@/lib/utils/objectIdHex";
 import { COUNTRY_CONFIGS, getCountryConfig, type CountryId } from "@/lib/constants/countries";
 import { getExecutiveOfficialFilter } from "@/lib/elections/executiveOfficeFilters";
 import { hasReachedExecutiveTermLimit } from "@/lib/elections/executiveTermLimits";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -88,8 +88,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     });
     const presidentCharId = currentPresident?.characterId?.toString() ?? null;
 
-    const characters = await db
-      .collection<Character>("characters")
+    const characters = await charactersCollection(db)
       .find({
         userId: { $exists: true },
         federationPendingResidenceId: { $exists: false },

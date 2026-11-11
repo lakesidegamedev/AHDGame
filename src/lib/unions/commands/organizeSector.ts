@@ -28,6 +28,7 @@ import {
   organizeSectorTreasuryCost,
   sectorUnionizationGain,
 } from "@/lib/unions/organizeSectorEconomy";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export {
   ORGANIZE_SECTOR_ACTION_COST,
@@ -218,12 +219,10 @@ export async function organizeSector(
 
   // Charge action points first (mirrors organizeUnion's spend-then-refund-on-
   // failure order).
-  const actionSpend = await db
-    .collection<Character>("characters")
-    .updateOne(
-      { _id: character._id, actions: { $gte: ORGANIZE_SECTOR_ACTION_COST } },
-      { $inc: { actions: -ORGANIZE_SECTOR_ACTION_COST }, $set: { updatedAt: now } }
-    );
+  const actionSpend = await charactersCollection(db).updateOne(
+    { _id: character._id, actions: { $gte: ORGANIZE_SECTOR_ACTION_COST } },
+    { $inc: { actions: -ORGANIZE_SECTOR_ACTION_COST }, $set: { updatedAt: now } }
+  );
   if (actionSpend.modifiedCount === 0) {
     return {
       ok: false,
@@ -239,9 +238,10 @@ export async function organizeSector(
       { $inc: { treasury: -treasuryCost }, $set: { updatedAt: now } }
     );
   if (treasurySpend.modifiedCount === 0) {
-    await db
-      .collection<Character>("characters")
-      .updateOne({ _id: character._id }, { $inc: { actions: ORGANIZE_SECTOR_ACTION_COST } });
+    await charactersCollection(db).updateOne(
+      { _id: character._id },
+      { $inc: { actions: ORGANIZE_SECTOR_ACTION_COST } }
+    );
     return {
       ok: false,
       status: 409,
@@ -284,9 +284,10 @@ export async function organizeSector(
   if (sectorUpdate.modifiedCount === 0) {
     // Sector changed between our read and write, refund both spends rather
     // than silently apply the drive against stale data.
-    await db
-      .collection<Character>("characters")
-      .updateOne({ _id: character._id }, { $inc: { actions: ORGANIZE_SECTOR_ACTION_COST } });
+    await charactersCollection(db).updateOne(
+      { _id: character._id },
+      { $inc: { actions: ORGANIZE_SECTOR_ACTION_COST } }
+    );
     await db
       .collection<Union>("unions")
       .updateOne({ _id: union._id }, { $inc: { treasury: treasuryCost } });

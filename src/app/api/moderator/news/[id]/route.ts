@@ -4,7 +4,8 @@ import { getDb } from "@/lib/mongodb";
 import { requireModerator } from "@/lib/api/requireModerator";
 import { handleRouteError, notFound, errorResponse } from "@/lib/api/errors";
 import { createModAuditLog } from "@/lib/modAuditLog";
-import type { Character, NewsPost, User } from "@/lib/db/types";
+import type { NewsPost, User } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 // DELETE /api/moderator/news/[id] — Delete a player news post and all its replies and reactions.
 // Auth: requireModerator
@@ -26,9 +27,10 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
       return errorResponse(403, "System-generated posts cannot be removed by moderators");
     }
 
-    const authorCharacter = await db
-      .collection<Character>("characters")
-      .findOne({ _id: post.authorId }, { projection: { userId: 1 } });
+    const authorCharacter = await charactersCollection(db).findOne(
+      { _id: post.authorId },
+      { projection: { userId: 1 } }
+    );
     const authorUser = authorCharacter?.userId
       ? await db
           .collection<User>("users")

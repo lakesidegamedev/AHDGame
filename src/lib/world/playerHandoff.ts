@@ -27,7 +27,7 @@ import {
   type GovernmentType,
 } from "@/lib/constants/countries";
 import type { CountryGameState, GameState } from "@/lib/db/types/gameState";
-import type { Character, ElectedOfficial } from "@/lib/db/types";
+import type { ElectedOfficial } from "@/lib/db/types";
 import type { UnifiedCabinetMember } from "@/lib/db/types/unifiedCabinetMember";
 import { getCabinetMembersCollection } from "@/lib/db/collections/cabinetMembers";
 import { getGovernmentFormationsCollection } from "@/lib/db/collections/governmentFormation";
@@ -38,6 +38,7 @@ import {
   resolvePresetIdFromGameState,
   type CountryReadinessReport,
 } from "@/lib/world/countryReadinessContract";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 // ─── Role taxonomy ───────────────────────────────────────────────────────────
 
@@ -324,8 +325,7 @@ export async function exitCountryForPlayers(
   const refill = new Set<ConstitutionalRefillProcess>();
   const governmentType = getCountryConfig(countryId).governmentType;
 
-  const playerChars = await db
-    .collection<Character>("characters")
+  const playerChars = await charactersCollection(db)
     .find({ countryId, userId: { $exists: true } })
     .project({ _id: 1 })
     .toArray();
@@ -398,7 +398,7 @@ export async function exitCountryForPlayers(
       refill.add(refillProcessForClaimableVacancy("cabinet-minister", governmentType));
     }
 
-    await db.collection<Character>("characters").updateMany(
+    await charactersCollection(db).updateMany(
       { _id: { $in: playerIds }, countryId },
       {
         $set: { currentOffice: null, updatedAt: now },

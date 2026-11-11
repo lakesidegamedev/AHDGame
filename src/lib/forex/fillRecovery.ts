@@ -40,6 +40,7 @@ import type {
   ProcessingFillIntent,
 } from "@/lib/db/types/currencyOrder";
 import { recordAudit } from "@/lib/audit/recordAudit";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /** A claim older than this with no live owner may be finished or undone. */
 export const FILL_CLAIM_STALE_MS = 5 * 60 * 1000;
@@ -273,7 +274,7 @@ export async function applyFillLegs(
   // Filler settlement: guarded debit plus fromCurrency credit, one stamped
   // write. The $gte guard refuses an overdraw; the stamp refuses a replay.
   const fillerBalancePath = `currencyBalances.personal.${intent.toCurrency}`;
-  const fillerRes = await db.collection("characters").updateOne(
+  const fillerRes = await charactersCollection(db).updateOne(
     {
       _id: fillerOid,
       [fillerBalancePath]: { $gte: intent.fillerTotalCost },
@@ -297,13 +298,14 @@ export async function applyFillLegs(
   }
 
   // Poster credit: unconditional amount, stamped so replay is a no-op.
-  const posterRes = await db
-    .collection("characters")
-    .updateOne({ _id: posterOid, [SETTLED_KEYS_FIELD]: { $ne: posterStamp } }, {
+  const posterRes = await charactersCollection(db).updateOne(
+    { _id: posterOid, [SETTLED_KEYS_FIELD]: { $ne: posterStamp } },
+    {
       $inc: buildPersonalBalanceInc(intent.toCurrencyAmount, intent.toCurrency, true),
       $set: { updatedAt: now },
       $push: { [SETTLED_KEYS_FIELD]: { $each: [posterStamp], $slice: -SETTLED_KEYS_CAP } },
-    } as Document);
+    } as Document
+  );
   if (posterRes.matchedCount !== 1) {
     if (!(await hasStamp(db, "characters", { _id: posterOid }, posterStamp))) {
       return { ok: false, leg: "poster", message: "Order owner not found", status: 404 };
@@ -645,18 +647,16 @@ export async function reverseLandedFillLegs(
   const errors: unknown[] = [];
   const state = await verifyFillLegs(db, intent);
   if (state.filler) {
-    const res = await db
-      .collection("characters")
-      .updateOne(
-        { _id: new ObjectId(intent.fillerId) },
-        { $inc: fillerRollbackInc(intent), $set: { updatedAt: now } }
-      );
+    const res = await charactersCollection(db).updateOne(
+      { _id: new ObjectId(intent.fillerId) },
+      { $inc: fillerRollbackInc(intent), $set: { updatedAt: now } }
+    );
     if (res.matchedCount !== 1) {
       errors.push(new Error("filler debit landed but the filler is gone"));
     }
   }
   if (state.poster) {
-    const res = await db.collection("characters").updateOne(
+    const res = await charactersCollection(db).updateOne(
       { _id: new ObjectId(intent.posterId) },
       {
         $inc: buildPersonalBalanceInc(-intent.toCurrencyAmount, intent.toCurrency, true),
@@ -779,13 +779,14 @@ export async function applyCancelRefund(
 ): Promise<boolean> {
   if (amount <= 0) return true;
   const stamp = `${cancelKey}#refund`;
-  const res = await db
-    .collection("characters")
-    .updateOne({ _id: characterId, [SETTLED_KEYS_FIELD]: { $ne: stamp } }, {
+  const res = await charactersCollection(db).updateOne(
+    { _id: characterId, [SETTLED_KEYS_FIELD]: { $ne: stamp } },
+    {
       $inc: buildPersonalBalanceInc(amount, currency, true),
       $set: { updatedAt: now },
       $push: { [SETTLED_KEYS_FIELD]: { $each: [stamp], $slice: -SETTLED_KEYS_CAP } },
-    } as Document);
+    } as Document
+  );
   return res.matchedCount === 1;
 }
 

@@ -22,8 +22,9 @@ import {
 import { isSameCountry } from "@/lib/api/sameCountry";
 import { isCampaignUpgradeGeneralPhase } from "@/lib/elections/phases";
 import { getGameTime } from "@/lib/time/gameTime";
-import type { Campaign, ElectionCandidate, Character, GameState } from "@/lib/db/types";
+import type { Campaign, ElectionCandidate, GameState } from "@/lib/db/types";
 import { z } from "zod";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const schema = z.object({
   stateId: z.string().min(1),
@@ -162,9 +163,10 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const freshChar = recovering
       ? null
-      : await db
-          .collection<Character>("characters")
-          .findOne({ _id: character._id }, { projection: { actions: 1 } });
+      : await charactersCollection(db).findOne(
+          { _id: character._id },
+          { projection: { actions: 1 } }
+        );
 
     if (!recovering && (!freshChar || freshChar.actions < actionCost)) {
       return errorResponse(
@@ -197,7 +199,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(409, "No running-mate surrogate actions remaining today.");
     }
 
-    const characters = db.collection<Character>("characters");
+    const characters = charactersCollection(db);
     const campaigns = db.collection<Campaign>("campaigns");
     const candidates = db.collection<ElectionCandidate>("electionCandidates");
     const mapRmTravelError = (step: MoneyFlowStepRef, outcome: MoneyFlowLegOutcome): Error => {

@@ -4,17 +4,12 @@
  * counted withdrawals and avoiding a query per constituency or nominee.
  */
 import { type ClientSession, type Db, type ObjectId } from "mongodb";
-import type {
-  Character,
-  Election,
-  ElectionCandidate,
-  ElectionVoteTally,
-  NPP,
-} from "@/lib/db/types";
+import type { Election, ElectionCandidate, ElectionVoteTally, NPP } from "@/lib/db/types";
 import { russianDumaConvocationOfficeCompatible } from "./rules/dumaConvocation";
 import { loadPendingRussianCouncilOwners } from "./pendingCouncilMandates";
 import type { RussianDumaResultRecord } from "./dumaElectionResult";
 import type { RussianDumaCohortBallot } from "./rules/assemblyCohort";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export async function loadRussianDumaCertificationInputs(input: {
   db: Db;
@@ -87,8 +82,7 @@ export async function loadRussianDumaCertificationInputs(input: {
         .toArray()
     : [];
   const players = playerIds.length
-    ? await db
-        .collection<Character>("characters")
+    ? await charactersCollection(db)
         .find(
           {
             _id: { $in: playerIds },

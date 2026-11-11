@@ -14,8 +14,9 @@ import {
   CAUCUS_NPP_RECRUIT_MIN_RELATIONSHIP,
 } from "@/lib/constants/partyOrg";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
-import type { CaucusMembership, Character, NPP, NPPRelationship } from "@/lib/db/types";
+import type { CaucusMembership, NPP, NPPRelationship } from "@/lib/db/types";
 import { isSameCountry } from "@/lib/api/sameCountry";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const joinSchema = z.discriminatedUnion("memberType", [
   z.object({
@@ -369,7 +370,7 @@ export async function POST(
     // Validate the target exists, is in the same party, and isn't already in
     // any other caucus (one caucus per member, Phase 1 invariant).
     if (memberType === "character") {
-      const target = await db.collection<Character>("characters").findOne({ _id: memberOid });
+      const target = await charactersCollection(db).findOne({ _id: memberOid });
       if (!target) {
         return errorResponse(404, "Character not found");
       }

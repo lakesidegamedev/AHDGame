@@ -1,6 +1,7 @@
 import type { Db, ObjectId } from "mongodb";
-import type { Character, PartyCharter } from "@/lib/db/types";
+import type { PartyCharter } from "@/lib/db/types";
 import { ratifyCharter } from "./ratifyCharter";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * Record a founder's signature on a charter. Transitions the charter to
@@ -59,9 +60,10 @@ export async function signCharter(
 
   // Auth: the session userId must own the character that's signing. Without
   // this check, any logged-in user could sign for any other founder slot.
-  const character = await db
-    .collection<Character>("characters")
-    .findOne({ _id: signerCharacterId }, { projection: { userId: 1 } });
+  const character = await charactersCollection(db).findOne(
+    { _id: signerCharacterId },
+    { projection: { userId: 1 } }
+  );
   if (!character?.userId || !character.userId.equals(signerUserId)) {
     return { ok: false, reason: "not-character-owner" };
   }

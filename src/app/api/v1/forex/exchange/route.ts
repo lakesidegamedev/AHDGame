@@ -18,8 +18,9 @@ import {
   nonConvertibleTradeCurrency,
 } from "@/lib/constants/commandEconomy";
 import type { CountryId } from "@/lib/constants/countries";
-import type { Character, GameConfig, GameState, User } from "@/lib/db/types";
+import type { GameConfig, GameState, User } from "@/lib/db/types";
 import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const marketOrderSchema = z
   .object({
@@ -106,7 +107,7 @@ export async function POST(request: Request) {
       const characterQuery = userDoc?.activeCharacterId
         ? { _id: userDoc.activeCharacterId, userId: new ObjectId(apiAuth.ownerUserId) }
         : { userId: new ObjectId(apiAuth.ownerUserId) };
-      const character = await db.collection<Character>("characters").findOne(characterQuery);
+      const character = await charactersCollection(db).findOne(characterQuery);
       if (!character) {
         return errorResponse(404, "Character not found");
       }

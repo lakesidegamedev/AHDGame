@@ -6,6 +6,7 @@ import type { User, PoliticalParty } from "@/lib/db/types";
 import { eligibleIdentitySignals } from "@/lib/auth/identitySignals";
 import { loadRecentIdentityValues } from "@/lib/identityHistory/recentValues";
 import { hashSensitiveSignal } from "@/lib/utils/hashSignal";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /** Hash a list of identity values, dropping any that hash to null. The client
  * grouper matches on these hashes, so a hash of one value must equal a hash of
@@ -30,7 +31,7 @@ export async function GET() {
       .find({ role: { $ne: "admin" } })
       .toArray();
 
-    const characters = await db.collection("characters").find({}).toArray();
+    const characters = await charactersCollection(db).find({}).toArray();
     const charByUser = new Map(characters.map((c) => [c.userId.toString(), c]));
 
     const parties = await db

@@ -19,6 +19,7 @@ import {
   resolveHouseIncumbentTenures,
   resolveSingleSeatLegislativeIncumbent,
 } from "@/lib/elections/engine/singleSeatIncumbency";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /** A rival candidate as the poll and the opponent summary see them. */
 export interface OpponentForShare {
@@ -191,8 +192,7 @@ export async function getElectionOpponents(
               .toArray()
           : Promise.resolve([]),
         charIds.length > 0
-          ? db
-              .collection<Character>("characters")
+          ? charactersCollection(db)
               .find({ _id: { $in: charIds.map((id) => new ObjectId(id)) } })
               .toArray()
           : Promise.resolve([]),

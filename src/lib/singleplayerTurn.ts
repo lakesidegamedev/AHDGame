@@ -4,6 +4,7 @@ import { getSingleplayerConfig } from "@/lib/singleplayerServer";
 import { getSingleplayerWorldAvailability } from "@/lib/singleplayerOperator";
 import { processTurn } from "@/lib/turnSystem";
 import { runShareFillRecoveryPass } from "@/lib/corporations/commands/shareTrading/shareFillAudit";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface SingleplayerTurnBriefing {
   funds: number;
@@ -40,12 +41,10 @@ export async function checkSingleplayerTurnAllowed(
     return { ok: false, status: 409, error: "A player world is not configured" };
   }
 
-  const character = await db
-    .collection("characters")
-    .findOne(
-      { userId: new ObjectId(SINGLEPLAYER_USER_ID), retiredAt: { $exists: false } },
-      { projection: { _id: 1, funds: 1, currencyBalances: 1, actions: 1 } }
-    );
+  const character = await charactersCollection(db).findOne(
+    { userId: new ObjectId(SINGLEPLAYER_USER_ID), retiredAt: { $exists: false } },
+    { projection: { _id: 1, funds: 1, currencyBalances: 1, actions: 1 } }
+  );
   if (!character) {
     return { ok: false, status: 409, error: "Create a character before ending a turn." };
   }
@@ -80,9 +79,10 @@ export async function advanceSingleplayerTurn(db: Db): Promise<SingleplayerTurnO
   // contract instead of surfacing it through the caller's error handling.
   await runShareFillRecoveryPass(db);
 
-  const updated = await db
-    .collection("characters")
-    .findOne({ _id: character._id }, { projection: { funds: 1, currencyBalances: 1, actions: 1 } });
+  const updated = await charactersCollection(db).findOne(
+    { _id: character._id },
+    { projection: { funds: 1, currencyBalances: 1, actions: 1 } }
+  );
   const beforeFunds = character.currencyBalances?.campaign ?? character.funds ?? 0;
   const afterFunds = updated?.currencyBalances?.campaign ?? updated?.funds ?? beforeFunds;
   const beforeActions = character.actions ?? 0;

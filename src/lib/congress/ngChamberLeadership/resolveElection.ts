@@ -11,7 +11,6 @@ import { sendCountryGameEvent, DISCORD_COLORS } from "@/lib/discordWebhooks";
 import { leadershipRoleLabel } from "@/lib/congress/leadership/electionRoleMap";
 import { claimStatusTransition } from "@/lib/turn/atomicClaim";
 import type {
-  Character,
   NgChamberLeadershipElection,
   NgChamberLeadershipNomination,
   NgChamberLeadershipRole,
@@ -19,6 +18,7 @@ import type {
   ElectedOfficial,
 } from "@/lib/db/types";
 import { NG_ROLE_CONFIG, NG_ELECTION_COLLECTION, NG_NOMINATION_COLLECTION } from "./config";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export async function resolveNgChamberLeadershipElection(
   db: Db,
@@ -140,9 +140,10 @@ export async function resolveNgChamberLeadershipElection(
   if (completed && winner) {
     const roleLabel = leadershipRoleLabel(role);
     const nomineeAvatarUrl = (
-      await db
-        .collection<Character>("characters")
-        .findOne({ _id: winner.nomineeId }, { projection: { avatarUrl: 1 } })
+      await charactersCollection(db).findOne(
+        { _id: winner.nomineeId },
+        { projection: { avatarUrl: 1 } }
+      )
     )?.avatarUrl;
     sendCountryGameEvent("NG", {
       title: `Leadership Election Result: ${roleLabel}`,

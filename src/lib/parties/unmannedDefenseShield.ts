@@ -13,11 +13,12 @@
  * party draws from the Unaffiliated pool.
  */
 import type { Db, ObjectId } from "mongodb";
-import type { Character, PoliticalParty } from "@/lib/db/types";
+import type { PoliticalParty } from "@/lib/db/types";
 import {
   DEFENSE_UNMANNED_CAPTURE_MULTIPLIER,
   isUnmannedDefault,
 } from "@/lib/turn/partyOrg/defenseConstants";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * Is the party's chair seat held by an active (non-banned) human player?
@@ -26,9 +27,10 @@ import {
  */
 async function isActiveHumanChair(db: Db, chairId: PoliticalParty["chairId"]): Promise<boolean> {
   if (!chairId) return false;
-  const chair = await db
-    .collection<Character>("characters")
-    .findOne({ _id: chairId as ObjectId }, { projection: { userId: 1 } });
+  const chair = await charactersCollection(db).findOne(
+    { _id: chairId as ObjectId },
+    { projection: { userId: 1 } }
+  );
   if (!chair?.userId) return false;
   const user = await db
     .collection("users")

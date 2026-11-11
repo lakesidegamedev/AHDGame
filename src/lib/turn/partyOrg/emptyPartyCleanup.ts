@@ -14,7 +14,6 @@ import type {
   NationalCommitteeCandidate,
   NationalCommitteeVote,
   BillWhip,
-  Character,
   NPP,
   ElectedOfficial,
   Caucus,
@@ -26,6 +25,7 @@ import type {
   PartyCharter,
 } from "@/lib/db/types";
 import type { Coalition } from "@/lib/db/types/coalition";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface EmptyPartyCleanupResult {
   deletedParties: string[];
@@ -86,8 +86,7 @@ export async function cleanupEmptyParties(): Promise<EmptyPartyCleanupResult> {
   // Use composite keys (countryId:partyId) to avoid cross-country sequential ID collisions
   type CompositeCount = { _id: { countryId: string; party: string }; count: number };
   const [charCounts, nppCounts, officialCounts] = await Promise.all([
-    db
-      .collection<Character>("characters")
+    charactersCollection(db)
       .aggregate<CompositeCount>([
         { $match: { party: { $in: partyStringIds } } },
         {

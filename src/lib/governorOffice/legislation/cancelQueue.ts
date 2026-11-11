@@ -1,5 +1,6 @@
 import type { Db, ObjectId } from "mongodb";
-import type { Character, GovernorQueuedBill } from "@/lib/db/types";
+import type { GovernorQueuedBill } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * Cancel a pending queued bill. Always refunds the governor's prepaid action
@@ -19,7 +20,7 @@ export async function cancelQueue(
     return { status: 400, body: { error: `Queue entry already ${doc.status}.` } };
   }
 
-  await db.collection<Character>("characters").updateOne(
+  await charactersCollection(db).updateOne(
     { _id: doc.governorCharacterId },
     {
       $inc: {

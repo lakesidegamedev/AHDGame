@@ -16,6 +16,7 @@ import {
   seatedPlayerPresidentId,
   tallyUnionLeaderVotes,
 } from "@/lib/unions/unionLeadershipVote";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const DUPLICATE_KEY_ERROR_CODE = 11000;
 
@@ -71,12 +72,10 @@ export async function voteUnionLeader(
   const incumbentId = seatedPlayerPresidentId(union);
   const isIncumbentCandidate = incumbentId === candidateCharacterId.toString();
 
-  const candidate = await db
-    .collection<Character>("characters")
-    .findOne(
-      { _id: candidateCharacterId },
-      { projection: { name: 1, userId: 1, countryId: 1, unionLeaderOf: 1 } }
-    );
+  const candidate = await charactersCollection(db).findOne(
+    { _id: candidateCharacterId },
+    { projection: { name: 1, userId: 1, countryId: 1, unionLeaderOf: 1 } }
+  );
   if (!candidate) {
     return { ok: false, status: 404, error: "Candidate not found." };
   }
@@ -161,9 +160,10 @@ export async function voteUnionLeader(
       { $set: { pendingLeaderCharacterId: new ObjectId(leaderId), updatedAt: now } }
     );
 
-  const leaderChar = await db
-    .collection<Character>("characters")
-    .findOne({ _id: new ObjectId(leaderId) }, { projection: { userId: 1, name: 1 } });
+  const leaderChar = await charactersCollection(db).findOne(
+    { _id: new ObjectId(leaderId) },
+    { projection: { userId: 1, name: 1 } }
+  );
   if (leaderChar?.userId) {
     await createNotification({
       userId: leaderChar.userId,

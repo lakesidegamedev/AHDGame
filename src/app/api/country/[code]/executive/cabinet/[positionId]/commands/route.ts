@@ -17,8 +17,8 @@ import { DEFENSE_POSITION_BY_COUNTRY } from "@/lib/constants/military";
 import { STRATEGIC_REGIONS } from "@/lib/military/regions";
 import { listCountryGenerals } from "@/lib/db/collections/characterGenerals";
 import type { MilitaryCommand } from "@/lib/military/types";
-import type { Character } from "@/lib/db/types";
 import { createNotifications, type NotificationInput } from "@/lib/notifications";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 // Light shape validation — the command org is client-authoritative (no resources spent);
 // the server guards ownership + referential integrity below.
@@ -172,8 +172,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
     // over a notification. Filtered rather than trusted.
     const notifiable = newlyAppointed.filter((n) => ObjectId.isValid(n.characterId));
     if (notifiable.length > 0) {
-      const chars = await db
-        .collection<Character>("characters")
+      const chars = await charactersCollection(db)
         .find({ _id: { $in: notifiable.map((n) => new ObjectId(n.characterId)) } })
         .project<{ _id: ObjectId; userId?: ObjectId }>({ _id: 1, userId: 1 })
         .toArray();

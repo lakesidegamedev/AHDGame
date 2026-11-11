@@ -15,6 +15,7 @@ import {
   setCachedRarity,
   invalidateRarityCache,
 } from "./cache";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 async function maybeAwardCompletionist(
   userId: ObjectId,
@@ -348,9 +349,10 @@ export async function getAchievementRarityMap(): Promise<Map<string, number>> {
 export async function resolveUserIdFromCharacter(characterId: ObjectId): Promise<ObjectId | null> {
   try {
     const db = await getDb();
-    const character = await db
-      .collection<{ _id: ObjectId; userId: ObjectId }>("characters")
-      .findOne({ _id: characterId }, { projection: { userId: 1 } });
+    const character = await charactersCollection<{ _id: ObjectId; userId: ObjectId }>(db).findOne(
+      { _id: characterId },
+      { projection: { userId: 1 } }
+    );
     return character?.userId ?? null;
   } catch (error) {
     console.error("[achievements] resolveUserIdFromCharacter error:", error);

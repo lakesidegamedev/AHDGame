@@ -10,7 +10,7 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { parseJsonBody } from "@/lib/api/validate";
 import { z } from "zod";
-import type { Character, Election, ImperialCharacter, User } from "@/lib/db/types";
+import type { Election, ImperialCharacter, User } from "@/lib/db/types";
 import { getCharacterByUserId } from "@/lib/db/characterLookup";
 import { findBlockingActiveCandidacy } from "@/lib/elections/activeCandidacy";
 import { foundingCooldownTurnsRemaining } from "@/lib/corporations/foundingCooldown";
@@ -29,6 +29,7 @@ import { isIndexFundsEnabled } from "@/lib/indexFunds/featureFlag";
 import { listCharacterPositions, listFundsByIds } from "@/lib/indexFunds/fundQueries";
 import { enrichFundPositions } from "@/lib/indexFunds/fundPortfolioView";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 // The current corporation is read here, so this endpoint must never serve a
 // stale body: a positive max-age let the browser return a pre-founding
@@ -345,19 +346,17 @@ export async function PATCH(request: Request) {
     const ownCharacterFilter = { _id: activeCharacter._id, userId: new ObjectId(user.userId) };
 
     if (Object.keys(updates).length > 0) {
-      await db
-        .collection<Character>("characters")
-        .updateOne(ownCharacterFilter, { $set: { ...updates, updatedAt: now } });
+      await charactersCollection(db).updateOne(ownCharacterFilter, {
+        $set: { ...updates, updatedAt: now },
+      });
     }
 
     if (onboardingStep !== undefined) {
       // First visit wins: never overwrite an existing timestamp.
-      await db
-        .collection<Character>("characters")
-        .updateOne(
-          { ...ownCharacterFilter, [`onboarding.steps.${onboardingStep}`]: { $exists: false } },
-          { $set: { [`onboarding.steps.${onboardingStep}`]: now, updatedAt: now } }
-        );
+      await charactersCollection(db).updateOne(
+        { ...ownCharacterFilter, [`onboarding.steps.${onboardingStep}`]: { $exists: false } },
+        { $set: { [`onboarding.steps.${onboardingStep}`]: now, updatedAt: now } }
+      );
     }
 
     return NextResponse.json({ success: true });

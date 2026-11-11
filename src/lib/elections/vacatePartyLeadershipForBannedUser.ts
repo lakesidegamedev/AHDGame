@@ -18,7 +18,8 @@
  */
 
 import type { Db, ObjectId } from "mongodb";
-import type { Character, PoliticalParty, StatePartyOrg } from "@/lib/db/types";
+import type { PoliticalParty, StatePartyOrg } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface VacateResult {
   characterIds: string[];
@@ -36,8 +37,7 @@ export async function vacatePartyLeadershipForBannedUser(
   db: Db,
   userId: ObjectId
 ): Promise<VacateResult> {
-  const characters = await db
-    .collection<Character>("characters")
+  const characters = await charactersCollection(db)
     .find({ userId })
     .project<{ _id: ObjectId }>({ _id: 1 })
     .toArray();

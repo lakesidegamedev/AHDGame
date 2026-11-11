@@ -10,12 +10,12 @@ import { createNotification } from "@/lib/notifications";
 import { resolveCorporation } from "@/lib/api/corporations/resolveQuery";
 import { isCorporationCeoVoteDuplicateKey } from "@/lib/elections/duplicateKey";
 import type { Corporation } from "@/lib/db/types";
-import type { Character } from "@/lib/db/types/character";
 import { bulkFetchCharacterNames } from "@/lib/db/characterLookup";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { holdsAnyBondsInCorp } from "@/lib/bonds/ceoBondConflict";
 import { shareholderVotingPower } from "@/lib/corporations/superShares";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -188,9 +188,10 @@ async function reconcilePendingCeo(
     { $set: { pendingCeoCharacterId: new ObjectId(leaderId), updatedAt: now } }
   );
 
-  const leaderChar = await db
-    .collection<Character>("characters")
-    .findOne({ _id: new ObjectId(leaderId) }, { projection: { userId: 1, name: 1 } });
+  const leaderChar = await charactersCollection(db).findOne(
+    { _id: new ObjectId(leaderId) },
+    { projection: { userId: 1, name: 1 } }
+  );
 
   if (leaderChar?.userId) {
     await createNotification({
@@ -271,12 +272,10 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     // Candidate must exist and be in the corporation's HQ state
     const candidateOid = new ObjectId(candidateCharacterId);
-    const candidate = await db
-      .collection<Character>("characters")
-      .findOne(
-        { _id: candidateOid },
-        { projection: { name: 1, userId: 1, homeState: 1, countryId: 1 } }
-      );
+    const candidate = await charactersCollection(db).findOne(
+      { _id: candidateOid },
+      { projection: { name: 1, userId: 1, homeState: 1, countryId: 1 } }
+    );
     if (!candidate) {
       return errorResponse(404, "Candidate character not found");
     }

@@ -5,6 +5,8 @@ import type { Db } from "mongodb";
 import type { ElectedOfficial } from "@/lib/db/types/officials";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import type { Document } from "mongodb";
 
 export async function carryNorthernIrelandMPs(
   db: Db,
@@ -103,6 +105,6 @@ export async function mirrorNorthernIrelandMPs(
         ]
       : []
   );
-  if (playerOps.length) await db.collection("characters").bulkWrite(playerOps);
+  if (playerOps.length) await charactersCollection<Document>(db).bulkWrite(playerOps);
   if (nppOps.length) await db.collection("npps").bulkWrite(nppOps);
 }

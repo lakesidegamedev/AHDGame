@@ -13,6 +13,7 @@ import { REGIONAL_LIFECYCLE_CONFIG, type RegionalLifecycleConfig } from "./confi
 import { validateStateBudgetImpact } from "@/lib/budget/validation";
 import { captureBillStatusChanged } from "@/lib/analytics/billStatusAnalytics";
 import type { BillLifecycleRuntimeContext } from "./types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * Regional (state) bill-lifecycle walker: the `level: "regional"` counterpart
@@ -102,9 +103,10 @@ async function loadNotificationCharacter(
 ): Promise<NotificationCharacter | null> {
   const key = characterId.toString();
   if (cache.characters.has(key)) return cache.characters.get(key) ?? null;
-  const character = await db
-    .collection<Character>("characters")
-    .findOne({ _id: characterId }, { projection: { _id: 1, userId: 1 } });
+  const character = await charactersCollection(db).findOne(
+    { _id: characterId },
+    { projection: { _id: 1, userId: 1 } }
+  );
   cache.characters.set(key, character);
   return character;
 }
@@ -213,9 +215,10 @@ export async function finalizeStateBillEnactment(
       );
     }
     if (bill.sponsorId) {
-      const sponsor = await db
-        .collection<Character>("characters")
-        .findOne({ _id: bill.sponsorId }, { projection: { _id: 1, userId: 1 } });
+      const sponsor = await charactersCollection(db).findOne(
+        { _id: bill.sponsorId },
+        { projection: { _id: 1, userId: 1 } }
+      );
       if (sponsor) {
         await createNotifications([
           {

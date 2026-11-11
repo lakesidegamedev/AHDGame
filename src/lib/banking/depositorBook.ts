@@ -5,11 +5,12 @@
  */
 import { ObjectId, type Db } from "mongodb";
 import { createHash } from "node:crypto";
-import type { Character, NPP } from "@/lib/db/types";
+import type { NPP } from "@/lib/db/types";
 import type { SavingsAccount } from "@/lib/db/types/savingsAccount";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { BankingPolicySnapshot } from "./rules/policy";
 import { savingsReadsAuthoritative } from "./rules/policy";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface BankDepositor {
   key: string;
@@ -56,8 +57,7 @@ export async function getBankDepositorBook(
     const nppIds = accounts.filter((a) => a.ownerType === "npp").map((a) => a.ownerId);
     const [characters, npps] = await Promise.all([
       characterIds.length
-        ? db
-            .collection<Character>("characters")
+        ? charactersCollection(db)
             .find({ _id: { $in: characterIds } }, { projection: { name: 1, sequentialId: 1 } })
             .toArray()
         : [],
@@ -80,8 +80,7 @@ export async function getBankDepositorBook(
       };
     });
   } else {
-    const characters = await db
-      .collection<Character>("characters")
+    const characters = await charactersCollection(db)
       .find(
         {
           [`currencyBalances.savingsHolder.${currency}`]: holder,

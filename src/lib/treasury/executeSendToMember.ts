@@ -30,6 +30,7 @@ import { checkPlayerPayoutCap } from "@/lib/treasury/payoutCap";
 // database-facing module should not have to stub it.
 import { countDistinctOfficers } from "@/lib/treasury/payoutCapValues";
 import { TreasuryExecutionUncertainError } from "@/lib/treasury/executionUncertain";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface ExecuteSendToMemberArgs {
   db: Db;
@@ -118,9 +119,11 @@ export async function executeSendToMember(
     if (debitResult.matchedCount === 0) {
       throw badRequest("Insufficient treasury funds");
     }
-    const creditResult = await db
-      .collection<Character>("characters")
-      .updateOne({ _id: targetCharacter._id }, characterCredit, { session });
+    const creditResult = await charactersCollection(db).updateOne(
+      { _id: targetCharacter._id },
+      characterCredit,
+      { session }
+    );
     if (creditResult.matchedCount === 0) {
       throw notFound("Character not found");
     }
@@ -173,9 +176,10 @@ export async function executeSendToMember(
 
     let creditResult;
     try {
-      creditResult = await db
-        .collection<Character>("characters")
-        .updateOne({ _id: targetCharacter._id }, characterCredit);
+      creditResult = await charactersCollection(db).updateOne(
+        { _id: targetCharacter._id },
+        characterCredit
+      );
     } catch (creditError) {
       await refundDebit("credit threw", creditError);
       throw creditError;

@@ -18,6 +18,7 @@ import { escapeRegex } from "@/lib/utils/escapeRegex";
 import { buildCharacterHref, parseCharacterId } from "@/lib/utils/profileUrls";
 import { partyUrl } from "@/lib/urls";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -259,12 +260,11 @@ export async function queryCharacters(
   if (discordId) {
     const user = await db.collection<User>("users").findOne({ discordId });
     if (user) {
-      const char = await db.collection<Character>("characters").findOne({ userId: user._id });
+      const char = await charactersCollection(db).findOne({ userId: user._id });
       if (char) characters = [char];
     }
   } else if (name) {
-    characters = await db
-      .collection<Character>("characters")
+    characters = await charactersCollection(db)
       .find({ name: { $regex: escapeRegex(name), $options: "i" } })
       .limit(5)
       .toArray();
@@ -290,7 +290,7 @@ export async function queryCharacterById(
       ? { sequentialId: parsed.value }
       : { _id: new ObjectId(parsed.value) };
 
-  const char = await db.collection<Character>("characters").findOne(filter);
+  const char = await charactersCollection(db).findOne(filter);
   if (!char) return null;
 
   const results = await enrichPublicCharacters(db, [char]);
@@ -314,9 +314,7 @@ export async function queryCharacterCareer(
     toState: string | null;
   }>;
 } | null> {
-  const char = await db
-    .collection<Character>("characters")
-    .findOne({ _id: new ObjectId(characterId) });
+  const char = await charactersCollection(db).findOne({ _id: new ObjectId(characterId) });
   if (!char) return null;
 
   const career = [...(char.careerHistory ?? [])].reverse().map((event) => ({
@@ -349,9 +347,7 @@ export async function queryCharacterAchievements(
     earnedAt: string | null;
   }>;
 } | null> {
-  const char = await db
-    .collection<Character>("characters")
-    .findOne({ _id: new ObjectId(characterId) });
+  const char = await charactersCollection(db).findOne({ _id: new ObjectId(characterId) });
   if (!char) return null;
 
   const highlightedIds = new Set<string>((char.highlightedAchievementIds ?? []).map(String));
@@ -418,8 +414,7 @@ export async function queryCharactersBulk(
   if (objectIds.length > 0) filters.push({ _id: { $in: objectIds } });
   const characters =
     filters.length > 0
-      ? await db
-          .collection<Character>("characters")
+      ? await charactersCollection(db)
           .find(filters.length === 1 ? filters[0] : { $or: filters })
           .limit(100)
           .toArray()

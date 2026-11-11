@@ -33,6 +33,7 @@ import {
   type CountryRequirementLevel,
 } from "@/lib/world/countryRequirementLevel";
 import { enterCountryForPlayers, exitCountryForPlayers } from "@/lib/world/playerHandoff";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteContext {
   params: Promise<{ code: string }>;
@@ -144,7 +145,7 @@ export const GET = withAdminRoute(async (_auth, request: Request, { params }: Ro
   const [access, gameState, activePlayers, activeNpps, politicalParties] = await Promise.all([
     getCountryAccess(countryId),
     db.collection<GameState>("gameState").findOne({ _id: "current" }),
-    db.collection("characters").countDocuments({ countryId }),
+    charactersCollection(db).countDocuments({ countryId }),
     db.collection("npps").countDocuments({ countryId }),
     db.collection("politicalParties").countDocuments({ countryId }),
   ]);

@@ -15,6 +15,7 @@ import {
 } from "@/lib/legislature/lowerChamberSeats";
 import { getGameState } from "@/lib/gameState";
 import { SINGLEPLAYER_USER_ID, isSingleplayer } from "@/lib/singleplayer";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export function mayRuleByDecree(
   character: Pick<Character, "countryId" | "singleplayerHeadOfState">,
@@ -168,7 +169,7 @@ export async function seatSingleplayerHeadOfState(
 ): Promise<boolean> {
   const officeType = getSingleplayerHeadOfStateOfficeType(args.countryId, args.preset);
   if (!officeType) return false;
-  const character = await db.collection<Character>("characters").findOne({ _id: args.characterId });
+  const character = await charactersCollection(db).findOne({ _id: args.characterId });
   if (!character || character.countryId !== args.countryId) return false;
 
   if (isDirectSingleplayerGovernment(args.countryId, args.preset)) {
@@ -219,7 +220,7 @@ export async function seatSingleplayerHeadOfState(
       { countryId: args.countryId, "currentOffice.type": officeType },
       { $set: { currentOffice: null, updatedAt: args.now } }
     );
-  await db.collection<Character>("characters").updateMany(
+  await charactersCollection(db).updateMany(
     {
       countryId: args.countryId,
       "currentOffice.type": officeType,
@@ -245,9 +246,10 @@ export async function seatSingleplayerHeadOfState(
     },
     { upsert: true }
   );
-  await db
-    .collection<Character>("characters")
-    .updateOne({ _id: args.characterId }, { $set: { currentOffice: office, updatedAt: args.now } });
+  await charactersCollection(db).updateOne(
+    { _id: args.characterId },
+    { $set: { currentOffice: office, updatedAt: args.now } }
+  );
   return true;
 }
 
@@ -265,7 +267,7 @@ export async function reconcileSingleplayerHeadOfState(
   const gameState = await getGameState(db);
   if (gameState?.singleplayerConfig?.mode !== "head-of-state") return false;
 
-  const character = await db.collection<Character>("characters").findOne({
+  const character = await charactersCollection(db).findOne({
     userId: new ObjectId(SINGLEPLAYER_USER_ID),
     retiredAt: { $exists: false },
   });
@@ -276,12 +278,10 @@ export async function reconcileSingleplayerHeadOfState(
   if (!getSingleplayerHeadOfStateOfficeType(countryId, preset)) return false;
 
   if (character.singleplayerHeadOfState !== true) {
-    await db
-      .collection<Character>("characters")
-      .updateOne(
-        { _id: character._id },
-        { $set: { singleplayerHeadOfState: true, updatedAt: args.now ?? new Date() } }
-      );
+    await charactersCollection(db).updateOne(
+      { _id: character._id },
+      { $set: { singleplayerHeadOfState: true, updatedAt: args.now ?? new Date() } }
+    );
   }
 
   return seatSingleplayerHeadOfState(db, {
@@ -297,7 +297,7 @@ export async function pinnedSingleplayerHeadOfState(
   countryId: CountryId
 ): Promise<Character | null> {
   if (!isSingleplayer()) return null;
-  return db.collection<Character>("characters").findOne({
+  return charactersCollection(db).findOne({
     countryId,
     singleplayerHeadOfState: true,
     retiredAt: { $exists: false },

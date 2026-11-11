@@ -26,6 +26,7 @@ import { TERRITORY_ADMISSIONS } from "@/lib/elections/statehoodAdmission";
 import { buildMajorPartyOrgsForState } from "@/lib/seeds/reference/statePartyOrg";
 import { insertManyIgnoringDuplicateKey } from "@/lib/elections/duplicateKey";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export const ELECTION_DURATION_TURNS = 72; // 72 turns = 72 hours
 
@@ -61,8 +62,7 @@ async function ensureResidentTerritorialPartyOrgs(
   );
   if (territoryIds.length === 0) return statePartyOrgs;
 
-  const residents = await db
-    .collection<Character>("characters")
+  const residents = await charactersCollection(db)
     .find({
       countryId: "US",
       homeState: { $in: territoryIds },
@@ -691,8 +691,7 @@ export async function vacateInactiveLeadership(
   const holderIds = Array.from(holderIdByHex.values());
   if (holderIds.length === 0) return 0;
 
-  const characters = await db
-    .collection<Character>("characters")
+  const characters = await charactersCollection(db)
     .find({ _id: { $in: holderIds } })
     .project<{ _id: ObjectId; userId: ObjectId }>({ _id: 1, userId: 1 })
     .toArray();
@@ -815,8 +814,7 @@ async function notifyMembersElectionsOpenedBatch(
   if (openings.length === 0) return;
 
   const db = await getDb();
-  const members = await db
-    .collection<Character>("characters")
+  const members = await charactersCollection(db)
     .find({
       $or: openings.map(({ stateId, partyId, countryId }) => ({
         homeState: stateId,
@@ -878,7 +876,7 @@ async function notifyLeadershipElected(
   winnerName: string
 ): Promise<void> {
   const db = await getDb();
-  const char = await db.collection<Character>("characters").findOne({ _id: winnerId });
+  const char = await charactersCollection(db).findOne({ _id: winnerId });
   if (!char) return;
 
   await createNotification({
@@ -901,7 +899,7 @@ async function notifyLeadershipLost(
   winnerName: string
 ): Promise<void> {
   const db = await getDb();
-  const char = await db.collection<Character>("characters").findOne({ _id: loserId });
+  const char = await charactersCollection(db).findOne({ _id: loserId });
   if (!char) return;
 
   await createNotification({
@@ -922,7 +920,7 @@ async function notifyLeadershipRemoved(
   position: StatePartyElectionPosition
 ): Promise<void> {
   const db = await getDb();
-  const char = await db.collection<Character>("characters").findOne({ _id: holderId });
+  const char = await charactersCollection(db).findOne({ _id: holderId });
   if (!char) return;
 
   await createNotification({
@@ -944,7 +942,7 @@ async function notifyLeadershipVacatedForNewRole(
   newPosition: StatePartyElectionPosition
 ): Promise<void> {
   const db = await getDb();
-  const char = await db.collection<Character>("characters").findOne({ _id: holderId });
+  const char = await charactersCollection(db).findOne({ _id: holderId });
   if (!char) return;
 
   await createNotification({
@@ -973,7 +971,7 @@ export async function notifyLeadershipAppointed(
   appointedByName: string
 ): Promise<void> {
   const db = await getDb();
-  const char = await db.collection<Character>("characters").findOne({ _id: characterId });
+  const char = await charactersCollection(db).findOne({ _id: characterId });
   if (!char) return;
 
   await createNotification({
@@ -994,7 +992,7 @@ export async function notifyLeadershipRemovedByAdmin(
   position: StatePartyElectionPosition
 ): Promise<void> {
   const db = await getDb();
-  const char = await db.collection<Character>("characters").findOne({ _id: characterId });
+  const char = await charactersCollection(db).findOne({ _id: characterId });
   if (!char) return;
 
   await createNotification({
@@ -1017,8 +1015,7 @@ export async function notifyCandidacyDeclared(
   candidateCharId: ObjectId
 ): Promise<void> {
   const db = await getDb();
-  const members = await db
-    .collection<Character>("characters")
+  const members = await charactersCollection(db)
     .find({ homeState: stateId, party: partyId, countryId, _id: { $ne: candidateCharId } })
     .project<{ _id: ObjectId; userId: ObjectId }>({ _id: 1, userId: 1 })
     .toArray();

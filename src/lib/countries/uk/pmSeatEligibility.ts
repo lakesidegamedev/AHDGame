@@ -5,8 +5,9 @@
  */
 import type { Db, ObjectId } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { Character, ElectedOfficial } from "@/lib/db/types";
+import type { ElectedOfficial } from "@/lib/db/types";
 import { isSingleplayer } from "@/lib/singleplayer";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export async function hasRequiredPrimeMinisterSeat(
   db: Db,
@@ -16,7 +17,7 @@ export async function hasRequiredPrimeMinisterSeat(
 ): Promise<boolean> {
   if (countryId !== "UK") return true;
   if (characterId && isSingleplayer()) {
-    const pinned = await db.collection<Character>("characters").findOne(
+    const pinned = await charactersCollection(db).findOne(
       {
         _id: characterId,
         countryId,

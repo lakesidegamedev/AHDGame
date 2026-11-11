@@ -42,6 +42,7 @@ import { CAMPAIGN_ACTIVITY_HISTORY_CAP } from "@/lib/campaigns/constants/activit
 import { logger } from "../observability/logger";
 import { fundPoliticalMediaOrder } from "@/lib/politicalMedia/journal";
 import type { PoliticalMediaPayer } from "@/lib/politicalMedia/journal";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface CampaignTurnResults {
   campaignsProcessed: number;
@@ -297,8 +298,7 @@ export async function processCampaignTurn(turnNumber: number): Promise<CampaignT
         const nppIds = campaigns.filter((c) => c.candidateIsNPP).map((c) => c.candidateId);
         const [characterDocs, nppDocs] = await Promise.all([
           characterIds.length > 0
-            ? db
-                .collection("characters")
+            ? charactersCollection(db)
                 .find({ _id: { $in: characterIds } })
                 .toArray()
             : Promise.resolve([]),
@@ -978,8 +978,7 @@ async function applyPassiveEffectsBulk(
   // Resolve unknown targets (opposition research targets) — bulk lookup
   if (unknownTargets.size > 0) {
     const unknownIds = [...unknownTargets.keys()].map((id) => new ObjectId(id));
-    const foundChars = await db
-      .collection("characters")
+    const foundChars = await charactersCollection(db)
       .find({ _id: { $in: unknownIds } }, { projection: { _id: 1 } })
       .toArray();
     const charIdSet = new Set(foundChars.map((c) => c._id.toString()));
@@ -1030,7 +1029,7 @@ async function applyPassiveEffectsBulk(
         update: buildClampedFavorabilityUpdate(amount),
       },
     }));
-    await db.collection("characters").bulkWrite(charOps);
+    await charactersCollection(db).bulkWrite(charOps);
   }
 
   if (nppUpdatesFinal.size > 0) {

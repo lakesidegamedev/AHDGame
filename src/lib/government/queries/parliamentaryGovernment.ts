@@ -9,7 +9,7 @@ import { getParliamentaryCountryConfig } from "@/lib/government/parliamentaryCou
 import { activeAppointmentVoteFilter } from "@/lib/government/appointmentVoteDedup";
 import { loadRuntimeCountryOffices } from "@/lib/countries/runtimeOffices";
 import { ObjectId, type Db } from "mongodb";
-import type { Character, ElectedOfficial, NPP, PoliticalParty } from "@/lib/db/types";
+import type { ElectedOfficial, NPP, PoliticalParty } from "@/lib/db/types";
 import type {
   EligibleSenateAppointeeView,
   NoConfidenceVoteView,
@@ -20,6 +20,7 @@ import type {
 import { isFilledOfficial } from "@/lib/governors/senateVacancy";
 import { US_SENATE_2020 } from "@/lib/constants/historicalSeats";
 import type { CountryId } from "@/lib/constants/countries";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export async function getPmAppointmentCandidates(
   db: Db,
@@ -84,8 +85,12 @@ export async function getPmAppointmentCandidates(
   const charIds = lowerChamberMPs
     .map((mp) => mp.characterId)
     .filter((id): id is ObjectId => id != null);
-  const characters = await db
-    .collection<{ _id: ObjectId; name: string; party?: string; userId?: ObjectId }>("characters")
+  const characters = await charactersHandle<{
+    _id: ObjectId;
+    name: string;
+    party?: string;
+    userId?: ObjectId;
+  }>(db)
     .find({ _id: { $in: charIds }, userId: { $exists: true } })
     .toArray();
   const charMap = new Map(characters.map((char) => [char._id.toString(), char]));
@@ -181,8 +186,12 @@ export async function getHosAppointmentCandidates(
   }
 
   const charIds = deputies.map((mp) => mp.characterId).filter((id): id is ObjectId => id != null);
-  const characters = await db
-    .collection<{ _id: ObjectId; name: string; party?: string; userId?: ObjectId }>("characters")
+  const characters = await charactersHandle<{
+    _id: ObjectId;
+    name: string;
+    party?: string;
+    userId?: ObjectId;
+  }>(db)
     .find({ _id: { $in: charIds }, userId: { $exists: true } })
     .toArray();
   const charMap = new Map(characters.map((char) => [char._id.toString(), char]));
@@ -334,10 +343,10 @@ export async function getEligibleSenateAppointees(
   senateClass: 1 | 2 | 3
 ): Promise<{ candidates: EligibleSenateAppointeeView[] }> {
   const officialsCollection = db.collection<ElectedOfficial>("electedOfficials");
-  const charactersCollection = db.collection<Character>("characters");
+  const charactersHandle = charactersCollection(db);
   const nppsCollection = db.collection<NPP>("npps");
 
-  const governorCharacter = await charactersCollection.findOne({
+  const governorCharacter = await charactersHandle.findOne({
     userId: new ObjectId(governorUserId),
   });
   if (!governorCharacter) {
@@ -370,7 +379,7 @@ export async function getEligibleSenateAppointees(
   }
 
   const [eligibleChars, eligibleNpps, occupiedOfficials] = await Promise.all([
-    charactersCollection
+    charactersHandle
       .find({ homeState: governorOfficial.state, userId: { $exists: true } })
       .toArray(),
     nppsCollection.find({ homeState: governorOfficial.state, retiredAt: null }).toArray(),
@@ -482,9 +491,10 @@ async function getViewerVoteContext(
     return { viewerVote: null, myWhippedFrom: null };
   }
 
-  const viewerChar = await db
-    .collection<Character>("characters")
-    .findOne({ userId: new ObjectId(viewerUserId) }, { projection: { _id: 1 } });
+  const viewerChar = await charactersCollection(db).findOne(
+    { userId: new ObjectId(viewerUserId) },
+    { projection: { _id: 1 } }
+  );
   if (!viewerChar) {
     return { viewerVote: null, myWhippedFrom: null };
   }

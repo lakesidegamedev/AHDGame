@@ -6,7 +6,6 @@
 import { createHash } from "node:crypto";
 import { ObjectId, type ClientSession, type Db } from "mongodb";
 import type {
-  Character,
   ElectedOfficial,
   Election,
   ElectionCandidate,
@@ -20,6 +19,7 @@ import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
 import { HU_1991_COUNTS_COLLECTION, type Hu1991AssemblyRecord } from "./assemblyCount1991";
 import { settleHu1991Mandates } from "./rules/mandates1991";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const HU_1991_OFFICE_ARCHIVES_COLLECTION = "hu1991AssemblyOfficeArchives";
 interface Hu1991AssemblyArchive {
@@ -125,8 +125,7 @@ async function materializeHu1991AssemblySeating(input: {
         .toArray()
     : [];
   const players = playerIds.length
-    ? await db
-        .collection<Character>("characters")
+    ? await charactersCollection(db)
         .find(
           {
             _id: { $in: playerIds },
@@ -211,7 +210,7 @@ async function materializeHu1991AssemblySeating(input: {
       { session }
     );
   for (const isNpc of [false, true]) {
-    const collection = isNpc ? db.collection<NPP>("npps") : db.collection<Character>("characters");
+    const collection = isNpc ? db.collection<NPP>("npps") : charactersCollection(db);
     await collection.updateMany(
       { countryId: "HU", "currentOffice.type": { $in: ["assemblyDelegate", "assemblyDeputy"] } },
       {
@@ -247,7 +246,7 @@ async function materializeHu1991AssemblySeating(input: {
   for (const isNpc of [false, true]) {
     const selected = [...owners.values()].filter((row) => row.isNpc === isNpc);
     if (!selected.length) continue;
-    const collection = isNpc ? db.collection<NPP>("npps") : db.collection<Character>("characters");
+    const collection = isNpc ? db.collection<NPP>("npps") : charactersCollection(db);
     await collection.bulkWrite(
       selected.map((row) => {
         const originalOffice = (isNpc ? npcMap : playerMap).get(row.ownerId)?.currentOffice;

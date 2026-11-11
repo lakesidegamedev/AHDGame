@@ -20,6 +20,7 @@ import {
   loadHouseVoteStandings,
   loadPartyCoalitions,
 } from "@/lib/elections/resolution/contingentHouseVoteStandings";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface ContingentHouseVoteViewCandidate {
   id: string;
@@ -127,9 +128,7 @@ export async function buildContingentHouseVoteView(
           )
       : Promise.resolve(null),
     viewerCharacterId
-      ? db
-          .collection<Character>("characters")
-          .findOne({ _id: viewerCharacterId }, { projection: { party: 1 } })
+      ? charactersCollection(db).findOne({ _id: viewerCharacterId }, { projection: { party: 1 } })
       : Promise.resolve(null),
     db
       .collection<PoliticalParty>("politicalParties")
@@ -175,8 +174,7 @@ export async function buildContingentHouseVoteView(
     .sort((a, b) => a.scope.localeCompare(b.scope) || a.name.localeCompare(b.name));
 
   const defianceChars = standings?.defiances.length
-    ? await db
-        .collection<Character>("characters")
+    ? await charactersCollection(db)
         .find({ _id: { $in: standings.defiances.map((d) => new ObjectId(d.voterId)) } })
         .project<Pick<Character, "_id" | "name">>({ _id: 1, name: 1 })
         .toArray()

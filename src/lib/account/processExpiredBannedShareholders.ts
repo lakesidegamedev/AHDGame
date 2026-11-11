@@ -1,5 +1,5 @@
 import { ObjectId, type Db } from "mongodb";
-import type { Character, User } from "@/lib/db/types";
+import type { User } from "@/lib/db/types";
 import {
   cleanupShareMarketActivityForCharacters,
   cleanupShareMarketActivityForCorporations,
@@ -8,6 +8,7 @@ import { releaseCharacterHeldSharesToFloat } from "@/lib/corporations/releaseCha
 import { releaseCorporationHeldSharesToFloat } from "@/lib/corporations/releaseHeldSharesToFloat";
 import { closeCeoTenure } from "@/lib/corporations/ceoHistory";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const BANNED_SHARE_RELEASE_GRACE_MS = 48 * 60 * 60 * 1000;
 
@@ -65,8 +66,7 @@ export async function processExpiredBannedShareholders(
   }
 
   const userIds = expiredBannedUsers.map((user) => user._id);
-  const characters = await db
-    .collection<Character>("characters")
+  const characters = await charactersCollection(db)
     .find({ userId: { $in: userIds } }, { projection: { _id: 1, userId: 1 } })
     .toArray();
 

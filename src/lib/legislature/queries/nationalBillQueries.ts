@@ -80,6 +80,7 @@ import { getGameStatePreset } from "@/lib/db/collections/gameState";
 import { mayRuleByDecree } from "@/lib/singleplayerHeadOfState";
 import { loadBillLegislationTypes } from "@/lib/legislature/queries/loadBillLegislationTypes";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const BILL_PAGE_LIMIT = 50;
 
@@ -433,8 +434,7 @@ export async function listNationalLegislatureBills(
   ];
   const sponsorChars =
     sponsorIds.length > 0
-      ? await db
-          .collection<Character>("characters")
+      ? await charactersCollection(db)
           .find(
             { _id: { $in: sponsorIds.map((id) => new ObjectId(id)) } },
             { projection: { _id: 1, sequentialId: 1, avatarUrl: 1 } }
@@ -737,8 +737,7 @@ export async function getNationalBillDetail(
 
   if (countryHasFeature("usLib", country)) {
     if (authUser) {
-      const viewerCharacter = await db
-        .collection<Character>("characters")
+      const viewerCharacter = await charactersCollection(db)
         .findOne(
           { userId: new ObjectId(authUser.userId) },
           { projection: { _id: 1, party: 1, countryId: 1, policies: 1 } }
@@ -783,8 +782,7 @@ export async function getNationalBillDetail(
       }
     }
   } else if (authUser) {
-    const character = await db
-      .collection<Character>("characters")
+    const character = await charactersCollection(db)
       .findOne({ userId: new ObjectId(authUser.userId) });
     if (character) {
       myCharacterId = character._id.toString();
@@ -879,8 +877,7 @@ export async function getNationalBillDetail(
   const voterPartyMap = new Map<string, string>();
   const [characters, npps] = await Promise.all([
     uniqueCharacterIds.length > 0
-      ? db
-          .collection<Character>("characters")
+      ? charactersCollection(db)
           .find({ _id: { $in: uniqueCharacterIds.map((id) => new ObjectId(id)) } })
           .project({ _id: 1, party: 1 })
           .toArray()
@@ -1052,8 +1049,7 @@ export async function getNationalBillDetail(
   );
   const sequentialIdMap = new Map<string, number>();
   if (uniqueLookupIds.length > 0) {
-    const characterDocs = await db
-      .collection<Character>("characters")
+    const characterDocs = await charactersCollection(db)
       .find(
         { _id: { $in: uniqueLookupIds.map((id) => new ObjectId(id)) } },
         { projection: { _id: 1, sequentialId: 1 } }

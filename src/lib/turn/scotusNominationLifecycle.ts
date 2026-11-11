@@ -29,6 +29,7 @@ import { awardAchievement } from "@/lib/achievements";
 import { SCOTUS_CONFIRMED_SLUG } from "@/lib/scotus/achievementDefinitions";
 import { buildScotusConfirmationCareerEvent } from "@/lib/scotus/careerEvents";
 import { getPoliticalPartiesCollection } from "@/lib/db/collections/politicalParties";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface ScotusNominationLifecycleResult {
   nominationsProcessed: number;
@@ -218,8 +219,7 @@ export async function processScotusNominationLifecycle(
   ];
   const [characterPortraits, nppPortraits] = await Promise.all([
     nomineeCharacterIds.length
-      ? database
-          .collection<Character>("characters")
+      ? charactersCollection(database)
           .find({ _id: { $in: nomineeCharacterIds } }, { projection: { avatarUrl: 1 } })
           .toArray()
       : Promise.resolve([]),
@@ -295,9 +295,9 @@ export async function processScotusNominationLifecycle(
       announceResolution();
       confirmed++;
 
-      const presidentChar = await database
-        .collection<Character>("characters")
-        .findOne({ _id: nom.proposedByPresidentId });
+      const presidentChar = await charactersCollection(database).findOne({
+        _id: nom.proposedByPresidentId,
+      });
       if (presidentChar?.userId) {
         notificationInputs.push({
           userId: presidentChar.userId,
@@ -312,9 +312,9 @@ export async function processScotusNominationLifecycle(
         });
       }
       if (nom.nomineeMode === "character" && nom.nomineeCharacterId) {
-        const nomineeChar = await database
-          .collection<Character>("characters")
-          .findOne({ _id: nom.nomineeCharacterId });
+        const nomineeChar = await charactersCollection(database).findOne({
+          _id: nom.nomineeCharacterId,
+        });
         if (nomineeChar) {
           // Judicial seats have no OfficeType, so the profile reads this entry.
           confirmationCareerWrites.push({
@@ -368,9 +368,9 @@ export async function processScotusNominationLifecycle(
       announceResolution();
       rejected++;
 
-      const presidentChar = await database
-        .collection<Character>("characters")
-        .findOne({ _id: nom.proposedByPresidentId });
+      const presidentChar = await charactersCollection(database).findOne({
+        _id: nom.proposedByPresidentId,
+      });
       if (presidentChar?.userId) {
         notificationInputs.push({
           userId: presidentChar.userId,
@@ -388,7 +388,7 @@ export async function processScotusNominationLifecycle(
   }
 
   if (confirmationCareerWrites.length > 0) {
-    await database.collection<Character>("characters").bulkWrite(confirmationCareerWrites);
+    await charactersCollection(database).bulkWrite(confirmationCareerWrites);
   }
   for (const award of confirmationAwards) {
     await awardAchievement(award.userId, SCOTUS_CONFIRMED_SLUG, award.characterId);

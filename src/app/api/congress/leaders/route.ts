@@ -16,10 +16,11 @@ import { getHouseComposition } from "@/lib/congress/houseComposition";
 import { getSenateComposition } from "@/lib/congress/senateComposition";
 import { getPartyHex } from "@/lib/utils/politics";
 import { LEADERSHIP_ROLES } from "@/lib/congress/leadershipRoles";
-import type { CongressLeader, Character, NPP } from "@/lib/db/types";
+import type { CongressLeader, NPP } from "@/lib/db/types";
 import type { LeadershipRole } from "@/lib/db/types";
 import { fetchBordersByUserIds } from "@/lib/db/patreonBorders";
 import { getEnabledCountryIds } from "@/lib/countryAccess";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface LeaderDisplay {
   role: LeadershipRole;
@@ -67,8 +68,7 @@ export async function GET() {
 
     const leaderIds = docs.filter((d) => d.characterId).map((d) => d.characterId!);
     const characters = leaderIds.length
-      ? await db
-          .collection<Character>("characters")
+      ? await charactersCollection(db)
           .find({ _id: { $in: leaderIds } })
           .project({ _id: 1, avatarUrl: 1, homeState: 1, sequentialId: 1, userId: 1 })
           .toArray()
@@ -186,9 +186,10 @@ export async function POST(request: Request) {
     if (!ObjectId.isValid(characterId)) {
       return errorResponse(400, "Invalid character ID");
     }
-    const char = await db
-      .collection<Character>("characters")
-      .findOne({ _id: new ObjectId(characterId) }, { projection: { name: 1, party: 1 } });
+    const char = await charactersCollection(db).findOne(
+      { _id: new ObjectId(characterId) },
+      { projection: { name: 1, party: 1 } }
+    );
     if (!char) return errorResponse(404, "Character not found");
     if (!roleConfig) {
       return errorResponse(400, "Unknown leadership role");

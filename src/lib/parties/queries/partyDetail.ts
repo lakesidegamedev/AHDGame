@@ -3,7 +3,7 @@ import { loadCampaignPriceLevel } from "@/lib/campaigns/campaignCurrency";
 import { loadCampaignCurrencyRates } from "@/lib/campaigns/campaignCurrency";
 import { ObjectId, type Db } from "mongodb";
 import { getPartyBudgetCollection } from "@/lib/db/collections";
-import type { Character, GameConfig, NPP, PoliticalParty, State, User } from "@/lib/db/types";
+import type { GameConfig, NPP, PoliticalParty, State, User } from "@/lib/db/types";
 import type { PartyData, PartyLeader, PartyMember } from "@/lib/parties/dto/partyView";
 import { resolvePartyPsCap, resolvePartyTier } from "@/lib/parties/partyTier";
 import { nppActionPointCap, nppActionPointRegen } from "@/lib/npp/actionPoints";
@@ -34,6 +34,7 @@ import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { isUserActive } from "@/lib/players/playerActivity";
 import { DEFAULT_LEGACY_COUNTRY_ID } from "@/lib/constants/countries";
 import { countDistinctOfficers } from "@/lib/treasury/payoutCapValues";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export async function loadPartyLeaders(
   db: Db,
@@ -48,8 +49,7 @@ export async function loadPartyLeaders(
   ];
   if (ids.length === 0) return new Map();
 
-  const characters = await db
-    .collection<Character>("characters")
+  const characters = await charactersCollection(db)
     .find(
       { _id: { $in: ids } },
       { projection: { _id: 1, userId: 1, sequentialId: 1, name: 1, avatarUrl: 1 } }
@@ -120,8 +120,7 @@ export async function getPartyDetail(db: Db, party: PoliticalParty): Promise<Par
   // the roster, the NPP list, the game config and the turnout divisor together
   // instead of one after another.
   const [allMembers, npps, gameConfig, regionCount] = await Promise.all([
-    db
-      .collection<Character>("characters")
+    charactersCollection(db)
       .find(
         { party: String(party.sequentialId), countryId: partyCountry },
         {

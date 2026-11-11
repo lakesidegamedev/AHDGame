@@ -3,7 +3,6 @@ import { ObjectId } from "mongodb";
 import type {
   AuctionBid,
   AuctionBidHistoryEntry,
-  Character,
   Corporation,
   CorporateSector,
   NationalizationAuction,
@@ -45,6 +44,7 @@ import {
   reserveSectorsForTransition,
 } from "@/lib/corporations/securedConstructionProperty";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * Witness escrow cash that landed on a bidder: a bid moves it into escrow, and a
@@ -108,7 +108,7 @@ export async function placeAuctionBid(db: Db, params: PlaceBidParams): Promise<v
   // Residency gate (spec §13.3): only residents of the auction's country may bid.
   // The acting character must be a resident — this covers personal bids and
   // CEO-on-behalf corp bids alike (the corp currency match is checked below).
-  const actor = await db.collection<Character>("characters").findOne({ _id: params.characterId });
+  const actor = await charactersCollection(db).findOne({ _id: params.characterId });
   if (!actor || actor.countryId !== auction.countryId) {
     throw new Error(`Only residents of ${auction.countryId} may bid on this auction.`);
   }
@@ -518,9 +518,7 @@ export async function resolveNationalizationAuction(
   // existing HQ when the buyer's region is somehow absent (data-safe).
   let hqState: string | undefined;
   if (winner.characterId) {
-    const winnerChar = await db
-      .collection<Character>("characters")
-      .findOne({ _id: winner.characterId });
+    const winnerChar = await charactersCollection(db).findOne({ _id: winner.characterId });
     winnerUserId = winnerChar?.userId;
     hqState = winnerChar?.homeState;
     // `ceoType` is stamped, not inherited: a state shell may carry ceoType:"npp"

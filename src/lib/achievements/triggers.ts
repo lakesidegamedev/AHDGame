@@ -9,6 +9,7 @@ import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import type { ActionType } from "@/lib/db/types/gameState";
 import { awardAchievement, awardAchievements } from "./index";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export async function checkActionAchievements(
   userId: ObjectId,
@@ -142,8 +143,7 @@ export async function checkElectionEntryAchievements(
 /** Elections this character has won, from their career log. */
 export async function countElectionWins(characterId: ObjectId): Promise<number> {
   const db = await getDb();
-  const [row] = await db
-    .collection("characters")
+  const [row] = await charactersCollection(db)
     .aggregate<{ wins: number }>([
       { $match: { _id: characterId } },
       {

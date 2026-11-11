@@ -6,12 +6,13 @@ import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
 import { badRequest, handleRouteError, errorResponse } from "@/lib/api/errors";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { getDb } from "@/lib/mongodb";
-import type { State, Character, NPP } from "@/lib/db/types";
+import type { State, NPP } from "@/lib/db/types";
 import {
   loadTargetedAdContext,
   purchaseTargetedAds,
   quoteTargetedAds,
 } from "@/lib/campaignTargeting/commands";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -38,9 +39,10 @@ export async function GET(request: NextRequest, { params }: Params) {
               .findOne({ _id: context.candidate.nppId }, { projection: { homeState: 1 } })
           )?.homeState
         : (
-            await db
-              .collection<Character>("characters")
-              .findOne({ _id: context.candidate.characterId }, { projection: { homeState: 1 } })
+            await charactersCollection(db).findOne(
+              { _id: context.candidate.characterId },
+              { projection: { homeState: 1 } }
+            )
           )?.homeState;
     const regions = await db
       .collection<State>("states")

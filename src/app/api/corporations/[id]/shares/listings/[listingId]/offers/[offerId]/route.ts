@@ -19,8 +19,9 @@ import {
 } from "@/lib/currency/corporationCapital";
 import { emitTx } from "@/lib/financialTxLog/emit";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
-import type { Character, ShareOffer } from "@/lib/db/types";
+import type { ShareOffer } from "@/lib/db/types";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteParams {
   params: Promise<{ id: string; listingId: string; offerId: string }>;
@@ -168,7 +169,7 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
       }
       let refundCredited = false;
       try {
-        const refundResult = await db.collection<Character>("characters").updateOne(
+        const refundResult = await charactersCollection(db).updateOne(
           { _id: character._id },
           {
             $inc: buildPersonalBalanceInc(refundInHome, homeCurrency, forexEnabled),
@@ -201,7 +202,7 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
         });
       } catch (error) {
         if (refundCredited) {
-          await db.collection<Character>("characters").updateOne(
+          await charactersCollection(db).updateOne(
             { _id: character._id },
             {
               $inc: buildPersonalBalanceInc(-refundInHome, homeCurrency, forexEnabled),

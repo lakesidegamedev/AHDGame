@@ -32,6 +32,7 @@ import {
 } from "@/lib/unions/enforcementAuthority";
 import { enforcementTreasuryCostPerTurn } from "@/lib/unions/enforcementCosts";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const bodySchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("posture"), posture: z.enum(["tolerant", "normal", "crackdown"]) }),
@@ -126,8 +127,7 @@ export async function GET(_request: Request, { params }: Context) {
           .toArray()
       : [];
     const characters = organizers.length
-      ? await db
-          .collection<Character>("characters")
+      ? await charactersCollection(db)
           .find(
             { _id: { $in: organizers.map((organizer) => organizer.characterId) } },
             { projection: { _id: 1, name: 1 } }
@@ -238,12 +238,10 @@ export async function POST(request: Request, { params }: Context) {
       ) {
         return errorResponse(409, "Organizer is not eligible for prosecution.");
       }
-      const spent = await db
-        .collection<Character>("characters")
-        .updateOne(
-          { _id: character._id, actions: { $gte: PROSECUTION_ACTION_COST } },
-          { $inc: { actions: -PROSECUTION_ACTION_COST }, $set: { updatedAt: now } }
-        );
+      const spent = await charactersCollection(db).updateOne(
+        { _id: character._id, actions: { $gte: PROSECUTION_ACTION_COST } },
+        { $inc: { actions: -PROSECUTION_ACTION_COST }, $set: { updatedAt: now } }
+      );
       if (!spent.modifiedCount) {
         return errorResponse(409, "Prosecution requires three action points.");
       }
@@ -275,16 +273,18 @@ export async function POST(request: Request, { params }: Context) {
           { projection: { lastProsecutionId: 1 } }
         );
         if (persisted?.lastProsecutionId !== prosecutionId) {
-          await db
-            .collection<Character>("characters")
-            .updateOne({ _id: character._id }, { $inc: { actions: PROSECUTION_ACTION_COST } });
+          await charactersCollection(db).updateOne(
+            { _id: character._id },
+            { $inc: { actions: PROSECUTION_ACTION_COST } }
+          );
         }
         return handleRouteError(error);
       }
       if (!changed.modifiedCount) {
-        await db
-          .collection<Character>("characters")
-          .updateOne({ _id: character._id }, { $inc: { actions: PROSECUTION_ACTION_COST } });
+        await charactersCollection(db).updateOne(
+          { _id: character._id },
+          { $inc: { actions: PROSECUTION_ACTION_COST } }
+        );
         return errorResponse(409, "Organizer changed before prosecution.");
       }
       return NextResponse.json({
@@ -305,12 +305,10 @@ export async function POST(request: Request, { params }: Context) {
         return errorResponse(409, "This cell is not eligible for a raid.");
       }
       const loss = Math.min(undergroundStrength(union), 10);
-      const spent = await db
-        .collection<Character>("characters")
-        .updateOne(
-          { _id: character._id, actions: { $gte: RAID_ACTION_COST } },
-          { $inc: { actions: -RAID_ACTION_COST }, $set: { updatedAt: now } }
-        );
+      const spent = await charactersCollection(db).updateOne(
+        { _id: character._id, actions: { $gte: RAID_ACTION_COST } },
+        { $inc: { actions: -RAID_ACTION_COST }, $set: { updatedAt: now } }
+      );
       if (!spent.modifiedCount) {
         return errorResponse(409, "Raid requires two action points.");
       }
@@ -348,16 +346,18 @@ export async function POST(request: Request, { params }: Context) {
           .collection<Union>("unions")
           .findOne({ _id: union._id, countryId }, { projection: { lastUndergroundRaidId: 1 } });
         if (persisted?.lastUndergroundRaidId !== raidId) {
-          await db
-            .collection<Character>("characters")
-            .updateOne({ _id: character._id }, { $inc: { actions: RAID_ACTION_COST } });
+          await charactersCollection(db).updateOne(
+            { _id: character._id },
+            { $inc: { actions: RAID_ACTION_COST } }
+          );
         }
         return handleRouteError(error);
       }
       if (!changed.modifiedCount) {
-        await db
-          .collection<Character>("characters")
-          .updateOne({ _id: character._id }, { $inc: { actions: RAID_ACTION_COST } });
+        await charactersCollection(db).updateOne(
+          { _id: character._id },
+          { $inc: { actions: RAID_ACTION_COST } }
+        );
         return errorResponse(409, "The cell changed before the raid could proceed.");
       }
       return NextResponse.json({
@@ -370,12 +370,10 @@ export async function POST(request: Request, { params }: Context) {
       });
     }
 
-    const spent = await db
-      .collection<Character>("characters")
-      .updateOne(
-        { _id: character._id, actions: { $gte: 1 } },
-        { $inc: { actions: -1 }, $set: { updatedAt: now } }
-      );
+    const spent = await charactersCollection(db).updateOne(
+      { _id: character._id, actions: { $gte: 1 } },
+      { $inc: { actions: -1 }, $set: { updatedAt: now } }
+    );
     if (!spent.modifiedCount) {
       return errorResponse(409, "Investigation requires one action point.");
     }

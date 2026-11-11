@@ -13,7 +13,8 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError } from "@/lib/api/errors";
-import type { ElectedOfficial, Character, NPP } from "@/lib/db/types";
+import type { ElectedOfficial, NPP } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface DuplicateSeat {
   seatKey: string;
@@ -169,16 +170,12 @@ export async function POST() {
       for (const stale of toRemove) {
         // Clear currentOffice from character/NPP if they still reference this office
         if (stale.characterId) {
-          const char = await db
-            .collection<Character>("characters")
-            .findOne({ _id: stale.characterId });
+          const char = await charactersCollection(db).findOne({ _id: stale.characterId });
           if (char?.currentOffice?.type === stale.officeType) {
-            await db
-              .collection("characters")
-              .updateOne(
-                { _id: stale.characterId },
-                { $set: { currentOffice: null, updatedAt: now } }
-              );
+            await charactersCollection(db).updateOne(
+              { _id: stale.characterId },
+              { $set: { currentOffice: null, updatedAt: now } }
+            );
             clearedCharacters++;
           }
         } else if (stale.nppId) {

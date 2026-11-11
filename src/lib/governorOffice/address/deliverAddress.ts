@@ -1,11 +1,6 @@
 import type { Db, ObjectId } from "mongodb";
 import { ObjectId as MongoObjectId } from "mongodb";
-import type {
-  GovernorAddress,
-  Character,
-  GovernorOfficeState,
-  PartyGroupFavorability,
-} from "@/lib/db/types";
+import type { GovernorAddress, GovernorOfficeState, PartyGroupFavorability } from "@/lib/db/types";
 import type { StateDemographicTurnout } from "@/lib/db/types/stateDemographicTurnout";
 import type { CountryId } from "@/lib/constants/countries";
 import {
@@ -31,6 +26,7 @@ import { getNationalAddressName, getRegionalAddressName } from "@/lib/constants/
 import { generateAddressNews } from "@/lib/news";
 import { sendCountryGameEvent } from "@/lib/discordWebhooks";
 import { buildNationalAddressEmbed } from "@/lib/governorOffice/address/addressWebhook";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface DeliverAddressInput {
   countryId: CountryId;
@@ -146,7 +142,7 @@ export async function deliverAddress(
     if (officeSpend.modifiedCount === 0) {
       return { status: 400, body: { error: "Insufficient office action points." } };
     }
-    const npiSpend = await db.collection<Character>("characters").updateOne(
+    const npiSpend = await charactersCollection(db).updateOne(
       {
         _id: character._id,
         nationalInfluence: { $gte: ADDRESS_NPI_COST },

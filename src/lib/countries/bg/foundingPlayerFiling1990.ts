@@ -4,13 +4,7 @@
  * withdrawal and re-entry reuse the original person and their recorded ballots.
  */
 import { MongoServerError, ObjectId, type ClientSession, type Db } from "mongodb";
-import type {
-  Character,
-  Election,
-  ElectionCandidate,
-  GameState,
-  PoliticalParty,
-} from "@/lib/db/types";
+import type { Election, ElectionCandidate, GameState, PoliticalParty } from "@/lib/db/types";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { chooseBgFoundingPlayerDistrict } from "./rules/foundingPlayerFiling1990";
 import { isBgFoundingCampaign } from "./rules/foundingCampaign1990";
@@ -19,6 +13,7 @@ import {
   addBgFoundingRenewedNominee,
   bgFoundingOpenNominationDistricts,
 } from "./rules/foundingRenewal1990";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 export const BG_FOUNDING_FILING_LOCKS_COLLECTION = "bgFoundingAssemblyFilingLocks";
 export type BgFoundingFilingFailure =
   | "invalid-ballot"
@@ -102,7 +97,7 @@ export async function materializeBgFoundingPlayerFiling(input: {
       : !election.primaryEndTime || now >= election.primaryEndTime)
   )
     return reject("filing-closed");
-  const character = await db.collection<Character>("characters").findOne(
+  const character = await charactersCollection(db).findOne(
     { _id: candidate.characterId },
     {
       session,

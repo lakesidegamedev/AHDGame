@@ -22,7 +22,6 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQuery";
 import type {
-  Character,
   Corporation,
   CorporateSector,
   GameState,
@@ -93,6 +92,7 @@ import {
   retailDemandTransitionTurnsRemaining,
 } from "@/lib/market/retailDemandTransition";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * Sector capacity commands (plants tier, P3a of the buildable-sectors plan).
@@ -817,9 +817,10 @@ export async function placeCapacityBuild(
   // here AND in the sector-detail quote from the same helper, so the price the
   // dialog shows is the price this command charges.
   const ceoChar = corporation.ceoId
-    ? await db
-        .collection<Character>("characters")
-        .findOne({ _id: corporation.ceoId }, { projection: { "stats.businessAcumen": 1 } })
+    ? await charactersCollection(db).findOne(
+        { _id: corporation.ceoId },
+        { projection: { "stats.businessAcumen": 1 } }
+      )
     : null;
   const ceoAcumen = ceoChar?.stats?.businessAcumen ?? NEUTRAL_STAT;
   // Host price level: the sector's OWN state's cost-of-living index, so where

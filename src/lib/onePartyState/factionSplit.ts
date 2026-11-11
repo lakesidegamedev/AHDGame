@@ -15,7 +15,7 @@ import { ObjectId, type Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
 import { getCountryState } from "@/lib/countryState";
-import type { Character, ElectedOfficial, NPP, PoliticalParty } from "@/lib/db/types";
+import type { ElectedOfficial, NPP, PoliticalParty } from "@/lib/db/types";
 import { getNextSequentialId } from "@/lib/db/sequentialId";
 import { vacateDepartedLeadership } from "@/lib/parties/vacateDepartedLeadership";
 import { recomputePartyMemberCount } from "@/lib/parties/recomputePartyMemberCount";
@@ -43,6 +43,7 @@ export interface OfficialAlignment {
  */
 export { pickDefectors } from "./rules/factionDefection";
 import { pickDefectors } from "./rules/factionDefection";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface FactionSplitResult {
   newPartySequentialId: number;
@@ -113,8 +114,7 @@ export async function fireFactionSplit(
   const characterIds = eligible.flatMap((o) => (o.characterId ? [o.characterId] : []));
   const nppIds = eligible.flatMap((o) => (!o.characterId && o.nppId ? [o.nppId] : []));
   const [defectorChars, defectorNpps, memberships] = await Promise.all([
-    db
-      .collection<Character>("characters")
+    charactersCollection(db)
       .find({ _id: { $in: characterIds } }, { projection: { _id: 1, policies: 1 } })
       .toArray(),
     db
@@ -218,9 +218,10 @@ export async function fireFactionSplit(
   // Re-assign each defector character's party affiliation.
   const defectorIds = defectors.flatMap((d) => (d.characterId ? [d.characterId] : []));
   const defectorNppIds = defectors.flatMap((d) => (!d.characterId && d.nppId ? [d.nppId] : []));
-  await db
-    .collection<Character>("characters")
-    .updateMany({ _id: { $in: defectorIds } }, { $set: { party: String(newSeq), updatedAt: now } });
+  await charactersCollection(db).updateMany(
+    { _id: { $in: defectorIds } },
+    { $set: { party: String(newSeq), updatedAt: now } }
+  );
   // Also update their ElectedOfficials rows so the legislature reflects
   // the new affiliation immediately.
   await db

@@ -12,7 +12,6 @@ import type {
   PoliticalParty,
   UnifiedCabinetMember,
 } from "@/lib/db/types";
-import type { Character } from "@/lib/db/types/character";
 import { bulkFetchCharacterNames } from "@/lib/db/characterLookup";
 import { getCabinetPositionGroup, getCabinetPositions } from "@/lib/constants/cabinetMechanics";
 import { resolveCabinetRoster } from "@/lib/cabinet/rosterEra";
@@ -24,6 +23,7 @@ import { getGameState } from "@/lib/gameState";
 import { actingAppointmentsEnabled } from "@/lib/cabinet/actingEligibility";
 import { ACTING_TENURE_TURNS } from "@/lib/cabinet/actingScope";
 import { getActingChargesCollection } from "@/lib/db/collections/actingAppointmentCharges";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 // GET /api/whitehouse/cabinet — Returns all cabinet positions with current members, pending nominations, and the caller's senator/president status.
 // Country-scoped via ?country= (default US).
@@ -50,9 +50,7 @@ export async function GET(request: Request) {
           .collection<ElectedOfficial>("electedOfficials")
           .findOne({ countryId, officeType: "president", characterId: { $ne: null } }),
         authUser
-          ? db
-              .collection<Character>("characters")
-              .findOne({ userId: new ObjectId(authUser.userId) })
+          ? charactersCollection(db).findOne({ userId: new ObjectId(authUser.userId) })
           : Promise.resolve(null),
         db.collection<PoliticalParty>("politicalParties").find({ countryId }).toArray(),
       ]);

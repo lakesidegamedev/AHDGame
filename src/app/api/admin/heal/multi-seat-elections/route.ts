@@ -14,9 +14,9 @@ import type {
   ElectionVoteTally,
   ElectedOfficial,
   ElectionCandidate,
-  Character,
   NPP,
 } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface MisallocatedElection {
   electionId: string;
@@ -303,12 +303,10 @@ export async function POST() {
               { $set: { currentOffice: officeType, updatedAt: now } }
             );
         } else if (candidate.characterId) {
-          await db
-            .collection<Character>("characters")
-            .updateOne(
-              { _id: candidate.characterId },
-              { $set: { currentOffice: officeType, updatedAt: now } }
-            );
+          await charactersCollection(db).updateOne(
+            { _id: candidate.characterId },
+            { $set: { currentOffice: officeType, updatedAt: now } }
+          );
         }
       }
 

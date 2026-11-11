@@ -16,6 +16,7 @@ import type {
   Character,
   NationalPartyElection,
 } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const CAUCUS_ELECTION_LABEL = "Caucus Chair";
 
@@ -33,8 +34,7 @@ async function listActivePlayerMembers(
     .toArray();
   const memberIds = memberships.map((entry) => entry.memberId);
   if (memberIds.length === 0) return [];
-  return db
-    .collection<Character>("characters")
+  return charactersCollection(db)
     .find({ _id: { $in: memberIds } })
     .toArray()
     .then((items) => items.map((entry) => ({ _id: entry._id, userId: entry.userId })));
@@ -65,7 +65,7 @@ async function notifyElectionWinner(
   winnerName: string
 ): Promise<void> {
   const db = await getDb();
-  const winner = await db.collection<Character>("characters").findOne({ _id: winnerId });
+  const winner = await charactersCollection(db).findOne({ _id: winnerId });
   if (!winner) return;
   await createNotification({
     userId: winner.userId,
@@ -84,9 +84,7 @@ async function notifyElectionLosses(
   const db = await getDb();
   const inputs: NotificationInput[] = [];
   for (const loser of losers) {
-    const character = await db
-      .collection<Character>("characters")
-      .findOne({ _id: loser.characterId });
+    const character = await charactersCollection(db).findOne({ _id: loser.characterId });
     if (!character) continue;
     inputs.push({
       userId: character.userId,
@@ -101,9 +99,7 @@ async function notifyElectionLosses(
 
 async function notifyChairRemoved(caucus: Caucus, previousChairId: ObjectId): Promise<void> {
   const db = await getDb();
-  const previousChair = await db
-    .collection<Character>("characters")
-    .findOne({ _id: previousChairId });
+  const previousChair = await charactersCollection(db).findOne({ _id: previousChairId });
   if (!previousChair) return;
   await createNotification({
     userId: previousChair.userId,

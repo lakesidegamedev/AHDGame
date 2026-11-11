@@ -16,6 +16,7 @@ import { MONEY_MOVE_COLLECTION } from "@/lib/banking/moneyMove";
 import { toAccountSnapshot } from "./snapshot";
 import { savingsClosureTransition } from "./rules/closure";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export async function closeCharacterSavings(
   db: Db,
@@ -25,7 +26,7 @@ export async function closeCharacterSavings(
   const [policy, turn, owner, accounts] = await Promise.all([
     loadBankingPolicy(db),
     getCurrentTurn(db),
-    db.collection("characters").findOne({ _id: ownerId }, { projection: { _id: 1 } }),
+    charactersCollection(db).findOne({ _id: ownerId }, { projection: { _id: 1 } }),
     db
       .collection<SavingsAccount>("savingsAccounts")
       .find({ ownerType: "character", ownerId, status: { $ne: "closed" } })

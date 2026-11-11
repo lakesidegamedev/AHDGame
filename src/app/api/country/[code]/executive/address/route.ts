@@ -17,7 +17,8 @@ import {
   ADDRESS_TITLE_MAX_LENGTH,
   ADDRESS_BODY_MAX_LENGTH,
 } from "@/lib/constants/governorOffice";
-import type { Character, GameState, GovernorAddress, GovernorOfficeState } from "@/lib/db/types";
+import type { GameState, GovernorAddress, GovernorOfficeState } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * National (head-of-government) addresses — country leader's equivalent of
@@ -120,9 +121,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
         .limit(1)
         .toArray(),
       db.collection<GameState>("gameState").findOne({ _id: "current" }),
-      characterId
-        ? db.collection<Character>("characters").findOne({ _id: characterId })
-        : Promise.resolve(null),
+      characterId ? charactersCollection(db).findOne({ _id: characterId }) : Promise.resolve(null),
     ]);
 
     const currentTurn = gameStateDoc?.currentTurn ?? 0;

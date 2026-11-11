@@ -1,6 +1,6 @@
 import type { Db } from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
-import type { Character, ElectedOfficial, NPP, PoliticalParty } from "@/lib/db/types";
+import type { ElectedOfficial, NPP, PoliticalParty } from "@/lib/db/types";
 import type { Impeachment, ImpeachmentVoteValue } from "@/lib/db/types/impeachment";
 import { getExecutiveOfficialFilter } from "@/lib/elections/executiveOfficeFilters";
 import { governorOfficialFilter } from "@/lib/db/electedOfficialScope";
@@ -9,6 +9,7 @@ import {
   impeachmentStageChamberOfficeType,
 } from "./impeachmentTally";
 import { resolvePartyTier } from "@/lib/parties/partyTier";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * Per-axis stance distance (on the shared -5..+5 economic/social axes) within
@@ -123,9 +124,10 @@ export async function loadImpeachmentFallbackContext(
     db
       .collection<ElectedOfficial>("electedOfficials")
       .findOne(targetOfficialFilter(impeachment), { projection: { party: 1 } }),
-    db
-      .collection<Character>("characters")
-      .findOne({ _id: impeachment.targetCharacterId }, { projection: { policies: 1 } }),
+    charactersCollection(db).findOne(
+      { _id: impeachment.targetCharacterId },
+      { projection: { policies: 1 } }
+    ),
     db
       .collection<PoliticalParty>("politicalParties")
       .find({ countryId: impeachment.countryId })
@@ -216,9 +218,10 @@ export async function autoVoteNppsForImpeachmentStage(
           .project<Pick<NPP, "_id" | "policies">>({ _id: 1, policies: 1 })
           .toArray()
       : Promise.resolve([] as Array<Pick<NPP, "_id" | "policies">>),
-    db
-      .collection<Character>("characters")
-      .findOne({ _id: impeachment.targetCharacterId }, { projection: { policies: 1 } }),
+    charactersCollection(db).findOne(
+      { _id: impeachment.targetCharacterId },
+      { projection: { policies: 1 } }
+    ),
   ]);
   const stanceByNppId = new Map(
     nppDocs.map((n) => [

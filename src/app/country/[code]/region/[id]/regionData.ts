@@ -5,7 +5,6 @@ import type {
   StatePartyOrg,
   PoliticalParty,
   ElectedOfficial,
-  Character,
   User,
   NPP,
   PartyBudget,
@@ -24,6 +23,7 @@ import { DD_GEOGRAPHY } from "@/lib/countries/dd/geography";
 import { BR_GEOGRAPHY } from "@/lib/countries/br/geography";
 import { SCO_GEOGRAPHY } from "@/lib/countries/sco/geography";
 import { WAL_GEOGRAPHY } from "@/lib/countries/wal/geography";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * Coerce a Mongo timestamp field to an ISO string for client serialization.
@@ -219,8 +219,7 @@ export async function getRegionPartyOrg(stateId: string, countryId: CountryId) {
       .map((po) => po.chairId)
       .filter((id): id is NonNullable<typeof id> => id != null);
     const chairs = chairIds.length
-      ? await db
-          .collection<Character>("characters")
+      ? await charactersCollection(db)
           .find({ _id: { $in: chairIds } })
           .project<{ _id: (typeof chairIds)[number]; name: string; sequentialId?: number }>({
             _id: 1,
@@ -277,8 +276,7 @@ export async function getRegionGovernmentApproval(
 export async function getRegionPlayers(stateId: string) {
   try {
     const db = await getDb();
-    const players = await db
-      .collection<Character>("characters")
+    const players = await charactersCollection(db)
       .find({ homeState: stateId })
       .sort({ name: 1 })
       .toArray();
@@ -381,8 +379,7 @@ export async function getRegionOfficials(stateId: string, countryId: CountryId) 
     const partyIds = [...new Set(officials.map((o) => o.party).filter(Boolean))] as string[];
     const partySeqIds = partyIds.map(Number).filter(Boolean);
     const [characters, npps, parties] = await Promise.all([
-      db
-        .collection<Character>("characters")
+      charactersCollection(db)
         .find({ _id: { $in: characterIds } })
         .toArray(),
       db

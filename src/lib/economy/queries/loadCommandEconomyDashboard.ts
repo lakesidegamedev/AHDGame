@@ -33,6 +33,7 @@ import {
 } from "@/lib/economy/commandEconomyDashboard";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export async function loadCommandEconomyDashboard(
   db: Db,
@@ -90,8 +91,7 @@ export async function loadCommandEconomyDashboard(
   const missingNameIds = corps.map((c) => c.soe?.directorId).filter((id): id is ObjectId => !!id);
   const nameById = new Map<string, string>();
   if (missingNameIds.length > 0) {
-    const chars = await db
-      .collection("characters")
+    const chars = await charactersCollection(db)
       .find({ _id: { $in: missingNameIds } }, { projection: { name: 1 } })
       .toArray();
     for (const ch of chars)

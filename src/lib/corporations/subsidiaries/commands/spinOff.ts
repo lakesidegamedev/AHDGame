@@ -2,7 +2,7 @@ import type { Db, ObjectId } from "mongodb";
 import { assertSubsidiaryWithinCap } from "@/lib/mechanicalLaws/guards";
 import { isPrivateEnterpriseBlocked } from "@/lib/economy/queries/privateEnterpriseGate";
 import { ObjectId as Oid } from "mongodb";
-import type { Character, Corporation, CorporateSector } from "@/lib/db/types";
+import type { Corporation, CorporateSector } from "@/lib/db/types";
 
 import {
   CEO_INITIAL_SHARES,
@@ -56,6 +56,7 @@ import {
   settleConstructionBorrowerTransfers,
 } from "@/lib/banking/constructionBorrowerTransfer";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 // PLANTS-GATED: a spin-off only re-points `corporationId` on the existing row, so
 // capitalStock, buildQueue, CIP and plantsStartTurn ride along untouched. There
@@ -147,9 +148,10 @@ export async function spinOff(
   const SYSTEM_USER = new Oid("000000000000000000000000");
   if (appointedCeoType === "character") {
     if (!appointedCeoCharacterId) return fail("A character is required to appoint a human CEO.");
-    const character = await db
-      .collection<Character>("characters")
-      .findOne({ _id: appointedCeoCharacterId }, { projection: { userId: 1 } });
+    const character = await charactersCollection(db).findOne(
+      { _id: appointedCeoCharacterId },
+      { projection: { userId: 1 } }
+    );
     if (!character || !character.userId) {
       return fail("The selected character cannot serve as CEO (no owning player).");
     }

@@ -8,7 +8,7 @@ import { getCharacterByUserId } from "@/lib/db/characterLookup";
 import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
-import type { Character, ElectedOfficial } from "@/lib/db/types";
+import type { ElectedOfficial } from "@/lib/db/types";
 import { getGameState } from "@/lib/gameState";
 import { getExecutiveOfficialFilter } from "@/lib/elections/executiveOfficeFilters";
 import { governorOfficialFilter } from "@/lib/db/electedOfficialScope";
@@ -22,6 +22,7 @@ import {
   senateConvictionVotesNeeded,
   impeachmentStageChamberOfficeType,
 } from "@/lib/impeachment/impeachmentTally";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /** The all-seats bar a player needs to read a vote in progress. */
 export interface ImpeachmentChamberInfo {
@@ -126,9 +127,10 @@ export async function GET(request: Request) {
         { projection: { characterId: 1 } }
       );
     const target = official?.characterId
-      ? await db
-          .collection<Character>("characters")
-          .findOne({ _id: official.characterId }, { projection: { careerHistory: 1 } })
+      ? await charactersCollection(db).findOne(
+          { _id: official.characterId },
+          { projection: { careerHistory: 1 } }
+        )
       : null;
     const filingWindow = target
       ? await loadImpeachmentFilingWindow(

@@ -5,7 +5,6 @@ import type {
   PartyPoliticalStrengthLedgerRow,
   PoliticalParty,
   StatePartyOrg,
-  Character,
 } from "@/lib/db/types";
 import { emitTreasuryTransaction } from "@/lib/treasury/emit";
 import { activeUserIds } from "@/lib/players/playerActivity";
@@ -24,6 +23,7 @@ import {
   nppActionPointCap,
   nppActionPointRegen,
 } from "@/lib/npp/actionPoints";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 // Per-turn Political Strength for national and state parties:
 // - Flat passive: NATIONAL_PASSIVE_PS_PER_TURN (20) / STATE_PASSIVE_PS_PER_TURN (5),
@@ -278,8 +278,7 @@ export async function processPartyActionGeneration(
   // matching checkPartyPresence / hasPresence. One projected find — no per-row query.
   // Only players active within the inactivity window count: an all-inactive
   // homed roster drops the party to the NPP-only cap (see playerActivity).
-  const memberRows = await db
-    .collection<Character>("characters")
+  const memberRows = await charactersCollection(db)
     .find({}, { projection: { party: 1, homeState: 1, userId: 1 } })
     .toArray();
   const memberUserIds = memberRows

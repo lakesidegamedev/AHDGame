@@ -6,7 +6,6 @@ import "@/lib/events/pree/index";
 import { badRequest, conflict, notFound, errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
-import type { Character } from "@/lib/db/types/character";
 import type { Crisis } from "@/lib/db/types/crisis";
 import { getEventDefinitionsCollection } from "@/lib/db/collections/eventDefinitions";
 import { getEventHandler } from "@/lib/events/substrate/registry";
@@ -22,6 +21,7 @@ import { notifyCountryExecutiveEventOffered } from "@/lib/events/pree/notificati
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { createCrisisFromTemplate } from "@/lib/crises/createCrisisFromTemplate";
 import { warEmergencyTemplateForEventKind } from "@/lib/crises/warEmergencyCrises";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const TriggerSchema = z.object({
   countryId: z.string().min(1),
@@ -136,9 +136,10 @@ export const POST = withAdminRoute(async (_auth, request: Request) => {
   // Phase 0 events are constrained to safe/neutral defaults (plan §7).
   const leaderCharId = await getHeadOfGovernmentCharacterId(db, countryId);
   if (leaderCharId) {
-    const leaderChar = await db
-      .collection<Character>("characters")
-      .findOne({ _id: leaderCharId }, { projection: { userId: 1 } });
+    const leaderChar = await charactersCollection(db).findOne(
+      { _id: leaderCharId },
+      { projection: { userId: 1 } }
+    );
     if (leaderChar?.userId) {
       await notifyCountryExecutiveEventOffered(leaderChar.userId, definition, instance);
     }

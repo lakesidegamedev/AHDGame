@@ -9,6 +9,7 @@ import {
   type IdentitySignalEligibility,
 } from "@/lib/auth/identitySignals";
 import { loadRecentIdentityValues } from "@/lib/identityHistory/recentValues";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface UserWithCharacter {
   id: string;
@@ -74,8 +75,7 @@ export const GET = withAdminAuth(async (_auth, request: Request) => {
 
     // Fetch only the characters for users in this page (avoids loading the
     // entire characters collection on busy servers).
-    const characters = await db
-      .collection<Character>("characters")
+    const characters = await charactersCollection(db)
       .find({ userId: { $in: users.map((u) => u._id) } })
       .toArray();
 

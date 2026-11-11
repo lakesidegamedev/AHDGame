@@ -23,6 +23,7 @@ import { runWithOptionalTransaction } from "@/lib/db/runWithOptionalTransaction"
 import { newCharacterTransferBarrierResponse } from "@/lib/api/newCharacterTransferBarrier";
 import type { CurrencyOrder, CurrencyOrderStatus, GameConfig, GameState } from "@/lib/db/types";
 import { recordAudit } from "@/lib/audit/recordAudit";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const limitOrderSchema = z
   .object({
@@ -164,13 +165,11 @@ export async function POST(request: Request) {
     let insertedId: ObjectId | null = null;
     await runWithOptionalTransaction(
       async (session) => {
-        const escrowResult = await db
-          .collection("characters")
-          .updateOne(
-            { _id: character._id, [balanceField]: { $gte: amount } },
-            { $inc: escrowInc },
-            { session }
-          );
+        const escrowResult = await charactersCollection(db).updateOne(
+          { _id: character._id, [balanceField]: { $gte: amount } },
+          { $inc: escrowInc },
+          { session }
+        );
         if (escrowResult.modifiedCount === 0) {
           const balance = getPersonalBalance(character, fromCurrency, true);
           throw badRequest(
@@ -184,9 +183,10 @@ export async function POST(request: Request) {
         insertedId = result.insertedId;
       },
       async () => {
-        const escrowResult = await db
-          .collection("characters")
-          .updateOne({ _id: character._id, [balanceField]: { $gte: amount } }, { $inc: escrowInc });
+        const escrowResult = await charactersCollection(db).updateOne(
+          { _id: character._id, [balanceField]: { $gte: amount } },
+          { $inc: escrowInc }
+        );
         if (escrowResult.modifiedCount === 0) {
           const balance = getPersonalBalance(character, fromCurrency, true);
           throw badRequest(
@@ -200,12 +200,10 @@ export async function POST(request: Request) {
             .insertOne(order as CurrencyOrder);
           insertedId = result.insertedId;
         } catch (error) {
-          await db
-            .collection("characters")
-            .updateOne(
-              { _id: character._id },
-              { $inc: buildPersonalBalanceInc(amount, fromCurrency, true) }
-            );
+          await charactersCollection(db).updateOne(
+            { _id: character._id },
+            { $inc: buildPersonalBalanceInc(amount, fromCurrency, true) }
+          );
           throw error;
         }
       }

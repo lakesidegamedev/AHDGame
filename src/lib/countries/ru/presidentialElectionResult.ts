@@ -5,7 +5,6 @@
  */
 import { ObjectId, type ClientSession, type Db } from "mongodb";
 import type {
-  Character,
   CountryGameState,
   Election,
   ElectionCandidate,
@@ -19,6 +18,7 @@ import {
   type RussianPresidentialResult,
 } from "./rules/presidentialResult";
 import { hasAuthorizedPostSovietTransition } from "./rules/postSovietTransition";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 export const RUSSIAN_PRESIDENTIAL_RESULTS_COLLECTION = "russianPresidentialElectionResults";
 export interface RussianPresidentialResultRecord {
   _id: string;
@@ -201,12 +201,10 @@ export async function materializeRussianPresidentialElectionResult(input: {
           },
           { session, projection: { _id: 1 } }
         )
-      : await db
-          .collection<Character>("characters")
-          .findOne(
-            { _id: ownerId, countryId: "RU", federationPendingResidenceId: { $exists: false } },
-            { session, projection: { _id: 1 } }
-          );
+      : await charactersCollection(db).findOne(
+          { _id: ownerId, countryId: "RU", federationPendingResidenceId: { $exists: false } },
+          { session, projection: { _id: 1 } }
+        );
     const mateId = winner.runningMateId ?? winner.russianRunningMateNppId;
     const mateIsNpp = !winner.runningMateId;
     const samePerson = !!mateId && mateId.equals(ownerId) && mateIsNpp === !!winner.isNPP;
@@ -222,12 +220,10 @@ export async function materializeRussianPresidentialElectionResult(input: {
               },
               { session, projection: { name: 1, party: 1 } }
             )
-          : await db
-              .collection<Character>("characters")
-              .findOne(
-                { _id: mateId, countryId: "RU", federationPendingResidenceId: { $exists: false } },
-                { session, projection: { name: 1, party: 1 } }
-              )
+          : await charactersCollection(db).findOne(
+              { _id: mateId, countryId: "RU", federationPendingResidenceId: { $exists: false } },
+              { session, projection: { name: 1, party: 1 } }
+            )
         : null;
     if (!owner || !mate) {
       decision = { outcome: "repeat", reason: "invalid-ballot" };

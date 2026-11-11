@@ -34,12 +34,13 @@ import { buildStructureChangeHolderList } from "@/lib/corporations/structureChan
 import { recordShareTrade } from "@/lib/corporations/shareTradeHistory";
 import { generateStockExchangeSnapshots } from "@/lib/turn/stockExchangeSnapshot";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
-import type { Character, Corporation, Shareholder, ImperialCharacter } from "@/lib/db/types";
+import type { Corporation, Shareholder, ImperialCharacter } from "@/lib/db/types";
 import type { CorporationVote } from "@/lib/db/types/corporationVote";
 import type { CorporationHistory } from "@/lib/db/types/corporationHistory";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { resolveCorpLiquidCurrencyCode } from "@/lib/currency/corporationCapital";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -243,8 +244,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       const corpIds = droppedHolders.filter((d) => d.kind === "corporation").map((d) => d.ownerId);
       const [charDocs, imperialDocs, corpDocs] = await Promise.all([
         charIds.length > 0
-          ? db
-              .collection<Character>("characters")
+          ? charactersCollection(db)
               .find({ _id: { $in: charIds } })
               .project<{ _id: ObjectId; name: string }>({ name: 1 })
               .toArray()
@@ -402,8 +402,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       }
       const [charDocs, imperialDocs, corpDocs, fundDocs] = await Promise.all([
         ownerIds.characterIds.size > 0
-          ? db
-              .collection<Character>("characters")
+          ? charactersCollection(db)
               .find({
                 _id: {
                   $in: [...ownerIds.characterIds].map((s) => new ObjectId(s)),

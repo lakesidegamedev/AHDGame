@@ -30,6 +30,7 @@ import type { EconomyResetPlan } from "./types";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export const ECONOMY_RESET_PROCESSING_KIND = "economyReset";
 
@@ -247,8 +248,7 @@ async function loadSource(
       .find({}, { projection: { currencyCode: 1, rate: 1 } })
       .toArray(),
     loadCampaignCurrencyRates(db),
-    db
-      .collection<Document>("characters")
+    charactersCollection<Document>(db)
       .find(
         {},
         {

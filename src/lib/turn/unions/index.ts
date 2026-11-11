@@ -40,6 +40,7 @@ import { emitTxBulk, loadTxThresholds } from "@/lib/financialTxLog/emit";
 import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
 import { processLabourRelationsTurn } from "./labourRelationsTurn";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface UnionsTurnResult {
   unionsProcessed: number;
@@ -263,8 +264,7 @@ export async function processUnionsTurn(db: Db, turn?: number): Promise<UnionsTu
   // lastActivity/createdAt lookup exactly.
   const ownerIds = owned.map((u) => u.ownerId).filter((id): id is ObjectId => id != null);
   const owners = ownerIds.length
-    ? await db
-        .collection<Character>("characters")
+    ? await charactersCollection(db)
         .find({ _id: { $in: ownerIds } }, { projection: { _id: 1, userId: 1 } })
         .toArray()
     : [];
@@ -315,12 +315,10 @@ export async function processUnionsTurn(db: Db, turn?: number): Promise<UnionsTu
     await db
       .collection<Union>("unions")
       .updateMany({ _id: { $in: vacatedUnionIds } }, { $set: { ownerId: null, updatedAt: now } });
-    await db
-      .collection<Character>("characters")
-      .updateMany(
-        { _id: { $in: vacatedCharacterIds } },
-        { $set: { unionLeaderOf: null, updatedAt: now } }
-      );
+    await charactersCollection(db).updateMany(
+      { _id: { $in: vacatedCharacterIds } },
+      { $set: { unionLeaderOf: null, updatedAt: now } }
+    );
   }
 
   if (stillOwned.length > 0) {
@@ -452,14 +450,13 @@ export async function processUnionsTurn(db: Db, turn?: number): Promise<UnionsTu
     });
     await db.collection<Union>("unions").bulkWrite(ops);
     if (characterOps.length > 0) {
-      await db.collection<Character>("characters").bulkWrite(characterOps);
+      await charactersCollection(db).bulkWrite(characterOps);
     }
     if (contributionTx.length > 0) {
       const payoutIds = [
         ...new Set(contributionTx.map((entry) => entry.subjectId!.toString())),
       ].map((id) => new ObjectId(id));
-      const named = await db
-        .collection<Character>("characters")
+      const named = await charactersCollection(db)
         .find({ _id: { $in: payoutIds } }, { projection: { _id: 1, name: 1 } })
         .toArray();
       const nameById = new Map(

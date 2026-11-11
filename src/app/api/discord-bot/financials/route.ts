@@ -7,7 +7,6 @@ import { requireBotToken } from "@/lib/api/requireBotToken";
 import { checkRateLimit, rateLimitResponse, BOT_FINANCIAL_LIMITS } from "@/lib/api/rateLimit";
 import { toAbsoluteUploadUrl } from "@/lib/discord";
 import type { CorporateSector, State, StateMetrics } from "@/lib/db/types";
-import type { Character } from "@/lib/db/types/character";
 import { bulkFetchCharacterNames } from "@/lib/db/characterLookup";
 import {
   OPERATING_SECTOR_TYPE_LABELS,
@@ -48,6 +47,7 @@ import { getBankId } from "@/lib/centralBank/helpers";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -86,9 +86,10 @@ export async function GET(request: Request) {
     }
 
     const [ceo, sectors, outstandingBonds, gameState] = await Promise.all([
-      db
-        .collection<Character>("characters")
-        .findOne({ _id: corporation.ceoId }, { projection: { name: 1, sequentialId: 1 } }),
+      charactersCollection(db).findOne(
+        { _id: corporation.ceoId },
+        { projection: { name: 1, sequentialId: 1 } }
+      ),
       db
         .collection<CorporateSector>("corporateSectors")
         .find({ corporationId: corporation._id })

@@ -9,6 +9,7 @@ import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import { checkGovernmentFormation } from "@/lib/constants/readinessChecks";
 import { JP_READINESS_EXPECTATIONS } from "@/lib/countries/jp/data/jpReadinessExpectations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface ReadinessCheck {
   name: string;
@@ -65,7 +66,7 @@ async function checkCNCountryLeaderStates(db: Db): Promise<ReadinessCheck> {
   const count = await db
     .collection<{ _id: string }>("countryLeaderStates")
     .countDocuments({ _id: { $regex: "^CN_" } });
-  const characterCount = await db.collection("characters").countDocuments({ countryId: "CN" });
+  const characterCount = await charactersCollection(db).countDocuments({ countryId: "CN" });
   return {
     name: "CountryLeaderStates",
     status: count > 0 || characterCount === 0 ? "ok" : "warning",
@@ -84,7 +85,7 @@ async function checkCNCountryLeaderStates(db: Db): Promise<ReadinessCheck> {
 /** DE: Landeslisten populated. */
 async function checkDELandeslisten(db: Db): Promise<ReadinessCheck> {
   const count = await db.collection("landeslisten").countDocuments({ countryId: "DE" });
-  const characterCount = await db.collection("characters").countDocuments({ countryId: "DE" });
+  const characterCount = await charactersCollection(db).countDocuments({ countryId: "DE" });
   return {
     name: "Landeslisten",
     status: count > 0 || characterCount === 0 ? "ok" : "warning",

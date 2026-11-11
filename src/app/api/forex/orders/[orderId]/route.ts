@@ -9,6 +9,7 @@ import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { buildPersonalBalanceInc } from "@/lib/currency/characterFunds";
 import { runWithOptionalTransaction } from "@/lib/db/runWithOptionalTransaction";
 import type { CurrencyOrder } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteParams {
   params: Promise<{ orderId: string }>;
@@ -75,13 +76,11 @@ export async function DELETE(request: Request, { params }: RouteParams) {
         if (!claimedOrder) throw badRequest("Only open or partial orders can be cancelled");
 
         if (refundAmount > 0) {
-          await db
-            .collection("characters")
-            .updateOne(
-              { _id: order.characterId },
-              { $inc: buildPersonalBalanceInc(refundAmount, order.fromCurrency, true) },
-              { session }
-            );
+          await charactersCollection(db).updateOne(
+            { _id: order.characterId },
+            { $inc: buildPersonalBalanceInc(refundAmount, order.fromCurrency, true) },
+            { session }
+          );
         }
 
         const cancelResult = await db

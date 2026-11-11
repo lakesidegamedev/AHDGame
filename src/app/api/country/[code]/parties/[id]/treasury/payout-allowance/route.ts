@@ -9,11 +9,11 @@ import { findPartyBySequentialId } from "@/lib/db/partyLookup";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { isSameCountry } from "@/lib/api/sameCountry";
 import { parseObjectId } from "@/lib/utils/objectId";
-import type { Character } from "@/lib/db/types";
 import { isPartyOfficer } from "@/lib/parties/pendingTreasuryTransactions";
 import { getPlayerPayoutThisTurn } from "@/lib/treasury/payoutCap";
 import { countDistinctOfficers, getEffectivePlayerPayoutCap } from "@/lib/treasury/payoutCapValues";
 import { getGameTime } from "@/lib/time/gameTime";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -87,9 +87,10 @@ export async function GET(request: Request, { params }: RouteParams) {
       // figure exists to serve. Without it an officer could read the
       // treasury intake of anyone in the country, rival parties included,
       // which is a good deal more than pricing a payment needs.
-      const target = await db
-        .collection<Character>("characters")
-        .findOne({ _id: targetId }, { projection: { party: 1, countryId: 1 } });
+      const target = await charactersCollection(db).findOne(
+        { _id: targetId },
+        { projection: { party: 1, countryId: 1 } }
+      );
       if (!target) {
         return errorResponse(404, "Character not found");
       }

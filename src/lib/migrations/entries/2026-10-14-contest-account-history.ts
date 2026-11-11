@@ -3,6 +3,7 @@ import { ObjectId } from "mongodb";
 import type { Migration } from "../types";
 import { getContestRoundsCollection } from "@/lib/contests/collection";
 import { CONTEST_ACHIEVEMENTS } from "@/lib/contests/achievementDefinitions";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /** Only establish ownership from recorded identities, never from a name match. */
 export const migration: Migration = {
@@ -11,8 +12,7 @@ export const migration: Migration = {
   idempotent: true,
   async execute(db, ctx) {
     const [live, retired, rounds] = await Promise.all([
-      db
-        .collection("characters")
+      charactersCollection(db)
         .find({ userId: { $exists: true } }, { projection: { userId: 1 } })
         .toArray(),
       db

@@ -18,13 +18,13 @@ import type { CorporationVote, CorporationVoteType } from "@/lib/db/types/corpor
 import type { LegalStructureId } from "@/lib/constants/legalStructures";
 import type { CountryId } from "@/lib/constants/countries";
 import type { CurrencyCode } from "@/lib/constants/currencies";
-import type { Character } from "@/lib/db/types";
 import { commandEconomyRelocationBlock } from "@/lib/corporations/relocationCommandEconomyGate";
 import {
   SUPERSHARE_MIN_MULTIPLIER,
   SUPERSHARE_MAX_MULTIPLIER,
 } from "@/lib/corporations/superShares";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const OpenVoteSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("governance_change"), newLegalStructure: z.string() }),
@@ -106,9 +106,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const ceoCheck = requireCeo(corporation, auth.user.userId);
     if (ceoCheck) return ceoCheck;
 
-    const character = await db
-      .collection<Character>("characters")
-      .findOne({ _id: corporation.ceoId });
+    const character = await charactersCollection(db).findOne({ _id: corporation.ceoId });
     if (!character) return errorResponse(404, "CEO character not found");
 
     const parsed = await parseJsonBody(request, OpenVoteSchema);

@@ -38,6 +38,7 @@ import {
   countBgGrandPartialElection,
 } from "./rules/constituencyByElection1991";
 import type { BgFoundingMajorityBallot } from "./rules/foundingMajority1990";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export const BG_GRAND_BY_ELECTIONS_COLLECTION = "bgGrandConstituencyByElections";
 export interface BgGrandByElectionRecord {
@@ -541,8 +542,7 @@ export async function resolveBgGrandConstituencyByElections(
             .toArray()
         : [];
       const players = playerIds.length
-        ? await db
-            .collection<Character>("characters")
+        ? await charactersCollection(db)
             .find(
               {
                 _id: { $in: playerIds },
@@ -919,9 +919,7 @@ export async function resolveBgGrandConstituencyByElections(
             ]),
           ].filter((id) => owners.has(id));
           if (!ids.length) continue;
-          const collection = isNpc
-            ? db.collection<NPP>("npps")
-            : db.collection<Character>("characters");
+          const collection = isNpc ? db.collection<NPP>("npps") : charactersCollection(db);
           await collection.bulkWrite(
             ids.map((id) => {
               const owner = owners.get(id)!,

@@ -20,7 +20,7 @@ import {
 } from "@/lib/corporations/subsidiaries/cycleGuard";
 import { resolveCorporation } from "@/lib/api/corporations/resolveQuery";
 import { assertCeoTradeNotBlocked } from "@/lib/corporations/commands/privatization/openVoteGuard";
-import type { Character, User } from "@/lib/db/types";
+import type { User } from "@/lib/db/types";
 import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
 import {
   creditShares,
@@ -75,6 +75,7 @@ import { applyFloatBuyCredit } from "@/lib/corporations/shareEscrowSettlement";
 import { assertCeoAcquisitionWithinCap } from "@/lib/corporations/ceoShareAcquisitionCap";
 import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -150,7 +151,7 @@ export async function buyPublicShares(request: Request, { params }: RouteParams)
         const characterQuery = corpUserDoc?.activeCharacterId
           ? { _id: corpUserDoc.activeCharacterId, userId: new ObjectId(corpAuth.user.userId) }
           : { userId: new ObjectId(corpAuth.user.userId) };
-        const character = await db.collection<Character>("characters").findOne(characterQuery);
+        const character = await charactersCollection(db).findOne(characterQuery);
         if (!character) {
           return errorResponse(404, "Character not found");
         }
@@ -693,7 +694,7 @@ export async function buyPublicShares(request: Request, { params }: RouteParams)
     const characterQuery = userDoc?.activeCharacterId
       ? { _id: userDoc.activeCharacterId, userId: new ObjectId(basicAuth.user.userId) }
       : { userId: new ObjectId(basicAuth.user.userId) };
-    const character = await db.collection<Character>("characters").findOne(characterQuery);
+    const character = await charactersCollection(db).findOne(characterQuery);
     if (!character) {
       return errorResponse(404, "Character not found");
     }
@@ -702,7 +703,7 @@ export async function buyPublicShares(request: Request, { params }: RouteParams)
       return errorResponse(tradeLock.status, tradeLock.error);
     }
     // Load full character doc for balance check and home currency lookup.
-    const charDoc = await db.collection<Character>("characters").findOne({ _id: character._id });
+    const charDoc = await charactersCollection(db).findOne({ _id: character._id });
     if (!charDoc) {
       return errorResponse(404, "Character not found");
     }

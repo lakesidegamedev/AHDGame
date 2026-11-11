@@ -9,12 +9,12 @@ import { sendCountryGameEvent, DISCORD_COLORS } from "@/lib/discordWebhooks";
 import { leadershipRoleLabel } from "@/lib/congress/leadership/electionRoleMap";
 import { claimStatusTransition } from "@/lib/turn/atomicClaim";
 import type {
-  Character,
   NpcscChairElection,
   NpcscChairNomination,
   CongressLeader,
   PoliticalParty,
 } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * Resolve the open NPC Standing Committee Chairman election. Mirrors
@@ -96,9 +96,10 @@ export async function resolveNpcscChairElection(
   if (claimed) {
     const roleLabel = leadershipRoleLabel("chair_npcsc");
     const nomineeAvatarUrl = (
-      await db
-        .collection<Character>("characters")
-        .findOne({ _id: winner.nomineeId }, { projection: { avatarUrl: 1 } })
+      await charactersCollection(db).findOne(
+        { _id: winner.nomineeId },
+        { projection: { avatarUrl: 1 } }
+      )
     )?.avatarUrl;
     sendCountryGameEvent("CN", {
       title: `Leadership Election Result — ${roleLabel}`,

@@ -1,10 +1,11 @@
 import type { Db, ObjectId } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { Character, NPP } from "@/lib/db/types";
+import type { NPP } from "@/lib/db/types";
 import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
 import type { ElectedOfficial } from "@/lib/db/types/officials";
 import type { ParliamentaryGovernment } from "@/lib/db/types/parliamentaryGovernment";
 import { getCountryState, primeCountryStates } from "@/lib/countryState";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface PolicyHeadSponsor {
   _id: ObjectId;
@@ -76,8 +77,7 @@ export async function loadPolicyHeadSponsors(
   }
 
   const [characters, npps] = await Promise.all([
-    db
-      .collection<Character>("characters")
+    charactersCollection(db)
       .find(
         { _id: { $in: [...playerHeadByCountry.values()] } },
         { projection: { _id: 1, name: 1, party: 1 } }

@@ -17,7 +17,7 @@ import {
   PURGE_CHAIR_INFAMY_ESCALATION,
   PURGE_CHAIR_INFAMY_MAX,
 } from "@/lib/constants/partyActions";
-import type { Character, PoliticalParty } from "@/lib/db/types";
+import type { PoliticalParty } from "@/lib/db/types";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import {
   withdrawFromMismatchedPrimaries,
@@ -29,6 +29,7 @@ import { createNotification } from "@/lib/notifications";
 import { isSameCountry } from "@/lib/api/sameCountry";
 import { emitPartyMembershipEvent, buildPartyEventSnapshots } from "@/lib/parties/membershipEvents";
 import { prunePurgeRejoinBlocks } from "@/lib/parties/antiAbuseGuards";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 // POST /api/country/[code]/parties/[id]/purge — Chair expels a regular member from the party.
 // Auth: requireAuthWithCharacter (chair only)
@@ -81,7 +82,7 @@ export async function POST(
 
       const targetId = new ObjectId(parsed.data.characterId);
       // Characters collection contains only player characters; NPPs live in 'npps'
-      const target = await db.collection<Character>("characters").findOne({ _id: targetId });
+      const target = await charactersCollection(db).findOne({ _id: targetId });
 
       if (!target) {
         return errorResponse(404, "Character not found");
@@ -136,7 +137,7 @@ export async function POST(
       const nextPurgeCount = purgeCount + 1;
 
       // Apply costs to chair
-      await db.collection<Character>("characters").updateOne(
+      await charactersCollection(db).updateOne(
         { _id: chair._id },
         {
           $set: {
@@ -155,7 +156,7 @@ export async function POST(
         ...prunePurgeRejoinBlocks(target.purgeRejoinBlocks, currentTurn),
         { partyId, countryId, purgedAtTurn: currentTurn },
       ];
-      await db.collection<Character>("characters").updateOne(
+      await charactersCollection(db).updateOne(
         { _id: target._id },
         {
           $set: { party: "independent", partyInfluence: 0, purgeRejoinBlocks, updatedAt: now },

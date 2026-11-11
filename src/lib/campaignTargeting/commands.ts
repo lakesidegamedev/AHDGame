@@ -31,6 +31,7 @@ import {
   usesCampaignRules,
   type CampaignTarget,
 } from "./rules";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 type Actor = AuthUserWithCharacter & { hasCharacter: true; character: Character };
 
@@ -73,9 +74,7 @@ export async function quoteTargetedAds(
 ) {
   const { election, candidate, time } = context;
   if (!candidate.isNPP) {
-    const owner = await db
-      .collection<Character>("characters")
-      .findOne({ _id: candidate.characterId });
+    const owner = await charactersCollection(db).findOne({ _id: candidate.characterId });
     if (!owner) throw notFound("Candidate not found");
     return quoteStandingAds(db, owner, stateId, count);
   }
@@ -106,9 +105,10 @@ export async function quoteTargetedAds(
             { _id: candidate.nppId },
             { projection: { "policies.economic": 1, "policies.social": 1, homeState: 1 } }
           )
-      : await db
-          .collection<Character>("characters")
-          .findOne({ _id: candidate.characterId }, { projection: { policies: 1, homeState: 1 } });
+      : await charactersCollection(db).findOne(
+          { _id: candidate.characterId },
+          { projection: { policies: 1, homeState: 1 } }
+        );
   if (!owner) throw notFound("Candidate not found");
   if (
     !["president", "uachtaran", "special_president"].includes(election.electionType) &&
@@ -139,9 +139,7 @@ export async function purchaseTargetedAds(
 ) {
   const context = await loadTargetedAdContext(db, campaignId, user);
   if (!context.candidate.isNPP) {
-    const owner = await db
-      .collection<Character>("characters")
-      .findOne({ _id: context.candidate.characterId });
+    const owner = await charactersCollection(db).findOne({ _id: context.candidate.characterId });
     if (!owner) throw notFound("Candidate not found");
     return purchaseStandingAds(db, owner, user.character, request);
   }
@@ -223,13 +221,11 @@ export async function purchaseTargetedAds(
     targetedAdsRevision: context.candidate.targetedAdsRevision ?? { $exists: false },
   };
   const debit = async (session?: ClientSession) => {
-    const result = await db
-      .collection<Character>("characters")
-      .updateOne(
-        { _id: user.character._id, actions: { $gte: actions }, [fundsField]: { $gte: funds } },
-        { $inc: { actions: -actions, [fundsField]: -funds } },
-        { session }
-      );
+    const result = await charactersCollection(db).updateOne(
+      { _id: user.character._id, actions: { $gte: actions }, [fundsField]: { $gte: funds } },
+      { $inc: { actions: -actions, [fundsField]: -funds } },
+      { session }
+    );
     if (!result.modifiedCount) throw conflict("Insufficient personal actions or campaign funds");
   };
   const write = async (session?: ClientSession) => {
@@ -252,9 +248,10 @@ export async function purchaseTargetedAds(
       try {
         await write();
       } catch (error) {
-        await db
-          .collection<Character>("characters")
-          .updateOne({ _id: user.character._id }, { $inc: { actions, [fundsField]: funds } });
+        await charactersCollection(db).updateOne(
+          { _id: user.character._id },
+          { $inc: { actions, [fundsField]: funds } }
+        );
         throw error;
       }
     }

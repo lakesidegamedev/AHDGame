@@ -35,7 +35,7 @@ import {
   corpPurchaseWouldCycle,
   OWNERSHIP_CYCLE_ERROR,
 } from "@/lib/corporations/subsidiaries/cycleGuard";
-import type { Character, ShareOrder } from "@/lib/db/types";
+import type { ShareOrder } from "@/lib/db/types";
 import { getCharacterByUserId } from "@/lib/db/characterLookup";
 import {
   creditShares,
@@ -90,6 +90,7 @@ import { equityPoolDepthMessage, loadEquityQuote } from "@/lib/equities/marketPo
 import { recordAudit } from "@/lib/audit/recordAudit";
 import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -1105,7 +1106,7 @@ export async function placeShareOrder(request: Request, { params }: RouteParams)
           : undefined;
         let sellerCredited = false;
         try {
-          const sellerCredit = await db.collection<Character>("characters").updateOne(
+          const sellerCredit = await charactersCollection(db).updateOne(
             { _id: character._id },
             {
               $inc: buildPersonalBalanceInc(
@@ -1155,7 +1156,7 @@ export async function placeShareOrder(request: Request, { params }: RouteParams)
           });
         } catch (err) {
           if (sellerCredited) {
-            await db.collection<Character>("characters").updateOne(
+            await charactersCollection(db).updateOne(
               { _id: character._id },
               {
                 $inc: buildPersonalBalanceInc(

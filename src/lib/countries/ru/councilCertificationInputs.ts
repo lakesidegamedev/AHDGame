@@ -5,7 +5,6 @@
  */
 import { type ClientSession, type Db } from "mongodb";
 import type {
-  Character,
   CountryGameState,
   Election,
   ElectionCandidate,
@@ -19,6 +18,7 @@ import {
 } from "./dumaElectionResult";
 
 import { russianDumaBoundRoot } from "./dumaConvocationAuthority";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 export async function loadRussianCouncilCertificationInputs(input: {
   db: Db;
   session: ClientSession;
@@ -88,8 +88,7 @@ export async function loadRussianCouncilCertificationInputs(input: {
         .toArray()
     : [];
   const players = playerIds.length
-    ? await db
-        .collection<Character>("characters")
+    ? await charactersCollection(db)
         .find(
           {
             _id: { $in: playerIds },

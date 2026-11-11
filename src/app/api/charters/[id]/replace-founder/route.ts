@@ -7,7 +7,8 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { parseJsonBody } from "@/lib/api/validate";
 import { replaceFounderSchema } from "@/lib/api/schemas/charters";
 import { replaceFounder } from "@/lib/charters/replaceFounder";
-import type { Character, PartyCharter } from "@/lib/db/types";
+import type { PartyCharter } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -54,8 +55,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     if (!charter) {
       return errorResponse(404, "Charter not found");
     }
-    const callerCharacters = await db
-      .collection<Character>("characters")
+    const callerCharacters = await charactersCollection(db)
       .find({ userId: callerUserId, _id: { $in: charter.foundersCharacterIds } })
       .project<{ _id: ObjectId }>({ _id: 1 })
       .toArray();

@@ -10,10 +10,11 @@ import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { getAuthUser } from "@/lib/auth";
 import { handleRouteError } from "@/lib/api/errors";
-import type { ElectedOfficial, Character } from "@/lib/db/types";
+import type { ElectedOfficial } from "@/lib/db/types";
 import type { ScotusNomination } from "@/lib/db/types/scotus";
 import { computeCabinetNominationTally } from "@/lib/congress/governmentVoteBreakdown";
 import { loadNominationPeople } from "@/lib/congress/nominationPeople";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 // GET /api/congress/scotus-nominations — Returns all active SCOTUS nominations with the current user's vote status.
 // Auth: public
@@ -30,9 +31,7 @@ export const GET = withNoStore(async function GET() {
       .toArray();
 
     const myCharacter = authUser
-      ? await db
-          .collection<Character>("characters")
-          .findOne({ userId: new ObjectId(authUser.userId) })
+      ? await charactersCollection(db).findOne({ userId: new ObjectId(authUser.userId) })
       : null;
 
     const senatorOfficial = myCharacter

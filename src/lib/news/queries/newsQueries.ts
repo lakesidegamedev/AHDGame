@@ -2,7 +2,7 @@ import { formatSectorTypeSlugsInText } from "@/lib/utils/formatSectorTypeSlugsIn
 import { fetchBordersByUserIds } from "@/lib/db/patreonBorders";
 import { badRequest } from "@/lib/api/errors";
 import { ObjectId, type Db } from "mongodb";
-import type { Character, NewsPost, NewsReaction } from "@/lib/db/types";
+import type { NewsPost, NewsReaction } from "@/lib/db/types";
 import { withPublicNewsVisibility } from "@/lib/news/publicModeration";
 import {
   serializeNewsPost,
@@ -11,6 +11,7 @@ import {
   type NewsPostView,
   type NewsReplyView,
 } from "@/lib/news/dto/newsView";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface GetNewsFeedInput {
   limit: number;
@@ -128,8 +129,7 @@ async function getAuthorPresentationMap(
   }
 
   const authorOids = authorIds.map((id) => new ObjectId(id));
-  const characters = await db
-    .collection<Character>("characters")
+  const characters = await charactersCollection(db)
     .find({ _id: { $in: authorOids } }, { projection: { _id: 1, sequentialId: 1, userId: 1 } })
     .toArray();
 

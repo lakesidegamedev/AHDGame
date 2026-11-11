@@ -13,7 +13,6 @@
  */
 import type { Db } from "mongodb";
 import "@/lib/events/pree/index";
-import type { Character } from "@/lib/db/types/character";
 import type { Crisis } from "@/lib/db/types/crisis";
 import type { EventDefinition } from "@/lib/db/types/events";
 import { COUNTRY_CONFIGS, COUNTRY_ORDER, type CountryId } from "@/lib/constants/countries";
@@ -44,6 +43,7 @@ import {
 } from "./warEmergency";
 import { createCrisisFromTemplate } from "@/lib/crises/createCrisisFromTemplate";
 import { warEmergencyTemplateForEventKind } from "@/lib/crises/warEmergencyCrises";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface WorldEventsTurnResult {
   offered: number;
@@ -144,9 +144,10 @@ async function offerGlobalHostCountryEvent(
 
   const leaderCharId = await getHeadOfGovernmentCharacterId(db, countryId);
   if (leaderCharId) {
-    const leaderChar = await db
-      .collection<Character>("characters")
-      .findOne({ _id: leaderCharId }, { projection: { userId: 1 } });
+    const leaderChar = await charactersCollection(db).findOne(
+      { _id: leaderCharId },
+      { projection: { userId: 1 } }
+    );
     if (leaderChar?.userId) {
       await notifyCountryExecutiveEventOffered(leaderChar.userId, definition, instance);
     }
@@ -299,9 +300,10 @@ async function offerScheduledEventForCountry(
     // per plan §7) applies via the existing sweep either way.
     const leaderCharId = await getHeadOfGovernmentCharacterId(db, countryId);
     if (leaderCharId) {
-      const leaderChar = await db
-        .collection<Character>("characters")
-        .findOne({ _id: leaderCharId }, { projection: { userId: 1 } });
+      const leaderChar = await charactersCollection(db).findOne(
+        { _id: leaderCharId },
+        { projection: { userId: 1 } }
+      );
       if (leaderChar?.userId) {
         await notifyCountryExecutiveEventOffered(leaderChar.userId, definition, instance);
       }

@@ -5,6 +5,7 @@ import { fetchBordersByUserIds } from "@/lib/db/patreonBorders";
 import { getAuthUser } from "@/lib/auth";
 import { getEnabledCountryIds } from "@/lib/countryAccess";
 import { withPublicNewsVisibility } from "@/lib/news/publicModeration";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface LeaderboardEntry {
   characterId: string;
@@ -89,7 +90,7 @@ export async function GET() {
       characterFilter.countryId = { $in: enabledCountries };
     }
 
-    const characters = await db.collection("characters").find(characterFilter).toArray();
+    const characters = await charactersCollection(db).find(characterFilter).toArray();
 
     const userIds = characters.map((c) => c.userId).filter(Boolean);
     const borderMap = await fetchBordersByUserIds(db, userIds);

@@ -11,6 +11,7 @@ import type { Character, User } from "@/lib/db/types";
 import { validateStatAllocation } from "@/lib/stats/validateStatAllocation";
 import { suggestStatBuild, type SuggestBuildInput } from "@/lib/stats/suggestedBuild";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const allocateStatsSchema = z.object({
   stats: z.record(z.string(), z.number()),
@@ -25,7 +26,7 @@ async function loadActiveCharacter(userId: string) {
   const query = userDoc?.activeCharacterId
     ? { _id: userDoc.activeCharacterId, userId: new ObjectId(userId) }
     : { userId: new ObjectId(userId) };
-  const character = await db.collection<Character>("characters").findOne(query);
+  const character = await charactersCollection(db).findOne(query);
   return { db, character };
 }
 
@@ -106,7 +107,7 @@ export async function POST(request: Request) {
     }
 
     // Atomic guard: only allocate if still unallocated (prevents double-submit).
-    const result = await db.collection<Character>("characters").updateOne(
+    const result = await charactersCollection(db).updateOne(
       { _id: character._id, statsAllocated: { $ne: true } },
       {
         $set: {

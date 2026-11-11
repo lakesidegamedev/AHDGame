@@ -49,6 +49,7 @@ import { impeachmentStageChamberKey } from "@/lib/impeachment/impeachmentTally";
 import { getGameState } from "@/lib/gameState";
 import type { Impeachment } from "@/lib/db/types/impeachment";
 import { getBillWhipWindowStart } from "@/lib/congress/billWhipPhase";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; partyId: string }>;
@@ -290,9 +291,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     // Statecraft sharpens a chair's whip and trains the stat (use-growth).
     const whipStatecraftBonus = statecraftWhipBonus(authData.character.stats?.statecraft);
     const grantStatecraftXp = async () => {
-      await db
-        .collection("characters")
-        .updateOne({ _id: characterId }, { $inc: { "statXp.statecraft": USE_GROWTH_INCREMENT } });
+      await charactersCollection(db).updateOne(
+        { _id: characterId },
+        { $inc: { "statXp.statecraft": USE_GROWTH_INCREMENT } }
+      );
     };
 
     if (targetType === "bill") {

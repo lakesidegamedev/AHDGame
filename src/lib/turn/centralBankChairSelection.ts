@@ -13,7 +13,6 @@ import { ObjectId } from "mongodb";
 import type { Db } from "mongodb";
 import type { CentralBank, ChairSelectionPending, FomcSeat } from "@/lib/db/types/centralBank";
 import { FOMC_COMMITTEE_COUNTRY_IDS } from "@/lib/db/types/centralBank";
-import type { Character } from "@/lib/db/types";
 import { COUNTRY_CONFIGS, COUNTRY_ORDER, type CountryId } from "@/lib/constants/countries";
 import { getFullSimulationCountryIds } from "@/lib/country/countryTier";
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
@@ -35,6 +34,7 @@ import { CHAIR_CHANGE_SCRUTINY_RETAINED } from "@/lib/centralBank/credibility";
 import { workerConfig } from "@/lib/config/worker";
 import { getCharactersCollection } from "@/lib/db/collections/characters";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 // Optional global salt so headless sim runs can vary this RNG across runs
 // while staying reproducible within a run (mirrors nppActionProcessing.ts).
@@ -142,12 +142,10 @@ export async function vacateCentralBankChairCharacter(
   chairCharacterId: ObjectId | null | undefined
 ): Promise<void> {
   if (!chairCharacterId) return;
-  await db
-    .collection("characters")
-    .updateOne(
-      { _id: chairCharacterId, "currentOffice.type": "centralBankChair" },
-      { $set: { currentOffice: null } }
-    );
+  await charactersCollection(db).updateOne(
+    { _id: chairCharacterId, "currentOffice.type": "centralBankChair" },
+    { $set: { currentOffice: null } }
+  );
 }
 
 async function selectChairCandidate(
@@ -184,7 +182,7 @@ async function selectChairCandidate(
     )
       continue;
 
-    const char = await db.collection<Character>("characters").findOne({
+    const char = await charactersCollection(db).findOne({
       _id: new ObjectId(nom.characterId),
       userId: { $exists: true },
     });

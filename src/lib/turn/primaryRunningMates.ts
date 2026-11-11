@@ -9,6 +9,7 @@ import { createNotifications, type NotificationInput } from "@/lib/notifications
 import { getCountryConfig, type CountryId } from "@/lib/constants/countries";
 import { getExecutiveOfficialFilter } from "@/lib/elections/executiveOfficeFilters";
 import { hasReachedExecutiveTermLimit } from "@/lib/elections/executiveTermLimits";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * For each player presidential nominee without a runningMateId, tentatively
@@ -44,8 +45,7 @@ export async function autoAssignTentativeRunningMates(
   }
 
   const partyQueries = [...nomineesByParty.keys()].map((party) =>
-    db
-      .collection<Character>("characters")
+    charactersCollection(db)
       .find({
         countryId,
         party,
@@ -63,8 +63,7 @@ export async function autoAssignTentativeRunningMates(
   }
 
   // Batch-fetch nominee characters for notifications in one query
-  const nomineeChars = await db
-    .collection<Character>("characters")
+  const nomineeChars = await charactersCollection(db)
     .find(
       { _id: { $in: needsVp.map((n) => n.characterId) } },
       { projection: { _id: 1, userId: 1 } }

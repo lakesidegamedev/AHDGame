@@ -9,6 +9,7 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { createCharacterSchema } from "@/lib/api/schemas/settings";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { createCharacterForAccount } from "@/lib/auth/characterCreation";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 // POST /api/auth/character — Creates a new character for the authenticated user with starting stats and referral bonuses.
 // Auth: requireBasicAuth
@@ -55,7 +56,7 @@ async function handleGET(request?: Request) {
     const characterQuery = userDoc?.activeCharacterId
       ? { _id: userDoc.activeCharacterId, userId: new ObjectId(userId) }
       : { userId: new ObjectId(userId) };
-    const character = await db.collection("characters").findOne(characterQuery);
+    const character = await charactersCollection(db).findOne(characterQuery);
 
     if (!character) {
       return errorResponse(404, "Character not found");

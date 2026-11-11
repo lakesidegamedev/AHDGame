@@ -31,6 +31,7 @@ import { recordAudit } from "@/lib/audit/recordAudit";
 import { unplacedIpoShares } from "@/lib/corporations/rules/dividendShares";
 import { getNppsCollection } from "@/lib/db/collections/npps";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface ResolveInput {
   db: Db;
@@ -298,8 +299,7 @@ export async function resolvePrivatizationVote(input: ResolveInput): Promise<Res
     }
   }
 
-  if (personalPayoutOps.length)
-    await db.collection<Character>("characters").bulkWrite(personalPayoutOps);
+  if (personalPayoutOps.length) await charactersCollection(db).bulkWrite(personalPayoutOps);
   if (nppPayoutOps.length) await (await getNppsCollection(db)).bulkWrite(nppPayoutOps);
 
   // The float belongs to the equity market pool, not the issuer being taken private.

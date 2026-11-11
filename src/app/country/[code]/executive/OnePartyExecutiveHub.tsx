@@ -51,6 +51,7 @@ import {
   CONFIDENCE_CONSEQUENCE_DESCRIPTIONS,
 } from "@/lib/onePartyState/rulingPartyPriorities";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 type PartyRowMeta = {
   seqKey: string;
@@ -123,7 +124,7 @@ export async function OnePartyExecutiveHub({ countryId }: { countryId: CountryId
   const pmCharId = govFormation?.pmCharacterId ?? null;
   let premier: Character | null = null;
   if (pmCharId) {
-    premier = await db.collection<Character>("characters").findOne({ _id: pmCharId });
+    premier = await charactersCollection(db).findOne({ _id: pmCharId });
   }
 
   // Ceremonial Head of State — resolved via the config's isHeadOfState office
@@ -138,8 +139,7 @@ export async function OnePartyExecutiveHub({ countryId }: { countryId: CountryId
     : null;
   let president: Character | null = null;
   if (presidentOfficial?.characterId) {
-    president = await db
-      .collection<Character>("characters")
+    president = await charactersCollection(db)
       .findOne({ _id: presidentOfficial.characterId });
   }
 
@@ -154,7 +154,7 @@ export async function OnePartyExecutiveHub({ countryId }: { countryId: CountryId
       .collection<CongressLeader>("congressLeaders")
       .findOne({ role: role as CongressLeader["role"] });
     if (!leader?.characterId) return null;
-    return db.collection<Character>("characters").findOne({ _id: leader.characterId });
+    return charactersCollection(db).findOne({ _id: leader.characterId });
   }
   const legislatureChair = await resolveCongressLeader(
     surface.legislatureChairPlaque?.congressLeaderRole
@@ -478,7 +478,7 @@ export async function OnePartyExecutiveHub({ countryId }: { countryId: CountryId
       partyBySeq
     );
     if (result) {
-      oppositionLeaderChar = await db.collection<Character>("characters").findOne({
+      oppositionLeaderChar = await charactersCollection(db).findOne({
         _id: result.chairId,
       });
       oppositionPartyDoc = result.partyDoc;

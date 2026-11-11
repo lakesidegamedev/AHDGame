@@ -1,6 +1,7 @@
 import type { Db, ObjectId } from "mongodb";
-import type { Character, PartyCharter } from "@/lib/db/types";
+import type { PartyCharter } from "@/lib/db/types";
 import { computeCharterDeadline, computeCharterDeadlineTurn } from "./charterDeadlines";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * Records a founder's rejection on a charter and transitions it to
@@ -44,9 +45,10 @@ export async function rejectCharter(
   }
 
   // Auth: the session userId must own the character that's rejecting.
-  const character = await db
-    .collection<Character>("characters")
-    .findOne({ _id: rejecterCharacterId }, { projection: { userId: 1 } });
+  const character = await charactersCollection(db).findOne(
+    { _id: rejecterCharacterId },
+    { projection: { userId: 1 } }
+  );
   if (!character?.userId || !character.userId.equals(rejecterUserId)) {
     return { ok: false, reason: "not-character-owner" };
   }
@@ -99,8 +101,7 @@ export async function rejectCharter(
       (cid) => !cid.equals(rejecterCharacterId)
     );
     if (remaining.length > 0) {
-      const remainingCharacters = await db
-        .collection<Character>("characters")
+      const remainingCharacters = await charactersCollection(db)
         .find({ _id: { $in: remaining } })
         .project<{ _id: ObjectId; userId: ObjectId | null | undefined }>({
           _id: 1,

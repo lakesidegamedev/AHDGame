@@ -8,11 +8,11 @@
  */
 
 import { ObjectId, type Db } from "mongodb";
-import type { Character } from "@/lib/db/types";
 import type { NPP } from "@/lib/db/types/npp";
 import type { SovereignResolutionChoice } from "@/lib/db/types/budget";
 import { deriveIdeology } from "@/lib/sovereignDefault/npc/getExecutiveLeaderProfile";
 import { applyLegislatorImpacts } from "@/lib/sovereignDefault/political/legislatorPoliticalImpact";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export async function applyLegislatorImpactsForChamber(
   db: Db,
@@ -32,8 +32,7 @@ export async function applyLegislatorImpactsForChamber(
       .find({ _id: { $in: ids } })
       .project<{ _id: ObjectId; policies: NPP["policies"] }>({ policies: 1 })
       .toArray(),
-    db
-      .collection<Character>("characters")
+    charactersCollection(db)
       .find({ _id: { $in: ids } })
       .project<{ _id: ObjectId }>({ _id: 1 })
       .toArray(),

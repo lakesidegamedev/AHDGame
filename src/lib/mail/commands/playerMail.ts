@@ -3,6 +3,7 @@ import type { Character, PlayerMail, PlayerMailReport, User } from "@/lib/db/typ
 import { ObjectId, type Db } from "mongodb";
 import { createNotifications } from "@/lib/notifications";
 import { containsSlur } from "@/lib/moderation";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 type MailSender = Pick<Character, "_id" | "name" | "sequentialId" | "userId">;
 
@@ -22,7 +23,7 @@ export async function sendPlayerMail(
   }
 
   const toCharOid = new ObjectId(toCharacterId);
-  const toChar = await db.collection<Character>("characters").findOne({ _id: toCharOid });
+  const toChar = await charactersCollection(db).findOne({ _id: toCharOid });
   if (!toChar) {
     throw notFound("Recipient not found");
   }

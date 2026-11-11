@@ -45,6 +45,7 @@ import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * Core retirement function: snapshots a character, cleans up all gameplay
@@ -531,8 +532,7 @@ export async function retireCharacter(
     deletedAt: now,
   });
 
-  const retiredCharacterResult = await db
-    .collection<Character>("characters")
+  const retiredCharacterResult = await charactersCollection(db)
     .deleteOne({ _id: characterId });
 
   await db.collection("users").updateOne(

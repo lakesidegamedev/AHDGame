@@ -13,7 +13,7 @@ import { resumeReservePoolTransfers } from "@/lib/centralBank/reservePoolTransfe
 import { resumeMonetaryOperations } from "@/lib/moneySupply/monetaryOperationJournal";
 import { resumeLiquidityAdvances } from "@/lib/moneySupply/liquidityAdvance";
 import { MONETARY_OPERATION_COOLDOWN_TURNS } from "@/lib/moneySupply/operations";
-import type { Character, Corporation, CorporateSector } from "@/lib/db/types";
+import type { Corporation, CorporateSector } from "@/lib/db/types";
 import type { BankCharter, BankLoan } from "@/lib/db/types/bank";
 import type { CentralBank } from "@/lib/db/types/centralBank";
 import type { CurrencyCode } from "@/lib/constants/currencies";
@@ -83,6 +83,7 @@ import { ZERO_BANKING_TURN_SUMMARY, type BankingTurnSummary } from "@/lib/turn/b
 import { serviceInterbankAndCbMargin } from "./bankingInterbankTurn";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const BANK_CHARTER_ONLY = { projection: { bankCharter: 1 } };
 
@@ -482,8 +483,7 @@ async function bankPassLockKeys(
   }
   if (!depositTakers.length) return keys;
   const [depositors, loans] = await Promise.all([
-    db
-      .collection<Character>("characters")
+    charactersCollection(db)
       .find(
         {
           $or: [...bankIdsByCurrency].map(([currency, ids]) => ({
@@ -568,8 +568,7 @@ async function processOneBank(
   // (a) Player depositors, loaded once — the total here and the interest pass
   // in (c) below use the same rows (NPC flow in (b) does not touch player
   // savings, so reading them up front is equivalent).
-  const depositors = await db
-    .collection<Character>("characters")
+  const depositors = await charactersCollection(db)
     .find({ [`currencyBalances.savingsHolder.${currency}`]: bankIdHex })
     // `name` is projected for the interest ledger legs in (c): the alternative
     // is one lookup per depositor per bank per turn.

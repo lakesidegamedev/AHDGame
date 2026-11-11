@@ -5,6 +5,7 @@ import type { Character, User } from "@/lib/db/types";
 import { ObjectId } from "mongodb";
 import { escapeRegex } from "@/lib/utils/escapeRegex";
 import { getOfficeLabel } from "@/lib/utils/officeTitle";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 // GET /api/characters/search — Search characters by name with optional party, country, and exclude filters
 // Auth: public
@@ -48,12 +49,7 @@ export async function GET(request: Request) {
 
     // Search characters by name AND look up users by username / discordUsername
     const [characters, userMatches] = await Promise.all([
-      db
-        .collection<Character>("characters")
-        .find(mongoQuery)
-        .limit(limit)
-        .sort({ name: 1 })
-        .toArray(),
+      charactersCollection(db).find(mongoQuery).limit(limit).sort({ name: 1 }).toArray(),
       db
         .collection<User>("users")
         .find({
@@ -70,8 +66,7 @@ export async function GET(request: Request) {
     const foundCharIds = new Set(characters.map((c) => c._id.toString()));
     let userLinkedCharacters: Character[] = [];
     if (matchedUserIds.length > 0) {
-      userLinkedCharacters = await db
-        .collection<Character>("characters")
+      userLinkedCharacters = await charactersCollection(db)
         .find({ userId: { $in: matchedUserIds } })
         .limit(limit)
         .toArray();

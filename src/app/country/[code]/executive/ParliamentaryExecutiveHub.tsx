@@ -55,6 +55,7 @@ import { ConfidenceGaugeReadout } from "@/components/uk/government/ConfidenceGau
 import { getNhsState } from "@/lib/countries/uk/nhs/nhsStore";
 import { NhsQualityTile } from "@/components/uk/nhs/NhsQualityTile";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 type PartyRowMeta = {
   seqKey: string;
@@ -118,7 +119,7 @@ export async function ParliamentaryExecutiveHub({ countryId }: { countryId: Coun
   const pmCharId = govFormation ? govFormation.pmCharacterId : (parlGov?.pmCharacterId ?? null);
   let pmCharacter: Character | null = null;
   if (pmCharId) {
-    pmCharacter = await db.collection<Character>("characters").findOne({ _id: pmCharId });
+    pmCharacter = await charactersCollection(db).findOne({ _id: pmCharId });
   }
 
   // Optional deputy seat (IE Tánaiste) — seated through the cabinet as
@@ -132,8 +133,7 @@ export async function ParliamentaryExecutiveHub({ countryId }: { countryId: Coun
       positionId: surface.deputyPlaque.cabinetPositionId,
     });
     if (deputyMember?.characterId) {
-      deputyCharacter = await db
-        .collection<Character>("characters")
+      deputyCharacter = await charactersCollection(db)
         .findOne({ _id: deputyMember.characterId });
     }
   }
@@ -358,8 +358,7 @@ export async function ParliamentaryExecutiveHub({ countryId }: { countryId: Coun
     parlGov
   );
   if (oppositionResult) {
-    oppositionLeaderChar = await db
-      .collection<Character>("characters")
+    oppositionLeaderChar = await charactersCollection(db)
       .findOne({ _id: oppositionResult.chairId });
     oppositionPartyDoc = oppositionResult.partyDoc;
   }

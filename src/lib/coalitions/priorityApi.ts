@@ -2,7 +2,6 @@ import { ObjectId, type Db } from "mongodb";
 import type { AuthUserWithCharacter } from "@/lib/auth";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import type { PoliticalParty } from "@/lib/db/types/party";
-import type { Character } from "@/lib/db/types/character";
 import type { Bill } from "@/lib/db/types/legislation";
 import type { Coalition, CoalitionPriority } from "@/lib/db/types/coalition";
 import type { CoalitionPrioritiesPayload } from "@/lib/coalitions/types";
@@ -13,6 +12,7 @@ import {
   getPriorityVoteTally,
   normalizeCoalitionPriorities,
 } from "./priorities";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const LIVE_PRIORITY_BILL_STATUSES: ReadonlySet<Bill["status"]> = new Set([
   "active",
@@ -87,8 +87,7 @@ export async function loadCoalitionPriorityContext(
   }
 
   const characters = characterIds.size
-    ? await db
-        .collection<Character>("characters")
+    ? await charactersCollection(db)
         .find(
           { _id: { $in: [...characterIds].map((id) => new ObjectId(id)) } },
           { projection: { _id: 1, name: 1 } }

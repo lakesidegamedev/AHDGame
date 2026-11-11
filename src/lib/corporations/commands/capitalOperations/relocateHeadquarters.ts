@@ -13,7 +13,6 @@ import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQu
 import { getGameState } from "@/lib/gameState";
 import { closeCeoTenure } from "@/lib/corporations/ceoHistory";
 import type { Corporation, CorporateSector, State } from "@/lib/db/types";
-import type { Character } from "@/lib/db/types/character";
 import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
 import type { CountryId } from "@/lib/constants/countries";
 import { commandEconomyRelocationBlock } from "@/lib/corporations/relocationCommandEconomyGate";
@@ -54,6 +53,7 @@ import {
   releaseConstructionPropertyTransition,
 } from "@/lib/corporations/securedConstructionProperty";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const relocateSchema = z.object({
   targetStateId: z.string().min(1, "Target state/region ID required"),
@@ -235,9 +235,10 @@ export async function relocateHeadquarters(request: Request, { params }: RoutePa
       ? await db
           .collection<ImperialCharacter>("imperialCharacters")
           .findOne({ _id: corporation.ceoId }, { projection: { userId: 1, homeState: 1 } })
-      : await db
-          .collection<Character>("characters")
-          .findOne({ _id: corporation.ceoId }, { projection: { userId: 1, homeState: 1 } });
+      : await charactersCollection(db).findOne(
+          { _id: corporation.ceoId },
+          { projection: { userId: 1, homeState: 1 } }
+        );
     if (!ceoChar) {
       return errorResponse(400, "CEO record not found");
     }

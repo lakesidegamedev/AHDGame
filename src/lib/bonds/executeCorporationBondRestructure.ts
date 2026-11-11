@@ -35,6 +35,7 @@ import {
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface CorporationRestructureResult {
   /** Defaulted principal repaid in full, in ₳. */
@@ -278,8 +279,7 @@ export async function executeCorporationBondRestructure(
   // 4. Pay bondholders in full.
   if (charIncs.size > 0) {
     const charIds = [...charIncs.keys()].map((idStr) => new ObjectId(idStr));
-    const charDocs = await db
-      .collection<Character>("characters")
+    const charDocs = await charactersCollection(db)
       .find({ _id: { $in: charIds } })
       .project<Pick<Character, "_id" | "countryId" | "name">>({ _id: 1, countryId: 1, name: 1 })
       .toArray();
@@ -300,7 +300,7 @@ export async function executeCorporationBondRestructure(
         },
       };
     });
-    if (charOps.length > 0) await db.collection<Character>("characters").bulkWrite(charOps);
+    if (charOps.length > 0) await charactersCollection(db).bulkWrite(charOps);
   }
 
   if (imperialIncs.size > 0) {

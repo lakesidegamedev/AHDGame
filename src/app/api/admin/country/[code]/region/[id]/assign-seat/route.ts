@@ -18,9 +18,10 @@ import {
 } from "@/lib/constants/countries";
 import { subNationalChamberSeats } from "@/lib/constants/states";
 import { getGameStatePreset } from "@/lib/db/collections/gameState";
-import type { ElectedOfficial, Character, NPP, State } from "@/lib/db/types";
+import type { ElectedOfficial, NPP, State } from "@/lib/db/types";
 import { errorResponse } from "@/lib/api/errors";
 import type { Db } from "mongodb";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /** Seat total for a multi-seat group, read from the resolved State field. */
 function totalForSpec(
@@ -61,9 +62,10 @@ async function setCurrentOffice(
   if (actor.isNPP && actor.nppId) {
     await db.collection<NPP>("npps").updateOne({ _id: actor.nppId }, { $set: { currentOffice } });
   } else if (actor.characterId) {
-    await db
-      .collection<Character>("characters")
-      .updateOne({ _id: actor.characterId }, { $set: { currentOffice } });
+    await charactersCollection(db).updateOne(
+      { _id: actor.characterId },
+      { $set: { currentOffice } }
+    );
   }
 }
 
@@ -109,7 +111,7 @@ export const POST = withAdminRoute(
     }
 
     if (entityType === "player") {
-      const character = await db.collection<Character>("characters").findOne({
+      const character = await charactersCollection(db).findOne({
         _id: entityOid,
       });
       if (!character) {

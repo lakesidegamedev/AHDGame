@@ -1,7 +1,6 @@
 import { ObjectId, type Db } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import type {
-  Character,
   Election,
   ElectionCandidate,
   NPP,
@@ -20,6 +19,7 @@ import { withdrawFromPartyLeadershipElections } from "@/lib/elections/withdrawFr
 import { withdrawPlayerEndorsementsOnPartyChange } from "@/lib/elections/playerEndorsements";
 import type { CongressLeader } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * Move an Independent player's live governmental candidacies onto the party
@@ -608,8 +608,7 @@ export async function sweepPartyMismatchedCandidates(): Promise<number> {
   // Batch-load current party for all referenced characters and NPPs
   const charPartyMap = new Map<string, string>();
   if (charIds.length > 0) {
-    const chars = await db
-      .collection<Character>("characters")
+    const chars = await charactersCollection(db)
       .find({ _id: { $in: charIds } })
       .project({ _id: 1, party: 1 })
       .toArray();

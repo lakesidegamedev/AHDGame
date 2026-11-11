@@ -70,6 +70,7 @@ import { announceContestResults, type SettledRoundResult } from "./announce";
 import { getContestRoundsCollection } from "./collection";
 import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 type PlayerCharacter = Pick<
   Character,
@@ -93,8 +94,7 @@ const contestRounds = getContestRoundsCollection;
 
 /** Live player characters whose accounts are not banned. */
 async function loadPlayers(db: Db): Promise<Map<string, PlayerCharacter>> {
-  const characters = await db
-    .collection<Character>("characters")
+  const characters = await charactersCollection(db)
     .find(
       { isSynthetic: { $ne: true } },
       {
@@ -1026,8 +1026,7 @@ async function referralStandings(
   playersByUser: ReadonlyMap<string, PlayerCharacter>,
   since: Date
 ): Promise<ContestStanding[]> {
-  const fresh = await db
-    .collection<Character>("characters")
+  const fresh = await charactersCollection(db)
     .find({ createdAt: { $gte: since } }, { projection: { userId: 1 } })
     .toArray();
   if (fresh.length === 0) return [];

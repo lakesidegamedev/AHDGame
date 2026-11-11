@@ -1,8 +1,9 @@
 import type { Db, ObjectId } from "mongodb";
 import { ObjectId as ObjectIdCtor } from "mongodb";
-import type { Character, PoliticalParty, WikiPage } from "@/lib/db/types";
+import type { PoliticalParty, WikiPage } from "@/lib/db/types";
 import { corporationWikiSlug, partyWikiSlug, playerWikiSlug } from "./playerPages";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const OBJECT_ID_HEX_RE = /^[a-f0-9]{24}$/;
 const PLAYER_LEGACY_RE = /^player-([a-f0-9]{24})$/;
@@ -78,9 +79,10 @@ export async function syncPriorWikiSubmissions(
 
     let newSlug: string | null = null;
     if (kind === "player") {
-      const character = await db
-        .collection<Character>("characters")
-        .findOne({ _id: entityId }, { projection: { sequentialId: 1 } });
+      const character = await charactersCollection(db).findOne(
+        { _id: entityId },
+        { projection: { sequentialId: 1 } }
+      );
       if (!character) {
         skipped.push({ oldSlug: page.slug, reason: "Character no longer exists" });
         continue;

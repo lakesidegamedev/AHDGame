@@ -11,7 +11,8 @@ import {
   getNoConfidenceVotesCollection,
 } from "@/lib/db/collections/governmentFormation";
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
-import type { Character, ElectedOfficial } from "@/lib/db/types";
+import type { ElectedOfficial } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const healActionSchema = z.object({
   action: z.enum(["retrigger_formation", "appoint_pm"]),
@@ -52,9 +53,10 @@ export async function GET(_request: Request) {
     // Current PM
     let currentPM: { name: string; party: string; type: "character" | "npp" } | null = null;
     if (govFormation?.pmCharacterId) {
-      const pmChar = await db
-        .collection<Character>("characters")
-        .findOne({ _id: govFormation.pmCharacterId }, { projection: { name: 1, party: 1 } });
+      const pmChar = await charactersCollection(db).findOne(
+        { _id: govFormation.pmCharacterId },
+        { projection: { name: 1, party: 1 } }
+      );
       if (pmChar) currentPM = { name: pmChar.name, party: pmChar.party ?? "", type: "character" };
     }
 
@@ -64,12 +66,10 @@ export async function GET(_request: Request) {
         officials
           .filter((o) => o.characterId)
           .map(async (o) => {
-            const c = await db
-              .collection<Character>("characters")
-              .findOne(
-                { _id: o.characterId!, userId: { $exists: true } },
-                { projection: { name: 1, party: 1 } }
-              );
+            const c = await charactersCollection(db).findOne(
+              { _id: o.characterId!, userId: { $exists: true } },
+              { projection: { name: 1, party: 1 } }
+            );
             return c ? { id: c._id.toString(), name: c.name, party: c.party ?? "" } : null;
           })
       )
@@ -146,9 +146,7 @@ export async function POST(request: Request) {
         return errorResponse(400, "characterId is required and must be a valid ObjectId.");
       }
       const db = await getDb();
-      const character = await db
-        .collection<Character>("characters")
-        .findOne({ _id: new ObjectId(characterId) });
+      const character = await charactersCollection(db).findOne({ _id: new ObjectId(characterId) });
       if (!character) {
         return errorResponse(404, "Character not found.");
       }

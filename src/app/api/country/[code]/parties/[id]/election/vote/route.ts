@@ -22,6 +22,7 @@ import { getGameTime } from "@/lib/time/gameTime";
 import { hasTurnBackedWindowClosed } from "@/lib/time/turnBackedWindow";
 import { getLeadershipEligibility } from "@/lib/parties/leadershipTenure";
 import { CANONICAL_VOTING_ELECTION_SORT } from "@/lib/elections/canonicalVotingElection";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -174,9 +175,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     // For partyInfluence-weighted elections, snapshot the voter's partyInfluence at vote time
     let voterPartyInfluence: number | undefined;
     if (party.leadershipElectionMethod === "influence") {
-      const char = await db
-        .collection("characters")
-        .findOne({ _id: authUser.character._id }, { projection: { partyInfluence: 1 } });
+      const char = await charactersCollection(db).findOne(
+        { _id: authUser.character._id },
+        { projection: { partyInfluence: 1 } }
+      );
       voterPartyInfluence = (char?.partyInfluence as number | undefined) ?? 0;
     }
 

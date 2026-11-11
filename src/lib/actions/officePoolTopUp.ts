@@ -1,6 +1,6 @@
 import type { Db, ObjectId } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { Character, ElectedOfficial, GovernorOfficeState } from "@/lib/db/types";
+import type { ElectedOfficial, GovernorOfficeState } from "@/lib/db/types";
 import type { SupremeCourtSeat } from "@/lib/db/types/scotus";
 import { MINISTERIAL_ACTION_CAP } from "@/lib/constants/cabinetMechanicsTypes";
 import { initialVpActionFields, VP_ACTION_CAP } from "@/lib/constants/vicePresidentActions";
@@ -20,6 +20,7 @@ import {
   officePoolTopUpBlock,
   type OfficePoolKind,
 } from "./officePoolTopUpRules";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export { OFFICE_POOL_TOP_UP_AP_COST } from "./officePoolTopUpRules";
 export type { OfficePoolKind } from "./officePoolTopUpRules";
@@ -73,12 +74,10 @@ async function resolveMinisterialPool(
   }
   if (usesSharedMinisterialPool(countryId, member)) {
     const pool = await ensureUkSharedPool(db, member.characterId, now);
-    const stamp = await db
-      .collection<Character>("characters")
-      .findOne(
-        { _id: member.characterId },
-        { projection: { sharedMinisterialActionTopUpTurn: 1 } }
-      );
+    const stamp = await charactersCollection(db).findOne(
+      { _id: member.characterId },
+      { projection: { sharedMinisterialActionTopUpTurn: 1 } }
+    );
     const holderId = member.characterId;
     return {
       ok: true,
@@ -246,9 +245,10 @@ export async function topUpOfficePool(
   if (!resolved.ok) return resolved;
   const { pool } = resolved;
 
-  const character = await db
-    .collection<Character>("characters")
-    .findOne({ _id: characterId }, { projection: { actions: 1 } });
+  const character = await charactersCollection(db).findOne(
+    { _id: characterId },
+    { projection: { actions: 1 } }
+  );
   const blocked = officePoolTopUpBlock({
     remaining: pool.remaining,
     cap: pool.cap,
@@ -258,7 +258,7 @@ export async function topUpOfficePool(
   });
   if (blocked) return { ok: false, status: blocked.status, error: blocked.error };
 
-  const charactersCol = db.collection<Character>("characters");
+  const charactersCol = charactersCollection(db);
   const debited = await charactersCol.findOneAndUpdate(
     { _id: characterId, actions: { $gte: OFFICE_POOL_TOP_UP_AP_COST } },
     { $inc: { actions: -OFFICE_POOL_TOP_UP_AP_COST }, $set: { updatedAt: now } },

@@ -14,7 +14,6 @@ import { getDb } from "@/lib/mongodb";
 import { getAuthUser } from "@/lib/auth"; // Optional auth — intentionally uses getAuthUser()
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
-import type { Character } from "@/lib/db/types";
 import type { SupremeCourtSeat } from "@/lib/db/types/scotus";
 import {
   JUSTICE_ACTIONS,
@@ -25,6 +24,7 @@ import { getGameState } from "@/lib/gameState";
 import { officePoolTopUpStatus } from "@/lib/actions/officePoolTopUpRules";
 import { divergentDeathChance } from "@/lib/scotus/tenure";
 import { getScotusUpcomingCases } from "@/lib/scotus/queries";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ code: string }> }) {
   try {
@@ -52,9 +52,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     const db = await getDb();
     const authUser = await getAuthUser().catch(() => null);
     const myCharacter = authUser
-      ? await db
-          .collection<Character>("characters")
-          .findOne({ userId: new ObjectId(authUser.userId) })
+      ? await charactersCollection(db).findOne({ userId: new ObjectId(authUser.userId) })
       : null;
 
     const [seat, gameState, upcomingCases] = await Promise.all([

@@ -2,6 +2,7 @@ import { ObjectId, type Filter } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { escapeRegex } from "@/lib/utils/escapeRegex";
 import type { Character, User } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface PatreonSearchUser {
   userId: string;
@@ -29,9 +30,7 @@ export async function searchPatreonUsers(
   // The selector already identifies a character. Resolve that exact account
   // so duplicate names or common prefixes cannot select another player.
   if (ObjectId.isValid(characterId)) {
-    const character = await db
-      .collection<Character>("characters")
-      .findOne({ _id: new ObjectId(characterId) });
+    const character = await charactersCollection(db).findOne({ _id: new ObjectId(characterId) });
     let user: User | null = null;
     if (character) {
       const filter: Filter<User> = { _id: character.userId };
@@ -56,7 +55,7 @@ export async function searchPatreonUsers(
 
   const [users, characters] = await Promise.all([
     db.collection<User>("users").find({ username: regex }).limit(10).toArray(),
-    db.collection<Character>("characters").find({ name: regex }).limit(10).toArray(),
+    charactersCollection(db).find({ name: regex }).limit(10).toArray(),
   ]);
 
   const userIdsFromCharacters = characters.map((character) => character.userId);

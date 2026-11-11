@@ -8,7 +8,7 @@
  */
 import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { Character, ElectedOfficial, NPP, PoliticalParty } from "@/lib/db/types";
+import type { ElectedOfficial, NPP, PoliticalParty } from "@/lib/db/types";
 import type { DecisionHandler, DecisionOption } from "./types";
 import { adjustLeaderConfidence, installNewLeader } from "@/lib/turn/rulingPartyConfidence";
 import { adjustPopularLegitimacy } from "@/lib/turn/popularLegitimacy";
@@ -18,6 +18,7 @@ import { loadRuntimeCountryOffices } from "@/lib/countries/runtimeOffices";
 import { appointPrimeMinister } from "@/lib/turn/parliamentaryGovernment";
 import { getGovernmentFormationsCollection } from "@/lib/db/collections/governmentFormation";
 import { getCountryState } from "@/lib/countryState";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const negotiate: DecisionOption = {
   id: "negotiate",
@@ -197,12 +198,10 @@ async function reMergeDefectors(
   const now = new Date();
   // Re-assign every character whose party === defected party back to
   // the ruling party.
-  await db
-    .collection<Character>("characters")
-    .updateMany(
-      { countryId, party: String(defectedPartyId) },
-      { $set: { party: String(runtime.rulingPartyId), updatedAt: now } }
-    );
+  await charactersCollection(db).updateMany(
+    { countryId, party: String(defectedPartyId) },
+    { $set: { party: String(runtime.rulingPartyId), updatedAt: now } }
+  );
   await db
     .collection<ElectedOfficial>("electedOfficials")
     .updateMany(

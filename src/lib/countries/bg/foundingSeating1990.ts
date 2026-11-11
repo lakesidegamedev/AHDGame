@@ -6,7 +6,6 @@
 import { createHash } from "node:crypto";
 import { ObjectId, type ClientSession, type Db } from "mongodb";
 import type {
-  Character,
   ElectedOfficial,
   Election,
   ElectionCandidate,
@@ -21,6 +20,7 @@ import { MS_PER_TURN } from "@/lib/constants/turnTime";
 import { BG_FOUNDING_COUNTS_COLLECTION, type BgFoundingAssemblyRecord } from "./foundingCount1990";
 import { settleBgFoundingMandates } from "./rules/foundingMandates1990";
 import { BG_1990_REGION_CAPACITY } from "./data/foundingDistricts1990";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export const BG_FOUNDING_OFFICE_ARCHIVES_COLLECTION = "bgFoundingAssemblyOfficeArchives";
 interface BgFoundingAssemblyArchive {
@@ -130,8 +130,7 @@ async function materializeBgFoundingAssemblySeating(input: {
         .toArray()
     : [];
   const players = playerIds.length
-    ? await db
-        .collection<Character>("characters")
+    ? await charactersCollection(db)
         .find(
           {
             _id: { $in: playerIds },
@@ -225,7 +224,7 @@ async function materializeBgFoundingAssemblySeating(input: {
         { session }
       );
   for (const isNpc of [false, true]) {
-    const collection = isNpc ? db.collection<NPP>("npps") : db.collection<Character>("characters");
+    const collection = isNpc ? db.collection<NPP>("npps") : charactersCollection(db);
     await collection.updateMany(
       { countryId: "BG", "currentOffice.type": { $in: ["assemblyDeputy"] } },
       {
@@ -258,7 +257,7 @@ async function materializeBgFoundingAssemblySeating(input: {
   for (const isNpc of [false, true]) {
     const selected = [...owners.values()].filter((row) => row.isNpc === isNpc);
     if (!selected.length) continue;
-    const collection = isNpc ? db.collection<NPP>("npps") : db.collection<Character>("characters");
+    const collection = isNpc ? db.collection<NPP>("npps") : charactersCollection(db);
     await collection.bulkWrite(
       selected.map((row) => {
         const originalOffice = (isNpc ? npcMap : playerMap).get(row.ownerId)?.currentOffice;

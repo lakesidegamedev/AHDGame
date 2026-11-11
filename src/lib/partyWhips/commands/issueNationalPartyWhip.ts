@@ -53,6 +53,7 @@ import { getPartyNppControlStatus } from "@/lib/parties/antiAbuseGuards";
 import { recordAudit } from "@/lib/audit/recordAudit";
 import { inferWhipIssuerRole } from "@/lib/partyWhips/issuerRole";
 import { buildPlayerWhipMessage } from "./playerWhipMessage";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export const nationalPartyWhipSchema = z
   .object({
@@ -559,8 +560,7 @@ async function issuePlayerWhip(
 
   const charDocs =
     eligible.length > 0
-      ? await db
-          .collection<Character>("characters")
+      ? await charactersCollection(db)
           .find({ _id: { $in: eligible } })
           .project<{
             _id: ObjectId;
@@ -801,9 +801,10 @@ async function issueNppWhip(
     fellInLine = r.fellInLine;
     ignored = r.ignored;
     if (character.stats) {
-      await db
-        .collection("characters")
-        .updateOne({ _id: characterId }, { $inc: { "statXp.statecraft": USE_GROWTH_INCREMENT } });
+      await charactersCollection(db).updateOne(
+        { _id: characterId },
+        { $inc: { "statXp.statecraft": USE_GROWTH_INCREMENT } }
+      );
     }
   }
 

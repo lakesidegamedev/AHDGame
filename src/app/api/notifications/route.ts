@@ -14,12 +14,12 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { notificationsPatchSchema } from "@/lib/api/schemas/notifications";
 import type { Notification } from "@/lib/db/types";
 import type { User } from "@/lib/db/types/user";
-import type { Character } from "@/lib/db/types/character";
 import {
   getNotificationBundleUserIds,
   resolveAccountFilter,
   resolveCharacterProfileFilter,
 } from "@/lib/notifications/notificationBundle";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const notificationsDeleteSchema = z.object({
   id: z.string().optional(),
@@ -87,8 +87,7 @@ export const GET = withNoStore(async (request: Request) => {
     }
     const queryUserIds = accountResolution.userIds;
 
-    const profileScopeCharacters = await db
-      .collection<Character>("characters")
+    const profileScopeCharacters = await charactersCollection(db)
       .find(
         { userId: { $in: queryUserIds } },
         { projection: { _id: 1, name: 1, userId: 1, avatarUrl: 1 } }
@@ -309,9 +308,10 @@ export async function PATCH(request: Request) {
         if (!charOid) {
           return errorResponse(400, "Invalid character id");
         }
-        const owningChar = await db
-          .collection<Character>("characters")
-          .findOne({ _id: charOid, userId: { $in: scopeIds } }, { projection: { _id: 1 } });
+        const owningChar = await charactersCollection(db).findOne(
+          { _id: charOid, userId: { $in: scopeIds } },
+          { projection: { _id: 1 } }
+        );
         if (!owningChar) {
           return errorResponse(400, "Character not in scope");
         }

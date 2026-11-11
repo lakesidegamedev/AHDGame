@@ -27,7 +27,6 @@ import {
   convertCorpCurrency,
   type ConvertCorpCurrencySuccess,
 } from "@/lib/corporations/convertCorpCurrency";
-import type { Character } from "@/lib/db/types/character";
 import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
 import { doesCeoResideAtHeadquarters, vacateCorporationCeo } from "@/lib/corporations/ceoResidency";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
@@ -37,6 +36,7 @@ import {
   releaseConstructionPropertyTransition,
 } from "@/lib/corporations/securedConstructionProperty";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const schema = z.object({
   countryId: z.enum(["US", "UK", "JP", "DE"]),
@@ -151,9 +151,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
           ? await db
               .collection<ImperialCharacter>("imperialCharacters")
               .findOne({ _id: corp.ceoId }, { projection: { homeState: 1 } })
-          : await db
-              .collection<Character>("characters")
-              .findOne({ _id: corp.ceoId }, { projection: { homeState: 1 } });
+          : await charactersCollection(db).findOne(
+              { _id: corp.ceoId },
+              { projection: { homeState: 1 } }
+            );
       // NatCorp CEOs are HQ-state exempt (relaxed country-level residency), so an
       // HQ move within the country must not unseat them.
       if (

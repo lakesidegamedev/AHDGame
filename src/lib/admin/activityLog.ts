@@ -2,6 +2,7 @@ import { ObjectId, type Db } from "mongodb";
 import type { ActionLog } from "@/lib/db/types/gameState";
 import type { ActivityLog, ActivityLogGameAction } from "@/lib/db/types/activityLog";
 import type { CountryId } from "@/lib/constants/countries";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface IdentityLookup {
   characterName?: string;
@@ -179,8 +180,7 @@ export async function fetchActivityLog(
           .find({ username: regex }, { projection: { _id: 1 } })
           .limit(50)
           .toArray(),
-        db
-          .collection("characters")
+        charactersCollection(db)
           .find({ name: regex }, { projection: { _id: 1, userId: 1 } })
           .limit(50)
           .toArray(),
@@ -215,8 +215,7 @@ export async function fetchActivityLog(
     const needLookup = rows.filter((r) => !r.characterName).map((r) => r.characterId);
     const lookup = new Map<string, IdentityLookup>();
     if (needLookup.length > 0) {
-      const chars = await db
-        .collection("characters")
+      const chars = await charactersCollection(db)
         .find({ _id: { $in: needLookup } }, { projection: { name: 1, countryId: 1 } })
         .toArray();
       for (const c of chars) {

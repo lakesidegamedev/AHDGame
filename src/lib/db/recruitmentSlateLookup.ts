@@ -12,6 +12,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import { computeSlateAssignmentScore, isNppSlateCompliant } from "@/lib/slateAssignments";
 import { SLATE_ASSIGNMENT_CAP } from "@/lib/slateAssignmentCap";
 import { getSlateAcceptanceStatBonus } from "@/lib/slateAuthority";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * List all slates owned by a (countryId, partyId). Active by default; pass
@@ -335,8 +336,7 @@ export async function prefetchSlateTemplates(
           .toArray(),
     characterIds.length === 0
       ? Promise.resolve([] as Character[])
-      : db
-          .collection<Character>("characters")
+      : charactersCollection(db)
           .find({ _id: { $in: characterIds } })
           .toArray(),
   ]);
@@ -526,8 +526,7 @@ async function loadTemplateRoster(
         },
       })
       .toArray(),
-    db
-      .collection<Character>("characters")
+    charactersCollection(db)
       .find({
         _id: {
           $in: templateRows

@@ -7,7 +7,7 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { setGrowthRateSchema } from "@/lib/api/schemas/corporations";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQuery";
-import type { Character, CorporateSector, State } from "@/lib/db/types";
+import type { CorporateSector, State } from "@/lib/db/types";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { fetchSectorMarketSharePercent } from "@/lib/corporations/marketShare";
 import { growthCostFor, resolveCountryPrimeRate } from "@/lib/corporations/sectorGrowthCost";
@@ -15,6 +15,7 @@ import { getCorpTechGrowthCostMultiplier } from "@/lib/corporations/techTree/cor
 import { NEUTRAL_STAT } from "@/lib/stats/statsConstants";
 import { logEconomicAction } from "@/lib/corporations/economicActionLog";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteParams {
   params: Promise<{ id: string; sectorId: string }>;
@@ -106,9 +107,10 @@ export async function setSectorGrowth(request: Request, { params }: RouteParams)
     // CEO Business Acumen lowers growth cost (and softens high rates) — read it so
     // the persisted/previewed cost matches what the turn engine will charge.
     const ceoChar = corporation.ceoId
-      ? await db
-          .collection<Character>("characters")
-          .findOne({ _id: corporation.ceoId }, { projection: { "stats.businessAcumen": 1 } })
+      ? await charactersCollection(db).findOne(
+          { _id: corporation.ceoId },
+          { projection: { "stats.businessAcumen": 1 } }
+        )
       : null;
     const ceoAcumen = ceoChar?.stats?.businessAcumen ?? NEUTRAL_STAT;
     // Sector tech-tree growth-cost discount (scoped to this sector's type), so

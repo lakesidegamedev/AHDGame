@@ -4,8 +4,8 @@
  */
 
 import type { Db, ObjectId } from "mongodb";
-import type { Character } from "@/lib/db/types";
 import type { SovereignResolutionChoice } from "@/lib/db/types/budget";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface ExecutivePoliticalImpact {
   favorabilityDelta: number;
@@ -37,7 +37,7 @@ export async function applyExecutivePoliticalImpact(
 ): Promise<{ applied: boolean }> {
   if (!characterId) return { applied: false };
   const impact = computeExecutivePoliticalImpact(choice);
-  await db.collection<Character>("characters").updateOne(
+  await charactersCollection(db).updateOne(
     { _id: characterId },
     {
       $inc: {

@@ -13,12 +13,12 @@
  */
 
 import type { Db, ObjectId } from "mongodb";
-import type { Character } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import type { UnifiedCabinetMember } from "@/lib/db/types/unifiedCabinetMember";
 import { getCabinetPositions } from "@/lib/constants/cabinetMechanics";
 import { isSeatActive, resolveSeatName } from "@/lib/cabinet/rosterEra";
 import { MERGER_AUTHORITY_SEAT_BY_COUNTRY } from "./constants";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface MergerAuthority {
   seatId: string;
@@ -72,9 +72,10 @@ export async function resolveMergerAuthority(
 
   authority.holderCharacterId = member.characterId;
   authority.holderName = member.characterName;
-  const holder = await db
-    .collection<Character>("characters")
-    .findOne({ _id: member.characterId }, { projection: { userId: 1 } });
+  const holder = await charactersCollection(db).findOne(
+    { _id: member.characterId },
+    { projection: { userId: 1 } }
+  );
   if (holder?.userId) authority.holderUserId = holder.userId;
   return authority;
 }

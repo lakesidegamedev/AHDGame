@@ -14,6 +14,7 @@ import {
   isUnionProsecutionBarred,
   UNION_PROSECUTION_MESSAGE,
 } from "@/lib/unions/unionProsecutionBar";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export type OrganizeUnionResult =
   | {
@@ -72,12 +73,10 @@ export async function organizeUnion(
   }
 
   const now = new Date();
-  const spend = await db
-    .collection<Character>("characters")
-    .updateOne(
-      { _id: character._id, actions: { $gte: ORGANIZE_ACTION_COST } },
-      { $inc: { actions: -ORGANIZE_ACTION_COST }, $set: { updatedAt: now } }
-    );
+  const spend = await charactersCollection(db).updateOne(
+    { _id: character._id, actions: { $gte: ORGANIZE_ACTION_COST } },
+    { $inc: { actions: -ORGANIZE_ACTION_COST }, $set: { updatedAt: now } }
+  );
   if (spend.modifiedCount === 0) {
     return {
       ok: false,
@@ -95,9 +94,10 @@ export async function organizeUnion(
     );
   if (!updatedUnion) {
     // Refund: the union vanished between the read and the write.
-    await db
-      .collection<Character>("characters")
-      .updateOne({ _id: character._id }, { $inc: { actions: ORGANIZE_ACTION_COST } });
+    await charactersCollection(db).updateOne(
+      { _id: character._id },
+      { $inc: { actions: ORGANIZE_ACTION_COST } }
+    );
     return { ok: false, status: 404, error: "Union not found." };
   }
 

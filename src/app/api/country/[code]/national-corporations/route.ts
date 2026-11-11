@@ -11,6 +11,7 @@ import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { OPERATING_SECTOR_TYPES } from "@/lib/constants/corporations";
 import type { Character, CorporateSector } from "@/lib/db/types";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteParams {
   params: Promise<{ code: string }>;
@@ -64,8 +65,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const ceoIds = corps.filter((c) => !c.ceoVacant && c.ceoId).map((c) => c.ceoId);
     const ceos =
       ceoIds.length > 0
-        ? await db
-            .collection<Character>("characters")
+        ? await charactersCollection(db)
             .find({ _id: { $in: ceoIds } })
             .project<{ _id: Character["_id"]; name: string }>({ _id: 1, name: 1 })
             .toArray()

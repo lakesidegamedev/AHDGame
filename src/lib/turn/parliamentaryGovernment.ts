@@ -23,14 +23,7 @@ import { captureBillStatusChanged } from "@/lib/analytics/billStatusAnalytics";
 
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
-import type {
-  Character,
-  PoliticalParty,
-  CareerEvent,
-  OfficeType,
-  BillStatus,
-  Bill,
-} from "@/lib/db/types";
+import type { PoliticalParty, CareerEvent, OfficeType, BillStatus, Bill } from "@/lib/db/types";
 import type { Coalition } from "@/lib/db/types/coalition";
 import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
 import {
@@ -81,6 +74,7 @@ import { getCharactersCollection } from "@/lib/db/collections/characters";
 import { getNppsCollection } from "@/lib/db/collections/npps";
 import { getPoliticalPartiesCollection } from "@/lib/db/collections/politicalParties";
 import { openCaretaker } from "@/lib/elections/rules/caretaker";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export { resolveGoverningPartyIdsFromDocuments };
 
@@ -1448,7 +1442,7 @@ export async function resolveParliamentaryNoConfidenceVote(
       for (const appt of activeAppointments) {
         // PM appointment votes are character-only; the null arm is defensive.
         const nominee = appt.nomineeCharacterId
-          ? await db.collection<Character>("characters").findOne({ _id: appt.nomineeCharacterId })
+          ? await charactersCollection(db).findOne({ _id: appt.nomineeCharacterId })
           : null;
         if (nominee?.userId) {
           notificationInputs.push({

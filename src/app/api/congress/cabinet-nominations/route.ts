@@ -7,11 +7,12 @@ import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { getAuthUser } from "@/lib/auth";
 import { handleRouteError } from "@/lib/api/errors";
-import type { CabinetNomination, ElectedOfficial, Character } from "@/lib/db/types";
+import type { CabinetNomination, ElectedOfficial } from "@/lib/db/types";
 import { getCabinetPositionById } from "@/lib/constants";
 import { isDirectAppointmentSeat } from "@/lib/constants/cabinetMechanics";
 import { computeCabinetNominationTallies } from "@/lib/congress/governmentVoteBreakdown";
 import { loadNominationPeople } from "@/lib/congress/nominationPeople";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 // GET /api/congress/cabinet-nominations — Returns all active cabinet nominations with the current user's vote status.
 // Auth: public
@@ -31,9 +32,7 @@ export const GET = withNoStore(async function GET() {
     ).filter((n) => !isDirectAppointmentSeat("US", n.positionId));
 
     const myCharacter = authUser
-      ? await db
-          .collection<Character>("characters")
-          .findOne({ userId: new ObjectId(authUser.userId) })
+      ? await charactersCollection(db).findOne({ userId: new ObjectId(authUser.userId) })
       : null;
 
     const senatorOfficial = myCharacter

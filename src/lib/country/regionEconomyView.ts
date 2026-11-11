@@ -14,7 +14,6 @@ import type {
   State,
   Corporation,
   CorporateSector,
-  Character,
   StateMetrics,
   Tariff,
   UnownedSector,
@@ -67,6 +66,7 @@ import { loadNationalGdpGrowth } from "@/lib/country/nationalGdpGrowth";
 import type { GameState } from "@/lib/db/types/gameState";
 import { calculatePlantSectorSplit } from "@/lib/corporations/plantSectorSplit";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 type AuthedViewer = Awaited<ReturnType<typeof getAuthUser>>;
 
@@ -129,7 +129,7 @@ export async function buildRegionEconomyResponse({
         );
       }
     } else {
-      const character = await db.collection<Character>("characters").findOne({
+      const character = await charactersCollection(db).findOne({
         userId: new ObjectId(user.userId),
       });
       if (character) {
@@ -289,8 +289,7 @@ export async function buildRegionEconomyResponse({
   const ceoProjection = { _id: 1, name: 1, sequentialId: 1, countryId: 1 };
   const [regularCeos, imperialCeos] = await Promise.all([
     regularCeoIds.length > 0
-      ? db
-          .collection<Character>("characters")
+      ? charactersCollection(db)
           .find({ _id: { $in: regularCeoIds } })
           .project<{
             _id: import("mongodb").ObjectId;

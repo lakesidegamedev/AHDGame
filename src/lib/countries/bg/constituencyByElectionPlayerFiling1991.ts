@@ -5,7 +5,6 @@
  */
 import { ObjectId } from "mongodb";
 import type {
-  Character,
   Election,
   ElectionCandidate,
   ElectedOfficial,
@@ -25,6 +24,7 @@ import {
   bgGrandAssemblyAllowsPartialElection,
   bgGrandPartialOwnerEligible,
 } from "./rules/constituencyByElection1991";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface Lock {
   _id: string;
@@ -113,7 +113,7 @@ export async function materializeBgGrandPartialPlayerFiling(
       }
     );
   if (!bgGrandAssemblyAllowsPartialElection(country)) return reject("invalid-ballot");
-  const character = await db.collection<Character>("characters").findOne(
+  const character = await charactersCollection(db).findOne(
     { _id: candidate.characterId },
     {
       session,

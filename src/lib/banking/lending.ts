@@ -34,6 +34,7 @@ import type { BorrowerSnapshot } from "@/lib/banking/rules/boundary";
 import { reviveObjectIds, settleTransition } from "@/lib/banking/settlementJournal";
 import { quoteLoanOrigination } from "@/lib/banking/rules/loanFees";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export { CHARACTER_LOAN_SPREAD_PP };
 
@@ -221,7 +222,7 @@ export async function loadBorrowerSnapshot(
 ): Promise<{ snapshot: BorrowerSnapshot; name: string } | { error: string }> {
   const resolveFunds = await buildFundConstituentResolver(db, charter.blacklist?.indexFundIds);
   if (borrower.type === "character") {
-    const character = await db.collection<Character>("characters").findOne({ _id: borrower.id });
+    const character = await charactersCollection(db).findOne({ _id: borrower.id });
     if (!character) return { error: "Borrower character not found" };
     return {
       name: character.name ?? "Borrower",

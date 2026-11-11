@@ -5,7 +5,6 @@ import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { runWithOptionalTransaction } from "@/lib/db/runWithOptionalTransaction";
 import type {
   CapitalActionLog,
-  Character,
   Election,
   ElectionCandidate,
   GameState,
@@ -27,6 +26,7 @@ import { evaluateRequestedEndorsement } from "@/lib/npps/queries/directAction";
 import { isSameCountry } from "@/lib/api/sameCountry";
 import { statMultiplier } from "@/lib/stats/statMultiplier";
 import { NEUTRAL_STAT } from "@/lib/stats/statsConstants";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export class DirectActionBalanceConflictError extends Error {}
 
@@ -62,7 +62,7 @@ export async function applyNppDirectAction(
   const relationshipKey = `${characterId.toString()}_${nppId.toString()}`;
   const [npp, characterDoc, relationshipDoc, gameStateDoc] = await Promise.all([
     db.collection<NPP>("npps").findOne({ _id: nppId }),
-    db.collection<Character>("characters").findOne(
+    charactersCollection(db).findOne(
       { _id: characterId },
       {
         projection: {
@@ -191,7 +191,7 @@ export async function applyNppDirectAction(
     session?: ClientSession,
     onActionSpent?: () => void
   ): Promise<{ actions: number; funds: number }> => {
-    const characterUpdate = await db.collection<Character>("characters").findOneAndUpdate(
+    const characterUpdate = await charactersCollection(db).findOneAndUpdate(
       {
         _id: characterId,
         actions: { $gte: plan.actionCost },
@@ -334,7 +334,7 @@ export async function applyNppDirectAction(
         });
       } catch (error) {
         if (actionSpent) {
-          await db.collection<Character>("characters").updateOne(
+          await charactersCollection(db).updateOne(
             { _id: characterId },
             {
               $inc: {

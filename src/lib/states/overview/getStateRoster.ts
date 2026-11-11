@@ -4,6 +4,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import type { Character, Election, ElectionCandidate, PoliticalParty } from "@/lib/db/types";
 import { officeLabelFor } from "@/lib/utils/officeLabel";
 import { raceLabel } from "@/components/state/overview/raceLabel";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const NEUTRAL_PARTY_COLOR = "#6b6b7a";
 
@@ -97,8 +98,7 @@ export async function getStateRoster(
   const page = Math.max(1, Math.floor(args.page) || 1);
   const skip = (page - 1) * pageSize;
 
-  const [facet] = await db
-    .collection<Character>("characters")
+  const [facet] = await charactersCollection(db)
     .aggregate<{ rows: RosterFacetRow[]; total: [{ n: number }] | [] }>([
       { $match: { countryId, homeState: stateId } },
       {

@@ -15,7 +15,8 @@ import {
 } from "@/lib/parties/pendingTreasuryTransactions";
 import { isLeadershipElectionFreezeActive } from "@/lib/parties/leadershipElectionFreeze";
 import { getGameTime } from "@/lib/time/gameTime";
-import type { Character, State } from "@/lib/db/types";
+import type { State } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -63,8 +64,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const [characterDocs, stateDocs] = await Promise.all([
       characterIds.size === 0
         ? Promise.resolve([] as Array<{ _id: ObjectId; name: string }>)
-        : db
-            .collection<Character>("characters")
+        : charactersCollection(db)
             .find({ _id: { $in: Array.from(characterIds).map((id) => new ObjectId(id)) } })
             .project<{ _id: ObjectId; name: string }>({ name: 1 })
             .toArray(),

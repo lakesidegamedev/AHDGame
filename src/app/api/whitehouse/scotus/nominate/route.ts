@@ -14,8 +14,9 @@ import { parseJsonBody, schemas } from "@/lib/api/validate";
 import { z } from "zod";
 import { createNotification } from "@/lib/notifications";
 import { CONGRESS_LIMITS, checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
-import type { ElectedOfficial, Character } from "@/lib/db/types";
+import type { ElectedOfficial } from "@/lib/db/types";
 import { createJusticeNomination } from "@/lib/scotus/nominateJustice";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const nominateSchema = z.object({
   seatNumber: z.number().int().min(1).max(9),
@@ -56,7 +57,7 @@ export async function POST(request: Request) {
       return errorResponse(400, "No President in office");
     }
 
-    const myCharacter = await db.collection<Character>("characters").findOne({
+    const myCharacter = await charactersCollection(db).findOne({
       userId: new ObjectId(authUser.userId),
     });
     if (!myCharacter || !presidentOfficial.characterId.equals(myCharacter._id)) {
@@ -88,8 +89,7 @@ export async function POST(request: Request) {
       .toArray();
     const senatorCharIds = senators.map((s) => s.characterId!).filter(Boolean);
     const senatorChars = senatorCharIds.length
-      ? await db
-          .collection<Character>("characters")
+      ? await charactersCollection(db)
           .find({ _id: { $in: senatorCharIds } }, { projection: { _id: 1, userId: 1 } })
           .toArray()
       : [];

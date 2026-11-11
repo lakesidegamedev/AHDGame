@@ -11,12 +11,12 @@ import type {
   NationalCommitteeVote,
   NationalCommitteeCandidate,
   PoliticalParty,
-  Character,
 } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { getPartyRoleLabel } from "@/lib/parties/partyRoleLabels";
 import { createTurnBackedWindow } from "@/lib/time/turnBackedWindow";
 import { insertManyIgnoringDuplicateKey } from "@/lib/elections/duplicateKey";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export const COMMITTEE_ELECTION_DURATION_TURNS = 168; // 168 turns = 1 week
 export const COMMITTEE_SIZE = 6; // Maximum committee members
@@ -400,8 +400,7 @@ export async function processNationalCommitteeElections(
 async function notifyCommitteeElectionOpened(partyId: string, countryId: CountryId): Promise<void> {
   const db = await getDb();
   // Filter members by both partyId and countryId to avoid cross-country notifications
-  const members = await db
-    .collection<Character>("characters")
+  const members = await charactersCollection(db)
     .find({ party: partyId, countryId })
     .project<{ _id: ObjectId; userId: ObjectId }>({ _id: 1, userId: 1 })
     .toArray();
@@ -432,7 +431,7 @@ async function notifyCommitteeElected(
   voteCount: number
 ): Promise<void> {
   const db = await getDb();
-  const char = await db.collection<Character>("characters").findOne({ _id: characterId });
+  const char = await charactersCollection(db).findOne({ _id: characterId });
   if (!char) return;
 
   const party = await findPartyByElectionPartyId(db, partyId, countryId);
@@ -458,7 +457,7 @@ async function notifyCommitteeLost(
   voteCount: number
 ): Promise<void> {
   const db = await getDb();
-  const char = await db.collection<Character>("characters").findOne({ _id: characterId });
+  const char = await charactersCollection(db).findOne({ _id: characterId });
   if (!char) return;
 
   const party = await findPartyByElectionPartyId(db, partyId, countryId);
@@ -482,7 +481,7 @@ async function notifyCommitteeRemoved(
   countryId: CountryId
 ): Promise<void> {
   const db = await getDb();
-  const char = await db.collection<Character>("characters").findOne({ _id: characterId });
+  const char = await charactersCollection(db).findOne({ _id: characterId });
   if (!char) return;
 
   const committeeLabel = getPartyRoleLabel(countryId, "committee");
@@ -503,8 +502,7 @@ export async function notifyCommitteeCandidacyDeclared(
 ): Promise<void> {
   const db = await getDb();
   // Filter members by both partyId and countryId to avoid cross-country notifications
-  const members = await db
-    .collection<Character>("characters")
+  const members = await charactersCollection(db)
     .find({ party: partyId, countryId, _id: { $ne: candidateCharId } })
     .project<{ _id: ObjectId; userId: ObjectId }>({ _id: 1, userId: 1 })
     .toArray();

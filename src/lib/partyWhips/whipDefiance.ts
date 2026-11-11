@@ -27,6 +27,7 @@ import { getOfficeTypeForChamber } from "@/lib/legislature/chamberOfficeType";
 import { impeachmentStageChamberKey } from "@/lib/impeachment/impeachmentTally";
 import type { Impeachment } from "@/lib/db/types/impeachment";
 import { isBillWhipInCurrentPhase } from "@/lib/congress/billWhipPhase";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface WhipDefianceScope {
   countryId: CountryId;
@@ -567,8 +568,7 @@ async function buildWhipDefianceSnapshotsForScopes(
   >;
   const [characters, npps, officials] = await Promise.all([
     missingCharacterIds.length
-      ? db
-          .collection<Character>("characters")
+      ? charactersCollection(db)
           .find({ _id: { $in: missingCharacterIds } })
           .project<Pick<Character, "_id" | "name" | "party">>({ _id: 1, name: 1, party: 1 })
           .toArray()

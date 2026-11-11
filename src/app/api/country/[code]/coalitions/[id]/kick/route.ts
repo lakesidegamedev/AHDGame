@@ -7,9 +7,9 @@ import { handleRouteError, badRequest, forbidden, notFound, errorResponse } from
 import { createNotification } from "@/lib/notifications";
 import type { Coalition } from "@/lib/db/types/coalition";
 import type { PoliticalParty } from "@/lib/db/types/party";
-import type { Character } from "@/lib/db/types/character";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const kickSchema = z.object({
   partySequentialId: z.number().int().positive(),
@@ -99,9 +99,10 @@ export async function POST(
 
     // Notify the kicked party's chair
     if (targetParty.chairId) {
-      const kickedChairChar = await db
-        .collection<Character>("characters")
-        .findOne({ _id: targetParty.chairId }, { projection: { userId: 1 } });
+      const kickedChairChar = await charactersCollection(db).findOne(
+        { _id: targetParty.chairId },
+        { projection: { userId: 1 } }
+      );
       if (kickedChairChar) {
         await createNotification({
           userId: kickedChairChar.userId,

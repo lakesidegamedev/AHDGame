@@ -4,7 +4,7 @@
  */
 import { ObjectId } from "mongodb";
 import type { Db } from "mongodb";
-import type { Bill, BillWhip, Character, ElectedOfficial, GameState } from "@/lib/db/types";
+import type { Bill, BillWhip, ElectedOfficial, GameState } from "@/lib/db/types";
 import { recordAudit } from "@/lib/audit/recordAudit";
 import { applyEnactedBillEffects } from "@/lib/legislature/commands/applyEnactedBillEffects";
 import { createNotification } from "@/lib/notifications";
@@ -15,6 +15,7 @@ import { sendCountryGameEvent, buildBillVetoedDiscordEmbed } from "@/lib/discord
 import { billChamberVoteSplits } from "@/lib/charts/voteSplitChart";
 import { claimStatusTransition } from "@/lib/turn/atomicClaim";
 import { captureBillStatusChanged } from "@/lib/analytics/billStatusAnalytics";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const OVERRIDE_WINDOW_HOURS = 24;
 const OVERRIDE_WINDOW_MS = OVERRIDE_WINDOW_HOURS * 60 * 60 * 1000;
@@ -116,9 +117,10 @@ export async function executePresidentialBillAction(
       } catch (e) {
         console.error("Achievement check failed:", e);
       }
-      const sponsor = await db
-        .collection<Character>("characters")
-        .findOne({ _id: bill.sponsorId }, { projection: { userId: 1 } });
+      const sponsor = await charactersCollection(db).findOne(
+        { _id: bill.sponsorId },
+        { projection: { userId: 1 } }
+      );
       if (sponsor?.userId) {
         await createNotification({
           userId: sponsor.userId,
@@ -134,9 +136,10 @@ export async function executePresidentialBillAction(
     // character row is missing or sponsorId is null (e.g. admin-proposed bills).
     const sponsorName = bill.sponsorId
       ? ((
-          await db
-            .collection<Character>("characters")
-            .findOne({ _id: bill.sponsorId }, { projection: { name: 1 } })
+          await charactersCollection(db).findOne(
+            { _id: bill.sponsorId },
+            { projection: { name: 1 } }
+          )
         )?.name ??
         bill.sponsorName ??
         "Unknown")
@@ -230,9 +233,10 @@ export async function executePresidentialBillAction(
     });
 
     if (bill.sponsorId) {
-      const sponsor = await db
-        .collection<Character>("characters")
-        .findOne({ _id: bill.sponsorId }, { projection: { userId: 1 } });
+      const sponsor = await charactersCollection(db).findOne(
+        { _id: bill.sponsorId },
+        { projection: { userId: 1 } }
+      );
       if (sponsor?.userId) {
         await createNotification({
           userId: sponsor.userId,
@@ -257,8 +261,7 @@ export async function executePresidentialBillAction(
       .map((o) => o.characterId)
       .filter((id): id is ObjectId => id instanceof ObjectId);
     if (charIds.length > 0) {
-      const chars = await db
-        .collection<Character>("characters")
+      const chars = await charactersCollection(db)
         .find({ _id: { $in: charIds } }, { projection: { _id: 1, userId: 1 } })
         .toArray();
       await Promise.all(
@@ -280,9 +283,10 @@ export async function executePresidentialBillAction(
     );
 
     // Announce the veto on the bill country's game-events Discord webhook (fire-and-forget).
-    const president = await db
-      .collection<Character>("characters")
-      .findOne({ _id: characterId }, { projection: { name: 1 } });
+    const president = await charactersCollection(db).findOne(
+      { _id: characterId },
+      { projection: { name: 1 } }
+    );
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
     const billUrl = `${baseUrl}/congress/bills/${bill._id.toString()}`;
     sendCountryGameEvent(

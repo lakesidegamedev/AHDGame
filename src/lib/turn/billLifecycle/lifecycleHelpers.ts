@@ -7,9 +7,10 @@ import { ObjectId } from "mongodb";
 import { clotureVotesRequired } from "./clotureRules";
 import { createNotifications } from "@/lib/notifications";
 import { didPass } from "@/lib/billLifecycleHelpers";
-import type { Bill, BillStatus, Character, ElectedOfficial } from "@/lib/db/types";
+import type { Bill, BillStatus, ElectedOfficial } from "@/lib/db/types";
 import { getCountryConfig, type CountryId } from "@/lib/constants/countries";
 import { getChamberKeyForOfficeType } from "@/lib/legislature/chamberOfficeType";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 type LifecycleDb = Awaited<ReturnType<typeof import("@/lib/mongodb").getDb>>;
 
@@ -67,9 +68,10 @@ export async function notifyPresidentBillAwaitingSignature(
   });
   if (!presidentOfficial?.characterId) return;
 
-  const presidentChar = await db
-    .collection<Character>("characters")
-    .findOne({ _id: presidentOfficial.characterId }, { projection: { userId: 1 } });
+  const presidentChar = await charactersCollection(db).findOne(
+    { _id: presidentOfficial.characterId },
+    { projection: { userId: 1 } }
+  );
   if (!presidentChar?.userId) return;
 
   await createNotifications([
@@ -112,8 +114,7 @@ export async function notifyChambersVoteOpen(
     .map((o) => o.characterId)
     .filter((id): id is ObjectId => id instanceof ObjectId);
 
-  const chars = await db
-    .collection<Character>("characters")
+  const chars = await charactersCollection(db)
     .find({ _id: { $in: charIds } }, { projection: { _id: 1, userId: 1 } })
     .toArray();
 
@@ -165,8 +166,7 @@ export async function notifyBillsVoteOpen(
         .map((id) => [id.toString(), id])
     ).values(),
   ];
-  const characters = await db
-    .collection<Character>("characters")
+  const characters = await charactersCollection(db)
     .find({ _id: { $in: characterIds } }, { projection: { _id: 1, userId: 1 } })
     .toArray();
   const characterById = new Map(
@@ -219,8 +219,7 @@ export async function notifySponsor(
 
   if (notifyIds.length === 0) return;
 
-  const chars = await db
-    .collection<Character>("characters")
+  const chars = await charactersCollection(db)
     .find({ _id: { $in: notifyIds } }, { projection: { _id: 1, userId: 1 } })
     .toArray();
 

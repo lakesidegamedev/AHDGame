@@ -57,9 +57,9 @@ import type {
   LegislationType,
   Achievement,
   User,
-  Character,
 } from "@/lib/db/types";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * What `runSeed`'s reset branch deletes, and how far.
@@ -281,8 +281,7 @@ export async function runSeed(
     const adminUserIds = adminUsers.map((u) => u._id);
     const adminCharacters =
       adminUserIds.length > 0
-        ? await db
-            .collection<Character>("characters")
+        ? await charactersCollection(db)
             .find({ userId: { $in: adminUserIds } })
             .toArray()
         : [];
@@ -736,12 +735,10 @@ export async function runSeed(
     .catch(() => {});
   // Non-unique: multiple characters per userId are allowed in test mode and for admins.
   // The application enforces limits via activeCharacterCount on the user document.
-  await db
-    .collection("characters")
+  await charactersCollection(db)
     .createIndex({ userId: 1 })
     .catch(() => {});
-  await db
-    .collection("characters")
+  await charactersCollection(db)
     .createIndex({ homeState: 1 })
     .catch(() => {});
   await db

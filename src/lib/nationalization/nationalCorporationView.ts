@@ -8,14 +8,7 @@ import { plantSizeForSector, sectorPlantCount } from "@/lib/constants/facilityQu
 import { corporationTypeOfLane } from "@/lib/constants/corporations";
 import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import type { Db, ObjectId } from "mongodb";
-import type {
-  Character,
-  Corporation,
-  CorporateSector,
-  GameState,
-  State,
-  StateMetrics,
-} from "@/lib/db/types";
+import type { Corporation, CorporateSector, GameState, State, StateMetrics } from "@/lib/db/types";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
 import {
   computeFillRate,
@@ -69,6 +62,7 @@ import { loadFxRatesByCurrency } from "@/lib/currency/corporationCapital";
 import { getDesignatedSectorTypes } from "./strategicSectors";
 import { isSittingLeader } from "@/lib/governorOffice/isSittingLeader";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /** Human-readable label for a `category.field` metric path (region-aware). */
 function mandateMetricLabel(path: string, stateId?: string): string {
@@ -640,7 +634,7 @@ export async function buildNationalCorporationView(
       sectorCount: foundingCount,
     });
 
-  const characters = db.collection<Character>("characters");
+  const characters = charactersCollection(db);
   let ceoName: string | null = null;
   let ceoSequentialId: number | null = null;
   if (!corp.ceoVacant && corp.ceoId) {

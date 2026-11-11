@@ -6,7 +6,6 @@
 import { ObjectId } from "mongodb";
 import type { Db } from "@/lib/mongodb";
 import type {
-  Character,
   Coalition,
   Election,
   ElectionCandidate,
@@ -19,6 +18,7 @@ import {
   type HouseVoteStandings,
 } from "@/lib/elections/contingentHouseStandings";
 import { loadContingentElectionData } from "@/lib/elections/resolution/loadContingentElectionData";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export type ContingentHouseVoteRecord = NonNullable<ElectionVoteTally["contingentHouseVote"]>;
 
@@ -48,8 +48,7 @@ export async function partitionEligibleCandidates(
   const nppIds = candidacies.filter((c) => c.isNPP && c.nppId).map((c) => c.nppId as ObjectId);
   const [chars, npps] = await Promise.all([
     charIds.length > 0
-      ? db
-          .collection<Character>("characters")
+      ? charactersCollection(db)
           .find({ _id: { $in: charIds } })
           .project({ _id: 1 })
           .toArray()

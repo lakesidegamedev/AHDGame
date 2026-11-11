@@ -7,6 +7,7 @@ import { ObjectId, type Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { Character, PoliticalParty } from "@/lib/db/types";
 import { PartyTerritoryError } from "./territoryErrors";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface TerritoryParty {
   countryId: CountryId;
@@ -75,12 +76,10 @@ export async function withPartyTerritoryMutation<T>(
   try {
     await claimTerritory(db, identities, token);
     if (expectedCharacter) {
-      const current = await db
-        .collection<Character>("characters")
-        .findOne(
-          { _id: expectedCharacter._id },
-          { projection: { homeState: 1, party: 1, countryId: 1 } }
-        );
+      const current = await charactersCollection(db).findOne(
+        { _id: expectedCharacter._id },
+        { projection: { homeState: 1, party: 1, countryId: 1 } }
+      );
       if (
         !current ||
         current.party !== expectedCharacter.party ||

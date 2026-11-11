@@ -1,5 +1,5 @@
 import { operatingSectorFilter } from "@/lib/constants/corporations";
-import { ObjectId, type Db, type Filter } from "mongodb";
+import { ObjectId, type Db, type Document, type Filter } from "mongodb";
 import { logWireEvent } from "@/lib/wireEvent";
 import { createNotifications } from "@/lib/notifications";
 import { isMacroMetricPath } from "@/lib/macroMetrics/paths";
@@ -37,6 +37,7 @@ import {
 } from "@/lib/livingConflict/vietnamCompat";
 import { getStatesCollection } from "@/lib/db/collections/states";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * Process active crises for the current turn.
@@ -436,8 +437,7 @@ async function notifyAffectedPlayers(
   type: "crisis_start" | "crisis_end"
 ): Promise<void> {
   // Find all characters in affected states
-  const characters = await db
-    .collection("characters")
+  const characters = await charactersCollection(db)
     .find({
       homeState: { $in: targetStateIds },
       active: { $ne: false },
@@ -719,8 +719,7 @@ async function applyStatEffects(
     filter["currentOffice.stateId"] = { $in: targetStateIds };
   }
 
-  const chars = await db
-    .collection<{ _id: ObjectId; stats?: Record<string, number> }>("characters")
+  const chars = await charactersCollection<{ _id: ObjectId; stats?: Record<string, number> }>(db)
     .find(filter, { projection: { _id: 1, stats: 1 } })
     .toArray();
 
@@ -748,7 +747,7 @@ async function applyStatEffects(
   }
 
   if (ops.length > 0) {
-    await db.collection("characters").bulkWrite(ops);
+    await charactersCollection<Document>(db).bulkWrite(ops);
   }
 }
 

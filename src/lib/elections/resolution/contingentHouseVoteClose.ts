@@ -12,13 +12,7 @@
  */
 import { ObjectId } from "mongodb";
 import type { Db } from "@/lib/mongodb";
-import type {
-  Character,
-  Election,
-  ElectionCandidate,
-  ElectionVoteTally,
-  NPP,
-} from "@/lib/db/types";
+import type { Election, ElectionCandidate, ElectionVoteTally, NPP } from "@/lib/db/types";
 import { createNotifications } from "@/lib/notifications";
 import { seatPresidentialExecutive } from "@/lib/elections/resolution/presidentExecutiveSeating";
 import { recordPresidentialTenure } from "@/lib/elections/resolution/presidentialTenureLedger";
@@ -37,6 +31,7 @@ import {
 } from "@/lib/elections/resolution/contingentPersonIds";
 import { logger } from "@/lib/observability/logger";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 type TallyWithVote = ElectionVoteTally & {
   contingentHouseVote: NonNullable<ElectionVoteTally["contingentHouseVote"]>;
@@ -49,9 +44,10 @@ async function actingPersonPresent(db: Db, personId: string): Promise<boolean> {
       .findOne({ _id: toNppObjectId(personId) }, { projection: { retiredAt: 1 } });
     return Boolean(npp && !npp.retiredAt);
   }
-  const char = await db
-    .collection<Character>("characters")
-    .findOne({ _id: toCharacterObjectId(personId) }, { projection: { _id: 1 } });
+  const char = await charactersCollection(db).findOne(
+    { _id: toCharacterObjectId(personId) },
+    { projection: { _id: 1 } }
+  );
   return Boolean(char);
 }
 
@@ -111,9 +107,10 @@ async function seatHouseElectedPresident(
   );
 
   if (!winnerCandidate.isNPP && winnerCandidate.characterId) {
-    const char = await db
-      .collection<Character>("characters")
-      .findOne({ _id: winnerCandidate.characterId }, { projection: { userId: 1 } });
+    const char = await charactersCollection(db).findOne(
+      { _id: winnerCandidate.characterId },
+      { projection: { userId: 1 } }
+    );
     if (char?.userId) {
       await createNotifications([
         {

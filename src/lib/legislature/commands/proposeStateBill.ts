@@ -12,7 +12,7 @@ import {
 } from "@/lib/constants/countries";
 import type { AuthUserWithCharacter } from "@/lib/auth";
 import { STATE_TERMINAL_STATUSES } from "@/lib/congress/billProposalLimits";
-import type { Character, ElectedOfficial, PoliticalParty, StateBill } from "@/lib/db/types";
+import type { ElectedOfficial, PoliticalParty, StateBill } from "@/lib/db/types";
 import { isBannedParty } from "@/lib/turn/onePartyConstraints";
 import { getCountryState } from "@/lib/countryState";
 import type { RegionalBudget } from "@/lib/db/types/regionalBudget";
@@ -21,6 +21,7 @@ import type { LegislatureCommandResult } from "@/lib/legislature/commands/types"
 import { getGameState } from "@/lib/gameState";
 import { snapshotPolicyProvisionsInPlace } from "@/lib/legislature/provisionEnrichment";
 import { validateStateBillProvisions } from "@/lib/legislature/commands/validateStateBillProvisions";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const VOTING_DURATION_HOURS = 24;
 
@@ -207,7 +208,7 @@ export async function proposeStateBill(
         },
       };
     }
-    const spendResult = await db.collection<Character>("characters").updateOne(
+    const spendResult = await charactersCollection(db).updateOne(
       {
         _id: character._id,
         actions: { $gte: actionCost },
@@ -272,7 +273,7 @@ export async function proposeStateBill(
     result = await db.collection<StateBill>("stateBills").insertOne(bill as StateBill);
   } catch (error) {
     if (!(adminOverride && user.isAdmin)) {
-      await db.collection<Character>("characters").updateOne(
+      await charactersCollection(db).updateOne(
         { _id: character._id },
         {
           $inc: {

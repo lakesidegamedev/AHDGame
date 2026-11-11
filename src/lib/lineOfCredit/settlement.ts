@@ -24,6 +24,7 @@ import {
   validateLocDrawAdmission,
 } from "./bookAdmission";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface LocEffect {
   locAfter?: Character["lineOfCredit"];
@@ -409,8 +410,7 @@ export async function recoverPendingLoc(db: Db, turn: number) {
       )
       .limit(50)
       .toArray(),
-    db
-      .collection("characters")
+    charactersCollection(db)
       .find(
         { "pendingLocSettlement.key": { $exists: true } },
         { projection: { "pendingLocSettlement.key": 1 } }

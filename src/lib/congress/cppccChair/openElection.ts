@@ -24,10 +24,10 @@ import {
 import type {
   CppccChairElection,
   CppccChairNomination,
-  Character,
   CongressLeader,
   ElectedOfficial,
 } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const ELECTION_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours — parity with US Speaker
 
@@ -92,12 +92,10 @@ export async function triggerCppccChairElectionAfterReconcile(db: Db, now: Date)
       countryId: "CN",
     });
     if (hasSeat) {
-      const char = await db
-        .collection<Character>("characters")
-        .findOne(
-          { _id: incumbent.characterId },
-          { projection: { party: 1, homeState: 1, name: 1 } }
-        );
+      const char = await charactersCollection(db).findOne(
+        { _id: incumbent.characterId },
+        { projection: { party: 1, homeState: 1, name: 1 } }
+      );
       const incumbentParty = char?.party ?? incumbent.party ?? null;
       if (incumbentParty && isPartyEligible(policy, incumbentParty, chamberCtx)) {
         await db.collection<CppccChairNomination>("cppccChairNominations").insertOne({

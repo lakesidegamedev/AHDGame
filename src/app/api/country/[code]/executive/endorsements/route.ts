@@ -18,7 +18,6 @@ import { createExecutiveEndorsement } from "@/lib/governorOffice/endorsements/cr
 import { getNationalStateId } from "@/lib/policy/nationalStateId";
 import { GOVERNOR_ENDORSEMENT_ACTION_COST } from "@/lib/constants/governorOffice";
 import type {
-  Character,
   Election,
   ElectionCandidate,
   ExecutiveEndorsement,
@@ -27,6 +26,7 @@ import type {
   State,
 } from "@/lib/db/types";
 import { buildPartyIdResolver } from "@/lib/parties/partyMatch";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 // Re-uses electionLabels via the constants/countries re-export.
 // Import resolved inline above to keep this file self-contained.
@@ -131,8 +131,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
           .sort({ name: 1 })
           .toArray(),
         db.collection<GovernorOfficeState>("governorOfficeState").findOne({ countryId, stateId }),
-        db
-          .collection<{ _id: ObjectId; party?: string }>("characters")
+        charactersCollection<{ _id: ObjectId; party?: string }>(db)
           .findOne({ _id: characterId }, { projection: { party: 1 } })
           .then((c) => c?.party ?? null),
       ]);
@@ -154,8 +153,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
       ),
     ];
     const playerCharacters = playerCharacterIds.length
-      ? await db
-          .collection<Character>("characters")
+      ? await charactersCollection(db)
           .find({ _id: { $in: playerCharacterIds } })
           .project<{ _id: ObjectId; party?: string }>({ _id: 1, party: 1 })
           .toArray()

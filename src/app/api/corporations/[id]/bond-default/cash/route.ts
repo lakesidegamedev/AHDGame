@@ -33,6 +33,7 @@ import { getGameState } from "@/lib/gameState";
 import { withCorporationSettlementLock } from "@/lib/corporations/settlementLock";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -277,8 +278,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
 
           if (charIncs.size > 0) {
             const charIds = [...charIncs.keys()].map((entryId) => new ObjectId(entryId));
-            const charDocs = await db
-              .collection<Character>("characters")
+            const charDocs = await charactersCollection(db)
               .find({ _id: { $in: charIds } }, so)
               .project<Pick<Character, "_id" | "countryId" | "name">>({
                 _id: 1,

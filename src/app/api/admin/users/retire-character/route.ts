@@ -11,10 +11,10 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { parseJsonBody, schemas } from "@/lib/api/validate";
 import { retireCharacter } from "@/lib/retireCharacter";
 import { buildRetireRecapOpts } from "@/lib/recap/retireRecapOpts";
-import type { Character } from "@/lib/db/types";
 import type { RetiredCharacter } from "@/lib/db/types/retiredCharacter";
 import { ObjectId } from "mongodb";
 import { z } from "zod";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 // GET /api/admin/users/retire-character?userId=xxx — Fetch retired characters for a user.
 // Auth: requireAdmin
@@ -76,7 +76,7 @@ export async function POST(request: Request) {
 
     // Find active character — use activeCharacterId if set, otherwise first character
     const charQuery = user.activeCharacterId ? { _id: user.activeCharacterId, userId } : { userId };
-    const character = await db.collection<Character>("characters").findOne(charQuery);
+    const character = await charactersCollection(db).findOne(charQuery);
     if (!character) return errorResponse(404, "User has no active character");
 
     const recapOpts = await buildRetireRecapOpts(db, character);

@@ -139,6 +139,7 @@ import {
   electoralMajorityFor,
 } from "./presidentialResolutionDisplay";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export async function _enrichElection(
   election: Election,
@@ -702,13 +703,13 @@ export async function _enrichElection(
       myCampaignId = await findViewerRaceCampaignId(db, electionOid, userId);
     }
 
-    // The reader's party, so a primary screen offers endorsement only where the
-    // endorse route would accept it (own-party candidates). Presidential
-    // primaries only: nothing else on the page needs it.
+    // The reader's party, so a primary screen offers endorsement only for
+    // own-party candidates. Presidential primaries only.
     if (myCharId && isPresident && inPrimary && ObjectId.isValid(myCharId)) {
-      const me = await db
-        .collection<Character>("characters")
-        .findOne({ _id: new ObjectId(myCharId) }, { projection: { party: 1 } });
+      const me = await charactersCollection(db).findOne(
+        { _id: new ObjectId(myCharId) },
+        { projection: { party: 1 } }
+      );
       myPartyId = me?.party ?? null;
     }
 
@@ -1430,8 +1431,7 @@ export async function fetchDepsForElection(
     tally,
   ] = await Promise.all([
     allCharIds.length > 0
-      ? db
-          .collection<Character>("characters")
+      ? charactersCollection(db)
           .find(
             { _id: { $in: allCharIds } },
             isFull ? undefined : { projection: ELECTION_SUMMARY_CHARACTER_PROJECTION }
@@ -1530,7 +1530,7 @@ export async function fetchDepsForElection(
       q["currentOffice.senateClass"] = election.senateClass;
     }
     const [incumbentChar, incumbentNPP] = await Promise.all([
-      db.collection<Character>("characters").findOne(q, { projection: { name: 1, party: 1 } }),
+      charactersCollection(db).findOne(q, { projection: { name: 1, party: 1 } }),
       db.collection<NPP>("npps").findOne(q, { projection: { name: 1, party: 1 } }),
     ]);
     const holder = incumbentChar ?? incumbentNPP;

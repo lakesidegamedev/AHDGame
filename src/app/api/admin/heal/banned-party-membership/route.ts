@@ -3,8 +3,9 @@ import type { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError } from "@/lib/api/errors";
-import type { User, Character } from "@/lib/db/types";
+import type { User } from "@/lib/db/types";
 import { stripPartyMembershipForBannedUser } from "@/lib/account/stripPartyMembershipForBannedUser";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * GET /api/admin/heal/banned-party-membership
@@ -27,8 +28,7 @@ export async function GET() {
     let affectedCharacters = 0;
 
     for (const u of bannedIds) {
-      const chars = await db
-        .collection<Character>("characters")
+      const chars = await charactersCollection(db)
         .find({
           userId: u._id,
           party: { $exists: true, $nin: ["", "independent"] },

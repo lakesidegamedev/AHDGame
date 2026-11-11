@@ -19,6 +19,7 @@ import {
   getPartyTenure,
   STATE_LEADERSHIP_RELOCATION_DELAY_TURNS,
 } from "@/lib/parties/leadershipTenure";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; partyId: string }>;
@@ -102,9 +103,9 @@ export async function POST(request: Request, { params }: RouteParams) {
       // to a deleted/banned/party-left character does not block appointment.
       let chairPositionIsVacant = true;
       if (statePartyOrg?.chairId) {
-        const existingChair = await db
-          .collection<Character>("characters")
-          .findOne({ _id: statePartyOrg.chairId });
+        const existingChair = await charactersCollection(db).findOne({
+          _id: statePartyOrg.chairId,
+        });
         if (existingChair && existingChair.party === partyKey) {
           chairPositionIsVacant = false;
         }
@@ -131,7 +132,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       }
 
       // Find the character
-      appointedCharacter = await db.collection<Character>("characters").findOne({
+      appointedCharacter = await charactersCollection(db).findOne({
         _id: characterObjectId,
       });
 

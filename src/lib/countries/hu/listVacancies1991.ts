@@ -14,6 +14,7 @@ import {
   findHu1991ListVacancies,
   type Hu1991ListReplacement,
 } from "./rules/listVacancies1991";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export const HU_1991_LIST_REPLACEMENTS_COLLECTION = "hu1991ListReplacements";
 interface ReplacementReceipt {
@@ -104,8 +105,7 @@ async function readContext(db: Db, turn: number, session?: ClientSession) {
       { session, projection: { party: 1, currentOffice: 1 } }
     )
     .toArray();
-  const players = await db
-    .collection<Character>("characters")
+  const players = await charactersCollection(db)
     .find(
       {
         _id: {
@@ -335,7 +335,7 @@ export async function designateHu1991ListDeputy(input: {
       );
     }
     if (!mandate.isNpc)
-      await db.collection<Character>("characters").updateOne(
+      await charactersCollection(db).updateOne(
         { _id: new ObjectId(mandate.ownerId) },
         {
           $push: {

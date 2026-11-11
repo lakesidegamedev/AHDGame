@@ -31,6 +31,7 @@ import type {
   SenateLeadershipElectionRole,
   SenateLeadershipNomination,
 } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export const LEADERSHIP_ELECTION_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours = 24 turns
 
@@ -142,9 +143,10 @@ export async function openCongressLeadershipElection(
   });
   if (!seat) return true;
 
-  const char = await db
-    .collection<Character>("characters")
-    .findOne({ _id: incumbent.characterId }, { projection: { party: 1, homeState: 1 } });
+  const char = await charactersCollection(db).findOne(
+    { _id: incumbent.characterId },
+    { projection: { party: 1, homeState: 1 } }
+  );
   // Congressional leadership races are player-only, so an incumbent without a
   // character document is never seeded onto the ballot.
   if (!char) return true;

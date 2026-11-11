@@ -6,7 +6,6 @@ import type {
   ElectedOfficial,
   NPP,
   OfficeType,
-  Character,
 } from "@/lib/db/types";
 import {
   MULTI_SEAT_TYPES,
@@ -25,6 +24,7 @@ import { isExecutiveOffice } from "@/lib/elections/executiveOffice";
 import { captureOfficeTransition } from "@/lib/analytics/officeTransitionAnalytics";
 import type { ElectionNewsOutcome } from "./electionNotifications";
 import { voidDebateSessionsForElection } from "@/lib/debate/debateSessionLifecycle";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface OneElectionResult {
   resolved: boolean;
@@ -177,15 +177,14 @@ export async function sweepStaleOffice(
     ...(currentCharIds.length > 0 ? { _id: { $nin: currentCharIds } } : {}),
   };
   const departingPlayers = telemetry
-    ? await db
-        .collection<Character>("characters")
+    ? await charactersCollection(db)
         .find(departingFilter, { projection: { _id: 1, party: 1, countryId: 1 } })
         .toArray()
         .catch(() => [])
     : [];
-  await db
-    .collection<Character>("characters")
-    .updateMany(departingFilter, { $set: { currentOffice: null, updatedAt: now } });
+  await charactersCollection(db).updateMany(departingFilter, {
+    $set: { currentOffice: null, updatedAt: now },
+  });
   if (telemetry)
     await Promise.all(
       departingPlayers.map((character) =>
@@ -262,12 +261,10 @@ export async function resolveElectionWithNoTally(
         officeFilter["currentOffice.senateClass"] = election.senateClass;
       }
       if (incumbent.characterId) {
-        await db
-          .collection<Character>("characters")
-          .updateOne(
-            { _id: incumbent.characterId, ...officeFilter },
-            { $set: { currentOffice: null, updatedAt: now } }
-          );
+        await charactersCollection(db).updateOne(
+          { _id: incumbent.characterId, ...officeFilter },
+          { $set: { currentOffice: null, updatedAt: now } }
+        );
       }
       if (incumbent.nppId) {
         await db
@@ -390,12 +387,10 @@ export async function resolveElectionWithZeroVotes(
         officeFilter["currentOffice.senateClass"] = election.senateClass;
       }
       if (incumbent.characterId) {
-        await db
-          .collection<Character>("characters")
-          .updateOne(
-            { _id: incumbent.characterId, ...officeFilter },
-            { $set: { currentOffice: null, updatedAt: now } }
-          );
+        await charactersCollection(db).updateOne(
+          { _id: incumbent.characterId, ...officeFilter },
+          { $set: { currentOffice: null, updatedAt: now } }
+        );
       }
       if (incumbent.nppId) {
         await db
@@ -514,12 +509,10 @@ export async function resolveElectionWithNoRankedCandidates(
         officeFilter["currentOffice.senateClass"] = election.senateClass;
       }
       if (incumbent.characterId) {
-        await db
-          .collection<Character>("characters")
-          .updateOne(
-            { _id: incumbent.characterId, ...officeFilter },
-            { $set: { currentOffice: null, updatedAt: now } }
-          );
+        await charactersCollection(db).updateOne(
+          { _id: incumbent.characterId, ...officeFilter },
+          { $set: { currentOffice: null, updatedAt: now } }
+        );
       }
       if (incumbent.nppId) {
         await db

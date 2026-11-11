@@ -11,6 +11,7 @@ import {
 } from "@/lib/npp/actionPoints";
 import { resolvePartyTier } from "@/lib/parties/partyTier";
 import type { Db } from "mongodb";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const NATIONAL_PARTY_MANAGEMENT_ACTIONS = [
   "boost_favorability",
@@ -57,8 +58,7 @@ export async function getNationalPartyInfluenceView(
   const [characters, npps] = await Promise.all([
     charIds.length === 0
       ? Promise.resolve([] as Character[])
-      : db
-          .collection<Character>("characters")
+      : charactersCollection(db)
           .find({ _id: { $in: charIds } })
           .toArray(),
     nppIds.length === 0

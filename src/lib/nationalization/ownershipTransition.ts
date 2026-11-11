@@ -9,7 +9,7 @@ import { pendingStockTaxReceipt } from "@/lib/corporations/rules/stockTaxReceipt
 import { heldStakeValueAnchor, transferOwnedSharesToNatCorp } from "./heldEquityTransfer";
 import { ObjectId } from "mongodb";
 import { badRequest } from "@/lib/api/errors";
-import type { Character, Corporation, CorporateSector, State } from "@/lib/db/types";
+import type { Corporation, CorporateSector, State } from "@/lib/db/types";
 import type { NationalizationTaking } from "@/lib/db/types/corporationSector";
 import { splitCompensationBySector } from "./compensationSplit";
 import type { UnownedSector } from "@/lib/db/types/unownedSector";
@@ -120,6 +120,7 @@ import {
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 export {
   settleFundedWholeCorpLiquidation,
   settleFundedWholeCorpShareholderPool,
@@ -1259,7 +1260,7 @@ export async function nationalizeWholeCorp(
     const ceoChar =
       params.tier === "seizure" || target.ceoVacant || !target.ceoId
         ? null
-        : await db.collection<Character>("characters").findOne({ _id: target.ceoId });
+        : await charactersCollection(db).findOne({ _id: target.ceoId });
     const ceoSurplusAnchor = ceoChar ? Math.max(0, liquidCapitalAnchor - payoutPoolAnchor) : 0;
     const treasuryCashAnchor = liquidCapitalAnchor - ceoSurplusAnchor;
 
@@ -1282,12 +1283,10 @@ export async function nationalizeWholeCorp(
         const currency = getHomeCurrency(ceoChar, corpGameState?.preset);
         const rate = fxByCurrency.get(currency as CurrencyCode) ?? 1;
         const amt = Math.round(forexEnabled ? ceoSurplusAnchor * rate : ceoSurplusAnchor);
-        const credited = await db
-          .collection<Character>("characters")
-          .updateOne(
-            { _id: ceoChar._id },
-            { $inc: buildPersonalBalanceInc(amt, currency, forexEnabled), $set: { updatedAt: now } }
-          );
+        const credited = await charactersCollection(db).updateOne(
+          { _id: ceoChar._id },
+          { $inc: buildPersonalBalanceInc(amt, currency, forexEnabled), $set: { updatedAt: now } }
+        );
         if ((credited?.matchedCount ?? 0) > 0) {
           await witnessTreasuryCash(db, ledger, {
             flow: "corporation_liquidation",
@@ -1536,12 +1535,11 @@ export async function payShareholders(
   );
   if (charRows.length > 0) {
     const ids = charRows.map((r) => new ObjectId(r.characterId));
-    const docs = await db
-      .collection<Character>("characters")
+    const docs = await charactersCollection(db)
       .find({ _id: { $in: ids } })
       .toArray();
     const currencyById = new Map(docs.map((c) => [c._id.toString(), getHomeCurrency(c)]));
-    await db.collection<Character>("characters").bulkWrite(
+    await charactersCollection(db).bulkWrite(
       charRows.map((r) => {
         const currency = currencyById.get(r.characterId) ?? "USD";
         const amt = forexEnabled ? anchorToLocal(r.payout, currency) : r.payout;

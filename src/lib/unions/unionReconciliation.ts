@@ -1,5 +1,6 @@
 import type { Db, ObjectId } from "mongodb";
 import type { Character, Union } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * Self-heal helpers for the `Character.unionLeaderOf` cache, the denormalized
@@ -20,17 +21,16 @@ export async function reconcileUnionOwnerCache(
   union: Pick<Union, "_id" | "ownerId">
 ): Promise<void> {
   if (!union.ownerId) return;
-  const owner = await db
-    .collection<Character>("characters")
-    .findOne({ _id: union.ownerId }, { projection: { unionLeaderOf: 1 } });
+  const owner = await charactersCollection(db).findOne(
+    { _id: union.ownerId },
+    { projection: { unionLeaderOf: 1 } }
+  );
   if (!owner) return;
   if (owner.unionLeaderOf && owner.unionLeaderOf.toString() === union._id.toString()) return;
-  await db
-    .collection<Character>("characters")
-    .updateOne(
-      { _id: union.ownerId },
-      { $set: { unionLeaderOf: union._id, updatedAt: new Date() } }
-    );
+  await charactersCollection(db).updateOne(
+    { _id: union.ownerId },
+    { $set: { unionLeaderOf: union._id, updatedAt: new Date() } }
+  );
 }
 
 /**
@@ -54,8 +54,9 @@ export async function reconcileUnionLeaderCache(
     .findOne({ _id: character.unionLeaderOf }, { projection: { ownerId: 1 } });
   const matches = union?.ownerId && union.ownerId.toString() === character._id.toString();
   if (matches) return character.unionLeaderOf;
-  await db
-    .collection<Character>("characters")
-    .updateOne({ _id: character._id }, { $set: { unionLeaderOf: null, updatedAt: new Date() } });
+  await charactersCollection(db).updateOne(
+    { _id: character._id },
+    { $set: { unionLeaderOf: null, updatedAt: new Date() } }
+  );
   return null;
 }

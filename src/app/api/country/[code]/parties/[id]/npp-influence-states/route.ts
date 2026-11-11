@@ -3,8 +3,9 @@ import { handleRouteError, forbidden, notFound, errorResponse } from "@/lib/api/
 import { getDb } from "@/lib/mongodb";
 import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
 import { findPartyBySequentialId } from "@/lib/db/partyLookup";
-import type { Character, State } from "@/lib/db/types";
+import type { State } from "@/lib/db/types";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -52,8 +53,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     // Get all player characters in this party (non-NPP)
     // Filter by countryId to prevent cross-country sequentialId collisions
     const partyCountry = party.countryId ?? "US";
-    const playerCharacters = await db
-      .collection<Character>("characters")
+    const playerCharacters = await charactersCollection(db)
       .find({ party: partyIdStr, isNPP: { $ne: true }, countryId: partyCountry })
       .project({ homeState: 1 })
       .toArray();

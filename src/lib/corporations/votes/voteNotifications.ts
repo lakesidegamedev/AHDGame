@@ -3,6 +3,7 @@ import type { CorporationVote } from "@/lib/db/types/corporationVote";
 import type { NotificationType } from "@/lib/db/types/notifications";
 import { createNotification } from "@/lib/notifications";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export function proposalSummary(vote: CorporationVote): string {
   switch (vote.type) {
@@ -33,8 +34,7 @@ async function getShareholderUserIds(db: Db, corporationId: ObjectId): Promise<O
     .filter((s: { characterId?: ObjectId }) => s.characterId)
     .map((s: { characterId: ObjectId }) => s.characterId);
   if (!characterIds.length) return [];
-  const characters = await db
-    .collection("characters")
+  const characters = await charactersCollection(db)
     .find<{ userId: ObjectId }>({ _id: { $in: characterIds } }, { projection: { userId: 1 } })
     .toArray();
   return characters.map((c) => c.userId);

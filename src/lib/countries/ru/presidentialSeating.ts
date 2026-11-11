@@ -3,13 +3,7 @@
  * Seating archives replaced offices and vacates the winners' incompatible seats.
  */
 import { type Db, type ClientSession, type ObjectId } from "mongodb";
-import type {
-  Character,
-  NPP,
-  CountryGameState,
-  ElectedOfficial,
-  ElectionCandidate,
-} from "@/lib/db/types";
+import type { NPP, CountryGameState, ElectedOfficial, ElectionCandidate } from "@/lib/db/types";
 import { PM_VACANCY_DEADLINE_TURNS } from "@/lib/constants/turnTime";
 import type { UnifiedCabinetMember } from "@/lib/db/types/unifiedCabinetMember";
 import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
@@ -17,6 +11,7 @@ import {
   RUSSIAN_PRESIDENTIAL_RESULTS_COLLECTION,
   type RussianPresidentialResultRecord,
 } from "./presidentialElectionResult";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 const RUSSIAN_PRESIDENTIAL_ARCHIVES_COLLECTION = "russianPresidentialOfficeArchives";
 interface Archive {
   _id: string;
@@ -94,8 +89,7 @@ export async function materializeRussianPresidentialSeating(input: {
   )
     throw new Error("Russian certified ticket identities overlap");
   const chars = charIds.length
-    ? await db
-        .collection<Character>("characters")
+    ? await charactersCollection(db)
         .find(
           {
             _id: { $in: charIds },
@@ -197,13 +191,11 @@ export async function materializeRussianPresidentialSeating(input: {
         { session }
       );
   }
-  await db
-    .collection<Character>("characters")
-    .updateMany(
-      { countryId: "RU", "currentOffice.type": { $in: retiredTypes }, _id: { $nin: charIds } },
-      { $set: { currentOffice: null, updatedAt: now } },
-      { session }
-    );
+  await charactersCollection(db).updateMany(
+    { countryId: "RU", "currentOffice.type": { $in: retiredTypes }, _id: { $nin: charIds } },
+    { $set: { currentOffice: null, updatedAt: now } },
+    { session }
+  );
   await db
     .collection<NPP>("npps")
     .updateMany(
@@ -256,7 +248,7 @@ export async function materializeRussianPresidentialSeating(input: {
     }));
     const updated = isNpp
       ? await db.collection<NPP>("npps").bulkWrite(writes, { session })
-      : await db.collection<Character>("characters").bulkWrite(writes, { session });
+      : await charactersCollection(db).bulkWrite(writes, { session });
     if (updated.matchedCount !== people.length)
       throw new Error("Russian certified office holder changed");
   }

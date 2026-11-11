@@ -6,7 +6,7 @@ import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { getAuthUser } from "@/lib/auth";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
-import type { ElectedOfficial, Character, PoliticalParty, CabinetNomination } from "@/lib/db/types";
+import type { ElectedOfficial, PoliticalParty, CabinetNomination } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { getExecutiveTermsServed } from "@/lib/elections/executiveTermLimits";
 import { resolvePresidentialCountry } from "@/lib/executive/presidentialCountry";
@@ -15,6 +15,7 @@ import { getGameTime } from "@/lib/time/gameTime";
 import { getGovernmentFormationsCollection } from "@/lib/db/collections/governmentFormation";
 import { executiveStatusPayload } from "@/lib/elections/rules/successionFill";
 import { pastRealTimestampToLarpDate } from "@/lib/utils/formatters";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 // GET /api/whitehouse — Returns the current President and Vice President details along with caller admin and president flags.
 // Country-scoped via ?country= (default US) so any presidential country renders the surface.
@@ -88,7 +89,7 @@ export async function GET(request: Request) {
     let presidentCurrentTerm: number | null = null;
 
     if (presCharId) {
-      const char = await db.collection<Character>("characters").findOne({ _id: presCharId });
+      const char = await charactersCollection(db).findOne({ _id: presCharId });
       if (char) {
         presidentCurrentTerm = Math.max(1, getExecutiveTermsServed(char, countryId));
         const charCountry: CountryId = char.countryId ?? countryId;
@@ -136,7 +137,7 @@ export async function GET(request: Request) {
     }
 
     if (vpCharId) {
-      const char = await db.collection<Character>("characters").findOne({ _id: vpCharId });
+      const char = await charactersCollection(db).findOne({ _id: vpCharId });
       if (char) {
         const charCountry: CountryId = char.countryId ?? countryId;
         const party = char.party
@@ -180,9 +181,7 @@ export async function GET(request: Request) {
     }
 
     const myCharacter = authUser
-      ? await db
-          .collection<Character>("characters")
-          .findOne({ userId: new ObjectId(authUser.userId) })
+      ? await charactersCollection(db).findOne({ userId: new ObjectId(authUser.userId) })
       : null;
     const isPresident =
       !!presidentOfficial?.characterId &&

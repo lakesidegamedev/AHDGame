@@ -5,7 +5,6 @@ import type {
   PositionShiftAxis,
 } from "@/lib/db/types/committeeProposal";
 import type {
-  Character,
   NationalCommitteeElection,
   NationalPartyElection,
   NationalPartyVote,
@@ -35,6 +34,7 @@ import {
   POSITION_SHIFT_COOLDOWN_TURNS,
   PROPOSAL_COOLDOWN_TURNS,
 } from "./proposalConstants";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 // ─── Pure helpers ────────────────────────────────────────────────────────────
 
@@ -200,8 +200,7 @@ export async function applyElectionMethodEffect(
   const voterIds = [
     ...new Map(votes.map((vote) => [vote.voterId.toString(), vote.voterId])).values(),
   ];
-  const voters = await db
-    .collection<Character>("characters")
+  const voters = await charactersCollection(db)
     .find({ _id: { $in: voterIds } }, { projection: { partyInfluence: 1 } })
     .toArray();
   const influenceByVoter = new Map(
@@ -457,9 +456,10 @@ export async function applyCampaignerAppointmentEffect(
   if (current.some((id) => id.equals(targetCharacterId))) return;
   if (current.length >= MAX_NATIONAL_CAMPAIGNERS) return;
 
-  const character = await db
-    .collection<Character>("characters")
-    .findOne({ _id: targetCharacterId }, { projection: { party: 1, countryId: 1 } });
+  const character = await charactersCollection(db).findOne(
+    { _id: targetCharacterId },
+    { projection: { party: 1, countryId: 1 } }
+  );
   if (!character) return;
   if (character.party !== String(party.sequentialId) || character.countryId !== party.countryId) {
     return;
@@ -637,14 +637,13 @@ export async function mergePartyInto(
 
       // Captured before step 1 re-points them: their live candidacies move in 4d.
       const absorbedCharacterIds = (
-        await db
-          .collection("characters")
+        await charactersCollection(db)
           .find({ party: proposingStrId, countryId }, { projection: { _id: 1 } })
           .toArray()
       ).map((c) => c._id as ObjectId);
 
       // 1. Transfer characters — move party membership, halve partyInfluence
-      await db.collection("characters").updateMany({ party: proposingStrId, countryId }, [
+      await charactersCollection(db).updateMany({ party: proposingStrId, countryId }, [
         {
           $set: {
             party: targetStrId,
@@ -1025,9 +1024,10 @@ export async function mergePartyInto(
       }
 
       // 8. Recount target party member count after transfer
-      const newMemberCount = await db
-        .collection("characters")
-        .countDocuments({ party: targetStrId, countryId: targetParty.countryId });
+      const newMemberCount = await charactersCollection(db).countDocuments({
+        party: targetStrId,
+        countryId: targetParty.countryId,
+      });
 
       // 9. Defunct the proposing party — clear leadership and mark dissolved
       await db.collection<PoliticalParty>("politicalParties").updateOne(

@@ -8,8 +8,8 @@ import { getDb } from "@/lib/mongodb";
 import { handleRouteError, badRequest } from "@/lib/api/errors";
 import { EXTRACTABLE_RESOURCES } from "@/lib/constants/commodities";
 import type { CorporateSector } from "@/lib/db/types";
-import type { Character } from "@/lib/db/types/character";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export async function GET(request: Request) {
   try {
@@ -39,8 +39,7 @@ export async function GET(request: Request) {
     const ceoIds = corps.map((c) => c.ceoId).filter((id): id is ObjectId => id instanceof ObjectId);
     const ceoNameById = new Map<string, string>();
     if (ceoIds.length > 0) {
-      const chars = await db
-        .collection<Character>("characters")
+      const chars = await charactersCollection(db)
         .find({ _id: { $in: ceoIds } }, { projection: { name: 1 } })
         .toArray();
       for (const ch of chars) ceoNameById.set(ch._id.toString(), ch.name);

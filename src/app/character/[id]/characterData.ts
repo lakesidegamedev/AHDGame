@@ -34,6 +34,7 @@ import { getNationalNpiOrdinalRank } from "@/lib/character/nationalNpiOrdinalRan
 import { resolveMemberSince } from "@/lib/character/memberSince";
 import { loadCharacterByUrlId } from "./characterLoaders";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface CandidateElection {
   election: Election;
@@ -199,15 +200,13 @@ export async function getCharacterById(characterId: string) {
         .collection<State>("states")
         .findOne({ _id: character.homeState, countryId: character.countryId }),
       db.collection<GameConfig>("gameConfig").findOne({ _id: "default" }),
-      db
-        .collection<Character>("characters")
+      charactersCollection(db)
         .find({ isBanned: { $ne: true }, ...npiCountryMatch })
         .sort({ nationalInfluence: -1 })
         .limit(1)
         .project({ nationalInfluence: 1 })
         .toArray(),
-      db
-        .collection<Character>("characters")
+      charactersCollection(db)
         .find({ isBanned: { $ne: true } })
         .sort({ donorBaseLevel: -1 })
         .limit(1)

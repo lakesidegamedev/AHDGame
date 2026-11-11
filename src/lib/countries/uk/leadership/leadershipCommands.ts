@@ -33,9 +33,10 @@ import type {
   LeadershipChallenge,
   UKPartyLeadership,
 } from "@/lib/countries/uk/leadership/leadershipTypes";
-import type { Character, ElectedOfficial, PoliticalParty } from "@/lib/db/types";
+import type { ElectedOfficial, PoliticalParty } from "@/lib/db/types";
 import type { Caucus, CaucusMembership } from "@/lib/db/types/caucus";
 import type { CountryId } from "@/lib/constants/countries";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * UK party leadership removal shell commands.
@@ -172,8 +173,7 @@ export async function getCommitteeSnapshot(
   const [characters, memberships, caucuses] = await Promise.all([
     memberIds.length === 0
       ? []
-      : db
-          .collection<Character>("characters")
+      : charactersCollection(db)
           .find({ _id: { $in: memberIds } })
           .project({ name: 1 })
           .toArray(),
@@ -261,9 +261,10 @@ export async function getLeadershipState(
 
   let leader: LeadershipStateView["leader"] = null;
   if (party.chairId) {
-    const chair = await db
-      .collection<Character>("characters")
-      .findOne({ _id: party.chairId }, { projection: { name: 1 } });
+    const chair = await charactersCollection(db).findOne(
+      { _id: party.chairId },
+      { projection: { name: 1 } }
+    );
     leader = { characterId: party.chairId.toString(), name: chair?.name ?? "Unknown" };
   }
 
@@ -477,9 +478,10 @@ export async function initiateLeadershipChallenge(
     throw badRequest("This party holds no Commons seats, so no challenge can trigger");
   }
 
-  const targetChar = await db
-    .collection<Character>("characters")
-    .findOne({ _id: party.chairId }, { projection: { name: 1 } });
+  const targetChar = await charactersCollection(db).findOne(
+    { _id: party.chairId },
+    { projection: { name: 1 } }
+  );
 
   const challengeId = new ObjectId();
   const opensImmediately = canTriggerChallenge(1, totalMps, leadership.ruleset, {
@@ -756,9 +758,10 @@ export async function castLeadershipBallotVote(
     }
     weight = official.seatsHeld ?? 1;
   } else {
-    const member = await db
-      .collection<Character>("characters")
-      .findOne({ _id: voter._id, userId: { $exists: true } }, { projection: { party: 1 } });
+    const member = await charactersCollection(db).findOne(
+      { _id: voter._id, userId: { $exists: true } },
+      { projection: { party: 1 } }
+    );
     if (!member || member.party !== challenge.partyId) {
       throw forbidden("Only party members vote in this ballot");
     }
@@ -919,9 +922,10 @@ export async function resolveLeadershipChallenge(
       ),
       now
     );
-    const target = await db
-      .collection<Character>("characters")
-      .findOne({ _id: challenge.targetCharacterId }, { projection: { userId: 1, name: 1 } });
+    const target = await charactersCollection(db).findOne(
+      { _id: challenge.targetCharacterId },
+      { projection: { userId: 1, name: 1 } }
+    );
     if (target?.userId) {
       await createNotification({
         userId: target.userId,

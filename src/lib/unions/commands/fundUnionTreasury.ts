@@ -19,6 +19,7 @@ import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { getHomeCurrency } from "@/lib/currency/characterFunds";
 import { rejectIfTurnProcessing, resolveOwnedUnion } from "./unionActions";
 import type { UnionActionResult } from "./unionActions";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * Smallest contribution worth a write. Not a balance question: it stops a
@@ -69,13 +70,11 @@ export async function fundUnionTreasury(
 
   // Conditional single-document debit: two concurrent contributions can never
   // both pass on a stale balance, and the balance can never go negative.
-  const debited = await db
-    .collection<Character>("characters")
-    .findOneAndUpdate(
-      { _id: character._id, [campaignFundsField]: { $gte: contribution } },
-      { $inc: { [campaignFundsField]: -contribution }, $set: { updatedAt: new Date() } },
-      { returnDocument: "after" }
-    );
+  const debited = await charactersCollection(db).findOneAndUpdate(
+    { _id: character._id, [campaignFundsField]: { $gte: contribution } },
+    { $inc: { [campaignFundsField]: -contribution }, $set: { updatedAt: new Date() } },
+    { returnDocument: "after" }
+  );
   if (!debited) {
     const available = useForexCampaignBalance
       ? (character.currencyBalances?.campaign ?? 0)
@@ -100,9 +99,10 @@ export async function fundUnionTreasury(
   } catch {
     // Pure $inc back, never gated on balance, so the refund cannot itself fail
     // the way the guarded debit can.
-    await db
-      .collection<Character>("characters")
-      .updateOne({ _id: character._id }, { $inc: { [campaignFundsField]: contribution } });
+    await charactersCollection(db).updateOne(
+      { _id: character._id },
+      { $inc: { [campaignFundsField]: contribution } }
+    );
     return {
       ok: false,
       status: 500,

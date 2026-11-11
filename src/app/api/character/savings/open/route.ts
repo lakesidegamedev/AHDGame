@@ -6,7 +6,6 @@ import { handleRouteError, badRequest, errorResponse } from "@/lib/api/errors";
 import { checkRateLimit, rateLimitResponse, SAVINGS_WALLET_LIMITS } from "@/lib/api/rateLimit";
 import { parseJsonBody } from "@/lib/api/validate";
 import { z } from "zod";
-import type { Character } from "@/lib/db/types";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import {
   getPersonalBalance,
@@ -20,6 +19,7 @@ import { insertSavingsLedgerEntry } from "@/lib/savings/ledger";
 import { getGameState } from "@/lib/gameState";
 import { ZOD_ACTIVE_CURRENCY_ENUM } from "@/lib/constants/currencies";
 import type { CurrencyCode } from "@/lib/constants/currencies";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const openSchema = z.object({
   currency: z.enum(ZOD_ACTIVE_CURRENCY_ENUM),
@@ -101,14 +101,12 @@ export async function POST(request: Request) {
     }
 
     const now = new Date();
-    await db
-      .collection<Character>("characters")
-      .updateOne(
-        { _id: character._id },
-        { $set: { [`savingsAccountsOpened.${currency}`]: true, updatedAt: now } }
-      );
+    await charactersCollection(db).updateOne(
+      { _id: character._id },
+      { $set: { [`savingsAccountsOpened.${currency}`]: true, updatedAt: now } }
+    );
 
-    const after = await db.collection<Character>("characters").findOne({ _id: character._id });
+    const after = await charactersCollection(db).findOne({ _id: character._id });
     if (after) {
       await insertSavingsLedgerEntry(db, {
         characterId: character._id,

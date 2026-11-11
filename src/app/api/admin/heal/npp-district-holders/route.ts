@@ -9,7 +9,8 @@ import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError } from "@/lib/api/errors";
-import type { CongressionalDistrict, Character, NPP } from "@/lib/db/types";
+import type { CongressionalDistrict, NPP } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * Find districts whose holderCharacterId does not resolve to a `characters`
@@ -32,8 +33,7 @@ async function findMisstampedDistricts(
 
   const realCharIds = new Set(
     (
-      (await db
-        .collection<Character>("characters")
+      (await charactersCollection(db)
         .find({ _id: { $in: holderIds } }, { projection: { _id: 1 } })
         .toArray()) as { _id: unknown }[]
     ).map((c) => String(c._id))

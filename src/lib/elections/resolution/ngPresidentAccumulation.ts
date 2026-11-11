@@ -13,13 +13,7 @@
  */
 import { ObjectId } from "mongodb";
 import type { Db } from "@/lib/mongodb";
-import type {
-  State,
-  StatePartyOrg,
-  ElectionVoteTally,
-  ElectionCandidate,
-  Character,
-} from "@/lib/db/types";
+import type { State, StatePartyOrg, ElectionVoteTally, ElectionCandidate } from "@/lib/db/types";
 import { loadRegionalCampaignCells } from "@/lib/campaignTargeting/audience";
 import {
   combinedAds,
@@ -30,6 +24,7 @@ import {
 } from "@/lib/campaignTargeting/rules";
 import { NG_ZONES } from "@/lib/elections/presidential/nigeriaPresidentialElectionEngine";
 import { planTurnSlice } from "@/lib/elections/rules/turnSlice";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /** Approximate NG presidential turnout (share of population voting). */
 const NG_TURNOUT_RATE = NG_CAMPAIGN_TURNOUT_RATE;
@@ -94,8 +89,7 @@ export async function accumulateNGPresidentVoteTurn(
     )
     .toArray();
   const owners = candidates.length
-    ? await db
-        .collection<Character>("characters")
+    ? await charactersCollection(db)
         .find(
           { _id: { $in: candidates.map((candidate) => candidate.characterId) } },
           { projection: { policies: 1, targetedAds: 1 } }

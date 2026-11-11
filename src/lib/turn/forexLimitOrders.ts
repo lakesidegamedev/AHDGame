@@ -20,6 +20,7 @@ import { sendSystemMail } from "@/lib/mail/systemMail";
 import { getBankId } from "@/lib/centralBank/helpers";
 import { getCharactersCollection } from "@/lib/db/collections/characters";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 // ── Limit order processing ──────────────────────────────────────────────────
 
@@ -215,9 +216,10 @@ export async function processTriggeredLimitOrders(
     // Credit the purchased toCurrency to the character's personal balance.
     // The fromCurrency was escrowed at order creation time — no deduction needed here.
     const creditInc = buildPersonalBalanceInc(toAmount, order.toCurrency, true);
-    const creditResult = await db
-      .collection("characters")
-      .updateOne({ _id: order.characterId }, { $inc: creditInc });
+    const creditResult = await charactersCollection(db).updateOne(
+      { _id: order.characterId },
+      { $inc: creditInc }
+    );
 
     // Character was deleted between order creation and fill — cancel the order
     // so it doesn't retry every turn. Escrowed funds are unrecoverable.

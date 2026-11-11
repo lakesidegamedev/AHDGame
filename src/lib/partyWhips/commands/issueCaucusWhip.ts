@@ -47,6 +47,7 @@ import type {
   User,
   WhipIssuerRole,
 } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export const caucusWhipSchema = z
   .object({
@@ -105,8 +106,7 @@ async function getEligibleCaucusCharactersForWhip(
     .filter((id): id is ObjectId => id != null);
   if (characterIds.length === 0) return [];
 
-  const characters = await db
-    .collection<Character>("characters")
+  const characters = await charactersCollection(db)
     .find({ _id: { $in: characterIds } })
     .project<{ _id: ObjectId; userId: ObjectId }>({ _id: 1, userId: 1 })
     .toArray();
@@ -562,8 +562,7 @@ export async function issueCaucusWhip({
 
     const characterDocs =
       eligible.length > 0
-        ? await db
-            .collection<Character>("characters")
+        ? await charactersCollection(db)
             .find({ _id: { $in: eligible } })
             .project<{
               _id: ObjectId;
@@ -669,12 +668,10 @@ export async function issueCaucusWhip({
   const actorCharacter = character;
   const whipStatecraftBonus = statecraftWhipBonus(actorCharacter.stats?.statecraft);
   const grantStatecraftXp = async () => {
-    await db
-      .collection("characters")
-      .updateOne(
-        { _id: actorCharacter._id },
-        { $inc: { "statXp.statecraft": USE_GROWTH_INCREMENT } }
-      );
+    await charactersCollection(db).updateOne(
+      { _id: actorCharacter._id },
+      { $inc: { "statXp.statecraft": USE_GROWTH_INCREMENT } }
+    );
   };
   if (targetType === "bill") {
     const bill = await db

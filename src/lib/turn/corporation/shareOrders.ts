@@ -20,7 +20,7 @@ import {
 } from "@/lib/corporations/rules/stockTaxReceipt";
 import type { PendingStockTaxReceipt } from "@/lib/budget/rules/capitalGainsTax";
 import type { Db } from "mongodb";
-import type { Character, IndexFund, ShareOrder } from "@/lib/db/types";
+import type { IndexFund, ShareOrder } from "@/lib/db/types";
 import { emitTxBulk, loadTxThresholds } from "@/lib/financialTxLog/emit";
 import { buildPersonalBalanceBulkOp } from "@/lib/currency/characterFunds";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
@@ -47,6 +47,7 @@ import {
 import type { EquityMarketPool } from "@/lib/db/types";
 import { EQUITY_MARKET_POOLS_COLLECTION } from "@/lib/db/types/equityMarketPool";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /** Per-character delta for a corp, plus the fill price for new-entry cost basis. */
 interface ShareDelta {
@@ -789,8 +790,7 @@ export async function fillPendingShareOrders(
     const forexEnabled = await isForexEnabled();
     personalForexEnabled = forexEnabled;
     const adjCharIds = [...charCashAdjustments.keys()].map((id) => new ObjectId(id));
-    const adjChars = await db
-      .collection<Character>("characters")
+    const adjChars = await charactersCollection(db)
       .find({ _id: { $in: adjCharIds } })
       .project<{ _id: ObjectId; countryId: string }>({ _id: 1, countryId: 1 })
       .toArray();
@@ -863,7 +863,7 @@ export async function fillPendingShareOrders(
       };
     });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await db.collection("characters").bulkWrite(charOps as any);
+    await charactersCollection(db).bulkWrite(charOps as any);
   }
 
   // Pay corporations that had sell orders filled (proceeds → liquidCapital).
@@ -1104,8 +1104,7 @@ export async function fillPendingShareOrders(
 
     const [nameChars, nameCorps] = await Promise.all([
       charIdSet.size > 0
-        ? db
-            .collection<Character>("characters")
+        ? charactersCollection(db)
             .find({ _id: { $in: [...charIdSet].map((id) => new ObjectId(id)) } })
             .project<{ _id: ObjectId; name: string; countryId?: string }>({
               _id: 1,

@@ -1,6 +1,5 @@
 import type { Db, ObjectId } from "mongodb";
 import { escapeRegex } from "@/lib/utils/escapeRegex";
-import type { Character } from "@/lib/db/types";
 import type { CorporateSector } from "@/lib/db/types/corporation";
 import type { ShareTradeHistory } from "@/lib/db/types/shareTradeHistory";
 import { getRoundedPublicMarketCap } from "@/lib/corporations/marketQuote";
@@ -11,6 +10,7 @@ import {
 import { corpFinancials } from "./corpFinancials";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -38,15 +38,12 @@ export async function queryCorporation(db: Db, params: { name?: string; id?: str
 
   const [ceo, bonds, sectors, holderChars, holderCorps] = await Promise.all([
     corp.ceoId && !corp.ceoVacant
-      ? db
-          .collection<Character>("characters")
-          .findOne({ _id: corp.ceoId }, { projection: { name: 1 } })
+      ? charactersCollection(db).findOne({ _id: corp.ceoId }, { projection: { name: 1 } })
       : Promise.resolve(null),
     bondsCollection(db).find({ corporationId: corp._id }).toArray(),
     db.collection<CorporateSector>("corporateSectors").find({ corporationId: corp._id }).toArray(),
     holderCharacterIds.length > 0
-      ? db
-          .collection<Character>("characters")
+      ? charactersCollection(db)
           .find({ _id: { $in: holderCharacterIds } }, { projection: { name: 1 } })
           .toArray()
       : Promise.resolve([]),

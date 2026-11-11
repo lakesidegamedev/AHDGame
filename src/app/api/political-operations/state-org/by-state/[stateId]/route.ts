@@ -9,7 +9,8 @@ import { isUsResidentPoliticalRegion } from "@/lib/elections/statehoodAdmission"
 import { getCharacterByUserId } from "@/lib/db/characterLookup";
 import { loadCampaignFxRate } from "@/lib/currency/campaignFxRate";
 import { statePresenceNextCost } from "@/lib/campaigns/statePresenceCost";
-import type { CharacterStateOrg, Character } from "@/lib/db/types";
+import type { CharacterStateOrg } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const VALID_STATES = new Set(ELECTORAL_VOTE_UNITS.map((u) => u.stateId));
 
@@ -68,8 +69,7 @@ async function handleGET(_req: Request, { params }: RouteParams) {
     }
 
     const charIds = rows.map((r) => r.characterId);
-    const chars = await db
-      .collection<Character>("characters")
+    const chars = await charactersCollection(db)
       .find({ _id: { $in: charIds } }, { projection: { _id: 1, name: 1 } })
       .toArray();
     const charMap = new Map(chars.map((c) => [c._id.toString(), c.name]));

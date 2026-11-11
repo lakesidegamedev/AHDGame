@@ -6,7 +6,6 @@
 import { createHash } from "node:crypto";
 import { ObjectId, type ClientSession, type Db } from "mongodb";
 import type {
-  Character,
   CountryGameState,
   ElectedOfficial,
   Election,
@@ -26,6 +25,7 @@ import { calendarTurn } from "@/lib/utils/gameDate";
 import { settleBgOrdinaryListHolders } from "./rules/ordinaryElectionPlan";
 import { bgOrdinarySeatingClockReady } from "./rules/assemblyClock1991";
 import { GAME_STATE_PRE_ITERATION_FIELDS } from "@/lib/db/collections/gameState";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface BgAssemblyOfficeArchive {
   _id: string;
@@ -142,8 +142,7 @@ async function materializeBgOrdinaryAssembly(input: {
         .toArray()
     : [];
   const players = playerIds.length
-    ? await db
-        .collection<Character>("characters")
+    ? await charactersCollection(db)
         .find(
           {
             _id: { $in: playerIds },
@@ -257,13 +256,11 @@ async function materializeBgOrdinaryAssembly(input: {
   const previousPlayers = incumbents.flatMap((row) => (row.characterId ? [row.characterId] : []));
   const previousNpcs = incumbents.flatMap((row) => (row.nppId ? [row.nppId] : []));
   if (previousPlayers.length)
-    await db
-      .collection<Character>("characters")
-      .updateMany(
-        { _id: { $in: previousPlayers }, "currentOffice.type": "assemblyDeputy" },
-        { $set: { currentOffice: null, updatedAt: now } },
-        { session }
-      );
+    await charactersCollection(db).updateMany(
+      { _id: { $in: previousPlayers }, "currentOffice.type": "assemblyDeputy" },
+      { $set: { currentOffice: null, updatedAt: now } },
+      { session }
+    );
   if (previousNpcs.length)
     await db
       .collection<NPP>("npps")
@@ -298,7 +295,7 @@ async function materializeBgOrdinaryAssembly(input: {
       { session }
     );
   if (officials.some((row) => !row.isNPP))
-    await db.collection<Character>("characters").bulkWrite(
+    await charactersCollection(db).bulkWrite(
       officials
         .filter((row) => !row.isNPP)
         .map((row) => ({

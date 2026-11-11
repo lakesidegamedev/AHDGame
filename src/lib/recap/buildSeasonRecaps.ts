@@ -28,6 +28,7 @@ import type {
   RecapActionBreakdown,
   RecapRankedStat,
 } from "./types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /** Bill statuses that count as "passed" (enacted) for the recap. */
 const PASSED_BILL_STATUSES = ["signed", "enrolled", "veto_override", "override_shugiin"];
@@ -486,7 +487,7 @@ export async function buildSoloRecap(
   character: Character,
   ctx: RecapBuildContext
 ): Promise<CharacterRecap | null> {
-  const field = await db.collection<Character>("characters").find({}).toArray();
+  const field = await charactersCollection(db).find({}).toArray();
   if (!field.some((c) => c._id.equals(character._id))) field.push(character);
   const recaps = await buildSeasonRecaps(db, [character], ctx, { field, rankActions: false });
   return recaps.get(character._id.toString()) ?? null;

@@ -3,7 +3,7 @@
  * Archives Congress and commits seating atomically.
  */
 import { ObjectId, type ClientSession, type Db } from "mongodb";
-import type { Character, NPP, CountryGameState, ElectedOfficial, State } from "@/lib/db/types";
+import type { NPP, CountryGameState, ElectedOfficial, State } from "@/lib/db/types";
 import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
 import {
@@ -18,6 +18,7 @@ import { russianAssemblyOfficialId } from "./assemblyOfficialIdentity";
 import { loadRussianAssemblySeatingInputs } from "./assemblySeatingInputs";
 import type { RussianAssemblySeat } from "./rules/assemblySeating";
 import type { RussianAssemblyVacancyReason } from "./rules/assemblyOwnerEligibility";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 export const RUSSIAN_ASSEMBLY_SEATINGS_COLLECTION = "russianAssemblySeatings";
 export const RUSSIAN_ASSEMBLY_ARCHIVES_COLLECTION = "russianAssemblyOfficeArchives";
 export interface RussianAssemblySeatingRecord {
@@ -135,13 +136,11 @@ export async function materializeRussianAssemblySeating(input: {
       { session }
     );
   }
-  await db
-    .collection<Character>("characters")
-    .updateMany(
-      { countryId: "RU", "currentOffice.type": "congressDeputy" },
-      { $set: { currentOffice: null, updatedAt: now } },
-      { session }
-    );
+  await charactersCollection(db).updateMany(
+    { countryId: "RU", "currentOffice.type": "congressDeputy" },
+    { $set: { currentOffice: null, updatedAt: now } },
+    { session }
+  );
   await db
     .collection<NPP>("npps")
     .updateMany(
@@ -217,7 +216,7 @@ export async function materializeRussianAssemblySeating(input: {
     }));
     const updated = isNpc
       ? await db.collection<NPP>("npps").bulkWrite(operations, { session })
-      : await db.collection<Character>("characters").bulkWrite(operations, { session });
+      : await charactersCollection(db).bulkWrite(operations, { session });
     if (updated.matchedCount !== selected.length)
       throw new Error("Assembly owner changed during handover");
   }

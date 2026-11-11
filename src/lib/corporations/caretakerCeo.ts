@@ -25,7 +25,7 @@
 
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
-import type { Character, Corporation, NPP } from "@/lib/db/types";
+import type { Corporation, NPP } from "@/lib/db/types";
 import { TURNS_PER_DAY } from "@/lib/constants/turnTime";
 import { openCeoTenure, closeCeoTenure } from "./ceoHistory";
 import { chooseNppCorpCeo, type NppCorpCeoAffiliation } from "@/lib/admin/nppCorpCeoSelection";
@@ -39,6 +39,7 @@ import { subsidiaryReclaimBlocked } from "@/lib/corporations/subsidiaries/parent
 import { characterCeoResidencyFailure } from "@/lib/corporations/ceoEligibilityRules";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /** Reason a caretaker appointment was rejected (pure, before any I/O). */
 export type CaretakerAppointmentError =
@@ -213,9 +214,10 @@ export async function dismissCaretakerCeo(
 
   const { underlyingCharacterId, underlyingUserId, appointmentSource } = corp.caretakerCeo;
   const underlyingCharacter = underlyingCharacterId
-    ? await db
-        .collection<Character>("characters")
-        .findOne({ _id: underlyingCharacterId }, { projection: { homeState: 1, countryId: 1 } })
+    ? await charactersCollection(db).findOne(
+        { _id: underlyingCharacterId },
+        { projection: { homeState: 1, countryId: 1 } }
+      )
     : null;
   const eligibleUnderlyingCharacter =
     underlyingCharacter &&

@@ -6,7 +6,6 @@
 import type { Db, ObjectId } from "mongodb";
 import { quoteLoanOrigination } from "@/lib/banking/rules/loanFees";
 import type { BankLoan } from "@/lib/db/types/bank";
-import type { Character } from "@/lib/db/types/character";
 import { loadBorrowerSnapshot } from "@/lib/banking/lending";
 import { loadBankingSnapshot } from "@/lib/banking/snapshot";
 import { decideBankCommand } from "@/lib/banking/rules/decide";
@@ -20,6 +19,7 @@ import { approveConstructionFinance, rejectConstructionFinance } from "./constru
 import { loadBankingPolicy } from "./policy";
 import { MONEY_MOVE_COLLECTION } from "./moneyMove";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export type LoanDecisionResult = { ok: true; loan: BankLoan } | { ok: false; error: string };
 
@@ -58,7 +58,7 @@ async function resolveBorrowerMailTarget(
   if (!loan.borrowerId) return null;
   const proj = { projection: { _id: 1, userId: 1, name: 1, sequentialId: 1 } } as const;
   if (loan.borrowerType === "character") {
-    const c = await db.collection<Character>("characters").findOne({ _id: loan.borrowerId }, proj);
+    const c = await charactersCollection(db).findOne({ _id: loan.borrowerId }, proj);
     if (!c?.userId) return null;
     return {
       toCharacterId: c._id,
@@ -72,7 +72,7 @@ async function resolveBorrowerMailTarget(
     { projection: { userId: 1 } }
   );
   if (!corp?.userId) return null;
-  const owner = await db.collection<Character>("characters").findOne({ userId: corp.userId }, proj);
+  const owner = await charactersCollection(db).findOne({ userId: corp.userId }, proj);
   if (!owner?.userId) return null;
   return {
     toCharacterId: owner._id,
@@ -219,9 +219,10 @@ async function acceptLoanInner(
   const borrowerName =
     loan.borrowerType === "character"
       ? ((
-          await db
-            .collection<Character>("characters")
-            .findOne({ _id: loan.borrowerId }, { projection: { name: 1 } })
+          await charactersCollection(db).findOne(
+            { _id: loan.borrowerId },
+            { projection: { name: 1 } }
+          )
         )?.name ?? "Borrower")
       : ((
           await corporationsCollection(db).findOne(

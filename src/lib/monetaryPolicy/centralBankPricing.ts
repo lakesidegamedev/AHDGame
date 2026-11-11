@@ -1,6 +1,7 @@
 import type { Db } from "mongodb";
 import type { Character, GameConfig } from "@/lib/db/types";
 import { createNotifications, type NotificationInput } from "@/lib/notifications";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * Shared pricing adjustment for central-bank LOCs and central-bank-held
@@ -93,12 +94,11 @@ async function notifyExposedPlayers(
   adjustment: CentralBankPricingAdjustment,
   startedTurn: number
 ): Promise<void> {
-  const characters = await db
-    .collection<
-      Pick<Character, "_id" | "userId" | "lineOfCredit" | "currencyBalances"> & {
-        savingsOnHand?: number;
-      }
-    >("characters")
+  const characters = await charactersCollection<
+    Pick<Character, "_id" | "userId" | "lineOfCredit" | "currencyBalances"> & {
+      savingsOnHand?: number;
+    }
+  >(db)
     .find({})
     .project({ _id: 1, userId: 1, lineOfCredit: 1, currencyBalances: 1, savingsOnHand: 1 })
     .toArray();

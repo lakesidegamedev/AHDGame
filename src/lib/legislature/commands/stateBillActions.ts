@@ -10,13 +10,7 @@ import {
 } from "@/lib/constants/countries";
 import { applyBillVotePolicyShift, shouldApplyVoteShift } from "@/lib/policyShift";
 import { buildEmbeddedVoteTallyUpdate } from "@/lib/votes/embeddedVoteTally";
-import type {
-  Character,
-  ElectedOfficial,
-  GameState,
-  PoliticalParty,
-  StateBill,
-} from "@/lib/db/types";
+import type { ElectedOfficial, GameState, PoliticalParty, StateBill } from "@/lib/db/types";
 import { isBannedParty } from "@/lib/turn/onePartyConstraints";
 import { getCountryState } from "@/lib/countryState";
 import { createNotification } from "@/lib/notifications";
@@ -25,6 +19,7 @@ import { generateBillSignedNews, generateBillVetoedNews } from "@/lib/news";
 import { isVotingDeadlinePassed } from "@/lib/legislature/billVotingWindow";
 import type { LegislatureCommandResult } from "@/lib/legislature/commands/types";
 import { captureBillStatusChanged } from "@/lib/analytics/billStatusAnalytics";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const OVERRIDE_VOTING_HOURS = 24;
 
@@ -434,9 +429,10 @@ export async function takeStateBillGovernorAction(
     }
 
     if (bill.sponsorId) {
-      const sponsor = await db
-        .collection<Character>("characters")
-        .findOne({ _id: bill.sponsorId }, { projection: { userId: 1 } });
+      const sponsor = await charactersCollection(db).findOne(
+        { _id: bill.sponsorId },
+        { projection: { userId: 1 } }
+      );
       if (sponsor) {
         await createNotification({
           userId: sponsor.userId,
@@ -453,9 +449,10 @@ export async function takeStateBillGovernorAction(
     // governor-queued bills (sponsorId is null in that case).
     const sponsorName = bill.sponsorId
       ? ((
-          await db
-            .collection<Character>("characters")
-            .findOne({ _id: bill.sponsorId }, { projection: { name: 1 } })
+          await charactersCollection(db).findOne(
+            { _id: bill.sponsorId },
+            { projection: { name: 1 } }
+          )
         )?.name ??
         bill.sponsorName ??
         "Unknown")
@@ -511,9 +508,10 @@ export async function takeStateBillGovernorAction(
   });
 
   if (bill.sponsorId) {
-    const sponsor = await db
-      .collection<Character>("characters")
-      .findOne({ _id: bill.sponsorId }, { projection: { userId: 1 } });
+    const sponsor = await charactersCollection(db).findOne(
+      { _id: bill.sponsorId },
+      { projection: { userId: 1 } }
+    );
     if (sponsor) {
       await createNotification({
         userId: sponsor.userId,

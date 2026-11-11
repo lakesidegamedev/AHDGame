@@ -14,6 +14,7 @@ import { applyPassedVoteEffects } from "@/lib/corporations/votes/voteEffects";
 import { resolvePrivatizationVote } from "@/lib/corporations/commands/privatization/resolvePrivatizationVote";
 import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 type ReminderVote = CorporationVote | CorporationPrivatizationVote;
 
@@ -77,8 +78,7 @@ export async function processVoteReminders(db: Db, currentTurn: number): Promise
   const characters =
     allCharacterIds.size === 0
       ? []
-      : await db
-          .collection<Pick<Character, "_id" | "userId">>("characters")
+      : await charactersCollection<Pick<Character, "_id" | "userId">>(db)
           .find({ _id: { $in: [...allCharacterIds.values()] } }, { projection: { userId: 1 } })
           .toArray();
   const userIdsForVote = (vote: ReminderVote): ObjectId[] => {

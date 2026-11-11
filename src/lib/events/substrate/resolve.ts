@@ -9,6 +9,7 @@ import { getEventHandler } from "./registry";
 import { pickTier } from "./tiers";
 import { statRollAdjustment } from "./rollAdjustment";
 import type { EventResolveContext, ResolveEventHooks } from "./types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export class EventNotResolvableError extends Error {
   constructor(message: string) {
@@ -62,9 +63,10 @@ export async function resolveEvent(
   let statAdjustment: EventResolveContext["statAdjustment"];
 
   if (option.primaryStat && instance.scope === "character") {
-    const character = await db
-      .collection("characters")
-      .findOne({ _id: instance.scopeId }, { projection: { stats: 1 } });
+    const character = await charactersCollection(db).findOne(
+      { _id: instance.scopeId },
+      { projection: { stats: 1 } }
+    );
     const statValue =
       (character?.stats as Record<string, number> | undefined)?.[option.primaryStat] ?? 5.5;
     const delta = statRollAdjustment(statValue);

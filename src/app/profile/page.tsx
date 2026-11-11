@@ -118,6 +118,7 @@ import { isPatreonActive } from "@/lib/db/types";
 import { resolveMemberSince } from "@/lib/character/memberSince";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const MIN_BASE_ACTIONS_PER_TURN = 4;
 
@@ -146,7 +147,7 @@ async function getCharacterData() {
   const characterQuery = userDoc?.activeCharacterId
     ? { _id: userDoc.activeCharacterId, userId: new ObjectId(user.userId) }
     : { userId: new ObjectId(user.userId) };
-  const character = await db.collection<Character>("characters").findOne(characterQuery);
+  const character = await charactersCollection(db).findOne(characterQuery);
   if (!character) return null;
 
   const hasParty = Boolean(character.party && character.party !== "independent");
@@ -283,15 +284,13 @@ async function getCharacterData() {
   const npiCountryMatch: Filter<Character> = { countryId: charCountryId ?? "US" };
 
   const [topNPI, topDonor] = await Promise.all([
-    db
-      .collection<Character>("characters")
+    charactersCollection(db)
       .find({ isBanned: { $ne: true }, ...npiCountryMatch })
       .sort({ nationalInfluence: -1 })
       .limit(1)
       .project({ nationalInfluence: 1 })
       .toArray(),
-    db
-      .collection<Character>("characters")
+    charactersCollection(db)
       .find({ isBanned: { $ne: true } })
       .sort({ donorBaseLevel: -1 })
       .limit(1)
@@ -681,8 +680,7 @@ export default async function ProfilePage() {
 
     const charCountry = character.countryId ?? "US";
     const piDb = await getDb();
-    const poolAgg = await piDb
-      .collection<Character>("characters")
+    const poolAgg = await charactersCollection(piDb)
       .aggregate<{ totalInfluence: number; memberCount: number }>([
         {
           $match: {

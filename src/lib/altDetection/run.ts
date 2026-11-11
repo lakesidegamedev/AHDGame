@@ -7,7 +7,6 @@
 
 import { ObjectId, type Db } from "mongodb";
 import * as Sentry from "@sentry/nextjs";
-import type { Character } from "@/lib/db/types/character";
 import type { User } from "@/lib/db/types/user";
 import type { ActionLog } from "@/lib/db/types/gameState";
 import type { ActionAuditCategory } from "@/lib/db/types/actionAuditLog";
@@ -45,6 +44,7 @@ import {
   writeRunRecord,
 } from "./runPersist";
 import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 // ─── Tunables ────────────────────────────────────────────────────────────
 
@@ -275,7 +275,7 @@ async function selectCandidateUserIds(
   // neither be flagged nor drag a real user into a cluster by sitting between
   // them.
   if (seedIds.size > 0) {
-    const syntheticUserIds = await db.collection<Character>("characters").distinct("userId", {
+    const syntheticUserIds = await charactersCollection(db).distinct("userId", {
       isSynthetic: true,
       userId: { $in: [...seedIds].map((id) => new ObjectId(id)) },
     });
@@ -373,8 +373,7 @@ async function buildCandidateFacets(
       .collection<User>("users")
       .find({ _id: { $in: candidateUserIds } })
       .toArray(),
-    db
-      .collection<Character>("characters")
+    charactersCollection(db)
       .find({ userId: { $in: candidateUserIds } }, { projection: { _id: 1, userId: 1 } })
       .toArray(),
   ]);
@@ -561,8 +560,7 @@ async function buildCandidateFacets(
       if (cpId && !charToUser.has(cpId)) unresolvedCounterpartyIds.add(cpId);
     }
     if (unresolvedCounterpartyIds.size > 0) {
-      const extraChars = await db
-        .collection<Character>("characters")
+      const extraChars = await charactersCollection(db)
         .find(
           { _id: { $in: [...unresolvedCounterpartyIds].map((id) => new ObjectId(id)) } },
           { projection: { _id: 1, userId: 1 } }

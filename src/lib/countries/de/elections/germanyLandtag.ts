@@ -43,6 +43,7 @@ import { logger } from "@/lib/observability/logger";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { captureElectionWon } from "@/lib/analytics/electionAnalytics";
 import { captureOfficeTransition } from "@/lib/analytics/officeTransitionAnalytics";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const LANDTAG_THRESHOLD = 0.05;
 
@@ -414,14 +415,13 @@ async function sweepStaleLandtagOffice(
     ...officeMatch,
     ...(currentCharIds.length > 0 ? { _id: { $nin: currentCharIds } } : {}),
   };
-  const departingPlayers = await db
-    .collection<Character>("characters")
+  const departingPlayers = await charactersCollection(db)
     .find(departingFilter, { projection: { _id: 1, party: 1, countryId: 1 } })
     .toArray()
     .catch(() => []);
-  await db
-    .collection<Character>("characters")
-    .updateMany(departingFilter, { $set: { currentOffice: null, updatedAt: now } });
+  await charactersCollection(db).updateMany(departingFilter, {
+    $set: { currentOffice: null, updatedAt: now },
+  });
   await Promise.all(
     departingPlayers.map((character) =>
       captureOfficeTransition({
@@ -508,8 +508,7 @@ export async function resolveDELandtagElection(
     .filter((c): c is typeof c & { characterId: ObjectId } => !c.isNPP && !!c.characterId)
     .map((c) => c.characterId);
   if (candidateCharIds.length > 0) {
-    const existingChars = await db
-      .collection<Character>("characters")
+    const existingChars = await charactersCollection(db)
       .find(
         { _id: { $in: candidateCharIds } },
         { projection: { _id: 1, currentOffice: 1, userId: 1 } }
@@ -583,7 +582,7 @@ export async function resolveDELandtagElection(
         date: now,
       };
       winnerActions.push(async () => {
-        await db.collection<Character>("characters").updateOne(
+        await charactersCollection(db).updateOne(
           { _id: charId },
           {
             $set: { currentOffice: office, updatedAt: now },

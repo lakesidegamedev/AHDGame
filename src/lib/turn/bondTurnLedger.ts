@@ -10,6 +10,7 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 import { resolveBondCurrency } from "./bondTurnHelpers";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 // Tx log entry accumulators (resolved to names + emitted after all phases).
 // `charId` carries the holder id in string form for batched name lookup;
@@ -158,8 +159,7 @@ export async function emitBondTurnLedger(args: {
     ];
     const [regularNameDocs, imperialNameDocs] = await Promise.all([
       regularCharIds.length > 0
-        ? db
-            .collection<Character>("characters")
+        ? charactersCollection(db)
             .find({ _id: { $in: regularCharIds.map((id) => new ObjectId(id!)) } })
             .project({ _id: 1, name: 1 })
             .toArray()

@@ -3,8 +3,9 @@ import type { Db } from "mongodb";
 import { createNotifications } from "@/lib/notifications";
 import type { CountryConfig } from "@/lib/constants/countries";
 import { getOfficeTypeForChamber } from "@/lib/legislature/chamberOfficeType";
-import type { Bill, Character } from "@/lib/db/types";
+import type { Bill } from "@/lib/db/types";
 import type { BillLifecycleConfig, SponsorNotifier } from "../types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const VOTING_HOURS = 24;
 
@@ -20,9 +21,10 @@ function makeOnePartyNotifier(lowerLabel: string): SponsorNotifier {
     if (status !== "signed" && status !== "failed" && status !== "active_other") return;
     if (!bill.sponsorId) return;
     try {
-      const sponsor = await db
-        .collection<Character>("characters")
-        .findOne({ _id: bill.sponsorId }, { projection: { userId: 1 } });
+      const sponsor = await charactersCollection(db).findOne(
+        { _id: bill.sponsorId },
+        { projection: { userId: 1 } }
+      );
       if (!sponsor) return;
 
       const message =

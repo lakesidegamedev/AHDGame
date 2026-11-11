@@ -17,7 +17,8 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { resolvePresidentialCountry } from "@/lib/executive/presidentialCountry";
 import { getScotusComposition } from "@/lib/scotus/queries";
 import type { ScotusNomination, SupremeCourtSeat } from "@/lib/db/types/scotus";
-import type { ElectedOfficial, Character } from "@/lib/db/types";
+import type { ElectedOfficial } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 // GET /api/whitehouse/scotus: 9-seat composition, active nominations, and caller's president/senator/justice status. Country-scoped via ?country= (default US); SCOTUS is US-only, other countries return an empty shell.
 // Auth: public
@@ -57,7 +58,7 @@ export async function GET(request: Request) {
         .collection<ElectedOfficial>("electedOfficials")
         .findOne({ countryId, officeType: "president", characterId: { $ne: null } }),
       authUser
-        ? db.collection<Character>("characters").findOne({ userId: new ObjectId(authUser.userId) })
+        ? charactersCollection(db).findOne({ userId: new ObjectId(authUser.userId) })
         : Promise.resolve(null),
     ]);
 

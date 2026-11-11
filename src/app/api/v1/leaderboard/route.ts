@@ -8,6 +8,7 @@ import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import { getAuthUser } from "@/lib/auth";
 import { getEnabledCountryIds } from "@/lib/countryAccess";
 import type { Character, NPP } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -72,8 +73,7 @@ export async function GET(request: Request) {
     const db = await getDb();
 
     // Fetch player characters (exclude banned users)
-    const characters = await db
-      .collection<Character>("characters")
+    const characters = await charactersCollection(db)
       .aggregate<Character & { _userDoc?: { isBanned?: boolean } }>([
         { $match: countryFilter },
         {

@@ -44,8 +44,9 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 import { notifyHostileTakeoverThresholdIfEligible } from "@/lib/corporations/hostileTakeoverNotifications";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
-import type { Character, Notification, ShareListing, ShareOffer } from "@/lib/db/types";
+import type { Notification, ShareListing, ShareOffer } from "@/lib/db/types";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteParams {
   params: Promise<{ id: string; listingId: string; offerId: string }>;
@@ -206,9 +207,10 @@ export async function settleListingOffer(
     Math.round(corpLiquidCapitalToAnchor(refundLocal, listingCorp ?? {}, listingCorpFxRate) * 100) /
     100;
   const sellerChar = !listing.sellerCorporationId
-    ? await db
-        .collection<Character>("characters")
-        .findOne({ _id: listing.sellerCharacterId }, { projection: { countryId: 1, name: 1 } })
+    ? await charactersCollection(db).findOne(
+        { _id: listing.sellerCharacterId },
+        { projection: { countryId: 1, name: 1 } }
+      )
     : null;
   const sellerCurrency = sellerChar ? getHomeCurrency(sellerChar) : "USD";
   let sellerFxRate = 1.0;
@@ -221,9 +223,10 @@ export async function settleListingOffer(
   }
 
   const buyerCharForRefund = !offer.buyerCorporationId
-    ? await db
-        .collection<Character>("characters")
-        .findOne({ _id: offer.buyerCharacterId }, { projection: { countryId: 1, name: 1 } })
+    ? await charactersCollection(db).findOne(
+        { _id: offer.buyerCharacterId },
+        { projection: { countryId: 1, name: 1 } }
+      )
     : null;
   const buyerCurrency = buyerCharForRefund ? getHomeCurrency(buyerCharForRefund) : "USD";
   let buyerFxRate = 1.0;
@@ -417,9 +420,10 @@ export async function settleListingOffer(
   if (audit !== "failed") await settleShareFillAttempt(db, fillKey, "completed");
 
   // Notify buyer
-  const buyerChar = await db
-    .collection<Character>("characters")
-    .findOne({ _id: offer.buyerCharacterId }, { projection: { userId: 1 } });
+  const buyerChar = await charactersCollection(db).findOne(
+    { _id: offer.buyerCharacterId },
+    { projection: { userId: 1 } }
+  );
 
   if (buyerChar) {
     const listingCorpSym =

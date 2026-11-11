@@ -31,6 +31,8 @@ import { calculateStateLeanForCache } from "@/lib/demographics/cachedStateLean";
 import type { Layer1Config } from "@/lib/seeds/stateDemographics";
 import { SEED_ERA_IDS, type EraId } from "@/lib/seeds/presetSelector";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import type { Document } from "mongodb";
 
 const VALID_ERAS = SEED_ERA_IDS;
 
@@ -150,8 +152,7 @@ export async function POST(request: Request) {
     // Clear stored polls (skippable to avoid disrupting active players)
     let charactersCleared = 0;
     if (!skipPollClear) {
-      const charsResult = await db
-        .collection("characters")
+      const charsResult = await charactersCollection<Document>(db)
         .updateMany({}, { $unset: { lastPoll: "", lastPollLarge: "" } });
       charactersCleared = charsResult.modifiedCount;
     }

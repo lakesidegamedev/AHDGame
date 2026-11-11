@@ -33,9 +33,9 @@ import type {
   NpcscChairElection,
   CppccChairElection,
   ElectedOfficial,
-  Character,
   LeadershipRole,
 } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const LEADERSHIP_ELECTION_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -219,9 +219,10 @@ export async function resolveLeadershipElection(
     const roleLabel = leadershipRoleLabel(leaderRole);
     const chamberLabel = chamber === "senate" ? "Senate" : "House";
     const nomineeAvatarUrl = (
-      await db
-        .collection<Character>("characters")
-        .findOne({ _id: winner.nomineeId }, { projection: { avatarUrl: 1 } })
+      await charactersCollection(db).findOne(
+        { _id: winner.nomineeId },
+        { projection: { avatarUrl: 1 } }
+      )
     )?.avatarUrl;
     sendCountryGameEvent("US", {
       title: `Leadership Election Result — ${roleLabel}`,
@@ -263,9 +264,10 @@ async function autoNominateIncumbent(
   });
   if (!hasSeat) return;
 
-  const char = await db
-    .collection<Character>("characters")
-    .findOne({ _id: leader.characterId }, { projection: { party: 1, homeState: 1 } });
+  const char = await charactersCollection(db).findOne(
+    { _id: leader.characterId },
+    { projection: { party: 1, homeState: 1 } }
+  );
   if (!char) return;
 
   const incumbentParty = char.party ?? leader.party ?? null;
@@ -330,9 +332,10 @@ async function autoNominateStandingIncumbent(
   });
   if (!hasSeat) return;
 
-  const char = await db
-    .collection<Character>("characters")
-    .findOne({ _id: speaker.characterId }, { projection: { party: 1, homeState: 1 } });
+  const char = await charactersCollection(db).findOne(
+    { _id: speaker.characterId },
+    { projection: { party: 1, homeState: 1 } }
+  );
   if (!char) return;
 
   const incumbentParty = char.party ?? speaker.party ?? null;

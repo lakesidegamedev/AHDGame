@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { requireModerator } from "@/lib/api/requireModerator";
 import { handleRouteError } from "@/lib/api/errors";
-import type { Character } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 // GET /api/moderator/resources/characters — List characters for resource grant UI.
 // Auth: requireModerator
 // Errors: 403
@@ -13,11 +13,7 @@ export async function GET() {
 
     const db = await getDb();
 
-    const characters = await db
-      .collection<Character>("characters")
-      .find({})
-      .sort({ name: 1 })
-      .toArray();
+    const characters = await charactersCollection(db).find({}).sort({ name: 1 }).toArray();
 
     const characterList = characters.map((char) => ({
       id: char._id.toString(),

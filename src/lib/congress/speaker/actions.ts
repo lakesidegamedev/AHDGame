@@ -33,6 +33,7 @@ import {
   isPartyEligible,
   POLICY_BY_ROLE,
 } from "@/lib/congress/leadership/rolePolicy";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const ELECTION_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -59,7 +60,7 @@ export async function handleSpeakerAction(ctx: ActionContext): Promise<ActionRes
   if (action === "force_end") return handleForceEnd(ctx);
 
   // declare, withdraw, vote require character + House membership
-  const character = await db.collection<Character>("characters").findOne({
+  const character = await charactersCollection(db).findOne({
     userId: new ObjectId(authUser.userId),
   });
   if (!character) return { success: false, error: "No character", status: 400 };
@@ -189,9 +190,10 @@ async function handleStartElection(ctx: ActionContext): Promise<ActionResult> {
       characterId: incumbent.characterId,
     });
     if (hasSeat) {
-      const char = await db
-        .collection<Character>("characters")
-        .findOne({ _id: incumbent.characterId }, { projection: { party: 1, homeState: 1 } });
+      const char = await charactersCollection(db).findOne(
+        { _id: incumbent.characterId },
+        { projection: { party: 1, homeState: 1 } }
+      );
       const party = char?.party ?? incumbent.party ?? null;
       if (char && party && isPartyEligible(speakerPolicy, party, chamberCtx)) {
         await db.collection<SpeakerNomination>("speakerNominations").insertOne({
@@ -386,9 +388,10 @@ async function handleWithdraw(
   }
 
   const now = new Date();
-  await db
-    .collection<Character>("characters")
-    .updateOne({ _id: character._id }, { $inc: { politicalInfluence: -3 } });
+  await charactersCollection(db).updateOne(
+    { _id: character._id },
+    { $inc: { politicalInfluence: -3 } }
+  );
   await db.collection("influenceHistory").insertOne({
     characterId: character._id,
     amount: -3,

@@ -13,6 +13,7 @@ import { CHAIR_TERM_TURNS } from "@/lib/turn/centralBankChairSelection";
 import { getGameState } from "@/lib/gameState";
 import { getBankId } from "@/lib/centralBank/helpers";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const schema = z.object({
   characterId: schemas.objectId.nullable(),
@@ -33,7 +34,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
 
     const db = await getDb();
     const centralBanks = centralBanksCollection(db);
-    const characters = db.collection("characters");
+    const characters = charactersCollection(db);
     const bankId = getBankId(countryId);
 
     // Ensure bank doc exists

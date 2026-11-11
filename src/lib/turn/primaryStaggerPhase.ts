@@ -76,6 +76,7 @@ import { getStatesCollection } from "@/lib/db/collections/states";
 import { getCharactersCollection } from "@/lib/db/collections/characters";
 import { getNppsCollection } from "@/lib/db/collections/npps";
 import { getElectionsCollection } from "@/lib/db/collections/elections";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const MS_PER_HOUR = 3_600_000;
 
@@ -912,7 +913,7 @@ export async function runPrimaryStaggerWaveIfDue(
         update: buildClampedFavorabilityUpdate(amount),
       },
     }));
-    await db.collection("characters").bulkWrite(ops);
+    await charactersCollection(db).bulkWrite(ops);
   }
   if (nppMomentumMap.size > 0) {
     const ops = [...nppMomentumMap.entries()].map(([id, amount]) => ({

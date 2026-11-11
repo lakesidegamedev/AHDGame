@@ -8,6 +8,7 @@ import {
   type UkMinisterialRoleSlot,
 } from "@/lib/countries/uk/dualMinistry/rules";
 import type { Migration, MigrationResult } from "../types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export const UK_DUAL_MINISTRY_ROLE_SLOT_INDEX = "cabinetMembers_countryId_characterId_roleSlot";
 const LEGACY_ONE_SEAT_INDEX = "cabinetMembers_countryId_characterId";
@@ -139,7 +140,7 @@ async function backfillUkDualMinistry(db: Db, dryRun: boolean): Promise<Migratio
       })),
       MINISTERIAL_ACTION_CAP
     );
-    const result = await db.collection("characters").updateOne(
+    const result = await charactersCollection(db).updateOne(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       { _id: holderId as any, sharedMinisterialActions: { $exists: false } },
       {

@@ -26,7 +26,7 @@ import {
   resolveCorporation,
   requireCeo,
 } from "@/lib/api/corporations/resolveQuery";
-import type { Character, CorporateSector, ImperialCharacter, State } from "@/lib/db/types";
+import type { CorporateSector, ImperialCharacter, State } from "@/lib/db/types";
 import type { ShareListing } from "@/lib/db/types/shareListings";
 import type { ShareOrder } from "@/lib/db/types/corporation";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
@@ -101,6 +101,7 @@ import { payNppSqueezeOut } from "@/lib/corporations/commands/takeovers/payNppSq
 import { getCorporationsCollection } from "@/lib/db/collections/corporations";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 type TakeoverTxInput = Omit<FinancialTxLogEntry, "_id" | "expiresAt" | "flagged">;
 
@@ -517,9 +518,7 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
 
           let holderParty: ShareTradeParty | null = null;
           if (sh.characterId) {
-            const ch = await db
-              .collection<Character>("characters")
-              .findOne({ _id: sh.characterId });
+            const ch = await charactersCollection(db).findOne({ _id: sh.characterId });
             if (!ch) continue;
             const home =
               (withholdingContexts.get("characters:" + sh.characterId.toHexString())?.currency as
@@ -558,7 +557,7 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
                   withholdingContexts.get("characters:" + sh.characterId!.toHexString())
                 )
               : undefined;
-            await db.collection<Character>("characters").updateOne(
+            await charactersCollection(db).updateOne(
               { _id: sh.characterId },
               {
                 $inc: buildPersonalBalanceInc(

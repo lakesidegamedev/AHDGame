@@ -22,6 +22,7 @@ import { type CurrencyCode } from "@/lib/constants/currencies";
 import { type FxScalePair, loadFxScalePair } from "@/lib/country/mergeFxScale";
 import { convertCorpCurrency } from "@/lib/corporations/convertCorpCurrency";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export async function convertTransferredResidentsCurrency(
   db: Db,
@@ -92,7 +93,7 @@ export async function convertTransferredResidentsCurrency(
   // One pipeline update computed from each document's live balances: players act
   // while the turn runs, so a wallet read earlier and written back whole would
   // erase any spend, trade or credit that landed in between.
-  await db.collection<Character>("characters").updateMany(
+  await charactersCollection(db).updateMany(
     {
       homeState: regionId,
       userId: { $ne: null },

@@ -9,7 +9,7 @@ import {
 import { anchorHoldingPosition, positionHoldingTerms } from "@/lib/corporations/rules/holdingTerms";
 import { recordCorporationExit } from "@/lib/corporations/exits/recordCorporationExit";
 import { ObjectId } from "mongodb";
-import type { Character, Corporation, CorporateSector, ImperialCharacter } from "@/lib/db/types";
+import type { Corporation, CorporateSector, ImperialCharacter } from "@/lib/db/types";
 import type { IndexFund } from "@/lib/db/types";
 import {
   EQUITY_MARKET_POOLS_COLLECTION,
@@ -76,6 +76,7 @@ import { getNppsCollection } from "@/lib/db/collections/npps";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface ExecuteAgreedAcquisitionParams {
   db: Db;
@@ -387,8 +388,7 @@ async function runAgreedAcquisition(
   const floatPaid = Boolean(allocation?.publicFloatRow && allocation.publicFloatRow.payout > 0);
   const [chars, imperials, creditors, funds, npps, treasury, equityPool] = await Promise.all([
     charIds.length > 0
-      ? db
-          .collection<Character>("characters")
+      ? charactersCollection(db)
           .find({ _id: { $in: charIds } })
           .toArray()
       : [],

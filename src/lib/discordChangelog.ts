@@ -16,6 +16,7 @@ import { compareVersionsDesc } from "@/lib/changelog/postUtils";
 import type { ChangelogPost } from "@/lib/changelog/types";
 import { getCanonicalUrl, getWikiCanonicalUrl } from "@/lib/siteMetadata";
 import crypto from "crypto";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -325,9 +326,9 @@ async function notifyAllUsersOfUpdate(version: string): Promise<void> {
     // Get all users who have a character (active players). The link lives on
     // the character (characters.userId), not on the user document — users have
     // no characterId field, so the old users.characterId query matched nobody.
-    const userIds = (await db
-      .collection("characters")
-      .distinct("userId", { userId: { $exists: true, $ne: null } })) as ObjectId[];
+    const userIds = (await charactersCollection(db).distinct("userId", {
+      userId: { $exists: true, $ne: null },
+    })) as ObjectId[];
 
     const notificationPromises = userIds.map((userId) =>
       createNotification({

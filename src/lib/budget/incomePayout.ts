@@ -27,6 +27,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface IncomeCredit {
   characterId: ObjectId;
@@ -124,8 +125,7 @@ export async function creditIncomeAfterTax(
           projection: { treasuryCashLedgerEnabled: 1, ledgerShadow: 1, turnLengthMinutes: 1 },
         }
       );
-      const regularActors = await db
-        .collection<Character>("characters")
+      const regularActors = await charactersCollection(db)
         .find(
           {
             _id: {
@@ -581,9 +581,10 @@ export async function creditIncomeAfterTax(
         });
       }
       if (walletOps.characters.length) {
-        const credited = await db
-          .collection<IncomeWallet>("characters")
-          .bulkWrite(walletOps.characters, { session });
+        const credited = await charactersCollection<IncomeWallet>(db).bulkWrite(
+          walletOps.characters,
+          { session }
+        );
         if (credited.matchedCount !== walletOps.characters.length)
           throw new Error("Income recipient changed");
       }

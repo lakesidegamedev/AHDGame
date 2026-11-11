@@ -13,6 +13,7 @@ import type {
 } from "@/lib/db/types";
 import { computeElectionPhase } from "@/lib/elections/phases";
 import { getGameTime, type GameTimeContext } from "@/lib/time/gameTime";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -114,8 +115,7 @@ async function loadCandidateStats(
   const projection = { _id: 1, favorability: 1, politicalInfluence: 1 } as const;
   const [characters, npps] = await Promise.all([
     characterIds.length > 0
-      ? db
-          .collection<Character>("characters")
+      ? charactersCollection(db)
           .find({ _id: { $in: characterIds } })
           .project<Pick<Character, "_id" | "favorability" | "politicalInfluence">>(projection)
           .toArray()

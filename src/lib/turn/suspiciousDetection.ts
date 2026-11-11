@@ -21,6 +21,7 @@ import type {
 } from "@/lib/db/types/activityLog";
 import { detectAutomationTiming } from "./automationDetection";
 import { getCharactersCollection } from "@/lib/db/collections/characters";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface SuspiciousDetectionResult {
   flagged: number;
@@ -514,8 +515,7 @@ async function detectSharedAuthArtifacts(
   now: Date,
   characterIds: ObjectId[]
 ): Promise<Map<string, SuspiciousFlag[]>> {
-  const characters = await db
-    .collection<CharacterUserLink>("characters")
+  const characters = await charactersCollection<CharacterUserLink>(db)
     .find({ _id: { $in: characterIds } }, { projection: { _id: 1, userId: 1 } })
     .toArray();
 
@@ -577,8 +577,7 @@ async function detectCoordinatedLogins(
   now: Date,
   characterIds: ObjectId[]
 ): Promise<Map<string, SuspiciousFlag>> {
-  const characters = await db
-    .collection<CharacterUserLink>("characters")
+  const characters = await charactersCollection<CharacterUserLink>(db)
     .find({ _id: { $in: characterIds } }, { projection: { _id: 1, userId: 1 } })
     .toArray();
 

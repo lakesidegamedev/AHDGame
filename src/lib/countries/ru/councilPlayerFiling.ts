@@ -33,6 +33,7 @@ type FilingCharacter = Pick<
   "_id" | "countryId" | "homeState" | "party" | "currentOffice" | "federationPendingResidenceId"
 >;
 import { russianDumaBoundRoot } from "./dumaConvocationAuthority";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 export async function validateRussianCouncilPlayerFiling(input: {
   db: Db;
   election: Election;
@@ -246,7 +247,7 @@ export async function materializeRussianCouncilPlayerFiling(input: {
   const election = await db
     .collection<Election>("elections")
     .findOne({ _id: electionId }, { session });
-  const character = await db.collection<Character>("characters").findOne(
+  const character = await charactersCollection(db).findOne(
     { _id: candidate.characterId },
     {
       session,

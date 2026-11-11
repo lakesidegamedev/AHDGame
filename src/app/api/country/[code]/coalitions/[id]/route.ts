@@ -4,8 +4,8 @@ import { getDb } from "@/lib/mongodb";
 import { handleRouteError, notFound, badRequest, errorResponse } from "@/lib/api/errors";
 import type { Coalition } from "@/lib/db/types/coalition";
 import type { PoliticalParty } from "@/lib/db/types/party";
-import type { Character } from "@/lib/db/types/character";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 // GET /api/coalitions/[id]?country=us — Returns full coalition details
 export async function GET(
@@ -61,8 +61,7 @@ export async function GET(
     if (coalition.chairCharacterId) chairCharacterIds.push(coalition.chairCharacterId);
 
     // Fetch all relevant characters (names only)
-    const characters = await db
-      .collection<Character>("characters")
+    const characters = await charactersCollection(db)
       .find({ _id: { $in: chairCharacterIds } }, { projection: { _id: 1, name: 1 } })
       .toArray();
 
@@ -73,8 +72,7 @@ export async function GET(
     const memberSeqIds = validMemberParties.map((p) => String(p.sequentialId));
     const [memberCharCountAgg, memberNppCountAgg] = await Promise.all([
       memberSeqIds.length > 0
-        ? db
-            .collection<Character>("characters")
+        ? charactersCollection(db)
             .aggregate<{ _id: string; count: number }>([
               { $match: { party: { $in: memberSeqIds }, countryId } },
               { $group: { _id: "$party", count: { $sum: 1 } } },

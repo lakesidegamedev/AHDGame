@@ -8,7 +8,7 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { sendFundsSchema } from "@/lib/api/schemas/send";
 import { findPartyBySequentialId } from "@/lib/db/partyLookup";
 import { findCaucusBySlug, listCaucusMemberships } from "@/lib/db/caucusLookup";
-import type { Caucus, Character, AdminLog } from "@/lib/db/types";
+import type { Caucus, AdminLog } from "@/lib/db/types";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
@@ -27,6 +27,7 @@ import {
 } from "@/lib/parties/leadershipElectionFreeze";
 import { getGameTime } from "@/lib/time/gameTime";
 import { TreasuryExecutionUncertainError } from "@/lib/treasury/executionUncertain";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; slug: string }>;
@@ -96,7 +97,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(400, "Character is not an active player member of this caucus");
     }
 
-    const targetCharacter = await db.collection<Character>("characters").findOne({
+    const targetCharacter = await charactersCollection(db).findOne({
       _id: targetCharacterOid,
       countryId,
       party: partyIdStr,
@@ -158,9 +159,11 @@ export async function POST(request: Request, { params }: RouteParams) {
         throw badRequest("Insufficient caucus funds");
       }
 
-      const creditResult = await db
-        .collection<Character>("characters")
-        .updateOne({ _id: targetCharacterOid }, characterCredit, { session });
+      const creditResult = await charactersCollection(db).updateOne(
+        { _id: targetCharacterOid },
+        characterCredit,
+        { session }
+      );
 
       if (creditResult.matchedCount === 0) {
         throw notFound("Character not found");
@@ -214,9 +217,10 @@ export async function POST(request: Request, { params }: RouteParams) {
 
       let creditResult;
       try {
-        creditResult = await db
-          .collection<Character>("characters")
-          .updateOne({ _id: targetCharacterOid }, characterCredit);
+        creditResult = await charactersCollection(db).updateOne(
+          { _id: targetCharacterOid },
+          characterCredit
+        );
       } catch (creditError) {
         await refundDebit("credit threw", creditError);
         throw creditError;

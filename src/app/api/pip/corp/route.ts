@@ -25,6 +25,7 @@ import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
 import { sectorEconomicRevenue } from "@/lib/corporations/sectorRevenueBasis";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 // The six commodity types shown in the PiP Corp view
 const PIP_COMMODITIES: CommodityType[] = [
@@ -45,9 +46,7 @@ export async function GET() {
 
     let character: Character | null = null;
     if (authUser) {
-      character = await db
-        .collection<Character>("characters")
-        .findOne({ userId: new ObjectId(authUser.userId) });
+      character = await charactersCollection(db).findOne({ userId: new ObjectId(authUser.userId) });
     }
 
     const isAdmin = authUser?.isAdmin === true;

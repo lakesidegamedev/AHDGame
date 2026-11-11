@@ -4,7 +4,7 @@ import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
 import { parseJsonBody } from "@/lib/api/validate";
 import { draftCharterSchema } from "@/lib/api/schemas/charters";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
-import type { PoliticalParty, Character, StatePartyOrg } from "@/lib/db/types";
+import type { PoliticalParty, StatePartyOrg } from "@/lib/db/types";
 import { resolvePartyTier } from "@/lib/parties/partyTier";
 import { ObjectId } from "mongodb";
 import { getPartyHex } from "@/lib/utils/politics";
@@ -12,6 +12,7 @@ import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { draftCharter } from "@/lib/charters/draftCharter";
 import { getPartyFrontiers } from "@/lib/parties/partyFrontier";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 // GET /api/country/[code]/parties — Return all political parties in the country with member counts and leadership
 // Auth: public
@@ -68,8 +69,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
       : Promise.resolve([]);
 
     const [leaders, bannedUserDocs, nppAgg, orgAgg, allCharsInParties] = await Promise.all([
-      db
-        .collection<Character>("characters")
+      charactersCollection(db)
         .find(
           { _id: { $in: leaderIds } },
           {
@@ -104,8 +104,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
         ])
         .toArray(),
       orgAggPromise,
-      db
-        .collection<Character>("characters")
+      charactersCollection(db)
         .find(
           { party: { $in: partyIdStrings }, countryId },
           { projection: { _id: 1, party: 1, userId: 1 } }

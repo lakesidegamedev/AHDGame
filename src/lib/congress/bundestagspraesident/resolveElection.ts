@@ -9,12 +9,12 @@ import { sendCountryGameEvent, DISCORD_COLORS } from "@/lib/discordWebhooks";
 import { leadershipRoleLabel } from "@/lib/congress/leadership/electionRoleMap";
 import { claimStatusTransition } from "@/lib/turn/atomicClaim";
 import type {
-  Character,
   BundestagspraesidentElection,
   BundestagspraesidentNomination,
   CongressLeader,
   PoliticalParty,
 } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * Resolve the open Bundestagspräsident election. Mirrors
@@ -97,9 +97,10 @@ export async function resolveBundestagspraesidentElection(
   if (claimed) {
     const roleLabel = leadershipRoleLabel("speaker_of_the_bundestag");
     const nomineeAvatarUrl = (
-      await db
-        .collection<Character>("characters")
-        .findOne({ _id: winner.nomineeId }, { projection: { avatarUrl: 1 } })
+      await charactersCollection(db).findOne(
+        { _id: winner.nomineeId },
+        { projection: { avatarUrl: 1 } }
+      )
     )?.avatarUrl;
     sendCountryGameEvent("DE", {
       title: `Leadership Election Result — ${roleLabel}`,

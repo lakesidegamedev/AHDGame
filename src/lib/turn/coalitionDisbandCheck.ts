@@ -3,6 +3,7 @@ import { createNotifications, type NotificationInput } from "@/lib/notifications
 import type { Coalition } from "@/lib/db/types/coalition";
 import type { PoliticalParty } from "@/lib/db/types/party";
 import { getGameState } from "@/lib/gameState";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export async function resolveExpiredDisbandVotes(referenceNow = new Date()): Promise<{
   resolved: number;
@@ -60,8 +61,7 @@ export async function resolveExpiredDisbandVotes(referenceNow = new Date()): Pro
         .project({ chairId: 1 })
         .toArray();
       const chairCharIds = memberParties.map((p) => p.chairId).filter(Boolean);
-      const chairChars = await db
-        .collection("characters")
+      const chairChars = await charactersCollection(db)
         .find({ _id: { $in: chairCharIds } })
         .project({ _id: 1, userId: 1 })
         .toArray();

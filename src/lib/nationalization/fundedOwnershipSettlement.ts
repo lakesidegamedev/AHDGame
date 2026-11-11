@@ -24,6 +24,7 @@ import type { TreasuryCashOptions } from "./treasuryLedger";
 import { getNppsCollection } from "@/lib/db/collections/npps";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * Distribute a ₳-denominated shareholder pool pro-rata across every bucket:
@@ -73,8 +74,7 @@ export async function settleFundedWholeCorpShareholderPool(
   if (!(totalAnchor > 0)) return;
 
   const [personalDocs, imperialDocs, corpDocs, funds, npps] = await Promise.all([
-    db
-      .collection<Character>("characters")
+    charactersCollection(db)
       .find({
         _id: {
           $in: personalRows

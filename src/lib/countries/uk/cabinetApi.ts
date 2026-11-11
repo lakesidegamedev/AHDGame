@@ -52,6 +52,7 @@ import { GREAT_OFFICE_POSITION_IDS } from "@/lib/countries/uk/confidence/confide
 import { getGovernmentFormationsCollection } from "@/lib/db/collections/governmentFormation";
 import { canReshuffle, getReshuffleIdentity } from "@/lib/countries/uk/cabinet/reshuffleLimit";
 import { captureOfficeTransition } from "@/lib/analytics/officeTransitionAnalytics";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export {
   reselectionRiskFor,
@@ -137,19 +138,15 @@ export async function restoreCharacterOfficeAfterCabinet(
               : {}),
           }
         : { type: lowerOfficial.officeType, state: lowerOfficial.state! };
-    await db
-      .collection<Character>("characters")
-      .updateOne(
-        { _id: holderCharacterId },
-        { $set: { currentOffice: restoreOffice, updatedAt: now } }
-      );
+    await charactersCollection(db).updateOne(
+      { _id: holderCharacterId },
+      { $set: { currentOffice: restoreOffice, updatedAt: now } }
+    );
   } else {
-    await db
-      .collection<Character>("characters")
-      .updateOne(
-        { _id: holderCharacterId },
-        { $unset: { currentOffice: "" }, $set: { updatedAt: now } }
-      );
+    await charactersCollection(db).updateOne(
+      { _id: holderCharacterId },
+      { $unset: { currentOffice: "" }, $set: { updatedAt: now } }
+    );
   }
 }
 
@@ -240,7 +237,7 @@ export async function appointCabinetMemberHandler(request: Request, countryId: C
       );
     }
 
-    const targetChar = await db.collection<Character>("characters").findOne({ _id: characterId });
+    const targetChar = await charactersCollection(db).findOne({ _id: characterId });
     if (!targetChar) {
       throw notFound("Character");
     }
@@ -409,17 +406,16 @@ export async function appointCabinetMemberHandler(request: Request, countryId: C
       partyCountryId: countryId,
       date: now,
     };
-    await db
-      .collection<Character>("characters")
-      .updateOne({ _id: targetChar._id }, { $push: { careerHistory: careerEvent } });
+    await charactersCollection(db).updateOne(
+      { _id: targetChar._id },
+      { $push: { careerHistory: careerEvent } }
+    );
 
     // Set currentOffice so the character receives the ukCabinet NPI bonus in actionRefresh
-    await db
-      .collection<Character>("characters")
-      .updateOne(
-        { _id: targetChar._id },
-        { $set: { currentOffice: cabinetOffice, updatedAt: now } }
-      );
+    await charactersCollection(db).updateOne(
+      { _id: targetChar._id },
+      { $set: { currentOffice: cabinetOffice, updatedAt: now } }
+    );
     await captureOfficeTransition({
       db,
       officeType: cabinetType,
@@ -630,9 +626,9 @@ export async function resignCabinetMemberHandler(request: Request, countryId: Co
     const { positionId } = parsed.data;
 
     const db = await getDb();
-    const caller = await db
-      .collection<Character>("characters")
-      .findOne({ userId: new ObjectId(auth.user.userId) });
+    const caller = await charactersCollection(db).findOne({
+      userId: new ObjectId(auth.user.userId),
+    });
     if (!caller) {
       throw forbidden("Only a sitting minister can resign from cabinet");
     }
@@ -819,7 +815,7 @@ export async function reshuffleCabinetHandler(request: Request, countryId: Count
       }
       seenCharacters.add(characterIdStr);
 
-      const targetChar = await db.collection<Character>("characters").findOne({ _id: characterId });
+      const targetChar = await charactersCollection(db).findOne({ _id: characterId });
       if (!targetChar) {
         throw notFound("Character");
       }
@@ -983,15 +979,14 @@ export async function reshuffleCabinetHandler(request: Request, countryId: Count
           partyCountryId: countryId,
           date: now,
         };
-        await db
-          .collection<Character>("characters")
-          .updateOne({ _id: targetChar._id }, { $push: { careerHistory: careerEvent } });
-        await db
-          .collection<Character>("characters")
-          .updateOne(
-            { _id: targetChar._id },
-            { $set: { currentOffice: cabinetOffice, updatedAt: now } }
-          );
+        await charactersCollection(db).updateOne(
+          { _id: targetChar._id },
+          { $push: { careerHistory: careerEvent } }
+        );
+        await charactersCollection(db).updateOne(
+          { _id: targetChar._id },
+          { $set: { currentOffice: cabinetOffice, updatedAt: now } }
+        );
 
         // Fresh appointment cooldown (checked on the NEXT single-seat
         // appointment, not on this reshuffle) plus the same setting-cooldown

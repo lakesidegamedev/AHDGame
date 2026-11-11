@@ -5,6 +5,7 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { getDb } from "@/lib/mongodb";
 import { buildDistrictSquareViews } from "@/lib/redistricting/districtSquareResponse";
 import type { CongressionalDistrict, Character, NPP } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * Returns the static congressional-district geometry for a single US
@@ -52,8 +53,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ stateId
         .filter((id): id is NonNullable<typeof id> => id != null);
       const holderNames: Record<string, string> = {};
       if (holderIds.length > 0) {
-        const chars = (await db
-          .collection<Character>("characters")
+        const chars = (await charactersCollection(db)
           .find({ _id: { $in: holderIds } })
           .toArray()) as Character[];
         for (const c of chars) holderNames[String(c._id)] = c.name;

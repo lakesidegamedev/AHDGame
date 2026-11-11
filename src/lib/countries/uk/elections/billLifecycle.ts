@@ -1,9 +1,10 @@
 import { CONCURRENT_VOTE_STAGE } from "@/lib/turn/billLifecycle/configs/concurrentVoteStage";
 import type { Db } from "mongodb";
 import { createNotifications } from "@/lib/notifications";
-import type { Bill, Character } from "@/lib/db/types";
+import type { Bill } from "@/lib/db/types";
 import type { BillLifecycleConfig } from "@/lib/turn/billLifecycle/types";
 import { applyBudgetOutcome } from "@/lib/db/collections/ukBudgets";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const VOTING_HOURS = 24;
 
@@ -29,9 +30,10 @@ async function notifyUKSponsor(db: Db, bill: Bill, status: Bill["status"]): Prom
   if (status !== "signed" && status !== "failed" && status !== "enrolled") return;
   if (!bill.sponsorId) return;
   try {
-    const sponsor = await db
-      .collection<Character>("characters")
-      .findOne({ _id: bill.sponsorId }, { projection: { userId: 1 } });
+    const sponsor = await charactersCollection(db).findOne(
+      { _id: bill.sponsorId },
+      { projection: { userId: 1 } }
+    );
     if (!sponsor) return;
 
     const message =

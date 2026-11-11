@@ -1,6 +1,7 @@
 import type { AnyBulkWriteOperation, Db } from "mongodb";
 import type { PoliticalParty } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface ReconcileMemberCountsResult {
   partiesChecked: number;
@@ -28,8 +29,7 @@ interface PartyGroupCount {
  */
 export async function reconcilePartyMemberCounts(db: Db): Promise<ReconcileMemberCountsResult> {
   const [playerGroups, nppGroups, parties] = await Promise.all([
-    db
-      .collection("characters")
+    charactersCollection(db)
       .aggregate<PartyGroupCount>([
         { $group: { _id: { party: "$party", countryId: "$countryId" }, count: { $sum: 1 } } },
       ])

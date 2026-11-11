@@ -6,8 +6,9 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { createModAuditLog } from "@/lib/modAuditLog";
 import { z } from "zod";
 import { MAX_REGION_ID_LENGTH } from "@/lib/constants/states";
-import type { Character, State } from "@/lib/db/types";
+import type { State } from "@/lib/db/types";
 import { performRelocation } from "@/lib/character/performRelocation";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const updateStateSchema = z.object({
   username: z.string().min(1, "username is required"),
@@ -51,7 +52,7 @@ export async function PATCH(request: Request) {
       return errorResponse(403, "Cannot perform actions on admin accounts");
     }
 
-    const character = await db.collection<Character>("characters").findOne({ userId: user._id });
+    const character = await charactersCollection(db).findOne({ userId: user._id });
     if (!character) {
       return errorResponse(404, `No character found for user '${username}'`);
     }

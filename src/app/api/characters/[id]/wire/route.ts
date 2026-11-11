@@ -14,7 +14,7 @@ import {
   NEW_CHARACTER_TRANSFER_BARRIER_TURNS,
 } from "@/lib/character/newCharacterTransferBarrier";
 import { z } from "zod";
-import type { Character, User } from "@/lib/db/types";
+import type { User } from "@/lib/db/types";
 import { getCharacterByUserId } from "@/lib/db/characterLookup";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import {
@@ -28,6 +28,7 @@ import {
   CURRENCY_SYMBOLS,
   type CurrencyCode,
 } from "@/lib/constants/currencies";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const wireSchema = z.object({
   amount: z.number().int().positive(),
@@ -80,7 +81,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     const [target, userDoc] = await Promise.all([
-      db.collection<Character>("characters").findOne({ _id: targetObjectId }),
+      charactersCollection(db).findOne({ _id: targetObjectId }),
       db
         .collection<User>("users")
         .findOne(
@@ -260,7 +261,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       ? { _id: sender._id, [`currencyBalances.personal.${transferCurrency}`]: { $gte: amount } }
       : { _id: sender._id, cashOnHand: { $gte: amount } };
 
-    const senderUpdate = await db.collection<Character>("characters").updateOne(atomicFilter, {
+    const senderUpdate = await charactersCollection(db).updateOne(atomicFilter, {
       $inc: { ...buildPersonalBalanceInc(-amount, transferCurrency, forexEnabled) },
       $set: { updatedAt: now },
     });
@@ -271,7 +272,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     const senderRollbackInc = buildPersonalBalanceInc(amount, transferCurrency, forexEnabled);
-    const recipientCreditResult = await db.collection<Character>("characters").updateOne(
+    const recipientCreditResult = await charactersCollection(db).updateOne(
       { _id: targetObjectId },
       {
         $inc: { ...buildPersonalBalanceInc(amount, transferCurrency, forexEnabled) },
@@ -279,12 +280,10 @@ export async function POST(request: Request, { params }: RouteParams) {
       }
     );
     if (recipientCreditResult.modifiedCount === 0) {
-      await db
-        .collection<Character>("characters")
-        .updateOne(
-          { _id: sender._id },
-          { $inc: senderRollbackInc, $set: { updatedAt: new Date() } }
-        );
+      await charactersCollection(db).updateOne(
+        { _id: sender._id },
+        { $inc: senderRollbackInc, $set: { updatedAt: new Date() } }
+      );
       await rollbackQuotaClaim();
       return errorResponse(404, "Recipient not found");
     }

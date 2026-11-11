@@ -13,6 +13,7 @@ import type {
 import type { CountryId } from "@/lib/constants/countries";
 import { CAUCUS_NPP_RETENTION_MIN_RELATIONSHIP } from "@/lib/constants/partyOrg";
 import { buildWhipDefianceSnapshots } from "@/lib/partyWhips/whipDefiance";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const CAUCUS_RECENT_WINDOW_TURNS = 12;
 const CAUCUS_WARNING_BUFFER = 10;
@@ -229,8 +230,7 @@ export async function buildPartyCaucusHealthSnapshot(
       .toArray(),
     chairIds.length === 0
       ? Promise.resolve([] as Character[])
-      : db
-          .collection<Character>("characters")
+      : charactersCollection(db)
           .find({ _id: { $in: chairIds } })
           .toArray(),
     db
@@ -268,8 +268,7 @@ export async function buildPartyCaucusHealthSnapshot(
           .toArray(),
     allCharacterIds.length === 0
       ? Promise.resolve([] as Character[])
-      : db
-          .collection<Character>("characters")
+      : charactersCollection(db)
           .find({ _id: { $in: allCharacterIds } })
           .toArray(),
     elections.length === 0

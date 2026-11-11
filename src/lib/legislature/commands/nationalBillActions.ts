@@ -34,6 +34,8 @@ import { NEUTRAL_STAT, USE_GROWTH_INCREMENT } from "@/lib/stats/statsConstants";
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import type { Document } from "mongodb";
 
 export type NationalBillActionInput =
   | { action: "vote"; vote: "for" | "against" | "abstain" }
@@ -746,7 +748,7 @@ export async function performNationalBillAction(
       invokedAt: now,
     };
 
-    const spendResult = await db.collection("characters").updateOne(
+    const spendResult = await charactersCollection<Document>(db).updateOne(
       {
         _id: character._id,
         actions: { $gte: filibusterActionCost },
@@ -803,8 +805,7 @@ export async function performNationalBillAction(
     );
 
     if (filibusterResult.modifiedCount === 0) {
-      await db
-        .collection("characters")
+      await charactersCollection<Document>(db)
         .updateOne(
           { _id: character._id },
           { $inc: { actions: filibusterActionCost, politicalInfluence: filibusterNpiCost } }
@@ -818,8 +819,7 @@ export async function performNationalBillAction(
     }
 
     if (bill.sponsorId) {
-      const sponsorChar = await db
-        .collection<Character>("characters")
+      const sponsorChar = await charactersCollection(db)
         .findOne({ _id: bill.sponsorId }, { projection: { userId: 1 } });
       if (sponsorChar) {
         await createNotification({

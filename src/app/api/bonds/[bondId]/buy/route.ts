@@ -9,7 +9,7 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { buyBondSchema } from "@/lib/api/schemas/bonds";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { refundOrCapture } from "@/lib/observability/context";
-import type { Character, User } from "@/lib/db/types";
+import type { User } from "@/lib/db/types";
 import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { emitTx } from "@/lib/financialTxLog/emit";
@@ -47,6 +47,7 @@ import { creditBondPool, loadBondQuote } from "@/lib/bonds/marketPool";
 import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteParams {
   params: Promise<{ bondId: string }>;
@@ -456,7 +457,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       const characterQuery = userDoc?.activeCharacterId
         ? { _id: userDoc.activeCharacterId, userId: new ObjectId(user.userId) }
         : { userId: new ObjectId(user.userId) };
-      const character = await db.collection<Character>("characters").findOne(characterQuery);
+      const character = await charactersCollection(db).findOne(characterQuery);
       if (!character) {
         return errorResponse(404, "Character not found");
       }

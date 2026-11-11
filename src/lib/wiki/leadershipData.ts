@@ -2,9 +2,10 @@
  * Leadership data for wiki leadership pages.
  */
 import { getDb } from "@/lib/mongodb";
-import type { CongressLeader, Character, NPP, PoliticalParty } from "@/lib/db/types";
+import type { CongressLeader, NPP, PoliticalParty } from "@/lib/db/types";
 import { LEADERSHIP_ROLES } from "@/lib/congress/leadershipRoles";
 import { buildCharacterHref, buildNppHref } from "@/lib/utils/profileUrls";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export type LeadershipRole = (typeof LEADERSHIP_ROLES)[number]["role"];
 
@@ -53,12 +54,10 @@ export async function getLeadershipData(role: string): Promise<LeadershipData | 
   let tintColor: string | null | undefined;
   let profileHref: string | null = null;
   if (doc?.characterId) {
-    const char = await db
-      .collection<Character>("characters")
-      .findOne(
-        { _id: doc.characterId },
-        { projection: { homeState: 1, avatarUrl: 1, borderKey: 1, tintColor: 1, sequentialId: 1 } }
-      );
+    const char = await charactersCollection(db).findOne(
+      { _id: doc.characterId },
+      { projection: { homeState: 1, avatarUrl: 1, borderKey: 1, tintColor: 1, sequentialId: 1 } }
+    );
     if (char) {
       state = char.homeState;
       avatarUrl = char.avatarUrl;

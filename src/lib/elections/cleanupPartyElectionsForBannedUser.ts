@@ -12,7 +12,6 @@
 
 import type { Db, ObjectId } from "mongodb";
 import type {
-  Character,
   StatePartyCandidate,
   StatePartyVote,
   NationalPartyCandidate,
@@ -21,6 +20,7 @@ import type {
   NationalCommitteeVote,
 } from "@/lib/db/types";
 import { cleanupCaucusParticipationForCharacters } from "@/lib/caucus/cleanupCaucusParticipationForCharacters";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface CleanupResult {
   characterIds: string[];
@@ -38,8 +38,7 @@ export async function cleanupPartyElectionsForBannedUser(
   db: Db,
   userId: ObjectId
 ): Promise<CleanupResult> {
-  const characters = await db
-    .collection<Character>("characters")
+  const characters = await charactersCollection(db)
     .find({ userId })
     .project<{ _id: ObjectId }>({ _id: 1 })
     .toArray();

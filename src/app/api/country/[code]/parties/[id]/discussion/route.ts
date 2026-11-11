@@ -7,7 +7,8 @@ import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
 import { getDb } from "@/lib/mongodb";
 import { findPartyBySequentialId } from "@/lib/db/partyLookup";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
-import type { Character, PartyDiscussionPost } from "@/lib/db/types";
+import type { PartyDiscussionPost } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 // GET /api/country/[code]/parties/[id]/discussion
 // POST /api/country/[code]/parties/[id]/discussion
@@ -140,9 +141,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     };
     const result = await col.insertOne(newPost as PartyDiscussionPost);
 
-    await db
-      .collection<Character>("characters")
-      .updateOne({ _id: character._id }, { $set: { lastDiscussionPostAt: now } });
+    await charactersCollection(db).updateOne(
+      { _id: character._id },
+      { $set: { lastDiscussionPostAt: now } }
+    );
 
     return NextResponse.json({
       post: {

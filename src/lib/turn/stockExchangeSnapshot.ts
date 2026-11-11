@@ -14,7 +14,6 @@ import { ObjectId, type Db } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import type {
   Bond,
-  Character,
   Corporation,
   CorporateSector,
   CorporationHistory,
@@ -79,6 +78,7 @@ import {
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const EXCHANGE_NAMES: Record<string, string> = getExchangeNamesMap();
 
@@ -168,8 +168,7 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
 
       const [characters, imperialChars, nppChars] = await Promise.all([
         regularCeoIds.length > 0
-          ? database
-              .collection<Character>("characters")
+          ? charactersCollection(database)
               .find({ _id: { $in: regularCeoIds } })
               .project<{ _id: ObjectId; name: string; avatarUrl?: string; sequentialId?: number }>({
                 _id: 1,

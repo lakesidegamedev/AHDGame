@@ -15,6 +15,7 @@ import { DUAL_TRACK_CEILING, scheduledMarketizationLevel } from "@/lib/constants
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export type { OverviewCounts } from "@/lib/country/overviewCounts";
 
@@ -45,8 +46,7 @@ async function countPoliticians(db: Db, countryId: CountryId): Promise<number> {
   // Mirrors fetchPoliticians: players excluding banned users, plus active NPPs —
   // keeps the directory figure equal to the Politicians page count.
   const [playerRows, nppCount] = await Promise.all([
-    db
-      .collection("characters")
+    charactersCollection(db)
       .aggregate<{ count: number }>([
         { $match: { countryId } },
         {

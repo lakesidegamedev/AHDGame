@@ -18,6 +18,7 @@ import { getExecutiveOfficialFilter } from "@/lib/elections/executiveOfficeFilte
 import { hasReachedExecutiveTermLimit } from "@/lib/elections/executiveTermLimits";
 import { isSameCountry } from "@/lib/api/sameCountry";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -147,8 +148,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(400, "The current President cannot be a running mate");
     }
 
-    const runningMateChar = await db
-      .collection<Character>("characters")
+    const runningMateChar = await charactersCollection(db)
       .findOne({ _id: runningMateObjectId });
     if (!runningMateChar) {
       return errorResponse(404, "Running mate character not found");

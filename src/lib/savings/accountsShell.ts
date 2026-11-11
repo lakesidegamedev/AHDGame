@@ -57,6 +57,7 @@ function finite(value: unknown): number {
 import { toAccountSnapshot } from "./snapshot";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * The account for an owner and currency, materialized from the legacy fields
@@ -73,9 +74,10 @@ export async function ensureSavingsAccount(
     .findOne({ ownerType: "character", ownerId, currency });
   if (existing) return toAccountSnapshot(existing);
 
-  const character = await db
-    .collection<Character>("characters")
-    .findOne({ _id: ownerId }, { projection: { currencyBalances: 1, savingsAccountsOpened: 1 } });
+  const character = await charactersCollection(db).findOne(
+    { _id: ownerId },
+    { projection: { currencyBalances: 1, savingsAccountsOpened: 1 } }
+  );
   if (!character) return null;
   const balances: Partial<NonNullable<Character["currencyBalances"]>> =
     character.currencyBalances ?? {};
@@ -276,9 +278,10 @@ export async function runSavingsCommand(
 
   let command: SavingsCommand;
   if (intent.type === "deposit") {
-    const character = await db
-      .collection<Character>("characters")
-      .findOne({ _id: ownerId }, { projection: { [`currencyBalances.personal.${currency}`]: 1 } });
+    const character = await charactersCollection(db).findOne(
+      { _id: ownerId },
+      { projection: { [`currencyBalances.personal.${currency}`]: 1 } }
+    );
     let holder: HolderSnapshot = current;
     if (isBankHolder(account.holder)) {
       const withCeiling = await loadHolderSnapshot(db, account.holder, currency, {

@@ -24,7 +24,6 @@ import type {
   LegislationType,
   Election,
   ElectionCandidate,
-  Character,
   PoliticalParty,
 } from "@/lib/db/types";
 import type { DevolutionPolicy } from "@/lib/db/types/governorOfficeState";
@@ -52,6 +51,7 @@ import { formatElectionTypeLabel } from "@/lib/utils/electionLabels";
 import { buildPartyIdResolver } from "@/lib/parties/partyMatch";
 import { officePoolTopUpStatus } from "@/lib/actions/officePoolTopUpRules";
 import { resolveRegionOfficeBannerImage } from "@/lib/constants/regionBanner";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface Props {
   params: Promise<{ code: string; id: string }>;
@@ -143,9 +143,10 @@ export default async function GovernorOfficePage({ params }: Props) {
     officePageGameTime,
   ] = await Promise.all([
     officeHolder?.characterId
-      ? db
-          .collection<Character>("characters")
-          .findOne({ _id: officeHolder.characterId }, { projection: { avatarUrl: 1 } })
+      ? charactersCollection(db).findOne(
+          { _id: officeHolder.characterId },
+          { projection: { avatarUrl: 1 } }
+        )
       : Promise.resolve(null),
     hasHolderParty
       ? db
@@ -307,8 +308,7 @@ export default async function GovernorOfficePage({ params }: Props) {
     ...new Set(stateCandidates.filter((c) => !c.isNPP && c.characterId).map((c) => c.characterId!)),
   ];
   const playerCharacters = playerCharacterIds.length
-    ? await db
-        .collection<Character>("characters")
+    ? await charactersCollection(db)
         .find({ _id: { $in: playerCharacterIds } })
         .project<{ _id: ObjectId; party?: string }>({ _id: 1, party: 1 })
         .toArray()

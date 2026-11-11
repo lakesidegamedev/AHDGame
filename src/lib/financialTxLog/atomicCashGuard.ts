@@ -2,6 +2,7 @@ import { corporateDiscretionaryCashGuard } from "@/lib/corporations/rules/discre
 import type { ClientSession, Db, ObjectId } from "mongodb";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export type DebitResult = { ok: true; newBalance: number } | { ok: false; error: string };
 
@@ -42,7 +43,7 @@ export async function atomicallyDebitCharacterCash(
 
   const balanceField = forexEnabled ? `currencyBalances.personal.${currency}` : "cashOnHand";
 
-  const result = await db.collection("characters").findOneAndUpdate(
+  const result = await charactersCollection(db).findOneAndUpdate(
     { _id: characterId, [balanceField]: { $gte: amount } },
     { $inc: { [balanceField]: -amount }, $set: { updatedAt: new Date() } },
     {
@@ -81,13 +82,11 @@ export async function refundCharacterCash(
 ): Promise<boolean> {
   if (!Number.isFinite(amount) || amount <= 0) return false;
   const balanceField = forexEnabled ? `currencyBalances.personal.${currency}` : "cashOnHand";
-  const result = await db
-    .collection("characters")
-    .updateOne(
-      { _id: characterId },
-      { $inc: { [balanceField]: amount }, $set: { updatedAt: new Date() } },
-      mongoOptions(options)
-    );
+  const result = await charactersCollection(db).updateOne(
+    { _id: characterId },
+    { $inc: { [balanceField]: amount }, $set: { updatedAt: new Date() } },
+    mongoOptions(options)
+  );
   return (result?.matchedCount ?? 0) > 0;
 }
 

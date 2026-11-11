@@ -21,11 +21,11 @@ import {
   loadFxRatesByCurrency,
 } from "@/lib/currency/corporationCapital";
 import { emitTx } from "@/lib/financialTxLog/emit";
-import type { Character } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import type { CountryId } from "@/lib/constants/countries";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const schema = z.object({
   /** Amount in the character's home currency. */
@@ -89,9 +89,9 @@ export async function POST(request: Request, { params }: RouteParams) {
     const currentTurn = gameState?.currentTurn ?? 0;
 
     // Load CEO character to get cash balance and home currency.
-    const character = await db
-      .collection<Character>("characters")
-      .findOne({ userId: new ObjectId(auth.user.userId) });
+    const character = await charactersCollection(db).findOne({
+      userId: new ObjectId(auth.user.userId),
+    });
     if (!character) {
       return errorResponse(404, "Character not found");
     }

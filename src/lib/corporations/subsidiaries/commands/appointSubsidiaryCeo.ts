@@ -1,5 +1,5 @@
 import { ObjectId, type Db } from "mongodb";
-import type { Character, Corporation, NPP } from "@/lib/db/types";
+import type { Corporation, NPP } from "@/lib/db/types";
 import { characterCeoResidencyFailure } from "@/lib/corporations/ceoEligibilityRules";
 import { resolveControllingCorporateParent } from "@/lib/corporations/reservedCorporateHoldings";
 import {
@@ -17,6 +17,7 @@ import { subsidiaryCeoBlockMessage, subsidiaryCeoBlockReason } from "../helpers"
 import { collectSiblingSubsidiaryCeoUserIds, resolveParentCeoUserId } from "../parentContext";
 import { fail, type SubsidiaryCommandResult } from "../commandTypes";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface AppointSubsidiaryCeoInput {
   sub: Corporation;
@@ -88,9 +89,10 @@ export async function appointSubsidiaryCeo(
 
   // Character path.
   if (!characterId) return fail("A character is required to appoint a human CEO.");
-  const character = await db
-    .collection<Character>("characters")
-    .findOne({ _id: characterId }, { projection: { userId: 1, homeState: 1, countryId: 1 } });
+  const character = await charactersCollection(db).findOne(
+    { _id: characterId },
+    { projection: { userId: 1, homeState: 1, countryId: 1 } }
+  );
   if (!character || !character.userId) {
     return fail("The selected character cannot serve as CEO (no owning player).");
   }

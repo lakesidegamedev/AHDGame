@@ -39,6 +39,7 @@ import type {
 } from "@/lib/db/types";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const MIN_BASE_ACTIONS_PER_TURN = 4;
 
@@ -66,7 +67,7 @@ async function handleGET() {
 
     const [gameState, character, forexEnabled] = await Promise.all([
       getGameState(),
-      db.collection<Character>("characters").findOne({ userId: new ObjectId(authUser.userId) }),
+      charactersCollection(db).findOne({ userId: new ObjectId(authUser.userId) }),
       isForexEnabled(),
     ]);
     const forexRates: Record<string, number> | undefined = forexEnabled

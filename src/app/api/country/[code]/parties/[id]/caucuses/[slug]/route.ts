@@ -17,6 +17,7 @@ import { buildPartyCaucusHealthSnapshot } from "@/lib/caucus/caucusHealth";
 import type { Caucus, CaucusMembership } from "@/lib/db/types";
 import type { Character } from "@/lib/db/types";
 import { normalizeDiscordInviteUrl } from "@/lib/discord/invite";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 // GET /api/country/[code]/parties/[id]/caucuses/[slug] — Detail view of a single caucus including policy positions
 // Auth: requireAuth
@@ -66,8 +67,7 @@ export async function GET(
       countCaucusMembers(db, caucus._id),
       buildPartyCaucusHealthSnapshot(db, countryId, partyId),
       chairIds.length > 0
-        ? db
-            .collection<Character>("characters")
+        ? charactersCollection(db)
             .find({ _id: { $in: chairIds } }, { projection: { _id: 1, name: 1 } })
             .toArray()
         : Promise.resolve([] as Character[]),
@@ -306,12 +306,10 @@ export async function DELETE(
         .map((m) => m.memberId);
       const nppIds = activeMemberships.filter((m) => m.memberType === "npp").map((m) => m.memberId);
       if (characterIds.length > 0) {
-        await db
-          .collection("characters")
-          .updateMany(
-            { _id: { $in: characterIds }, factionId: caucus._id },
-            { $set: { factionId: null, updatedAt: now } }
-          );
+        await charactersCollection(db).updateMany(
+          { _id: { $in: characterIds }, factionId: caucus._id },
+          { $set: { factionId: null, updatedAt: now } }
+        );
       }
       if (nppIds.length > 0) {
         await db

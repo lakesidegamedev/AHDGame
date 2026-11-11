@@ -6,7 +6,6 @@
 import { createHash } from "node:crypto";
 import { ObjectId, type ClientSession, type Db } from "mongodb";
 import type {
-  Character,
   Election,
   ElectionCandidate,
   ElectedOfficial,
@@ -34,6 +33,7 @@ import {
   type Hu1991RegionalCampaign,
 } from "./rules/campaignBallots1991";
 import { TALLY_WITH_LATEST_SNAPSHOT_ONLY } from "@/lib/elections/engine/tallyProjections";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 export const HU_1991_BY_ELECTIONS_COLLECTION = "hu1991ConstituencyByElections";
 export interface Hu1991ByElectionRecord {
   _id: string;
@@ -684,8 +684,7 @@ async function materializeHu1991ByElectionResolution(input: {
       { session, projection: { party: 1, currentOffice: 1 } }
     )
     .toArray();
-  const players = await db
-    .collection<Character>("characters")
+  const players = await charactersCollection(db)
     .find(
       {
         _id: {
@@ -831,7 +830,7 @@ async function materializeHu1991ByElectionResolution(input: {
   }
   const notices = players.filter((player) => ownerSeats.has(player._id.toHexString()));
   if (notices.length)
-    await db.collection<Character>("characters").bulkWrite(
+    await charactersCollection(db).bulkWrite(
       notices.map((player) => {
         const official = officials.find((row) => row.characterId?.equals(player._id))!;
         return {

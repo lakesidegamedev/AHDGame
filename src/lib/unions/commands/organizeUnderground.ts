@@ -18,6 +18,7 @@ import {
   type UndergroundHeatText,
   type UndergroundStatus,
 } from "@/lib/unions/underground";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export type OrganizeUndergroundResult =
   | {
@@ -123,7 +124,7 @@ export async function organizeUnderground(
   }
 
   const now = new Date();
-  const spend = await db.collection<Character>("characters").updateOne(
+  const spend = await charactersCollection(db).updateOne(
     {
       _id: character._id,
       actions: { $gte: UNDERGROUND_ACTION_COST },
@@ -184,7 +185,7 @@ export async function organizeUnderground(
   }
 
   if (!organizer) {
-    await db.collection<Character>("characters").updateOne(
+    await charactersCollection(db).updateOne(
       { _id: character._id, lastUndergroundDriveTurn: currentTurn },
       {
         $inc: { actions: UNDERGROUND_ACTION_COST },
@@ -221,7 +222,7 @@ export async function organizeUnderground(
   );
   if (!updatedUnion) {
     // Refund: the union vanished between the read and the write.
-    await db.collection<Character>("characters").updateOne(
+    await charactersCollection(db).updateOne(
       { _id: character._id, lastUndergroundDriveTurn: currentTurn },
       {
         $inc: { actions: UNDERGROUND_ACTION_COST },

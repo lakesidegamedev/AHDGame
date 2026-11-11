@@ -105,7 +105,7 @@ import { getSovereignConfidencePremium } from "@/lib/budget/debt";
 import { INVESTOR_CONFIDENCE_BASELINE } from "@/lib/nationalization/constants";
 import { getTreasuryOperationsCollection } from "@/lib/db/collections/treasuryOperations";
 import type { ExchangeRate } from "@/lib/db/types/exchangeRate";
-import type { StateMetrics, PoliticalParty, Character } from "@/lib/db/types";
+import type { StateMetrics, PoliticalParty } from "@/lib/db/types";
 import type { RegionalBudget } from "@/lib/db/types/regionalBudget";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import { getBankId } from "@/lib/centralBank/helpers";
@@ -147,6 +147,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /** Assembles the cabinet position briefing payload for the viewing user. */
 export async function buildCabinetBriefing(
@@ -186,7 +187,7 @@ export async function buildCabinetBriefing(
               )
           : null,
         member.characterId
-          ? db.collection<Character>("characters").findOne(
+          ? charactersCollection(db).findOne(
               { _id: member.characterId },
               {
                 projection: {

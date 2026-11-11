@@ -60,6 +60,7 @@ import type {
 } from "@/lib/db/types";
 import { ObjectId, type Db } from "mongodb";
 import { loadOppositionTargets } from "@/lib/campaigns/oppositionTargets";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface CampaignListItem {
   id: string;
@@ -94,9 +95,9 @@ export async function getCampaignDetail(
   const [candidate, manager, election] = await Promise.all([
     campaign.candidateIsNPP
       ? db.collection<NPP>("npps").findOne({ _id: campaign.candidateId })
-      : db.collection<Character>("characters").findOne({ _id: campaign.candidateId }),
+      : charactersCollection(db).findOne({ _id: campaign.candidateId }),
     campaign.managerCharacterId
-      ? db.collection<Character>("characters").findOne({ _id: campaign.managerCharacterId })
+      ? charactersCollection(db).findOne({ _id: campaign.managerCharacterId })
       : Promise.resolve(null),
     db.collection<Election>("elections").findOne({ _id: campaign.electionId }),
   ]);
@@ -112,8 +113,7 @@ export async function getCampaignDetail(
     (m) => m.characterId
   );
   const managerChars = managerCharIds.length
-    ? await db
-        .collection<Character>("characters")
+    ? await charactersCollection(db)
         .find({ _id: { $in: managerCharIds } }, { projection: { _id: 1, name: 1 } })
         .toArray()
     : [];
@@ -199,9 +199,10 @@ export async function getCampaignDetail(
         { projection: { runningMateId: 1 } }
       );
     if (ticketRow?.runningMateId) {
-      const mate = await db
-        .collection<{ name?: string }>("characters")
-        .findOne({ _id: ticketRow.runningMateId }, { projection: { name: 1 } });
+      const mate = await charactersCollection<{ name?: string }>(db).findOne(
+        { _id: ticketRow.runningMateId },
+        { projection: { name: 1 } }
+      );
       if (mate?.name) {
         runningMateName = mate.name;
         runningMateCharacterId = ticketRow.runningMateId.toString();
@@ -761,8 +762,7 @@ export async function getViewerCampaigns(
   const userOid = new ObjectId(user.userId);
   const party = user.character.party;
   const characterCountryId = user.character.countryId;
-  const ownedCharacterIds = await db
-    .collection<Character>("characters")
+  const ownedCharacterIds = await charactersCollection(db)
     .find({ userId: userOid }, { projection: { _id: 1 } })
     .toArray();
   const candidateIds = ownedCharacterIds.map((character) => character._id);
@@ -874,8 +874,7 @@ async function getPartyTreasuryAccess(
     return undefined;
   }
 
-  const ownedCharIds = await db
-    .collection<Character>("characters")
+  const ownedCharIds = await charactersCollection(db)
     .find({ userId: new ObjectId(user.userId) }, { projection: { _id: 1 } })
     .toArray();
   const ownedIds = ownedCharIds.map((character) => character._id);

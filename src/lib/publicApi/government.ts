@@ -6,6 +6,7 @@ import { COUNTRY_CONFIGS, isParliamentarySystemForGovernmentType } from "@/lib/c
 import { getCountryState } from "@/lib/countryState";
 import { getGovernmentFormationsCollection } from "@/lib/db/collections/governmentFormation";
 import { buildCharacterHref } from "@/lib/utils/profileUrls";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -73,8 +74,7 @@ export async function queryGovernment(db: Db, country: string) {
 
   const characters =
     charObjectIds.length > 0
-      ? await db
-          .collection<Character>("characters")
+      ? await charactersCollection(db)
           .find({ _id: { $in: charObjectIds } })
           .project<Pick<Character, "_id" | "sequentialId" | "party" | "countryId" | "avatarUrl">>({
             _id: 1,

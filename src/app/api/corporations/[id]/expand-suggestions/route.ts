@@ -21,7 +21,6 @@ import {
   operatingSectorIdentity,
 } from "@/lib/constants/corporations";
 import type {
-  Character,
   CorporateSector,
   GameState,
   SectorBuildOrder,
@@ -65,6 +64,7 @@ import {
   retailDemandTransitionTurnsRemaining,
 } from "@/lib/market/retailDemandTransition";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -388,9 +388,10 @@ export async function GET(request: Request, { params }: RouteParams) {
       const techEffects = await loadFoundingTechEffects(db, corporation, identity, currentYear);
 
       const ceoChar = corporation.ceoId
-        ? await db
-            .collection<Character>("characters")
-            .findOne({ _id: corporation.ceoId }, { projection: { "stats.businessAcumen": 1 } })
+        ? await charactersCollection(db).findOne(
+            { _id: corporation.ceoId },
+            { projection: { "stats.businessAcumen": 1 } }
+          )
         : null;
 
       const baseQuoteInputs: FoundingQuoteInputs = {

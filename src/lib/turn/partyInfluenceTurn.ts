@@ -8,6 +8,7 @@ import { energyActionLimits } from "@/lib/stats/statDrift";
 import { STAT_MIN } from "@/lib/stats/statsConstants";
 import { appendActionGrantLog } from "./actionGrantLog";
 import { getPoliticalPartiesCollection } from "@/lib/db/collections/politicalParties";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /*
  * Reference infamy level at which the infamy penalty reaches its configured
@@ -298,6 +299,6 @@ export async function processPartyInfluenceTurn(
   }
 
   if (ops.length > 0) {
-    await db.collection("characters").bulkWrite(ops as never);
+    await charactersCollection(db).bulkWrite(ops as never);
   }
 }

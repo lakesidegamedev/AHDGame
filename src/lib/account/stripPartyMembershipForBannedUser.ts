@@ -15,6 +15,7 @@ import {
 import { updatePartyPresence } from "@/lib/turn/partyOrg/presence";
 import { findPartyBySequentialId } from "@/lib/db/partyLookup";
 import { cleanupCaucusParticipationForCharacters } from "@/lib/caucus/cleanupCaucusParticipationForCharacters";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface StripPartyMembershipResult {
   charactersUpdated: number;
@@ -68,7 +69,7 @@ export async function stripPartyMembershipForBannedUser(
   db: Db,
   userId: ObjectId
 ): Promise<StripPartyMembershipResult> {
-  const characters = await db.collection<Character>("characters").find({ userId }).toArray();
+  const characters = await charactersCollection(db).find({ userId }).toArray();
 
   let charactersUpdated = 0;
   const now = new Date();
@@ -98,7 +99,7 @@ export async function stripPartyMembershipForBannedUser(
 
     const countryId = char.countryId ?? "US";
 
-    await db.collection<Character>("characters").updateOne(
+    await charactersCollection(db).updateOne(
       { _id: char._id },
       {
         $set: {

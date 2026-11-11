@@ -19,9 +19,10 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { getCentralBankScope } from "@/lib/centralBank/helpers";
 import { getGameState } from "@/lib/gameState";
 import type { FomcNomination } from "@/lib/db/types/centralBank";
-import type { Character, NPP } from "@/lib/db/types";
+import type { NPP } from "@/lib/db/types";
 import { FOMC_VOTE_WINDOW_TURNS, FOMC_PLAYER_VOTE_WINDOW_MS } from "@/lib/db/types/centralBank";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteContext {
   params: Promise<{ code: string }>;
@@ -97,9 +98,7 @@ export async function POST(request: Request, context: RouteContext) {
     let nomineeName: string;
     let nomineeParty: string | undefined;
     if (nomineeCharacterId) {
-      const char = await db
-        .collection<Character>("characters")
-        .findOne({ _id: nomineeCharacterId });
+      const char = await charactersCollection(db).findOne({ _id: nomineeCharacterId });
       if (!char) return NextResponse.json(notFound("Nominee not found").toJson(), { status: 404 });
       if (
         requiresCabinetIndependence(

@@ -4,13 +4,7 @@ import {
   SHORT_TERM_HOLDING_TURNS,
 } from "@/lib/corporations/rules/holdingTerms";
 import type { Db, AnyBulkWriteOperation } from "mongodb";
-import type {
-  Character,
-  Corporation,
-  Notification,
-  ShareListing,
-  ShareOffer,
-} from "@/lib/db/types";
+import type { Corporation, Notification, ShareListing, ShareOffer } from "@/lib/db/types";
 import { creditShares, creditSharesToCorp } from "@/lib/corporations/shareholderOps";
 import { buildPersonalBalanceBulkOp } from "@/lib/currency/characterFunds";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
@@ -25,6 +19,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import { emitTxBulk, loadTxThresholds } from "@/lib/financialTxLog/emit";
 import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * Expire share listings whose expiresAt has passed:
@@ -179,8 +174,7 @@ export async function expireShareListings(db: Db, now: Date, currentTurn: number
   if (charCashRefunds.size > 0) {
     const forexEnabled = await isForexEnabled();
     const refundCharIds = [...charCashRefunds.keys()].map((id) => new ObjectId(id));
-    const refundChars = await db
-      .collection<Character>("characters")
+    const refundChars = await charactersCollection(db)
       .find({ _id: { $in: refundCharIds } })
       .project<{ _id: ObjectId; countryId: string; name: string }>({
         _id: 1,
@@ -235,7 +229,7 @@ export async function expireShareListings(db: Db, now: Date, currentTurn: number
     });
     // bulkWrite op array type doesn't satisfy AnyBulkWriteOperation narrowing — runtime shape is valid
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await db.collection<Character>("characters").bulkWrite(ops as any);
+    await charactersCollection(db).bulkWrite(ops as any);
   }
 
   // Refund corporation liquid capital. Escrow amounts are stored in ₳; each
@@ -368,8 +362,7 @@ export async function expireShareListings(db: Db, now: Date, currentTurn: number
   // Notify buyers
   if (notifyKeys.size > 0) {
     const buyerCharIds = [...new Set([...notifyKeys.values()].map((v) => v.charId))];
-    const buyerChars = await db
-      .collection<Character>("characters")
+    const buyerChars = await charactersCollection(db)
       .find({ _id: { $in: buyerCharIds } }, { projection: { _id: 1, userId: 1 } })
       .toArray();
     const charToUser = new Map(buyerChars.map((c) => [c._id.toString(), c.userId]));

@@ -5,8 +5,8 @@ import { getDb } from "@/lib/mongodb";
 import { requireAuth } from "@/lib/api/requireAuth";
 import { parseJsonBody } from "@/lib/api/validate";
 import { badRequest, handleRouteError, errorResponse } from "@/lib/api/errors";
-import type { Character } from "@/lib/db/types/character";
 import type { RetiredCharacter } from "@/lib/db/types/retiredCharacter";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const schema = z.object({ characterId: z.string().nullable() });
 
@@ -31,9 +31,7 @@ export async function PATCH(request: Request) {
       if (!ObjectId.isValid(characterId)) throw badRequest("Invalid characterId");
       const objectId = new ObjectId(characterId);
       const [ownsActive, ownsRetired] = await Promise.all([
-        db
-          .collection<Character>("characters")
-          .findOne({ _id: objectId, userId }, { projection: { _id: 1 } }),
+        charactersCollection(db).findOne({ _id: objectId, userId }, { projection: { _id: 1 } }),
         db
           .collection<RetiredCharacter>("retiredCharacters")
           .findOne({ characterId: objectId, userId }, { projection: { _id: 1 } }),

@@ -25,8 +25,9 @@ import {
   type PresenceCampaign,
   type PresenceCandidate,
 } from "@/lib/campaigns/statePresenceAccess";
-import type { Campaign, Character, CharacterStateOrg } from "@/lib/db/types";
+import type { Campaign, CharacterStateOrg } from "@/lib/db/types";
 import { MongoServerError, ObjectId } from "mongodb";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const VALID_US_STATES = new Set(ELECTORAL_VOTE_UNITS.map((u) => u.stateId));
 
@@ -135,8 +136,7 @@ export async function POST(request: Request) {
       campaign = subject.campaign;
     } else {
       ownerId = character._id;
-      freshChar = await db
-        .collection<Character>("characters")
+      freshChar = await charactersCollection(db)
         .findOne({ _id: character._id }, { projection: { countryId: 1 } });
       if (!freshChar) {
         return NextResponse.json(badRequest("Character not found").toJson(), { status: 404 });

@@ -1,9 +1,10 @@
 import { ObjectId, type Db } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { createNotification, createNotifications } from "@/lib/notifications";
-import type { NationalPartyElectionPosition, Character, PoliticalParty } from "@/lib/db/types";
+import type { NationalPartyElectionPosition, PoliticalParty } from "@/lib/db/types";
 import { type CountryId } from "@/lib/constants/countries";
 import { getPartyRoleLabel } from "@/lib/parties/partyRoleLabels";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 async function findPartyByElectionPartyId(
   db: Db,
@@ -28,8 +29,7 @@ export async function notifyNationalMembersElectionsOpenedBatch(
   opts: { founding?: boolean } = {}
 ): Promise<void> {
   const db = await getDb();
-  const members = await db
-    .collection<Character>("characters")
+  const members = await charactersCollection(db)
     .find({ party: partyId, countryId })
     .project<{ _id: ObjectId; userId: ObjectId }>({ _id: 1, userId: 1 })
     .toArray();
@@ -69,7 +69,7 @@ export async function notifyNationalLeadershipElected(
   countryId: CountryId
 ): Promise<void> {
   const db = await getDb();
-  const char = await db.collection<Character>("characters").findOne({ _id: winnerId });
+  const char = await charactersCollection(db).findOne({ _id: winnerId });
   if (!char) return;
 
   const party = await findPartyByElectionPartyId(db, partyId, countryId);
@@ -96,7 +96,7 @@ export async function notifyNationalLeadershipLost(
   countryId: CountryId
 ): Promise<void> {
   const db = await getDb();
-  const char = await db.collection<Character>("characters").findOne({ _id: loserId });
+  const char = await charactersCollection(db).findOne({ _id: loserId });
   if (!char) return;
 
   const party = await findPartyByElectionPartyId(db, partyId, countryId);
@@ -121,7 +121,7 @@ export async function notifyNationalLeadershipRemoved(
   countryId: CountryId
 ): Promise<void> {
   const db = await getDb();
-  const char = await db.collection<Character>("characters").findOne({ _id: holderId });
+  const char = await charactersCollection(db).findOne({ _id: holderId });
   if (!char) return;
 
   const label = getPartyRoleLabel(countryId, position);
@@ -144,7 +144,7 @@ export async function notifyNationalLeadershipVacatedForNewRole(
   countryId: CountryId
 ): Promise<void> {
   const db = await getDb();
-  const char = await db.collection<Character>("characters").findOne({ _id: holderId });
+  const char = await charactersCollection(db).findOne({ _id: holderId });
   if (!char) return;
 
   const vacatedLabel = getPartyRoleLabel(countryId, vacatedPosition);
@@ -177,7 +177,7 @@ export async function notifyNationalLeadershipNotReStood(
   countryId: CountryId
 ): Promise<void> {
   const db = await getDb();
-  const char = await db.collection<Character>("characters").findOne({ _id: holderId });
+  const char = await charactersCollection(db).findOne({ _id: holderId });
   if (!char) return;
 
   const label = getPartyRoleLabel(countryId, vacatedPosition);
@@ -204,7 +204,7 @@ export async function notifyNationalLeadershipVacatedInactive(
   countryId: CountryId
 ): Promise<void> {
   const db = await getDb();
-  const char = await db.collection<Character>("characters").findOne({ _id: holderId });
+  const char = await charactersCollection(db).findOne({ _id: holderId });
   if (!char) return;
 
   const label = getPartyRoleLabel(countryId, vacatedPosition);
@@ -232,7 +232,7 @@ export async function notifyNationalLeadershipAppointed(
   countryId: CountryId
 ): Promise<void> {
   const db = await getDb();
-  const char = await db.collection<Character>("characters").findOne({ _id: characterId });
+  const char = await charactersCollection(db).findOne({ _id: characterId });
   if (!char) return;
 
   const label = getPartyRoleLabel(countryId, position);
@@ -259,8 +259,7 @@ export async function notifyNationalCandidacyDeclared(
     countryId,
     _id: { $ne: candidateCharId },
   };
-  const members = await db
-    .collection<Character>("characters")
+  const members = await charactersCollection(db)
     .find(filter)
     .project<{ _id: ObjectId; userId: ObjectId }>({ _id: 1, userId: 1 })
     .toArray();

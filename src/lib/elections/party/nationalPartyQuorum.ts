@@ -4,6 +4,7 @@ import { getEligibleVoterSet } from "@/lib/parties/proposals";
 import type { NationalPartyElection, NationalPartyVote, PoliticalParty } from "@/lib/db/types";
 import { type CountryId } from "@/lib/constants/countries";
 import { applyOptionalCountryScope } from "./nationalPartyElectionScope";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 // ─── Quorum Acceleration ─────────────────────────────────────────────────────
 
@@ -90,8 +91,7 @@ export async function applyQuorumAcceleration(
   // the loop via getEligibleVoterSet); every other method ("party",
   // "influence") lets each player member vote, so we count them live here.
   const playerPartyIdStrings = parties.map((p) => String(p.sequentialId));
-  const playerCountRaw = await db
-    .collection("characters")
+  const playerCountRaw = await charactersCollection(db)
     .aggregate<{ _id: { party: string; countryId: string }; count: number }>([
       {
         $match: { party: { $in: playerPartyIdStrings }, countryId: { $in: partyCountryIds } },

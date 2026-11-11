@@ -34,6 +34,7 @@ import type {
 } from "../types";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export const DEFECT_ID = "AHD-sovereign-maturity-stranded-payout";
 const PAYOUT_KIND = "sovereign_maturity_payout";
@@ -144,7 +145,7 @@ async function survey(db: Db): Promise<PayoutPatch[]> {
         { projection: { sovereignMaturityClaim: 1 } }
       )
       .toArray(),
-    liveIds("characters", db.collection<{ _id: unknown }>("characters")),
+    liveIds("characters", charactersCollection<{ _id: unknown }>(db)),
     liveIds("imperialCharacters", db.collection<{ _id: unknown }>("imperialCharacters")),
     liveIds("corporations", corporationsCollection<{ _id: unknown }>(db)),
     liveIds("indexFunds", db.collection<{ _id: unknown }>("indexFunds")),

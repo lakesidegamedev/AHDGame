@@ -1,5 +1,6 @@
 import type { Db, ObjectId } from "mongodb";
 import type { CaucusChairCandidate, CaucusMembership } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface CleanupOptions {
   caucusId?: ObjectId;
@@ -102,7 +103,7 @@ export async function cleanupCaucusParticipationForCharacters(
       );
       membershipsClosed = membershipRes.modifiedCount;
 
-      const factionRes = await db.collection("characters").updateMany(
+      const factionRes = await charactersCollection(db).updateMany(
         {
           _id: { $in: characterIds },
           factionId: { $in: caucusIds },

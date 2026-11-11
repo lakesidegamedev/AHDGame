@@ -14,7 +14,6 @@ import { getGovernmentFormationsCollection } from "@/lib/db/collections/governme
 import type {
   ElectedOfficial,
   PoliticalParty,
-  Character,
   CongressLeader,
   CabinetMember,
   LeadershipRole,
@@ -24,6 +23,7 @@ import { LEADERSHIP_ROLE_LABEL } from "@/lib/congress/leadership/electionRoleMap
 import { getCabinetPositions } from "@/lib/constants/cabinetMechanics";
 import { resolveSeatName } from "@/lib/cabinet/rosterEra";
 import { getLiveGameYear } from "@/lib/cabinet/liveGameYear";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -134,8 +134,7 @@ export async function GET(request: Request) {
 
     const characters =
       charObjectIds.length > 0
-        ? await db
-            .collection<Character>("characters")
+        ? await charactersCollection(db)
             .find({ _id: { $in: charObjectIds } })
             .project({ _id: 1, sequentialId: 1, party: 1, countryId: 1 })
             .toArray()

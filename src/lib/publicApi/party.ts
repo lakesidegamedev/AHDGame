@@ -3,6 +3,7 @@ import type { Db, Filter } from "mongodb";
 import type { PoliticalParty, Character, Election } from "@/lib/db/types";
 import { getLeanLabel } from "@/lib/utils/demographics";
 import { buildCharacterHref } from "@/lib/utils/profileUrls";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -41,8 +42,7 @@ export async function queryParty(
 
   const [officials, topMembers, recentElections, allMembersResult] = await Promise.all([
     db.collection("electedOfficials").find({ party: partySeqStr, countryId: country }).toArray(),
-    db
-      .collection<Character>("characters")
+    charactersCollection(db)
       .find({ party: partySeqStr, countryId: country } as Filter<Character>)
       .sort({ nationalInfluence: -1 })
       .limit(5)
@@ -54,8 +54,7 @@ export async function queryParty(
       .limit(3)
       .toArray(),
     includeMembers
-      ? db
-          .collection<Character>("characters")
+      ? charactersCollection(db)
           .find({ party: partySeqStr, countryId: country } as Filter<Character>)
           .sort({ nationalInfluence: -1 })
           .skip(skip)
@@ -68,9 +67,10 @@ export async function queryParty(
 
   const chairName = party.chairId
     ? ((
-        (await db
-          .collection<Character>("characters")
-          .findOne({ _id: party.chairId }, { projection: { name: 1 } })) as { name?: string } | null
+        (await charactersCollection(db).findOne(
+          { _id: party.chairId },
+          { projection: { name: 1 } }
+        )) as { name?: string } | null
       )?.name ?? null)
     : null;
 

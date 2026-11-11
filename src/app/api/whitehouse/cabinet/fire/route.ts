@@ -10,9 +10,10 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { parseJsonBody } from "@/lib/api/validate";
 import { z } from "zod";
 import { createNotification } from "@/lib/notifications";
-import type { CabinetMember, ElectedOfficial, Character } from "@/lib/db/types";
+import type { CabinetMember, ElectedOfficial } from "@/lib/db/types";
 import { getCabinetPositions } from "@/lib/constants/cabinetMechanics";
 import { resolvePresidentialCountry } from "@/lib/executive/presidentialCountry";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const fireSchema = z.object({
   // positionId validated against the resolved country's positions in the handler.
@@ -53,7 +54,7 @@ export async function POST(request: Request) {
       return errorResponse(400, "No President in office");
     }
 
-    const myCharacter = await db.collection<Character>("characters").findOne({
+    const myCharacter = await charactersCollection(db).findOne({
       userId: new ObjectId(authUser.userId),
     });
     if (!myCharacter || !presidentOfficial.characterId.equals(myCharacter._id)) {
@@ -73,9 +74,10 @@ export async function POST(request: Request) {
     const posName = positionDef.name;
 
     const firedChar = member.characterId
-      ? await db
-          .collection<Character>("characters")
-          .findOne({ _id: member.characterId }, { projection: { userId: 1 } })
+      ? await charactersCollection(db).findOne(
+          { _id: member.characterId },
+          { projection: { userId: 1 } }
+        )
       : null;
     if (firedChar?.userId) {
       await createNotification({

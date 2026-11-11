@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError } from "@/lib/api/errors";
 import { getDb } from "@/lib/mongodb";
-import type { Character, NPP, PoliticalParty, State } from "@/lib/db/types";
+import type { NPP, PoliticalParty, State } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 // Map old slug values to party names for migration
 const SLUG_TO_NAME: Record<string, string> = {
@@ -61,8 +62,7 @@ export async function GET() {
     stateCountryMap = new Map(allStates.map((s) => [s._id, s.countryId]));
 
     const [characters, npps, parties] = await Promise.all([
-      db
-        .collection<Character>("characters")
+      charactersCollection(db)
         .find({ party: { $exists: true, $ne: "independent" } })
         .toArray(),
       db
@@ -253,8 +253,7 @@ export async function POST() {
     stateCountryMap = new Map(allStates2.map((s) => [s._id, s.countryId]));
 
     const [characters, npps, parties] = await Promise.all([
-      db
-        .collection<Character>("characters")
+      charactersCollection(db)
         .find({ party: { $exists: true, $ne: "independent" } })
         .toArray(),
       db
@@ -334,18 +333,17 @@ export async function POST() {
       const suggestedParty = findSuggestedParty(char.party, currentParty, memberCountry);
 
       if (suggestedParty) {
-        await db
-          .collection<Character>("characters")
-          .updateOne(
-            { _id: char._id },
-            { $set: { party: String(suggestedParty.sequentialId), updatedAt: new Date() } }
-          );
+        await charactersCollection(db).updateOne(
+          { _id: char._id },
+          { $set: { party: String(suggestedParty.sequentialId), updatedAt: new Date() } }
+        );
         charactersFixed++;
       } else {
         // No matching party found - set to independent
-        await db
-          .collection<Character>("characters")
-          .updateOne({ _id: char._id }, { $set: { party: "independent", updatedAt: new Date() } });
+        await charactersCollection(db).updateOne(
+          { _id: char._id },
+          { $set: { party: "independent", updatedAt: new Date() } }
+        );
         charactersSetIndependent++;
       }
     }

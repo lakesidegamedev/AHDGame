@@ -11,6 +11,7 @@ import { getGameStatePreset } from "@/lib/db/collections/gameState";
 import { getCountryState, primeCountryStates } from "@/lib/countryState";
 import type { ElectedOfficial } from "@/lib/db/types/officials";
 import type { ParliamentaryGovernment } from "@/lib/db/types/parliamentaryGovernment";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * Head-of-government resolution for diplomatic auth and viewer-role lookups.
@@ -169,9 +170,10 @@ export async function getHeadOfGovernmentCharacter(
 ): Promise<{ _id: ObjectId; name: string } | null> {
   const characterId = await getHeadOfGovernmentCharacterId(db, countryId);
   if (!characterId) return null;
-  const character = await db
-    .collection<{ _id: ObjectId; name?: string }>("characters")
-    .findOne({ _id: characterId }, { projection: { name: 1 } });
+  const character = await charactersCollection<{ _id: ObjectId; name?: string }>(db).findOne(
+    { _id: characterId },
+    { projection: { name: 1 } }
+  );
   if (!character) return null;
   return { _id: characterId, name: character.name ?? "Head of Government" };
 }

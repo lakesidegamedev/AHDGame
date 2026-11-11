@@ -12,7 +12,8 @@
 
 import type { Db, ObjectId as MongoObjectId } from "mongodb";
 import { ObjectId } from "mongodb";
-import type { Character, Landesliste } from "@/lib/db/types";
+import type { Landesliste } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const COLLECTION = "landeslisten";
 
@@ -48,8 +49,7 @@ export async function autoGenerateLandesliste(
 
   // Rank party members in this Land by NPI descending; tie-break by ObjectId
   // (stable-ish ordering across runs).
-  const members = await db
-    .collection<Character>("characters")
+  const members = await charactersCollection(db)
     .find(
       { countryId: "DE", party: partyId, homeState: landId },
       { projection: { _id: 1, nationalInfluence: 1 } }
@@ -135,8 +135,7 @@ export async function reorderLandesliste(
     throw new Error("Landesliste cannot contain duplicate candidates");
   }
 
-  const validMembers = await db
-    .collection<Character>("characters")
+  const validMembers = await charactersCollection(db)
     .find(
       { countryId: "DE", party: partyId, homeState: landId, _id: { $in: dedup } },
       { projection: { _id: 1 } }
@@ -189,8 +188,7 @@ export async function lockLandesliste(
  * before the list is consumed by the AMS resolver.
  */
 export async function generateLandeslistenForCycle(db: Db, cycle: number): Promise<void> {
-  const members = await db
-    .collection<Character>("characters")
+  const members = await charactersCollection(db)
     .find({ countryId: "DE" }, { projection: { _id: 1, party: 1, homeState: 1 } })
     .toArray();
 

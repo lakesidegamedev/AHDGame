@@ -4,6 +4,7 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { withAdminAuth } from "@/lib/api/withAdminAuth";
 import { getDb } from "@/lib/mongodb";
 import { parseBoundedIntParam } from "@/lib/api/validate";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface UserApiKeyRow {
   _id: string;
@@ -81,8 +82,7 @@ export const GET = withAdminAuth(async (_auth, request: Request) => {
     const userMap = new Map(users.map((u) => [u._id.toString(), u.username]));
 
     // Resolve character names
-    const characters = await db
-      .collection("characters")
+    const characters = await charactersCollection(db)
       .find({ userId: { $in: userIds.map((id) => new ObjectId(id)) } })
       .project({ userId: 1, name: 1 })
       .toArray();

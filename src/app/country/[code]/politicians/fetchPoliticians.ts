@@ -3,6 +3,7 @@ import { type CountryId } from "@/lib/constants/countries";
 import { getOfficeLabel } from "@/lib/utils/officeTitle";
 import type { Character, NPP, PoliticalParty } from "@/lib/db/types";
 import type { PoliticianData } from "@/lib/politicians/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface PoliticiansResult {
   politicians: PoliticianData[];
@@ -35,8 +36,7 @@ export async function fetchPoliticians(countryId: CountryId): Promise<Politician
   const countryFilter = { countryId };
 
   const [characters, npps] = await Promise.all([
-    db
-      .collection<Character>("characters")
+    charactersCollection(db)
       .aggregate<PoliticianCharacter>([
         { $match: countryFilter },
         {

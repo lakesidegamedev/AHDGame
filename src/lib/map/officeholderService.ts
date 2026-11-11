@@ -2,9 +2,10 @@
  * Vacant seats are excluded; multi-seat delegations retain their seat count.
  */
 import type { Db } from "mongodb";
-import type { Character, ElectedOfficial, NPP, PoliticalParty } from "@/lib/db/types";
+import type { ElectedOfficial, NPP, PoliticalParty } from "@/lib/db/types";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { getPartyHex } from "@/lib/utils/politics";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface MapOfficeholder {
   id: string;
@@ -57,8 +58,7 @@ export async function computeMapOfficeholders(
   const nppIds = filled.flatMap((o) => (o.nppId ? [o.nppId] : []));
   const [characters, npps] = await Promise.all([
     characterIds.length
-      ? db
-          .collection<Character>("characters")
+      ? charactersCollection(db)
           .find({ _id: { $in: characterIds } }, { projection: { _id: 1, avatarUrl: 1 } })
           .toArray()
       : [],

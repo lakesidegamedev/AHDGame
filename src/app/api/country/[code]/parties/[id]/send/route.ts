@@ -7,7 +7,6 @@ import { parseObjectId } from "@/lib/utils/objectId";
 import { parseJsonBody } from "@/lib/api/validate";
 import { sendFundsSchema } from "@/lib/api/schemas/send";
 import { findPartyBySequentialId } from "@/lib/db/partyLookup";
-import type { Character } from "@/lib/db/types";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { requirePlayerTransfersEnabled } from "@/lib/api/requirePlayerTransfers";
@@ -32,6 +31,7 @@ import {
   formatPayoutCap,
   getEffectivePlayerPayoutCap,
 } from "@/lib/treasury/payoutCapValues";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -110,7 +110,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     // Verify target character exists and is a party member in the same country
-    const targetCharacter = await db.collection<Character>("characters").findOne({
+    const targetCharacter = await charactersCollection(db).findOne({
       _id: targetCharacterOid,
     });
 

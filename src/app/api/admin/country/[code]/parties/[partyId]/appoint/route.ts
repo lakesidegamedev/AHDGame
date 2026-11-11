@@ -8,10 +8,11 @@ import { getDb } from "@/lib/mongodb";
 import { parseJsonBody } from "@/lib/api/validate";
 import { errorResponse } from "@/lib/api/errors";
 import { findPartyBySequentialId } from "@/lib/db/partyLookup";
-import type { PoliticalParty, Character } from "@/lib/db/types";
+import type { PoliticalParty } from "@/lib/db/types";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { getPartyRoleLabel } from "@/lib/parties/partyRoleLabels";
 import { z } from "zod";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const POSITION_FIELD = {
   chair: "chairId",
@@ -56,7 +57,7 @@ export const POST = withAdminRoute(
     const partyCountryId = party.countryId ?? "US";
     let characterName: string | undefined;
     if (characterId) {
-      const character = await db.collection<Character>("characters").findOne({
+      const character = await charactersCollection(db).findOne({
         _id: new ObjectId(characterId),
         party: partyIdStr,
         countryId: partyCountryId,

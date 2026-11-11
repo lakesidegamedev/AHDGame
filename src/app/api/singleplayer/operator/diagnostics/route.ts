@@ -4,6 +4,7 @@ import { requireSingleplayer } from "@/lib/api/requireSingleplayer";
 import { getDb } from "@/lib/mongodb";
 import type { GameState } from "@/lib/db/types";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export async function GET(request: Request) {
   const denied = requireSingleplayer(request);
@@ -16,7 +17,7 @@ export async function GET(request: Request) {
         { _id: "current" },
         { projection: { currentTurn: 1, preset: 1, isProcessing: 1, singleplayerTurnMetrics: 1 } }
       ),
-    db.collection("characters").countDocuments({ retiredAt: { $exists: false } }),
+    charactersCollection(db).countDocuments({ retiredAt: { $exists: false } }),
     corporationsCollection(db).countDocuments(),
     db.collection("politicalParties").countDocuments(),
   ]);

@@ -13,6 +13,7 @@ import { emitPartyMembershipEvent, buildPartyEventSnapshots } from "@/lib/partie
 import { withPartyTerritoryMutation } from "./territoryMutation";
 import { canCharacterJoinParty } from "./partyFrontier";
 import { PartyTerritoryError } from "./relocationTerritory";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface ApplyCharacterPartyJoinArgs {
   db: Db;
@@ -88,7 +89,7 @@ export async function applyCharacterPartyJoin(
       // Update character's party and reset party influence.
       // `partyJoinedAt` is the third anchor of the 24-hour new-character
       // cooldown on leadership/committee actions (see newCharacterCooldown.ts).
-      await db.collection("characters").updateOne(
+      await charactersCollection(db).updateOne(
         { _id: character._id },
         {
           $set: {

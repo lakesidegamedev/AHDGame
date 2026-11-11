@@ -31,6 +31,7 @@ import {
   assertCampaignActorForSurrogate,
   getCurrentTurn,
 } from "./campaignManagementCommands";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 export {
   appointCampaignManager,
   contributeCampaignStrength,
@@ -149,7 +150,7 @@ export async function upgradeCampaign(params: {
     if (targetOid.equals(campaign.candidateId)) {
       throw badRequest("You cannot research your own candidate");
     }
-    const targetChar = await db.collection<Character>("characters").findOne({ _id: targetOid });
+    const targetChar = await charactersCollection(db).findOne({ _id: targetOid });
     oppoTargetChar = targetChar;
     const targetNpp = !targetChar
       ? await db.collection<NPP>("npps").findOne({ _id: targetOid })
@@ -258,7 +259,7 @@ export async function upgradeCampaign(params: {
         },
       },
     ];
-    const charRes = await db.collection("characters").updateOne({ _id: targetOid }, clampFav);
+    const charRes = await charactersCollection(db).updateOne({ _id: targetOid }, clampFav);
     if (charRes.matchedCount === 0) {
       await db.collection("npps").updateOne({ _id: targetOid }, clampFav);
     }
@@ -322,8 +323,7 @@ export async function donateToCampaign(params: {
       throw notFound("Party not found");
     }
 
-    const ownedCharacters = await db
-      .collection<Character>("characters")
+    const ownedCharacters = await charactersCollection(db)
       .find(
         { userId: new ObjectId(user.userId) },
         { projection: { _id: 1, name: 1, countryId: 1 } }
@@ -494,9 +494,7 @@ export async function donateToCampaign(params: {
     return;
   }
 
-  const character = await db
-    .collection<Character>("characters")
-    .findOne({ _id: user.character._id });
+  const character = await charactersCollection(db).findOne({ _id: user.character._id });
   if (!character) {
     throw notFound("Character not found");
   }
@@ -552,9 +550,11 @@ export async function donateToCampaign(params: {
 
   await runWithOptionalTransaction(
     async (session) => {
-      const debitResult = await db
-        .collection<Character>("characters")
-        .updateOne(characterBalanceFilter, characterDebit, { session });
+      const debitResult = await charactersCollection(db).updateOne(
+        characterBalanceFilter,
+        characterDebit,
+        { session }
+      );
       if (debitResult.matchedCount === 0) {
         throw badRequest("Insufficient funds");
       }
@@ -567,9 +567,10 @@ export async function donateToCampaign(params: {
       }
     },
     async () => {
-      const debitResult = await db
-        .collection<Character>("characters")
-        .updateOne(characterBalanceFilter, characterDebit);
+      const debitResult = await charactersCollection(db).updateOne(
+        characterBalanceFilter,
+        characterDebit
+      );
       if (debitResult.matchedCount === 0) {
         throw badRequest("Insufficient funds");
       }
@@ -582,9 +583,10 @@ export async function donateToCampaign(params: {
           throw notFound("Campaign not found");
         }
       } catch (error) {
-        await db
-          .collection<Character>("characters")
-          .updateOne({ _id: character._id }, { $inc: { [campaignFundsField]: amountLocal } });
+        await charactersCollection(db).updateOne(
+          { _id: character._id },
+          { $inc: { [campaignFundsField]: amountLocal } }
+        );
         throw error;
       }
     }

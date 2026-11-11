@@ -15,6 +15,7 @@ import { accountId } from "@/lib/ledger/accounts";
 import type { BalanceSnapshot } from "@/lib/ledger/types";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export const BALANCE_SNAPSHOTS_COLLECTION = "balanceSnapshots";
 export const BALANCE_CHECKPOINTS_COLLECTION = "balanceSnapshotCheckpoints";
@@ -87,14 +88,14 @@ async function collectBalanceState(
   }
 
   // --- Characters: personal + savings wallets --------------------------------
-  const characters = db.collection<{
+  const characters = charactersCollection<{
     _id: ObjectId;
     cashOnHand?: number;
     currencyBalances?: {
       personal?: Partial<Record<CurrencyCode, number>>;
       savings?: Partial<Record<CurrencyCode, number>>;
     };
-  }>("characters");
+  }>(db);
   const charCursor = characters.find(
     {},
     { projection: { cashOnHand: 1, "currencyBalances.personal": 1, "currencyBalances.savings": 1 } }

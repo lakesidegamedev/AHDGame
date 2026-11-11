@@ -10,10 +10,11 @@ import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, notFound, errorResponse } from "@/lib/api/errors";
-import type { Character, GameState } from "@/lib/db/types";
+import type { GameState } from "@/lib/db/types";
 import { openCeoTenure, closeCeoTenure } from "@/lib/corporations/ceoHistory";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const appointSchema = z.object({ characterId: z.string().length(24) });
 
@@ -37,9 +38,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     // (shouldRedactCorporation), so it MUST be stamped here exactly like the
     // player-facing /ceo/accept flow. Without it an appointed CEO is treated as
     // an outsider and sees the redacted "private corporation" view.
-    const character = await db
-      .collection<Character>("characters")
-      .findOne({ _id: new ObjectId(characterId) }, { projection: { userId: 1 } });
+    const character = await charactersCollection(db).findOne(
+      { _id: new ObjectId(characterId) },
+      { projection: { userId: 1 } }
+    );
     if (!character) throw notFound("Character not found");
 
     // `ceoType` MUST be stamped, not left alone: corporationDetail resolves the

@@ -6,8 +6,8 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import { createModAuditLog } from "@/lib/modAuditLog";
 import { z } from "zod";
-import type { Character } from "@/lib/db/types";
 import { awardAchievement } from "@/lib/achievements";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const grantSchema = z.object({
   characterId: z.string().refine((s) => ObjectId.isValid(s), "Invalid character ID"),
@@ -31,9 +31,7 @@ export async function POST(request: Request) {
     const { characterId, achievementSlug } = parsed.data;
     const db = await getDb();
 
-    const character = await db
-      .collection<Character>("characters")
-      .findOne({ _id: new ObjectId(characterId) });
+    const character = await charactersCollection(db).findOne({ _id: new ObjectId(characterId) });
     if (!character) {
       return errorResponse(404, "Character not found");
     }

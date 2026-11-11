@@ -9,6 +9,7 @@ import { createAdminLog } from "@/lib/adminLog";
 import { applyPatreonStatus } from "@/lib/patreon/service";
 import { escapeRegex } from "@/lib/utils/escapeRegex";
 import type { Character, User } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const schema = z
   .object({
@@ -54,12 +55,12 @@ export async function POST(request: Request) {
     if (discordId) {
       user = await db.collection<User>("users").findOne({ discordId });
       if (user) {
-        character = await db.collection<Character>("characters").findOne({ userId: user._id });
+        character = await charactersCollection(db).findOne({ userId: user._id });
       }
     } else if (name) {
-      character = await db
-        .collection<Character>("characters")
-        .findOne({ name: { $regex: `^${escapeRegex(name)}$`, $options: "i" } });
+      character = await charactersCollection(db).findOne({
+        name: { $regex: `^${escapeRegex(name)}$`, $options: "i" },
+      });
       if (character) {
         user = await db.collection<User>("users").findOne({ _id: character.userId });
       }

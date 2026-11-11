@@ -23,7 +23,7 @@ import { sellSharesSchema } from "@/lib/api/schemas/corporations";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { resolveCorporation } from "@/lib/api/corporations/resolveQuery";
 import { assertCeoTradeNotBlocked } from "@/lib/corporations/commands/privatization/openVoteGuard";
-import type { Character, Corporation, ShareOrder, User } from "@/lib/db/types";
+import type { Corporation, ShareOrder, User } from "@/lib/db/types";
 import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
 import {
   creditShares,
@@ -70,6 +70,7 @@ import { recordAudit } from "@/lib/audit/recordAudit";
 import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
 import { fillBestBuyOrderForMarketSell } from "@/lib/corporations/commands/shareTrading/fillBestBuyOrder";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -226,7 +227,7 @@ export async function sellPublicShares(request: Request, { params }: RouteParams
         const characterQuery = userDoc?.activeCharacterId
           ? { _id: userDoc.activeCharacterId, userId: new ObjectId(basicAuth.user.userId) }
           : { userId: new ObjectId(basicAuth.user.userId) };
-        const character = await db.collection<Character>("characters").findOne(characterQuery);
+        const character = await charactersCollection(db).findOne(characterQuery);
         if (!character) {
           return errorResponse(404, "Character not found");
         }
@@ -727,7 +728,7 @@ export async function sellPublicShares(request: Request, { params }: RouteParams
     const characterQuery = userDoc?.activeCharacterId
       ? { _id: userDoc.activeCharacterId, userId: new ObjectId(basicAuth.user.userId) }
       : { userId: new ObjectId(basicAuth.user.userId) };
-    const charDoc = await db.collection<Character>("characters").findOne(characterQuery);
+    const charDoc = await charactersCollection(db).findOne(characterQuery);
     if (!charDoc) {
       return errorResponse(404, "Character not found");
     }
@@ -933,7 +934,7 @@ export async function sellPublicShares(request: Request, { params }: RouteParams
           withholdingContexts.get(stockSellerKey({ id: charDoc._id, collection: "characters" }))
         )
       : undefined;
-    const sellerCredit = await db.collection<Character>("characters").updateOne(
+    const sellerCredit = await charactersCollection(db).updateOne(
       { _id: charDoc._id },
       {
         $inc: {

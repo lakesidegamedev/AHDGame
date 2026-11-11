@@ -61,6 +61,7 @@ import type {
   PrimaryViewerCampaign,
 } from "@/lib/elections/dto/primaryPartyDetail";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export type { PrimaryPartyDetail, PrimaryViewerCampaign };
 
@@ -168,8 +169,7 @@ export async function loadPrimaryPartyData(
   const nppIds = candidates.filter((c) => c.isNPP && c.nppId).map((c) => c.nppId!);
   const [chars, npps] = await Promise.all([
     characterIds.length > 0
-      ? db
-          .collection<Character>("characters")
+      ? charactersCollection(db)
           .find(
             { _id: { $in: characterIds } },
             { projection: { homeState: 1, nationalInfluence: 1, favorability: 1 } }
@@ -315,8 +315,7 @@ export async function loadPrimaryPartyData(
     ...new Set(playerEndorsements.map((e) => e.characterId.toString())),
   ].map((id) => new ObjectId(id));
   const playerEndorsers = playerEndorserIds.length
-    ? await db
-        .collection<Character>("characters")
+    ? await charactersCollection(db)
         .find({ _id: { $in: playerEndorserIds } })
         .project<Pick<Character, "_id" | "name">>({ _id: 1, name: 1 })
         .toArray()
@@ -526,9 +525,7 @@ async function resolveViewer(
     candidates.find(
       (c) => !c.isNPP && c.characterId && c.characterId.toString() === viewerCharId.toString()
     ) ?? null;
-  const viewerCharacter = await db
-    .collection<Character>("characters")
-    .findOne({ _id: viewerCharId });
+  const viewerCharacter = await charactersCollection(db).findOne({ _id: viewerCharId });
 
   return { viewerCandidate, viewerCharacter };
 }

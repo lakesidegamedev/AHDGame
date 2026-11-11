@@ -11,14 +11,9 @@
  * so "against" is the conservative default whenever there is no usable signal.
  */
 import type { Db } from "@/lib/mongodb";
-import type {
-  Character,
-  ElectedOfficial,
-  NPP,
-  PoliticalParty,
-  SpeakerVacateMotion,
-} from "@/lib/db/types";
+import type { ElectedOfficial, NPP, PoliticalParty, SpeakerVacateMotion } from "@/lib/db/types";
 import { resolvePartyTier } from "@/lib/parties/partyTier";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * Per-axis stance distance (on the shared -5..+5 economic/social axes) within
@@ -122,9 +117,10 @@ export async function loadVacateSpeakerContext(
         { characterId: motion.targetSpeakerId, officeType: "house" },
         { projection: { party: 1 } }
       ),
-    db
-      .collection<Character>("characters")
-      .findOne({ _id: motion.targetSpeakerId }, { projection: { policies: 1 } }),
+    charactersCollection(db).findOne(
+      { _id: motion.targetSpeakerId },
+      { projection: { policies: 1 } }
+    ),
     db
       .collection<PoliticalParty>("politicalParties")
       .find({ countryId: "US" })

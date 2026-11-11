@@ -13,13 +13,14 @@ import {
   refundCharacterCash,
 } from "@/lib/financialTxLog/atomicCashGuard";
 import { getPlayerBannerAdsCollection } from "@/lib/db/collections/playerBannerAds";
-import type { Character, User } from "@/lib/db/types";
+import type { User } from "@/lib/db/types";
 import { isPlusOrBetter } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { runWithOptionalTransaction } from "@/lib/db/runWithOptionalTransaction";
 import { isR2Enabled, uploadFile } from "@/lib/r2";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { parseFormData } from "@/lib/api/validate";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 const MAX_SIZE = 2 * 1024 * 1024; // 2 MB
@@ -38,8 +39,7 @@ const WEALTH_PERCENTAGE = 0.02; // 2% of average wealth
 
 async function computeAverageCost(db: Db, forexEnabled: boolean): Promise<number> {
   if (forexEnabled) {
-    const chars = await db
-      .collection<Character>("characters")
+    const chars = await charactersCollection(db)
       .find({}, { projection: { countryId: 1, currencyBalances: 1, cashOnHand: 1 } })
       .toArray();
 
@@ -56,8 +56,7 @@ async function computeAverageCost(db: Db, forexEnabled: boolean): Promise<number
     return count > 0 ? Math.floor((total / count) * WEALTH_PERCENTAGE) : 0;
   }
 
-  const result = await db
-    .collection<Character>("characters")
+  const result = await charactersCollection(db)
     .aggregate<{ avg: number }>([
       { $match: { cashOnHand: { $gt: 0 } } },
       { $group: { _id: null, avg: { $avg: "$cashOnHand" } } },
@@ -270,13 +269,11 @@ export async function POST(request: Request) {
         }
 
         if (!canUseFreeInTx) {
-          const debitResult = await db
-            .collection<Character>("characters")
-            .updateOne(
-              { _id: character._id, [personalBalanceField]: { $gte: cost } },
-              { $inc: { [personalBalanceField]: -cost }, $set: { updatedAt: new Date() } },
-              { session }
-            );
+          const debitResult = await charactersCollection(db).updateOne(
+            { _id: character._id, [personalBalanceField]: { $gte: cost } },
+            { $inc: { [personalBalanceField]: -cost }, $set: { updatedAt: new Date() } },
+            { session }
+          );
 
           if (debitResult.modifiedCount === 0) {
             throw new Error("PLAYER_AD_FUNDS_CHANGED");

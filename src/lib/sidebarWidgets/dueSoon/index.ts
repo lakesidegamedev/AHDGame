@@ -1,6 +1,5 @@
 import { ObjectId, type Db } from "mongodb";
 import type { User } from "@/lib/db/types/user";
-import type { Character } from "@/lib/db/types/character";
 import type { ElectedOfficial } from "@/lib/db/types/officials";
 import { getGameStateCore } from "@/lib/gameState";
 import { nationalBillVotes, presidentialBillActions } from "./nationalBills";
@@ -8,6 +7,7 @@ import { stateBillActions } from "./stateBills";
 import { confirmationVotes, partyBallots } from "./politics";
 import { corporateVotes } from "./corporate";
 import type { DueSoonContext, DueSoonItem, DueSoonSource, DueSoonWidgetData } from "./types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export const DUE_SOON_LIMIT = 8;
 const HOUR_MS = 3_600_000;
@@ -58,7 +58,7 @@ export async function loadDueSoon(db: Db, userId: string): Promise<DueSoonWidget
   if (!user?.activeCharacterId || user.activeCharacterType === "imperial") return null;
   const characterId = user.activeCharacterId;
   const [character, game, seats] = await Promise.all([
-    db.collection<Character>("characters").findOne(
+    charactersCollection(db).findOne(
       { _id: characterId },
       {
         projection: {

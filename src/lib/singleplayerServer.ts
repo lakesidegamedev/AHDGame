@@ -23,6 +23,7 @@ import {
   stampSingleplayerBaseline,
 } from "@/lib/migrations/singleplayerMigrations";
 import { serverEnv } from "@/lib/config/read";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * Node-only singleplayer helpers. `@/lib/singleplayer` must stay importable
@@ -153,10 +154,11 @@ export async function singleplayerStatus(db: Db): Promise<SingleplayerStatus> {
         { _id: "current" },
         { projection: { currentTurn: 1, preset: 1, isProcessing: 1, singleplayerConfig: 1 } }
       ),
-    db
-      .collection("characters")
-      .findOne({ userId, retiredAt: { $exists: false } }, { projection: { _id: 1, name: 1 } }),
-    db.collection("characters").countDocuments({ retiredAt: { $exists: false } }),
+    charactersCollection(db).findOne(
+      { userId, retiredAt: { $exists: false } },
+      { projection: { _id: 1, name: 1 } }
+    ),
+    charactersCollection(db).countDocuments({ retiredAt: { $exists: false } }),
   ]);
   const config = gameState?.singleplayerConfig;
   if (config?.mode === "head-of-state") {

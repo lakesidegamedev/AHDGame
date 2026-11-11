@@ -1,6 +1,7 @@
 import type { Db } from "mongodb";
 import { FOUNDING_WINDOW_TURNS } from "@/lib/onboarding/stepStamps";
 import { ONBOARDING_STEP_IDS } from "@/lib/onboarding/checklist";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * First-days outcomes for new characters, split by whether they joined during
@@ -59,8 +60,7 @@ export async function computeOnboardingCohorts(
   since: Date,
   now: Date = new Date()
 ): Promise<OnboardingCohorts> {
-  const rows = (await db
-    .collection("characters")
+  const rows = (await charactersCollection(db)
     .aggregate([
       { $match: { createdAt: { $gte: since } } },
       {

@@ -13,6 +13,7 @@ import { cascadeCharacterDeletion } from "@/lib/account/cascadeCharacterDeletion
 import { stampSubjectDeleted } from "@/lib/financialTxLog/stampDeleted";
 import { logCharacterDeleted } from "@/lib/db/collections/activityLog";
 import { heldBlocRowIds, releaseVacatedBlocSeats } from "@/lib/elections/vacatedBlocSeats";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 // POST /api/admin/users/delete — Permanently delete a user account and their character.
 // Auth: requireAdmin
@@ -37,7 +38,7 @@ export const POST = withNoStore(async (request: Request) => {
 
     const db = await getDb();
     const usersCollection = db.collection("users");
-    const charactersCollection = db.collection("characters");
+    const charactersHandle = charactersCollection(db);
     const actionLogsCollection = db.collection("actionLogs");
     const officialsCollection = db.collection("electedOfficials");
 
@@ -59,7 +60,7 @@ export const POST = withNoStore(async (request: Request) => {
     }
 
     // Find the user's character
-    const character = await charactersCollection.findOne({ userId: objectId });
+    const character = await charactersHandle.findOne({ userId: objectId });
 
     // Log admin deletion with tracking data (before actually deleting)
     // WHY: Deleted accounts lose all IP/fingerprint data — this preserves an audit trail for fraud investigation
@@ -145,7 +146,7 @@ export const POST = withNoStore(async (request: Request) => {
       });
 
       // Delete the character
-      await charactersCollection.deleteOne({ _id: character._id });
+      await charactersHandle.deleteOne({ _id: character._id });
     }
 
     if (!character) {

@@ -45,6 +45,7 @@ import type { GameConfig } from "@/lib/db/types/gameConfig";
 import { resolveCampaignPriceLevel } from "@/lib/campaigns/rules/priceLevel";
 import { fundPoliticalMediaOrder } from "@/lib/politicalMedia/journal";
 import { applySlantToAdvertise, loadStateSlant } from "@/lib/mediaEditorial/slant";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 function clampAddExpression(fieldPath: string, delta: number, min: number, max: number) {
   return {
@@ -517,9 +518,11 @@ async function executeCharacterActionImpl(
     }
 
     dbStartedAt = Date.now();
-    const updated = await db
-      .collection<Character>("characters")
-      .findOneAndUpdate(updateFilter, [{ $set: pipelineSet }], { returnDocument: "after" });
+    const updated = await charactersCollection(db).findOneAndUpdate(
+      updateFilter,
+      [{ $set: pipelineSet }],
+      { returnDocument: "after" }
+    );
     timing.dbUpdateMs += Date.now() - dbStartedAt;
     if (!updated) {
       const error =

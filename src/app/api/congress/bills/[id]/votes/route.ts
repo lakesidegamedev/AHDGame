@@ -10,7 +10,7 @@ import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { getPartyMap } from "@/lib/db/partyMap";
-import type { Bill, Character, NPP, ElectedOfficial, PoliticalParty } from "@/lib/db/types";
+import type { Bill, NPP, ElectedOfficial, PoliticalParty } from "@/lib/db/types";
 import { resolveBillCountryId } from "@/lib/congress/resolveBillCountryId";
 import { buildScopedVoteInputs, type ScopedVoteOfficial } from "@/lib/congress/billVoting";
 import { snapshotWeightMap } from "@/lib/legislature/voteSnapshot";
@@ -21,6 +21,7 @@ import {
   resolveOtherVoteChamberKey,
   resolvePrimaryVoteChamberKey,
 } from "@/lib/congress/billVoteChamberScope";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface IndividualVote {
   id: string;
@@ -101,8 +102,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     // Batch-fetch characters, NPPs, elected officials, and parties
     const [characters, npps, partyMap] = await Promise.all([
       uniqueCharIds.length > 0
-        ? db
-            .collection<Character>("characters")
+        ? charactersCollection(db)
             .find({
               _id: { $in: uniqueCharIds.map((i) => new ObjectId(i)) },
             })

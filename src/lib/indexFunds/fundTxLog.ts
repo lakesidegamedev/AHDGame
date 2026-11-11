@@ -1,10 +1,11 @@
 import { ObjectId, type Db } from "mongodb";
-import type { Character, ImperialCharacter, IndexFund } from "@/lib/db/types";
+import type { ImperialCharacter, IndexFund } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
 import { emitTx, emitTxBulk, loadTxThresholds } from "@/lib/financialTxLog/emit";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export type IndexFundTxSource = "player" | "cron_queue";
 
@@ -327,9 +328,10 @@ export async function resolveIndexFundHolder(
   }
 ): Promise<IndexFundHolderContext | null> {
   if (entry.holderKind === "character" && entry.characterId) {
-    const character = await db
-      .collection<Character>("characters")
-      .findOne({ _id: entry.characterId }, { projection: { name: 1, countryId: 1, userId: 1 } });
+    const character = await charactersCollection(db).findOne(
+      { _id: entry.characterId },
+      { projection: { name: 1, countryId: 1, userId: 1 } }
+    );
     if (!character) return null;
     return {
       holderKind: "character",

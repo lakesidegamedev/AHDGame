@@ -20,7 +20,6 @@ import { buildActiveVisibleNppEndorsementFilter } from "@/lib/nppEndorsements";
 import type {
   Election,
   ElectionCandidate,
-  Character,
   NPP,
   PoliticalParty,
   GameState,
@@ -31,6 +30,7 @@ import type {
   StatePartyOrg,
   State,
 } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -151,8 +151,7 @@ export async function GET(request: Request) {
       stateDoc,
     ] = await Promise.all([
       allCharIds.length > 0
-        ? db
-            .collection<Character>("characters")
+        ? charactersCollection(db)
             .find({ _id: { $in: allCharIds } })
             .toArray()
         : [],
@@ -336,7 +335,7 @@ export async function GET(request: Request) {
         homeState: election.state,
         "currentOffice.type": officeType,
       };
-      const incumbentChar = await db.collection<Character>("characters").findOne(officeQuery);
+      const incumbentChar = await charactersCollection(db).findOne(officeQuery);
       if (incumbentChar) {
         const incumbentParty = partyMap.get(incumbentChar.party);
         incumbent = {

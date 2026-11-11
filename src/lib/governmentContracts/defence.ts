@@ -23,6 +23,7 @@ import { lockContractPlant, releaseContractPlant } from "./plantSlots";
 import { validateBid, ContractError } from "./eligibility";
 import { tenders } from "./persistence";
 import type { GovernmentTender, ContractBid } from "./types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export async function activateDefenceBid(
   db: Db,
@@ -183,7 +184,7 @@ async function resetUnconvertedAward(db: Db, t: GovernmentTender) {
 }
 async function finishAward(db: Db, t: GovernmentTender, contract: DefenceContract) {
   if (contract.selfDealing?.ministerCharacterId)
-    await db.collection("characters").updateOne(
+    await charactersCollection(db).updateOne(
       {
         _id: contract.selfDealing.ministerCharacterId,
         governmentContractDisclosures: { $ne: t._id },

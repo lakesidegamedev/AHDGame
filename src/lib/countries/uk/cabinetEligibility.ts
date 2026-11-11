@@ -21,6 +21,7 @@ import type {
   ParliamentaryGovernment,
   PoliticalParty,
 } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface CabinetEligibleCharacter {
   _id: string;
@@ -107,7 +108,7 @@ export async function requireCurrentPrimeMinister(
     throw forbidden(errorMessage);
   }
 
-  const pmCharacter = await db.collection<Character>("characters").findOne({
+  const pmCharacter = await charactersCollection(db).findOne({
     userId: new ObjectId(authUserId),
   });
 
@@ -181,8 +182,7 @@ export async function getEligibleCabinetCharacters(
   // eligible-chamber legislators. See 2026-06-05-ops-cabinet-any-player-design.md.
   let characters: Character[];
   if (isOps) {
-    characters = await db
-      .collection<Character>("characters")
+    characters = await charactersCollection(db)
       .find({ countryId, userId: { $exists: true } })
       .toArray();
   } else {
@@ -199,8 +199,7 @@ export async function getEligibleCabinetCharacters(
       return [];
     }
 
-    characters = await db
-      .collection<Character>("characters")
+    characters = await charactersCollection(db)
       .find({
         _id: { $in: characterIds },
         userId: { $exists: true },
