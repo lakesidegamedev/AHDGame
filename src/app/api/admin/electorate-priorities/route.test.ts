@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Db } from "mongodb";
 import { createMockDb, type MockDb, type MockCollection } from "@/lib/test-utils/mockDb";
 import { legislationTypes } from "@/lib/seeds/reference/legislationTypes";
+import { getProjectedPoliticalLegislationTypes } from "@/lib/admin/seed/seedPoliticalLegislation";
 import { getDefaultLegislativePriorities } from "@/lib/demographics/legislativePriorities/profile";
 import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
@@ -12,6 +13,8 @@ vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/api/requireAdmin", () => ({ requireAdmin: vi.fn() }));
 vi.mock("@/lib/adminLog", () => ({ createAdminLog: vi.fn() }));
 
+// A seeded world holds the legacy book plus the projected one-law-book types.
+const seededLaws = [...legislationTypes, ...getProjectedPoliticalLegislationTypes()];
 const target = { countryId: "US", regionId: "CA", bucketId: "age:young" };
 const defaults = getDefaultLegislativePriorities("US", "CA", "age:young")!;
 const selection = {
@@ -46,7 +49,7 @@ describe("admin electorate priorities API", () => {
     overrides = db.collection("electoratePriorityOverrides");
     laws = db.collection("legislationTypes");
     laws.find.mockReturnValue({
-      toArray: vi.fn().mockResolvedValue(legislationTypes.filter((l) => l.countryScope === "us")),
+      toArray: vi.fn().mockResolvedValue(seededLaws.filter((l) => l.countryScope === "us")),
     });
     vi.mocked(getDb).mockResolvedValue(db as unknown as Db);
     vi.mocked(requireAdmin).mockResolvedValue({
@@ -117,9 +120,7 @@ describe("admin electorate priorities API", () => {
     laws.find.mockReturnValue({
       toArray: vi
         .fn()
-        .mockResolvedValue(
-          legislationTypes.filter((l) => l.countryScope === countryId.toLowerCase())
-        ),
+        .mockResolvedValue(seededLaws.filter((l) => l.countryScope === countryId.toLowerCase())),
     });
     expect(
       (
@@ -162,15 +163,8 @@ describe("admin electorate priorities API", () => {
     { ...selection, primary: { ...selection.primary, policyOptionId: "missing" } },
     { ...selection, primary: { lawTypeId: "jp_pension", policyOptionId: "jp_pension_opt_2" } },
     { ...selection, primary: selection.secondary[0] },
-    {
-      ...selection,
-      primary: {
-        lawTypeId: selection.primary.lawTypeId,
-        policyOptionId: defaults.primary.policyOptionId,
-      },
-    },
   ])(
-    "rejects missing/extra secondary slots, foreign laws, wrong levels and duplicate laws",
+    "rejects missing/extra secondary slots, foreign laws, unknown levels and duplicate laws",
     async (priorities) => {
       expect((await PUT(request("PUT", { ...target, priorities }))).status).toBe(400);
       expect(overrides.replaceOne).not.toHaveBeenCalled();

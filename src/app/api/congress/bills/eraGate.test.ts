@@ -5,8 +5,8 @@ import { isLegislationTypeActive } from "@/lib/era/legislationCatalog";
 // contract the route relies on (full end-to-end route tests need a DB harness).
 describe("congress bill era gate contract", () => {
   it("rejects a windowed type before its window, accepts at/after, accepts when year null", () => {
-    expect(isLegislationTypeActive("us_paid_family_leave", 1990)).toBe(false);
-    expect(isLegislationTypeActive("us_paid_family_leave", 1993)).toBe(true);
-    expect(isLegislationTypeActive("us_paid_family_leave", null)).toBe(true);
+    expect(isLegislationTypeActive("jp_cybersecurity", 1997)).toBe(false);
+    expect(isLegislationTypeActive("jp_cybersecurity", 1998)).toBe(true);
+    expect(isLegislationTypeActive("jp_cybersecurity", null)).toBe(true);
   });
 });
