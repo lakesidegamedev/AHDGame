@@ -1,17 +1,12 @@
 /**
- * Canada's root metrics for the 2027 world, per province and territory.
+ * Canada's root metrics for the 2027 world: the ones `caStateMetrics` leaves to
+ * the shared uniform formulas, authored here (a national level, then provincial
+ * tilts where sources show one) so no blind formula value survives.
  *
- * These are the metrics the provincial seed in `caStateMetrics` leaves to the
- * shared uniform formulas. Each is authored here so no blind formula value
- * survives: a national level, then provincial tilts where the sources show one.
- *
- * Sources: Statistics Canada (housing, labour force, research and development,
- * crime severity, population projections), the Canada Mortgage and Housing
- * Corporation (price and rent indexes), the Canadian Institute for Health
- * Information and the Fraser Institute (specialist wait times), Canada Energy
- * Regulator (electricity generation mix), Public Safety Canada (disaster
- * preparedness), and Elections Canada and CBC research on public broadcaster
- * trust. Rounded and tuned for play.
+ * Sources: Statistics Canada, CMHC price and rent indexes, CIHI and Fraser
+ * Institute wait times, the Canada Energy Regulator generation mix, Public
+ * Safety Canada, and Elections Canada and CBC broadcaster-trust research.
+ * Rounded and tuned for play.
  */
 import { caRegions2027 } from "./caRegions2027";
 
