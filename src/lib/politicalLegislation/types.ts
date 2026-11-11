@@ -21,7 +21,7 @@ export type LawCountryId = (typeof LAW_COUNTRY_IDS)[number];
  * but not yet on the playable roster is listed here ahead of `LAW_COUNTRY_IDS`,
  * so its catalogue can be validated without every exhaustive table demanding a row.
  */
-export type CostAnchorCountryId = LawCountryId | "JP";
+export type CostAnchorCountryId = LawCountryId | "CN";
 
 export interface LawLevel {
   name: string;

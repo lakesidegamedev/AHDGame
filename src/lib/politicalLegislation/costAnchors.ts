@@ -26,4 +26,6 @@ export const COST_INCOME_ANCHORS: Record<CostAnchorCountryId, number> = {
   CA: 58_000,
   // About half the 1953 display income anchor, the same relationship US and UK hold.
   JP: 350,
+  // Half the 1953 display income anchor, the same relationship US and UK hold.
+  CN: 40,
 };
