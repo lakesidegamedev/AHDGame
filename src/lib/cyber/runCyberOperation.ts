@@ -7,6 +7,7 @@
 import { ObjectId, type Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import { getCountryDisplayName } from "@/lib/constants/countryClientConfig";
+import { isLiveWorldSwitchOn } from "@/lib/gameConfig/liveWorldSwitches";
 import { applyTensionEvent } from "@/lib/coldwar/tension";
 import { createCrisisFromTemplate } from "@/lib/crises/createCrisisFromTemplate";
 import { CYBER_ATTACK_TEMPLATE } from "@/lib/crises/templates";
@@ -209,6 +210,8 @@ function exposureTemplate(targetName: string): CrisisTemplate {
   };
 }
 
+export const CYBER_OPERATIONS_CLOSED_TEXT = "Cyber operations are not open in this world yet.";
+
 export type LaunchCyberResult =
   | { ok: false; status: number; error: string }
   | {
@@ -238,6 +241,9 @@ function nameOf(countryId: string): string {
 
 export async function launchCyberOperation(args: LaunchCyberArgs): Promise<LaunchCyberResult> {
   const { db, attackerId, targetId, turn } = args;
+  if (!(await isLiveWorldSwitchOn(db, "cyberOperationsEnabled"))) {
+    return { ok: false, status: 409, error: CYBER_OPERATIONS_CLOSED_TEXT };
+  }
   const [attacker, target] = await loadCyberResilience(db, [attackerId, targetId]).then((rows) => [
     rows.find((row) => row.countryId === attackerId),
     rows.find((row) => row.countryId === targetId),

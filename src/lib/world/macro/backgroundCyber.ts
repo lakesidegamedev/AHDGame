@@ -16,6 +16,7 @@ import {
   loadCyberPairHistory,
   standDownCyber,
 } from "@/lib/cyber/runCyberOperation";
+import { isLiveWorldSwitchOn } from "@/lib/gameConfig/liveWorldSwitches";
 import { rivalLeaderOf } from "./rules/foreignPolicy";
 import type { ForeignPolicyPlan } from "./backgroundForeignPolicy";
 
@@ -32,6 +33,9 @@ export async function applyScriptedCyber(
 ): Promise<{ launched: number; standDowns: number }> {
   const candidates = plans.filter((p) => rivalLeaderOf(p.state.bloc, p.countryId) !== null);
   if (candidates.length === 0) return { launched: 0, standDowns: 0 };
+  if (!(await isLiveWorldSwitchOn(db, "cyberOperationsEnabled"))) {
+    return { launched: 0, standDowns: 0 };
+  }
   const tension = (await getColdWarTension(db)).value;
   const crisisTargets = await loadCyberCrisisTargets(
     db,

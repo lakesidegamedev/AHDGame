@@ -430,6 +430,12 @@ export interface GameConfig {
    */
   preeGenericFallbackEnabled?: boolean;
   /**
+   * Operational switch for cyber operations: player intelligence services,
+   * computer-run governments and background governments may launch them.
+   * Fresh worlds seed true; absent or false refuses every launch.
+   */
+  cyberOperationsEnabled?: boolean;
+  /**
    * Funded producer market: >= 1 judges whether a cash-short company's run
    * pays for itself (the sales advance) with its inputs at last turn's
    * clearing price, never above the bid ceiling, instead of at the ceiling.

@@ -135,6 +135,7 @@ describe("fresh-world flag policy", () => {
       "scotusNppNominationsEnabled",
       "scotusPendingDocketEnabled",
       "preeGenericFallbackEnabled",
+      "cyberOperationsEnabled",
     ];
     const { settings, flags } = splitFreshWorldGameConfigFlags(referenceGameConfig);
     for (const key of switches) {

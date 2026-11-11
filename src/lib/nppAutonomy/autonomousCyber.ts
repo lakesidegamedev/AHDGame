@@ -30,6 +30,7 @@ import {
 import { scriptedRoll } from "@/lib/world/macro/backgroundCyber";
 import { rivalLeaderOf } from "@/lib/world/macro/rules/foreignPolicy";
 import { countryAlignmentsCollection } from "@/lib/db/repositories/countryAlignments";
+import { isLiveWorldSwitchOn } from "@/lib/gameConfig/liveWorldSwitches";
 
 const INTELLIGENCE_POSITION_ID = "director_of_intelligence";
 const DEFAULT_TRADECRAFT = 3;
@@ -46,6 +47,7 @@ export async function processAutonomousCyber(
   head: HeadSlice,
   turn: number
 ): Promise<AutonomousCyberResult> {
+  if (!(await isLiveWorldSwitchOn(db, "cyberOperationsEnabled"))) return "none";
   // A player directing the service is the only one who launches for it.
   const director = await getCabinetMembersCollection(db).findOne({
     countryId,

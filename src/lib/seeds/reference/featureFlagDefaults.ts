@@ -124,6 +124,7 @@ export const FRESH_WORLD_GAME_CONFIG_FLAGS = {
   scotusNppNominationsEnabled: true,
   scotusPendingDocketEnabled: true,
   preeGenericFallbackEnabled: true,
+  cyberOperationsEnabled: true,
 } as const satisfies Partial<GameConfig>;
 
 export type FreshWorldGameConfigFlagKey = keyof typeof FRESH_WORLD_GAME_CONFIG_FLAGS;
