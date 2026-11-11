@@ -48,6 +48,7 @@ import { indexFundPositionsCollection } from "@/lib/db/repositories/indexFundPos
 import { portfolioHistoryCollection } from "@/lib/db/repositories/portfolioHistory";
 import type { Document } from "mongodb";
 import { corporationPortfolioHistoryCollection } from "@/lib/db/repositories/corporationPortfolioHistory";
+import { sumLookThroughStockValueByCharacter } from "@/lib/wealth/computeCharacterWealth";
 
 /**
  * Snapshot portfolio values for all characters who hold shares and/or bonds.
@@ -124,6 +125,7 @@ export async function snapshotPortfolioValues(
         sharePrice: 1,
         liquidCurrencyCode: 1,
         countryId: 1,
+        totalShares: 1,
       })
       .toArray(),
     bondsCollection(db)
@@ -221,6 +223,26 @@ export async function snapshotPortfolioValues(
         locDebtValue: existing.locDebtValue,
       });
     }
+  }
+
+  // Stakes a character's corporations hold in other corporations, scaled by the
+  // character's share of the holder. The wealth ranking counts these through the
+  // same function, so the history and the ranking show one net worth. `corporations`
+  // is every corporation with a shareholder, which covers every holder and issuer
+  // in a chain. The value joins the stock bucket (long-term: the character owns
+  // no lots of it) so it flows into the total and the net worth.
+  const lookThroughByCharId = sumLookThroughStockValueByCharacter(
+    corporations,
+    new Set(portfolioMap.keys()),
+    charFxByCurrency
+  );
+  for (const [charId, lookThroughValue] of lookThroughByCharId) {
+    if (!(lookThroughValue > 0)) continue;
+    const existing = portfolioMap.get(charId);
+    if (!existing) continue;
+    existing.totalValue += lookThroughValue;
+    existing.netValue += lookThroughValue;
+    existing.stockValue += lookThroughValue;
   }
 
   // Add bond holdings — normalize to ₳ via bond.currencyCode

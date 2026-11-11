@@ -1,4 +1,4 @@
-import { canLandMarines } from "@/lib/navair/frontSupport";
+import { marinesSustained } from "@/lib/navair/frontSupport";
 import type { PeaceOfferDoc } from "@/lib/db/types/peaceOffer";
 import type { PeaceTerm } from "@/lib/military/peaceTerm";
 import type { FrontSupport } from "@/lib/navair/types";
@@ -124,8 +124,8 @@ export interface NavalAirPanel {
   interdiction: number;
   /** Coarse read of who holds the air, never a number. */
   airBand: string;
-  /** Whether marines could be put ashore here right now. */
-  canLandMarines: boolean;
+  /** Whether marines fighting here are supplied across the water (full strength). */
+  marinesSustained: boolean;
   /** Recent surface actions in this theatre, newest first. */
   recentActions: NavalActionRow[];
 }
@@ -413,7 +413,7 @@ export function buildRecordExtras(input: RecordExtrasInput): RecordExtras {
           navairSupport.airSuperiority,
           navairEnemySupport?.airSuperiority ?? 0
         ),
-        canLandMarines: canLandMarines(navairSupport.seaControl),
+        marinesSustained: marinesSustained(navairSupport.seaControl),
         recentActions: navairActions ?? [],
       };
     }
