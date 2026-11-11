@@ -1,21 +1,11 @@
 /**
- * Canada's 13 provinces and territories for the 2027 world.
- *
- * Sources (rounded, then carried to mid-2027):
- * - Population: Statistics Canada Table 17-10-0009-01 (quarterly population
- *   estimates), carried forward at about 0.5% a year to match the lower
- *   immigration levels in the federal 2026 to 2028 levels plan.
- * - GDP: Statistics Canada Table 36-10-0222-01 provincial shares of nominal
- *   GDP, applied to the IMF World Economic Outlook national GDP projection
- *   (about 3.45 trillion Canadian dollars for 2027). Values are in millions of
- *   Canadian dollars.
- * - Seats: the 343 House of Commons seats under the 2023 federal electoral
- *   redistribution (Representation Order of 2023), as fought in the 2025
- *   general election.
- * - `stateSenateSeats` carries the appointed Senate seats per region (105 in
- *   total, fixed by the Constitution Act, 1867 and later amendments).
- *
- * Seed independence: authored directly for 2027, never derived from another era.
+ * Canada's 13 provinces and territories for the 2027 world, authored directly
+ * for 2027 and never derived from another era. Sources, rounded to mid-2027:
+ * - Population: Statistics Canada Table 17-10-0009-01, grown about 0.5% a year.
+ * - GDP (millions of CAD): Table 36-10-0222-01 provincial shares applied to the
+ *   IMF national projection of about 3.45 trillion CAD.
+ * - Seats: the 343 Commons seats of the Representation Order of 2023.
+ * - `stateSenateSeats`: the 105 appointed Senate seats per region.
  */
 import type { State } from "@/lib/db/types";
 

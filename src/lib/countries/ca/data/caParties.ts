@@ -2,17 +2,14 @@ import type { PartySeed } from "@/lib/seeds/reference/politicalParties";
 import type { MajorDefaultParty } from "@/lib/seeds/defaultPartyTiers";
 
 /**
- * Canada's default parties for the 2027 world.
+ * Canada's default parties for the 2027 world, all fictional analogues.
+ * Positions sit on the -5 to +5 scale (negative is economically left and
+ * socially liberal). The opening board follows the April 2025 federal result:
+ * a centrist governing party ahead of a right-of-centre opposition, a
+ * Quebec-only sovereigntist party, a shrunken left party and one Green seat.
  *
- * Every party here is a fictional analogue with an invented name. Positions sit
- * on the -5 to +5 scale (economic: negative is left; social: negative is
- * liberal). The opening board follows the shape of the most recent federal
- * general election at authoring time (April 2025): a centrist governing party
- * ahead of a right-of-centre opposition, a Quebec-only sovereigntist party, a
- * shrunken left party and one Green seat.
- *
- * The Laurentian Alliance runs only in Quebec; the territory rule is enforced
- * by the regional party machinery, not by this seed.
+ * The Laurentian Alliance runs only in Quebec; the regional party machinery
+ * enforces that, not this seed.
  */
 export const CA_PARTY_SLUGS = {
   federalUnity: "ca_federal_unity",

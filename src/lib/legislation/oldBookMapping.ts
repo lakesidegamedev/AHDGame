@@ -1,13 +1,10 @@
 /**
- * Where each retired US and UK law type went in the one law book.
- *
- * The old books had 7-option ladders (index 0 is the most left-wing option);
- * the one book has five levels per program law and a rate slider per tax law.
- * Each row names the closest new law by policy meaning and which way the old
- * ladder runs against the new levels:
- *
- * - `leftHigh`: the old left end is the bigger program, so it becomes a high level.
- * - `leftLow`: the old left end is the lighter hand, so it becomes a low level.
+ * Where each retired US and UK law type went in the one law book. Old books had
+ * 7-option ladders (index 0 most left-wing); the one book has five levels per
+ * program law and a rate slider per tax law. Each row names the closest new law
+ * and which way the old ladder runs against the new levels:
+ * - `leftHigh`: the old left end is the bigger program, so it maps high.
+ * - `leftLow`: the old left end is the lighter hand, so it maps low.
  *
  * Plain data and pure functions: no database, clock or randomness.
  */
