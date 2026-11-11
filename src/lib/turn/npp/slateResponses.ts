@@ -37,6 +37,7 @@ import {
   canFieldExecutiveCandidate,
   canFieldLegislativeCandidate,
 } from "@/lib/turn/onePartyConstraints";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 interface SlateResponseSummary {
   rowsConsidered: number;
@@ -633,7 +634,7 @@ export async function fileAcceptedSlateRows(ctx: NPPContext): Promise<SlateFilin
         const holdsInStateCommonsSeat = offices.some(
           (office) =>
             office.officeType === "commons" &&
-            (office.countryId ?? electionCountry) === "UK" &&
+            countryHasFeature("ukTurn", office.countryId ?? electionCountry) &&
             office.state === election.state
         );
         if (holdsInStateCommonsSeat) {

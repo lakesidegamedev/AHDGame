@@ -69,6 +69,7 @@ import {
 } from "./actorProbes";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /** Database-name prefix every sandbox sim world uses (`ahd_sim_<seed>`). */
 export const SIM_SANDBOX_DB_PREFIX = "ahd_sim_";
@@ -397,7 +398,9 @@ export async function materializeSyntheticActors(
     )
     .sort((a, b) => (a._id < b._id ? -1 : a._id > b._id ? 1 : 0));
   const targetOrg =
-    seatedOrgs.find((org) => (org.countryId ?? "US") === "US") ?? seatedOrgs[0] ?? null;
+    seatedOrgs.find((org) => countryHasFeature("usTurn", org.countryId ?? "US")) ??
+    seatedOrgs[0] ??
+    null;
 
   const statePartyElections: Array<Record<string, unknown>> = [];
   const statePartyCandidates: Array<Record<string, unknown>> = [];

@@ -31,6 +31,7 @@ import { politicalParties as SEED_PARTIES } from "@/lib/seeds/reference/politica
 import { logger } from "@/lib/observability/logger";
 import { getGameStateCollection } from "@/lib/db/collections/gameState";
 import { getStatesCollection } from "@/lib/db/collections/states";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /**
  * Canonical US seed name for each seeded abbreviation, used as a fallback when
@@ -38,9 +39,9 @@ import { getStatesCollection } from "@/lib/db/collections/states";
  * seeds still use (e.g. "REP" → "GOP" on the production world).
  */
 const US_SEED_PARTY_NAME_BY_ABBR = new Map(
-  SEED_PARTIES.filter((p) => p.countryId === "US" && p.abbreviation && p.name).map(
-    (p) => [p.abbreviation.toUpperCase(), p.name.trim().toLowerCase()] as const
-  )
+  SEED_PARTIES.filter(
+    (p) => countryHasFeature("usTurn", p.countryId) && p.abbreviation && p.name
+  ).map((p) => [p.abbreviation.toUpperCase(), p.name.trim().toLowerCase()] as const)
 );
 
 export interface StatehoodResult {
