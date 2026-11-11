@@ -3,6 +3,7 @@ import { calculateEnactedLawAnnualCost } from "@/lib/budget/costs";
 import type { EnactedLaw } from "@/lib/db/types";
 import { LEGISLATION_COST_CLASS, getCostClass } from "./legislationCostCatalog";
 import { SAVED_WORLD_COST_CLASS } from "./savedWorldCostClasses";
+import KNOWN_COST_CLASS_IDS from "./costClassIds.snapshot.json";
 
 describe("saved-world cost classes", () => {
   it("only lists types that new worlds no longer seed", () => {
@@ -36,5 +37,22 @@ describe("saved-world cost classes", () => {
       year: 2006,
     });
     expect(cost).toBeCloseTo(67_600, 6);
+  });
+});
+
+describe("removing a law type from the cost catalog", () => {
+  const classed = (id: string) => id in LEGISLATION_COST_CLASS || id in SAVED_WORLD_COST_CLASS;
+
+  it("keeps every once-classed id in one of the two tables", () => {
+    // Saved worlds still hold enacted laws of removed types. Move a removed
+    // row into SAVED_WORLD_COST_CLASS, or its programmes price at zero.
+    expect(KNOWN_COST_CLASS_IDS.filter((id) => !classed(id))).toEqual([]);
+  });
+
+  it("lists every classed id in the snapshot", () => {
+    // Add new ids to costClassIds.snapshot.json so a later removal is caught.
+    const known = new Set(KNOWN_COST_CLASS_IDS);
+    const ids = [...Object.keys(LEGISLATION_COST_CLASS), ...Object.keys(SAVED_WORLD_COST_CLASS)];
+    expect(ids.filter((id) => !known.has(id) && !/^(x_|eraB_)/.test(id))).toEqual([]);
   });
 });
