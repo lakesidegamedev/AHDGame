@@ -1,4 +1,4 @@
-import * as Sentry from "@sentry/nextjs";
+import { logger } from "@/lib/observability/logger";
 import type { CountryId } from "@/lib/constants/countries";
 import type { BillLifecycleRuntimeContext } from "@/lib/turn/billLifecycle/types";
 import { TurnMustStopError } from "@/lib/turn/turnMustStop";
@@ -52,9 +52,9 @@ export async function runCountryBillEntries(
         failed.push(phaseName);
         firstError ??= error;
         if (error instanceof TurnMustStopError) mustStop ??= error;
-        console.error(`[Turn] Country bill lifecycle "${phaseName}" failed`, error);
-        Sentry.captureException(error, {
-          extra: { phase: "countryBillLifecycle", family: phaseName },
+        logger.error("Turn", `Country bill lifecycle "${phaseName}" failed`, error, {
+          phase: "countryBillLifecycle",
+          family: phaseName,
         });
       } finally {
         durationMs[phaseName] = Date.now() - startedAt;
