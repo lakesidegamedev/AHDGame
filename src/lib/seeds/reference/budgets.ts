@@ -3087,10 +3087,6 @@ export function getInitialNationalBudgetsForPreset(preset: string): SupportedNat
 export const initialNationalBudgets: SupportedNationalBudget[] =
   getNationalBudgetSeedConfigsForPreset("2019-default").map(buildNationalBudgetSeed);
 
-export const initialFederalBudget = initialNationalBudgets.find((budget) =>
-  countryHasFeature("usSeeds", budget.countryId)
-) as SupportedNationalBudget;
-
 export const initialUkBudget = initialNationalBudgets.find((budget) =>
   countryHasFeature("ukSeeds", budget.countryId)
 ) as SupportedNationalBudget;
