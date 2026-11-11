@@ -1,16 +1,10 @@
 import type { NationalBudgetSeedConfig } from "@/lib/seeds/reference/budgets";
 
-// Bulgaria joined the euro on 1 January 2026. This is a 2027 forecast
-// calibration, not an enacted 2027 budget. The Commission Spring 2026
-// forecast gives 2.2% real growth, 2.6% HICP, -4.3% general-government
-// balance and 35.5% debt/GDP. The 2025 Eurostat revenue ratio (38.1% of
-// GDP) is held flat as a modeling assumption. The nominal GDP anchor is
-// EUR 134.592B from the BACB March 2026 forecast. Spending categories are
-// model allocations calibrated to the aggregate forecast, not official
-// appropriations.
+// Forecast calibration, not an enacted budget: growth, inflation, balance and
+// debt follow the Commission spring forecast, revenue holds the Eurostat ratio
+// flat, and spending categories are model allocations to match the aggregates.
 // https://economy-finance.ec.europa.eu/economic-surveillance-eu-member-states/country-pages-including-country-reports/bulgaria/economic-forecast-bulgaria_en
 // https://ec.europa.eu/eurostat/databrowser/view/tec00021/default/table
-// https://www.bacb.bg/en/files/archive/2026-03-31/88-interim-reports.pdf/7524
 export const BG_NATIONAL_BUDGET_2027: NationalBudgetSeedConfig = {
   budgetId: "BG",
   countryId: "BG",

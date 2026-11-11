@@ -3,578 +3,12 @@
  * Single source of truth — import from here or @/lib/constants.
  */
 
-/** House seat counts by state (2020 census apportionment). Sum = 435. */
-export const HOUSE_SEATS: Record<string, number> = {
-  AL: 7,
-  AK: 1,
-  AZ: 9,
-  AR: 4,
-  CA: 52,
-  CO: 8,
-  CT: 5,
-  DE: 1,
-  FL: 28,
-  GA: 14,
-  HI: 2,
-  ID: 2,
-  IL: 17,
-  IN: 9,
-  IA: 4,
-  KS: 4,
-  KY: 6,
-  LA: 6,
-  ME: 2,
-  MD: 8,
-  MA: 9,
-  MI: 13,
-  MN: 8,
-  MS: 4,
-  MO: 8,
-  MT: 2,
-  NE: 3,
-  NV: 4,
-  NH: 2,
-  NJ: 12,
-  NM: 3,
-  NY: 26,
-  NC: 14,
-  ND: 1,
-  OH: 15,
-  OK: 5,
-  OR: 6,
-  PA: 17,
-  RI: 2,
-  SC: 7,
-  SD: 1,
-  TN: 9,
-  TX: 38,
-  UT: 4,
-  VT: 1,
-  VA: 11,
-  WA: 10,
-  WV: 2,
-  WI: 8,
-  WY: 1,
-};
-
-/**
- * House seat counts by state — 1950 census apportionment (in force for the 83rd
- * through 87th Congresses, 1953-1963). Sum = 435 across the 48 contiguous states.
- *
- * Alaska and Hawaii are DELIBERATELY ABSENT: both were territories in 1953 (they
- * gained statehood in 1959), so they had no House delegation, no Senators, no
- * state governor and no electoral votes. `seedSeats` skips any US state absent
- * from the active-era apportionment map, which is how their pre-statehood
- * "territory" status is represented for the 1953 preset. DC likewise elects no
- * House member (and, pre-23rd-Amendment, cast no electoral votes — see
- * ELECTORAL_VOTES_1953).
- */
-export const HOUSE_SEATS_1953: Record<string, number> = {
-  AL: 9,
-  AZ: 2,
-  AR: 6,
-  CA: 30,
-  CO: 4,
-  CT: 6,
-  DE: 1,
-  FL: 8,
-  GA: 10,
-  ID: 2,
-  IL: 25,
-  IN: 11,
-  IA: 8,
-  KS: 6,
-  KY: 8,
-  LA: 8,
-  ME: 3,
-  MD: 7,
-  MA: 14,
-  MI: 18,
-  MN: 9,
-  MS: 6,
-  MO: 11,
-  MT: 2,
-  NE: 4,
-  NV: 1,
-  NH: 2,
-  NJ: 14,
-  NM: 2,
-  NY: 43,
-  NC: 12,
-  ND: 2,
-  OH: 23,
-  OK: 6,
-  OR: 4,
-  PA: 30,
-  RI: 2,
-  SC: 6,
-  SD: 2,
-  TN: 9,
-  TX: 22,
-  UT: 2,
-  VT: 1,
-  VA: 10,
-  WA: 7,
-  WV: 6,
-  WI: 10,
-  WY: 1,
-};
-
-/** Senate class assignments per state (Class 1: 33, Class 2: 33, Class 3: 34 seats). */
-export const SENATE_CLASSES_BY_STATE: Record<string, [1 | 2 | 3, 1 | 2 | 3]> = {
-  AL: [2, 3],
-  AK: [2, 3],
-  AZ: [1, 3],
-  AR: [2, 3],
-  CA: [1, 3],
-  CO: [2, 3],
-  CT: [1, 3],
-  DE: [1, 2],
-  FL: [1, 3],
-  GA: [2, 3],
-  HI: [1, 3],
-  ID: [2, 3],
-  IL: [2, 3],
-  IN: [1, 3],
-  IA: [2, 3],
-  KS: [2, 3],
-  KY: [2, 3],
-  LA: [2, 3],
-  ME: [1, 2],
-  MD: [1, 3],
-  MA: [1, 2],
-  MI: [1, 2],
-  MN: [1, 2],
-  MS: [1, 2],
-  MO: [1, 3],
-  MT: [1, 2],
-  NE: [1, 2],
-  NV: [1, 3],
-  NH: [2, 3],
-  NJ: [1, 2],
-  NM: [1, 2],
-  NY: [1, 3],
-  NC: [2, 3],
-  ND: [1, 3],
-  OH: [1, 3],
-  OK: [2, 3],
-  OR: [2, 3],
-  PA: [1, 3],
-  RI: [1, 2],
-  SC: [2, 3],
-  SD: [2, 3],
-  TN: [1, 2],
-  TX: [1, 2],
-  UT: [1, 3],
-  VT: [1, 3],
-  VA: [1, 2],
-  WA: [1, 3],
-  WV: [1, 2],
-  WI: [1, 3],
-  WY: [1, 2],
-};
-
-/** State Senate seat counts by state (for state senate elections). */
-export const STATE_SENATE_SEATS: Record<string, number> = {
-  AL: 35,
-  AK: 20,
-  AZ: 30,
-  AR: 35,
-  CA: 40,
-  CO: 35,
-  CT: 36,
-  DE: 21,
-  FL: 40,
-  GA: 56,
-  HI: 25,
-  ID: 35,
-  IL: 59,
-  IN: 50,
-  IA: 50,
-  KS: 40,
-  KY: 38,
-  LA: 39,
-  ME: 35,
-  MD: 47,
-  MA: 40,
-  MI: 38,
-  MN: 67,
-  MS: 52,
-  MO: 34,
-  MT: 50,
-  NE: 49,
-  NV: 21,
-  NH: 24,
-  NJ: 40,
-  NM: 42,
-  NY: 63,
-  NC: 50,
-  ND: 47,
-  OH: 33,
-  OK: 48,
-  OR: 30,
-  PA: 50,
-  RI: 38,
-  SC: 46,
-  SD: 35,
-  TN: 33,
-  TX: 31,
-  UT: 29,
-  VT: 30,
-  VA: 40,
-  WA: 49,
-  WV: 34,
-  WI: 33,
-  WY: 30,
-};
-
-export const TOTAL_HOUSE_SEATS = 435;
-export const TOTAL_SENATE_SEATS = 100;
-
-/**
- * UK Commons seat counts by region (Westminster constituencies per NUTS1 region).
- * Matches ukRegions.houseDistricts. Sum = 652 (ONS 2023 boundary review).
- * Mirrors HOUSE_SEATS for the UK parliamentary system.
- */
-export const UK_COMMONS_SEATS: Record<string, number> = {
-  LON: 75,
-  SEE: 90,
-  SWE: 58,
-  EAE: 60,
-  EMI: 47,
-  WMI: 57,
-  YHU: 54,
-  NWE: 75,
-  NEE: 27,
-  SCO: 57,
-  WAL: 32,
-  NIR: 18,
-};
-
-export const TOTAL_UK_COMMONS_SEATS = 650;
-
-/**
- * UK Commons seat counts by region — 1950–1955 redistribution (in force for
- * the `1953-default` preset). Mirrors `ukRegions1953.houseDistricts` exactly
- * (England 506 / Scotland 71 / Wales 36 / Northern Ireland 12 = 625). Without
- * this map, spawn/allocate still used the modern 650-seat `UK_COMMONS_SEATS`
- * and seated 650 MPs against a 625-seat / majority-313 chamber.
- */
-export const UK_COMMONS_SEATS_1953: Record<string, number> = {
-  LON: 91,
-  SEE: 81,
-  SWE: 43,
-  EAE: 47,
-  EMI: 37,
-  WMI: 53,
-  YHU: 52,
-  NWE: 75,
-  NEE: 27,
-  SCO: 71,
-  WAL: 36,
-  NIR: 12,
-};
-
-export const TOTAL_UK_COMMONS_SEATS_1953 = 625;
-
-/**
- * UK Commons seat counts by region — 1983 redistribution (in force for the
- * `1991-default` preset). Mirrors `ukRegions1991.houseDistricts` exactly
- * (England 523 / Scotland 72 / Wales 38 / Northern Ireland 17 = 650).
- *
- * Same defect `UK_COMMONS_SEATS_1953` was written for, one era over: without
- * this map `getUkCommonsSeats` fell through to the modern table, so a 1991
- * world spawned and allocated Commons elections on a regional split that
- * matched neither its chamber config nor its seated roster.
- */
-export const UK_COMMONS_SEATS_1991: Record<string, number> = {
-  LON: 81,
-  SEE: 89,
-  SWE: 50,
-  EAE: 53,
-  EMI: 41,
-  WMI: 56,
-  YHU: 52,
-  NWE: 72,
-  NEE: 29,
-  SCO: 72,
-  WAL: 38,
-  NIR: 17,
-};
-
-export const TOTAL_UK_COMMONS_SEATS_1991 = 650;
-
-/** RU (Soviet Union) region id → display name. Matches ruRegions seed names. */
-export const RU_REGION_NAMES: Record<string, string> = {
-  CEN: "Central Russia",
-  NWR: "Northwest Russia",
-  NOR: "European North",
-  CBE: "Central Black Earth",
-  VOL: "Volga",
-  NCA: "North Caucasus",
-  URA: "Urals",
-  WSB: "West Siberia",
-  ESB: "East Siberia",
-  FEA: "Russian Far East",
-  UKR: "Ukraine",
-  KAZ: "Kazakhstan",
-  TRA: "Transcaucasia",
-  CAS: "Central Asia",
-  MOL: "Moldova",
-  BEL: "Byelorussia",
-  BLT: "Baltic Republics",
-};
-
-/** UK region id → display name. Matches ukRegions seed names. */
-export const UK_REGION_NAMES: Record<string, string> = {
-  LON: "London",
-  SEE: "South East England",
-  SWE: "South West England",
-  EAE: "East of England",
-  EMI: "East Midlands",
-  WMI: "West Midlands",
-  YHU: "Yorkshire & the Humber",
-  NWE: "North West England",
-  NEE: "North East England",
-  SCO: "Scotland",
-  WAL: "Wales",
-  NIR: "Northern Ireland",
-};
-
-/**
- * UK Regional Council seat counts by region.
- * Each council retains a five-year term, with regions split across five
- * annual cohorts. See elections/ukRegionalCouncilStagger.ts.
- */
-export const UK_REGIONAL_COUNCIL_SEATS: Record<string, number> = {
-  LON: 32,
-  SEE: 67,
-  SWE: 39,
-  EAE: 39,
-  EMI: 39,
-  WMI: 18,
-  YHU: 21,
-  NWE: 27,
-  NEE: 17,
-  SCO: 129,
-  WAL: 60,
-  NIR: 90,
-};
-
-/**
- * NG State House of Assembly seats per geopolitical zone — 990 total (real
- * Nigerian State Assembly size), allocated by zone population (largest-remainder).
- */
-export const NG_REGIONAL_COUNCIL_SEATS: Record<string, number> = {
-  NORTH_WEST: 259,
-  NORTH_EAST: 137,
-  NORTH_CENTRAL: 146,
-  SOUTH_WEST: 197,
-  SOUTH_SOUTH: 134,
-  SOUTH_EAST: 117,
-};
-
-// ── Japan seat counts ────────────────────────────────────────────────────────
-
-// ── China seat counts ────────────────────────────────────────────────────────
-
-/**
- * NPC Delegate seats per macro-region for the MODERN apportionment
- * (2019/1991/1979 presets). Mirrors `cnRegions[i].houseDistricts` so the
- * perpetual-election spawner can pull total seats without importing the regions
- * seed at the constants layer. Total = 2980.
- *
- * Read through {@link getCnNpcSeats}, never directly — a 1953 world seats a
- * 1,226-deputy chamber, not this one.
- */
-export const CN_NPC_SEATS: Record<string, number> = {
-  DB: 238,
-  HB: 323,
-  HD: 922,
-  HZ: 395,
-  HN: 316,
-  XN: 466,
-  XB: 320,
-};
-
-export const TOTAL_CN_NPC_SEATS = 2980;
-
-/**
- * NPC Delegate seats per macro-region for `1953-default` — the 1,226-deputy
- * allocation of the 1st National People's Congress (1954 convocation).
- *
- * Mirrors `cnRegions1953[i].houseDistricts` EXACTLY (88/129/379/215/118/219/78),
- * which is also what `COUNTRY_CONFIGS.CN.legislature.lowerChamber` declares for
- * this preset and what `CN_NPC_1953` in `historicalSeats.ts` seats.
- * Before this map existed, `ensureCNElections` sized the 1953 race off the
- * modern 2,980 while every other era-aware source said 1,226, so the first CN
- * election in a 1953 world would have resolved ~1,750 phantom deputies into the
- * chamber.
- */
-export const CN_NPC_SEATS_1953: Record<string, number> = {
-  DB: 88,
-  HB: 129,
-  HD: 379,
-  HZ: 215,
-  HN: 118,
-  XN: 219,
-  XB: 78,
-};
-
-export const TOTAL_CN_NPC_SEATS_1953 = 1226;
-
-/**
- * Provincial People's Congress seats per macro-region, modern apportionment.
- * Total = 4000. Sub-national legislature, contested separately from the
- * national NPC. Sized roughly proportional to NPC apportionment, scaled up to
- * reflect real-world provincial people's congresses (each ~700-900 delegates).
- *
- * Read through {@link getCnPeoplesCongressSeats}, never directly.
- */
-export const CN_PEOPLES_CONGRESS_SEATS: Record<string, number> = {
-  DB: 321,
-  HB: 433,
-  HD: 1240,
-  HZ: 533,
-  HN: 425,
-  XN: 625,
-  XB: 423,
-};
-
-export const TOTAL_CN_PEOPLES_CONGRESS_SEATS = 4000;
-
-/**
- * Provincial People's Congress seats per macro-region for `1953-default`.
- * Total = 3781. Mirrors `cnRegions1953[i].stateSenateSeats` EXACTLY — that
- * field carries the era's provincial-congress allocation, so the 1953 seed and
- * this map agree by construction (unlike the modern eras, where
- * `stateSenateSeats` holds the separate, smaller appointed CPPCC allocation and
- * the map deliberately overrides it — bug #0853).
- */
-export const CN_PEOPLES_CONGRESS_SEATS_1953: Record<string, number> = {
-  DB: 270,
-  HB: 395,
-  HD: 1164,
-  HZ: 678,
-  HN: 362,
-  XN: 673,
-  XB: 239,
-};
-
-export const TOTAL_CN_PEOPLES_CONGRESS_SEATS_1953 = 3781;
-
-// ── Germany seat counts ──────────────────────────────────────────────────────
-
-/**
- * Bundestag Wahlkreise (single-member constituencies) per Bundesland.
- * Direct-mandate tier of the AMS/MMP system. Sum = 299.
- * Mirrors `deRegions[*].houseDistricts`.
- */
-export const DE_WAHLKREIS_SEATS: Record<string, number> = {
-  BW: 38,
-  BY: 47,
-  BE: 12,
-  BB: 10,
-  BRE: 2,
-  HH: 6,
-  HE: 22,
-  MV: 6,
-  NI: 30,
-  NW: 64,
-  RP: 15,
-  SL: 4,
-  SN: 16,
-  ST: 8,
-  SH: 11,
-  TH: 8,
-};
-
-/** Total Wahlkreise contested nationwide. Fixed under 2023 reform. */
-export const TOTAL_DE_WAHLKREIS_SEATS = 299;
-
-/**
- * Total Bundestag seats including list tier.
- * Capped under the 2023 Wahlrechtsreform — direct + list combined.
- */
-export const TOTAL_DE_BUNDESTAG_SEATS = 630;
-
-/** Landtag seat counts per Bundesland. Mirrors deRegions[*].stateSenateSeats. */
-export const DE_LANDTAG_SEATS: Record<string, number> = {
-  BW: 154,
-  BY: 203,
-  BE: 159,
-  BB: 88,
-  BRE: 87,
-  HH: 123,
-  HE: 137,
-  MV: 79,
-  NI: 146,
-  NW: 195,
-  RP: 101,
-  SL: 51,
-  SN: 120,
-  ST: 97,
-  SH: 73,
-  TH: 88,
-};
-
-/** Electoral votes per state (House seats + 2). DC = 3. Total = 538. */
-export const ELECTORAL_VOTES: Record<string, number> = {
-  AL: 9,
-  AK: 3,
-  AZ: 11,
-  AR: 6,
-  CA: 54,
-  CO: 10,
-  CT: 7,
-  DE: 3,
-  FL: 30,
-  GA: 16,
-  HI: 4,
-  ID: 4,
-  IL: 19,
-  IN: 11,
-  IA: 6,
-  KS: 6,
-  KY: 8,
-  LA: 8,
-  ME: 4,
-  MD: 10,
-  MA: 11,
-  MI: 15,
-  MN: 10,
-  MS: 6,
-  MO: 10,
-  MT: 4,
-  NE: 5,
-  NV: 6,
-  NH: 4,
-  NJ: 14,
-  NM: 5,
-  NY: 28,
-  NC: 16,
-  ND: 3,
-  OH: 17,
-  OK: 7,
-  OR: 8,
-  PA: 19,
-  RI: 4,
-  SC: 9,
-  SD: 3,
-  TN: 11,
-  TX: 40,
-  UT: 6,
-  VT: 3,
-  VA: 13,
-  WA: 12,
-  WV: 4,
-  WI: 10,
-  WY: 3,
-  DC: 3,
-};
-
-export const TOTAL_ELECTORAL_VOTES = 538;
-export const ELECTORAL_MAJORITY = 270;
+import {
+  HOUSE_SEATS,
+  HOUSE_SEATS_1953,
+  ELECTORAL_VOTES,
+  ELECTORAL_VOTES_1991,
+} from "@/lib/countries/us/data/usSeats";
 
 /**
  * One electoral-vote unit: a whole state, or one leg of a ME/NE split.
@@ -640,122 +74,6 @@ export const ELECTORAL_VOTE_UNITS: ElectoralVoteUnit[] =
   buildSplitElectoralVoteUnits(ELECTORAL_VOTES);
 
 /**
- * House seat counts by state — 1990 census apportionment (103rd Congress,
- * effective for the 1992-2000 elections). Sum = 435. Used for the
- * `1991-default` preset. Mirrors `states1991.ts` houseDistricts.
- */
-export const HOUSE_SEATS_1991: Record<string, number> = {
-  AL: 7,
-  AK: 1,
-  AZ: 6,
-  AR: 4,
-  CA: 52,
-  CO: 6,
-  CT: 6,
-  DE: 1,
-  FL: 23,
-  GA: 11,
-  HI: 2,
-  ID: 2,
-  IL: 20,
-  IN: 10,
-  IA: 5,
-  KS: 4,
-  KY: 6,
-  LA: 7,
-  ME: 2,
-  MD: 8,
-  MA: 10,
-  MI: 16,
-  MN: 8,
-  MS: 5,
-  MO: 9,
-  MT: 1,
-  NE: 3,
-  NV: 2,
-  NH: 2,
-  NJ: 13,
-  NM: 3,
-  NY: 31,
-  NC: 12,
-  ND: 1,
-  OH: 19,
-  OK: 6,
-  OR: 5,
-  PA: 21,
-  RI: 2,
-  SC: 6,
-  SD: 1,
-  TN: 9,
-  TX: 30,
-  UT: 3,
-  VT: 1,
-  VA: 11,
-  WA: 9,
-  WV: 3,
-  WI: 9,
-  WY: 1,
-};
-
-/**
- * Electoral votes per state — 1990 census (House seats + 2; DC = 3).
- * Total = 538. Matches the 1992/1996/2000 electoral map exactly.
- */
-export const ELECTORAL_VOTES_1991: Record<string, number> = {
-  AL: 9,
-  AK: 3,
-  AZ: 8,
-  AR: 6,
-  CA: 54,
-  CO: 8,
-  CT: 8,
-  DE: 3,
-  FL: 25,
-  GA: 13,
-  HI: 4,
-  ID: 4,
-  IL: 22,
-  IN: 12,
-  IA: 7,
-  KS: 6,
-  KY: 8,
-  LA: 9,
-  ME: 4,
-  MD: 10,
-  MA: 12,
-  MI: 18,
-  MN: 10,
-  MS: 7,
-  MO: 11,
-  MT: 3,
-  NE: 5,
-  NV: 4,
-  NH: 4,
-  NJ: 15,
-  NM: 5,
-  NY: 33,
-  NC: 14,
-  ND: 3,
-  OH: 21,
-  OK: 8,
-  OR: 7,
-  PA: 23,
-  RI: 4,
-  SC: 8,
-  SD: 3,
-  TN: 11,
-  TX: 32,
-  UT: 5,
-  VT: 3,
-  VA: 13,
-  WA: 11,
-  WV: 5,
-  WI: 11,
-  WY: 3,
-  DC: 3,
-};
-
-/**
  * 1990-census electoral vote allocation units. Same ME/NE split structure as
  * the 2020 bundle (only the per-unit EV values differ).
  */
@@ -780,19 +98,6 @@ export const ELECTORAL_VOTES_1953: Record<string, number> = Object.fromEntries(
 export const ELECTORAL_VOTE_UNITS_1953: ElectoralVoteUnit[] = Object.entries(
   ELECTORAL_VOTES_1953
 ).map(([stateId, ev]) => ({ unitId: stateId, ev, stateId, electorateShare: 1 }));
-
-/**
- * District lean for ME/NE congressional districts: -1 to +1.
- * Positive = favor conservative (higher economic position); negative = favor liberal.
- * Used to shift vote distribution in presidential elections.
- */
-export const UNIT_LEAN: Record<string, number> = {
-  ME_CD1: -0.1, // southern Maine (Portland area), suburban/D-leaning
-  ME_CD2: 0.1, // northern Maine, rural/R-leaning
-  NE_CD1: -0.12, // east Omaha, urban D-leaning
-  NE_CD2: -0.05, // Omaha proper, slight D-lean (Biden 2020)
-  NE_CD3: 0.25, // rural west, heavily R
-};
 
 /**
  * Upper bound on the length of any region `_id` in the `states` collection,
@@ -837,3 +142,51 @@ export {
   TOTAL_JP_SANGIIN_SEATS,
   JP_GOVERNOR_SEATS,
 } from "@/lib/countries/jp/data/jpSeats";
+
+export {
+  HOUSE_SEATS,
+  HOUSE_SEATS_1953,
+  SENATE_CLASSES_BY_STATE,
+  STATE_SENATE_SEATS,
+  TOTAL_HOUSE_SEATS,
+  TOTAL_SENATE_SEATS,
+  ELECTORAL_VOTES,
+  TOTAL_ELECTORAL_VOTES,
+  ELECTORAL_MAJORITY,
+  HOUSE_SEATS_1991,
+  ELECTORAL_VOTES_1991,
+  UNIT_LEAN,
+} from "@/lib/countries/us/data/usSeats";
+
+export {
+  UK_COMMONS_SEATS,
+  TOTAL_UK_COMMONS_SEATS,
+  UK_COMMONS_SEATS_1953,
+  TOTAL_UK_COMMONS_SEATS_1953,
+  UK_COMMONS_SEATS_1991,
+  TOTAL_UK_COMMONS_SEATS_1991,
+  UK_REGION_NAMES,
+  UK_REGIONAL_COUNCIL_SEATS,
+} from "@/lib/countries/uk/data/ukSeats";
+
+export { RU_REGION_NAMES } from "@/lib/countries/ru/data/ruRegionNames";
+
+export { NG_REGIONAL_COUNCIL_SEATS } from "@/lib/countries/ng/data/ngSeats";
+
+export {
+  CN_NPC_SEATS,
+  TOTAL_CN_NPC_SEATS,
+  CN_NPC_SEATS_1953,
+  TOTAL_CN_NPC_SEATS_1953,
+  CN_PEOPLES_CONGRESS_SEATS,
+  TOTAL_CN_PEOPLES_CONGRESS_SEATS,
+  CN_PEOPLES_CONGRESS_SEATS_1953,
+  TOTAL_CN_PEOPLES_CONGRESS_SEATS_1953,
+} from "@/lib/countries/cn/data/cnSeats";
+
+export {
+  DE_WAHLKREIS_SEATS,
+  TOTAL_DE_WAHLKREIS_SEATS,
+  TOTAL_DE_BUNDESTAG_SEATS,
+  DE_LANDTAG_SEATS,
+} from "@/lib/countries/de/data/deSeats";
