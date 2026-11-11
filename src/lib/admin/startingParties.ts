@@ -17,6 +17,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { savingsAccountsCollection } from "@/lib/db/repositories/savingsAccounts";
 
 export type StartingPartiesMode = "default" | "none";
 
@@ -217,8 +218,7 @@ export async function clearStartingPolitics(db: Db, preset: string): Promise<voi
       .toArray();
     for (const position of positions) keep(position.nppId);
   }
-  const accounts = await db
-    .collection<SavingsAccount>("savingsAccounts")
+  const accounts = await savingsAccountsCollection(db)
     .find({ ownerType: "npp" })
     .project<Pick<SavingsAccount, "ownerId">>({ ownerId: 1 })
     .toArray();

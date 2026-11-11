@@ -12,6 +12,7 @@ import type { BankingPolicySnapshot } from "./rules/policy";
 import { savingsReadsAuthoritative } from "./rules/policy";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { savingsAccountsCollection } from "@/lib/db/repositories/savingsAccounts";
 
 export interface BankDepositor {
   key: string;
@@ -41,8 +42,7 @@ export async function getBankDepositorBook(
     createHash("sha256").update(`${holder}:${type}:${ownerId.toString()}`).digest("hex");
   let rows: BankDepositor[];
   if (authoritative) {
-    const accounts = await db
-      .collection<SavingsAccount>("savingsAccounts")
+    const accounts = await savingsAccountsCollection(db)
       .find(
         {
           holder,

@@ -33,6 +33,8 @@ import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 export const ECONOMY_RESET_PROCESSING_KIND = "economyReset";
 
@@ -352,11 +354,10 @@ async function loadSource(
     db
       .collection(NON_ATOMIC_MONEY_FLOW_RECEIPTS_COLLECTION)
       .countDocuments({ status: "in_progress" }),
-    db
-      .collection<Document>("bankMoneyMoves")
+    bankMoneyMovesCollection(db)
       .find({ status: "partial" }, { projection: { kind: 1, turn: 1, legs: 1 } })
       .toArray(),
-    db.collection("bankLoans").countDocuments({}),
+    bankLoansCollection<Document>(db).countDocuments({}),
     collectBalances(db, { treasuryCashLedgerEnabled }),
     Promise.resolve(fence.worldEpochId!),
     Promise.all(

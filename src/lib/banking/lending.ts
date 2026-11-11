@@ -35,6 +35,7 @@ import { reviveObjectIds, settleTransition } from "@/lib/banking/settlementJourn
 import { quoteLoanOrigination } from "@/lib/banking/rules/loanFees";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
 
 export { CHARACTER_LOAN_SPREAD_PP };
 
@@ -145,10 +146,7 @@ async function committedNamedLoanPaymentPerTurn(
   currentTurn: number,
   currency: CurrencyCode
 ): Promise<number> {
-  const loans = await db
-    .collection<
-      Pick<BankLoan, "outstanding" | "ratePercent" | "originatedTurn" | "termTurns" | "currency">
-    >("bankLoans")
+  const loans = await bankLoansCollection<Pick<BankLoan, "outstanding" | "ratePercent" | "originatedTurn" | "termTurns" | "currency">>(db)
     .find({
       borrowerType: borrower.type,
       borrowerId: borrower.id,
@@ -444,8 +442,7 @@ export async function listBorrowerFacingLoans(
     borrowerClause.push({ borrowerType: "corporation", borrowerId: { $in: corpIds } });
   }
 
-  const loans = await db
-    .collection<BankLoan>("bankLoans")
+  const loans = await bankLoansCollection(db)
     .find({
       status: { $in: ["current", "arrears", "defaulted"] },
       $or: borrowerClause,

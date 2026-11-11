@@ -25,6 +25,7 @@ import { getNppsCollection } from "@/lib/db/collections/npps";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 /**
  * Distribute a ₳-denominated shareholder pool pro-rata across every bucket:
@@ -48,8 +49,7 @@ export async function settleFundedWholeCorpShareholderPool(
 ): Promise<void> {
   const context = input.ledger.context;
   const settlementKey = `treasury-nationalization-buyout:${input.key}`;
-  const prior = await db
-    .collection<{ _id: string }>("bankMoneyMoves")
+  const prior = await bankMoneyMovesCollection<{ _id: string }>(db)
     .findOne({ _id: settlementKey });
   if (prior) {
     const resumed = await resumeSettlement(db, settlementKey);
@@ -307,7 +307,7 @@ export async function settleFundedWholeCorpLiquidation(
 ): Promise<void> {
   const context = input.ledger.context;
   const settlementKey = `treasury-nationalization-liquidation:${input.key}`;
-  if (await db.collection<{ _id: string }>("bankMoneyMoves").findOne({ _id: settlementKey })) {
+  if (await bankMoneyMovesCollection<{ _id: string }>(db).findOne({ _id: settlementKey })) {
     const resumed = await resumeSettlement(db, settlementKey);
     if (resumed.status !== "applied" && !(resumed.status === "replayed" && !resumed.error))
       throw new Error(resumed.error ?? "Funded corporation liquidation is incomplete");

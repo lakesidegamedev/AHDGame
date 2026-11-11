@@ -51,6 +51,7 @@ import type { StateMetrics } from "@/lib/db/types/stateMetrics";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { savingsLedgerCollection } from "@/lib/db/repositories/savingsLedger";
 
 const SAVINGS_FLOW_WINDOW_TURNS = 12;
 
@@ -132,8 +133,7 @@ export async function loadInflationDiagnostics(
     centralBanksCollection(db).find({}).toArray(),
     db.collection<ExchangeRate>("exchangeRates").find({}).toArray(),
     loadCommodityPressureSnapshots(db, currentTurn),
-    db
-      .collection<SavingsLedgerEntry>("savingsLedger")
+    savingsLedgerCollection(db)
       .aggregate<{ _id: { countryId: string; type: string }; total: number }>([
         {
           $match: {

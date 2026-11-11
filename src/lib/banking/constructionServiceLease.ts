@@ -7,6 +7,7 @@ import { completeRefusedDebitBatch } from "./constructionBatchCompletion";
 import { resumeSettlement } from "./settlementJournal";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
 
 export async function acquireConstructionServiceLease(
   db: Db,
@@ -85,8 +86,7 @@ export async function releaseConstructionServiceLease(
   if (batchLoanIds.length > 0) {
     // Locks first: recovery reaches a batch's locks only through its lease,
     // so the lease must outlive them.
-    await db
-      .collection<BankLoan>("bankLoans")
+    await bankLoansCollection(db)
       .updateMany(
         { _id: { $in: [loanId, ...batchLoanIds] }, constructionSettlementOwner: key },
         { $unset: { constructionSettlementOwner: "" } }
@@ -95,8 +95,7 @@ export async function releaseConstructionServiceLease(
     return;
   }
   await corporationsCollection(db).updateOne(lease, { $unset: { bankConstructionFunding: "" } });
-  await db
-    .collection<BankLoan>("bankLoans")
+  await bankLoansCollection(db)
     .updateOne(
       { _id: loanId, constructionSettlementOwner: key },
       { $unset: { constructionSettlementOwner: "" } }
@@ -151,7 +150,7 @@ export async function recoverConstructionServiceLeases(
         key,
         "recovery"
       );
-      await db.collection<BankLoan>("bankLoans").updateOne(
+      await bankLoansCollection(db).updateOne(
         {
           _id: new ObjectId(lease.loanId),
           constructionSettlementOwner: key.slice(0, -":payout".length),

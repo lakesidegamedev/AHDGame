@@ -20,6 +20,7 @@ import { loadBankingPolicy } from "./policy";
 import { MONEY_MOVE_COLLECTION } from "./moneyMove";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
 
 export type LoanDecisionResult = { ok: true; loan: BankLoan } | { ok: false; error: string };
 
@@ -130,7 +131,7 @@ async function acceptLoanInner(
   bankCorporationId: ObjectId,
   loanId: ObjectId
 ): Promise<LoanDecisionResult> {
-  const loan = await db.collection<BankLoan>("bankLoans").findOne({
+  const loan = await bankLoansCollection(db).findOne({
     _id: loanId,
     bankCorporationId,
   });
@@ -150,8 +151,7 @@ async function acceptLoanInner(
     }
     const result = await approveConstructionFinance(db, bankCorporationId, loanId, true);
     if (!result.ok) return result;
-    const delivered = await db
-      .collection<BankLoan>("bankLoans")
+    const delivered = await bankLoansCollection(db)
       .findOne({ _id: loanId, bankCorporationId });
     return delivered
       ? { ok: true, loan: delivered }
@@ -310,7 +310,7 @@ async function rejectLoanInner(
   loanId: ObjectId,
   reason?: string
 ): Promise<LoanDecisionResult> {
-  const loan = await db.collection<BankLoan>("bankLoans").findOne({
+  const loan = await bankLoansCollection(db).findOne({
     _id: loanId,
     bankCorporationId,
   });
@@ -318,8 +318,7 @@ async function rejectLoanInner(
   if (loan.constructionCollateral) {
     const result = await rejectConstructionFinance(db, bankCorporationId, loanId, true, reason);
     if (!result.ok) return result;
-    const declined = await db
-      .collection<BankLoan>("bankLoans")
+    const declined = await bankLoansCollection(db)
       .findOne({ _id: loanId, bankCorporationId });
     return declined
       ? { ok: true, loan: declined }

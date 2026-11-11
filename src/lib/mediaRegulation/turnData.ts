@@ -16,6 +16,7 @@ import { currentTurnDeliveredAdvertisingUnits, type MediaOutletDelivery } from "
 import { loadPoliticalMediaOrdersForClearing } from "@/lib/politicalMedia/journal";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 /**
  * Load measured US media delivery for concentration-gated legislation.
@@ -129,8 +130,7 @@ export async function loadUSMediaOutletDelivery(
     typeof context.currentTurn === "number" &&
     Number.isSafeInteger(context.currentTurn)
   ) {
-    const receipts = await db
-      .collection<PoliticalSellerReceiptRow>("bankMoneyMoves")
+    const receipts = await bankMoneyMovesCollection<PoliticalSellerReceiptRow>(db)
       .find(
         {
           kind: "political-media-seller-receipt",

@@ -39,6 +39,7 @@ import { applyCivilLibertiesDelta } from "@/lib/politicalMetrics/civilLiberties"
 import type { EventResolveContext } from "./types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 function isCompletedSettlement(result: SettlementResult): boolean {
   return result.status === "applied" || (result.status === "replayed" && !result.error);
@@ -86,8 +87,7 @@ async function resumeFrozenFundedEvent(
   if (!isCompletedSettlement(resumed)) {
     throw new Error(resumed.error ?? `Funded Treasury event receipt ${receiptKey} is incomplete`);
   }
-  const receipt = await db
-    .collection<{ _id: string; event?: { meta?: Record<string, unknown> } }>("bankMoneyMoves")
+  const receipt = await bankMoneyMovesCollection<{ _id: string; event?: { meta?: Record<string, unknown> } }>(db)
     .findOne({ _id: receiptKey }, { projection: { _id: 1, event: 1 } });
   if (!receipt)
     throw new Error(`Funded Treasury event receipt ${receiptKey} disappeared during recovery`);
@@ -340,10 +340,10 @@ async function applyFundedCountryTreasuryDelta(
   receiptKey: string,
   requestedPreset?: string
 ): Promise<void> {
-  const journals = db.collection<{
+  const journals = bankMoneyMovesCollection<{
     _id: string;
     event?: { meta?: Record<string, unknown> };
-  }>("bankMoneyMoves");
+  }>(db);
   const existing = await journals.findOne(
     { _id: receiptKey },
     { projection: { _id: 1, event: 1 } }

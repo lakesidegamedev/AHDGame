@@ -1,6 +1,7 @@
 import { ObjectId, type Db } from "mongodb";
 import type { BankLoan } from "@/lib/db/types/bank";
 import type { CorporateSector } from "@/lib/db/types/corporation";
+import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
 
 /**
  * What a buyer's price does to a pledged site's secured loan, in ₳. The lender
@@ -15,8 +16,7 @@ export async function buildSecuredLoanInfo(
 ) {
   const loanId = sector.constructionFinancing?.loanId;
   if (!listing.pledged || !loanId || !ObjectId.isValid(loanId)) return null;
-  const loan = await db
-    .collection<BankLoan>("bankLoans")
+  const loan = await bankLoansCollection(db)
     .findOne({ _id: new ObjectId(loanId) }, { projection: { outstanding: 1, status: 1 } });
   if (!loan || !(loan.outstanding > 0)) return null;
   const outstanding = loan.outstanding / (sellerFxRate && sellerFxRate > 0 ? sellerFxRate : 1);

@@ -21,6 +21,7 @@ import { getBankId } from "@/lib/centralBank/helpers";
 import { getReserveRequirement } from "@/lib/banking/reserves";
 import { interestBearingCbMarginDebt } from "@/lib/banking/rules/facilityInterest";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { interbankLoansCollection } from "@/lib/db/repositories/interbankLoans";
 
 export const BANK_TREASURY_TRADES_COLLECTION = "bankTreasuryTrades";
 
@@ -158,8 +159,7 @@ export async function bankCashFloor(
       { _id: centralBankId },
       { projection: { primeRate: 1, inflationHistory: 1 } }
     ),
-    db
-      .collection<InterbankLoan>("interbankLoans")
+    interbankLoansCollection(db)
       .find({
         borrowerCorporationId: bankId,
         currency: charter.currency,

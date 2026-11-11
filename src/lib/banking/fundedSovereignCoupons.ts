@@ -34,6 +34,7 @@ import {
   fiscalScaleCouponOrder,
 } from "@/lib/budget/rules/fiscalScale";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 export const SOVEREIGN_COUPON_CLAIMS_COLLECTION = "sovereignCouponClaims";
 
@@ -237,8 +238,7 @@ async function loadOpenSovereignCouponClaims(
 export async function loadSovereignCouponPriorPayouts(
   db: Db
 ): Promise<Array<{ _id: string; status: string }>> {
-  return db
-    .collection<{ _id: string; status: string }>("bankMoneyMoves")
+  return bankMoneyMovesCollection<{ _id: string; status: string }>(db)
     .find(
       { _id: { $regex: "^sovereign-coupon:" }, status: { $in: ["partial", "applied"] } },
       { projection: { _id: 1, status: 1 } }
@@ -540,8 +540,7 @@ export async function loadSovereignCouponSettlementPrefetch(
     }
   }
   const batchRows = keys.length
-    ? await db
-        .collection<CouponBatchRecord>("bankMoneyMoves")
+    ? await bankMoneyMovesCollection<CouponBatchRecord>(db)
         .find({ _id: { $in: keys } }, { projection: BATCH_PROJECTION })
         .toArray()
     : [];
@@ -599,8 +598,7 @@ async function findPriorPayouts(
   claims: FundedSovereignCouponClaim[]
 ): Promise<Array<{ _id: string; status: string }>> {
   if (!claims.length) return [];
-  return db
-    .collection<{ _id: string; status: string }>("bankMoneyMoves")
+  return bankMoneyMovesCollection<{ _id: string; status: string }>(db)
     .find(
       {
         $or: claims.map((claim) => ({ _id: { $regex: `^${escapeRegex(claim.id)}:attempt:` } })),
@@ -1389,8 +1387,7 @@ export async function settleFundedSovereignCoupons(
       return prepared ? { completed: false, batchClose } : { completed: false };
     if (settlementLanded(result)) {
       // A replay keeps the membership the receipt was first written with.
-      const saved = await db
-        .collection<CouponBatchRecord>("bankMoneyMoves")
+      const saved = await bankMoneyMovesCollection<CouponBatchRecord>(db)
         .findOne({ _id: transition.key }, { projection: BATCH_PROJECTION });
       if (saved && batchSettled(saved)) {
         if (prepared) batchClose.push(...couponBatchCloseOps(budgetId, [saved], grouped));
@@ -1474,8 +1471,7 @@ async function loadCouponBatches(
   if (first === null) return [];
   const keys: string[] = [];
   for (let t = first; t <= turn; t++) keys.push(couponBatchKey(budgetId, t));
-  return db
-    .collection<CouponBatchRecord>("bankMoneyMoves")
+  return bankMoneyMovesCollection<CouponBatchRecord>(db)
     .find({ _id: { $in: keys } }, { projection: BATCH_PROJECTION })
     .toArray();
 }
@@ -1488,8 +1484,7 @@ async function loadCouponBatches(
  * records and needs no payee lock.
  */
 export async function unfinishedSovereignCouponBatchClaimIds(db: Db): Promise<string[]> {
-  const rows = await db
-    .collection<CouponBatchRecord>("bankMoneyMoves")
+  const rows = await bankMoneyMovesCollection<CouponBatchRecord>(db)
     .find(
       {
         status: { $in: ["partial", "replayed"] },

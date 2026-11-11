@@ -6,6 +6,7 @@ import { treasuryAnchorValuation } from "@/lib/budget/rules/treasuryAccrual";
 import { settleTransition, resumeSettlement } from "@/lib/banking/settlementJournal";
 import { oid, type BankingTransition } from "@/lib/banking/rules/boundary";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 interface CashArrearsInput {
   db: Db;
@@ -18,8 +19,7 @@ interface CashArrearsInput {
 }
 
 async function resumePending(db: Db, prefix: string): Promise<void> {
-  const rows = await db
-    .collection<{ _id: string; status?: string }>("bankMoneyMoves")
+  const rows = await bankMoneyMovesCollection<{ _id: string; status?: string }>(db)
     .find({ _id: { $regex: `^${prefix}` }, status: "partial" }, { projection: { _id: 1 } })
     .toArray();
   for (const row of rows.sort((a, b) => a._id.localeCompare(b._id))) {
@@ -60,8 +60,7 @@ export async function settlePriorCorporateCashArrears(input: CashArrearsInput): 
   if (operatingPaid > 0) {
     // Existence only: the receipt is read by resumeSettlement under its own
     // projection when it is there, so this check needs no status or legs.
-    const existing = await db
-      .collection<{ _id: string }>("bankMoneyMoves")
+    const existing = await bankMoneyMovesCollection<{ _id: string }>(db)
       .findOne({ _id: operatingKey }, { projection: { _id: 1 } });
     if (existing) {
       const resumed = await resumeSettlement(db, operatingKey);
@@ -147,8 +146,7 @@ export async function settlePriorCorporateCashArrears(input: CashArrearsInput): 
   if (!(totalPaidAnchor > 0)) return cash;
 
   const taxKey = `${taxPrefix}${turn}`;
-  const existingTax = await db
-    .collection<{ _id: string }>("bankMoneyMoves")
+  const existingTax = await bankMoneyMovesCollection<{ _id: string }>(db)
     .findOne({ _id: taxKey }, { projection: { _id: 1 } });
   if (existingTax) {
     const resumed = await resumeSettlement(db, taxKey);

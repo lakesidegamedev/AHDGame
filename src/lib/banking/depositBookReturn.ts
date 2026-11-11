@@ -92,6 +92,9 @@ import { CENTRAL_BANK_HOLDER } from "@/lib/savings/rules/accounts";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { interbankLoansCollection } from "@/lib/db/repositories/interbankLoans";
+import { savingsAccountsCollection } from "@/lib/db/repositories/savingsAccounts";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 /** Budget spending line a deposit insurance backstop is booked against. */
 export const DEPOSIT_INSURANCE_SPENDING_KEY = "depositInsurance";
@@ -317,8 +320,7 @@ export async function returnDepositBook(
       return { ...EMPTY, error: "Another bank operation owns deposit return" };
   }
   if (previous?.kind === "returning") {
-    const original = await db
-      .collection<{ _id: string }>("bankMoneyMoves")
+    const original = await bankMoneyMovesCollection<{ _id: string }>(db)
       .findOne({ _id: key }, { projection: { _id: 1 } });
     if (original) {
       const recovered = await resumeSettlement(db, key);
@@ -469,8 +471,7 @@ async function returnDepositBookInner(
   // central bank facilities, this money was never minted: it came out of
   // another bank's vault, so recovering it is a transfer rather than a burn.
   const cashAfterDeposits = Math.max(0, cashAfterCentralBank - fromBankCash);
-  const interbankLoans = await db
-    .collection<InterbankLoan>("interbankLoans")
+  const interbankLoans = await interbankLoansCollection(db)
     .find({ borrowerCorporationId: corporationId, status: "current" })
     .toArray();
   const interbankOwed = interbankLoans.reduce(
@@ -843,8 +844,7 @@ export async function freezeAccountsAt(
   currency: CurrencyCode,
   now: Date
 ): Promise<number> {
-  const frozen = await db
-    .collection<SavingsAccount>("savingsAccounts")
+  const frozen = await savingsAccountsCollection(db)
     .updateMany(
       { currency, holder: bankIdHex, status: "open" },
       { $set: { status: "frozen", updatedAt: now } }
@@ -864,8 +864,7 @@ export async function releaseAccountsFrom(
   currency: CurrencyCode,
   now: Date
 ): Promise<number> {
-  const released = await db
-    .collection<SavingsAccount>("savingsAccounts")
+  const released = await savingsAccountsCollection(db)
     .updateMany(
       { currency, holder: bankIdHex },
       { $set: { holder: CENTRAL_BANK_HOLDER, status: "open", updatedAt: now } }

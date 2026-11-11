@@ -22,6 +22,7 @@ import { settleTransition, resumeSettlement } from "@/lib/banking/settlementJour
 import { oid, type BankingTransition } from "@/lib/banking/rules/boundary";
 import { treasuryAnchorValuation } from "@/lib/budget/rules/treasuryAccrual";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 export type AcceptContractResult =
   | { ok: true; status: 200; activatedTurn: number; expiresTurn: number; signingFeeLocal: number }
@@ -142,11 +143,10 @@ export async function acceptContractOffer(
 
   if (fundedTreasuryFee && existingAttempt) {
     const key = `extraction-signing-fee:${existingAttempt}`;
-    const prior = await db
-      .collection<{
+    const prior = await bankMoneyMovesCollection<{
         _id: string;
         event?: { amount?: number };
-      }>("bankMoneyMoves")
+      }>(db)
       .findOne({ _id: key }, { projection: { _id: 1, event: 1 } });
     if (prior) {
       const resumed = await resumeSettlement(db, key);

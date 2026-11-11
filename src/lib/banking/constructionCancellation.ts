@@ -20,6 +20,7 @@ import {
 } from "./rules/constructionRecovery";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
 
 const complete = (result: SettlementResult) =>
   !result.error && ["applied", "replayed"].includes(result.status);
@@ -95,8 +96,7 @@ export async function cancelFinancedConstruction(input: {
     if (cleared.matchedCount !== 1) return { ok: false, error: "Cancellation recovery changed" };
     claim = { ...claim, cancellation: undefined };
   }
-  const loan = await db
-    .collection<BankLoan>("bankLoans")
+  const loan = await bankLoansCollection(db)
     .findOne({ _id: new ObjectId(claim.loanId) });
   if (
     !loan?.constructionCollateral ||
@@ -284,7 +284,7 @@ export async function cancelFinancedConstruction(input: {
           },
         }
       ),
-      db.collection<BankLoan>("bankLoans").findOne({ _id: loan._id }),
+      bankLoansCollection(db).findOne({ _id: loan._id }),
     ]);
     if (!updatedSector?.constructionFinancing || !updatedLoan)
       return { ok: false, error: "Missing conversion refund receipt" };

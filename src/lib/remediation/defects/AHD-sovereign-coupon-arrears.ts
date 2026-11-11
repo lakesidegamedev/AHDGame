@@ -34,6 +34,7 @@ import type {
   VerifyResult,
 } from "../types";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 export const DEFECT_ID = "AHD-sovereign-coupon-arrears";
 
@@ -92,11 +93,11 @@ async function currentTurn(db: Db): Promise<number> {
  * moved no money and owns nothing). Read-only.
  */
 export async function ownedOpenCouponClaimIds(db: Db): Promise<string[]> {
-  const moves = db.collection<{
+  const moves = bankMoneyMovesCollection<{
     _id: string;
     status?: string;
     event?: { meta?: { claimIds?: unknown } };
-  }>("bankMoneyMoves");
+  }>(db);
   const named = new Set<string>();
   for (const move of await moves
     .find(

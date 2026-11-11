@@ -17,6 +17,7 @@ import { toAccountSnapshot } from "./snapshot";
 import { savingsClosureTransition } from "./rules/closure";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { savingsAccountsCollection } from "@/lib/db/repositories/savingsAccounts";
 
 export async function closeCharacterSavings(
   db: Db,
@@ -27,8 +28,7 @@ export async function closeCharacterSavings(
     loadBankingPolicy(db),
     getCurrentTurn(db),
     charactersCollection(db).findOne({ _id: ownerId }, { projection: { _id: 1 } }),
-    db
-      .collection<SavingsAccount>("savingsAccounts")
+    savingsAccountsCollection(db)
       .find({ ownerType: "character", ownerId, status: { $ne: "closed" } })
       .toArray(),
   ]);
@@ -43,7 +43,7 @@ export async function closeCharacterSavings(
       ));
     if (holderMissing && (owner || !options.allowMissingHolderWriteOff))
       throw new Error("Recover savings from the missing bank before deleting the character");
-    const accountsCollection = db.collection<SavingsAccount>("savingsAccounts");
+    const accountsCollection = savingsAccountsCollection(db);
     if (original.closureClaimedTurn === undefined) {
       const claimed = await accountsCollection.updateOne(
         { _id: original._id, version: original.version, status: "open" },

@@ -28,6 +28,7 @@ import {
   type CapitalStanding,
 } from "./capitalAdequacy";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
 
 /**
  * Outstanding household tranches per bank, keyed by bank corp id hex.
@@ -40,8 +41,7 @@ async function loadBookTranches(db: Db, bankIds: ObjectId[]): Promise<Map<string
   const byBank = new Map<string, BookTranche[]>();
   if (bankIds.length === 0) return byBank;
 
-  const loans = await db
-    .collection<BankLoan>("bankLoans")
+  const loans = await bankLoansCollection(db)
     .find({
       bankCorporationId: { $in: bankIds },
       borrowerType: "npcBulk",

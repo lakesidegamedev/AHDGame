@@ -26,6 +26,7 @@ import type { TransitionLeg } from "./rules/boundary";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
 
 type Result = { ok: true; quote: ConstructionSaleQuote } | { ok: false; error: string };
 
@@ -51,7 +52,7 @@ export async function buySecuredConstructionProperty(input: {
   let quote = claim.sale;
   if (quote?.buyerId !== undefined && quote.buyerId !== String(buyerId))
     return { ok: false, error: "Another buyer owns this sale receipt" };
-  const loans = db.collection<BankLoan>("bankLoans");
+  const loans = bankLoansCollection(db);
   const loan = await loans.findOne({ _id: new ObjectId(claim.loanId) });
   if (
     !loan ||

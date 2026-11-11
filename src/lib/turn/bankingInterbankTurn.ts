@@ -30,6 +30,7 @@ import { discountWindowRatePercent } from "@/lib/banking/discountWindow";
 import { getCashReserves } from "@/lib/banking/bankCash";
 import type { BankingTurnSummary } from "./bankingTurn";
 import { getCorporationsCollection } from "@/lib/db/collections/corporations";
+import { interbankLoansCollection } from "@/lib/db/repositories/interbankLoans";
 
 /**
  * Service interbank interest from borrower to lender, and central-bank
@@ -61,8 +62,7 @@ export async function serviceInterbankAndCbMargin(
     }
   }
   const loans = propTrading
-    ? await db
-        .collection<InterbankLoan>("interbankLoans")
+    ? await interbankLoansCollection(db)
         .find({
           status: "current",
           lastProcessedTurn: { $ne: turn },

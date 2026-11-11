@@ -18,6 +18,7 @@ import { computeExpiresAtSync } from "@/lib/financialTxLog/expiresAt";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { ledgerEntriesCollection } from "@/lib/db/repositories/ledgerEntries";
 
 interface Payer {
   ownerCollection: Assessment["ownerCollection"];
@@ -481,7 +482,7 @@ async function deliver(db: Db, original: Batch): Promise<void> {
           },
         ];
       });
-      await db.collection("ledgerEntries").bulkWrite(
+      await ledgerEntriesCollection<Document>(db).bulkWrite(
         entries.map((entry) => ({
           updateOne: {
             filter: { _id: entry._id },

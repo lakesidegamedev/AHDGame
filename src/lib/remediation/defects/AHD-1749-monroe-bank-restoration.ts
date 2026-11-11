@@ -15,6 +15,7 @@ import type {
 import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 // Frozen turn-601 waterfall resolution: vault plus USD insurance fund
 // paid the household book into the central bank. The 22,150.23 household
@@ -115,7 +116,7 @@ const markerOf = (doc: CorpDoc | null): Marker | undefined => {
   return v && typeof v === "object" ? (v as Marker) : undefined;
 };
 async function loadRecord(db: Db): Promise<FrozenRecord | null> {
-  return db.collection<FrozenRecord>("bankMoneyMoves").findOne({ _id: RECORD_ID });
+  return bankMoneyMovesCollection<FrozenRecord>(db).findOne({ _id: RECORD_ID });
 }
 async function eventExists(db: Db): Promise<boolean> {
   return Boolean(

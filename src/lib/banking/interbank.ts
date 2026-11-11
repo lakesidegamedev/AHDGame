@@ -10,6 +10,7 @@ import { cbMarginRatePercent, decideBankCommand } from "@/lib/banking/rules/deci
 import { reviveObjectIds, settleTransition } from "@/lib/banking/settlementJournal";
 import { emitBankingAuditEvent } from "@/lib/banking/auditEvents";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { interbankLoansCollection } from "@/lib/db/repositories/interbankLoans";
 
 export { INTERBANK_MAX_SHARE_OF_LENDABLE } from "@/lib/banking/rules/decide";
 
@@ -30,8 +31,7 @@ async function sumLenderInterbankOutstanding(
 ): Promise<number> {
   // A find rather than an aggregation so the same code runs on the in-memory
   // store the simulation host uses; a lender holds a handful of loans.
-  const rows = await db
-    .collection<InterbankLoan>("interbankLoans")
+  const rows = await interbankLoansCollection(db)
     .find({ lenderCorporationId, status: "current" })
     .project<Pick<InterbankLoan, "outstanding">>({ outstanding: 1 })
     .toArray();
@@ -167,7 +167,7 @@ export async function repayInterbank(
   amount: number,
   commandId: string = new ObjectId().toHexString()
 ): Promise<RepayInterbankResult> {
-  const loan = await db.collection<InterbankLoan>("interbankLoans").findOne({ _id: loanId });
+  const loan = await interbankLoansCollection(db).findOne({ _id: loanId });
   if (!loan || loan.status !== "current") {
     return { ok: false, error: "Interbank loan not found or not current" };
   }

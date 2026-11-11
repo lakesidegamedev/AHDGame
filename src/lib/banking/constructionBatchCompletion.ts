@@ -16,6 +16,7 @@ import type { BankLoan } from "@/lib/db/types/bank";
 import { MONEY_MOVE_COLLECTION, type MoneyMoveRecordLeg } from "./moneyMove";
 import { reviveObjectIds } from "./settlementEncoding";
 import type { TransitionProjection } from "./rules/boundary";
+import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
 
 interface JournalProjection {
   applied?: boolean;
@@ -85,8 +86,7 @@ export async function completeRefusedDebitBatch(db: Db, key: string): Promise<bo
   const loanIds = projections
     .filter((p) => p.projection.collection === "bankLoans")
     .map((p) => reviveObjectIds(p.projection.filter)?._id);
-  const loans = await db
-    .collection<BankLoan>("bankLoans")
+  const loans = await bankLoansCollection(db)
     .find({ _id: { $in: loanIds } } as never)
     .toArray();
   const loanById = new Map(loans.map((loan) => [String(loan._id), loan]));

@@ -4,6 +4,7 @@ import {
   ASSUMABLE_LOAN_STATUSES,
   corporateLoanAssumptionRefusal,
 } from "./rules/corporateLoanAssumption";
+import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
 
 const plainLoansOf = (borrowerId: ObjectId) => ({
   borrowerType: "corporation" as const,
@@ -20,8 +21,7 @@ export async function corporateLoanAssumptionCheck(
   db: Db,
   input: { fromId: ObjectId; toCurrency: string | undefined }
 ): Promise<string | null> {
-  const loans = await db
-    .collection<BankLoan>("bankLoans")
+  const loans = await bankLoansCollection(db)
     .find(
       { ...plainLoansOf(input.fromId), status: { $in: ["pending", ...ASSUMABLE_LOAN_STATUSES] } },
       { projection: { status: 1, currency: 1 } }
@@ -40,7 +40,7 @@ export async function assumeCorporateLoans(
   db: Db,
   input: { fromId: ObjectId; toId: ObjectId }
 ): Promise<ObjectId[]> {
-  const loans = db.collection<BankLoan>("bankLoans");
+  const loans = bankLoansCollection(db);
   const filter = {
     ...plainLoansOf(input.fromId),
     status: { $in: [...ASSUMABLE_LOAN_STATUSES] },
@@ -59,8 +59,7 @@ export async function restoreCorporateLoans(
   input: { ids: readonly ObjectId[]; fromId: ObjectId; toId: ObjectId }
 ): Promise<void> {
   if (input.ids.length === 0) return;
-  await db
-    .collection<BankLoan>("bankLoans")
+  await bankLoansCollection(db)
     .updateMany(
       { _id: { $in: [...input.ids] }, borrowerType: "corporation", borrowerId: input.toId },
       { $set: { borrowerId: input.fromId } }
@@ -77,8 +76,7 @@ export async function loadLiveCorporateLoans(
   borrowerId: ObjectId,
   options: { ordinaryOnly?: boolean } = {}
 ): Promise<Pick<BankLoan, "_id" | "outstanding" | "currency">[]> {
-  return db
-    .collection<BankLoan>("bankLoans")
+  return bankLoansCollection(db)
     .find(
       {
         ...(options.ordinaryOnly

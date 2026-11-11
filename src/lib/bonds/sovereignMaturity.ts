@@ -44,6 +44,7 @@ import {
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 export async function settleSovereignBondMaturity(
   db: Db,
@@ -334,8 +335,7 @@ export async function settleFundedSovereignBondMaturity(
   // its stable claim quote allows a new turn-keyed attempt without changing
   // payees, amounts, or FX. An unfinished funding attempt and an unfinished
   // payout receipt are answered by one read, not one lookup each.
-  const priorReceipts = await db
-    .collection<{ _id: string; status?: string }>("bankMoneyMoves")
+  const priorReceipts = await bankMoneyMovesCollection<{ _id: string; status?: string }>(db)
     .find(
       // Two plain branches, not `^id:(fund:|payout$)`: an alternation is not a
       // simple prefix, so the server would walk the whole `_id` index for it.
@@ -355,8 +355,7 @@ export async function settleFundedSovereignBondMaturity(
     throw new Error("Frozen sovereign maturity quote disappeared");
   quote = currentQuote;
   if (quote.paid) {
-    const completedPayout = await db
-      .collection<{ _id: string }>("bankMoneyMoves")
+    const completedPayout = await bankMoneyMovesCollection<{ _id: string }>(db)
       .findOne({ _id: `${claimId}:payout` }, { projection: { _id: 1 } });
     if (!completedPayout) return null;
     return {

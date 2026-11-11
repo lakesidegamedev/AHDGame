@@ -10,6 +10,7 @@ import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
 
 /** Expose defaulted security to funded buyers. A book mark never pays a creditor. */
 export async function listDefaultedConstructionCollateral(db: Db, turn: number): Promise<number> {
@@ -31,8 +32,7 @@ export async function listDefaultedConstructionCollateral(db: Db, turn: number):
       : []
   );
   const [loans, owners, rates, eraUnitScale, gameState] = await Promise.all([
-    db
-      .collection<BankLoan>("bankLoans")
+    bankLoansCollection(db)
       .find({ _id: { $in: loanIds }, status: "defaulted", outstanding: { $gt: 0 } })
       .toArray(),
     corporationsCollection(db)

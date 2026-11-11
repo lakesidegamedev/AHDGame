@@ -29,6 +29,7 @@ import {
 } from "./constructionAdmission";
 import { unprotectedConstructionPropertyFilter } from "./rules/constructionProperty";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
 
 export type {
   ConstructionFundingBankCorporation,
@@ -299,7 +300,7 @@ export async function approveConstructionFinance(
   preloadedFundingContext?: PreloadedConstructionFundingContext
 ): Promise<ConstructionFinanceResult> {
   if (!enabled) return { ok: false, error: "Construction finance is not enabled" };
-  const loans = db.collection<BankLoan>("bankLoans");
+  const loans = bankLoansCollection(db);
   const loan = await loans.findOne({ _id: loanId, bankCorporationId: bankId });
   const collateral = loan?.constructionCollateral;
   if (!loan || !collateral || loan.constructionDecision === "reject")
@@ -389,7 +390,7 @@ export async function rejectConstructionFinance(
   reason?: string
 ): Promise<ConstructionFinanceResult> {
   if (!enabled) return { ok: false, error: "Construction finance is not enabled" };
-  const loans = db.collection<BankLoan>("bankLoans");
+  const loans = bankLoansCollection(db);
   const loan = await loans.findOne({ _id: loanId, bankCorporationId: bankId });
   const collateral = loan?.constructionCollateral;
   if (!loan || !collateral || loan.constructionDecision === "approve")
@@ -490,8 +491,7 @@ export async function recoverConstructionFunding(
   for (const sector of unfinished) {
     const claim = sector.constructionFinancing;
     if (!claim || !ObjectId.isValid(claim.loanId) || !ObjectId.isValid(claim.bankId)) continue;
-    const loan = await db
-      .collection<BankLoan>("bankLoans")
+    const loan = await bankLoansCollection(db)
       .findOne({ _id: new ObjectId(claim.loanId) }, { projection: { constructionDecision: 1 } });
     // A pending lender decision is not authority to disburse.
     if (loan?.constructionDecision !== "approve") continue;

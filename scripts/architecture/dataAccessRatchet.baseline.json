@@ -590,7 +590,7 @@
       "untyped": 12
     },
     "src/lib/admin/economyReset/census.ts": {
-      "untyped": 7
+      "untyped": 6
     },
     "src/lib/admin/finalizeResetGameWorld.ts": {
       "untyped": 6
@@ -854,12 +854,9 @@
       "untyped": 1
     },
     "src/lib/budget/incomePayout.ts": {
-      "untyped": 5
+      "untyped": 3
     },
     "src/lib/budget/playerIncomeTaxSettlement.ts": {
-      "untyped": 2
-    },
-    "src/lib/budget/treasuryAccrualReceipt.ts": {
       "untyped": 1
     },
     "src/lib/budget/treasuryReserveTransfer.ts": {
@@ -1596,9 +1593,6 @@
     "src/lib/retireCharacter.ts": {
       "untyped": 21
     },
-    "src/lib/savings/ledger.ts": {
-      "untyped": 1
-    },
     "src/lib/savings/shadow.ts": {
       "untyped": 1
     },
@@ -1702,7 +1696,7 @@
       "untyped": 1
     },
     "src/lib/turn/corporation/corporateTaxPriority.ts": {
-      "untyped": 3
+      "untyped": 1
     },
     "src/lib/turn/corporation/corporationSectorShed.ts": {
       "untyped": 1
@@ -1753,7 +1747,7 @@
       "untyped": 2
     },
     "src/lib/turn/inflationRecalc.ts": {
-      "untyped": 2
+      "untyped": 1
     },
     "src/lib/turn/internationalOrganizationsPhase.ts": {
       "untyped": 1
@@ -1793,9 +1787,6 @@
     },
     "src/lib/turn/primaryResolution.ts": {
       "untyped": 1
-    },
-    "src/lib/turn/savingsInterestTurn.ts": {
-      "untyped": 3
     },
     "src/lib/turn/stockExchangeSnapshot.ts": {
       "untyped": 1

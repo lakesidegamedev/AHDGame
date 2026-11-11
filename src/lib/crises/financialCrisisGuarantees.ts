@@ -12,6 +12,7 @@ import { guaranteedDepositorShortfall } from "@/lib/livingConflict/rules/financi
 import { resolveCountryCurrencyCode } from "@/lib/currency/govBudgetFields";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 interface FundedGuarantee {
   _id: string;
@@ -65,8 +66,7 @@ export async function processFinancialCrisisGuarantees(
   const summary = { paid: 0, refunded: 0 };
   // Only earlier-turn attempts are recoverable here; live requests may still
   // own a current-turn claim. Recovery precedes reading the escrow snapshot.
-  const pending = await db
-    .collection<{ _id: string }>("bankMoneyMoves")
+  const pending = await bankMoneyMovesCollection<{ _id: string }>(db)
     .find({
       ...unfinishedSettlementFilter(),
       turn: { $lt: turn },
@@ -103,8 +103,7 @@ export async function processFinancialCrisisGuarantees(
   const expired = guarantees.filter((guarantee) => turn > guarantee.expiresTurn);
   const legacyExpired = expired.filter((guarantee) => !hasFrozenRefundSource(guarantee));
   const legacyFundingMoves = legacyExpired.length
-    ? await db
-        .collection<GuaranteeFundingMove>("bankMoneyMoves")
+    ? await bankMoneyMovesCollection<GuaranteeFundingMove>(db)
         .find(
           {
             _id: {
@@ -163,7 +162,7 @@ export async function processFinancialCrisisGuarantees(
       : [];
     for (const bank of banks) {
       const key = `${guarantee._id}:claim:${bank._id.toHexString()}`;
-      const prior = await db.collection<{ _id: string }>("bankMoneyMoves").findOne({ _id: key });
+      const prior = await bankMoneyMovesCollection<{ _id: string }>(db).findOne({ _id: key });
       if (prior) continue;
       const amount = Math.min(
         available,

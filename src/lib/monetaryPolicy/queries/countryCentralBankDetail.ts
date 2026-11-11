@@ -76,6 +76,7 @@ import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { savingsLedgerCollection } from "@/lib/db/repositories/savingsLedger";
 
 type ViewerCharacter = Character | null;
 
@@ -358,8 +359,7 @@ export async function loadCountryCentralBankDetail(params: {
       .collection<CommodityPrice>("commodityPrices")
       .find({}, { projection: { commodity: 1, basePrice: 1, nationalPrices: 1 } })
       .toArray(),
-    db
-      .collection<SavingsLedgerEntry>("savingsLedger")
+    savingsLedgerCollection(db)
       .aggregate<{ _id: { type: string }; total: number }>([
         {
           $match: {
@@ -546,8 +546,7 @@ export async function loadCountryCentralBankDetail(params: {
           },
         ])
         .toArray(),
-      db
-        .collection<SavingsLedgerEntry>("savingsLedger")
+      savingsLedgerCollection(db)
         .aggregate<{ total: number }>([
           { $match: { countryId, type: "interest", currencyCode: homeCurrency } },
           { $group: { _id: null, total: { $sum: "$amount" } } },

@@ -20,6 +20,8 @@ import { remarkBankTreasuryAfterMaturity } from "@/lib/banking/bankTreasury";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { ledgerEntriesCollection } from "@/lib/db/repositories/ledgerEntries";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 type ClaimReceiptRow = { _id: string; kind?: string; turn?: number; status?: string };
 
@@ -57,8 +59,7 @@ async function loadClaimReceipts(
   const byClaim = new Map<string, ClaimReceiptRow[]>();
   const unique = [...new Set(claimIds)];
   if (unique.length === 0) return byClaim;
-  const rows = await db
-    .collection<ClaimReceiptRow>("bankMoneyMoves")
+  const rows = await bankMoneyMovesCollection<ClaimReceiptRow>(db)
     .find(
       idPrefixFilter(unique.flatMap((id) => CLAIM_RECEIPT_SUFFIXES.map((suffix) => id + suffix))),
       { projection: { _id: 1, kind: 1, turn: 1, status: 1 } }
@@ -83,8 +84,7 @@ async function loadPaidClaimIds(
   if (claims.length === 0) return paid;
   const rows =
     input.treasuryCashLedgerEnabled === true
-      ? await db
-          .collection<{ _id: string }>("bankMoneyMoves")
+      ? await bankMoneyMovesCollection<{ _id: string }>(db)
           .find(
             {
               ...idPrefixFilter(
@@ -95,8 +95,7 @@ async function loadPaidClaimIds(
             { projection: { _id: 1 } }
           )
           .toArray()
-      : await db
-          .collection<{ _id: string }>("bankMoneyMoves")
+      : await bankMoneyMovesCollection<{ _id: string }>(db)
           .find(
             {
               _id: { $in: claims.map((claim) => `${claim.id}:funding:${input.turn}`) },
@@ -582,7 +581,7 @@ async function ensureLedgerWitness(
 ): Promise<void> {
   const expected = ledgerProjection(claim, key, turn, destination).insert;
   if (!(expected._id instanceof ObjectId)) throw new Error("Ledger witness id must be an ObjectId");
-  const rows = db.collection<LedgerEntry>("ledgerEntries");
+  const rows = ledgerEntriesCollection(db);
   await rows.updateOne({ _id: expected._id }, { $setOnInsert: expected }, { upsert: true });
   const stored = await rows.findOne({ _id: expected._id });
   const economicIdentity = (row: LedgerEntry) => ({
@@ -718,8 +717,7 @@ async function fundClaimEscrow(
   // One probe for every open attempt. Each is resumed to a terminal state, and
   // any that stays partial refuses the claim below, so a second read of the
   // same predicate ("is a funding attempt still open?") only cost a round trip.
-  const pending = await db
-    .collection<{ _id: string }>("bankMoneyMoves")
+  const pending = await bankMoneyMovesCollection<{ _id: string }>(db)
     .find(
       {
         _id: { $regex: `^${claim.id}:funding:` },

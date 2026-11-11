@@ -14,6 +14,7 @@ import {
 } from "./rules/constructionBorrowerTransfer";
 import { acquireConstructionLoanLock } from "./constructionLoanLock";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
 
 type TransferSector = Pick<
   CorporateSector,
@@ -130,8 +131,7 @@ export async function prepareConstructionBorrowerTransfers(
   });
   const [turn, loans] = await Promise.all([
     input.turn ?? getCurrentTurn(db),
-    db
-      .collection<BankLoan>("bankLoans")
+    bankLoansCollection(db)
       .find({ _id: { $in: loanIds } })
       .toArray(),
   ]);
@@ -140,7 +140,7 @@ export async function prepareConstructionBorrowerTransfers(
   const unlock = () =>
     transfers.length === 0
       ? Promise.resolve()
-      : db.collection<BankLoan>("bankLoans").bulkWrite(
+      : bankLoansCollection(db).bulkWrite(
           transfers.map((transfer) => ({
             updateOne: {
               filter: { _id: transfer.loanId, constructionSettlementOwner: transfer.key },
@@ -237,7 +237,7 @@ export async function settleConstructionBorrowerTransfers(
       },
     });
   }
-  await db.collection<BankLoan>("bankLoans").bulkWrite(ops, { ordered: true });
+  await bankLoansCollection(db).bulkWrite(ops, { ordered: true });
   return { moved };
 }
 

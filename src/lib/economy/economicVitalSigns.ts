@@ -47,6 +47,7 @@ import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { ledgerEntriesCollection } from "@/lib/db/repositories/ledgerEntries";
 export {
   summarizeLedgerTurnover,
   computeEconomicVitalSigns,
@@ -314,8 +315,7 @@ export async function snapshotEconomicVitalSigns(
     db.collection<LedgerReconciliation>("ledgerReconciliations").findOne({ turn }),
     db.collection<BalanceSnapshot>("balanceSnapshots").findOne({ turn }),
     loadLedgerTurnover(db, windowStart, turn),
-    db
-      .collection<LedgerEntry>("ledgerEntries")
+    ledgerEntriesCollection(db)
       .countDocuments({ turn: { $gte: windowStart, $lte: turn } }),
     resolveFormalizedGroups(db),
     db.collection<ExchangeRate>("exchangeRates").find({}).toArray(),

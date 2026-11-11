@@ -20,6 +20,7 @@ import {
 } from "@/lib/bonds/sovereignMaturityRetirement";
 import type { SovereignMaturityCashLeg } from "@/lib/bonds/sovereignMaturityPayoutTargets";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 /** Everything one sovereign maturity settles, built before any money moves. */
 export interface SovereignMaturityPlan {
@@ -88,8 +89,7 @@ export async function loadSovereignMaturityWave(
         { projection: { _id: 1, treasuryCashLocal: 1, "bankSovereignClaims.id": 1 } }
       )
       .toArray(),
-    db
-      .collection<{ _id: string }>("bankMoneyMoves")
+    bankMoneyMovesCollection<{ _id: string }>(db)
       .find(
         {
           status: "partial",
@@ -128,8 +128,7 @@ export function sovereignMaturityWaveKey(
  * at all.
  */
 async function loadPartialWaveReceipts(db: Db, wave: SovereignMaturityWave): Promise<void> {
-  const rows = await db
-    .collection<{
+  const rows = await bankMoneyMovesCollection<{
       _id: string;
       legs?: Array<{
         kind?: string;
@@ -137,7 +136,7 @@ async function loadPartialWaveReceipts(db: Db, wave: SovereignMaturityWave): Pro
         path?: string;
         filter?: { _id?: unknown };
       }>;
-    }>("bankMoneyMoves")
+    }>(db)
     .find(
       { _id: { $regex: "^sovereign-maturity-wave:" }, status: "partial" },
       {

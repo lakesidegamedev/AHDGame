@@ -46,6 +46,7 @@ import { emitTxBulk, loadTxThresholds, type TxInput } from "@/lib/financialTxLog
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
 
 export type DeadBankLoanSummary = {
   /** Loans belonging to a wound-up bank that were serviced this turn. */
@@ -420,8 +421,7 @@ export async function processDeadBankLoans(
   // One loan read for every dead book, then grouped per bank in collection
   // order, instead of one query per bank. Each bank still services its own
   // loans in the same order.
-  const allLoans: BankLoan[] = await db
-    .collection<BankLoan>("bankLoans")
+  const allLoans: BankLoan[] = await bankLoansCollection(db)
     .find({
       bankCorporationId: { $in: deadBanks.map((bank) => bank.corporationId) },
       status: { $in: ["current", "arrears"] },
@@ -908,7 +908,7 @@ async function serviceConstructionBatch(
   const key = deadBankConstructionServiceKey(bank, turn);
   const loanIds = loans.map((loan) => loan._id);
   const anchor = loans.find((loan) => loan.constructionCollateral);
-  const bankLoans = db.collection<BankLoan>("bankLoans");
+  const bankLoans = bankLoansCollection(db);
   const constructionTarget: MoneyTarget = holdsBankEpoch
     ? {
         ...target,
@@ -1130,8 +1130,7 @@ async function clearStaleConstructionBatchLocks(
     if (complete || unfunded) cleared.push(owner);
   }
   if (cleared.length === 0) return;
-  await db
-    .collection<BankLoan>("bankLoans")
+  await bankLoansCollection(db)
     .updateMany(
       { constructionSettlementOwner: { $in: cleared } },
       { $unset: { constructionSettlementOwner: "" } }

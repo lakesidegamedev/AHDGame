@@ -33,6 +33,7 @@ import {
 } from "@/lib/turn/npp/rules/shortageGrowthFinance";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
 
 type ConstructionBorrowerLoan = Pick<
   BankLoan,
@@ -155,8 +156,7 @@ export async function loadNppConstructionFundingPool(input: {
         income: 1,
       })
       .toArray(),
-    db
-      .collection<BankLoan>("bankLoans")
+    bankLoansCollection(db)
       .find({
         borrowerType: "corporation",
         borrowerId: { $in: borrowerIds },

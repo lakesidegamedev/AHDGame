@@ -12,6 +12,7 @@ import { isAnchorBalanced } from "@/lib/ledger/epsilon";
 import type { LedgerEntry, LedgerEntryInput } from "@/lib/ledger/types";
 import { roundedNppBondReturns } from "./rules";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { ledgerEntriesCollection } from "@/lib/db/repositories/ledgerEntries";
 
 export interface NppBondReturns {
   total: number;
@@ -43,7 +44,7 @@ export async function flushNppBondCashWitnesses(db: Db, pending: NppBondCashWitn
       .filter((p) => landed.get(p.nppId.toHexString()) === p.key)
       .flatMap((p) => p.entries);
     if (entries.length === 0) return;
-    await db.collection<LedgerEntry>("ledgerEntries").bulkWrite(
+    await ledgerEntriesCollection(db).bulkWrite(
       entries.map(({ id, entry }) => ({
         updateOne: {
           filter: { _id: id },
