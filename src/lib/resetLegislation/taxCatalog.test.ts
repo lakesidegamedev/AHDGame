@@ -7,7 +7,14 @@ import { UK_LAWS } from "@/lib/countries/uk/data/ukLaws";
 import { JP_LAWS } from "@/lib/countries/jp/data/jpLaws";
 import { US_STATE_TAX_LAWS } from "@/lib/countries/us/data/usStateTaxLaws";
 import { projectLawToLegislationType } from "@/lib/politicalLegislation/project";
-import { resetTaxes, resetTaxesFor } from "./taxCatalog";
+import {
+  resetTaxBaseTypeIds,
+  resetTaxForLegislationType,
+  resetTaxLegislationTypeIds,
+  resetTaxes,
+  resetTaxesFor,
+  resetTaxesForWorld,
+} from "./taxCatalog";
 
 describe("reset tax instruments", () => {
   it("offers independent income and capital-gains tiers among fourteen exact-rate tax instruments", () => {
@@ -49,5 +56,47 @@ describe("reset tax instruments", () => {
         )
       ).toBe(true);
     }
+  });
+});
+
+describe("Japanese tax instruments in worlds seeded before the law book", () => {
+  const japan = resetTaxesFor("JP", "national");
+
+  it("files each instrument under the old type id as well", () => {
+    expect(resetTaxForLegislationType(japan, "jp_consumption_tax")?.id).toBe("T05");
+    expect(resetTaxForLegislationType(japan, "jp.tax.salesTax")?.id).toBe("T05");
+    expect(resetTaxForLegislationType(japan, "jp_income_tax_rate__income_low")).toBe(
+      resetTaxForLegislationType(japan, "jp.tax.incomeTax__income_low")
+    );
+    expect(resetTaxForLegislationType(japan, "jp_income_tax_rate__capital_high")?.taxType).toBe(
+      "capitalGainsTaxHigh"
+    );
+    expect(resetTaxLegislationTypeIds(japan)).toHaveLength(japan.length * 2);
+  });
+
+  it("offers the type the world holds", () => {
+    const saved = resetTaxesForWorld(japan, new Set(["jp_customs_tariff", "jp_income_tax_rate"]));
+    expect(saved.find((tax) => tax.id === "T06")?.existingLegislationTypeId).toBe(
+      "jp_customs_tariff"
+    );
+    expect(saved.find((tax) => tax.id === "T01_low")?.existingLegislationTypeId).toBe(
+      "jp_income_tax_rate__income_low"
+    );
+    const both = resetTaxesForWorld(japan, new Set(["jp_customs_tariff", "jp.tax.tariffs"]));
+    expect(both.find((tax) => tax.id === "T06")?.existingLegislationTypeId).toBe("jp.tax.tariffs");
+    expect(resetTaxesForWorld(japan, new Set())).toEqual(japan);
+  });
+
+  it("looks up base type ids only", () => {
+    const ids = resetTaxBaseTypeIds(japan);
+    expect(ids).toContain("jp_income_tax_rate");
+    expect(ids).toContain("jp.tax.incomeTax");
+    expect(ids.some((id) => id.includes("__"))).toBe(false);
+  });
+
+  it("gives no other country an alias", () => {
+    expect(
+      resetTaxes.filter((tax) => tax.country !== "JP" && tax.savedWorldLegislationTypeId)
+    ).toEqual([]);
   });
 });

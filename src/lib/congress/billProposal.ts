@@ -58,7 +58,7 @@ import { isResetV2Country, resetSystemVersionsForCountry } from "@/lib/resetVers
 import { loadReviewedLawCatalog } from "@/lib/resetLegislation/loadReviewedCatalog";
 import type { ResetCountry } from "@/lib/resetLegislation/fundingOwner";
 import type { LawChoice } from "@/lib/resetLegislation/rules/eligibility";
-import { resetTaxesFor } from "@/lib/resetLegislation/taxCatalog";
+import { resetTaxForLegislationType, resetTaxesFor } from "@/lib/resetLegislation/taxCatalog";
 import { resolveResetTaxProvisionFields } from "@/lib/resetLegislation/resolveTaxProvision";
 import { marketAtLeast } from "@/lib/market/featureFlag";
 import { isMediaOwnershipBillAvailable } from "@/lib/mediaRegulation/rules";
@@ -165,7 +165,7 @@ export async function validateBillProvisions(
   const validatedEuropeanTreatyProvisions: EuropeanTreatyProvision[] = [];
   const validatedResetLawProvisions: ResetLawProvision[] = [];
   const resetFamilyIds = new Set<string>();
-  const resetTaxTypeIds = new Set<string>();
+  const resetTaxInstrumentIds = new Set<string>();
   let reviewedNationalCatalog: Awaited<ReturnType<typeof loadReviewedLawCatalog>> | null = null;
   const isTradeCategory = TARIFF_BILL_CATEGORIES.has(category as BillCategory);
   const requestedLegislationTypeIds = Array.from(
@@ -704,8 +704,9 @@ export async function validateBillProvisions(
       };
     }
     if (resetLegislationV2) {
-      const resetTax = resetTaxesFor(sourceCountry as ResetCountry, "national").find(
-        (candidate) => candidate.existingLegislationTypeId === lt._id
+      const resetTax = resetTaxForLegislationType(
+        resetTaxesFor(sourceCountry as ResetCountry, "national"),
+        lt._id
       );
       if (!resetTax) {
         return {
@@ -714,7 +715,7 @@ export async function validateBillProvisions(
           error: "This world accepts only reviewed legislation v2 provisions.",
         };
       }
-      if (resetTaxTypeIds.has(lt._id)) {
+      if (resetTaxInstrumentIds.has(resetTax.id)) {
         return { ok: false, status: 400, error: "A v2 bill cannot repeat a tax instrument." };
       }
       if (category !== "tax" && category !== "custom") {
@@ -735,7 +736,7 @@ export async function validateBillProvisions(
       if (!resolved.ok) {
         return { ok: false, status: 400, error: resolved.error };
       }
-      resetTaxTypeIds.add(lt._id);
+      resetTaxInstrumentIds.add(resetTax.id);
       validatedPolicyProvisions.push({
         legislationTypeId: lt._id,
         ...resolved.fields,
