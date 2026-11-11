@@ -14,6 +14,16 @@ vi.mock("@/lib/currency/corporationCapital", () => ({
 vi.mock("@/lib/corporations/convertCorpCurrency", () => ({
   convertCorpCurrency: vi.fn().mockResolvedValue({ ok: true, converted: true }),
 }));
+vi.mock("@/lib/savings/closeCharacterSavings", () => ({
+  closeCharacterSavings: vi.fn().mockResolvedValue(undefined),
+}));
+vi.mock("@/lib/savings/accountsShell", () => ({
+  ensureSavingsAccount: vi.fn().mockResolvedValue({ id: "acct" }),
+}));
+vi.mock("@/lib/banking/policy", () => ({
+  loadBankingPolicy: vi.fn().mockResolvedValue({ savingsAccounts: "authoritative" }),
+}));
+vi.mock("@/lib/currentTurn", () => ({ getCurrentTurn: vi.fn().mockResolvedValue(816) }));
 
 const { convertTransferredResidentsCurrency } =
   await import("./convertTransferredResidentsCurrency");
@@ -44,7 +54,6 @@ describe("convertTransferredResidentsCurrency", () => {
     expect(vi.mocked(convertCorpCurrency).mock.calls[0][2]).toBe("IEP"); // target currency
     // Wallets are never read and written back: one pipeline update converts
     // each resident from the live document.
-    expect(db.collectionMocks["characters"].find).not.toHaveBeenCalled();
     expect(db.collectionMocks["characters"].updateOne).not.toHaveBeenCalled();
     const [filter, pipeline] = db.collectionMocks["characters"].updateMany.mock.calls[0];
     expect(filter).toMatchObject({ homeState: "NIR", currencyBalances: { $type: "object" } });
@@ -60,6 +69,8 @@ describe("convertTransferredResidentsCurrency", () => {
       campaign: 2000, // 1000 x 2
       personal: { USD: 200, IEP: 10000 }, // GBP removed, USD kept as forex
       savings: { IEP: 21 }, // 1 + 10 x 2
+      pendingSavingsInterest: {},
+      interestEarned: {},
     });
     // A balance a player moved after the transfer began is converted as it
     // stands when the update lands, not as an earlier read saw it.
@@ -68,6 +79,97 @@ describe("convertTransferredResidentsCurrency", () => {
     });
     expect(later.currencyBalances.personal).toEqual({ USD: 200, IEP: 8000 });
     expect(later.currencyBalances.savings).toEqual({});
+  });
+
+  describe("savings accounts", () => {
+    function residents(ids: string[]) {
+      db.collection("corporations").find.mockReturnValue(cursorOf([]));
+      return ids.map((id) => ({ _id: { toString: () => id } }));
+    }
+
+    it("closes the old-currency account of each resident that has one, before the wallet converts", async () => {
+      const owners = residents(["a", "b", "c"]);
+      db.collection("characters").find.mockReturnValue(cursorOf(owners));
+      db.collection("savingsAccounts").find.mockReturnValue(
+        cursorOf([{ ownerId: owners[0]._id }, { ownerId: owners[2]._id }])
+      );
+
+      await convertTransferredResidentsCurrency(db as unknown as Db, "NIR", "UK", "IE");
+
+      const { closeCharacterSavings } = await import("@/lib/savings/closeCharacterSavings");
+      const closed = vi.mocked(closeCharacterSavings).mock.calls;
+      expect(closed.map((call) => String(call[1]))).toEqual(["a", "c"]);
+      // Only the departing currency, and the legacy balance is left for the
+      // wallet conversion instead of being zeroed.
+      expect(closed[0][2]).toEqual({ currency: "GBP", keepLegacyProjection: true });
+      const [accountFilter] = db.collectionMocks["savingsAccounts"].find.mock.calls[0];
+      expect(accountFilter).toMatchObject({
+        ownerType: "character",
+        currency: "GBP",
+        status: { $ne: "closed" },
+      });
+      const closeOrder = vi.mocked(closeCharacterSavings).mock.invocationCallOrder[0];
+      const convertOrder = db.collectionMocks["characters"].updateMany.mock.invocationCallOrder[0];
+      expect(closeOrder).toBeLessThan(convertOrder);
+    });
+
+    it("carries accrued interest and the opened flag into the new currency", async () => {
+      db.collection("corporations").find.mockReturnValue(cursorOf([]));
+      db.collection("characters").find.mockReturnValue(cursorOf([]));
+      await convertTransferredResidentsCurrency(db as unknown as Db, "NIR", "UK", "IE");
+      const [, pipeline] = db.collectionMocks["characters"].updateMany.mock.calls[0];
+      const after = applySetStage(pipeline[0].$set, {
+        currencyBalances: {
+          savings: { GBP: 100 },
+          pendingSavingsInterest: { GBP: 3 },
+          interestEarned: { GBP: 40, USD: 5 },
+        },
+        savingsAccountsOpened: { GBP: true, USD: true },
+      });
+      expect(after.currencyBalances.pendingSavingsInterest).toEqual({ IEP: 6 });
+      expect(after.currencyBalances.interestEarned).toEqual({ USD: 5, IEP: 80 });
+      expect(after.savingsAccountsOpened).toEqual({ GBP: true, USD: true, IEP: true });
+      const unopened = applySetStage(pipeline[0].$set, { currencyBalances: {} });
+      expect(unopened.savingsAccountsOpened).toEqual({});
+    });
+
+    it("builds the new-currency account for residents who now hold savings in it", async () => {
+      const owners = residents(["a", "b"]);
+      db.collection("characters")
+        .find.mockReturnValueOnce(cursorOf([]))
+        .mockReturnValueOnce(cursorOf(owners));
+      await convertTransferredResidentsCurrency(db as unknown as Db, "NIR", "UK", "IE");
+      const { ensureSavingsAccount } = await import("@/lib/savings/accountsShell");
+      expect(
+        vi.mocked(ensureSavingsAccount).mock.calls.map((call) => [String(call[1]), call[2]])
+      ).toEqual([
+        ["a", "IEP"],
+        ["b", "IEP"],
+      ]);
+      const holderFilter = db.collectionMocks["characters"].find.mock.calls[1][0];
+      expect(holderFilter["currencyBalances.savings.IEP"]).toEqual({ $gt: 0 });
+    });
+
+    it("fails the transfer rather than leave a holder without an account", async () => {
+      const owners = residents(["a"]);
+      db.collection("characters")
+        .find.mockReturnValueOnce(cursorOf([]))
+        .mockReturnValueOnce(cursorOf(owners));
+      const { ensureSavingsAccount } = await import("@/lib/savings/accountsShell");
+      vi.mocked(ensureSavingsAccount).mockResolvedValueOnce(null);
+      await expect(
+        convertTransferredResidentsCurrency(db as unknown as Db, "NIR", "UK", "IE")
+      ).rejects.toThrow("Savings account could not be created");
+    });
+
+    it("leaves account creation to the lazy path when savings accounts are not authoritative", async () => {
+      residents([]);
+      const { loadBankingPolicy } = await import("@/lib/banking/policy");
+      vi.mocked(loadBankingPolicy).mockResolvedValueOnce({ savingsAccounts: "off" } as never);
+      await convertTransferredResidentsCurrency(db as unknown as Db, "NIR", "UK", "IE");
+      const { ensureSavingsAccount } = await import("@/lib/savings/accountsShell");
+      expect(ensureSavingsAccount).not.toHaveBeenCalled();
+    });
   });
 
   it("converts carried region party-org treasuries at the same scale", async () => {
@@ -133,6 +235,8 @@ function evalExpr(expr: unknown, doc: Doc, vars: Doc = {}): any {
       return arg.map(ev).reduce((a: number, b: number) => a + b, 0);
     case "$ne":
       return ev(arg[0]) !== ev(arg[1]);
+    case "$eq":
+      return ev(arg[0]) === ev(arg[1]);
     case "$cond":
       return ev(arg[0]) ? ev(arg[1]) : ev(arg[2]);
     case "$mergeObjects":

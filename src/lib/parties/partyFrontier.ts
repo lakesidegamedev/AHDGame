@@ -18,7 +18,7 @@
  * same reason the Build Org foothold rule re-checks presence live.
  */
 import type { Db, ObjectId } from "mongodb";
-import { STATE_ADJACENCY, adjacentStates } from "@/lib/constants/stateAdjacency";
+import { STATE_ADJACENCY, adjacentStates, annexedNeighbours } from "@/lib/constants/stateAdjacency";
 import type { Character, ElectedOfficial, NPP, PoliticalParty, State } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { connectedGrowthFrontier, type TerritoryAdjacency } from "./rules/territory";
@@ -29,10 +29,21 @@ export function getTerritoryAdjacency(
   regions: readonly string[]
 ): TerritoryAdjacency {
   const graph = STATE_ADJACENCY[countryId] ?? {};
+  const live = new Set(regions);
+  // A region annexed after the map was seeded (IE Northern Ireland) has no
+  // seeded entry; without one it is a detached "unknown" region that no party
+  // can ever connect to, so nobody homed there could join anything.
+  const withAnnexed = (region: string): readonly string[] | undefined => {
+    const annexed = annexedNeighbours(countryId, region, live);
+    if (annexed.length === 0) return graph[region];
+    return [...new Set([...(graph[region] ?? []), ...annexed])];
+  };
   // Keep original neighbor lists so a transferred neighbor does not turn its
   // former neighbor into an explicitly exempt island. Traversals use keys only.
   return Object.fromEntries(
-    regions.filter((region) => graph[region] !== undefined).map((region) => [region, graph[region]])
+    regions
+      .map((region) => [region, withAnnexed(region)] as const)
+      .filter((entry): entry is readonly [string, readonly string[]] => entry[1] !== undefined)
   );
 }
 
@@ -58,12 +69,20 @@ export function isolatedRegions(countryId: CountryId): string[] {
  * region is treated as next to every region, so any party with presence
  * somewhere can grow into it. An empty presence set stays empty.
  */
-export function expandFrontier(countryId: CountryId, presence: Iterable<string>): Set<string> {
+export function expandFrontier(
+  countryId: CountryId,
+  presence: Iterable<string>,
+  regions?: readonly string[]
+): Set<string> {
   const out = new Set<string>();
+  const live = regions ? new Set(regions) : null;
   for (const stateId of presence) {
     if (!stateId) continue;
     out.add(stateId);
     for (const neighbour of adjacentStates(countryId, stateId)) out.add(neighbour);
+    // Regions annexed after the map was seeded, when the live set is known.
+    if (live)
+      for (const neighbour of annexedNeighbours(countryId, stateId, live)) out.add(neighbour);
   }
   if (out.size > 0) {
     for (const isolated of isolatedRegions(countryId)) out.add(isolated);
@@ -163,7 +182,7 @@ export async function getPartyFrontier(
     presence,
     frontier: connectedGrowthFrontier(
       presence,
-      expandFrontier(countryId, presence),
+      expandFrontier(countryId, presence, regions),
       getTerritoryAdjacency(countryId, regions)
     ),
   };
@@ -225,7 +244,7 @@ export async function getPartyFrontiers(
         : [
             ...connectedGrowthFrontier(
               states,
-              expandFrontier(countryId, states),
+              expandFrontier(countryId, states, regions),
               getTerritoryAdjacency(countryId, regions)
             ),
           ].sort(),
