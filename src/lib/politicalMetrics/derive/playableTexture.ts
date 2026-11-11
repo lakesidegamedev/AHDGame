@@ -33,6 +33,7 @@ import { applyMetricPresetToMetrics, getRegionMetricPresets } from "@/lib/seeds/
 import { applyEra1953Adjustments } from "@/lib/seeds/reference/stateMetricsEra1953";
 import { stateMetrics1953 } from "@/lib/seeds/reference/stateMetrics1953";
 import { states1953 } from "@/lib/seeds/reference/states1953";
+import type { StateMetrics } from "@/lib/db/types";
 import { ukStateMetrics } from "@/lib/seeds/uk/ukStateMetrics";
 import { ukRegions1953 } from "@/lib/seeds/uk/ukRegions1953";
 import { ruStateMetrics } from "@/lib/seeds/ru/ruStateMetrics";
@@ -86,7 +87,7 @@ export interface TextureCountryDiagnostic {
 }
 
 /** `{ category: { metricId: { value } } }` → `{ "category.metricId": value }`. */
-function flatten(doc: Record<string, unknown>): Record<string, number> {
+function flatten(doc: object): Record<string, number> {
   const flat: Record<string, number> = {};
   for (const [category, metrics] of Object.entries(doc)) {
     if (typeof metrics !== "object" || metrics == null) continue;
@@ -98,14 +99,12 @@ function flatten(doc: Record<string, unknown>): Record<string, number> {
   return flat;
 }
 
-const BASE_DOCS: Record<PoliticalMetricsCountryId, Array<Record<string, unknown>>> = {
-  US: stateMetrics1953 as unknown as Array<Record<string, unknown>>,
-  UK: ukStateMetrics as unknown as Array<Record<string, unknown>>,
-  RU: ruStateMetrics as unknown as Array<Record<string, unknown>>,
-  DD: ddStateMetrics1953 as unknown as Array<Record<string, unknown>>,
-  DE: deStateMetrics.filter((m) => deRegions1953.some((r) => r._id === m._id)) as unknown as Array<
-    Record<string, unknown>
-  >,
+const BASE_DOCS: Record<PoliticalMetricsCountryId, readonly StateMetrics[]> = {
+  US: stateMetrics1953,
+  UK: ukStateMetrics,
+  RU: ruStateMetrics,
+  DD: ddStateMetrics1953,
+  DE: deStateMetrics.filter((m) => deRegions1953.some((r) => r._id === m._id)),
 };
 
 const PARTY_ROSTERS: Record<PoliticalMetricsCountryId, readonly unknown[]> = {
@@ -132,16 +131,14 @@ const REGION_SEEDS: Record<
  * era adjustments applied (as seedUKStateMetrics does); the other bundles
  * already carry them. Keyed record, not a country-literal branch.
  */
-const LEGACY_DOC_BUILDERS: Record<
-  PoliticalMetricsCountryId,
-  (raw: Record<string, unknown>) => Record<string, unknown>
-> = {
-  US: (raw) => raw,
-  UK: (raw) => applyEra1953Adjustments(raw as never) as unknown as Record<string, unknown>,
-  RU: (raw) => raw,
-  DD: (raw) => raw,
-  DE: (raw) => raw,
-};
+const LEGACY_DOC_BUILDERS: Record<PoliticalMetricsCountryId, (raw: StateMetrics) => StateMetrics> =
+  {
+    US: (raw) => raw,
+    UK: applyEra1953Adjustments,
+    RU: (raw) => raw,
+    DD: (raw) => raw,
+    DE: (raw) => raw,
+  };
 
 /**
  * The authoritative legacy regional seed for one region at 1953-default:
@@ -151,12 +148,12 @@ const LEGACY_DOC_BUILDERS: Record<
  */
 function legacyFlatFor(
   countryId: PoliticalMetricsCountryId,
-  raw: Record<string, unknown>
+  raw: StateMetrics
 ): Record<string, number> {
   let doc = LEGACY_DOC_BUILDERS[countryId](raw);
   const overlay = getRegionMetricPresets(countryId, String(raw._id), PLAYABLE_TEXTURE_PRESET);
   if (overlay) {
-    doc = applyMetricPresetToMetrics(doc as never, overlay) as unknown as Record<string, unknown>;
+    doc = applyMetricPresetToMetrics(doc, overlay);
   }
   return flatten(doc);
 }
