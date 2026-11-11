@@ -66,7 +66,7 @@
       "noDirector": "The service has no director, so no operation can be launched.",
       "launch": "Launch operation",
       "standDown": "Stand down",
-      "standDownHelp": "After an operation against a country, standing down opens a truce that blocks operations between the two countries in both directions and eases world tension.",
+      "standDownHelp": "After an operation against a country, standing down opens a truce that stops your service for 72 turns and holds the other country back until your own cooldown would have ended. It also eases world tension.",
       "working": "Working...",
       "problem": "That order did not go through.",
       "outcome": "Result: {message}",

@@ -24,6 +24,7 @@ import { operationCost } from "@/lib/intelligence/cost";
 import { loadCyberResilience } from "./resilience";
 import {
   CYBER_ATTRIBUTION_TENSION,
+  CYBER_COOLDOWN_TURNS,
   CYBER_EXPOSURE_TURNS,
   CYBER_REFUSAL_TEXT,
   CYBER_STAND_DOWN_REFUSAL_TEXT,
@@ -62,13 +63,24 @@ export function foldCyberPairHistory(
     ) {
       lastOperationTurn = row.turn;
     }
-    if (
-      row.opType === CYBER_STAND_DOWN_TYPE &&
-      row.truceUntilTurn != null &&
-      (truceUntilTurn === null || row.truceUntilTurn > truceUntilTurn)
-    ) {
-      truceUntilTurn = row.truceUntilTurn;
+  }
+  for (const row of rows) {
+    if (row.opType !== CYBER_STAND_DOWN_TYPE || row.truceUntilTurn == null) continue;
+    let until = row.truceUntilTurn;
+    if (row.ownerCountryId !== attackerId) {
+      // The declarer's quiet binds the other side only for as long as the declarer's own
+      // cooldown would have, so declaring after a strike cannot buy a retaliation blackout.
+      const declarerLast = rows
+        .filter(
+          (r) =>
+            r.opType === CYBER_OPERATION_TYPE &&
+            r.ownerCountryId === row.ownerCountryId &&
+            r.turn <= row.turn
+        )
+        .reduce<number | null>((m, r) => (m === null || r.turn > m ? r.turn : m), null);
+      if (declarerLast !== null) until = Math.min(until, declarerLast + CYBER_COOLDOWN_TURNS);
     }
+    if (truceUntilTurn === null || until > truceUntilTurn) truceUntilTurn = until;
   }
   return { lastOperationTurn, truceUntilTurn };
 }

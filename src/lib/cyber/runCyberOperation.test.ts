@@ -55,7 +55,7 @@ const db = {
   collection: () => ({ findOne: async () => ({ gdp: 1e12 }) }),
 } as unknown as Db;
 
-const { launchCyberOperation, loadCyberCrisisTargets, standDownCyber } =
+const { foldCyberPairHistory, launchCyberOperation, loadCyberCrisisTargets, standDownCyber } =
   await import("./runCyberOperation");
 
 beforeEach(() => {
@@ -216,5 +216,26 @@ describe("standDownCyber", () => {
       expect(blocked).toMatchObject({ ok: false, status: 409 });
     }
     expect(await standDownCyber(db, "CN", "US", 12)).toMatchObject({ ok: false });
+  });
+});
+
+describe("foldCyberPairHistory truce shield", () => {
+  const rows = [
+    { ownerCountryId: "CN", targetCountryId: "US", opType: "cyber_operation", turn: 10 },
+    {
+      ownerCountryId: "CN",
+      targetCountryId: "US",
+      opType: "cyber_stand_down",
+      turn: 11,
+      truceUntilTurn: 83,
+    },
+  ] as never[];
+
+  it("binds the declarer for the whole truce", () => {
+    expect(foldCyberPairHistory(rows, "CN").truceUntilTurn).toBe(83);
+  });
+
+  it("frees the victim once the declarer's own cooldown would have lapsed", () => {
+    expect(foldCyberPairHistory(rows, "US").truceUntilTurn).toBe(34);
   });
 });
