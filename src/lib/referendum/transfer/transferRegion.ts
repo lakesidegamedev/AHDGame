@@ -24,7 +24,7 @@ import { convertPublicCurrency } from "./convertPublicCurrency";
 import { loadFxScalePair } from "@/lib/country/mergeFxScale";
 import { carryNorthernIrelandMPs, mirrorNorthernIrelandMPs } from "./carryNorthernIrelandMPs";
 import type { ElectedOfficial } from "@/lib/db/types/officials";
-import type { State } from "@/lib/db/types";
+import type { State, Corporation } from "@/lib/db/types";
 import { computeNationalMetrics } from "@/lib/nationalMetrics";
 import { recordCountryEvent } from "@/lib/turn/history/recordCountryEvent";
 import {
@@ -148,12 +148,26 @@ async function transferRegionInTransaction(
     throw new Error("Reunification requires usable exchange rates");
   const currencyScale = currencyPair?.kind === "convert" ? currencyPair.scale : 1;
   if (reunifyingNorthernIreland) {
-    await refundConversionConstruction(db, regionId, currentTurn);
+    // The carried delegation can include NPPs living elsewhere in the UK.
+    // Their corporations follow them after evacuation, so resolve worldwide
+    // construction and freeze its native currency BEFORE either HQ changes.
+    const incomingCorps = await db
+      .collection<Corporation>("corporations")
+      .find(
+        {
+          ceoType: "npp",
+          ceoId: { $in: carriedMPs.flatMap((mp) => (mp.nppId ? [mp.nppId] : [])) },
+        },
+        { projection: { _id: 1 } }
+      )
+      .toArray();
+    const incomingIds = incomingCorps.map((corp) => corp._id);
+    await refundConversionConstruction(db, regionId, currentTurn, incomingIds);
     if (currencyPair?.kind === "convert") {
       // Freeze inferred GBP before countryId changes, including legacy unstamped corporations.
       await db.collection("corporations").updateMany(
         {
-          headquartersState: regionId,
+          $and: [{ $or: [{ headquartersState: regionId }, { _id: { $in: incomingIds } }] }],
           $or: [
             { liquidCurrencyCode: { $exists: false } },
             { liquidCurrencyCode: null },
