@@ -105,15 +105,9 @@ const nextConfig: NextConfig = {
   // bundle small, and the instrumentation it skips (node-cron, auto-seed) is
   // exactly what a local world must not run. Production stays on `next start`
   // for the reasons above.
-  // CI's build job runs on the same 4 vCPU / 16 GB hosted runners as
-  // singleplayer packaging and starved the same way: three static-generation
-  // workers, each holding the whole server bundle, stalled page generation
-  // ("took more than 60 seconds") until the runner agent was killed, in about
-  // one build in five. NEXT_BUILD_CPUS caps the workers there; unset (Railway,
-  // local) leaves Next's default untouched. Singleplayer keeps its own cap below.
-  ...(process.env.SINGLEPLAYER !== "1" && Number(process.env.NEXT_BUILD_CPUS) > 0
-    ? { experimental: { cpus: Number(process.env.NEXT_BUILD_CPUS) } }
-    : {}),
+  // Each static-generation worker holds the server bundle. Use one on every
+  // host, including self-hosted builds without Railway or CI environment vars.
+  experimental: { cpus: 1 },
   ...(process.env.SINGLEPLAYER === "1"
     ? {
         output: "standalone" as const,
@@ -126,14 +120,7 @@ const nextConfig: NextConfig = {
           // SINGLEPLAYER_PRELOAD_ENTRIES=1 restores the default for the smoke
           // workflow's measurements.
           preloadEntriesOnStart: process.env.SINGLEPLAYER_PRELOAD_ENTRIES === "1",
-          // Packaging also runs on 4 vCPU / 16 GB hosted runners, where Next's
-          // default of cpus-1 static generation workers (3) each hold the whole
-          // server bundle on top of the Turbopack build and starved the runner
-          // until its agent was killed. package.mjs caps the worker count via
-          // SINGLEPLAYER_BUILD_CPUS; unset leaves Next's default untouched.
-          ...(Number(process.env.SINGLEPLAYER_BUILD_CPUS) > 0
-            ? { cpus: Number(process.env.SINGLEPLAYER_BUILD_CPUS) }
-            : {}),
+          cpus: 1,
         },
       }
     : {}),
