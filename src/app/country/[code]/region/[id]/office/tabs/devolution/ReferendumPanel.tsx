@@ -6,6 +6,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { CountryId } from "@/lib/constants/countriesCore";
 import type { ReferendumKind, ReferendumStatus } from "@/lib/db/types/referendum";
+import { getSovereigntyGovernmentNames } from "@/lib/constants/devolution";
 
 /** Server-serialized summary of a region's current/most-recent referendum. */
 export interface ReferendumSummary {
@@ -32,7 +33,10 @@ interface Props {
 }
 
 function kindNoun(stateId: string): string {
-  return stateId.toUpperCase() === "NIR" ? "Reunification" : "Independence";
+  const id = stateId.toUpperCase();
+  if (id === "NIR") return "Reunification";
+  if (id === "CA_QC") return "Sovereignty";
+  return "Independence";
 }
 
 /** "in N turns" suffix, or empty when the target turn has passed/absent. */
@@ -43,7 +47,7 @@ function inTurns(targetTurn: number | null, currentTurn: number): string {
 }
 
 /** One-line human status for an in-flight or terminal referendum. */
-function statusLine(ref: ReferendumSummary, currentTurn: number): string {
+function statusLine(ref: ReferendumSummary, currentTurn: number, stateId: string): string {
   switch (ref.status) {
     case "requested":
       return "Requested: awaiting the Prime Minister's decision.";
@@ -60,7 +64,7 @@ function statusLine(ref: ReferendumSummary, currentTurn: number): string {
     case "actuating":
       return "Carried at the ballot box — the conversion is under way.";
     case "declined":
-      return "Westminster declined the referendum.";
+      return `${getSovereigntyGovernmentNames(stateId).national} declined the referendum.`;
     case "settled":
       return "The referendum was defeated.";
     case "cancelled":
@@ -129,7 +133,7 @@ export function ReferendumPanel({ countryId, stateId, currentTurn, viewerCanMana
 
       {ref && (
         <div className="mt-3 space-y-3">
-          <p className="text-sm text-muted">{statusLine(ref, currentTurn)}</p>
+          <p className="text-sm text-muted">{statusLine(ref, currentTurn, stateId)}</p>
           {showCampaignBar && (
             <div>
               <div className="flex justify-between text-xs text-muted">
@@ -163,9 +167,10 @@ export function ReferendumPanel({ countryId, stateId, currentTurn, viewerCanMana
         <div className="mt-3 space-y-3">
           {!ref && (
             <p className="text-sm text-muted">
-              With sufficient {noun.toLowerCase()} desire, the First Minister may formally request a
-              referendum. The Prime Minister then grants or declines the request. An NPP ministry
-              acts after 24 turns if its party leadership has not decided sooner.
+              With sufficient {noun.toLowerCase()} desire, the{" "}
+              {getSovereigntyGovernmentNames(stateId).regional} may formally request a referendum.
+              The Prime Minister then grants or declines the request. An NPP ministry acts after 24
+              turns if its party leadership has not decided sooner.
             </p>
           )}
           {/* The cooldown line above already explains a cooldown block, so only

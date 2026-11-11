@@ -8,6 +8,7 @@ import {
   type CandidateLite,
 } from "@/lib/elections/resolution/independenceDesireHook";
 import { highDesireElectionBonus } from "@/lib/constants/devolution";
+import { getRegionalExecutiveOfficeKey } from "@/lib/constants/countries";
 import { applyFirstMinisterHighDesireBonus } from "@/lib/elections/rules/highDesireElectionBonus";
 
 function cand(party: string): CandidateLite {
@@ -442,6 +443,67 @@ describe("maybeApplyIndependenceDesireHook", () => {
   });
 });
 
+describe("Quebec", () => {
+  function quebecDb(desire: number): Db {
+    const collection = vi.fn((name: string) => {
+      if (name === "macroMetrics") {
+        return { findOne: vi.fn().mockResolvedValue({ independenceDesire: { value: desire } }) };
+      }
+      if (name === "politicalParties") {
+        return {
+          find: vi.fn().mockReturnValue({
+            project: vi.fn().mockReturnValue({
+              toArray: vi.fn().mockResolvedValue([
+                { sequentialId: 1, abbreviation: "FUP" },
+                { sequentialId: 2, abbreviation: "NPA" },
+                { sequentialId: 4, abbreviation: "AL" },
+              ]),
+            }),
+          }),
+        };
+      }
+      throw new Error(`Unexpected collection: ${name}`);
+    });
+    return { collection } as unknown as Db;
+  }
+
+  it("moves Commons votes toward the Laurentian Alliance when sovereignty runs high", async () => {
+    const al = cand("4");
+    const fup = cand("1");
+    const npa = cand("2");
+    const votes = {
+      [al._id.toString()]: 3000,
+      [fup._id.toString()]: 4000,
+      [npa._id.toString()]: 3000,
+    };
+    const result = await maybeApplyIndependenceDesireHook(quebecDb(80), {
+      countryId: "CA",
+      electionType: "caCommons",
+      state: "CA_QC",
+      effectiveVotes: votes,
+      candidates: [al, fup, npa],
+      totalVotes: 10_000,
+    });
+    expect(result.nudgeApplied).toBeCloseTo(0.03, 5);
+    expect(result.adjustedVotes[al._id.toString()]).toBeCloseTo(3300, 5);
+    expect(result.adjustedVotes[fup._id.toString()]).toBeCloseTo(3850, 5);
+    expect(result.adjustedVotes[npa._id.toString()]).toBeCloseTo(2850, 5);
+  });
+
+  it("leaves other provinces alone", async () => {
+    const al = cand("4");
+    const result = await maybeApplyIndependenceDesireHook(quebecDb(80), {
+      countryId: "CA",
+      electionType: "caCommons",
+      state: "CA_ON",
+      effectiveVotes: { [al._id.toString()]: 1000 },
+      candidates: [al],
+      totalVotes: 1000,
+    });
+    expect(result.nudgeApplied).toBe(0);
+  });
+});
+
 describe("loadFirstMinisterBonusContexts", () => {
   it("loads all qualifying regional office inputs in two projected batch reads", async () => {
     const electedOfficialsFind = vi.fn().mockReturnValue({
@@ -464,20 +526,35 @@ describe("loadFirstMinisterBonusContexts", () => {
       }),
     } as unknown as Db;
 
-    const contexts = await loadFirstMinisterBonusContexts(db, ["sco", "SCO", "NIR", "LON"]);
+    const contexts = await loadFirstMinisterBonusContexts(db, [
+      "sco",
+      "SCO",
+      "NIR",
+      "LON",
+      "ca_qc",
+      "CA_ON",
+    ]);
 
+    expect(electedOfficialsFind).toHaveBeenCalledTimes(1);
     expect(electedOfficialsFind).toHaveBeenCalledWith(
       {
-        countryId: "UK",
-        officeType: "governor",
-        state: { $in: ["SCO", "NIR"] },
+        $or: [
+          { countryId: "UK", officeType: "governor", state: { $in: ["SCO", "NIR"] } },
+          {
+            countryId: "CA",
+            officeType: getRegionalExecutiveOfficeKey("CA"),
+            state: { $in: ["CA_QC"] },
+          },
+        ],
       },
       { projection: { state: 1, party: 1 } }
     );
+    expect(officeStateFind).toHaveBeenCalledTimes(1);
     expect(officeStateFind).toHaveBeenCalledWith(
-      { countryId: "UK", stateId: { $in: ["SCO", "NIR"] } },
+      { countryId: { $in: ["UK", "CA"] }, stateId: { $in: ["SCO", "NIR", "CA_QC"] } },
       { projection: { stateId: 1, devolutionPolicy: 1 } }
     );
+    expect(contexts.get("CA_QC")).toEqual({ firstMinisterPartyId: null, devolutionPolicy: null });
     expect(contexts.get("SCO")).toEqual({
       firstMinisterPartyId: "777",
       devolutionPolicy: "independence",

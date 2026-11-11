@@ -27,7 +27,8 @@ import type {
   PoliticalParty,
 } from "@/lib/db/types";
 import type { DevolutionPolicy } from "@/lib/db/types/governorOfficeState";
-import { highDesireElectionBonus, isUKDevolutionRegion } from "@/lib/constants/devolution";
+import { highDesireElectionBonus } from "@/lib/constants/devolution";
+import { sovereigntyRegionIn } from "@/lib/referendum/rules/sovereigntyRegions";
 import { referendumRequestEligibility } from "@/lib/constants/referendum";
 import { getReferendumCollection } from "@/lib/db/collections/referendum";
 import type { ReferendumPanelData } from "./tabs/devolution/ReferendumPanel";
@@ -425,8 +426,9 @@ export default async function GovernorOfficePage({ params }: Props) {
     };
     referendum: ReferendumPanelData;
   } | null = null;
-  if (countryId === COUNTRY_CONFIGS.UK.id && isUKDevolutionRegion(stateId)) {
-    const snapshot = (await loadIndependenceDesireSnapshots(db)).find(
+  const sovereignty = sovereigntyRegionIn(countryId, stateId);
+  if (sovereignty) {
+    const snapshot = (await loadIndependenceDesireSnapshots(db, sovereignty.countryId)).find(
       (row) => row.stateId === stateId
     );
     if (snapshot) {
@@ -464,8 +466,11 @@ export default async function GovernorOfficePage({ params }: Props) {
               cooldownReadyAtTurn: displayRef.cooldownReadyAtTurn,
             }
           : null,
-        eligible: eligibility.eligible,
-        eligibilityReason: eligibility.reason,
+        // A region without a successor state keeps its mood but cannot ask.
+        eligible: sovereignty.actuates && eligibility.eligible,
+        eligibilityReason: sovereignty.actuates
+          ? eligibility.reason
+          : "A referendum cannot be held until an independent state can be formed.",
       };
 
       devolutionProps = {

@@ -66,6 +66,7 @@ import {
 } from "@/lib/elections/resolution/electionNotifications";
 import { resolveOneGeneralElection } from "@/lib/elections/resolution/generalResolution";
 import { loadFirstMinisterBonusContexts } from "@/lib/elections/resolution/independenceDesireHook";
+import { isSovereigntyRegion } from "@/lib/referendum/rules/sovereigntyRegions";
 import { logger } from "@/lib/observability/logger";
 import { recordAuditBulk } from "@/lib/audit/recordAudit";
 import type { ActionAuditInput } from "@/lib/db/types/actionAuditLog";
@@ -129,8 +130,8 @@ export async function resolveGeneralElections(
   if (completedElections.length === 0) return 0;
 
   const electionIds = completedElections.map((e) => e._id);
-  const ukDevolutionRegions = completedElections
-    .filter((e) => countryHasFeature("ukElections", e.countryId) && e.state)
+  const sovereigntyRegions = completedElections
+    .filter((e) => e.state && isSovereigntyRegion(e.state))
     .map((e) => e.state.toUpperCase());
   const genericElectionIds = completedElections
     .filter((e) => !isNativeRussianAssemblyElection(e))
@@ -151,7 +152,7 @@ export async function resolveGeneralElections(
           .catch(() => [])
       : Promise.resolve([]),
     (await getGameStateCollection(db)).findOne({ _id: "current" }),
-    loadFirstMinisterBonusContexts(db, ukDevolutionRegions),
+    loadFirstMinisterBonusContexts(db, sovereigntyRegions),
   ]);
   const currentTurn = gameStateDoc?.currentTurn ?? 0;
   const tallyMap = new Map(tallies.map((t) => [t.electionId.toString(), t]));
