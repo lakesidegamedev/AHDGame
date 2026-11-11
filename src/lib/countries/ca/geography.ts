@@ -1,4 +1,6 @@
 import type { CountryGeography } from "../contract";
+import { caMetricPresets2027 } from "./data/caMetricPresets2027";
+import { caRegionCensusData2027 } from "./data/caRegionCensusData2027";
 import { caRegions2027 } from "./data/caRegions2027";
 import { caStateMetrics } from "./data/caStateMetrics";
 import {
@@ -33,8 +35,9 @@ export const CA_GEOGRAPHY: CountryGeography = {
   core5Normals: CA_CORE5_NORMALS,
   adjacency: CA_ADJACENCY_MAP,
   regionNames: CA_REGION_NAMES,
+  censusBundles: { "2027-default": caRegionCensusData2027 },
   populationAnchors: {},
-  metricPresets: {},
+  metricPresets: { "2027-default": caMetricPresets2027 },
   regionBundles: { "2027-default": caRegions2027 },
   rawMetrics: caStateMetrics,
   mapRegistry: CA_MAP_REGISTRY,
