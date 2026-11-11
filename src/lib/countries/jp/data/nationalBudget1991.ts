@@ -34,12 +34,12 @@ export const JP_NATIONAL_BUDGET_1991: NationalBudgetSeedConfig = {
   },
   creditRating: "AAA", // Japan was AAA pre-1998
   baselineSpendingByCategory: {
-    health: 18_000_000_000_000,
+    healthcare: 18_000_000_000_000,
     education: 6_000_000_000_000,
     statePensions: 20_000_000_000_000,
     welfare: 14_000_000_000_000,
     defense: 4_300_000_000_000,
-    publicWorks: 9_000_000_000_000,
+    transport: 9_000_000_000_000,
     other: 28_000_000_000_000,
   },
   baselineStateGrants: 14_000_000_000_000,
