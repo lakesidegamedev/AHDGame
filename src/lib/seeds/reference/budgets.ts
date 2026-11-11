@@ -578,6 +578,7 @@ import { CS_ECONOMY } from "@/lib/countries/cs/economy";
 import { BLR_ECONOMY } from "@/lib/countries/blr/economy";
 import { UKR_ECONOMY } from "@/lib/countries/ukr/economy";
 import { BAL_ECONOMY } from "@/lib/countries/bal/economy";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /**
  * Authored historical fiscal baselines for 1953 (Korean War defense shares,
@@ -5660,7 +5661,7 @@ function getUncalibratedNationalBudgetSeedConfigsForPreset(
   if (preset === "1991-default") {
     return overlayNationalBudgetConfigs(
       NATIONAL_BUDGET_SEED_CONFIGS_1991.map((config) =>
-        config.countryId === "NG"
+        countryHasFeature("ngSeeds", config.countryId)
           ? rebaseBudgetNominals(config, NG_1991_NOMINAL_GDP_NGN)
           : anchorFiscal1991(config, false)
       ),
@@ -5806,7 +5807,7 @@ export function getNationalBudgetSeedConfigsForPreset(preset: string): NationalB
         },
         nominalGdp
       );
-      if (config.countryId !== "IE") return rebased;
+      if (!countryHasFeature("ieSeeds", config.countryId)) return rebased;
       // CSO's gross debt stock is an absolute EUR observation restored to IEP.
       // Preserve the authored ceiling headroom, not the stale 133.3% debt share.
       const ireland = {
@@ -6070,12 +6071,12 @@ export function getInitialNationalBudgetsForPreset(preset: string): SupportedNat
 export const initialNationalBudgets: SupportedNationalBudget[] =
   getNationalBudgetSeedConfigsForPreset("2019-default").map(buildNationalBudgetSeed);
 
-export const initialFederalBudget = initialNationalBudgets.find(
-  (budget) => budget.countryId === "US"
+export const initialFederalBudget = initialNationalBudgets.find((budget) =>
+  countryHasFeature("usSeeds", budget.countryId)
 ) as SupportedNationalBudget;
 
-export const initialUkBudget = initialNationalBudgets.find(
-  (budget) => budget.countryId === "UK"
+export const initialUkBudget = initialNationalBudgets.find((budget) =>
+  countryHasFeature("ukSeeds", budget.countryId)
 ) as SupportedNationalBudget;
 
 type StateBudgetSeedInput = {
@@ -6731,7 +6732,9 @@ export function generateCountryOwnedSeedData(
     },
   ];
 
-  const ukStates = states.filter((state) => state.countryId === "UK" && state.gdp > 0);
+  const ukStates = states.filter(
+    (state) => countryHasFeature("ukSeeds", state.countryId) && state.gdp > 0
+  );
 
   const healthcareIncomeTarget = initialUkBudget.revenue.healthcareIncome;
   if (ukStates.length === 0 || healthcareIncomeTarget <= 0) {
@@ -6855,7 +6858,9 @@ export function generateCountryOwnedSeedData(
   // canonical market size in ₳, divided back to SUR via the RU exchange rate
   // (corporateSectors.revenue is liquidCurrencyCode-denominated — matching the
   // UK/CN NatCorp convention and what commodityPriceTurn expects).
-  const ruStates = states.filter((state) => state.countryId === "RU" && state.gdp > 0);
+  const ruStates = states.filter(
+    (state) => countryHasFeature("ruSeeds", state.countryId) && state.gdp > 0
+  );
   if (ruStates.length > 0 && preset !== "2019-default") {
     // Preset-aware: the ₳→SUR rate is era-specific (1953 = 9 SUR/USD, the
     // Western GNP-estimate basis ruRegions1953 is calibrated on; the base
@@ -7162,10 +7167,12 @@ export function generateCountryOwnedSeedData(
   // that never collide with the issuer or player-founded corporations. Only
   // OWNED sectors count as commodity supply, so this adds the SOE-performance
   // channel without double-counting the unowned market pool.
-  const cnStates = states.filter((state) => state.countryId === "CN" && state.gdp > 0);
+  const cnStates = states.filter(
+    (state) => countryHasFeature("cnSeeds", state.countryId) && state.gdp > 0
+  );
   if (commandEconomyEnabled && cnStates.length > 0 && commandEconomySoeSectors("CN").length > 0) {
-    const cnSeedYear = getNationalBudgetSeedConfigsForPreset(preset).find(
-      (c) => c.countryId === "CN"
+    const cnSeedYear = getNationalBudgetSeedConfigsForPreset(preset).find((c) =>
+      countryHasFeature("cnSeeds", c.countryId)
     )?.fiscalYear;
     const cnInCommandBand =
       cnSeedYear != null && scheduledMarketizationLevel("CN", cnSeedYear) < COMMAND_CEILING;

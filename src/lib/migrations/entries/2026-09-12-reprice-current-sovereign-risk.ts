@@ -2,6 +2,7 @@ import type { Db } from "mongodb";
 import { deriveFiscalState } from "@/lib/budget/treasuryBalance";
 import type { Migration, MigrationResult } from "../types";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /**
  * Reprice persisted sovereign fields after removing the historical-anchor
@@ -59,7 +60,7 @@ async function repriceCurrentSovereignRisk(db: Db, dryRun: boolean): Promise<Mig
       await federalBudgetCollection(db).updateOne({ _id: budget._id }, { $set: update });
     }
 
-    if (budget.countryId === "DD") {
+    if (countryHasFeature("ddSeeds", budget.countryId)) {
       notes.push(
         `${dryRun ? "would reprice" : "repriced"} DD: ${derived.creditRating} at ${(derived.interestRate * 100).toFixed(1)}%`
       );

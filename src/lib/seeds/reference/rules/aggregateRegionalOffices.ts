@@ -9,6 +9,7 @@ import {
   BR_REGION_VOTE_SHARES_2019,
 } from "@/lib/countries/br/data/brStatePartyOrgCalculations";
 import { apportionSeats } from "./apportionSeats";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /**
  * These opening holders are game-model aggregates, not named historical
@@ -47,7 +48,7 @@ const IE_PARTY_SLUGS: Readonly<Record<string, string>> = {
 };
 
 function partySlug(country: "BR" | "IE", key: string): string {
-  const slug = (country === "BR" ? BR_PARTY_SLUGS : IE_PARTY_SLUGS)[key];
+  const slug = (countryHasFeature("brSeeds", country) ? BR_PARTY_SLUGS : IE_PARTY_SLUGS)[key];
   if (!slug) throw new Error(`No ${country} modeled aggregate party for ${key}`);
   return slug;
 }

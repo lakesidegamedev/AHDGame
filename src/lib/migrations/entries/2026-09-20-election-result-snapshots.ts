@@ -7,6 +7,7 @@ import {
 } from "@/lib/elections/liveResults/buildResultsPayload";
 import type { ElectionResultSnapshot } from "@/lib/db/types/electionResultSnapshot";
 import type { Election, GameState } from "@/lib/db/types";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 const ENDED = ["completed", "resolved"] as const;
 
@@ -75,7 +76,7 @@ export const migration: Migration = {
     const houseSeatsByYear = new Map<number, Record<string, number>>();
     for (const election of ended) {
       if (
-        election.countryId !== "US" ||
+        !countryHasFeature("usSeeds", election.countryId) ||
         election.electionType !== "house" ||
         typeof election.electionYear !== "number" ||
         typeof election.totalSeats !== "number" ||
@@ -139,7 +140,7 @@ export const migration: Migration = {
             // The map and allocation rules in force when the race ran, not
             // the ones in force today.
             apportionmentYear: election.electionYear ?? null,
-            ...(election.countryId === "US" &&
+            ...(countryHasFeature("usSeeds", election.countryId) &&
             election.electionType === "president" &&
             election.electionYear !== undefined
               ? { houseSeatsByState: houseSeatsByYear.get(election.electionYear) }

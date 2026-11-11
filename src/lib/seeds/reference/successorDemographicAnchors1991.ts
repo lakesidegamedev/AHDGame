@@ -1,4 +1,5 @@
 import { HU_1991_REGION_AGE } from "@/lib/countries/hu/data/huPopulation1991";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /**
  * 1991 age and urbanization controls. WDI age 0-14 / 65+ and urban share for
@@ -62,17 +63,17 @@ export const SOVIET_REPUBLIC_DEMOGRAPHIC_ANCHORS_1991: Record<string, Demographi
 };
 
 export function demographicAnchor1991(countryId: string, regionId: string): DemographicAnchor1991 {
-  if (countryId === "RU" && regionId.startsWith("SU_")) {
+  if (countryHasFeature("ruSeeds", countryId) && regionId.startsWith("SU_")) {
     const anchor = SOVIET_REPUBLIC_DEMOGRAPHIC_ANCHORS_1991[regionId];
     if (!anchor) throw new Error(`Missing Soviet republic 1991 demographic anchor for ${regionId}`);
     return anchor;
   }
-  if (countryId === "YU") {
+  if (countryHasFeature("yuSeeds", countryId)) {
     const anchor = YU_REGION_DEMOGRAPHIC_ANCHORS_1991[regionId];
     if (!anchor) throw new Error(`Missing Yugoslav 1991 demographic anchor for ${regionId}`);
     return anchor;
   }
-  if (countryId === "HU") {
+  if (countryHasFeature("huSeeds", countryId)) {
     const counts = HU_1991_REGION_AGE[regionId as keyof typeof HU_1991_REGION_AGE];
     if (!counts) throw new Error(`Missing Hungarian 1990 regional age for ${regionId}`);
     const total = counts.young0to14 + counts.adult15to64 + counts.senior65Plus;
@@ -82,7 +83,11 @@ export function demographicAnchor1991(countryId: string, regionId: string): Demo
       urban: NATIONAL_DEMOGRAPHIC_ANCHORS_1991.HU.urban,
     };
   }
-  const key = countryId === "CS" ? (regionId === "CS_SVK" ? "CS_SVK" : "CS_CZE") : countryId;
+  const key = countryHasFeature("csSeeds", countryId)
+    ? regionId === "CS_SVK"
+      ? "CS_SVK"
+      : "CS_CZE"
+    : countryId;
   const anchor =
     NATIONAL_DEMOGRAPHIC_ANCHORS_1991[key as keyof typeof NATIONAL_DEMOGRAPHIC_ANCHORS_1991];
   if (!anchor) throw new Error(`Missing 1991 demographic anchor for ${countryId}/${regionId}`);

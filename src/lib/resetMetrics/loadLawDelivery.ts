@@ -13,6 +13,7 @@ import {
   type MetricLawProgram,
   type MetricLawSettlement,
 } from "./rules/lawDelivery";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export async function loadMetricLawDelivery(
   db: Db,
@@ -34,8 +35,8 @@ export async function loadMetricLawDelivery(
     ...new Set(input.countryIds ?? regions.map((region) => region.countryId)),
   ].filter(isResetV2Country);
   if (!countries.length) return empty;
-  const us = regions.filter((r) => r.countryId === "US").map((r) => r._id);
-  const other = regions.filter((r) => r.countryId !== "US").map((r) => r._id);
+  const us = regions.filter((r) => countryHasFeature("usSeeds", r.countryId)).map((r) => r._id);
+  const other = regions.filter((r) => !countryHasFeature("usSeeds", r.countryId)).map((r) => r._id);
   const [replacements, accounts, boards, regional, states] = await Promise.all([
     db
       .collection<ResetLawProgramDocument>("resetLawPrograms")

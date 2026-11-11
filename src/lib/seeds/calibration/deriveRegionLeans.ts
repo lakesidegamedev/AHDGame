@@ -16,6 +16,7 @@ import { getCountryLayer1Model } from "@/lib/seeds/international";
 import type { Layer1Config } from "@/lib/seeds/stateDemographics";
 import type { EraId } from "@/lib/seeds/presetSelector";
 import type { RegionLean } from "./types";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 const US_CENSUS: Record<EraId, Record<string, Layer1Config>> = {
   // 1953: 1979 shares proxy with the 1979-authored positions blocks stripped.
@@ -34,7 +35,7 @@ const US_CENSUS: Record<EraId, Record<string, Layer1Config>> = {
  * composition model, which the calibration anchors were written against.
  */
 export function deriveRegionLeans(country: string, era: EraId): RegionLean[] {
-  if (country === "US") {
+  if (countryHasFeature("usSeeds", country)) {
     return Object.entries(US_CENSUS[era]).map(([stateId, cfg]) => {
       const ed = groupConfigFromSeed(stateId, "US", era, cfg);
       const d = groupLeanUs(ed);
