@@ -19,6 +19,15 @@ export const CA_PARTY_SLUGS = {
   greenHorizon: "ca_green_horizon",
 } as const;
 
+/** Default party abbreviation to stable slug, for rules keyed by slug. */
+export const CA_PARTY_SLUG_BY_ABBREVIATION: Readonly<Record<string, string>> = {
+  FUP: CA_PARTY_SLUGS.federalUnity,
+  NPA: CA_PARTY_SLUGS.nationalProsperity,
+  LCP: CA_PARTY_SLUGS.labourCommons,
+  AL: CA_PARTY_SLUGS.laurentian,
+  GHP: CA_PARTY_SLUGS.greenHorizon,
+};
+
 function caParty(
   seedOrder: number,
   name: string,

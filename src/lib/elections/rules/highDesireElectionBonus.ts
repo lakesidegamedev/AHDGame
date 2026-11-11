@@ -1,4 +1,5 @@
-import { highDesireElectionBonus, isUKDevolutionRegion } from "@/lib/constants/devolution";
+import { highDesireElectionBonus } from "@/lib/constants/devolution";
+import { isSovereigntyRegion } from "@/lib/referendum/rules/sovereigntyRegions";
 
 export interface HighDesireBonusCandidate {
   id: string;
@@ -23,7 +24,7 @@ export function applyFirstMinisterHighDesireBonus(args: {
   const { effectiveVotes, candidates, desire, region, firstMinisterPartyId, devolutionPolicy } =
     args;
 
-  if (!isUKDevolutionRegion(region)) {
+  if (!isSovereigntyRegion(region)) {
     return { adjustedVotes: effectiveVotes, bonusApplied: 0 };
   }
   if (

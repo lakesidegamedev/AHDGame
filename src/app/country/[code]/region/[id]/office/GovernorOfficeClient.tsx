@@ -22,9 +22,8 @@ import type { DevolutionDriverSnapshot } from "./tabs/DevolutionTab";
 import type { ReferendumPanelData } from "./tabs/devolution/ReferendumPanel";
 import type { Race } from "./tabs/endorsements/RaceList";
 import type { DevolutionPolicy } from "@/lib/db/types/governorOfficeState";
-import { isUKDevolutionRegion } from "@/lib/constants/devolution";
+import { sovereigntyRegionIn } from "@/lib/referendum/rules/sovereigntyRegions";
 import { TabFallback } from "@/components/state/TabFallback";
-import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 // Only the Overview tab is open on arrival; the others are one click away and
 // each pulls its own heavy tree (the legislation tab drags the metric catalog
@@ -95,7 +94,7 @@ interface Props {
   availableRaces: Race[];
   legislationActivity: LegislationActivity;
   eligibleNpps: EligibleNpp[];
-  /** Devolution tab data — only present for UK SCO/WAL/NIR FM seats. */
+  /** Devolution tab data, present only for sovereignty-region executives. */
   devolution: {
     currentValue: number;
     currentTrend: number;
@@ -108,9 +107,16 @@ interface Props {
   } | null;
 }
 
-function buildTabs(showDevolution: boolean): Array<{ key: TabKey; label: string }> {
+function buildTabs(
+  showDevolution: boolean,
+  stateId: string
+): Array<{ key: TabKey; label: string }> {
   const tabs: Array<{ key: TabKey; label: string }> = [{ key: "overview", label: "Overview" }];
-  if (showDevolution) tabs.push({ key: "devolution", label: "Devolution" });
+  if (showDevolution)
+    tabs.push({
+      key: "devolution",
+      label: stateId.toUpperCase() === "CA_QC" ? "Sovereignty" : "Devolution",
+    });
   tabs.push(
     { key: "legislation", label: "Legislation" },
     { key: "orders", label: "Orders" },
@@ -122,10 +128,8 @@ function buildTabs(showDevolution: boolean): Array<{ key: TabKey; label: string 
 
 export function GovernorOfficeClient(props: Props) {
   const showDevolution =
-    countryHasFeature("ukUi", props.countryId) &&
-    isUKDevolutionRegion(props.stateId) &&
-    props.devolution != null;
-  const tabs = buildTabs(showDevolution);
+    sovereigntyRegionIn(props.countryId, props.stateId) != null && props.devolution != null;
+  const tabs = buildTabs(showDevolution, props.stateId);
   const [active, setActive] = useState<TabKey>("overview");
   const router = useRouter();
 

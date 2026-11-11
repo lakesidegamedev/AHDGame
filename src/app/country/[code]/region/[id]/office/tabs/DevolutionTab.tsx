@@ -13,6 +13,7 @@ import {
   HIGH_DESIRE_BONUS_TIER_COUNT,
   getDevolutionPolicyLabel,
   getIndependenceMetricLabel,
+  getSovereigntyGovernmentNames,
 } from "@/lib/constants/devolution";
 import type { DevolutionPolicy } from "@/lib/db/types/governorOfficeState";
 import { ChangePolicyModal } from "./devolution/ChangePolicyModal";
@@ -51,7 +52,7 @@ interface Props {
   viewerCanManage: boolean;
   viewerIsAdmin: boolean;
   driverPreview: DevolutionDriverSnapshot;
-  /** Current First Minister party eligible for the high-desire bonus. */
+  /** Current regional head of government party eligible for the high-desire bonus. */
   firstMinisterPartyName: string | null;
   /** Current additive vote-share bonus after desire, policy, and office-holder
    *  eligibility are considered. */
@@ -80,6 +81,20 @@ const POLICY_BLURBS: Record<DevolutionPolicy, string> = {
     "Our nation deserves to chart its own course. Building the case for separation is the work of this Government.",
 };
 
+const QUEBEC_POLICY_BLURBS: Record<DevolutionPolicy, string> = {
+  anti: "Quebec's place is in Canada. Separation would cost our people far more than it could ever give them.",
+  pro: "Quebec governs what is ours to govern and defends its powers, inside the federation.",
+  independence:
+    "Quebec is a nation and should become a country. Preparing that choice is the work of this Government.",
+};
+
+function policyBlurb(stateId: string, policy: DevolutionPolicy): string {
+  const id = stateId.toUpperCase();
+  if (id === "CA_QC") return QUEBEC_POLICY_BLURBS[policy];
+  if (id === "NIR" && policy === "independence") return POLICY_NIR_REUNIFICATION_BLURB;
+  return POLICY_BLURBS[policy];
+}
+
 const POLICY_NIR_REUNIFICATION_BLURB =
   "The future of this island is its reunification. Working with partners north and south to make it inevitable.";
 
@@ -97,6 +112,7 @@ export function DevolutionTab(props: Props) {
   const onCooldown = cooldownRemaining > 0;
   const apShort = props.gubernatorialActions < DEVOLUTION_POLICY_CHANGE_AP_COST;
   const canChange = props.viewerCanManage && !onCooldown && !apShort;
+  const governments = getSovereigntyGovernmentNames(props.stateId);
 
   return (
     <div className="space-y-6">
@@ -111,7 +127,7 @@ export function DevolutionTab(props: Props) {
         }}
       />
 
-      {/* First Minister party election bonus */}
+      {/* Regional head of government party election bonus */}
       <div className="rounded-xl border border-card-border bg-card p-6">
         <div className="flex items-baseline justify-between">
           <h2 className="text-sm text-muted">Election bonus</h2>
@@ -128,7 +144,7 @@ export function DevolutionTab(props: Props) {
             <div className="pb-1 text-sm text-muted">
               vote bonus to{" "}
               <span className="font-medium text-foreground/90">
-                {props.firstMinisterPartyName ?? "the First Minister's party"}
+                {props.firstMinisterPartyName ?? `the ${governments.regional}'s party`}
               </span>{" "}
               in every {props.stateName} election. This does not penalise rivals.
             </div>
@@ -147,7 +163,7 @@ export function DevolutionTab(props: Props) {
           </div>
         ) : (
           <div className="mt-3 text-sm text-muted">
-            No bonus active. The current First Minister must belong to a party.
+            No bonus active. The current {governments.regional} must belong to a party.
           </div>
         )}
         <ul
@@ -206,9 +222,7 @@ export function DevolutionTab(props: Props) {
                   )}
                 </div>
                 <p className="mt-2 text-xs leading-snug text-muted">
-                  {policy === "independence" && props.stateId.toUpperCase() === "NIR"
-                    ? POLICY_NIR_REUNIFICATION_BLURB
-                    : POLICY_BLURBS[policy]}
+                  {policyBlurb(props.stateId, policy)}
                 </p>
               </div>
             );

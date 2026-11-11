@@ -15,6 +15,16 @@ export interface SovereigntyRegion {
   readonly targetCountryId: CountryId | null;
   /** Who asks for the referendum, as written in wire copy. */
   readonly executiveTitle: string;
+  /** How copy names the national government the region would leave. */
+  readonly nationalGovernmentName: string;
+  /**
+   * Party slugs the region's mood moves votes between at elections: toward
+   * the separatist parties and away from their main unionist rivals.
+   */
+  readonly electionParties: {
+    readonly separatist: readonly string[];
+    readonly rivals: readonly string[];
+  };
   /**
    * Whether a passed referendum can be carried out. A region whose successor
    * country is not built yet keeps its mood but cannot open a referendum, so
@@ -30,6 +40,8 @@ export const SOVEREIGNTY_REGIONS: readonly SovereigntyRegion[] = [
     kind: "independence",
     targetCountryId: null,
     executiveTitle: "First Minister",
+    nationalGovernmentName: "Westminster",
+    electionParties: { separatist: ["uk_snp"], rivals: ["uk_conservative"] },
     actuates: true,
   },
   {
@@ -38,6 +50,8 @@ export const SOVEREIGNTY_REGIONS: readonly SovereigntyRegion[] = [
     kind: "independence",
     targetCountryId: null,
     executiveTitle: "First Minister",
+    nationalGovernmentName: "Westminster",
+    electionParties: { separatist: ["uk_plaid"], rivals: ["uk_conservative"] },
     actuates: true,
   },
   {
@@ -46,6 +60,8 @@ export const SOVEREIGNTY_REGIONS: readonly SovereigntyRegion[] = [
     kind: "reunification",
     targetCountryId: "IE",
     executiveTitle: "First Minister",
+    nationalGovernmentName: "Westminster",
+    electionParties: { separatist: ["uk_sf"], rivals: ["uk_dup", "uk_uup"] },
     actuates: true,
   },
   {
@@ -54,6 +70,11 @@ export const SOVEREIGNTY_REGIONS: readonly SovereigntyRegion[] = [
     kind: "independence",
     targetCountryId: null,
     executiveTitle: "Premier",
+    nationalGovernmentName: "Ottawa",
+    electionParties: {
+      separatist: ["ca_laurentian"],
+      rivals: ["ca_federal_unity", "ca_national_prosperity"],
+    },
     actuates: false,
   },
 ];

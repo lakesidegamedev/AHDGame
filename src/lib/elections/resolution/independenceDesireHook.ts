@@ -1,37 +1,37 @@
 /**
- * Soft electoral hook for UK SCO/WAL/NIR Independence/Reunification Desire.
+ * Soft electoral hook for regions in the sovereignty registry (Scotland, Wales,
+ * Northern Ireland, Quebec).
  *
- * When resolving a SCO/WAL/NIR general election, the region's
- * `independenceDesire` metric translates into a small vote-share nudge for the
- * legacy independence parties and a stepped bonus for the current First
- * Minister's party when the office is pursuing independence or reunification.
+ * When resolving a general election in such a region, its `independenceDesire`
+ * metric translates into a small vote-share nudge toward the separatist parties
+ * and a stepped bonus for the regional head of government's party when the
+ * office is pursuing independence or reunification.
  *
- * See docs/design/uk-devolution-policy.md §"Soft electoral hook".
- *
- * Applies to: regionalCouncil (devolved parliament), commons (UK Westminster
- * within those regions), governor (FM / Mayor of London — LON skipped because
- * it has no devolution axis).
+ * Applies to the national lower house inside those regions, devolved
+ * parliaments, and the regional executive (London has no devolution axis and
+ * is not in the registry).
  */
 import type { Db } from "mongodb";
 import type { MacroMetricsDoc } from "@/lib/db/types/macroMetrics";
 import type { ElectedOfficial, GovernorOfficeState, PoliticalParty } from "@/lib/db/types";
 import type { DevolutionPolicy } from "@/lib/db/types/governorOfficeState";
-import { getRegionalExecutiveOfficeKey } from "@/lib/constants/countries";
-import { isUKDevolutionRegion } from "@/lib/constants/devolution";
+import { getRegionalExecutiveOfficeKey, type CountryId } from "@/lib/constants/countries";
 import { applyFirstMinisterHighDesireBonus } from "@/lib/elections/rules/highDesireElectionBonus";
+import { sovereigntyRegion, sovereigntyRegionIn } from "@/lib/referendum/rules/sovereigntyRegions";
+import { CA_PARTY_SLUG_BY_ABBREVIATION } from "@/lib/countries/ca/data/caParties";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 /** Election types where the hook is applied. */
-const HOOKED_ELECTION_TYPES = new Set(["commons", "snap_commons", "regionalCouncil", "governor"]);
-
-/** Per-region pro-independence + unionist-rival party slugs. */
-const REGION_PARTY_MAP: Record<string, { proIndy: string[]; rivals: string[] }> = {
-  SCO: { proIndy: ["uk_snp"], rivals: ["uk_conservative"] },
-  WAL: { proIndy: ["uk_plaid"], rivals: ["uk_conservative"] },
-  NIR: { proIndy: ["uk_sf"], rivals: ["uk_dup", "uk_uup"] },
-};
+const HOOKED_ELECTION_TYPES = new Set([
+  "commons",
+  "snap_commons",
+  "caCommons",
+  "snap_caCommons",
+  "regionalCouncil",
+  "governor",
+]);
 
 /** Magnitude of the nudge: (desire − 50) × 0.001, clamped to ±0.05. */
 function shareNudgeFromDesire(desire: number): number {
@@ -57,18 +57,29 @@ export async function loadFirstMinisterBonusContexts(
   db: Db,
   regions: readonly string[]
 ): Promise<Map<string, FirstMinisterBonusContext>> {
-  const normalizedRegions = [
-    ...new Set(regions.map((region) => region.toUpperCase()).filter(isUKDevolutionRegion)),
+  const entries = [
+    ...new Map(
+      regions
+        .map((region) => sovereigntyRegion(region))
+        .filter((entry) => entry != null)
+        .map((entry) => [entry.regionId, entry])
+    ).values(),
   ];
-  if (normalizedRegions.length === 0) return new Map();
+  if (entries.length === 0) return new Map();
+  const normalizedRegions = entries.map((entry) => entry.regionId);
+  const countries = [...new Set(entries.map((entry) => entry.countryId))];
 
   const [officeHolders, officeStates] = await Promise.all([
     electedOfficialsCollection(db)
       .find(
         {
-          countryId: "UK",
-          officeType: getRegionalExecutiveOfficeKey("UK"),
-          state: { $in: normalizedRegions },
+          $or: countries.map((countryId) => ({
+            countryId,
+            officeType: getRegionalExecutiveOfficeKey(countryId),
+            state: {
+              $in: entries.filter((e) => e.countryId === countryId).map((e) => e.regionId),
+            },
+          })),
         },
         { projection: { state: 1, party: 1 } }
       )
@@ -76,7 +87,7 @@ export async function loadFirstMinisterBonusContexts(
     db
       .collection<GovernorOfficeState>("governorOfficeState")
       .find(
-        { countryId: "UK", stateId: { $in: normalizedRegions } },
+        { countryId: { $in: countries }, stateId: { $in: normalizedRegions } },
         { projection: { stateId: 1, devolutionPolicy: 1 } }
       )
       .toArray(),
@@ -114,7 +125,7 @@ export async function loadFirstMinisterBonusContexts(
  * @param partyBySeq      sequentialId → slug map (resolves c.party to a slug)
  * @param desire          current independenceDesire value (0..100)
  * @param totalVotes      total votes cast (used to scale the share nudge)
- * @param region          stateId — SCO/WAL/NIR
+ * @param region          stateId of a sovereignty region
  */
 export function applyIndependenceDesireNudge(args: {
   effectiveVotes: Record<string, number>;
@@ -125,7 +136,7 @@ export function applyIndependenceDesireNudge(args: {
   region: string;
 }): { adjustedVotes: Record<string, number>; nudgeApplied: number } {
   const { effectiveVotes, candidates, partyBySeq, desire, totalVotes, region } = args;
-  const regionMap = REGION_PARTY_MAP[region.toUpperCase()];
+  const regionMap = sovereigntyRegion(region)?.electionParties;
   if (!regionMap) return { adjustedVotes: effectiveVotes, nudgeApplied: 0 };
   if (totalVotes <= 0) return { adjustedVotes: effectiveVotes, nudgeApplied: 0 };
 
@@ -138,7 +149,7 @@ export function applyIndependenceDesireNudge(args: {
   for (const c of candidates) {
     const slug = partyBySeq.get(c.party);
     if (!slug) continue;
-    if (regionMap.proIndy.includes(slug)) {
+    if (regionMap.separatist.includes(slug)) {
       const arr = proIndyByParty.get(slug) ?? [];
       arr.push(c);
       proIndyByParty.set(slug, arr);
@@ -210,10 +221,34 @@ function distributeWithinParty(
 }
 
 /**
- * Look up the slug → party-sequentialId map for UK parties. Used by callers
- * that have candidate.party as a sequentialId string but need to match
+ * Look up the slug → party-sequentialId map for one country's parties. Used by
+ * callers that have candidate.party as a sequentialId string but need to match
  * slug-keyed config. Returns a Map<sequentialIdString, slug>.
  */
+export async function buildPartySlugMap(
+  db: Db,
+  countryId: CountryId
+): Promise<Map<string, string>> {
+  if (countryHasFeature("ukElections", countryId)) return buildUKPartySlugMap(db);
+  const parties = await politicalPartiesCollection(db)
+    .find({ countryId })
+    .project<{ sequentialId: number; abbreviation: string }>({ sequentialId: 1, abbreviation: 1 })
+    .toArray();
+  const slugs = PARTY_SLUGS_BY_COUNTRY[countryId] ?? {};
+  const map = new Map<string, string>();
+  for (const p of parties) {
+    const slug = slugs[p.abbreviation];
+    if (slug) map.set(String(p.sequentialId), slug);
+  }
+  return map;
+}
+
+/** Abbreviation-keyed slugs for countries whose default parties carry stable abbreviations. */
+const PARTY_SLUGS_BY_COUNTRY: Partial<Record<CountryId, Readonly<Record<string, string>>>> = {
+  CA: CA_PARTY_SLUG_BY_ABBREVIATION,
+};
+
+/** UK slugs derive from name as well as abbreviation, covering older seeds. */
 export async function buildUKPartySlugMap(db: Db): Promise<Map<string, string>> {
   const ukParties = await politicalPartiesCollection(db)
     .find({ countryId: "UK" })
@@ -278,8 +313,8 @@ export async function maybeApplyIndependenceDesireHook(
   };
   const { countryId, electionType, state, effectiveVotes, candidates, totalVotes, bonusContext } =
     args;
-  if (!countryHasFeature("ukElections", countryId)) return noop;
-  if (!state || !isUKDevolutionRegion(state)) return noop;
+  const region = state ? sovereigntyRegionIn(countryId, state) : null;
+  if (!state || !region) return noop;
   if (!HOOKED_ELECTION_TYPES.has(electionType)) return noop;
 
   // SP5: independenceDesire lives top-level on macroMetrics.
@@ -289,7 +324,7 @@ export async function maybeApplyIndependenceDesireHook(
   const desire = metric?.independenceDesire?.value;
   if (desire == null) return noop;
 
-  const partyBySeq = await buildUKPartySlugMap(db);
+  const partyBySeq = await buildPartySlugMap(db, region.countryId);
 
   // Step 1: vote-share transfer (existing soft electoral hook).
   const transfer = applyIndependenceDesireNudge({
