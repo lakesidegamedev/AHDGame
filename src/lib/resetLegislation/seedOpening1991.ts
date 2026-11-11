@@ -31,6 +31,18 @@ export async function seedOpeningLawBoards1991(
   const expectedRegional = buildOpeningRegionalBoards1991(worldId, sourceTurn).filter((board) =>
     countries.includes(board.countryId as ResetOpeningCountry)
   );
+  return persistLawOpening(db, worldId, sourceTurn, countries, expected, expectedRegional, true);
+}
+
+export async function persistLawOpening(
+  db: Db,
+  worldId: string,
+  sourceTurn: number,
+  countries: readonly ResetOpeningCountry[],
+  expected: readonly ResetLawOpeningBoard[],
+  expectedRegional: readonly ResetRegionalOpeningBoard[],
+  verifyHistoricalUk = false
+): Promise<ResetSystemSeedReceipt> {
   const seededRegions = await statesCollection(db)
     .find({ countryId: { $in: [...countries] } }, { projection: { _id: 1, countryId: 1 } })
     .toArray();
@@ -40,29 +52,30 @@ export async function seedOpeningLawBoards1991(
     .map((board) => board._id)
     .sort();
   if (JSON.stringify(actualIds) !== JSON.stringify(expectedIds)) {
-    throw new Error("The seeded 1991 regions do not match the v2 current-law crosswalk");
+    throw new Error("The seeded regions do not match the v2 current-law crosswalk");
   }
   if (
     JSON.stringify(actualIds) !== JSON.stringify(expectedRegional.map((board) => board._id).sort())
   ) {
-    throw new Error("The seeded 1991 regions do not match v2 regional fiscal claims");
+    throw new Error("The seeded regions do not match v2 regional fiscal claims");
   }
-  const ukBudgetRows = countries.includes("UK")
-    ? await stateBudgetsCollection(db)
-        .find(
-          { countryId: "UK" },
-          {
-            projection: {
-              stateId: 1,
-              countryId: 1,
-              "revenue.propertyTax": 1,
-              "revenue.domesticCorporateTax": 1,
-              "revenue.foreignCorporateTax": 1,
-            },
-          }
-        )
-        .toArray()
-    : [];
+  const ukBudgetRows =
+    verifyHistoricalUk && countries.includes("UK")
+      ? await stateBudgetsCollection(db)
+          .find(
+            { countryId: "UK" },
+            {
+              projection: {
+                stateId: 1,
+                countryId: 1,
+                "revenue.propertyTax": 1,
+                "revenue.domesticCorporateTax": 1,
+                "revenue.foreignCorporateTax": 1,
+              },
+            }
+          )
+          .toArray()
+      : [];
   const expectedUk = expected.filter((board) => board.ukTerritorialTax);
   const actualUkByRegion = new Map(ukBudgetRows.map((budget) => [budget.stateId, budget]));
   if (ukBudgetRows.length !== expectedUk.length || actualUkByRegion.size !== expectedUk.length) {
@@ -103,6 +116,7 @@ export async function seedOpeningLawBoards1991(
           sourceTurn: 1,
           ukTerritorialTax: 1,
           references: 1,
+          modeledOpening: 1,
         },
       }
     )

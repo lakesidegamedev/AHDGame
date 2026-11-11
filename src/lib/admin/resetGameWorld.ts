@@ -693,7 +693,7 @@ export async function resetGameWorld(
   // Law-created seats belong to the outgoing world. A fresh v1 world begins
   // without them; the historical 1991 Cabinet-v2 opening includes Education.
   gameStateUpdate.manuallyEnabledSeats =
-    selectedVersions.cabinet === "v2" ? ["secretary_of_education"] : [];
+    selectedVersions.cabinet === "v2" && resetDate.year >= 1980 ? ["secretary_of_education"] : [];
   if (options.iteration) {
     gameStateUpdate.iteration = options.iteration;
     // Maintain the global iteration registry so generated wiki office pages can

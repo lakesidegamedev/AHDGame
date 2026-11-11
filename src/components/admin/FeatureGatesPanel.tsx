@@ -522,8 +522,7 @@ export function FeatureGatesPanel() {
                 ))}
               </div>
               <p className="mt-2 text-[11px] text-muted">
-                Next 1991 reset: {selection}. Changing this selection does not switch the running
-                world.
+                Next reset: {selection}. Changing this selection does not switch the running world.
               </p>
               {!v2Ready ? (
                 <p className="mt-2 text-[11px] text-muted">

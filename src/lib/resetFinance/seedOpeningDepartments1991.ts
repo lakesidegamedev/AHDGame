@@ -70,6 +70,18 @@ export async function seedOpeningDepartmentBoards1991(
     },
     openingNamedGrantClaims1991()
   );
+  return persistCabinetOpening(db, worldId, sourceTurn, countries, expected, partition, fiscal);
+}
+
+export async function persistCabinetOpening(
+  db: Db,
+  worldId: string,
+  sourceTurn: number,
+  countries: readonly ResetOpeningCountry[],
+  expected: readonly ResetDepartmentOpeningBoard[],
+  partition: ReturnType<typeof buildOpeningDepartmentFundingPartition>,
+  fiscal: Parameters<typeof openingNationalTreasurySnapshots>[2]
+): Promise<ResetSystemSeedReceipt> {
   const collection = resetDepartmentOpeningBoardsCollection<ResetDepartmentOpeningBoard>(db);
   await collection.bulkWrite(
     expected.map((board) => ({

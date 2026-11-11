@@ -166,11 +166,11 @@ export function resetSystemSelectionsFrom(
   };
 }
 
-/** A v2 reset can only use the authored opening era and complete runtime paths. */
+/** Selectors require complete runtime paths and their system dependencies. */
 export function resetSelectionPreflight(
   state: ResetVersionState | null,
-  preset: string,
-  atPresetAnchor: boolean,
+  _preset: string,
+  _atPresetAnchor: boolean,
   v2Ready: ResetV2Readiness
 ): { allowed: true } | { allowed: false; reason: string } {
   const raw = rawResetSystemSelectionsFrom(state);
@@ -180,24 +180,6 @@ export function resetSelectionPreflight(
   const selected = resetSystemSelectionsFrom(state);
   const requested = RESET_SYSTEMS.filter((system) => selected[system] === "v2");
   if (requested.length === 0) return { allowed: true };
-  if (preset !== "1991-default" || !atPresetAnchor) {
-    const settings = [
-      ["legislation", "Legislation"],
-      ["cabinet", "Cabinet"],
-      ["metrics", "Metrics"],
-      ["demographics", "Demographics"],
-    ] as const;
-    const changes = settings
-      .filter(([system]) => requested.includes(system))
-      .map(([, label]) => label);
-    return {
-      allowed: false,
-      reason:
-        "Reset v2 requires the 1991 default preset at week 1. " +
-        "For the selected date, open Admin Dashboard > Feature gates and set the following " +
-        `next-reset versions to v1 in order: ${changes.join(", ")}. Then retry the reset.`,
-    };
-  }
   const unavailable = requested.filter((system) => !v2Ready[system]);
   if (unavailable.length > 0) {
     return { allowed: false, reason: `Reset v2 systems are not ready: ${unavailable.join(", ")}` };

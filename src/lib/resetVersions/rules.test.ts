@@ -187,14 +187,13 @@ describe("reset-era system versions", () => {
     });
   });
 
-  it("preflights staged v2 against era, anchor date, and runtime readiness", () => {
+  it("preflights staged v2 against runtime readiness across presets and dates", () => {
     const state = { resetSystemSelections: { metrics: "v2" as const } };
     expect(resetSelectionPreflight(null, "2019-default", false, staged)).toEqual({ allowed: true });
     expect(resetSelectionPreflight(state, "2019-default", true, ready)).toEqual({
-      allowed: false,
-      reason: expect.stringContaining("next-reset versions to v1 in order: Metrics."),
+      allowed: true,
     });
-    expect(resetSelectionPreflight(state, "1991-default", false, ready).allowed).toBe(false);
+    expect(resetSelectionPreflight(state, "1991-default", false, ready).allowed).toBe(true);
     expect(resetSelectionPreflight(state, "1991-default", true, staged)).toEqual({
       allowed: false,
       reason: "Reset v2 systems are not ready: metrics",
@@ -202,7 +201,7 @@ describe("reset-era system versions", () => {
     expect(resetSelectionPreflight(state, "1991-default", true, ready)).toEqual({ allowed: true });
   });
 
-  it("shows the dependency order for changing v2 selections before a 2027 reset", () => {
+  it("keeps selected v2 systems enabled for a 2027 reset", () => {
     const state = {
       resetSystemSelections: {
         metrics: "v2",
@@ -212,10 +211,7 @@ describe("reset-era system versions", () => {
       } as const,
     };
     expect(resetSelectionPreflight(state, "2027-default", true, ready)).toEqual({
-      allowed: false,
-      reason: expect.stringContaining(
-        "next-reset versions to v1 in order: Legislation, Cabinet, Metrics."
-      ),
+      allowed: true,
     });
     expect(
       resetSelectionPreflight(

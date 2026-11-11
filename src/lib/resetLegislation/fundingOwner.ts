@@ -146,17 +146,19 @@ export type ResetOwnerCode = keyof typeof SEATS;
 export function fundingSeatForLaw(
   law: Pick<LawFamilyDefinition, "id" | "ownerCode">,
   country: ResetCountry,
-  enabledSeats: ReadonlySet<string> = new Set()
+  enabledSeats: ReadonlySet<string> = new Set(),
+  year = 1991
 ): string {
   if (!(law.ownerCode in SEATS)) throw new Error(`Unknown reset owner ${law.ownerCode}`);
   const code = law.ownerCode as ResetOwnerCode;
   if (countryHasFeature("usSeeds", country)) {
-    if (law.id === "L50") return "secretary_of_treasury"; // ATF in the 1991 Treasury.
+    if (law.id === "L50") return year >= 2003 ? "attorney_general" : "secretary_of_treasury";
     if (code === "EDU" && enabledSeats.has("secretary_of_education")) {
       return "secretary_of_education";
     }
   }
   if (countryHasFeature("ukSeeds", country)) {
+    if (code === "AGR" && year >= 2001) return "environment_secretary";
     if (law.id === "L21" || law.id === "L38") return "health_secretary";
     if (law.id === "L36") return "justice_secretary";
   }
@@ -167,9 +169,15 @@ export function fundingSeatForLaw(
 export function fundingNameForLaw1991(
   law: Pick<LawFamilyDefinition, "id" | "ownerCode">,
   country: ResetCountry,
-  enabledSeats: ReadonlySet<string> = new Set()
+  enabledSeats: ReadonlySet<string> = new Set(),
+  year = 1991
 ): string {
-  const seatId = fundingSeatForLaw(law, country, enabledSeats);
+  const seatId = fundingSeatForLaw(law, country, enabledSeats, year);
+  if (year !== 1991) {
+    const mechanics = getCabinetMechanics(country, seatId);
+    if (!mechanics) throw new Error(`No Cabinet mechanics for ${country} ${seatId}`);
+    return resolveDepartment(mechanics, year);
+  }
   if (countryHasFeature("usSeeds", country)) {
     if (law.id === "L50") return "Department of the Treasury (ATF funding)";
     if (seatId === "secretary_of_health" && !enabledSeats.has("secretary_of_education")) {
