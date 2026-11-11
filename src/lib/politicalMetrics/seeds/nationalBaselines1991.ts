@@ -86,6 +86,17 @@ export const NATIONAL_BASELINES_1991: Record<
     governance: [72, 56, 52, 56, 74, 64, 62],
     defense: [60, 56, 52, 50, 52, 50, 16],
   }),
+  CN: board({
+    economy: [48, 42, 38, 44, 58, 56, 28],
+    education: [55, 45, 50, 52, 50, 62, 12],
+    health: [58, 50, 58, 54, 58, 36, 44],
+    infrastructure: [36, 46, 38, 48, 40, 30, 50],
+    order: [32, 22, 46, 62, 38, 68, 72],
+    environment: [34, 40, 38, 48, 60, 44, 54],
+    society: [40, 42, 50, 52, 26, 62, 40],
+    governance: [26, 14, 16, 40, 50, 80, 84],
+    defense: [36, 34, 28, 58, 54, 68, 36],
+  }),
   DD: NATIONAL_BASELINES_1979.DD,
 };
 
@@ -96,4 +107,5 @@ export const OPENING_POLITICAL_APPROVAL_1991: Partial<Record<PoliticalMetricsCou
   RU: 43,
   DE: 54,
   JP: 47,
+  CN: 58,
 };

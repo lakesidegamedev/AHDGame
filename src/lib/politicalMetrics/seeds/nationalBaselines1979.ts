@@ -99,4 +99,15 @@ export const NATIONAL_BASELINES_1979: Record<
     governance: [70, 52, 46, 58, 76, 68, 62],
     defense: [56, 48, 44, 40, 40, 38, 12],
   }),
+  CN: buildBaselines({
+    economy: [45, 35, 30, 40, 45, 50, 18],
+    education: [50, 40, 45, 45, 45, 60, 10],
+    health: [55, 45, 55, 45, 60, 35, 40],
+    infrastructure: [35, 40, 30, 40, 25, 25, 40],
+    order: [30, 18, 42, 62, 32, 66, 74],
+    environment: [36, 40, 40, 45, 55, 42, 52],
+    society: [38, 40, 45, 50, 25, 64, 40],
+    governance: [25, 12, 14, 38, 45, 80, 84],
+    defense: [34, 30, 26, 56, 50, 70, 35],
+  }),
 };

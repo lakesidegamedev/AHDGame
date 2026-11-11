@@ -101,12 +101,6 @@ export const DEFENSE_BOARDS_1953: Record<string, DefenseBoard> = {
 
   // ── Asia ──────────────────────────────────────────────────────────────────
   /**
-   * PRC: fresh from fighting the United Nations to a standstill in Korea with a
-   * vast, hard, lightly-equipped army. The UN seat is held by Taipei, so standing
-   * is near-zero regardless of real power — rule 4 in action.
-   */
-  CN: board(32, 15, 28, 62, 35, 82, 28),
-  /**
    * Turkey: NATO from 1952, guarding the alliance's longest border with the Soviet
    * Union, with a very large conscript army and combat experience from Korea.
    * Manpower far outstrips domestic industry.

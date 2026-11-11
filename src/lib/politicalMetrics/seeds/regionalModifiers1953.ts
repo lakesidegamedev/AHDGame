@@ -217,4 +217,6 @@ export const REGIONAL_MODIFIERS_1953: Record<
   DE: {},
   // Japan's regional texture is derived from its region seeds.
   JP: {},
+  // China's regional texture is derived from its region seeds.
+  CN: {},
 };

@@ -50,6 +50,9 @@ import { deParties } from "@/lib/countries/de/data/deParties";
 import { jpStateMetrics } from "@/lib/countries/jp/data/jpStateMetrics";
 import { jpRegions1953 } from "@/lib/countries/jp/data/jpRegions1953";
 import { jpParties } from "@/lib/countries/jp/data/jpParties";
+import { cnStateMetrics } from "@/lib/countries/cn/data/cnStateMetrics";
+import { cnRegions1953 } from "@/lib/countries/cn/data/cnRegions1953";
+import { cnParties } from "@/lib/countries/cn/data/cnParties";
 import { REGIONAL_MODIFIERS_1953 } from "../seeds/regionalModifiers1953";
 import {
   POLITICAL_METRIC_COUNTRY_IDS,
@@ -109,6 +112,7 @@ const BASE_DOCS: Record<PoliticalMetricsCountryId, readonly StateMetrics[]> = {
   DD: ddStateMetrics1953,
   DE: deStateMetrics.filter((m) => deRegions1953.some((r) => r._id === m._id)),
   JP: jpStateMetrics.filter((m) => jpRegions1953.some((r) => r._id === m._id)),
+  CN: cnStateMetrics.filter((m) => cnRegions1953.some((r) => r._id === m._id)),
 };
 
 const PARTY_ROSTERS: Record<PoliticalMetricsCountryId, readonly unknown[]> = {
@@ -118,6 +122,7 @@ const PARTY_ROSTERS: Record<PoliticalMetricsCountryId, readonly unknown[]> = {
   DD: ddParties,
   DE: deParties,
   JP: jpParties,
+  CN: cnParties,
 };
 
 const REGION_SEEDS: Record<
@@ -130,6 +135,7 @@ const REGION_SEEDS: Record<
   DD: ddRegions1953,
   DE: deRegions1953,
   JP: jpRegions1953,
+  CN: cnRegions1953,
 };
 
 /**
@@ -145,6 +151,7 @@ const LEGACY_DOC_BUILDERS: Record<PoliticalMetricsCountryId, (raw: StateMetrics)
     DD: (raw) => raw,
     DE: (raw) => raw,
     JP: (raw) => raw,
+    CN: (raw) => raw,
   };
 
 /**

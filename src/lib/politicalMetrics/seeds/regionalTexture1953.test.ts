@@ -7,6 +7,7 @@ import { ukRegions1953 } from "@/lib/seeds/uk/ukRegions1953";
 import { ruRegions1953 } from "@/lib/seeds/ru/ruRegions1953";
 import { ddRegions1953 } from "@/lib/seeds/dd/ddRegions1953";
 import { deRegions1953 } from "@/lib/countries/de/data/deRegions1953";
+import { cnRegions1953 } from "@/lib/countries/cn/data/cnRegions1953";
 import { jpRegions1953 } from "@/lib/countries/jp/data/jpRegions1953";
 import type { PoliticalMetricId, PoliticalMetricsCountryId } from "@/lib/politicalMetrics/types";
 
@@ -19,7 +20,7 @@ import type { PoliticalMetricId, PoliticalMetricsCountryId } from "@/lib/politic
  * committed artifact that exactly matches what the generator derives today.
  */
 
-const COUNTRIES = ["US", "UK", "RU", "DD", "DE", "JP"] as const;
+const COUNTRIES = ["US", "UK", "RU", "DD", "DE", "JP", "CN"] as const;
 
 const POPULATIONS: Record<PoliticalMetricsCountryId, Map<string, number>> = {
   US: new Map(states1953.map((s) => [s._id, s.population ?? 0])),
@@ -28,6 +29,7 @@ const POPULATIONS: Record<PoliticalMetricsCountryId, Map<string, number>> = {
   DD: new Map(ddRegions1953.map((s) => [s._id, s.population ?? 0])),
   DE: new Map(deRegions1953.map((s) => [s._id, s.population ?? 0])),
   JP: new Map(jpRegions1953.map((s) => [s._id, s.population ?? 0])),
+  CN: new Map(cnRegions1953.map((s) => [s._id, s.population ?? 0])),
 };
 
 describe("regional texture 1953", () => {
