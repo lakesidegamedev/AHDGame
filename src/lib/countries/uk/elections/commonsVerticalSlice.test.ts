@@ -287,6 +287,69 @@ describe("lifecycle hooks", () => {
   });
 });
 
+describe("Canadian Commons lifecycle hooks", () => {
+  function caMp() {
+    return mpCharacter({
+      countryId: "CA",
+      homeState: "CA_ON",
+      currentOffice: { type: "caCommons", state: "CA_ON" },
+    });
+  }
+
+  it("resignPosition tombstones a Canadian seat and records a CA vacancy", async () => {
+    const { resignPosition } = await import("@/lib/settings/resignations");
+    const fake = createFakeCommonsDb();
+    const character = caMp();
+    const seat = commonsSeat(character._id as ObjectId, {
+      officeType: "caCommons",
+      countryId: "CA",
+      state: "CA_ON",
+    });
+    fake.seed("characters", [character]);
+    fake.seed("electedOfficials", [seat]);
+    fake.seed("gameState", [{ _id: "current", currentTurn: TURN }]);
+    const result = await resignPosition(
+      fake.db,
+      character as never,
+      `official:${(seat._id as ObjectId).toString()}`
+    );
+    expect(result.ok).toBe(true);
+    const rows = fake.read<Record<string, unknown>>("electedOfficials");
+    expect(rows).toHaveLength(1);
+    expect(rows[0].characterId).toBeNull();
+    const [vacancy] = fake.read<Record<string, unknown>>("ukCommonsVacancies");
+    expect(vacancy).toMatchObject({ countryId: "CA", state: "CA_ON", reason: "resignation" });
+  });
+
+  it("retireCharacter records a CA retirement vacancy", async () => {
+    const { retireCharacter } = await import("@/lib/retireCharacter");
+    const fake = createFakeCommonsDb();
+    const character = { ...caMp(), party: "independent", currentOffice: null };
+    const seat = commonsSeat(character._id as ObjectId, {
+      officeType: "caCommons",
+      countryId: "CA",
+      state: "CA_QC",
+      seatsHeld: 2,
+    });
+    fake.seed("characters", [character]);
+    fake.seed("electedOfficials", [seat]);
+    fake.seed("gameState", [{ _id: "current", currentTurn: TURN }]);
+    await retireCharacter(
+      fake.db,
+      character as never,
+      character.userId as ObjectId,
+      "retired" as never
+    );
+    const [vacancy] = fake.read<Record<string, unknown>>("ukCommonsVacancies");
+    expect(vacancy).toMatchObject({
+      countryId: "CA",
+      state: "CA_QC",
+      seats: 2,
+      reason: "retirement",
+    });
+  });
+});
+
 describe("recall signature idempotency", () => {
   it("re-signing is a no-op that reports the live count", async () => {
     const { addRecallSignature } = await import("./recallPetitionShell");

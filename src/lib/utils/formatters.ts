@@ -231,6 +231,8 @@ export function electionToLarpYear(
     case "milletMeclisi":
       return years.trMeclis + (cycle - 1) * 4;
     case "caCommons":
+    case "snap_caCommons":
+    case "special_caCommons":
       return (years.caCommons ?? years.governorStateSenate) + (cycle - 1) * 4;
     case "qcAssembly":
       return (years.qcAssembly ?? years.governorStateSenate) + (cycle - 1) * 4;

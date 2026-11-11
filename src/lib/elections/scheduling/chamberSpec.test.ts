@@ -16,6 +16,7 @@ import {
   getCycleAnchors,
 } from "@/lib/elections/cycleAnchorContext";
 import { BY_ELECTION_COUNTRIES } from "@/lib/turn/byElections";
+import { COMMONS_BY_ELECTION_CHAMBERS } from "@/lib/elections/rules/commonsByElectionChambers";
 import { IE_CHAMBER_SPECS } from "@/lib/countries/ie/elections/chamberSpecs";
 import { NG_CHAMBER_SPECS } from "@/lib/countries/ng/elections/chamberSpecs";
 import { CN_CHAMBER_SPECS } from "@/lib/countries/cn/elections/chamberSpecs";
@@ -177,6 +178,18 @@ describe("chamber specs", () => {
     for (const spec of ALL_SPECS) {
       if (spec.byElections === "none") {
         expect(BY_ELECTION_COUNTRIES).not.toContain(spec.countryId);
+      }
+    }
+  });
+
+  it("declare by-elections exactly for chambers the Commons watcher fills", () => {
+    for (const spec of ALL_SPECS) {
+      const watched = COMMONS_BY_ELECTION_CHAMBERS.some(
+        (c) => c.countryId === spec.countryId && c.generalTypes.includes(spec.electionType)
+      );
+      if (watched) expect(spec.byElections, spec.chamberId).toBe("special");
+      if (spec.byElections === "special" && !BY_ELECTION_COUNTRIES.includes(spec.countryId)) {
+        expect(watched, spec.chamberId).toBe(true);
       }
     }
   });

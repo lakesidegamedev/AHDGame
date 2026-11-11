@@ -30,6 +30,10 @@ import {
 import { isElectionTypeEntryBlocked } from "@/lib/elections/nationwideExecutive";
 import { isPrimaryClosed } from "@/lib/elections/electionDeadlineFilters";
 import { isSpecialCommonsElection } from "@/lib/utils/electionLabels";
+import {
+  commonsChamberForOffice,
+  commonsChamberForSpecial,
+} from "@/lib/elections/rules/commonsByElectionChambers";
 import { removeWithdrawnCandidateFromTally } from "@/lib/elections/engine/tallyCleaner";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { SLATE_ASSIGNMENT_CAP, isLiveSlateStatus } from "@/lib/slateAssignmentCap";
@@ -37,7 +41,6 @@ import {
   canFieldExecutiveCandidate,
   canFieldLegislativeCandidate,
 } from "@/lib/turn/onePartyConstraints";
-import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { campaignsCollection } from "@/lib/db/repositories/campaigns";
@@ -627,10 +630,12 @@ export async function fileAcceptedSlateRows(ctx: NPPContext): Promise<SlateFilin
       // holding an in-state Commons seat to avoid double-seating.
       if (isSpecialCommonsElection(election.electionType)) {
         const offices = ctx.officialsByNPP.get(candidateKey) ?? [];
+        const chamber = commonsChamberForSpecial(election.electionType);
         const holdsInStateCommonsSeat = offices.some(
           (office) =>
-            office.officeType === "commons" &&
-            countryHasFeature("ukTurn", office.countryId ?? electionCountry) &&
+            chamber !== null &&
+            commonsChamberForOffice(office.officeType, office.countryId ?? electionCountry) ===
+              chamber &&
             office.state === election.state
         );
         if (holdsInStateCommonsSeat) {

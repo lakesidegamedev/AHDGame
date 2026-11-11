@@ -1,21 +1,22 @@
 /**
- * UK Commons by-election watcher.
+ * Commons by-election watcher, for every chamber in the Commons by-election
+ * table (UK Commons, Canadian House of Commons).
  *
  * Fills Commons seats vacated mid-term (death, retirement, resignation,
- * defection, recall) with an off-calendar `special_commons` race that contests
- * ONLY the vacated seats: the regional electorate scaled to
+ * defection, recall) with an off-calendar special race that contests ONLY the
+ * vacated seats: the regional electorate scaled to
  * vacatedSeats / totalRegionSeats (see `byElectionCarve.ts`).
  *
- * Runs AFTER `byElectionWatcher` so US/RU governor specials settle first; both
- * read settled seat state. Suppressed during founding, when every seat is being
+ * Runs AFTER `byElectionWatcher` so governor specials settle first; both read
+ * settled seat state. Suppressed during founding, when every seat is being
  * elected and there are no mid-term vacancies to backfill.
  *
- * `special_commons` lands in its own group in `cleanupDuplicateElections`, is
- * invisible to the perpetual spawner (which keys off `commons`), seats winners
- * as plain `commons`, and resolves additively (sitting MPs keep their rows). A
- * by-election only runs when it resolves before the region's next general, and a
- * snap dissolution cancels any live one, so a special never seats into a
- * delegation a general has already replaced.
+ * Each special type lands in its own group in `cleanupDuplicateElections`, is
+ * invisible to the perpetual spawner (which keys off the regular type), seats
+ * winners in the chamber's regular office, and resolves additively (sitting MPs
+ * keep their rows). A by-election only runs when it resolves before the
+ * region's next general, and a snap dissolution cancels any live one, so a
+ * special never seats into a delegation a general has already replaced.
  */
 
 import { ObjectId } from "mongodb";
@@ -23,10 +24,19 @@ import type { Db } from "@/lib/mongodb";
 import { withCampaignRules } from "@/lib/campaignTargeting/rules";
 import type { ElectedOfficial, Election } from "@/lib/db/types";
 import { officialsCountryScope } from "@/lib/db/electedOfficialScope";
+import type { CountryId } from "@/lib/constants/countries";
 import { getSeatIdFromElection } from "@/lib/seats/seatId";
 import { turnToWallClock } from "@/lib/elections/canonicalCycle";
 import { getUkCommonsSeats } from "@/lib/constants/states";
 import { getGameStateCollection } from "@/lib/db/collections";
+import { statesCollection } from "@/lib/db/repositories/states";
+import {
+  COMMONS_BY_ELECTION_CHAMBERS,
+  SPECIAL_COMMONS_TYPES,
+  commonsChamberForCountry,
+  seatMapFromHouseDistricts,
+  type CommonsByElectionChamber,
+} from "@/lib/elections/rules/commonsByElectionChambers";
 import { getUkCommonsVacanciesCollection } from "@/lib/db/collections/ukByElection";
 import {
   COMMONS_BY_ELECTION_FILING_TURNS,
@@ -54,9 +64,6 @@ import { getCharactersCollection } from "@/lib/db/collections/characters";
 import { processYearOneByElections } from "./yearOneByElections";
 
 export const SPECIAL_COMMONS_ELECTION_TYPE = "special_commons";
-
-/** Regular Commons races whose live presence suppresses a by-election. */
-const REGULAR_COMMONS_TYPES: readonly Election["electionType"][] = ["commons", "snap_commons"];
 
 /** Election statuses that count as a live, seat-filling race. */
 const LIVE_ELECTION_STATUSES: readonly Election["status"][] = ["active", "upcoming"];
@@ -92,7 +99,7 @@ export function commonsByElectionGate(input: {
   currentTurn: number;
 }): CommonsByElectionGate {
   const { liveRaces, lastSpecialEndTurn, currentTurn } = input;
-  if (liveRaces.some((e) => e.electionType === SPECIAL_COMMONS_ELECTION_TYPE)) {
+  if (liveRaces.some((e) => SPECIAL_COMMONS_TYPES.includes(e.electionType))) {
     return { kind: "special_live" };
   }
   const filling = liveRaces.filter((e) =>
@@ -115,6 +122,8 @@ export function commonsByElectionGate(input: {
 }
 
 export interface SpawnSpecialCommonsInput {
+  /** Defaults to the UK Commons. */
+  countryId?: CountryId;
   state: string;
   /** Open vacancy docs this race claims (one race may fill several). */
   vacancyIds: ObjectId[];
@@ -136,17 +145,20 @@ export async function spawnSpecialCommons(
   db: Db,
   input: SpawnSpecialCommonsInput
 ): Promise<ObjectId> {
+  const countryId = input.countryId ?? "UK";
+  const chamber = commonsChamberForCountry(countryId);
+  if (!chamber) throw new Error(`No Commons by-election chamber for ${countryId}`);
   const primaryEndTurn = input.currentTurn + COMMONS_BY_ELECTION_FILING_TURNS;
   const endTurn = primaryEndTurn + COMMONS_BY_ELECTION_GENERAL_TURNS;
   const carve = computeByElectionCarveFraction(input.seats, input.totalRegionSeats);
   const doc: Election = {
     _id: new ObjectId(),
-    electionType: SPECIAL_COMMONS_ELECTION_TYPE,
+    electionType: chamber.specialType,
     state: input.state,
-    countryId: "UK",
+    countryId,
     seatId: getSeatIdFromElection({
-      countryId: "UK",
-      electionType: SPECIAL_COMMONS_ELECTION_TYPE,
+      countryId,
+      electionType: chamber.specialType,
       state: input.state,
     }),
     cycle: input.currentTurn,
@@ -198,13 +210,7 @@ export async function processCommonsByElectionWatcher(
     petitionsAdvanced: 0,
     reconciled: 0,
   };
-  const scope = officialsCountryScope("UK");
-  const officials = await getElectedOfficialsCollection(db);
-  const elections = await getElectionsCollection(db);
-  const vacancies = getUkCommonsVacanciesCollection(db);
-
   const gameState = await (await getGameStateCollection(db)).findOne({ _id: "current" });
-  const seatMap = getUkCommonsSeats(gameState?.preset);
 
   await processYearOneByElections(db, currentTurn, now, {
     preset: gameState?.preset,
@@ -212,11 +218,53 @@ export async function processCommonsByElectionWatcher(
     preIterationTurns: gameState?.preIterationTurns,
   });
 
-  // ── 1. Backstop: every holder-less `commons` row needs a live vacancy. ──
+  for (const chamber of COMMONS_BY_ELECTION_CHAMBERS) {
+    await processChamberByElections(db, chamber, gameState?.preset, currentTurn, now, result);
+  }
+
+  if (result.spawned > 0) {
+    console.log(`[Turn] Spawned ${result.spawned} Commons by-election(s)`);
+  }
+  return result;
+}
+
+/** Seats per region for one chamber, read only when a seat count must be derived. */
+async function loadSeatMap(
+  db: Db,
+  chamber: CommonsByElectionChamber,
+  preset: string | undefined
+): Promise<Record<string, number>> {
+  if (chamber.seatSource === "presetCommonsTable") return getUkCommonsSeats(preset);
+  const regions = await statesCollection<{ id: string; houseDistricts?: number | null }>(db)
+    .find({ countryId: chamber.countryId }, { projection: { _id: 0, id: 1, houseDistricts: 1 } })
+    .toArray();
+  return seatMapFromHouseDistricts(regions);
+}
+
+async function processChamberByElections(
+  db: Db,
+  chamber: CommonsByElectionChamber,
+  preset: string | undefined,
+  currentTurn: number,
+  now: Date,
+  result: CommonsWatcherResult
+): Promise<void> {
+  const countryId = chamber.countryId;
+  const scope = chamber.claimsUnscopedRows
+    ? officialsCountryScope(countryId)
+    : { countryId: chamber.countryId };
+  const officials = await getElectedOfficialsCollection(db);
+  const elections = await getElectionsCollection(db);
+  const vacancies = getUkCommonsVacanciesCollection(db);
+  const regularTypes = chamber.generalTypes as Election["electionType"][];
+  let seatMap: Record<string, number> | null = null;
+  const seatsFor = async () => (seatMap ??= await loadSeatMap(db, chamber, preset));
+
+  // ── 1. Backstop: every holder-less seat row needs a live vacancy. ──
   // Death, bans, and admin removals tombstone the row without recording a
   // reason; hooked paths (retirement, resignation, recall) write a precise
   // reason instead, so this only fires for unhooked paths (`removal`).
-  const commonsRows = await officials.find({ officeType: "commons", ...scope }).toArray();
+  const commonsRows = await officials.find({ officeType: chamber.officeType, ...scope }).toArray();
   const tombstones = commonsRows.filter((o) => o.state && o.characterId == null && o.nppId == null);
   const untracked: ElectedOfficial[] = [];
   for (const row of tombstones) {
@@ -232,8 +280,9 @@ export async function processCommonsByElectionWatcher(
   const countless = untracked.filter((row) => !((row.seatsHeld ?? 0) > 0));
   if (countless.length > 0) {
     const live = await vacancies
-      .find({ countryId: "UK", status: { $in: ["open", "scheduled"] } })
+      .find({ countryId, status: { $in: ["open", "scheduled"] } })
       .toArray();
+    const regionSeats = await seatsFor();
     for (const state of new Set(countless.map((row) => row.state as string))) {
       const rows = countless.filter((row) => row.state === state);
       const seated = commonsRows
@@ -245,7 +294,7 @@ export async function processCommonsByElectionWatcher(
       const kept = untracked
         .filter((row) => row.state === state && (row.seatsHeld ?? 0) > 0)
         .reduce((n, row) => n + (row.seatsHeld as number), 0);
-      const deficit = (seatMap[state] ?? 0) - seated - claimed - kept;
+      const deficit = (regionSeats[state] ?? 0) - seated - claimed - kept;
       rows.forEach((row, i) =>
         derivedSeats.set(row._id.toString(), i === 0 ? Math.max(1, deficit - (rows.length - 1)) : 1)
       );
@@ -253,6 +302,7 @@ export async function processCommonsByElectionWatcher(
   }
   for (const row of untracked) {
     await createCommonsVacancy(db, {
+      countryId,
       officialId: row._id,
       state: row.state as string,
       seats: derivedSeats.get(row._id.toString()) ?? Math.max(1, row.seatsHeld ?? 1),
@@ -267,7 +317,9 @@ export async function processCommonsByElectionWatcher(
 
   // ── 2. Recall pipeline: ensure watches for seated MPs, evaluate triggers,
   // advance open/check petitions. Favorability + infamy load in one batch. ──
-  const seated = commonsRows.filter((o) => o.state && (o.characterId != null || o.nppId != null));
+  const seated = chamber.recallPetitions
+    ? commonsRows.filter((o) => o.state && (o.characterId != null || o.nppId != null))
+    : [];
   const characterIds = seated.map((o) => o.characterId).filter((id): id is ObjectId => id != null);
   const characters =
     characterIds.length > 0
@@ -312,7 +364,7 @@ export async function processCommonsByElectionWatcher(
 
   // ── 3. Reconcile scheduled vacancies against finished races. ──
   const liveVacancies = await vacancies
-    .find({ countryId: "UK", status: { $in: ["open", "scheduled"] } })
+    .find({ countryId, status: { $in: ["open", "scheduled"] } })
     .toArray();
   const scheduled = liveVacancies.filter((v) => v.status === "scheduled" && v.electionId);
   const electionIds = [...new Set(scheduled.map((v) => v.electionId as ObjectId))];
@@ -324,9 +376,9 @@ export async function processCommonsByElectionWatcher(
     statesWithVacancies.length > 0
       ? await elections
           .find({
-            countryId: "UK",
+            countryId,
             state: { $in: statesWithVacancies },
-            electionType: { $in: REGULAR_COMMONS_TYPES },
+            electionType: { $in: regularTypes },
             status: { $in: FINISHED_ELECTION_STATUSES },
           })
           .toArray()
@@ -396,7 +448,7 @@ export async function processCommonsByElectionWatcher(
 
   // ── 4. Spawn: one `special_commons` per region over its open vacancies. ──
   const openByState = new Map<string, UkCommonsVacancy[]>();
-  const freshOpen = await vacancies.find({ countryId: "UK", status: "open" }).toArray();
+  const freshOpen = await vacancies.find({ countryId, status: "open" }).toArray();
   for (const v of freshOpen) {
     const list = openByState.get(v.state) ?? [];
     list.push(v);
@@ -405,10 +457,10 @@ export async function processCommonsByElectionWatcher(
   if (openByState.size > 0) {
     const liveRaces = await elections
       .find({
-        countryId: "UK",
+        countryId,
         state: { $in: [...openByState.keys()] },
         electionType: {
-          $in: [SPECIAL_COMMONS_ELECTION_TYPE, ...REGULAR_COMMONS_TYPES],
+          $in: [chamber.specialType, ...regularTypes],
         },
         status: { $in: LIVE_ELECTION_STATUSES },
       })
@@ -421,9 +473,9 @@ export async function processCommonsByElectionWatcher(
     }
     const finishedSpecials = await elections
       .find({
-        countryId: "UK",
+        countryId,
         state: { $in: [...openByState.keys()] },
-        electionType: SPECIAL_COMMONS_ELECTION_TYPE,
+        electionType: chamber.specialType,
         status: { $nin: LIVE_ELECTION_STATUSES },
       })
       .toArray();
@@ -441,20 +493,17 @@ export async function processCommonsByElectionWatcher(
       });
       if (gate.kind !== "spawn") continue;
       const seats = claims.reduce((n, v) => n + Math.max(1, v.seats), 0);
+      const regionSeats = await seatsFor();
       await spawnSpecialCommons(db, {
+        countryId,
         state,
         vacancyIds: claims.map((v) => v._id),
         seats,
-        totalRegionSeats: seatMap[state] ?? seats,
+        totalRegionSeats: regionSeats[state] ?? seats,
         currentTurn,
         now,
       });
       result.spawned++;
     }
   }
-
-  if (result.spawned > 0) {
-    console.log(`[Turn] Spawned ${result.spawned} Commons by-election(s)`);
-  }
-  return result;
 }

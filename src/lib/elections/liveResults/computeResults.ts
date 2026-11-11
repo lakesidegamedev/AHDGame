@@ -38,6 +38,7 @@ export const WESTMINSTER_STYLE_TYPES = new Set([
   "riksdag",
   "milletMeclisi",
   "caCommons",
+  "snap_caCommons",
 ]);
 
 /**
@@ -62,6 +63,7 @@ export const NATIONAL_AGGREGATION_TYPES = new Set([
   "riksdag",
   "milletMeclisi",
   "caCommons",
+  "snap_caCommons",
 ]);
 
 export const CHAMBER_LABELS: Record<string, string> = {
@@ -87,6 +89,7 @@ export const CHAMBER_LABELS: Record<string, string> = {
   riksdag: "Riksdag",
   milletMeclisi: "Grand National Assembly",
   caCommons: "House of Commons",
+  snap_caCommons: "House of Commons",
 };
 
 /** FNV-1a → 0..1. Stable across processes; drives per-unit reveal offsets. */

@@ -11,6 +11,7 @@
 
 import type { CountryId } from "@/lib/constants/countries";
 import { getOfficeTypeForChamber } from "@/lib/legislature/chamberOfficeType";
+import { SPECIAL_COMMONS_TYPES } from "@/lib/elections/rules/commonsByElectionChambers";
 
 /** Human-readable label for each election type. Fallback to the raw string. */
 export const ELECTION_TYPE_LABEL_MAP: Record<string, string> = {
@@ -77,6 +78,8 @@ export const ELECTION_TYPE_LABEL_MAP: Record<string, string> = {
   riksdag: "Riksdag",
   milletMeclisi: "Grand National Assembly",
   caCommons: "House of Commons",
+  snap_caCommons: "Snap House of Commons",
+  special_caCommons: "Commons By-Election",
 };
 
 /** Short labels used in win/loss notifications (space-constrained contexts). */
@@ -135,6 +138,8 @@ export const ELECTION_TYPE_SHORT_LABEL: Record<string, string> = {
   riksdag: "Riksdag",
   milletMeclisi: "Meclis",
   caCommons: "Commons",
+  snap_caCommons: "Snap Commons",
+  special_caCommons: "Commons By-Election",
   qcAssembly: "Assembly",
 };
 
@@ -227,6 +232,9 @@ export const MULTI_SEAT_TYPES: ReadonlySet<string> = new Set([
   "riksdag",
   "milletMeclisi",
   "caCommons",
+  "snap_caCommons",
+  // Resolved additively, like `special_commons`.
+  "special_caCommons",
   // AT/FI/GR lower chambers: multi-seat regional PR like their FR/IT/ES
   // siblings. Without this their first resolved election runs the
   // single-winner path, which deletes the whole seeded delegation.
@@ -299,6 +307,7 @@ const SNAP_TO_REGULAR: Readonly<Record<string, string>> = {
   snap_holyrood: "holyrood",
   snap_senedd: "senedd",
   snap_qcAssembly: "qcAssembly",
+  snap_caCommons: "caCommons",
   snap_bundestag: "bundestag",
   snap_shugiin: "shugiin",
 };
@@ -311,6 +320,7 @@ const SNAP_TO_REGULAR: Readonly<Record<string, string>> = {
  */
 const SPECIAL_TO_REGULAR: Readonly<Record<string, string>> = {
   special_commons: "commons",
+  special_caCommons: "caCommons",
   special_president: "president",
 };
 
@@ -379,7 +389,7 @@ export function isByElectionType(electionType: string): boolean {
  * that regular multi-seat races use.
  */
 export function isSpecialCommonsElection(electionType: string): boolean {
-  return electionType === "special_commons";
+  return SPECIAL_COMMONS_TYPES.includes(electionType);
 }
 
 /**

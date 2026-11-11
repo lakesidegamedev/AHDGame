@@ -34,6 +34,7 @@ import type {
 } from "@/lib/db/types";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { commonsChamberForOffice } from "@/lib/elections/rules/commonsByElectionChambers";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
@@ -409,14 +410,11 @@ async function resignOfficial(
 ): Promise<boolean> {
   if (!official.characterId?.equals(character._id)) return false;
 
-  // UK Commons seats (#860) are tombstoned, never deleted: the holder-less row
-  // anchors the durable vacancy the by-election watcher fills. `vacate` is
-  // idempotent (one live vacancy per row), so retries converge. Every other
-  // country and office keeps the delete/tombstone path below.
-  if (
-    official.officeType === "commons" &&
-    countryHasFeature("ukAdmin", official.countryId ?? character.countryId)
-  ) {
+  // Commons seats are tombstoned, never deleted: the holder-less row anchors
+  // the durable vacancy the by-election watcher fills. `vacate` is idempotent
+  // (one live vacancy per row), so retries converge. Every other office keeps
+  // the delete/tombstone path below.
+  if (commonsChamberForOffice(official.officeType, official.countryId ?? character.countryId)) {
     const currentTurn = await getCurrentTurn(db);
     const vacancy = await vacateCommonsSeat(db, official, "resignation", currentTurn, now);
     if (!vacancy) return false;

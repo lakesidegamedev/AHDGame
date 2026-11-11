@@ -103,6 +103,9 @@ export const DEFAULT_DURATIONS: Record<
   riksdag: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },
   // CA House of Commons: 48h window, fixed four-year cycle.
   caCommons: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },
+  snap_caCommons: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },
+  // Canadian Commons by-election, same split as the UK one.
+  special_caCommons: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },
   milletMeclisi: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },
   // GR/AT/FI unicameral lower chambers — same beta-tier treatment as
   // FR/IT/ES/SE/TR. A chamber spec is rejected without a duration entry, so

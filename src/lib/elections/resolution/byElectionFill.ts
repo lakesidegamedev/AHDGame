@@ -28,9 +28,9 @@ import { openNppCreationBatch } from "@/lib/npp/generator";
 import { buildNppElectionEligiblePartyKeys } from "@/lib/parties/antiAbuseGuards";
 import { getChallengerSupplyPolicy } from "@/lib/turn/npp/rules/challengerSupply";
 import { processByElectionWatcher } from "@/lib/turn/byElections";
+import { SPECIAL_COMMONS_TYPES } from "@/lib/elections/rules/commonsByElectionChambers";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
-const SPECIAL_COMMONS = "special_commons";
 const SPECIAL_GOVERNOR = "special_governor";
 const SPECIAL_PRESIDENT = "special_president";
 
@@ -38,7 +38,7 @@ const SPECIAL_PRESIDENT = "special_president";
 async function loadPreviousParties(db: Db, races: Election[]): Promise<Map<string, string>> {
   const previous = new Map<string, string>();
   const vacancyIds = races.flatMap((r) =>
-    r.electionType === SPECIAL_COMMONS ? (r.byElectionVacancyIds ?? []) : []
+    SPECIAL_COMMONS_TYPES.includes(r.electionType) ? (r.byElectionVacancyIds ?? []) : []
   );
   if (vacancyIds.length > 0) {
     const vacancies = await getUkCommonsVacanciesCollection(db)
@@ -95,7 +95,7 @@ export async function fillUncontestedByElections(
   const elections = await getElectionsCollection(db);
   const closing = await elections
     .find({
-      electionType: { $in: [SPECIAL_COMMONS, SPECIAL_GOVERNOR, SPECIAL_PRESIDENT] },
+      electionType: { $in: [...SPECIAL_COMMONS_TYPES, SPECIAL_GOVERNOR, SPECIAL_PRESIDENT] },
       status: "active",
       primaryEndTurn: { $gt: currentTurn, $lte: currentTurn + BY_ELECTION_FILL_LEAD_TURNS },
     })

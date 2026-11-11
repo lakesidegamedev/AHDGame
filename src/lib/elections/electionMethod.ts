@@ -51,6 +51,8 @@ export const POSITION_BY_ELECTION_TYPE: Readonly<Record<string, ElectionPosition
   congresoDiputados: "lowerChamber",
   riksdag: "lowerChamber",
   caCommons: "lowerChamber",
+  snap_caCommons: "lowerChamber",
+  special_caCommons: "lowerChamber",
   milletMeclisi: "lowerChamber",
   nationalrat: "lowerChamber",
   eduskunta: "lowerChamber",
