@@ -55,8 +55,14 @@ function makeDb(bills: ReturnType<typeof bill>[]) {
             toArray: async () => bills.filter((b) => !claimed.has(b._id.toString())),
           }),
           findOne: async () => bills.find((b) => !b.crisisEmergency.recordedTurn) ?? null,
-          updateMany: async (filter: { _id: { $in: ObjectId[] } }) => {
-            for (const id of filter._id.$in) claimed.add(id.toString());
+          updateMany: async (
+            filter: { _id: { $in: ObjectId[] } },
+            update: { $unset?: unknown }
+          ) => {
+            for (const id of filter._id.$in) {
+              if (update.$unset) claimed.delete(id.toString());
+              else claimed.add(id.toString());
+            }
           },
         };
       }
@@ -106,6 +112,19 @@ describe("processCrisisEmergencyBills", () => {
       })
     );
     expect(pushes).toHaveLength(0);
+  });
+
+  it("releases a passed bill whose charge fails for want of funds so a later turn retries it", async () => {
+    leverCommand.commitLeverUse.mockResolvedValueOnce({
+      ok: false,
+      code: "insufficient_funds",
+      status: 409,
+      message: "",
+    });
+    const { db } = makeDb([bill("signed")]);
+    expect(await processCrisisEmergencyBills(db, 12)).toEqual({ passed: 0, failed: 0 });
+    expect(await processCrisisEmergencyBills(db, 13)).toEqual({ passed: 1, failed: 0 });
+    expect(leverCommand.commitLeverUse).toHaveBeenCalledTimes(2);
   });
 
   it("records an inaction row for the sponsor when the bill fails", async () => {
