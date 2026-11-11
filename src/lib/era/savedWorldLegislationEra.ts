@@ -3,6 +3,8 @@
  * saved worlds still hold. Without an entry an unknown id counts as available
  * in every year, so a saved world could file these laws before their time.
  * Values are the years these types carried while they were still seeded.
+ * Only for local singleplayer saves, which are never reset. A reset replaces
+ * every such id and the residue scan fails on any that survive.
  */
 export const SAVED_WORLD_LEGISLATION_ERA: Readonly<Record<string, number>> = {
   cn_ai_strategy: 2015,
