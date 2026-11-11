@@ -47,4 +47,6 @@ export interface ConsequenceResult {
   legitimacyDelta: number;
   approvalMetricNudges: { stateId: string; metricPath: string; delta: number }[];
   foreignOwnerRecorded: CountryId | null;
+  /** World tension the taking added for a foreign owner. 0 for a domestic taking. */
+  tensionDelta: number;
 }

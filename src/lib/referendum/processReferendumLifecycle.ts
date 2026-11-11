@@ -90,6 +90,7 @@ const ACTIVE_STATUSES: ReferendumStatus[] = [
 export interface ReferendumLifecycleResult {
   processed: number;
   transitions: Array<{ referendumId: string; from: string; to: string }>;
+  failures?: Array<{ referendumId: string; regionId: string; error: string }>;
 }
 
 /**
@@ -158,6 +159,27 @@ export async function processReferendumLifecycle(
         .findOne({ countryId: "UK", stateId: getNationalStateId("UK") })
     : null;
   const transitions: ReferendumLifecycleResult["transitions"] = [];
+  const failures: NonNullable<ReferendumLifecycleResult["failures"]> = [];
+  const actuate = async (ref: Referendum, from: string) => {
+    try {
+      // Each actuation owns a transaction. A failed conversion rolls back its
+      // own writes, while unrelated regions can still complete this turn.
+      const result = await runReferendumActuation(db, ref, currentTurn);
+      if (result.ok) transitions.push({ referendumId: String(ref._id), from, to: "completed" });
+      else
+        failures.push({
+          referendumId: String(ref._id),
+          regionId: ref.regionId,
+          error: result.error ?? "Conversion did not complete",
+        });
+    } catch (error) {
+      failures.push({
+        referendumId: String(ref._id),
+        regionId: ref.regionId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  };
   const now = new Date();
   const snapshots: CampaignSnapshot[] = [];
 
@@ -382,12 +404,7 @@ export async function processReferendumLifecycle(
         }
 
         if (billPassed(westminster) && (!dailRequired || billPassed(dail))) {
-          const res = await runReferendumActuation(db, ref, currentTurn);
-          if (res.ok) {
-            transitions.push({ referendumId: id, from, to: "completed" });
-          } else {
-            console.error(`${ref.regionId} auto-conversion failed: ${res.error}`);
-          }
+          await actuate(ref, from);
         } else if (billFailed(westminster) || (dailRequired && billFailed(dail))) {
           if (await cancelReferendum(db, ref, currentTurn, { cooldown: false }))
             transitions.push({ referendumId: id, from, to: "cancelled" });
@@ -429,12 +446,7 @@ export async function processReferendumLifecycle(
         }
 
         if (billPassed(westminster)) {
-          const res = await runReferendumActuation(db, ref, currentTurn);
-          if (res.ok) {
-            transitions.push({ referendumId: id, from, to: "completed" });
-          } else {
-            console.error(`${ref.regionId} auto-secession failed: ${res.error}`);
-          }
+          await actuate(ref, from);
         } else if (billFailed(westminster)) {
           if (await cancelReferendum(db, ref, currentTurn, { cooldown: false }))
             transitions.push({ referendumId: id, from, to: "cancelled" });
@@ -449,5 +461,5 @@ export async function processReferendumLifecycle(
       transitions.push({ referendumId: String(snapshot.id), from: snapshot.from, to: snapshot.to });
     for (const event of snapshot.wire) await recordWireEvent(db, event).catch(() => {});
   }
-  return { processed: transitions.length, transitions };
+  return { processed: transitions.length, transitions, ...(failures.length ? { failures } : {}) };
 }
