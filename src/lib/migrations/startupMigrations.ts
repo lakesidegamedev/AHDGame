@@ -43,6 +43,7 @@ import { migration as subhourWikiCadence } from "./entries/2026-10-09-subhour-wi
 import { runMigrations, type RunSummary } from "./runner";
 import { migration as jpLawLeanEffects } from "./entries/2026-11-09-jp-law-lean-effects";
 import { migration as financialTxLogTurnOrderIndex } from "./entries/2026-11-10-financial-tx-log-turn-order-index";
+import { migration as bucketApprovalsRename } from "./entries/2026-11-11-bucket-approvals-rename";
 import { migration as scotusCareerAchievements } from "./entries/2026-10-16-scotus-career-achievements";
 import type { Migration } from "./types";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
@@ -120,6 +121,9 @@ export const REQUIRED_STARTUP_MIGRATIONS: readonly Migration[] = [
   // Japanese laws carry lean effects in code; the live law types need them stored or
   // passed bills still move no regional lean. Idempotent, existing jp_* docs only.
   jpLawLeanEffects,
+  // Character and NPP group approvals move to the field this build reads;
+  // until they do, every approval reads as empty in elections and polls.
+  bucketApprovalsRename,
 ];
 
 /** Index metadata can disappear on reset even when migration markers survive. */

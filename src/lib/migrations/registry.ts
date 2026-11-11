@@ -1,4 +1,5 @@
 import { migration as financialTxLogTurnOrderIndex } from "./entries/2026-11-10-financial-tx-log-turn-order-index";
+import { migration as bucketApprovalsRename } from "./entries/2026-11-11-bucket-approvals-rename";
 import { migration as electoratePriorityLawBook } from "./entries/2026-11-11-electorate-priority-law-book";
 import { migration as deLawBookBackfill } from "./entries/2026-11-12-de-law-book-backfill";
 import { migration as cyberLaunchKeyIndex } from "./entries/2026-11-12-cyber-launch-key-index";
@@ -411,6 +412,8 @@ export const MIGRATIONS: Migration[] = [
   crisisV2ConsequenceIndexes,
   crisisV2PopulationOrderIndexes,
   financialTxLogTurnOrderIndex,
+  // Also in the startup allowlist: approvals must move before the first 1.20 turn.
+  bucketApprovalsRename,
 ];
 
 // D13 rollback drill - registered but deliberately OUTSIDE the normal chain.
