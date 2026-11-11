@@ -25,6 +25,7 @@ import type { CabinetSetting } from "@/lib/db/types/cabinetSetting";
 import { loadAnnualSubsidyCostMaps } from "@/lib/subsidies/subsidyBudgetCosts";
 import { getCountryConfig, type CountryId } from "@/lib/constants/countries";
 import { getStatesCollection } from "@/lib/db/collections/states";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -93,8 +94,8 @@ const DEFAULT_FEDERAL_GRANT_PER_CAPITA = 500;
 function getTaxRateFromPolicy(
   policy: StatePolicy | undefined,
   legTypeMap: Map<string, LegislationType>
-): number {
-  if (!policy) return 0;
+): number | undefined {
+  if (!policy) return undefined;
   const legType = legTypeMap.get(policy.legislationTypeId);
   // Tax-slider laws (ruling #16, spec 5.1b) carry a SYNTHETIC option id,
   // `rate:<value>`, that matches no seeded `policyOptions` entry — the rate is
@@ -316,8 +317,14 @@ export async function processLaenderRegionalBudgets(
   );
   const vatPolicy = nationalPolicies.find((p) => p.legislationTypeId === taxTypeIds.vat);
 
-  const incomeTaxRate = getTaxRateFromPolicy(incomeTaxPolicy, legTypeMap);
-  const vatRate = getTaxRateFromPolicy(vatPolicy, legTypeMap);
+  // Slider tax laws keep their rate in the national budget until a bill
+  // writes a policy row, so the budget is the rate whenever no row exists.
+  const nationalRates = (
+    await federalBudgetCollection(db).findOne({ _id: countryId }, { projection: { taxRates: 1 } })
+  )?.taxRates;
+  const incomeTaxRate =
+    getTaxRateFromPolicy(incomeTaxPolicy, legTypeMap) ?? nationalRates?.incomeTax ?? 0;
+  const vatRate = getTaxRateFromPolicy(vatPolicy, legTypeMap) ?? nationalRates?.salesTax ?? 0;
 
   const nationalPopulation = deRegions.reduce((sum, r) => sum + r.population, 0);
 
