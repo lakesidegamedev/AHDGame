@@ -1,5 +1,5 @@
 /**
- * Later-era national laws for the US and UK law books: the 2027 band (AI
+ * Later-era national laws for the US, UK, DE, JP and CN law books: the 2027 band (AI
  * liability, data protection, housing supply, critical minerals, cyber
  * resilience, platform content, and the climate laws: carbon price, coal
  * phase-out, clean power standard), the 2030 band (automation tax, wage
@@ -11,7 +11,7 @@
  * self-ownership, water security) and the 2050 band (advanced AI oversight,
  * lifelong pension account, zero carbon economy, space resources). The 2045 and
  * 2050 bands also reach RU and DD. The same laws exist in the legacy catalogue
- * for DE, JP, CN and IE (seeds/shared/modernEraLegislation.ts).
+ * for IE (seeds/shared/modernEraLegislation.ts).
  *
  * The automation policy track (retraining guarantee, hiring subsidy,
  * automation pension levy, transition compacts) is authored in
@@ -44,8 +44,12 @@ import type { PoliticalMetricCategoryId, PoliticalMetricId } from "../../politic
 import type { LawLevel, PoliticalLaw } from "../types";
 import { AUTOMATION_BAND_SPECS } from "./modernEraLawsAutomation";
 import { LATE_BAND_SPECS } from "./modernEraLawsLate";
+import type { ModernEraBookCountryId } from "./modernEraCountries";
 
-type ModernLawCountry = "US" | "UK" | "RU" | "DD";
+type ModernLawCountry = ModernEraBookCountryId | "RU" | "DD";
+
+/** Countries whose budget lines follow the UK authoring rather than the US one. */
+const UK_BUDGET_STYLE = new Set<ModernLawCountry>(["DE", "JP", "CN"]);
 
 /** Text that differs by country; a plain string is shared. */
 type Copy = string | { US: string; UK: string };
@@ -76,7 +80,16 @@ export interface ModernLawSpec {
 }
 
 const pick = (copy: Copy, countryId: ModernLawCountry): string =>
-  typeof copy === "string" ? copy : copy[countryId as keyof typeof copy];
+  typeof copy === "string" ? copy : (copy[countryId as keyof typeof copy] ?? copy.US);
+
+/** DE, JP and CN have no pension line of their own, so those laws book to welfare. */
+function budgetKeyFor(spec: ModernLawSpec, countryId: ModernLawCountry): string | undefined {
+  const own = spec.budgetKeyOverride?.[countryId];
+  if (own) return own;
+  if (!UK_BUDGET_STYLE.has(countryId)) return undefined;
+  const uk = spec.budgetKeyOverride?.UK;
+  return uk === "statePensions" ? "welfare" : uk;
+}
 
 const EARLIER_BAND_SPECS: readonly ModernLawSpec[] = [
   // ── 2027 ────────────────────────────────────────────────────────────────
@@ -1249,9 +1262,7 @@ function buildLaw(spec: ModernLawSpec, countryId: ModernLawCountry): PoliticalLa
     baselineLevel: 0,
     window: { from: spec.from, ...(spec.until !== undefined ? { until: spec.until } : {}) },
     levels,
-    ...(spec.budgetKeyOverride?.[countryId]
-      ? { budgetKeyOverride: spec.budgetKeyOverride[countryId] }
-      : {}),
+    ...(budgetKeyFor(spec, countryId) ? { budgetKeyOverride: budgetKeyFor(spec, countryId) } : {}),
   };
 }
 
@@ -1261,6 +1272,18 @@ export const US_MODERN_ERA_LAWS: PoliticalLaw[] = MODERN_ERA_LAW_SPECS.map((spec
 
 export const UK_MODERN_ERA_LAWS: PoliticalLaw[] = MODERN_ERA_LAW_SPECS.map((spec) =>
   buildLaw(spec, "UK")
+);
+
+export const DE_MODERN_ERA_LAWS: PoliticalLaw[] = MODERN_ERA_LAW_SPECS.map((spec) =>
+  buildLaw(spec, "DE")
+);
+
+export const JP_MODERN_ERA_LAWS: PoliticalLaw[] = MODERN_ERA_LAW_SPECS.map((spec) =>
+  buildLaw(spec, "JP")
+);
+
+export const CN_MODERN_ERA_LAWS: PoliticalLaw[] = MODERN_ERA_LAW_SPECS.map((spec) =>
+  buildLaw(spec, "CN")
 );
 
 /** First year of the bands that RU and DD also carry. */

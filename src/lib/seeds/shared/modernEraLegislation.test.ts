@@ -92,10 +92,12 @@ describe("2027 to 2050 law types", () => {
 
   it("covers the legacy-catalog countries the 2027 world simulates in full", () => {
     const covered = new Set(MODERN_ERA_LEGISLATURE_SPECS.map((s) => s.scope.toUpperCase()));
-    for (const country of ["DE", "JP", "CN"] as CountryId[]) {
-      expect(tierFor("2027-default", country), country).toBe("npp");
-      expect(covered.has(country), country).toBe(true);
-    }
+    expect(covered.has("IE")).toBe(true);
+  });
+
+  it("leaves the countries on the one law book to the book", () => {
+    const covered = new Set(MODERN_ERA_LEGISLATURE_SPECS.map((s) => s.scope.toUpperCase()));
+    for (const country of ["US", "UK", "DE", "JP", "CN"]) expect(covered.has(country)).toBe(false);
   });
 
   it("each type appears only from its first year", () => {

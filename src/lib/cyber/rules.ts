@@ -41,6 +41,12 @@ export function cyberMandateBonus(optionIndex: number | null | undefined): numbe
   return CYBER_MANDATE_BONUS[optionIndex] ?? 0;
 }
 
+/** Mandate ladder index a new-generation law level counts as; levels 0 and 1 carry no bonus. */
+export function mandateIndexForLevel(level: number | null | undefined): number | null {
+  if (level == null || !Number.isInteger(level) || level < 0 || level > 4) return null;
+  return [3, 3, 2, 1, 0][level];
+}
+
 /** Technology readiness 0..1 from R&D intensity in percent of GDP. */
 export function technologyReadiness(rdIntensity: number | null | undefined): number {
   if (rdIntensity == null || !Number.isFinite(rdIntensity)) return DEFAULT_READINESS;

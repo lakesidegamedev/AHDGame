@@ -24,6 +24,9 @@ import { US_STATE_TAX_LAWS } from "./laws/usStateTaxLaws";
 import {
   DD_MODERN_ERA_LAWS,
   RU_MODERN_ERA_LAWS,
+  DE_MODERN_ERA_LAWS,
+  JP_MODERN_ERA_LAWS,
+  CN_MODERN_ERA_LAWS,
   UK_MODERN_ERA_LAWS,
   US_MODERN_ERA_LAWS,
 } from "./laws/modernEraLaws";
@@ -57,6 +60,9 @@ const ERA_SIDECARS: Partial<Record<LawCountryId, PoliticalLaw[]>> = {
   UK: UK_MODERN_ERA_LAWS,
   RU: RU_MODERN_ERA_LAWS,
   DD: DD_MODERN_ERA_LAWS,
+  DE: DE_MODERN_ERA_LAWS,
+  JP: JP_MODERN_ERA_LAWS,
+  CN: CN_MODERN_ERA_LAWS,
 };
 
 const CATALOGS: Record<LawCountryId, PoliticalLaw[]> = {
@@ -64,10 +70,10 @@ const CATALOGS: Record<LawCountryId, PoliticalLaw[]> = {
   UK: [...CORE_CATALOGS.UK, ...UK_MODERN_ERA_LAWS],
   RU: [...CORE_CATALOGS.RU, ...RU_MODERN_ERA_LAWS],
   DD: [...CORE_CATALOGS.DD, ...DD_LAND_LAWS, ...DD_MODERN_ERA_LAWS],
-  DE: CORE_CATALOGS.DE,
+  DE: [...CORE_CATALOGS.DE, ...DE_MODERN_ERA_LAWS],
   CA: CORE_CATALOGS.CA,
-  JP: CORE_CATALOGS.JP,
-  CN: CORE_CATALOGS.CN,
+  JP: [...CORE_CATALOGS.JP, ...JP_MODERN_ERA_LAWS],
+  CN: [...CORE_CATALOGS.CN, ...CN_MODERN_ERA_LAWS],
 };
 
 // Explicit anchors for all program laws make era coverage inspectable.

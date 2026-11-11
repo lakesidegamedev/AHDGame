@@ -6,15 +6,23 @@ import type { Db } from "mongodb";
 import type { PoliticalMetricsDoc } from "@/lib/db/types/politicalMetrics";
 import type { StatePolicy } from "@/lib/db/types/statePolicy";
 import { MODERN_ERA_LEGISLATURE_SPECS } from "@/lib/seeds/shared/modernEraLegislation";
-import { cyberResilienceScore } from "./rules";
+import { cyberResilienceScore, mandateIndexForLevel } from "./rules";
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
 import { politicalMetricsCollection } from "@/lib/db/repositories/politicalMetrics";
 
 const MANDATE_SLUG = "cyber_resilience_mandate";
+const BOOK_MANDATE_SLUG = "cyberResilienceMandate";
+/** Law book countries whose mandate sets resilience (the US and UK books do not model it). */
+const BOOK_COUNTRIES: ReadonlySet<string> = new Set(["DE", "JP", "CN"]);
 
-/** The cyber resilience mandate law id for a country, or null where it has none. */
+/**
+ * The cyber resilience mandate law id for a country, or null where it has none.
+ * Law book countries carry it as a five-level law; legacy countries as a
+ * seven-option ladder.
+ */
 export function cyberMandateTypeIdFor(countryId: string): string | null {
+  if (BOOK_COUNTRIES.has(countryId)) return `${countryId.toLowerCase()}.sec.${BOOK_MANDATE_SLUG}`;
   const spec = MODERN_ERA_LEGISLATURE_SPECS.find((s) => s.prefix.toUpperCase() === countryId);
   return spec ? `${spec.prefix}_${MANDATE_SLUG}` : null;
 }
@@ -72,7 +80,9 @@ export async function loadCyberResilience(
   for (const policy of policies) {
     const countryId = mandateIds.get(policy.legislationTypeId);
     if (countryId && finite(policy.policyOptionIndex)) {
-      mandateByCountry.set(countryId, policy.policyOptionIndex);
+      const isBook = BOOK_COUNTRIES.has(countryId);
+      const index = isBook ? mandateIndexForLevel(policy.policyOptionIndex) : policy.policyOptionIndex;
+      if (index !== null) mandateByCountry.set(countryId, index);
     }
   }
 
