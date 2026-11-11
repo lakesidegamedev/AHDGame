@@ -91,12 +91,21 @@ function inactionRow(crisis: LiveCrisis, bill: Bill, turn: number): Accountabili
   };
 }
 
-async function recordPassedBill(db: Db, bill: Bill, crisis: LiveCrisis, turn: number) {
+/** Codes that mean the legislature could not pay yet, so a later turn may succeed. */
+const RETRYABLE_CODES = new Set(["insufficient_funds", "insufficient_actions"]);
+
+/** True when the bill's charge failed for want of funds and should be tried again next turn. */
+async function recordPassedBill(
+  db: Db,
+  bill: Bill,
+  crisis: LiveCrisis,
+  turn: number
+): Promise<boolean> {
   const marker = bill.crisisEmergency;
   const lever = resolveCrisisDefinition(crisis.v2.definitionId)?.levers.find(
     (candidate) => candidate.id === marker?.leverId
   );
-  if (!marker || !lever || crisis.v2.stage === "resolved") return;
+  if (!marker || !lever || crisis.v2.stage === "resolved") return false;
   const result = await commitLeverUse(db, {
     crisis,
     lever,
@@ -111,7 +120,9 @@ async function recordPassedBill(db: Db, bill: Bill, crisis: LiveCrisis, turn: nu
       billId: bill._id.toString(),
       code: result.code,
     });
+    return RETRYABLE_CODES.has(result.code);
   }
+  return false;
 }
 
 /**
@@ -153,13 +164,14 @@ export async function processCrisisEmergencyBills(
   );
 
   const inaction: AnyBulkWriteOperation<Crisis>[] = [];
+  const retry: Bill["_id"][] = [];
   for (const { bill, outcome } of resolved) {
     const crisis = crises.get(bill.crisisEmergency?.crisisId.toString() ?? "");
     if (!crisis) continue;
     try {
       if (outcome === "passed") {
-        await recordPassedBill(db, bill, crisis, turn);
-        counts.passed += 1;
+        if (await recordPassedBill(db, bill, crisis, turn)) retry.push(bill._id);
+        else counts.passed += 1;
       } else {
         const row = inactionRow(crisis, bill, turn);
         if (!row) continue;
@@ -176,6 +188,13 @@ export async function processCrisisEmergencyBills(
         billId: bill._id.toString(),
       });
     }
+  }
+  if (retry.length > 0) {
+    // Release the claim so an empty treasury delays the response instead of voiding it.
+    await billsCollection(db).updateMany(
+      { _id: { $in: retry } },
+      { $unset: { "crisisEmergency.recordedTurn": "" } }
+    );
   }
   if (inaction.length > 0) {
     try {
