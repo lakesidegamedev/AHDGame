@@ -6,6 +6,7 @@ import { readFile } from "fs/promises";
 import { join } from "path";
 import type { SubdivisionInput } from "@/lib/utils/subdivisionResults";
 import { loadCountyLeans } from "./countyLeans";
+import { usCongressionalGeometryDirectory } from "./usCongressionalGeometry";
 
 export interface SubdivisionFile {
   viewBox: string;
@@ -34,7 +35,17 @@ export async function loadSubdivisionFile(
   options?: { preset?: string | null; countyPopulations?: ReadonlyMap<string, number> }
 ): Promise<SubdivisionFile | null> {
   try {
-    const filePath = join(process.cwd(), "src", "data", ...dataDir.split("/"), `${regionId}.json`);
+    const selectedDir =
+      dataDir === "congressional-districts"
+        ? usCongressionalGeometryDirectory(options?.preset)
+        : dataDir;
+    const filePath = join(
+      process.cwd(),
+      "src",
+      "data",
+      ...selectedDir.split("/"),
+      `${regionId}.json`
+    );
     const raw = await readFile(filePath, "utf-8");
     const parsed = JSON.parse(raw) as SubdivisionFile | LegacyCountyFile | LegacyCdFile;
     if ("counties" in parsed) {

@@ -8,6 +8,7 @@ import type { CongressionalDistrict, Character, NPP } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { congressionalDistrictsCollection } from "@/lib/db/repositories/congressionalDistricts";
+import { usCongressionalGeometryDirectory } from "@/lib/maps/usCongressionalGeometry";
 
 /**
  * Returns the static congressional-district geometry for a single US
@@ -27,11 +28,20 @@ export async function GET(_req: Request, { params }: { params: Promise<{ stateId
       return errorResponse(400, "Invalid state id");
     }
 
-    const filePath = join(process.cwd(), "src", "data", "congressional-districts", `${state}.json`);
+    const gs = await getGameState();
+    const filePath = join(
+      process.cwd(),
+      "src",
+      "data",
+      usCongressionalGeometryDirectory(gs?.preset),
+      `${state}.json`
+    );
     try {
       const raw = await readFile(filePath, "utf-8");
       const parsed = JSON.parse(raw) as {
         viewBox: string;
+        geometrySource?: string;
+        leanBasis?: string;
         districts: { cd: string; path: string; cookPVI: number }[];
       };
       const baseDistricts = parsed.districts.map((d) => ({
@@ -40,11 +50,14 @@ export async function GET(_req: Request, { params }: { params: Promise<{ stateId
         cookPVI: d.cookPVI,
       }));
 
-      // Live square overlay.
-      const db = await getDb();
-      const docs = (await congressionalDistrictsCollection(db)
-        .find({ countryId: "US", stateId: state })
-        .toArray()) as CongressionalDistrict[];
+      // Live square overlay — only when the feature flag is on.
+      let redistricting:
+        { enabled: boolean; districts: ReturnType<typeof buildDistrictSquareViews> } | undefined;
+      if (isRedistrictingEnabled(gs)) {
+        const db = await getDb();
+        const docs = (await congressionalDistrictsCollection(db)
+          .find({ countryId: "US", stateId: state })
+          .toArray()) as CongressionalDistrict[];
 
       const holderIds = docs
         .map((d) => d.holderCharacterId)
@@ -76,6 +89,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ stateId
 
       return NextResponse.json({
         viewBox: parsed.viewBox,
+        ...(parsed.geometrySource ? { geometrySource: parsed.geometrySource } : {}),
+        ...(parsed.leanBasis ? { leanBasis: parsed.leanBasis } : {}),
         districts: baseDistricts,
         redistricting,
       });

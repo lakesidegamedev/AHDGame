@@ -24,6 +24,18 @@ beforeAll(async () => {
 }, 600_000);
 
 describe("real US 2027 opening pipeline", () => {
+  it("retains the seeded party roster so district qualification is exercised", async () => {
+    expect(
+      await db
+        .collection("congressionalDistricts")
+        .countDocuments({ countryId: "US", holderParty: "DEM" })
+    ).toBe(261);
+    expect(
+      await db
+        .collection("congressionalDistricts")
+        .countDocuments({ countryId: "US", holderParty: "REP" })
+    ).toBe(174);
+  });
   it("passes population, fiscal composition, holder and calendar qualification", async () => {
     const checks = await checkUS2027Opening(db, "2027-default");
     expect(checks.filter((c) => c.severity === "critical")).toEqual([]);

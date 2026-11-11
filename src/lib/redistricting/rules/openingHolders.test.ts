@@ -7,6 +7,28 @@ const officials = [
   { id: "r", state: "CA", party: "GOP", position: 2, seats: 1 },
 ];
 describe("opening House holders", () => {
+  it("uses district results rather than sorting parties by modeled lean", () => {
+    expect(
+      openingDistrictHolders({
+        districts: districts.map((d, i) => ({ ...d, openingParty: i === 0 ? "GOP" : "DEM" })),
+        officials,
+      }).map((a) => a.party)
+    ).toEqual(["GOP", "DEM", "DEM"]);
+  });
+  it("rejects incomplete results and results that disagree with state totals", () => {
+    expect(() =>
+      openingDistrictHolders({
+        districts: districts.map((d, i) => ({ ...d, openingParty: i === 0 ? "GOP" : undefined })),
+        officials,
+      })
+    ).toThrow("Incomplete");
+    expect(() =>
+      openingDistrictHolders({
+        districts: districts.map((d) => ({ ...d, openingParty: "GOP" })),
+        officials,
+      })
+    ).toThrow("disagree");
+  });
   it("fills every district and preserves compressed delegation counts", () => {
     expect(
       openingDistrictHolders({ districts, officials }).map((a) => [a.districtId, a.party])

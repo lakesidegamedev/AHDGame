@@ -4,6 +4,7 @@
  * same primary advance limit as the resolver.
  */
 import { resolveElectionYear } from "@/lib/utils/formatters";
+import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
 import { cycleAnchorContextFromGameState } from "./cycleAnchorContext";
 import { computeSeatMargins, type SeatProjection } from "@/lib/elections/seatMargins";
 import type { CongressionalDistrict } from "@/lib/db/types/congressionalDistrict";
@@ -1516,7 +1517,12 @@ export async function fetchDepsForElection(
       election.electionType === "president" ||
       election.electionType === "primeMinister" ||
       election.electionType === "uachtaran";
-    const q: Record<string, unknown> = { "currentOffice.type": election.electionType };
+    const q: Record<string, unknown> = {
+      ...(countryId === COUNTRY_CONFIGS.US.id
+        ? { $or: [{ countryId: COUNTRY_CONFIGS.US.id }, { countryId: null }] }
+        : { countryId }),
+      "currentOffice.type": election.electionType,
+    };
     if (!isNational) q["currentOffice.state"] = election.state;
     if (election.electionType === "senate" && election.senateClass != null) {
       q["currentOffice.senateClass"] = election.senateClass;

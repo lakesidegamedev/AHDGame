@@ -11,8 +11,7 @@ export interface DistrictSquareView {
 }
 
 /**
- * Join the static district cd-codes (sorted) with the live square docs by index
- * (sorted cd i ⇒ district index i+1) and resolve holder names. Indices without a
+ * Join district codes to the matching numbered office and resolve holder names. Codes without a
  * doc are omitted (e.g. seed not yet run for that state).
  */
 export function buildDistrictSquareViews(
@@ -25,10 +24,13 @@ export function buildDistrictSquareViews(
 
   const sortedCds = [...staticCds].sort((a, b) => a.localeCompare(b));
   const views: DistrictSquareView[] = [];
-  sortedCds.forEach((cd, i) => {
-    const index = i + 1;
+  sortedCds.forEach((cd) => {
+    const match = /^([A-Z]{2})-(\d{2}|AL)$/.exec(cd);
+    if (!match) return;
+    if ((match[2] === "AL" || match[2] === "00") && docs.length !== 1) return;
+    const index = match[2] === "AL" || match[2] === "00" ? 1 : Number(match[2]);
     const d = byIndex.get(index);
-    if (!d) return;
+    if (!d || d.stateId !== match[1]) return;
     // NPP-held seats key off holderNppId (id in `npps`); player seats off
     // holderCharacterId. holderNames is keyed by whichever id string applies.
     const holderId = d.holderCharacterId ?? d.holderNppId ?? null;

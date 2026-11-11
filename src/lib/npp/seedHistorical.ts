@@ -364,7 +364,11 @@ export function buildOfficeType(seat: HistoricalSeat): OfficeType | null {
     case "house":
       return { type: "house", state: seat.state, seatsHeld: seat.seatsHeld ?? 1 };
     case "senate":
-      return { type: "senate", state: seat.state };
+      return {
+        type: "senate",
+        state: seat.state,
+        ...(seat.senateClass && { senateClass: seat.senateClass }),
+      };
     case "president":
       return { type: "president" };
     case "vicePresident":
@@ -875,7 +879,7 @@ export async function seedHistoricalOfficials(
   await seedBRGovernmentFormation(db, () => {});
 
   const { seedOpeningHouseHolders } = await import("@/lib/redistricting/seedOpeningHolders");
-  await seedOpeningHouseHolders(db);
+  await seedOpeningHouseHolders(db, presetId);
 
   return result;
 }

@@ -13,54 +13,87 @@ import type { SeedDiagnosticCheck } from "./types";
 
 export async function checkUS2027Opening(db: Db, preset: string): Promise<SeedDiagnosticCheck[]> {
   if (preset !== "2027-default") return [];
-  const [states, cohorts, districts, officials, budget, accounts, elections, world] =
-    await Promise.all([
-      db
-        .collection<State>("states")
-        .find(
-          { countryId: "US" },
-          { projection: { _id: 1, population: 1, gdp: 1, stateSenateSeats: 1 } }
-        )
-        .toArray(),
-      db
-        .collection<RegionDemographics>("regionDemographics")
-        .find({ countryId: "US" }, { projection: { _id: 1, ages: 1 } })
-        .toArray(),
-      db
-        .collection<CongressionalDistrict>("congressionalDistricts")
-        .find(
-          { countryId: "US" },
-          { projection: { _id: 1, holderParty: 1, holderNppId: 1, holderCharacterId: 1 } }
-        )
-        .toArray(),
-      db
-        .collection<ElectedOfficial>("electedOfficials")
-        .find({ countryId: "US" }, { projection: { _id: 1, officeType: 1, seatsHeld: 1 } })
-        .toArray(),
-      db.collection<FederalBudget>("federalBudget").findOne({ countryId: "US" }),
-      db
-        .collection<ResetDepartmentAccountSnapshot>("resetDepartmentAccounts")
-        .find({ countryId: "US" })
-        .toArray(),
-      db
-        .collection("elections")
-        .find(
-          { countryId: "US", electionType: { $in: ["governor", "stateSenate"] } },
-          { projection: { state: 1, electionType: 1, cycle: 1, electionYear: 1, endTurn: 1 } }
-        )
-        .toArray(),
-      db.collection("gameState").findOne(
-        { _id: "current" as never },
+  const [
+    states,
+    cohorts,
+    districts,
+    officials,
+    budget,
+    accounts,
+    elections,
+    world,
+    senators,
+    shares,
+  ] = await Promise.all([
+    db
+      .collection<State>("states")
+      .find(
+        { countryId: "US" },
+        { projection: { _id: 1, population: 1, gdp: 1, stateSenateSeats: 1 } }
+      )
+      .toArray(),
+    db
+      .collection<RegionDemographics>("regionDemographics")
+      .find({ countryId: "US" }, { projection: { _id: 1, ages: 1 } })
+      .toArray(),
+    db
+      .collection<CongressionalDistrict>("congressionalDistricts")
+      .find(
+        { countryId: "US" },
         {
           projection: {
-            cabinetSystemVersion: 1,
-            resetWorldId: 1,
-            startingYear: 1,
-            preIterationTurns: 1,
+            _id: 1,
+            stateId: 1,
+            index: 1,
+            holderParty: 1,
+            holderNppId: 1,
+            holderCharacterId: 1,
           },
         }
-      ),
-    ]);
+      )
+      .toArray(),
+    db
+      .collection<ElectedOfficial>("electedOfficials")
+      .find(
+        { countryId: "US" },
+        { projection: { _id: 1, officeType: 1, seatsHeld: 1, senateClass: 1, nppId: 1, state: 1 } }
+      )
+      .toArray(),
+    db.collection<FederalBudget>("federalBudget").findOne({ countryId: "US" }),
+    db
+      .collection<ResetDepartmentAccountSnapshot>("resetDepartmentAccounts")
+      .find({ countryId: "US" })
+      .toArray(),
+    db
+      .collection("elections")
+      .find(
+        { countryId: "US", electionType: { $in: ["governor", "stateSenate"] } },
+        { projection: { state: 1, electionType: 1, cycle: 1, electionYear: 1, endTurn: 1 } }
+      )
+      .toArray(),
+    db.collection("gameState").findOne(
+      { _id: "current" as never },
+      {
+        projection: {
+          cabinetSystemVersion: 1,
+          resetWorldId: 1,
+          startingYear: 1,
+          preIterationTurns: 1,
+        },
+      }
+    ),
+    db
+      .collection("npps")
+      .find(
+        { countryId: "US", "currentOffice.type": "senate" },
+        { projection: { _id: 1, currentOffice: 1 } }
+      )
+      .toArray(),
+    db
+      .collection("stateDemographics")
+      .find({ countryId: "US" }, { projection: { _id: 1, groups: 1 } })
+      .toArray(),
+  ]);
   const checks: SeedDiagnosticCheck[] = [];
   const assert = (
     metric: string,
@@ -72,6 +105,39 @@ export async function checkUS2027Opening(db: Db, preset: string): Promise<SeedDi
       check(`opening.US.2027.${metric}`, "US", metric, expected, actual, valid ? "ok" : "critical")
     );
   const regionalGdp = states.reduce((sum, s) => sum + (s.gdp ?? 0) * 1e6, 0);
+  const senateById = new Map(senators.map((n) => [String(n._id), n.currentOffice]));
+  const wrongClasses = officials
+    .filter((o) => o.officeType === "senate" && o.nppId)
+    .filter((o) => {
+      const office = senateById.get(String(o.nppId));
+      return !office || office.state !== o.state || office.senateClass !== o.senateClass;
+    }).length;
+  assert("senate-incumbent-classes", wrongClasses === 0, wrongClasses, 0);
+  const wrongShares = shares.filter(
+    (d) =>
+      Math.abs(
+        Object.values(d.groups as Record<string, { population: number }>).reduce(
+          (sum, g) => sum + g.population,
+          0
+        ) - 100
+      ) > 1e-8
+  ).length;
+  assert("demographic-share-conservation", wrongShares === 0, wrongShares, 0);
+  if (districts.some((d) => d.holderParty === "DEM" || d.holderParty === "REP")) {
+    const expectedParties = new Map(
+      snapshot.house.map((d) => [
+        d.district,
+        d.party === "D" ? "DEM" : d.party === "R" ? "REP" : "IND",
+      ])
+    );
+    const wrongParties = districts.filter(
+      (d) =>
+        d.holderParty !==
+        (expectedParties.get(`${d.stateId}-${String(d.index).padStart(2, "0")}`) ??
+          expectedParties.get(`${d.stateId}-AL`))
+    ).length;
+    assert("district-result-parties", wrongParties === 0, wrongParties, 0);
+  }
   assert(
     "gdp-reconciliation",
     !!budget && Math.abs(regionalGdp - budget.gdp) < 100,

@@ -190,7 +190,12 @@ function matchesCondition(value: unknown, condition: unknown): boolean {
             return Array.isArray(value) && value.length === operand;
           case "$regex": {
             if (typeof value !== "string") return false;
-            const flags = typeof condition["$options"] === "string" ? condition["$options"] : "";
+            const flags =
+              typeof condition["$options"] === "string"
+                ? condition["$options"]
+                : operand instanceof RegExp
+                  ? operand.flags
+                  : "";
             const source = operand instanceof RegExp ? operand.source : String(operand);
             return new RegExp(source, flags).test(value);
           }

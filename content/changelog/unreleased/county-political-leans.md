@@ -19,3 +19,10 @@ areas: [engine]
 - Uses state-specific regional election years. State senates still use
   aggregate chamber renewal; missing counts and unmapped laws are labeled.
 - Adds opening diagnostics and integrated regression coverage.
+- Preserves Senate classes on opening incumbents and isolates incumbent lookups
+  by country, including legacy US records.
+- Matches 2027 House holders to the provisional district results and conserves
+  demographic shares at exactly 100 percent.
+- Ships corrected Census CD120 geometry for all 435 voting districts in the
+  2027 preset. Historical map assets remain separate. Missing PVI uses a
+  labeled modeled fallback rather than claiming observed voting data.

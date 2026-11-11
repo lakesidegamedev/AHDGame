@@ -1,6 +1,12 @@
 /** Allocate compressed opening House delegations to modeled district holders. */
 export function openingDistrictHolders(input: {
-  districts: readonly { id: string; state: string; lean: number; occupied: boolean }[];
+  districts: readonly {
+    id: string;
+    state: string;
+    lean: number;
+    occupied: boolean;
+    openingParty?: string;
+  }[];
   officials: readonly {
     id: string;
     state: string;
@@ -22,6 +28,21 @@ export function openingDistrictHolders(input: {
     )
       throw new Error(`Opening House capacity does not match districts in ${state}`);
     const ordered = [...districts].sort((a, b) => a.lean - b.lean || a.id.localeCompare(b.id));
+    if (districts.some((d) => d.openingParty !== undefined)) {
+      if (districts.some((d) => !d.openingParty))
+        throw new Error(`Incomplete opening district results in ${state}`);
+      const remaining = new Map(officials.map((o) => [o.id, o.seats]));
+      for (const district of districts) {
+        const holder = officials.find(
+          (o) => o.party === district.openingParty && remaining.get(o.id)! > 0
+        );
+        if (!holder)
+          throw new Error(`Opening district results disagree with delegation in ${state}`);
+        remaining.set(holder.id, remaining.get(holder.id)! - 1);
+        assignments.push({ districtId: district.id, officialId: holder.id, party: holder.party });
+      }
+      continue;
+    }
     const holders = [...officials].sort(
       (a, b) => a.position - b.position || a.id.localeCompare(b.id)
     );

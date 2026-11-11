@@ -39,6 +39,7 @@ export const POST = withAdminRoute(
     const { regenerated } = await regenerateCongressionalDistricts(db, {
       countryId,
       stateIds: [stateId],
+      preset: gs?.preset,
       now,
     });
     if (regenerated === 0) {

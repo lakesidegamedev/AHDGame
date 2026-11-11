@@ -7,6 +7,7 @@ import {
   getEraComposition,
 } from "./demographicCategories";
 import type { EraId } from "./presetSelector";
+import { roundedDemographicShares } from "./rules/demographicShares";
 import { stateCensusData as importedCensusData } from "./stateCensusData";
 
 import type { Layer1Config, Layer1SeedOverride } from "./stateDemographicsPure";
@@ -111,7 +112,7 @@ function generateStateDemographics(
     ? { positions: opts.positions, turnout: opts.turnout }
     : undefined;
   const comp = getEraComposition(era);
-  const populations = deriveGroupPopulations(config, era, override);
+  const populations = roundedDemographicShares(deriveGroupPopulations(config, era, override));
   const groups: Record<string, StateDemographicGroup> = {};
 
   for (const id of comp.groupIds) {
@@ -123,7 +124,7 @@ function generateStateDemographics(
         deriveGroupLeanFromLayer1(id, config, era, opts.positions, override, stateId)
       : deriveGroupLean(id, config, era);
     groups[id] = {
-      population: Math.round(populations[id] * 100) / 100,
+      population: populations[id],
       ...lean,
       turnout: derivedTurnout, // always store derived turnout from underlying Layer 1
     };

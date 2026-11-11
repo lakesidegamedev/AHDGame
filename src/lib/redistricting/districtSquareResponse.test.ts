@@ -23,6 +23,25 @@ function doc(partial: Partial<CongressionalDistrict>): CongressionalDistrict {
 }
 
 describe("buildDistrictSquareViews", () => {
+  it("joins by identity when geometry skips an index and ignores other states", () => {
+    const views = buildDistrictSquareViews(
+      ["CA-03", "CA-01", "NY-02"],
+      [doc({ index: 1 }), doc({ index: 2 }), doc({ index: 3 })],
+      {}
+    );
+    expect(views.map((v) => [v.cd, v.index])).toEqual([
+      ["CA-01", 1],
+      ["CA-03", 3],
+    ]);
+  });
+  it("accepts at-large codes only for a single-seat state", () => {
+    expect(buildDistrictSquareViews(["CA-00"], [doc({ index: 1 }), doc({ index: 2 })], {})).toEqual(
+      []
+    );
+    expect(
+      buildDistrictSquareViews(["WY-AL"], [doc({ stateId: "WY", index: 1 })], {})[0].index
+    ).toBe(1);
+  });
   it("joins sorted cd codes to docs by index and resolves holder names", () => {
     const staticCds = ["CA-02", "CA-01"]; // unsorted on purpose
     const docs = [

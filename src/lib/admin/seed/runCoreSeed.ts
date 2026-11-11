@@ -603,8 +603,9 @@ export async function runSeed(
 
   // Congressional districts (US House redistricting model). Seeded after states
   // + parties + state-party-org so apportionment (state.houseDistricts) and
-  // registration pools are available. Idempotent.
-  const districtResult = await seedCongressionalDistricts(db, { now, log });
+  // registration pools are available. Idempotent; cosmetic until the
+  // redistrictingEnabled flag is turned on.
+  const districtResult = await seedCongressionalDistricts(db, { now, log, preset });
   log(`Seeded ${districtResult.seeded} congressional districts`);
 
   // State metrics — preset-aware. 2019-era uses the modern dataset; 1991-era

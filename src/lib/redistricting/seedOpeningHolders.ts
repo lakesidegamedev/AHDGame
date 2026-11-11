@@ -2,8 +2,9 @@
 import type { Db } from "mongodb";
 import type { CongressionalDistrict, ElectedOfficial, PoliticalParty } from "@/lib/db/types";
 import { openingDistrictHolders } from "./rules/openingHolders";
+import snapshot from "@/lib/countries/us/data/us2026ResultsSnapshot.json";
 
-export async function seedOpeningHouseHolders(db: Db): Promise<number> {
+export async function seedOpeningHouseHolders(db: Db, preset?: string): Promise<number> {
   const [districts, officials, parties] = await Promise.all([
     db
       .collection<CongressionalDistrict>("congressionalDistricts")
@@ -13,6 +14,7 @@ export async function seedOpeningHouseHolders(db: Db): Promise<number> {
           projection: {
             _id: 1,
             stateId: 1,
+            index: 1,
             netLean: 1,
             holderParty: 1,
             holderCharacterId: 1,
@@ -56,12 +58,29 @@ export async function seedOpeningHouseHolders(db: Db): Promise<number> {
     )
   );
   const officialById = new Map(officials.map((o) => [String(o._id), o]));
+  const useSnapshot =
+    preset === "2027-default" &&
+    parties.some((p) => p.abbreviation === "DEM") &&
+    parties.some((p) => p.abbreviation === "REP");
+  const openingParties = new Map(
+    snapshot.house.map((row) => [
+      row.district,
+      row.party === "D" ? "DEM" : row.party === "R" ? "REP" : "IND",
+    ])
+  );
   const updates = openingDistrictHolders({
     districts: districts.map((d) => ({
       id: d._id,
       state: d.stateId,
       lean: d.netLean,
       occupied: !!(d.holderParty || d.holderCharacterId || d.holderNppId),
+      ...(useSnapshot
+        ? {
+            openingParty:
+              openingParties.get(`${d.stateId}-${String(d.index).padStart(2, "0")}`) ??
+              openingParties.get(`${d.stateId}-AL`),
+          }
+        : {}),
     })),
     officials: officials.map((o) => {
       const party = partyById.get(String(o.party));

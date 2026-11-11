@@ -9,6 +9,7 @@ import { seedOpeningHouseHolders } from "./seedOpeningHolders";
 
 interface SeedOpts {
   countryId?: CountryId;
+  preset?: string;
   now: Date;
   log?: (m: string) => void;
 }
@@ -25,7 +26,7 @@ export async function seedCongressionalDistricts(
   const countryId = (opts.countryId ?? "US") as CountryId;
   const log = opts.log ?? (() => {});
 
-  const docs = await buildDistrictDocsForStates(db, countryId, opts.now);
+  const docs = await buildDistrictDocsForStates(db, countryId, opts.now, undefined, opts.preset);
   if (docs.length > 0) {
     await congressionalDistrictsCollection(db).bulkWrite(
       docs.map((doc) => ({
@@ -35,7 +36,7 @@ export async function seedCongressionalDistricts(
     );
   }
   const seeded = docs.length;
-  if (countryId === COUNTRY_CONFIGS.US.id) await seedOpeningHouseHolders(db);
+  if (countryId === COUNTRY_CONFIGS.US.id) await seedOpeningHouseHolders(db, opts.preset);
 
   await congressionalDistrictsCollection<Document>(db)
     .createIndex({ countryId: 1, stateId: 1, index: 1 }, { unique: true })
