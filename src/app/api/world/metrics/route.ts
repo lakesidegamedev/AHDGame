@@ -228,7 +228,7 @@ export async function GET(request: Request) {
     // with the same aggregation the national phase uses, and from display-merged
     // region docs so the political half arrives through the board exactly as it
     // does for a national document.
-    const nationalCountries = new Set<string>(Object.values(NATIONAL_SCOPE));
+    const nationalCountries = new Set<CountryId>(Object.values(NATIONAL_SCOPE) as CountryId[]);
     const regionStates = await db
       .collection<State>("states")
       .find(
