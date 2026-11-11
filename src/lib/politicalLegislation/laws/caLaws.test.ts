@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { getCatalog, isLawActive } from "../catalog";
 import { validateCatalog } from "../validate";
-import { CA_LAWS } from "./caLaws";
+import { CA_LAWS } from "@/lib/countries/ca/data/caLaws";
 
 describe("Canada catalog", () => {
   it("passes the full catalog validator", () => {
