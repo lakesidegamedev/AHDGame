@@ -1,0 +1,214 @@
+{
+  "config": {
+    "governmentType": "onePartyState",
+    "regionLabel": "Republic",
+    "legislature": {
+      "name": "Supreme Soviet",
+      "lowerChamber": {
+        "key": "sovietOfTheUnion",
+        "name": "Soviet of the Union",
+        "shortName": "Union",
+        "seats": 559,
+        "description": "559 deputies elected by population to the Supreme Soviet of the USSR; four-year terms, single-list elections under the Communist Party."
+      },
+      "upperChamber": {
+        "key": "sovietOfNationalities",
+        "name": "Soviet of Nationalities",
+        "shortName": "Nationalities",
+        "seats": 515,
+        "description": "Deputies representing the union republics and autonomous republics of the Soviet Union - the nationalities chamber of the Supreme Soviet, seated by republic rather than by population.",
+        "elected": true
+      }
+    },
+    "subNationalChamber": {
+      "key": "republicSupremeSoviet",
+      "name": "Republic Supreme Soviet",
+      "shortName": "Republic Soviet",
+      "regionalModel": true
+    },
+    "officeTypes": [
+      {
+        "key": "premier",
+        "label": "Premier",
+        "labelPlural": "Premiers",
+        "isExecutive": true,
+        "isSubNational": false
+      },
+      {
+        "key": "chairmanOfPresidium",
+        "label": "Chairman of the Presidium",
+        "labelPlural": "Chairmen of the Presidium",
+        "isExecutive": true,
+        "isSubNational": false,
+        "isHeadOfState": true
+      },
+      {
+        "key": "supremeSovietDeputy",
+        "label": "Supreme Soviet Deputy",
+        "labelPlural": "Supreme Soviet Deputies",
+        "chamberKey": "sovietOfTheUnion",
+        "isExecutive": false,
+        "isSubNational": false
+      },
+      {
+        "key": "nationalitiesDeputy",
+        "label": "Nationalities Deputy",
+        "labelPlural": "Nationalities Deputies",
+        "chamberKey": "sovietOfNationalities",
+        "isExecutive": false,
+        "isSubNational": false
+      },
+      {
+        "key": "republicSupremeSoviet",
+        "label": "Republic Deputy",
+        "labelPlural": "Republic Deputies",
+        "chamberKey": "republicSupremeSoviet",
+        "isExecutive": false,
+        "isSubNational": true
+      },
+      {
+        "key": "governor",
+        "label": "Republic First Secretary",
+        "labelPlural": "Republic First Secretaries",
+        "isExecutive": false,
+        "isSubNational": true
+      },
+      {
+        "key": "centralBankChair",
+        "label": "Chairman of Gosbank",
+        "labelPlural": "Chairmen of Gosbank",
+        "isExecutive": false,
+        "isSubNational": false
+      }
+    ],
+    "lowerElectionSystem": { "snapElectionsAllowed": false },
+    "upperElectionSystem": { "snapElectionsAllowed": false }
+  },
+  "eraOverrides": {
+    "2027-default": {
+      "governmentType": "presidential",
+      "legislature": {
+        "name": "Federal Assembly",
+        "lowerChamber": {
+          "key": "stateDuma",
+          "name": "State Duma",
+          "shortName": "Duma",
+          "seats": 450,
+          "description": "450 deputies elected for five-year terms, with 225 single-member constituencies and 225 party-list seats subject to a 5% threshold."
+        },
+        "upperChamber": {
+          "key": "federationCouncil",
+          "name": "Federation Council",
+          "shortName": "Federation Council",
+          "seats": 178,
+          "description": "178 members delegated two per federal subject by regional legislatures and executives; not popularly elected.",
+          "elected": false
+        }
+      },
+      "officeTypes": [
+        {
+          "key": "president",
+          "label": "President",
+          "labelPlural": "Presidents",
+          "isExecutive": true,
+          "isSubNational": false,
+          "isHeadOfState": true
+        },
+        {
+          "key": "primeMinister",
+          "label": "Prime Minister",
+          "labelPlural": "Prime Ministers",
+          "isExecutive": true,
+          "isSubNational": false
+        },
+        {
+          "key": "dumaDeputy",
+          "label": "Duma Deputy",
+          "labelPlural": "Duma Deputies",
+          "chamberKey": "stateDuma",
+          "isExecutive": false,
+          "isSubNational": false
+        },
+        {
+          "key": "federationCouncilMember",
+          "label": "Federation Council Member",
+          "labelPlural": "Federation Council Members",
+          "chamberKey": "federationCouncil",
+          "isExecutive": false,
+          "isSubNational": false
+        },
+        {
+          "key": "centralBankChair",
+          "label": "Governor of the Bank of Russia",
+          "labelPlural": "Governors of the Bank of Russia",
+          "isExecutive": false,
+          "isSubNational": false
+        }
+      ],
+      "lowerElectionSystem": { "snapElectionsAllowed": true }
+    },
+    "1991-default": {
+      "governmentType": "parliamentaryRepublic",
+      "regionLabel": "Economic Region",
+      "legislature": {
+        "name": "Congress of People's Deputies of the Soviet Union",
+        "lowerChamber": {
+          "key": "unionCongress",
+          "name": "Congress of People's Deputies of the Soviet Union",
+          "shortName": "Union Congress",
+          "seats": 2250,
+          "description": "The 1989 Congress had 1,500 territorial and national-territorial deputies plus 750 representatives of public organizations. It selected the inner Supreme Soviet."
+        },
+        "upperChamber": null
+      },
+      "subNationalChamber": null,
+      "officeTypes": [
+        {
+          "key": "chairmanOfCabinet",
+          "label": "Chairman of the Cabinet of Ministers",
+          "labelPlural": "Chairmen of the Cabinet of Ministers",
+          "isExecutive": true,
+          "isSubNational": false
+        },
+        {
+          "key": "sovietPresident",
+          "label": "President of the Soviet Union",
+          "labelPlural": "Presidents of the Soviet Union",
+          "isExecutive": true,
+          "isSubNational": false,
+          "isHeadOfState": true
+        },
+        {
+          "key": "unionCongressDeputy",
+          "label": "Union People's Deputy",
+          "labelPlural": "Union People's Deputies",
+          "chamberKey": "unionCongress",
+          "isExecutive": false,
+          "isSubNational": false
+        }
+      ],
+      "upperElectionSystem": null
+    },
+    "1953-default": {
+      "legislature": {
+        "name": "Supreme Soviet",
+        "lowerChamber": {
+          "key": "sovietOfTheUnion",
+          "name": "Soviet of the Union",
+          "shortName": "Union",
+          "seats": 526,
+          "description": "526 deputies of the Soviet of the Union (RU's share of the 1954 convocation), elected by population."
+        },
+        "upperChamber": {
+          "key": "sovietOfNationalities",
+          "name": "Soviet of Nationalities",
+          "shortName": "Nationalities",
+          "seats": 515,
+          "description": "Deputies representing the union republics and autonomous republics of the Soviet Union.",
+          "elected": true
+        }
+      }
+    }
+  },
+  "regionalAssentOfficeKey": "governor"
+}

@@ -1,0 +1,57 @@
+{
+  "config": {
+    "governmentType": "onePartyState",
+    "regionLabel": "Republic",
+    "legislature": {
+      "name": "Supreme Soviet",
+      "lowerChamber": {
+        "key": "supremeSoviet",
+        "name": "Supreme Soviet",
+        "shortName": "Soviet",
+        "seats": 300,
+        "description": "Combined deputies of the Estonian, Latvian and Lithuanian SSR Supreme Soviets, elected to single-list terms under the Communist Party."
+      },
+      "upperChamber": {
+        "key": "presidium",
+        "name": "Presidium",
+        "shortName": "Presidium",
+        "seats": 21,
+        "description": "The Presidium of the Supreme Soviet - a standing organ acting between sessions.",
+        "elected": false
+      }
+    },
+    "officeTypes": [
+      {
+        "key": "firstSecretary",
+        "label": "First Secretary",
+        "labelPlural": "First Secretaries",
+        "isExecutive": true,
+        "isSubNational": false
+      },
+      {
+        "key": "chairmanOfPresidium",
+        "label": "Chairman of the Presidium",
+        "labelPlural": "Chairmen of the Presidium",
+        "isExecutive": true,
+        "isSubNational": false,
+        "isHeadOfState": true
+      },
+      {
+        "key": "sovietDeputy",
+        "label": "Deputy",
+        "labelPlural": "Deputies",
+        "chamberKey": "supremeSoviet",
+        "isExecutive": false,
+        "isSubNational": false
+      },
+      {
+        "key": "centralBankChair",
+        "label": "Gosbank Chair",
+        "labelPlural": "Gosbank Chairs",
+        "isExecutive": false,
+        "isSubNational": false
+      }
+    ],
+    "lowerElectionSystem": { "snapElectionsAllowed": false }
+  }
+}

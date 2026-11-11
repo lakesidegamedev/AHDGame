@@ -1,0 +1,257 @@
+{
+  "config": {
+    "id": "RO",
+    "name": "Romania",
+    "code": "RO",
+    "status": "coming-soon",
+    "flagEmoji": "🇷🇴",
+    "regionLabel": "Region",
+    "regionLabelPlural": "Regions",
+    "executiveTitle": "General Secretary",
+    "executiveRealmPhrase": "Romania",
+    "executiveLabel": "Assembly",
+    "executivePath": "/country/ro/executive",
+    "governmentType": "onePartyState",
+    "governmentTypeLabel": "One Party State",
+    "descriptor": "A one-party socialist state where the ruling communist party's General Secretary governs through the Grand National Assembly; the economy is centrally planned until reform.",
+    "heroImage": "https://flagcdn.com/w640/ro.png",
+    "overviewPath": "/country/ro",
+    "mapPath": "/country/ro/map",
+    "currencyCode": "ROL",
+    "centralGovernmentLabel": "Central Plan",
+    "exchangeName": "CSP",
+    "exchangeKind": "stateRegister",
+    "financeMinisterCabinetId": "minister_of_finance",
+    "rulingPartyId": 1,
+    "majorPartyIds": ["pcr"],
+    "partyCreationNPPs": { "statesRequired": 1, "lockHomeState": true, "nppsPerState": 2 },
+    "legislature": {
+      "name": "Grand National Assembly",
+      "path": "/country/ro/legislature",
+      "bicameral": false,
+      "lowerChamber": {
+        "key": "grandNationalAssembly",
+        "name": "Grand National Assembly",
+        "shortName": "Assembly",
+        "seats": 369,
+        "description": "369 deputies of the Marea Adunare Națională, elected to five-year terms - a single-list body controlled by the ruling communist party."
+      },
+      "upperChamber": {
+        "key": "stateCouncil",
+        "name": "State Council",
+        "shortName": "Council",
+        "seats": 21,
+        "description": "A collective head of state exercising standing authority between Assembly sessions; chosen by the Grand National Assembly.",
+        "elected": false
+      }
+    },
+    "officeTypes": [
+      {
+        "key": "generalSecretary",
+        "label": "General Secretary",
+        "isExecutive": true,
+        "isSubNational": false,
+        "labelPlural": "General Secretaries"
+      },
+      {
+        "key": "presidentOfStateCouncil",
+        "label": "President of the State Council",
+        "isExecutive": true,
+        "isSubNational": false,
+        "isHeadOfState": true,
+        "labelPlural": "Presidents of the State Council"
+      },
+      {
+        "key": "assemblyDeputy",
+        "label": "Deputy",
+        "chamberKey": "grandNationalAssembly",
+        "isExecutive": false,
+        "isSubNational": false,
+        "labelPlural": "Deputies"
+      },
+      {
+        "key": "centralBankChair",
+        "label": "Governor of the BNR",
+        "isExecutive": false,
+        "isSubNational": false,
+        "labelPlural": "Governors of the BNR"
+      }
+    ],
+    "electionSystems": {
+      "lowerChamber": "fptp",
+      "headOfGovernment": "parliamentary",
+      "headOfState": "ceremonial"
+    },
+    "lowerElectionSystem": { "snapElectionsAllowed": false },
+    "centralBank": {
+      "name": "National Bank of Romania",
+      "abbreviation": "BNR",
+      "heroImage": "https://flagcdn.com/w640/ro.png",
+      "defaultPrimeRate": 5
+    },
+    "usdExchangeRate": 0.22
+  },
+  "eraOverrides": {
+    "2027-default": {
+      "executiveTitle": "Prime Minister",
+      "executiveLabel": "Prime Minister's Office",
+      "governmentType": "presidential",
+      "governmentTypeLabel": "Semi-Presidential Republic",
+      "descriptor": "The Prime Minister governs with the confidence of the 331-seat Chamber of Deputies and the 134-seat Senate, both elected by closed-list proportional vote.",
+      "currencyCode": "RON",
+      "centralGovernmentLabel": "National Government",
+      "exchangeName": "Bucharest Stock Exchange",
+      "exchangeKind": "market",
+      "rulingPartyId": null,
+      "majorPartyIds": ["psd", "aur", "pnl", "usr"],
+      "legislature": {
+        "name": "Parliament",
+        "path": "/country/ro/legislature",
+        "bicameral": true,
+        "lowerChamber": {
+          "key": "chamberOfDeputies",
+          "name": "Chamber of Deputies",
+          "shortName": "Chamber",
+          "seats": 331,
+          "description": "331 deputies elected for four-year terms by closed-list proportional representation with a 5% national threshold."
+        },
+        "upperChamber": {
+          "key": "senat",
+          "name": "Senate",
+          "shortName": "Senate",
+          "seats": 134,
+          "description": "134 senators elected for four-year terms by closed-list proportional representation with a 5% national threshold.",
+          "elected": true
+        }
+      },
+      "officeTypes": [
+        {
+          "key": "president",
+          "label": "President",
+          "isExecutive": true,
+          "isSubNational": false,
+          "isHeadOfState": true,
+          "labelPlural": "Presidents"
+        },
+        {
+          "key": "primeMinister",
+          "label": "Prime Minister",
+          "isExecutive": true,
+          "isSubNational": false,
+          "labelPlural": "Prime Ministers"
+        },
+        {
+          "key": "deputy",
+          "label": "Deputy",
+          "chamberKey": "chamberOfDeputies",
+          "isExecutive": false,
+          "isSubNational": false,
+          "labelPlural": "Deputies"
+        },
+        {
+          "key": "senator",
+          "label": "Senator",
+          "chamberKey": "senat",
+          "isExecutive": false,
+          "isSubNational": false,
+          "labelPlural": "Senators"
+        },
+        {
+          "key": "centralBankChair",
+          "label": "Governor of the BNR",
+          "isExecutive": false,
+          "isSubNational": false,
+          "labelPlural": "Governors of the BNR"
+        }
+      ],
+      "electionSystems": {
+        "lowerChamber": "pr_hareQuota",
+        "upperChamber": "pr_hareQuota",
+        "headOfGovernment": "parliamentary",
+        "headOfState": "fptp"
+      },
+      "lowerElectionSystem": { "snapElectionsAllowed": true },
+      "upperElectionSystem": { "snapElectionsAllowed": true },
+      "usdExchangeRate": 0.21746694502435632
+    },
+    "1991-default": {
+      "executiveTitle": "Prime Minister",
+      "executiveLabel": "Prime Minister's Office",
+      "governmentType": "presidential",
+      "governmentTypeLabel": "Transitional Semi-Presidential Republic",
+      "descriptor": "The President appoints a Prime Minister whose government answers to the elected Assembly of Deputies and Senate.",
+      "centralGovernmentLabel": "Government of Romania",
+      "rulingPartyId": null,
+      "majorPartyIds": ["fsn", "pnl", "pntcd", "udmr"],
+      "legislature": {
+        "name": "Constituent Parliament",
+        "path": "/country/ro/legislature",
+        "bicameral": true,
+        "lowerChamber": {
+          "key": "chamberOfDeputies",
+          "name": "Assembly of Deputies",
+          "shortName": "Assembly",
+          "seats": 396,
+          "description": "396 deputies elected in May 1990 under Decree-Law 92/1990."
+        },
+        "upperChamber": {
+          "key": "senat",
+          "name": "Senate",
+          "shortName": "Senate",
+          "seats": 119,
+          "description": "119 senators elected in May 1990 under Decree-Law 92/1990.",
+          "elected": true
+        }
+      },
+      "officeTypes": [
+        {
+          "key": "president",
+          "label": "President",
+          "isExecutive": true,
+          "isSubNational": false,
+          "isHeadOfState": true,
+          "labelPlural": "Presidents"
+        },
+        {
+          "key": "primeMinister",
+          "label": "Prime Minister",
+          "isExecutive": true,
+          "isSubNational": false,
+          "labelPlural": "Prime Ministers"
+        },
+        {
+          "key": "deputy",
+          "label": "Deputy",
+          "chamberKey": "chamberOfDeputies",
+          "isExecutive": false,
+          "isSubNational": false,
+          "labelPlural": "Deputies"
+        },
+        {
+          "key": "senator",
+          "label": "Senator",
+          "chamberKey": "senat",
+          "isExecutive": false,
+          "isSubNational": false,
+          "labelPlural": "Senators"
+        },
+        {
+          "key": "centralBankChair",
+          "label": "Governor of the BNR",
+          "isExecutive": false,
+          "isSubNational": false,
+          "labelPlural": "Governors of the BNR"
+        }
+      ],
+      "electionSystems": {
+        "lowerChamber": "pr_hareQuota",
+        "upperChamber": "pr_hareQuota",
+        "headOfGovernment": "parliamentary",
+        "headOfState": "fptp"
+      },
+      "upperElectionSystem": { "snapElectionsAllowed": false },
+      "usdExchangeRate": 0.02881844380403458
+    },
+    "1953-default": { "majorPartyIds": ["pmr"], "usdExchangeRate": 0.07407407407407407 }
+  }
+}
