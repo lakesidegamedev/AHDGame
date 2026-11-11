@@ -150,6 +150,7 @@ const SUCCESSION_RULES: Readonly<Record<string, SuccessionRule>> = {
   "FR:parliamentaryRepublic": pm(),
   "SCO:parliamentaryRepublic": pm(),
   "WAL:parliamentaryRepublic": pm(),
+  "QC:parliamentaryRepublic": pm(),
 
   "CN:onePartyState": partyChief("premier", "Vice Premier"),
   "RU:onePartyState": partyChief("premier", "First Deputy Premier"),

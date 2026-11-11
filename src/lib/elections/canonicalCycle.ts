@@ -70,6 +70,16 @@ const IT_SENATO_CYCLE_PERIOD_HOURS = 240;
  * era-gates the cycle OFF for that preset (ES 1953: Franco dictatorship —
  * no elections spawn, the country stays static by design).
  */
+/** Successor-nation chambers: anchor and cycle length, in turns. */
+const SUCCESSOR_CHAMBER_CYCLES: Record<
+  "holyrood" | "senedd" | "qcAssembly",
+  { anchor: "scoHolyrood" | "walSenedd" | "qcAssembly"; periodHours: number }
+> = {
+  holyrood: { anchor: "scoHolyrood", periodHours: DEVOLVED_CHAMBER_CYCLE_PERIOD_HOURS },
+  senedd: { anchor: "walSenedd", periodHours: DEVOLVED_CHAMBER_CYCLE_PERIOD_HOURS },
+  qcAssembly: { anchor: "qcAssembly", periodHours: 192 },
+};
+
 const BETA_PARLIAMENT_CYCLES: Record<
   string,
   {
@@ -449,25 +459,23 @@ export function canonicalTurnsForCycle(params: CanonicalCycleParams): CanonicalC
       };
     }
     case "holyrood":
-    case "senedd": {
-      // SCO Holyrood / WAL Senedd: 5-year AMS cycle (240 turns), stood up at
-      // secession. Anchored to the nearest canonical devolved-election year; the
-      // spawner walks forward to the next cycle after the secession turn. A snap
-      // shifts the anchor like commons (`priorEndTurn + 240`).
-      const anchor = electionType === "holyrood" ? anchors.scoHolyrood : anchors.walSenedd;
-      const endTurn =
-        priorEndTurn != null
-          ? priorEndTurn + DEVOLVED_CHAMBER_CYCLE_PERIOD_HOURS
-          : cycle === 1
-            ? anchor
-            : anchor + (cycle - 1) * DEVOLVED_CHAMBER_CYCLE_PERIOD_HOURS;
+    case "senedd":
+    case "qcAssembly": {
+      // Successor-nation chambers exist only after independence and take a
+      // fixed cycle from the nearest canonical election year; the spawner walks
+      // forward to the next cycle after the secession turn. A snap shifts the
+      // anchor like commons (`priorEndTurn + period`).
+      const cycleSpec = SUCCESSOR_CHAMBER_CYCLES[electionType];
+      const anchor = anchors[cycleSpec.anchor];
+      let endTurn: number;
+      if (priorEndTurn != null) endTurn = priorEndTurn + cycleSpec.periodHours;
+      else if (anchor == null) return null;
+      else endTurn = anchor + (cycle - 1) * cycleSpec.periodHours;
       return {
         endTurn,
         primaryEndTurn: endTurn - dur.generalDurationHours,
-        // Devolved chambers only exist post-secession (no game-start bootstrap),
-        // so cycle 1 uses a normal fixed-length window ending at the anchor — NOT
-        // the turn-1 bootstrap, which would make the standup election span the
-        // whole game and read as a stale "active" race instead of an upcoming one.
+        // No game-start bootstrap: cycle 1 is a normal fixed-length window
+        // ending at the anchor, so a standup race reads as upcoming, not stale.
         startTurn: endTurn - dur.durationHours,
       };
     }

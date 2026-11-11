@@ -18,6 +18,8 @@ export const POSITION_BY_ELECTION_TYPE: Readonly<Record<string, ElectionPosition
   snap_holyrood: "lowerChamber",
   senedd: "lowerChamber",
   snap_senedd: "lowerChamber",
+  qcAssembly: "lowerChamber",
+  snap_qcAssembly: "lowerChamber",
   house: "lowerChamber",
   commons: "lowerChamber",
   snap_commons: "lowerChamber",

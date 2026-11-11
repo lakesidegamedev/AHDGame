@@ -94,6 +94,8 @@ export const DEFAULT_DURATIONS: Record<
   holyrood: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },
   // WAL Senedd Cymru — 5-year AMS cycle, 48h election window. Stood up at secession.
   senedd: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },
+  // QC National Assembly: fixed four-year cycle, stood up at independence.
+  qcAssembly: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },
   // Beta-country parliamentary lower chambers: 48h window; multi-year cycle gap handled by canonical schedule in the beta chamber specs.
   assembleeNationale: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },
   cameraDeputati: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },

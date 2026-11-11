@@ -110,12 +110,18 @@ describe("requestReferendum", () => {
     expect(r.body.error).toMatch(/cannot hold/i);
   });
 
-  it("refuses Quebec until its successor state exists", async () => {
+  it("opens a Quebec independence referendum within Canada", async () => {
     seed(db, { desire: 80, ap: 5 });
     const r = await requestReferendum(db as unknown as Db, { countryId: "CA", stateId: "ca_qc" });
-    expect(r.status).toBe(400);
-    expect(r.body.error).toMatch(/successor state/);
-    expect(db.collectionMocks["referendums"].insertOne).not.toHaveBeenCalled();
+    expect(r.status).toBe(200);
+    const insertArg = db.collectionMocks["referendums"].insertOne.mock.calls[0][0];
+    expect(insertArg).toMatchObject({
+      countryId: "CA",
+      regionId: "CA_QC",
+      kind: "independence",
+      targetCountryId: null,
+      status: "requested",
+    });
   });
 
   it("rejects a non-devolution region", async () => {

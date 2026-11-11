@@ -93,7 +93,7 @@ export const SOVEREIGNTY_REGIONS: readonly SovereigntyRegion[] = [
       separatist: ["ca_laurentian"],
       rivals: ["ca_federal_unity", "ca_national_prosperity"],
     },
-    actuates: false,
+    actuates: true,
   },
 ];
 

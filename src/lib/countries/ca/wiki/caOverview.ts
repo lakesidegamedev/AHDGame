@@ -42,7 +42,7 @@ Quebec carries a **sovereignty mood** from 0 to 100, opening at 35. It moves eve
 
 The mood also moves votes. In Quebec elections, a mood above 50 shifts a small share of votes toward the **Laurentian Alliance**, which runs only in Quebec, and away from its two main federalist rivals. A mood below 50 does the reverse. A Pro-Sovereignty Premier whose party leads a mood of 60 or more also gets a stepped vote bonus.
 
-A sovereignty referendum cannot be held yet. It opens once an independent Quebec can be formed. See [Referendums](/wiki/referendums) for how the process works for Scotland, Wales and Northern Ireland.
+Once the mood reaches 60, the Premier can ask Canada's Prime Minister for a sovereignty referendum. If it passes and the House of Commons consents, Quebec becomes an independent country with eight regions, a 125-seat National Assembly and the Canadian dollar. See [Referendums](/wiki/referendums) for every step.
 
 ## Parties
 

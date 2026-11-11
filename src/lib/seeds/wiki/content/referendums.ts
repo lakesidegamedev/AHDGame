@@ -1,6 +1,6 @@
 export const referendumsContent = `# Independence and Reunification Referendums
 
-Scotland and Wales can leave the United Kingdom, and Northern Ireland can leave to join Ireland. A passing vote changes the map: the region's offices, parties, elections, companies and resources all move. Getting there takes a region whose people want out, a First Minister who asks, a Prime Minister who agrees, a campaign that wins, and Parliament's consent.
+Scotland and Wales can leave the United Kingdom, Northern Ireland can leave to join Ireland, and in 2027 worlds Quebec can leave Canada. A passing vote changes the map: the region's offices, parties, elections, companies and resources all move. Getting there takes a region whose people want out, a First Minister who asks, a Prime Minister who agrees, a campaign that wins, and Parliament's consent.
 
 ## From rising desire to a vote
 
@@ -91,9 +91,15 @@ When the transfer happens:
 - In Northern Ireland, player residents stay in the region, which becomes part of Ireland, and become Independents. The region's party organisations are dissolved, and its NPP politicians move to London and stay in the UK.
 - UK offices held for the region end, and so do cabinet posts held by people leaving. Scottish and Welsh MPs lose their seats; Northern Ireland's MPs carry over into the Dáil. If the Prime Minister is among those leaving, the UK government falls and has to be formed again. The [United Kingdom](/wiki/uk-overview) loses the region and its offices, parties and elections.
 - For Scotland and Wales, the First Minister stays on as head of the new government in a caretaker role.
+
+## Quebec
+
+In 2027 worlds Quebec has a Sovereignty Desire score that works the same way. Quebec's Premier files the request and Canada's Prime Minister decides. Independence needs a consent bill from Canada's House of Commons, sponsored by the Government of Canada.
+
+When Quebec leaves, it becomes eight regions: Montreal; Laval, Laurentides and Lanaudiere; Monteregie; Capitale-Nationale and Chaudiere-Appalaches; Estrie and Centre-du-Quebec; Outaouais and Abitibi-Temiscamingue; Mauricie and Saguenay-Lac-Saint-Jean; and Eastern and Northern Quebec. Residents move to the Quebec City region. The Laurentian Alliance moves with its members; members of Canada-wide parties become Independents. The Premier stays on as caretaker head of government, Quebec keeps the Canadian dollar, and elections open at once for the 125-seat National Assembly, a Prefect in each region and the regional councils. After that the Assembly sits for four years.
 - Regional ownership, parties, elections, companies, natural resources and the affected country maps all update. It is a world change, not a cosmetic result. New elections are stood up in the new country under [Election Mechanics](/wiki/election-mechanics), and a Northern Ireland reunification brings the region into [Ireland](/wiki/ie-overview).
 
 A transfer that stalls after the required consent is enacted is handled by the game team.
 
-Live in the United Kingdom only, in any world where Scotland, Wales and Northern Ireland have devolved governments. Other countries have no referendum system. Last checked 2026-10-29, version 1.18.0. Exact rules: [UK devolution policy (design)](https://docs.lakesidegames.net/design/uk-devolution-policy.html)
+Live in the United Kingdom, in any world where Scotland, Wales and Northern Ireland have devolved governments, and in Canada in 2027 worlds. Other countries have no referendum system. Last checked 2026-11-11, version 1.20.0. Exact rules: [UK devolution policy (design)](https://docs.lakesidegames.net/design/uk-devolution-policy.html)
 `;
