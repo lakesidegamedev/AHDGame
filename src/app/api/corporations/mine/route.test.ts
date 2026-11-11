@@ -30,7 +30,7 @@ beforeEach(() => {
 async function expectDestination(path: string) {
   const response = await GET(request());
   expect(response.status).toBe(307);
-  expect(response.headers.get("location")).toBe(`https://example.com${path}`);
+  expect(response.headers.get("location")).toBe(path);
   expect(response.headers.get("cache-control")).toBe("private, no-store");
 }
 
@@ -98,6 +98,12 @@ describe("GET /api/corporations/mine", () => {
       sequentialId: 0,
     });
     await expectDestination("/corporation/0");
+  });
+
+  it("keeps the redirect on the public host when the request URL is the internal origin", async () => {
+    const response = await GET(new Request("https://localhost:3000/api/corporations/mine"));
+    expect(response.headers.get("location")).toBe("/corporation/42");
+    expect(response.headers.get("location")).not.toContain("localhost");
   });
 
   it("requires authentication before querying the database", async () => {
