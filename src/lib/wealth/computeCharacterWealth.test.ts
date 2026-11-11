@@ -76,6 +76,100 @@ describe("sumStockValueByCharacter", () => {
   });
 });
 
+describe("sumStockValueByCharacter look-through of corporate stakes", () => {
+  const key = charId.toString();
+  const total = (id: ObjectId, shares: number) => ({ _id: id, totalShares: shares });
+  const stake = (holder: ObjectId, shares: number) => ({ corporationId: holder, shares });
+  const owner = (shares: number) => ({ characterId: charId, shares });
+
+  it("counts a 100% parent's 100% subsidiary on top of the parent's own price", () => {
+    const pId = new ObjectId();
+    const sId = new ObjectId();
+    const parent = corp({ ...total(pId, 100), sharePrice: 50, shareholders: [owner(100)] });
+    const sub = corp({ ...total(sId, 1000), sharePrice: 10, shareholders: [stake(pId, 1000)] });
+    const v = sumStockValueByCharacter([parent, sub], idSet, noFx);
+    // parent 100 x 50 = 5,000 direct, plus subsidiary 1,000 x 10 = 10,000
+    expect(v.get(key)).toBe(15000);
+  });
+
+  it("attributes only the character's share of a 40% parent", () => {
+    const pId = new ObjectId();
+    const sId = new ObjectId();
+    const parent = corp({ ...total(pId, 100), sharePrice: 50, shareholders: [owner(40)] });
+    const sub = corp({ ...total(sId, 1000), sharePrice: 10, shareholders: [stake(pId, 1000)] });
+    const v = sumStockValueByCharacter([parent, sub], idSet, noFx);
+    expect(v.get(key)).toBe(2000 + 0.4 * 10000);
+  });
+
+  it("follows a chain parent to subsidiary to sub-subsidiary", () => {
+    const pId = new ObjectId();
+    const sId = new ObjectId();
+    const tId = new ObjectId();
+    const parent = corp({ ...total(pId, 100), sharePrice: 1, shareholders: [owner(100)] });
+    const sub = corp({ ...total(sId, 100), sharePrice: 10, shareholders: [stake(pId, 50)] });
+    const subSub = corp({ ...total(tId, 100), sharePrice: 20, shareholders: [stake(sId, 100)] });
+    const v = sumStockValueByCharacter([parent, sub, subSub], idSet, noFx);
+    // P direct 100; P's 50 of S = 500; S's 100% of T = 2,000, half of which is P's via S
+    expect(v.get(key)).toBe(100 + 500 + 0.5 * 2000);
+  });
+
+  it("terminates on a cross-holding cycle", () => {
+    const aId = new ObjectId();
+    const bId = new ObjectId();
+    const a = corp({
+      ...total(aId, 100),
+      sharePrice: 10,
+      shareholders: [owner(100), stake(bId, 50)],
+    });
+    const b = corp({ ...total(bId, 100), sharePrice: 10, shareholders: [stake(aId, 50)] });
+    const v = sumStockValueByCharacter([a, b], idSet, noFx);
+    expect(Number.isFinite(v.get(key))).toBe(true);
+    expect(v.get(key)).toBeGreaterThan(1000);
+  });
+
+  it("skips a stake in an issuer with a non-positive price", () => {
+    const pId = new ObjectId();
+    const parent = corp({ ...total(pId, 100), sharePrice: 50, shareholders: [owner(100)] });
+    const sub = corp({ sharePrice: 0, shareholders: [stake(pId, 1000)] });
+    const v = sumStockValueByCharacter([parent, sub], idSet, noFx);
+    expect(v.get(key)).toBe(5000);
+  });
+
+  it("converts a foreign-currency issuer's stake to ₳", () => {
+    const pId = new ObjectId();
+    const parent = corp({ ...total(pId, 100), sharePrice: 50, shareholders: [owner(100)] });
+    const sub = corp({
+      sharePrice: 10,
+      liquidCurrencyCode: "USD" as CurrencyCode,
+      shareholders: [stake(pId, 1000)],
+    });
+    const fx = new Map<CurrencyCode, number>([["USD" as CurrencyCode, 2]]);
+    const v = sumStockValueByCharacter([parent, sub], idSet, fx);
+    // 1,000 x 10 = 10,000 USD at 2 per ₳ = 5,000 ₳, plus the parent's 5,000
+    expect(v.get(key)).toBe(10000);
+  });
+
+  it("gives nothing to a character outside the requested set", () => {
+    const pId = new ObjectId();
+    const other = new ObjectId();
+    const parent = corp({
+      ...total(pId, 100),
+      shareholders: [{ characterId: other, shares: 100 }],
+    });
+    const sub = corp({ shareholders: [stake(pId, 1000)] });
+    const v = sumStockValueByCharacter([parent, sub], idSet, noFx);
+    expect(v.size).toBe(0);
+  });
+
+  it("skips a holder with no total shares", () => {
+    const pId = new ObjectId();
+    const parent = corp({ ...total(pId, 0), sharePrice: 0, shareholders: [owner(100)] });
+    const sub = corp({ shareholders: [stake(pId, 1000)] });
+    const v = sumStockValueByCharacter([parent, sub], idSet, noFx);
+    expect(v.size).toBe(0);
+  });
+});
+
 describe("sumBondValueByCharacter", () => {
   function bond(overrides: Partial<BondWealthSlice>): BondWealthSlice {
     return {
