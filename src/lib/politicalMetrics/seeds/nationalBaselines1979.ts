@@ -88,4 +88,15 @@ export const NATIONAL_BASELINES_1979: Record<
     governance: [68.3, 66.1, 56.7, 64.9, 67.4, 63.2, 65.8],
     defense: [66, 62, 64, 70, 68, 63, 54],
   }),
+  JP: buildBaselines({
+    economy: [60, 62, 70, 66, 82, 58, 60],
+    education: [80, 68, 66, 80, 72, 78, 50],
+    health: [82, 72, 70, 76, 58, 70, 66],
+    infrastructure: [52, 84, 78, 68, 62, 64, 66],
+    order: [64, 58, 78, 82, 64, 66, 60],
+    environment: [52, 60, 46, 60, 48, 64, 44],
+    society: [46, 50, 62, 62, 70, 70, 72],
+    governance: [70, 52, 46, 58, 76, 68, 62],
+    defense: [56, 48, 44, 40, 40, 38, 12],
+  }),
 };

@@ -13,6 +13,7 @@ import { BASELINE_LEVEL_OVERRIDES_1991 } from "./seeds/baselineLevels1991";
 import { POST_1991_FALLBACK_YEAR } from "@/lib/politicalMetrics/seeds/baselineAnchors";
 import { DE_LAWS } from "@/lib/countries/de/data/deLaws";
 import { CA_LAWS } from "./laws/caLaws";
+import { JP_LAWS } from "@/lib/countries/jp/data/jpLaws";
 import { DD_LAWS } from "./laws/ddLaws";
 import { DD_LAND_LAWS } from "./laws/ddLandLaws";
 import { RU_LAWS } from "./laws/ruLaws";
@@ -35,6 +36,7 @@ const CORE_CATALOGS: Record<LawCountryId, PoliticalLaw[]> = {
   DD: DD_LAWS,
   DE: DE_LAWS,
   CA: CA_LAWS,
+  JP: JP_LAWS,
 };
 
 /** Regional-only sidecars (not part of the 109-law core). */
@@ -62,6 +64,7 @@ const CATALOGS: Record<LawCountryId, PoliticalLaw[]> = {
   DD: [...CORE_CATALOGS.DD, ...DD_LAND_LAWS, ...DD_MODERN_ERA_LAWS],
   DE: CORE_CATALOGS.DE,
   CA: CORE_CATALOGS.CA,
+  JP: CORE_CATALOGS.JP,
 };
 
 // Explicit anchors for all program laws make era coverage inspectable.

@@ -6,18 +6,15 @@ import { nonPlayableBoardsSchema } from "./nonPlayableBoardsSchema";
 /** Values read from the TypeScript table before it moved to a data file. */
 const SAMPLE: [preset: string, country: string, region: string, family: string, value: number][] = [
   ["1953-default", "AT", "AT_VIE", "economy.fiscal", 55.7],
-  ["1953-default", "JP", "TOH", "defense.armedForces", 15],
   ["1953-default", "NG", "SOUTH_WEST", "society.tradition", 31.3],
   ["1953-default", "BAL", "BAL_LVA", "economy.fiscal", 74.4],
   ["1979-default", "AT", "AT_VIE", "defense.armedForces", 10],
-  ["1979-default", "JP", "TOH", "society.tradition", 65.2],
   ["1979-default", "YU", "YU_VOJ", "economy.fiscal", 70.8],
   ["1979-default", "BAL", "BAL_LVA", "defense.armedForces", 25],
   ["1991-default", "AT", "AT_VIE", "society.tradition", 76],
   ["1991-default", "NG", "SOUTH_WEST", "economy.fiscal", 16.7],
   ["1991-default", "YU", "YU_VOJ", "defense.armedForces", 68],
   ["1991-default", "BAL", "BAL_LVA", "society.tradition", 72.5],
-  ["2019-default", "JP", "TOH", "economy.fiscal", 22.2],
   ["2019-default", "NG", "SOUTH_WEST", "defense.armedForces", 15],
   ["2019-default", "YU", "YU_VOJ", "society.tradition", 73.6],
 ];
@@ -37,7 +34,6 @@ const REGION_COUNTS_2019: Record<string, number> = {
   HU: 6,
   IE: 8,
   IT: 8,
-  JP: 8,
   NG: 6,
   PL: 8,
   RO: 7,
@@ -69,7 +65,7 @@ describe("non-playable boards data file", () => {
     const digest = createHash("sha256")
       .update(JSON.stringify(getNonPlayableBoards()))
       .digest("hex");
-    expect(digest).toBe("f37ebcbf93510eeb69748e06db8022338613ca0208dd969042b9654b0fbd3d38");
+    expect(digest).toBe("4f7d02de288162436125a38a0bbcead46612af4b89e22d9479d935b352cbaae1");
   });
 
   it("loads once and serves the cached table", () => {

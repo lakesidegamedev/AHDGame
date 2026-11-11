@@ -151,7 +151,7 @@ describe("non-playable approval intercepts", () => {
       /No APPROVAL_NEUTRAL_SCORE/
     );
     // A real country at an era with no emitted board is equally uncalibrated.
-    expect(() => approvalComponent(uniform(50), 0, "JP", "1899-default")).toThrow(
+    expect(() => approvalComponent(uniform(50), 0, "FR", "1899-default")).toThrow(
       /No APPROVAL_NEUTRAL_SCORE/
     );
   });

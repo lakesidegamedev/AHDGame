@@ -13,15 +13,11 @@ import type { PoliticalMetricCategoryId, PoliticalMetricId } from "../politicalM
  * instead. Deriving the union from the list means a new member is one edit, and
  * the tables demand their row at the same moment.
  */
-export const LAW_COUNTRY_IDS = ["US", "UK", "RU", "DD", "DE", "CA"] as const;
+export const LAW_COUNTRY_IDS = ["US", "UK", "RU", "DD", "DE", "CA", "JP"] as const;
 export type LawCountryId = (typeof LAW_COUNTRY_IDS)[number];
 
-/**
- * Countries the cost engine can price for. A country whose law book is authored
- * but not yet on the playable roster is listed here ahead of `LAW_COUNTRY_IDS`,
- * so its catalogue can be validated without every exhaustive table demanding a row.
- */
-export type CostAnchorCountryId = LawCountryId | "JP";
+/** Countries the cost engine can price for. Every law-book country has an anchor. */
+export type CostAnchorCountryId = LawCountryId;
 
 export interface LawLevel {
   name: string;
