@@ -162,16 +162,19 @@ Disclose a conflict when your change could directly help or hurt:
 
 - a character you play,
 - a corporation you own, run, or hold shares in, or
-- anything else you control in game, such as a party you lead or a government you head.
+- a party you lead, a government you head, a nation you lead or hold office in, or anything else you control in game.
 
-"Directly" means the change targets something you hold, or does more for it than for comparable players. If you are unsure, disclose.
+"Directly" means the change targets something you hold, or does more for it than for comparable players. A rule that applies to a whole category still counts: a change to wartime seizure affects you if you lead a nation at war, and a change to mining affects you if you own a mining corporation. If you are unsure, disclose.
+
+Economy and turn PRs also carry an `Affects:` line in the conflict section saying who the change helps or hurts. That line is required even when you have no conflict, so reviewers can check the answer.
 
 To disclose, tick the conflict box in the PR template and say what the link is. You do not have to name your character or corporation in the public PR: tell a maintainer privately and write "disclosed privately" in the PR instead.
 
 The required `custom-rules` check enforces two things on contributor PRs:
 
 - The "Conflict of interest" section stays in the description with exactly one box ticked.
-- A change to economy or turn-processing code (markets, banking, trade, budgets, corporations, the turn engine and the other folders listed in `scripts/ci/pr_governance.py`) needs a maintainer's approving review on the PR's current commit before it can merge. Pushing a new commit needs a fresh approval.
+- A change to economy or turn-processing code (markets, banking, trade, budgets, corporations, the turn engine and the other folders listed in `scripts/ci/pr_governance.py`) needs a maintainer's approving review before it can merge. Test files do not count. An approval keeps counting after later pushes as long as those pushes do not change economy code again; a push that does needs a fresh approval.
+- Trusted contributors, listed in `scripts/ci/pr_governance.py`, skip the economy approval on PRs where they declare no conflict. A trusted contributor's conflicted PR still needs a maintainer, and changes to CI or governance files always do.
 
 A disclosure does not block a PR. It tells the reviewer to weigh the change on its merits and against other players' positions, and a conflicted PR is never merged on its author's word alone. Staff contributors follow the same rule.
 
