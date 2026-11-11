@@ -47,6 +47,16 @@ export function mandateIndexForLevel(level: number | null | undefined): number |
   return [3, 3, 2, 1, 0][level];
 }
 
+/**
+ * Ladder index a Canadian Security Intelligence and Cyber Act level counts as. The act
+ * is a primary law that seeds at level 2, so level 2 is the neutral rung; stronger
+ * levels add duties and cost, weaker ones withdraw them.
+ */
+export function mandateIndexForSecurityActLevel(level: number | null | undefined): number | null {
+  if (level == null || !Number.isInteger(level) || level < 0 || level > 4) return null;
+  return [6, 5, 3, 2, 1][level];
+}
+
 /** Technology readiness 0..1 from R&D intensity in percent of GDP. */
 export function technologyReadiness(rdIntensity: number | null | undefined): number {
   if (rdIntensity == null || !Number.isFinite(rdIntensity)) return DEFAULT_READINESS;
