@@ -36,29 +36,21 @@ export const CN_NATIONAL_BUDGET_1953: NationalBudgetSeedConfig = {
     ceilingLastRaisedYear: 1953,
   },
   creditRating: "BB",
+  // The opening program spending China's old law types priced, kept when
+  // China joined the law book so the 1953 opening keeps the same envelope.
+  // Defense, capital construction (the first Five-Year Plan's opening year)
+  // and health were pinned to authored figures then and still are.
   baselineSpendingByCategory: {
     defense: 4_880_000_000, // large PLA; Korean War just ending
-    education: 1_630_000_000, // mass literacy campaign
-    // 1st-FYP capital construction ramped over 1953-57 toward its ¥76.4B
-    // five-year total; 1953 (the plan's first year, still standing up
-    // Soviet-aided project sites) sits at the low end of that ramp, not the
-    // plan's later peak run-rate — cut from 7.32B (22% of GDP, the full-plan
-    // average share) to 9% of GDP, in line with commonly-cited PRC
-    // national-budget capital-construction shares for the plan's opening
-    // year (fiscal audit F-11; the original 22% figure produced a 57%-of-GDP
-    // total budget once this category was correctly pinned instead of
-    // silently discarded — see EXTRA_OVERRIDE_CATEGORIES_BY_COUNTRY.CN).
     infrastructure: 3_000_000_000,
-    socialSecurity: 810_000_000,
-    // Key is "health" (not "healthcare") — matches cn_medical_insurance /
-    // cn_elder_care / cn_public_health / cn_mental_health's actual
-    // legislationType.budgetCategory. The old "healthcare" key never
-    // matched, so this line fell back to the (much thinner) raw era-catalog
-    // sum inside deriveEnactedLaws' override rescale (fiscal audit F-11).
     health: 810_000_000,
-    other: 2_030_000_000,
+    education: 677_526_261,
+    socialSecurity: 1_030_987_427,
+    publicSafety: 346_023_606,
+    agriculture: 482_378_865,
+    other: 552_504_426,
   },
-  baselineStateGrants: 1_630_000_000,
+  baselineStateGrants: 0,
   policyDefaults: COUNTRY_POLICY_CONFIGS_1953.cn.defaults,
   policyOptionOverrides: COUNTRY_POLICY_CONFIGS_1953.cn.optionIndexes,
   seedTaxRatesOverride: SEED_TAX_RATES_1953.CN,
