@@ -18,6 +18,7 @@ import { invalidateCachedCountryState } from "@/lib/countryState/cache";
 import { PM_VACANCY_DEADLINE_TURNS } from "@/lib/constants/turnTime";
 import type { FederationStateTransferPlan } from "./territoryTransferPlan";
 import { planProvisionalRussianCongress } from "./rules/provisionalCongress";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export const FEDERATION_ARCHIVED_POLITICAL_ROWS_COLLECTION = "federationArchivedPoliticalRows";
 const UNION_OFFICES = ["unionCongressDeputy", "chairmanOfCabinet", "sovietPresident"];
@@ -44,7 +45,9 @@ export async function materializeProvisionalRussianCongress(input: {
     transfers.length === 0 ||
     new Set(transfers.map((row) => row.stateId)).size !== transfers.length ||
     retainedStateIds.length === 0 ||
-    transfers.some((row) => row.leavesDetailedSource !== (row.successorEntityId !== "RU"))
+    transfers.some(
+      (row) => row.leavesDetailedSource !== !countryHasFeature("ruLib", row.successorEntityId)
+    )
   ) {
     throw new Error(
       "Russian political succession needs a transaction and approved retained territory"

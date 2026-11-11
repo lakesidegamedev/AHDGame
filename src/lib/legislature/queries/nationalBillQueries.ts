@@ -79,6 +79,7 @@ import { getOfficeTypeForChamber } from "@/lib/legislature/chamberOfficeType";
 import { getGameStatePreset } from "@/lib/db/collections/gameState";
 import { mayRuleByDecree } from "@/lib/singleplayerHeadOfState";
 import { loadBillLegislationTypes } from "@/lib/legislature/queries/loadBillLegislationTypes";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 const BILL_PAGE_LIMIT = 50;
 
@@ -734,7 +735,7 @@ export async function getNationalBillDetail(
   let viewerCountryId: CountryId | null = null;
   let viewerPolicies: AxisPositions | undefined;
 
-  if (country === "US") {
+  if (countryHasFeature("usLib", country)) {
     if (authUser) {
       const viewerCharacter = await db
         .collection<Character>("characters")
@@ -820,7 +821,7 @@ export async function getNationalBillDetail(
           )
         : false;
       isPresident = officials.some((official) => official.officeType === "president");
-      if (country === "JP" && bill.status === "cabinet_review") {
+      if (countryHasFeature("jpLib", country) && bill.status === "cabinet_review") {
         const governmentFormation = await getGovernmentFormationsCollection(db).findOne({
           _id: country,
         });

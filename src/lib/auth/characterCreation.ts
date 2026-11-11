@@ -53,6 +53,7 @@ import { isUsResidentPoliticalRegion } from "@/lib/elections/statehoodAdmission"
 import { findPartyBySequentialId } from "@/lib/db/partyLookup";
 import { canCharacterJoinParty } from "@/lib/parties/partyFrontier";
 import { withPartyTerritoryMutation } from "@/lib/parties/territoryMutation";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 const MIN_STARTING_DONOR_BASE_LEVEL = 1;
 
@@ -143,7 +144,7 @@ export async function createCharacterForAccount(userId: string, data: CreateChar
 
   // Alaska and Hawaii retain territorial politics before statehood: they are
   // playable homes with party organization and territorial governor races.
-  if ((stateDoc.countryId ?? "US") === "US") {
+  if (countryHasFeature("usLib", stateDoc.countryId ?? "US")) {
     const { admittedIds, preset } = await loadUsPoliticalStateIds(db);
     if (!isUsResidentPoliticalRegion(stateDoc._id, preset, admittedIds)) {
       return errorResponse(400, unplayableTerritoryHomeError(stateDoc.name));

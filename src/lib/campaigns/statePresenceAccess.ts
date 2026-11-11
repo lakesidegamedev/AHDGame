@@ -2,6 +2,7 @@ import { ObjectId, type Db } from "mongodb";
 import { badRequest, forbidden, notFound } from "@/lib/api/errors";
 import { isCampaignManagerUser, isCampaignNomineeUser } from "@/lib/campaigns/access";
 import type { Campaign, Character, ElectionCandidate } from "@/lib/db/types";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export type PresenceCampaign = Pick<
   Campaign,
@@ -96,7 +97,7 @@ export async function resolvePresenceSubject(
       { projection: { countryId: 1, party: 1, homeState: 1 } }
     );
   if (!candidate) throw notFound("Candidate not found");
-  if (candidate.countryId !== "US") {
+  if (!countryHasFeature("usLib", candidate.countryId)) {
     throw forbidden("Campaign Presence is currently a US-only feature");
   }
 

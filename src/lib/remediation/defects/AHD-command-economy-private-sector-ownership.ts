@@ -24,6 +24,7 @@ import type {
 } from "../types";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export const DEFECT_ID = "AHD-command-economy-private-sector-ownership";
 
@@ -363,7 +364,8 @@ async function survey(db: Db): Promise<Survey> {
     }
 
     if (row.compensation === "book") {
-      if (row.countryId === "DD") throw new Error("DD state-owned sectors cannot be compensated");
+      if (countryHasFeature("ddLib", row.countryId))
+        throw new Error("DD state-owned sectors cannot be compensated");
       if (!source) throw new Error(`compensation donor ${row.sourceCorporationId} is missing`);
       const budget = budgetByCountry.get(row.countryId);
       if (!budget) throw new Error(`federal budget for ${row.countryId} is missing`);

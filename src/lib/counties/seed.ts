@@ -18,6 +18,7 @@ import {
   loadPopulationSubdivisionReference,
   referencePopulationBaseline,
 } from "./subdivisionReference";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export async function seedCountyPopulations(
   db: Db,
@@ -50,17 +51,16 @@ export async function seedCountyPopulations(
   const groups = await Promise.all(
     states.map(async (state) => {
       const reference = await loadPopulationSubdivisionReference(state._id, state.countryId);
-      const baseline =
-        state.countryId === "US"
-          ? selectCountyPopulationBaseline(
-              reference.map((c) => ({ id: c.id, population: c.population })),
-              historicalCountyWeights(reference[0]?.id.slice(0, 2), year),
-              year
-            )
-          : {
-              weights: reference.map((c) => ({ id: c.id, population: c.population })),
-              populationBaseline: referencePopulationBaseline(state.countryId),
-            };
+      const baseline = countryHasFeature("usLib", state.countryId)
+        ? selectCountyPopulationBaseline(
+            reference.map((c) => ({ id: c.id, population: c.population })),
+            historicalCountyWeights(reference[0]?.id.slice(0, 2), year),
+            year
+          )
+        : {
+            weights: reference.map((c) => ({ id: c.id, population: c.population })),
+            populationBaseline: referencePopulationBaseline(state.countryId),
+          };
       const allocated = apportionPopulation(baseline.weights, state.population);
       return reference.map((c, i): County => ({
         _id: c.id,

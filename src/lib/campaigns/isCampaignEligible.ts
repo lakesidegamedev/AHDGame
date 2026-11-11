@@ -1,5 +1,6 @@
 import { getCountryConfig, type CountryId, isDirectElection } from "@/lib/constants/countries";
 import type { Election } from "@/lib/db/types";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /**
  * Campaign Manager (Campaign doc, fundraising / ads / ground-game upgrades,
@@ -20,7 +21,7 @@ export function isCampaignEligibleElection(
   const countryId = election.countryId;
   if (!countryId || election.electionType !== "president") return false;
 
-  if (countryId === "RU" && election.russianPresidentialRound) {
+  if (countryHasFeature("ruLib", countryId) && election.russianPresidentialRound) {
     const binding = election.russianPresidentialRound;
     return (
       [1, 2].includes(binding.round) &&

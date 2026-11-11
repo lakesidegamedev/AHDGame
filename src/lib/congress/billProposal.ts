@@ -63,6 +63,7 @@ import { resolveResetTaxProvisionFields } from "@/lib/resetLegislation/resolveTa
 import { marketAtLeast } from "@/lib/market/featureFlag";
 import { isMediaOwnershipBillAvailable } from "@/lib/mediaRegulation/rules";
 import { loadUSMediaOutletDelivery } from "@/lib/mediaRegulation/turnData";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 // snapshotBillPolicyProvisions now lives in the shared provision-enrichment core
 // so the regional bill paths can call it too. Re-exported for existing importers.
@@ -739,7 +740,7 @@ export async function validateBillProvisions(
       });
       continue;
     }
-    if (sourceCountry === "US" && lt._id === "us_media_communications") {
+    if (countryHasFeature("usLib", sourceCountry) && lt._id === "us_media_communications") {
       const mediaRegulationEnabled =
         mediaRegulation.enabled && marketAtLeast(mediaRegulation.marketSystemMode, "clearing");
       if (

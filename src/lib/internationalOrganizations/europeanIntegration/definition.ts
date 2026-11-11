@@ -8,6 +8,7 @@ import {
   COMMUNITY_MEMBERS_1991,
   type EuropeanIntegrationState,
 } from "./rules";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 const MEMBERS_2019 = [
   ...COMMUNITY_MEMBERS_1991,
@@ -41,7 +42,7 @@ export function withEuropeanInstitution(
         "1979-default": [...COMMUNITY_MEMBERS_1979],
         "1991-default": [...COMMUNITY_MEMBERS_1991],
         "2019-default": MEMBERS_2019,
-        "2027-default": MEMBERS_2019.filter((member) => member !== "UK"),
+        "2027-default": MEMBERS_2019.filter((member) => !countryHasFeature("ukLib", member)),
       }
     : def.foundingMembersByEra;
   if (state.stage === "union") return { ...def, foundingMembersByEra: rosters };

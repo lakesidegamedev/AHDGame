@@ -37,6 +37,7 @@ import {
   organizationAdWeight,
   NG_CAMPAIGN_TURNOUT_RATE,
 } from "./rules";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export async function projectCampaignPoll(
   db: Db,
@@ -96,7 +97,7 @@ export async function projectCampaignPoll(
     bonusesByCandidate,
   };
   if (presidential && COUNTRIES_WITH_BESPOKE_PRESIDENTIAL_ELECTIONS.has(election.countryId)) {
-    if (election.countryId !== "NG" || inPrimary) return null;
+    if (!countryHasFeature("ngLib", election.countryId) || inPrimary) return null;
     const weights = enriched.map((candidate) => {
       const org =
         partyOrgs.find(

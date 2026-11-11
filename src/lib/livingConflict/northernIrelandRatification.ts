@@ -18,6 +18,7 @@ import {
   northernIrelandCampaignSupport,
   northernIrelandRatificationDeltas,
 } from "./rules/northernIrelandRatification";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export { northernIrelandRatificationDeltas } from "./rules/northernIrelandRatification";
 
@@ -43,8 +44,8 @@ export async function reconcileNorthernIrelandRatification(
     )
     .sort({ proposedTurn: -1, proposedAt: -1, _id: -1 })
     .toArray();
-  const uk = bills.find((bill) => bill.countryId === "UK");
-  const ie = bills.find((bill) => bill.countryId === "IE");
+  const uk = bills.find((bill) => countryHasFeature("ukLib", bill.countryId));
+  const ie = bills.find((bill) => countryHasFeature("ieLib", bill.countryId));
   const refs = db.collection<Referendum>("referendums");
   const previousRejection = await refs.findOne(
     { kind: "peace_agreement", "peaceAgreement.conflictKey": def.key, "result.passed": false },

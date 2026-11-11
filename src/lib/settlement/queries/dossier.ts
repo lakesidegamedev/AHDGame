@@ -49,6 +49,7 @@ import type { SettlementPaymentMode } from "@/lib/db/types/settlementPlay";
 import { loadSettlementActorContext } from "../actorContext";
 import { resolvePersonalFunds } from "../playCost";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export interface DossierPaymentView {
   mode: SettlementPaymentMode;
@@ -259,10 +260,10 @@ const signedMag = (hundredths: number) =>
 
 /** Escalation authority copy, verbatim from the source design. */
 function escalateGateFor(seatId: string): string {
-  if (seatId === "DD") {
+  if (countryHasFeature("ddLib", seatId)) {
     return "Only Washington and Moscow hold the escalation authority. East Berlin can raise the temperature with coercive plays, but it cannot take the bloc to the ladder.";
   }
-  if (seatId === "UK") {
+  if (countryHasFeature("ukLib", seatId)) {
     return "Escalation on the ladder is a superpower decision — London can reinforce and protest, not mobilise the alliance.";
   }
   return "This seat has no escalation authority. Coercive plays still add heat to the ladder.";

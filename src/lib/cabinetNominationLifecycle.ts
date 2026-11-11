@@ -37,6 +37,7 @@ import type { OfficeType } from "@/lib/db/types/character";
 import type { CountryId } from "@/lib/constants/countries";
 import { captureOfficeTransition } from "@/lib/analytics/officeTransitionAnalytics";
 import { cabinetOfficeTypeForCountry } from "@/lib/actions/officeActionBonus";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /**
  * NPP vote based on party lines: same party as nominee -> for; opposite -> against.
@@ -352,7 +353,7 @@ export async function processCabinetNominationLifecycle(
     .toArray();
 
   for (const nom of activeNominations) {
-    const preload = (nom.countryId ?? "US") === "US" ? cabinetPreload : undefined;
+    const preload = countryHasFeature("usLib", nom.countryId ?? "US") ? cabinetPreload : undefined;
     await castNPPCabinetVotes(db, nom, preload);
   }
 
@@ -586,7 +587,7 @@ export async function processCabinetNominationLifecycle(
         // leftover from an earlier design that routed DE through
         // nominations; removing it keeps the parliamentary appointment
         // flow uniform across UK/JP/DE/CN.
-        if (nom.countryId === "US" && nom.nomineeCharacterId) {
+        if (countryHasFeature("usLib", nom.countryId) && nom.nomineeCharacterId) {
           const cabinetOffice: OfficeType = { type: "usCabinet", positionId: nom.positionId };
           const careerEvent: CareerEvent = {
             type: "appointed",

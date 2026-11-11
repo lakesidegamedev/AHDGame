@@ -20,6 +20,7 @@ import {
 } from "@/lib/constants/referendum";
 import { announceReferendumDecision } from "@/lib/referendum/referendumWebhooks";
 import { recordWireEvent } from "@/lib/referendum/wire";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export type GrantReferendumAction = "grant" | "decline";
 
@@ -51,7 +52,7 @@ async function grantReferendumInTransaction(
   db: Db,
   input: GrantReferendumInput
 ): Promise<GrantReferendumResult> {
-  if (input.countryId !== "UK") {
+  if (!countryHasFeature("ukLib", input.countryId)) {
     return { status: 400, body: { error: "Referendums are UK-only." } };
   }
   if (!input.isPM && input.adminOverride !== true) {

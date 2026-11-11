@@ -8,6 +8,7 @@ import { planSuccessionTerritories } from "./rules/territory";
 import type { SuccessionCustodyAsset } from "./rules/custody";
 import type { SuccessorTerritory } from "./rules/territory";
 import { sovietUnionRegions1991 } from "@/lib/countries/ru/data/sovietUnionRegions1991";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /** The complete 1991 federal regions, including Serbia's two provinces.
  * Proposals are drawn from live region populations and GDP, so pre-vote
@@ -111,7 +112,7 @@ export async function openDefaultFederationPoliticalProposal(input: {
         consents: [],
       },
       source: getWorldEntityOrThrow("1991-default", sourceCountryId),
-      ...(sourceCountryId === "RU" ? { continuingDisplayName: "Russia" } : {}),
+      ...(countryHasFeature("ruLib", sourceCountryId) ? { continuingDisplayName: "Russia" } : {}),
       successors: participants
         .filter((id) => id !== sourceCountryId)
         .map((id) => getWorldEntityOrThrow("1991-default", id)),

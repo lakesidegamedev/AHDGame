@@ -39,6 +39,7 @@ import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
 import { referendumYesShare } from "@/lib/referendum/resolveYesShare";
 import { recordWireEvent, type WireInput } from "@/lib/referendum/wire";
 import { WIRE_SWING_THRESHOLD } from "@/lib/constants/referendum";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /**
  * Snapshot a region's cohort baseline at campaign open, from the Layer-1
@@ -164,7 +165,7 @@ export async function processReferendumLifecycle(
 
     if (ref.status === "requested") {
       if (
-        ref.countryId === "UK" &&
+        countryHasFeature("ukLib", ref.countryId) &&
         ministry?.status === "formed" &&
         ministry.pmNppId &&
         !ministry.pmCharacterId

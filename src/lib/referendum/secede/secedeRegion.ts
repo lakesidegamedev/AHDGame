@@ -35,6 +35,7 @@ import { promoteEconomyToNational } from "./promoteEconomyToNational";
 import { splitParties } from "./splitParties";
 import { carryOverOfficials } from "./carryOverOfficials";
 import { promoteResetV2ForIndependence } from "./promoteResetV2";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export interface SecedeRegionArgs {
   regionId: string;
@@ -53,7 +54,7 @@ export interface SecedeRegionResult {
 }
 
 function isSecedingCountryId(id: string): id is SecedingCountryId {
-  return id === "SCO" || id === "WAL";
+  return countryHasFeature("scoLib", id) || countryHasFeature("walLib", id);
 }
 
 export async function secedeRegion(db: Db, args: SecedeRegionArgs): Promise<SecedeRegionResult> {

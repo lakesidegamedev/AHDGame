@@ -18,6 +18,7 @@ import {
   type IncomeShares,
 } from "./rules/incomeTaxTiers";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 function regionIncomePopulation(
   state: Pick<State, "_id" | "countryId">,
@@ -27,7 +28,7 @@ function regionIncomePopulation(
   const live =
     year == null
       ? null
-      : state.countryId === "US"
+      : countryHasFeature("usLib", state.countryId)
         ? getUsSubstrateForYear(state._id, year)?.config
         : getCountrySubstrateForYear(state.countryId, state._id, year)?.marginals;
   const census =

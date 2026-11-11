@@ -15,6 +15,7 @@ import type {
 } from "@/lib/db/types";
 import { FEDERATION_ARCHIVED_POLITICAL_ROWS_COLLECTION } from "./materializeRussianCongress";
 import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 type HistoricalPoliticalRow = { _id: ObjectId | string; [key: string]: unknown };
 
@@ -162,7 +163,9 @@ export async function materializeFederationFederalRetirement(input: {
       $set: {
         dissolvedTurn: appliedOnTurn,
         updatedAt: now,
-        ...(sourceCountryId === "YU" ? { yuSettlementAppliedSinceTurn: appliedOnTurn } : {}),
+        ...(countryHasFeature("yuLib", sourceCountryId)
+          ? { yuSettlementAppliedSinceTurn: appliedOnTurn }
+          : {}),
       },
     },
     { session }

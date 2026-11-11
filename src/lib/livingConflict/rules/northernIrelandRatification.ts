@@ -5,6 +5,7 @@
  */
 import type { Bill, BillStatus } from "@/lib/db/types";
 import type { LivingConflictState } from "../types";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export const SUCCESS: ReadonlySet<BillStatus> = new Set(["signed", "veto_override"]);
 const FAILURE: ReadonlySet<BillStatus> = new Set([
@@ -23,7 +24,8 @@ export function northernIrelandRatificationDeltas(
 ): Record<string, number> {
   const latest = new Map<string, (typeof bills)[number]>();
   for (const bill of bills) {
-    if (bill.countryId !== "UK" && bill.countryId !== "IE") continue;
+    if (!countryHasFeature("ukLib", bill.countryId) && !countryHasFeature("ieLib", bill.countryId))
+      continue;
     const previous = latest.get(bill.countryId);
     if (
       !previous ||

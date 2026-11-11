@@ -1,5 +1,6 @@
 import { fundingResponse } from "../spendingChannel";
 import type { RegistryNode } from "../types";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /**
  * Social-tier nodes — P3a ships the income/poverty cluster's social side
@@ -146,7 +147,7 @@ export const socialMobilityNode: RegistryNode = {
     // country (US anchors 55 — the former collegeEnrollment center — GCSE
     // countries anchor 40), so the deviation term is centered per country and
     // stays ~0 at seed (parity with the old collegeEnrollment read).
-    const uniCenter = ctx.countryId === "US" ? 55 : 40;
+    const uniCenter = countryHasFeature("usLib", ctx.countryId) ? 55 : 40;
     const uni = ctx.current["education.universityEnrollment"] ?? uniCenter;
     const gini = ctx.current["social.incomeInequality"] ?? 42;
     const povLag = ctx.prev["economic.povertyRate"] ?? 13;

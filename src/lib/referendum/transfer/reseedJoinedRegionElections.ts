@@ -18,13 +18,14 @@ import {
   ensureDEElections,
 } from "@/lib/elections/scheduling";
 import { updateParliamentaryGovernmentSeats } from "@/lib/turn/parliamentaryGovernment";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export async function reseedJoinedRegionElections(
   db: Db,
   toCountryId: CountryId,
   now: Date
 ): Promise<void> {
-  if (toCountryId === "IE") {
+  if (countryHasFeature("ieLib", toCountryId)) {
     // Dáil, Local Council, and Cathaoirleach (regional executive) for the newcomer.
     await ensureIEElections(now);
     await ensureIELocalCouncilElections(now);
@@ -32,7 +33,7 @@ export async function reseedJoinedRegionElections(
     // Grow the Dáil's recorded size + majority threshold on the government doc.
     await updateParliamentaryGovernmentSeats(db, toCountryId);
   }
-  if (toCountryId === "DE") {
+  if (countryHasFeature("deLib", toCountryId)) {
     // Bundestag races for the newcomer, then the chamber size and majority
     // threshold. `ensureDEElections` enumerates `states` by countryId, so it
     // picks up a Land that arrived a moment ago without being told which one.

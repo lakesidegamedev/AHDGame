@@ -14,6 +14,7 @@ import type {
   PoliticalParty,
 } from "@/lib/db/types";
 import { formatElectionTypeLabel, MULTI_SEAT_TYPES } from "@/lib/utils/electionLabels";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export async function updatePoliticianPagesAfterElection(
   db: Db,
@@ -39,7 +40,8 @@ export async function updatePoliticianPagesAfterElection(
         .findOne({ _id: election.state, countryId: election.countryId })
     : null;
   const stateName =
-    state?.name ?? (election.state === "US" ? "United States" : (election.state ?? "Unknown"));
+    state?.name ??
+    (countryHasFeature("usLib", election.state) ? "United States" : (election.state ?? "Unknown"));
   const year = election.endTime
     ? new Date(election.endTime).getFullYear()
     : new Date().getFullYear();
