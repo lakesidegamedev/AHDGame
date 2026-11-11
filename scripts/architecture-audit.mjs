@@ -174,8 +174,6 @@ const SIZE_CAP_EXEMPT = [
   // Pure-data political-legislation catalogs (SP3): 109 authored laws per
   // country transcribed from the approved design docs — declarative
   // PoliticalLaw records only, validated by validate.ts, no logic.
-  "src/lib/politicalLegislation/laws/usLaws.ts",
-  "src/lib/politicalLegislation/laws/ukLaws.ts",
   "src/lib/politicalLegislation/laws/ruLaws.ts",
   "src/lib/politicalLegislation/laws/ddLaws.ts",
 ];
