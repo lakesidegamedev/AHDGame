@@ -20,7 +20,7 @@
 import { getAuditRequestContext } from "@/lib/observability/context";
 import type { Db } from "mongodb";
 import { getCountryConfig, type CountryId } from "@/lib/constants/countries";
-import { resolvePresetIdFromGameState } from "@/lib/world/countryReadinessContract";
+import { resolvePresetIdFromGameState } from "@/lib/world/presetId";
 import type { GameState } from "@/lib/db/types";
 import { getEraUnitScale } from "@/lib/constants/sectorSeedEra";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";

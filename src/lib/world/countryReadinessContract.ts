@@ -38,6 +38,9 @@ import {
 } from "@/lib/world/countryRequirementLevel";
 import { isShippingPreset, tierFor } from "@/lib/world/eraRoster";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { resolvePresetIdFromGameState } from "./presetId";
+
+export { resolvePresetIdFromGameState };
 
 // ─── Capability catalogue ────────────────────────────────────────────────────
 
@@ -930,13 +933,4 @@ export function canOpenCountryToPlayers(
     return { ok: true, report };
   }
   return { ok: false, report };
-}
-
-/** Resolve the active world preset from a gameState-like document. */
-export function resolvePresetIdFromGameState(
-  gameState: { preset?: string | null } | null | undefined,
-  fallback = "2019-default"
-): string {
-  const preset = gameState?.preset?.trim();
-  return preset && preset.length > 0 ? preset : fallback;
 }

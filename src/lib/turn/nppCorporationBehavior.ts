@@ -85,7 +85,7 @@ import { loadGroupDominanceSectorResolver } from "@/lib/corporations/groupDomina
 import type { BuildCapexTxInput } from "@/lib/corporations/capexTxLog";
 
 import { buildNppNationalShareResolver } from "@/lib/turn/npp/nationalDominancePricing";
-import { resolvePresetIdFromGameState } from "@/lib/world/countryReadinessContract";
+import { resolvePresetIdFromGameState } from "@/lib/world/presetId";
 import { buildNppPriceSignals } from "@/lib/turn/npp/priceSignals";
 import type { RelocationPrimeBank } from "@/lib/corporations/issueRelocationBond";
 import { loadNppBankRateSnapshot } from "@/lib/turn/npp/bankRateSnapshot";

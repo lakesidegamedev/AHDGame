@@ -4,21 +4,13 @@ import { SEED_TAX_RATES_1953 } from "@/lib/politicalLegislation/seedTaxRates";
 const CA_GDP_2027 = 3_450_000_000_000;
 
 /**
- * Canada's 2027 national budget covers general government: federal,
- * provincial and territorial together, because the tax laws carry the combined
- * federal and provincial rates. Provinces keep their own regional budgets for
- * what they decide locally.
- *
- * GDP and population match the provincial rollup in caRegions2027.ts. The
- * revenue and spending envelope follows the IMF World Economic Outlook
- * general-government ratios for Canada (revenue about 41% and expenditure
- * about 43% of GDP). Debt is federal and provincial market debt, not the IMF
- * gross figure that also counts public pension liabilities. Defence is 2% of
- * GDP, the NATO pledge. Category splits, tax bases and the revenue residual are
- * game allocations reconciled to those totals.
- * https://www.imf.org/en/Publications/WEO
- * https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1010014701
- * https://www.budget.canada.ca/
+ * Canada's 2027 general-government budget (federal plus provincial), since the
+ * tax laws carry combined rates; provinces keep regional budgets for local
+ * choices. GDP and population match caRegions2027.ts. Totals follow the IMF WEO
+ * general-government ratios (revenue ~41%, spending ~43% of GDP); debt is
+ * federal and provincial market debt; defence is the 2% NATO pledge. Category
+ * splits, tax bases and the revenue residual are game allocations.
+ * Sources: imf.org/en/Publications/WEO, StatCan table 10-10-0147-01, budget.canada.ca
  */
 export const CA_NATIONAL_BUDGET_2027: NationalBudgetSeedConfig = {
   budgetId: "CA",

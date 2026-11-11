@@ -5,7 +5,7 @@ import { requireBotToken } from "@/lib/api/requireBotToken";
 import { checkRateLimit, rateLimitResponse, BOT_READ_LIMITS } from "@/lib/api/rateLimit";
 import { escapeRegex } from "@/lib/utils/escapeRegex";
 import { getEnabledCountryIdsFromDb } from "@/lib/countryAccess";
-import { resolvePresetIdFromGameState } from "@/lib/world/countryReadinessContract";
+import { resolvePresetIdFromGameState } from "@/lib/world/presetId";
 import type { State, GameState } from "@/lib/db/types";
 import { filterCountryResults } from "./countryResults";
 import { charactersCollection } from "@/lib/db/repositories/characters";

@@ -1,6 +1,6 @@
 /** Batched, projected capacity observations for funded build advice. */
 import type { Db } from "mongodb";
-import { resolvePresetIdFromGameState } from "@/lib/world/countryReadinessContract";
+import { resolvePresetIdFromGameState } from "@/lib/world/presetId";
 import { buildDemandProducer } from "./rules/buildDemandProducers";
 import { getCorporateSectorsCollection } from "@/lib/db/collections/corporateSectors";
 import { getCorporationsCollection } from "@/lib/db/collections/corporations";

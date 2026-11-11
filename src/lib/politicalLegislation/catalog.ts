@@ -12,7 +12,7 @@ import { CAPITAL_GAINS_TAX_KEYS } from "@/lib/budget/rules/capitalGainsTax";
 import { BASELINE_LEVEL_OVERRIDES_1991 } from "./seeds/baselineLevels1991";
 import { POST_1991_FALLBACK_YEAR } from "@/lib/politicalMetrics/seeds/baselineAnchors";
 import { DE_LAWS } from "@/lib/countries/de/data/deLaws";
-import { CA_LAWS } from "./laws/caLaws";
+import { CA_LAWS } from "@/lib/countries/ca/data/caLaws";
 import { JP_LAWS } from "@/lib/countries/jp/data/jpLaws";
 import { CN_LAWS } from "@/lib/countries/cn/data/cnLaws";
 import { DD_LAWS } from "./laws/ddLaws";

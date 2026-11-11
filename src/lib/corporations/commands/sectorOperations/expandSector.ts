@@ -7,7 +7,7 @@ import { NextResponse } from "next/server";
 import type { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { getEraUnitScale } from "@/lib/constants/sectorSeedEra";
-import { resolvePresetIdFromGameState } from "@/lib/world/countryReadinessContract";
+import { resolvePresetIdFromGameState } from "@/lib/world/presetId";
 import { requireCorporationActionsEnabled } from "@/lib/api/requireCorporationActions";
 import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { parseJsonBody } from "@/lib/api/validate";
