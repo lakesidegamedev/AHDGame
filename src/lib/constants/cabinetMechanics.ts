@@ -27,6 +27,7 @@ import {
 import { SCO_CABINET_MECHANICS } from "./scoCabinet";
 import { WAL_CABINET_MECHANICS } from "./walCabinet";
 import { ECON_COUNTRY_CABINET_MECHANICS } from "./econCountryCabinet";
+import { CA_CABINET_MECHANICS } from "@/lib/countries/ca/cabinet/mechanics";
 
 export type { CabinetPositionMechanics } from "./cabinetMechanicsTypes";
 export type { CabinetNameBand, CabinetPositionDef } from "./cabinetPositions";
@@ -68,6 +69,7 @@ export const MECHANICS_BY_COUNTRY: Record<string, Record<string, CabinetPosition
   FI: ECON_COUNTRY_CABINET_MECHANICS,
   GR: ECON_COUNTRY_CABINET_MECHANICS,
   BR: ECON_COUNTRY_CABINET_MECHANICS,
+  CA: CA_CABINET_MECHANICS,
 };
 
 /** Get mechanics for a specific position in a country. Returns undefined if not found. */

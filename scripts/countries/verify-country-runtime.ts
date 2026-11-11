@@ -933,8 +933,6 @@ ABSENT_UPSTREAM.CA = {
   EXECUTIVE_SEALS: "no seal; getSeal returns null and the UI omits it",
   FULL_ERA_REGION_BUNDLES:
     "no row in the seed-diagnostic registry; the seed runner is the authority",
-  ORDERS_BY_COUNTRY: "the cabinet stage authors Canada's ministerial orders",
-  MECHANICS_BY_COUNTRY: "the cabinet stage authors Canada's cabinet mechanics",
   POPULATION_ANCHOR_BUNDLES: "no population anchors are authored for any era",
   COUNTRY_MODIFIER_PATCHES: "no per-modifier override; the global and era defs apply unpatched",
   COUNTRY_ERA1991_PATCHES: "Canada is absent from the 1991 world",

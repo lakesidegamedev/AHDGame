@@ -233,6 +233,8 @@ export const CA_ESTATE_PORTFOLIO: Record<string, string> = {
   minister_of_industry: "commerce",
   minister_of_housing: "housing",
   minister_of_environment: "interior",
+  minister_of_natural_resources: "interior",
+  minister_of_agriculture: "agriculture",
   minister_of_labour: "labor",
 };
 

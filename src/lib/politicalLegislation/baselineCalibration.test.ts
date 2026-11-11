@@ -20,6 +20,7 @@ const BASES: Record<CalibratedCountryId, FiscalBase> = {
   UK: { gdp: 19_800_000_000, population: 52_600_000 },
   RU: { gdp: 1_400_000_000_000, population: 189_500_000 },
   DD: { gdp: 50_000_000_000, population: 18_400_000 },
+  CA: { gdp: 3_450_000_000_000, population: 41_500_000 },
 };
 
 /** Seeded-outlays targets (§4.2) and the catalog docs' §5 computed deviations. */
@@ -33,6 +34,10 @@ const TARGETS: Record<
   // DD (RU-parity catalog on the DDM 50B basis): baseline rollup ≈ M 16.11B
   // against 17.3B seeded outlays (spending categories + state grants).
   DD: { outlays: 17_300_000_000, docDeviation: -0.069, revenue: 450_000_000 },
+  // Canada has no catalog document: its targets are the authored rollup itself,
+  // so this row pins the opening book against silent drift rather than
+  // reconciling it to an external figure.
+  CA: { outlays: 809_800_000_000, docDeviation: 0, revenue: 3_450_000_000 },
 };
 
 function baselineTotals(countryId: CalibratedCountryId) {
@@ -61,7 +66,7 @@ function baselineTotals(countryId: CalibratedCountryId) {
 }
 
 describe("baseline fiscal calibration (±15% + doc-deviation pinning)", () => {
-  for (const countryId of ["US", "UK", "RU", "DD"] as const) {
+  for (const countryId of ["US", "UK", "RU", "DD", "CA"] as const) {
     it(`${countryId}: baseline sum within ±15% of seeded outlays and ±1pt of the doc's §5 figure`, () => {
       const { cost } = baselineTotals(countryId);
       const target = TARGETS[countryId];
