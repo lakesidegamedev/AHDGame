@@ -9,6 +9,7 @@ import { BR_IDENTITY } from "@/lib/countries/br/identity";
 import { SCO_IDENTITY } from "@/lib/countries/sco/identity";
 import { WAL_IDENTITY } from "@/lib/countries/wal/identity";
 import { CA_IDENTITY } from "@/lib/countries/ca/identity";
+import { QC_IDENTITY } from "@/lib/countries/qc/identity";
 
 export interface CensusLabelSet {
   cardTitles: {
@@ -53,6 +54,7 @@ export const REGION_CENSUS_LABELS: Partial<Record<CountryId, CensusLabelSet>> = 
   DE: DE_IDENTITY.regionCensusLabels,
   IE: IE_IDENTITY.regionCensusLabels,
   CA: CA_IDENTITY.regionCensusLabels,
+  QC: QC_IDENTITY.regionCensusLabels,
   CN: CN_IDENTITY.regionCensusLabels,
   BR: BR_IDENTITY.regionCensusLabels,
   DD: DD_IDENTITY.regionCensusLabels,

@@ -57,6 +57,7 @@ import { UKR_ECONOMY } from "@/lib/countries/ukr/economy";
 import { BAL_ECONOMY } from "@/lib/countries/bal/economy";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { CA_ECONOMY } from "@/lib/countries/ca/economy";
+import { QC_ECONOMY } from "@/lib/countries/qc/economy";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
 import { governorExecutiveOrdersCollection } from "@/lib/db/repositories/governorExecutiveOrders";
@@ -115,6 +116,7 @@ export const LEGISLATION_COUNTRY_SCOPES: Record<
   SCO: SCO_ECONOMY.legislationScope,
   WAL: WAL_ECONOMY.legislationScope,
   CA: CA_ECONOMY.legislationScope,
+  QC: QC_ECONOMY.legislationScope,
 };
 
 /**

@@ -184,6 +184,12 @@ export const JP_CORE5_NORMALS = {
   ],
 };
 
+/** Japan was admitted to the United Nations in 1956. */
+export const JP_UN_MEMBER_SINCE = 1956;
+
+/** Coverage region in the world entity tables. */
+export const JP_WORLD_REGION = "asia" as const;
+
 /** The continent Japan is filed under in the world tables. */
 export const JP_CONTINENT = "Asia";
 

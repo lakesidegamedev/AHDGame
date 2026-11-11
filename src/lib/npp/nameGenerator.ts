@@ -984,6 +984,7 @@ export function generateUniqueNPPNameAndGender(
     US: generateNPPNameAndGender,
     UK: generateUKNameAndGender,
     CA: generateCANameAndGender,
+    QC: generateCANameAndGender,
     DE: generateDENameAndGender,
     JP: generateJPNameAndGender,
     CN: generateCNNameAndGender,

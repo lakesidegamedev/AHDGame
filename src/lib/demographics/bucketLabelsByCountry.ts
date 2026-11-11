@@ -83,6 +83,7 @@ export const COUNTRY_BUCKET_LABELS: Record<string, CountryBucketLabels> = {
   SCO: SCO_BUCKET_LABELS,
   WAL: WAL_BUCKET_LABELS,
   CA: CA_BUCKET_LABELS,
+  QC: CA_BUCKET_LABELS, // Quebec keeps Canada's electorate and terms
 };
 
 /** Countries whose labels carry an English gloss because the script is not Latin. */

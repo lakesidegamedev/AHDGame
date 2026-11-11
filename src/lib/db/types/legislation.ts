@@ -1090,7 +1090,8 @@ export interface LegislationType {
     | "dd"
     | "sco"
     | "wls"
-    | "ca";
+    | "ca"
+    | "qc";
 
   /**
    * Political-legislation v2 (spec §6): the typed law's metric targets,

@@ -18,7 +18,6 @@
     "src/lib/turn/corporation/fundedProducerTurn.ts": 1854,
     "src/lib/turn/corporation/sectorCalculations.ts": 1858,
     "src/lib/turn/corporation/sectorTurn.ts": 1730,
-    "src/lib/world/worldEntityManifest.ts": 1580,
     "src/simulation/phases/turnPhaseRegistry.ts": 1724
   }
 }

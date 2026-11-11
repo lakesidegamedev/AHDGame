@@ -29,6 +29,7 @@ import { BLR_IDENTITY } from "@/lib/countries/blr/identity";
 import { UKR_IDENTITY } from "@/lib/countries/ukr/identity";
 import { BAL_IDENTITY } from "@/lib/countries/bal/identity";
 import { CA_IDENTITY } from "@/lib/countries/ca/identity";
+import { QC_IDENTITY } from "@/lib/countries/qc/identity";
 
 /**
  * National-identity layer for state-owned / National Corporation surfaces.
@@ -125,6 +126,7 @@ export const NATIONAL_IDENTITY: Record<CountryId, NationalIdentity> = {
   // Latent secession country — Welsh flavor; refined at activation (SP2).
   WAL: WAL_IDENTITY.national,
   CA: CA_IDENTITY.national,
+  QC: QC_IDENTITY.national,
 };
 
 export function getNationalIdentity(countryId: CountryId): NationalIdentity {

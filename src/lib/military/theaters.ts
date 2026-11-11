@@ -37,6 +37,7 @@ import { BR_IDENTITY } from "@/lib/countries/br/identity";
 import { SCO_IDENTITY } from "@/lib/countries/sco/identity";
 import { WAL_IDENTITY } from "@/lib/countries/wal/identity";
 import { CA_IDENTITY } from "@/lib/countries/ca/identity";
+import { QC_IDENTITY } from "@/lib/countries/qc/identity";
 
 /**
  * Situation-board dressing for a nation's command: classification strip, high-command
@@ -69,6 +70,7 @@ export const COUNTRY_COMMAND_FLAVOR: Record<string, CountryCommandFlavor> = {
   UK: UK_IDENTITY.commandFlavor,
   IE: IE_IDENTITY.commandFlavor,
   CA: CA_IDENTITY.commandFlavor,
+  QC: QC_IDENTITY.commandFlavor,
   DE: DE_IDENTITY.commandFlavor,
   DD: DD_IDENTITY.commandFlavor,
   JP: JP_IDENTITY.commandFlavor,

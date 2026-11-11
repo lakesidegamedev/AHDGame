@@ -49,6 +49,7 @@ export type StartingCountryId = Exclude<
   | "SCO"
   | "WAL"
   | "CA"
+  | "QC"
 >;
 
 interface StartingEconomyFacts {
