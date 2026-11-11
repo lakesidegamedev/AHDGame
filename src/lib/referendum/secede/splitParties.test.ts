@@ -138,4 +138,19 @@ describe("splitParties", () => {
     // Region party-ledger history dissolved.
     expect(cols.partyBudget).toHaveLength(0);
   });
+  it("drops slates of independentized parties instead of colliding on one independent slate per election", async () => {
+    const { db, cols } = seedWorld();
+    cols.recruitmentSlates = [
+      { _id: "s1", countryId: "SCO", partyId: "20", electionId: "e1" }, // SNP, carried
+      { _id: "s2", countryId: "SCO", partyId: "21", electionId: "e1" }, // LAB, dissolved
+      { _id: "s3", countryId: "SCO", partyId: "22", electionId: "e1" }, // CON, dissolved
+    ];
+    cols.slateCandidates = [
+      { _id: "c1", slateId: "s1", countryId: "SCO", partyId: "20", electionId: "e1" },
+      { _id: "c2", slateId: "s2", countryId: "SCO", partyId: "21", electionId: "e1" },
+    ];
+    await splitParties(db, "SCO", "UK", "SCO");
+    expect(cols.recruitmentSlates.map((r) => [r._id, r.partyId])).toEqual([["s1", "1"]]);
+    expect(cols.slateCandidates.map((r) => [r._id, r.partyId])).toEqual([["c1", "1"]]);
+  });
 });
