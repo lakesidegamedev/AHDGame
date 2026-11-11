@@ -6,6 +6,7 @@ import { loadPoliticalApprovalBases } from "@/lib/politicalLegislation/political
 import { loadResetApprovalModifiers } from "./loadApprovalModifiers";
 import { RESET_V2_SEED_REVISION } from "@/lib/resetVersions/rules";
 import type { GameState } from "@/lib/db/types/gameState";
+import type { ResetMetricSnapshot } from "./rules/snapshot";
 const boards = buildOpeningMetricSnapshots1991("approval-test", 1).filter(
   (board) => board.countryId === "UK"
 );
@@ -115,6 +116,45 @@ describe("Metrics v2 approval source", () => {
     db.collection("gameState").findOne.mockResolvedValue({ ...game, currentTurn: 9 } as GameState);
     db.collection("resetMetricSnapshots").find().toArray.mockResolvedValue(behind);
     await expect(loadPoliticalApprovalBases(db as unknown as Db, "UK")).rejects.toThrow();
+  });
+  it("judges prefetched board lag per country, not across every country's boards", async () => {
+    const later = { ...game, currentTurn: 3 } as GameState;
+    const ukLagging = boards.map((board) => ({ ...board, asOfTurn: 2 }));
+    const otherCurrent = ukLagging.map((board) => ({
+      ...board,
+      _id: board._id.replace(/^UK:/, "IE:"),
+      countryId: "IE",
+      asOfTurn: 3,
+    }));
+    const mixedAcrossCountries = [
+      ...ukLagging,
+      ...otherCurrent,
+    ] as unknown as ResetMetricSnapshot[];
+    const result = await loadResetApprovalModifiers(
+      db as unknown as Db,
+      "UK",
+      states.map((state) => state._id),
+      later,
+      undefined,
+      mixedAcrossCountries,
+      []
+    );
+    expect(result!.metrics.length).toBe(states.length);
+    // Within one country a mixed set still fails.
+    const mixedWithinCountry = ukLagging.map((board, i) =>
+      i === 0 ? { ...board, asOfTurn: 3 } : board
+    ) as unknown as ResetMetricSnapshot[];
+    await expect(
+      loadResetApprovalModifiers(
+        db as unknown as Db,
+        "UK",
+        states.map((state) => state._id),
+        later,
+        undefined,
+        mixedWithinCountry,
+        []
+      )
+    ).rejects.toThrow();
   });
   it("does not query the v2 collection when the country is not activated", async () => {
     const count = db.collection("resetMetricSnapshots").find.mock.calls.length;
