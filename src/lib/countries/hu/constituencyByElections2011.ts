@@ -10,22 +10,13 @@ import {
   type HuModernByElectionBallot,
   type HuModernByElectionCount,
 } from "./rules/constituencyByElection2011";
-import type {
-  Election,
-  ElectionCandidate,
-  ElectedOfficial,
-  ElectionVoteTally,
-  GameState,
-  NPP,
-  State,
-  StateRegistrationPool,
-} from "@/lib/db/types";
+import type { Election, ElectionCandidate, ElectedOfficial } from "@/lib/db/types";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { yearOfTurn } from "@/lib/utils/gameDate";
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
 import { scalePoolToRegistered } from "@/lib/elections/rules/registration";
 import { apportionSeats } from "@/lib/seeds/reference/rules/apportionSeats";
-import { HU_2011_COUNTS_COLLECTION, type Hu2011AssemblyRecord } from "./assemblyCount2011";
+import { type Hu2011AssemblyRecord } from "./assemblyCount2011";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
@@ -39,6 +30,8 @@ import { notificationsCollection } from "@/lib/db/repositories/notifications";
 import type { Document } from "mongodb";
 import { stateRegistrationPoolCollection } from "@/lib/db/repositories/stateRegistrationPool";
 import { hu2011AssemblyOfficeArchivesCollection } from "@/lib/db/repositories/hu2011AssemblyOfficeArchives";
+import { hu2011AssemblyCountsCollection } from "@/lib/db/repositories/hu2011AssemblyCounts";
+import { hu2011ConstituencyByElectionsCollection } from "@/lib/db/repositories/hu2011ConstituencyByElections";
 
 export const HU_2011_BY_ELECTIONS_COLLECTION = "hu2011ConstituencyByElections";
 export interface HuModernByElectionRecord {
@@ -79,13 +72,11 @@ async function cancelJobs(
 ) {
   if (!jobs.length) return;
   const ids = jobs.flatMap((job) => job.electionIds.map((id) => new ObjectId(id)));
-  await db
-    .collection<HuModernByElectionRecord>(HU_2011_BY_ELECTIONS_COLLECTION)
-    .updateMany(
-      { _id: { $in: jobs.map((job) => job._id) }, completedAtTurn: { $exists: false } },
-      { $set: { completedAtTurn: turn } },
-      { session }
-    );
+  await hu2011ConstituencyByElectionsCollection<HuModernByElectionRecord>(db).updateMany(
+    { _id: { $in: jobs.map((job) => job._id) }, completedAtTurn: { $exists: false } },
+    { $set: { completedAtTurn: turn } },
+    { session }
+  );
   await electionsCollection(db).updateMany(
     { _id: { $in: ids } },
     { $set: { status: "cancelled", resolving: false, updatedAt: now } },
@@ -113,7 +104,7 @@ async function materializeHuModernByElectionOpening(input: {
     }
   );
   if (game?.preset !== "1991-default" || game.huAssemblyReformedAtYear == null) return [];
-  const parent = await db.collection<Hu2011AssemblyRecord>(HU_2011_COUNTS_COLLECTION).findOne(
+  const parent = await hu2011AssemblyCountsCollection<Hu2011AssemblyRecord>(db).findOne(
     { seatedAtTurn: { $exists: true } },
     {
       session,
@@ -130,7 +121,7 @@ async function materializeHuModernByElectionOpening(input: {
     }
   );
   if (!parent || parent.seatedAtTurn == null || !parent.seatedAt) return [];
-  const journal = db.collection<HuModernByElectionRecord>(HU_2011_BY_ELECTIONS_COLLECTION);
+  const journal = hu2011ConstituencyByElectionsCollection<HuModernByElectionRecord>(db);
   const pending = await journal
     .find({ completedAtTurn: { $exists: false } }, { session })
     .toArray();
@@ -308,7 +299,7 @@ async function materializeHuModernByElectionOpening(input: {
   }>(db).updateOne({ _id: "HU" }, { $inc: { hu1991MandateGeneration: 1 } }, { session });
   if (chamberLock.matchedCount !== 1)
     throw new Error("Modern Hungarian chamber authority is missing");
-  const claim = await db.collection<Hu2011AssemblyRecord>(HU_2011_COUNTS_COLLECTION).updateOne(
+  const claim = await hu2011AssemblyCountsCollection<Hu2011AssemblyRecord>(db).updateOne(
     {
       _id: parent._id,
       constituencyByElectionGeneration: parent.constituencyByElectionGeneration ?? {
@@ -358,9 +349,10 @@ async function materializeHuModernByElectionOpening(input: {
   return electionIds;
 }
 export async function openHuModernByElections(db: Db, turn: number, now: Date): Promise<string[]> {
-  const parent = await db
-    .collection<Hu2011AssemblyRecord>(HU_2011_COUNTS_COLLECTION)
-    .findOne({ seatedAtTurn: { $exists: true } }, { projection: { _id: 1 } });
+  const parent = await hu2011AssemblyCountsCollection<Hu2011AssemblyRecord>(db).findOne(
+    { seatedAtTurn: { $exists: true } },
+    { projection: { _id: 1 } }
+  );
   if (!parent) return [];
   return runRequiredTransaction(
     (session) => materializeHuModernByElectionOpening({ db, session, turn, now }),
@@ -377,7 +369,7 @@ async function materializeHuModernByElectionResolution(input: {
 }): Promise<number> {
   const { db, session, receiptId, turn, now } = input;
   assertTransaction(session, turn, now);
-  const journal = db.collection<HuModernByElectionRecord>(HU_2011_BY_ELECTIONS_COLLECTION);
+  const journal = hu2011ConstituencyByElectionsCollection<HuModernByElectionRecord>(db);
   const job = await journal.findOne({ _id: receiptId }, { session });
   if (!job || job.completedAtTurn != null) return 0;
   const chamber = await governmentFormationsCollection<{
@@ -385,12 +377,10 @@ async function materializeHuModernByElectionResolution(input: {
     hu1991MandateGeneration?: number;
   }>(db).updateOne({ _id: "HU" }, { $inc: { hu1991MandateGeneration: 1 } }, { session });
   if (chamber.matchedCount !== 1) throw new Error("Modern Hungarian chamber authority is missing");
-  const parent = await db
-    .collection<Hu2011AssemblyRecord>(HU_2011_COUNTS_COLLECTION)
-    .findOne(
-      { seatedAtTurn: { $exists: true } },
-      { session, sort: { seatedAtTurn: -1 }, projection: { _id: 1 } }
-    );
+  const parent = await hu2011AssemblyCountsCollection<Hu2011AssemblyRecord>(db).findOne(
+    { seatedAtTurn: { $exists: true } },
+    { session, sort: { seatedAtTurn: -1 }, projection: { _id: 1 } }
+  );
   const game = await gameStateCollection(db).findOne(
     { _id: "current" },
     {

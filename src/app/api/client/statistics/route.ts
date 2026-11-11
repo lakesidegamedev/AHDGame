@@ -2,12 +2,12 @@ import { errorResponse } from "@/lib/api/errors";
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import {
-  COLLECTION_NAME,
   MAX_BODY_BYTES,
   clientStatisticsReportSchema,
   toStoredDocument,
   type ClientSimulationStatisticsDoc,
 } from "@/lib/clientStatistics";
+import { clientSimulationStatisticsCollection } from "@/lib/db/repositories/clientSimulationStatistics";
 
 export const dynamic = "force-dynamic";
 // Bound anonymous ingress without keeping per-IP or account identifiers.
@@ -102,9 +102,9 @@ export async function POST(request: Request) {
 
   try {
     const db = await getDb();
-    await db
-      .collection<ClientSimulationStatisticsDoc>(COLLECTION_NAME)
-      .insertOne(toStoredDocument(parsed.data, Date.now()));
+    await clientSimulationStatisticsCollection<ClientSimulationStatisticsDoc>(db).insertOne(
+      toStoredDocument(parsed.data, Date.now())
+    );
   } catch {
     return noStore(errorResponse(500, "Unable to store report"));
   }

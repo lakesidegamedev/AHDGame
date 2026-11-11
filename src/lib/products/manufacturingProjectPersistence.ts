@@ -8,14 +8,15 @@ import type { Corporation } from "@/lib/db/types";
 import { tickManufacturingProject } from "./rules/manufacturingRules";
 import {
   MANUFACTURING_PRODUCT_ACTIVE_INDEX_V2,
-  MANUFACTURING_PRODUCT_PROJECTS_V2,
   type ManufacturingProductProject,
   type ManufacturingDevelopmentCashReceiptV2,
 } from "./manufacturingProject";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { manufacturingProductProjectsV2Collection } from "@/lib/db/repositories/manufacturingProductProjectsV2";
+import type { Document } from "mongodb";
 
 export async function ensureManufacturingProductProjectIndexesV2(db: Db): Promise<string> {
-  await db.collection(MANUFACTURING_PRODUCT_PROJECTS_V2).createIndex(
+  await manufacturingProductProjectsV2Collection<Document>(db).createIndex(
     { activeCorporationId: 1 },
     {
       name: MANUFACTURING_PRODUCT_ACTIVE_INDEX_V2,
@@ -138,14 +139,15 @@ export async function consumeManufacturingDevelopmentReceiptsV2(input: {
   }
 
   if (projectOps.length > 0) {
-    const result = await input.db
-      .collection<ManufacturingProductProject>(MANUFACTURING_PRODUCT_PROJECTS_V2)
-      .bulkWrite(projectOps, { ordered: false });
+    const result = await manufacturingProductProjectsV2Collection<ManufacturingProductProject>(
+      input.db
+    ).bulkWrite(projectOps, { ordered: false });
     if (result.matchedCount !== projectOps.length) {
       // A concurrent retirement or clock writer can win. Only the stored
       // acknowledgment allows its matching paid cash receipt to be cleared.
-      const current = await input.db
-        .collection<ManufacturingProductProject>(MANUFACTURING_PRODUCT_PROJECTS_V2)
+      const current = await manufacturingProductProjectsV2Collection<ManufacturingProductProject>(
+        input.db
+      )
         .find({ _id: { $in: [...nextByCorporationId.values()].map((project) => project._id) } })
         .project<ManufacturingProductProject>(activeManufacturingProductProjectProjection())
         .toArray();

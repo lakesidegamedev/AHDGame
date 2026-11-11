@@ -3,25 +3,9 @@ import { ALIGNMENT_POLES, type AlignmentPoleId } from "@/lib/constants/alignment
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { type OrganizationCategory } from "@/lib/constants/orgCategory";
 import { NATIONAL_TERMINAL_STATUSES } from "@/lib/congress/billProposalLimits";
-import type { Bill, BillStatus, NPP, NppForeignPolicyStage } from "@/lib/db/types";
-import type { CountryAlignment } from "@/lib/db/types/countryAlignment";
-import type { ConflictDoc } from "@/lib/db/types/conflict";
-import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
-import type { GovernmentApproval } from "@/lib/db/types/governmentApproval";
-import type { BattleDeclarationDoc } from "@/lib/db/types/battleDeclaration";
-import type {
-  OrganizationLeadershipElection,
-  OrganizationLegislation,
-  OrganizationMembership,
-  OrganizationMembershipProposal,
-} from "@/lib/db/types/internationalOrganization";
-import type { Tariff } from "@/lib/db/types/tariff";
-import type { TradeEmbargo } from "@/lib/db/types/tradeEmbargo";
-import type { TradeFlowSnapshot } from "@/lib/db/types/tradeFlowSnapshot";
+import type { BillStatus, NppForeignPolicyStage } from "@/lib/db/types";
 import { loadOrganizationDefWithPowers } from "@/lib/internationalOrganizations/service";
 import { buildActiveNationalBillFilter } from "@/lib/legislature/nationalBillScope";
-import type { MilitaryUnit } from "@/lib/db/types/militaryUnit";
-import type { PeaceOfferDoc } from "@/lib/db/types/peaceOffer";
 import type { PersistedSphereMembership } from "@/lib/world/spheres/membershipStore";
 import { isNppAutonomyActive } from "./featureFlag";
 import { executeForeignPolicyChoice } from "./foreignPolicyActions";
@@ -33,7 +17,6 @@ import {
   foreignPolicyStageFrom,
 } from "./foreignPolicyRollout";
 import {
-  DECISION_COLLECTION,
   MINIMUM_ACTION_SCORE,
   MAX_ALTERNATIVES,
   STANDARD_COOLDOWN_TURNS,
@@ -82,6 +65,7 @@ import { sphereMembershipsCollection } from "@/lib/db/repositories/sphereMembers
 import { organizationMembershipProposalsCollection } from "@/lib/db/repositories/organizationMembershipProposals";
 import { organizationLeadershipElectionsCollection } from "@/lib/db/repositories/organizationLeadershipElections";
 import { peaceOffersCollection } from "@/lib/db/repositories/peaceOffers";
+import { nppForeignPolicyDecisionsCollection } from "@/lib/db/repositories/nppForeignPolicyDecisions";
 function buildOpinion(context: ForeignPolicyContext, targetCountryId: CountryId): CountryOpinion {
   const factors: OpinionFactor[] = [];
   const sourceAlignment = context.alignments.find(
@@ -380,8 +364,7 @@ async function loadContext(
     federalBudgetCollection<{ countryId: CountryId; debtToGdpRatio?: number }>(db).findOne({
       countryId,
     }),
-    db
-      .collection<PersistedForeignPolicyDecision>(DECISION_COLLECTION)
+    nppForeignPolicyDecisionsCollection<PersistedForeignPolicyDecision>(db)
       .find({
         countryId,
         turn: { $gte: Math.max(0, currentTurn - TRADE_ESCALATION_COOLDOWN_TURNS) },
@@ -565,7 +548,7 @@ export async function processAutonomousForeignPolicy(
             : "No permitted choice cleared the action threshold.",
     createdAt: now,
   };
-  const decisions = db.collection<PersistedForeignPolicyDecision>(DECISION_COLLECTION);
+  const decisions = nppForeignPolicyDecisionsCollection<PersistedForeignPolicyDecision>(db);
   const write = await decisions.updateOne(
     { countryId, turn: currentTurn },
     { $setOnInsert: decision },

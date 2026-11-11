@@ -14,10 +14,8 @@ import type {
   NppMarketEntryFunnel,
   NppMarketEntryReason,
 } from "@/lib/db/types/marketFormation";
-import {
-  NPP_MARKET_ENTRY_FUNNEL_COLLECTION,
-  NPP_MARKET_ENTRY_FUNNEL_RETENTION_TURNS,
-} from "./entryFunnelSnapshot";
+import { NPP_MARKET_ENTRY_FUNNEL_RETENTION_TURNS } from "./entryFunnelSnapshot";
+import { nppMarketEntryFunnelsCollection } from "@/lib/db/repositories/nppMarketEntryFunnels";
 
 export type {
   NppMarketEntryDiagnostic,
@@ -300,7 +298,7 @@ export async function persistNppMarketEntryFunnel(
 ): Promise<NppMarketEntryFunnel> {
   const turnDoc = summarizeNppMarketEntryFunnel({ turn, now, diagnostics });
   const currentDoc = { ...turnDoc, _id: "current" };
-  const collection = db.collection<NppMarketEntryFunnel>(NPP_MARKET_ENTRY_FUNNEL_COLLECTION);
+  const collection = nppMarketEntryFunnelsCollection<NppMarketEntryFunnel>(db);
   await collection.bulkWrite([
     { replaceOne: { filter: { _id: turnDoc._id }, replacement: turnDoc, upsert: true } },
     { replaceOne: { filter: { _id: "current" }, replacement: currentDoc, upsert: true } },

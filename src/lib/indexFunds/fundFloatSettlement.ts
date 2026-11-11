@@ -18,6 +18,7 @@ import { legsNet } from "@/lib/banking/rules/invariants";
 import type { IndexFund, IndexFundHolding } from "@/lib/db/types";
 import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 import { fundFloatSettlementsCollection } from "@/lib/db/repositories/fundFloatSettlements";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 export type FundFloatPlan = {
   key: string;
@@ -145,9 +146,9 @@ async function compensateRefusal(
   plan: FundFloatPlan,
   reverseCompleted = false
 ) {
-  const record = await db
-    .collection<FloatJournal>(MONEY_MOVE_COLLECTION)
-    .findOne({ _id: plan.transition.key });
+  const record = await bankMoneyMovesCollection<FloatJournal>(db).findOne({
+    _id: plan.transition.key,
+  });
   if (!record) return false;
   if (reverseCompleted) {
     if (record.status !== "applied" || !record.legs.every((leg) => leg.applied)) return false;
@@ -287,7 +288,7 @@ export async function settleFundFloatPlan(db: Db, fundId: ObjectId, plan: FundFl
 
 /** A caller reversing its own completed trade retains inverse cash and audit witnesses. */
 export async function reverseCompletedFundFloatPlan(db: Db, fundId: ObjectId, plan: FundFloatPlan) {
-  const proof = await db.collection<FloatJournal>(MONEY_MOVE_COLLECTION).findOne({ _id: plan.key });
+  const proof = await bankMoneyMovesCollection<FloatJournal>(db).findOne({ _id: plan.key });
   if (proof?.reversedBy) {
     const result = await resumeSettlement(db, proof.reversedBy);
     if (!completed(result)) throw new Error(result.error ?? "Fund trade reversal is incomplete");

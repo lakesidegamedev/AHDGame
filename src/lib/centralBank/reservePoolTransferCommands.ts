@@ -2,7 +2,7 @@
 import { ObjectId, type Db, type Document } from "mongodb";
 import { isDeepStrictEqual } from "node:util";
 import * as Sentry from "@sentry/nextjs";
-import type { CentralBank, GameConfig } from "@/lib/db/types";
+import type { CentralBank } from "@/lib/db/types";
 import type { ActionAuditRecord } from "@/lib/db/types/actionAuditLog";
 import { loadTurnLengthMinutes } from "@/lib/financialTxLog/expiresAt";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
@@ -23,8 +23,8 @@ import {
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { actionAuditLogCollection } from "@/lib/db/repositories/actionAuditLog";
+import { reservePoolTransferCommandsCollection } from "@/lib/db/repositories/reservePoolTransferCommands";
 
-const COLLECTION = "reservePoolTransferCommands";
 export class ReservePoolTransferRejected extends Error {}
 export interface ReservePoolTransferInput {
   operationId: string;
@@ -260,12 +260,10 @@ async function publishAudit(db: Db, receipt: Receipt): Promise<void> {
       !isDeepStrictEqual(await audits.findOne({ _id: record._id }), record)
     )
       throw new Error("Reserve transfer audit differs from original command");
-    const marked = await db
-      .collection<Receipt>(COLLECTION)
-      .updateOne(
-        { _id: receipt._id, status: receipt.status },
-        { $set: { auditDelivered: true, recoveryPending: false } }
-      );
+    const marked = await reservePoolTransferCommandsCollection<Receipt>(db).updateOne(
+      { _id: receipt._id, status: receipt.status },
+      { $set: { auditDelivered: true, recoveryPending: false } }
+    );
     if (marked.matchedCount !== 1)
       throw new Error("Reserve transfer audit delivered without marker");
   } catch (error) {
@@ -291,10 +289,13 @@ async function finish(db: Db, receipt: Receipt): Promise<TransferResult> {
         ? { error: result.error ?? "Reserve pool quote changed. Try again." }
         : {}),
     };
-    await db
-      .collection<Receipt>(COLLECTION)
-      .updateOne({ _id: receipt._id, status: "planning" }, { $set: update });
-    const current = await db.collection<Receipt>(COLLECTION).findOne({ _id: receipt._id });
+    await reservePoolTransferCommandsCollection<Receipt>(db).updateOne(
+      { _id: receipt._id, status: "planning" },
+      { $set: update }
+    );
+    const current = await reservePoolTransferCommandsCollection<Receipt>(db).findOne({
+      _id: receipt._id,
+    });
     if (!current || current.status === "planning")
       throw new Error("Reserve transfer outcome not committed");
     receipt = current;
@@ -310,7 +311,7 @@ export async function executeReservePoolTransfer(
   input: ReservePoolTransferInput
 ): Promise<TransferResult> {
   const command = { ...input, amount: Math.floor(input.amount) };
-  const commands = db.collection<Receipt>(COLLECTION);
+  const commands = reservePoolTransferCommandsCollection<Receipt>(db);
   let receipt = await commands.findOne({ _id: command.operationId });
   if (!receipt) {
     const prepared = await prepare(db, bank, command);
@@ -339,8 +340,7 @@ export async function executeReservePoolTransfer(
   return finish(db, receipt);
 }
 export async function resumeReservePoolTransfers(db: Db): Promise<void> {
-  const pending = await db
-    .collection<Receipt>(COLLECTION)
+  const pending = await reservePoolTransferCommandsCollection<Receipt>(db)
     .find({ recoveryPending: true })
     .sort({ _id: 1 })
     .limit(100)

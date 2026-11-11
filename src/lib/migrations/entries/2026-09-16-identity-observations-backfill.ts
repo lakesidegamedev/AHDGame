@@ -1,12 +1,9 @@
 import type { Db, ObjectId } from "mongodb";
-import {
-  IDENTITY_OBSERVATIONS_COLLECTION,
-  type IdentityObservation,
-  type IdentityTrack,
-} from "@/lib/db/types/identityObservation";
+import { type IdentityObservation, type IdentityTrack } from "@/lib/db/types/identityObservation";
 import { isGroupableIdentityValue } from "@/lib/identityHistory/guards";
 import type { Migration, MigrationContext, MigrationResult } from "../types";
 import { usersCollection } from "@/lib/db/repositories/users";
+import { identityObservationsCollection } from "@/lib/db/repositories/identityObservations";
 
 export interface BackfillUser {
   _id: ObjectId;
@@ -119,7 +116,7 @@ async function backfill(db: Db, ctx: MigrationContext): Promise<MigrationResult>
     )
     .toArray();
 
-  const collection = db.collection<IdentityObservation>(IDENTITY_OBSERVATIONS_COLLECTION);
+  const collection = identityObservationsCollection<IdentityObservation>(db);
   let inserted = 0;
   let skipped = 0;
 

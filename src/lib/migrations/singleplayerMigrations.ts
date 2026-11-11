@@ -22,8 +22,7 @@ import { runMigrations, type RunSummary } from "./runner";
 import { runRequiredStartupMigrations } from "./startupMigrations";
 import type { Migration, MigrationMarker } from "./types";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
-
-const COLLECTION = "migrationsRun";
+import { migrationsRunCollection } from "@/lib/db/repositories/migrationsRun";
 
 /** Marker id written when a local world is stamped current with its build. */
 export const SINGLEPLAYER_BASELINE_MARKER = "singleplayer-registry-baseline";
@@ -53,7 +52,7 @@ function datedOnOrAfter(id: string, cutoff: string): boolean {
 export async function stampSingleplayerBaseline(db: Db): Promise<number> {
   const completedAt = new Date();
   const ids = [...SINGLEPLAYER_MIGRATIONS.map((m) => m.id), SINGLEPLAYER_BASELINE_MARKER];
-  const result = await db.collection<MigrationMarker>(COLLECTION).bulkWrite(
+  const result = await migrationsRunCollection<MigrationMarker>(db).bulkWrite(
     ids.map((id) => ({
       updateOne: {
         filter: { _id: id },
@@ -85,9 +84,10 @@ export async function migrateSingleplayerWorld(db: Db): Promise<RunSummary | nul
   }>(db).findOne({ _id: "current" }, { projection: { _id: 1, worldEpochId: 1, currentTurn: 1 } });
   if (!world) return null;
 
-  const stamped = await db
-    .collection<MigrationMarker>(COLLECTION)
-    .findOne({ _id: SINGLEPLAYER_BASELINE_MARKER }, { projection: { _id: 1 } });
+  const stamped = await migrationsRunCollection<MigrationMarker>(db).findOne(
+    { _id: SINGLEPLAYER_BASELINE_MARKER },
+    { projection: { _id: 1 } }
+  );
   const migrations = stamped
     ? [...SINGLEPLAYER_MIGRATIONS]
     : SINGLEPLAYER_MIGRATIONS.filter((m) => datedOnOrAfter(m.id, SINGLEPLAYER_LEGACY_CUTOFF));

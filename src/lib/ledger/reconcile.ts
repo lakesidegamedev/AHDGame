@@ -2,7 +2,6 @@ import * as Sentry from "@sentry/nextjs";
 import { ObjectId, type Db } from "mongodb";
 import { accountCurrency, accountKind, isRealAccount } from "@/lib/ledger/accounts";
 import { epsilonFor, isAnchorBalanced, nativeImbalance } from "@/lib/ledger/epsilon";
-import { LEDGER_ENTRIES_COLLECTION } from "@/lib/ledger/emit";
 import { loadBalanceSnapshot, loadPreForexBalanceCheckpoint } from "@/lib/ledger/balanceSnapshot";
 import type {
   BalanceSnapshot,
@@ -15,6 +14,8 @@ import type {
   StockVsFlowFinding,
   TrialBalanceFinding,
 } from "@/lib/ledger/types";
+import { ledgerReconciliationsCollection } from "@/lib/db/repositories/ledgerReconciliations";
+import { ledgerEntriesCollection } from "@/lib/db/repositories/ledgerEntries";
 
 export const LEDGER_RECONCILIATIONS_COLLECTION = "ledgerReconciliations";
 
@@ -355,8 +356,7 @@ export async function reconcileTurn(
   opts: { skipStockVsFlow?: boolean; savingsAccountsMode?: string | null } = {}
 ): Promise<ReconcileReport | null> {
   try {
-    const entries = await db
-      .collection<LedgerEntry>(LEDGER_ENTRIES_COLLECTION)
+    const entries = await ledgerEntriesCollection<LedgerEntry>(db)
       // Reconciliation is intentionally shadow-only. Its three checks need
       // the entry identity, origin and legs, not the write timestamp/source
       // reference or denormalized `balanced` flag on every entry this turn.
@@ -387,7 +387,7 @@ export async function reconcileTurn(
     });
 
     const doc: LedgerReconciliation = { ...report, _id: new ObjectId() };
-    await db.collection<LedgerReconciliation>(LEDGER_RECONCILIATIONS_COLLECTION).insertOne(doc);
+    await ledgerReconciliationsCollection<LedgerReconciliation>(db).insertOne(doc);
 
     if (report.trialBalance.status === "red") {
       Sentry.captureMessage(
@@ -412,7 +412,8 @@ export async function reconcileTurn(
 
 /** Fetch the most recent persisted reconciliation (for the ops-dash / Watchtower section). */
 export async function loadLatestReconciliation(db: Db): Promise<LedgerReconciliation | null> {
-  return db
-    .collection<LedgerReconciliation>(LEDGER_RECONCILIATIONS_COLLECTION)
-    .findOne({}, { sort: { turn: -1 } });
+  return ledgerReconciliationsCollection<LedgerReconciliation>(db).findOne(
+    {},
+    { sort: { turn: -1 } }
+  );
 }

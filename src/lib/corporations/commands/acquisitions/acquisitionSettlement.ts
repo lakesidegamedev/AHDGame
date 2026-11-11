@@ -39,8 +39,7 @@ import type {
 } from "@/lib/db/types/acquisitionSettlement";
 import type { AcquisitionOutcome } from "@/lib/db/types/acquisitionOffer";
 import type { PlannedLeg, PayoutPlan } from "./rules/acquisitionPayoutPlan";
-
-const ACQUISITION_SETTLEMENTS = "acquisitionSettlements";
+import { acquisitionSettlementsCollection } from "@/lib/db/repositories/acquisitionSettlements";
 
 /** A retry recomputed a plan that disagrees with the claimed one. Never retry blind. */
 class AcquisitionSettlementConflictError extends Error {
@@ -51,7 +50,7 @@ class AcquisitionSettlementConflictError extends Error {
 }
 
 function settlements(db: Db) {
-  return db.collection<AcquisitionSettlement>(ACQUISITION_SETTLEMENTS);
+  return acquisitionSettlementsCollection<AcquisitionSettlement>(db);
 }
 
 export async function loadAcquisitionSettlement(

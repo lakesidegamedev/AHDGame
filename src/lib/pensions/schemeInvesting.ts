@@ -23,7 +23,8 @@ import { emitTx } from "@/lib/financialTxLog/emit";
 import { isIndexFundsEnabled } from "@/lib/indexFunds/featureFlag";
 import { creditFundPosition, insertFundTransaction } from "@/lib/indexFunds/fundQueries";
 import { pensionInvestableCashAnchor } from "./rules";
-import { PENSION_SCHEMES, INDEX_FUNDS } from "./schemeAssets";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { pensionSchemesCollection } from "@/lib/db/repositories/pensionSchemes";
 
 export interface PensionInvestingResult {
   schemesInvesting: number;
@@ -61,14 +62,12 @@ export async function runPensionSchemeInvestments(
   // untouched.
   if (!(await isIndexFundsEnabled())) return result;
 
-  const schemes = await db
-    .collection<PensionScheme>(PENSION_SCHEMES)
+  const schemes = await pensionSchemesCollection<PensionScheme>(db)
     .find({ assetsAnchor: { $gt: 0 } })
     .toArray();
   if (schemes.length === 0) return result;
 
-  const funds = await db
-    .collection<IndexFund>(INDEX_FUNDS)
+  const funds = await indexFundsCollection<IndexFund>(db)
     .find({ status: "active", kind: "broad", "mandate.mode": { $ne: "picked_stocks" } })
     .toArray();
   if (funds.length === 0) return result;
@@ -98,7 +97,7 @@ export async function runPensionSchemeInvestments(
       const now = new Date();
       // Guarded debit first. If the scheme's cash moved since the read (the
       // benefit pass runs earlier in the same turn), no units are issued.
-      const debit = await db.collection<PensionScheme>(PENSION_SCHEMES).updateOne(
+      const debit = await pensionSchemesCollection<PensionScheme>(db).updateOne(
         { _id: scheme._id, assetsAnchor: { $gte: costAnchor } },
         {
           $inc: { assetsAnchor: -costAnchor, totalInvestedAnchor: costAnchor },
@@ -115,12 +114,10 @@ export async function runPensionSchemeInvestments(
         units,
         fund.quotedNav
       );
-      await db
-        .collection<IndexFund>(INDEX_FUNDS)
-        .updateOne(
-          { _id: fund._id },
-          { $inc: { unitSupply: units, cashAnchor: costAnchor }, $set: { updatedAt: now } }
-        );
+      await indexFundsCollection<IndexFund>(db).updateOne(
+        { _id: fund._id },
+        { $inc: { unitSupply: units, cashAnchor: costAnchor }, $set: { updatedAt: now } }
+      );
       await insertFundTransaction(db, {
         fundId: fund._id,
         kind: "subscription",

@@ -45,10 +45,7 @@ import { getCountryState } from "@/lib/countryState";
 import { getCountryStateCollection } from "@/lib/db/collections/countryState";
 import { runBillLifecycle } from "@/lib/turn/billLifecycle/engine";
 import { buildOnePartyBillConfig } from "@/lib/turn/billLifecycle/configs/oneParty";
-import {
-  BG_1991_PROPOSALS_COLLECTION,
-  type Bg1991ConstitutionalProposal,
-} from "@/lib/countries/bg/constitutionalProposals1991";
+import { type Bg1991ConstitutionalProposal } from "@/lib/countries/bg/constitutionalProposals1991";
 import { BG_CONTINUED_ASSEMBLY_DISSOLUTION_ID } from "@/lib/countries/bg/assemblyDissolution1991";
 import {
   passesBgConstitution1991,
@@ -57,25 +54,19 @@ import {
 } from "@/lib/countries/bg/rules/constitutionalDecision1991";
 import { buildConfiguredCountryBillLifecycle } from "@/lib/turn/billLifecycle/configs/configuredCountry";
 import type { BillLifecycleRuntimeContext } from "@/lib/turn/billLifecycle/types";
-import type { CountryGameState } from "@/lib/db/types/gameState";
-import {
-  RO_1992_PROPOSALS_COLLECTION,
-  type Ro1992ElectoralProposal,
-} from "@/lib/countries/ro/electoralProposals1992";
+import { type Ro1992ElectoralProposal } from "@/lib/countries/ro/electoralProposals1992";
 import { passesRoElectoralAmendment } from "@/lib/countries/ro/rules/electoralDecision1992";
 import { passesHuElectoralAmendment } from "@/lib/countries/hu/rules/electoralLaw";
-import {
-  HU_1994_PROPOSALS_COLLECTION,
-  type Hu1994ElectoralProposal,
-} from "@/lib/countries/hu/electoralProposals1994";
+import { type Hu1994ElectoralProposal } from "@/lib/countries/hu/electoralProposals1994";
 
-import {
-  HU_2011_PROPOSALS_COLLECTION,
-  type Hu2011ElectoralProposal,
-} from "@/lib/countries/hu/electoralProposals2011";
+import { type Hu2011ElectoralProposal } from "@/lib/countries/hu/electoralProposals2011";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 import { rulingPartyPurgeEventsCollection } from "@/lib/db/repositories/rulingPartyPurgeEvents";
+import { ro1992ElectoralProposalsCollection } from "@/lib/db/repositories/ro1992ElectoralProposals";
+import { bg1991ConstitutionalProposalsCollection } from "@/lib/db/repositories/bg1991ConstitutionalProposals";
+import { hu2011ElectoralProposalsCollection } from "@/lib/db/repositories/hu2011ElectoralProposals";
+import { hu1994ElectoralProposalsCollection } from "@/lib/db/repositories/hu1994ElectoralProposals";
 
 const DEMOCRATIC_1991_COUNTRIES: readonly CountryId[] = ["PL", "CS", "HU", "RO", "BG", "YU"];
 
@@ -113,18 +104,14 @@ export async function processOnePartyBillLifecycleForCountry(
       const lifecycle = buildConfiguredCountryBillLifecycle(countryId, preset);
       if (countryHasFeature("huTurn", countryId)) {
         const proposals = await Promise.all([
-          db
-            .collection<Hu1994ElectoralProposal>(HU_1994_PROPOSALS_COLLECTION)
-            .findOne(
-              { _id: "1991-default:hu-electoral:threshold1994", status: "open" },
-              { projection: { billId: 1, revision: 1 } }
-            ),
-          db
-            .collection<Hu2011ElectoralProposal>(HU_2011_PROPOSALS_COLLECTION)
-            .findOne(
-              { _id: "1991-default:hu-electoral:system2011", status: "open" },
-              { projection: { billId: 1, revision: 1 } }
-            ),
+          hu1994ElectoralProposalsCollection<Hu1994ElectoralProposal>(db).findOne(
+            { _id: "1991-default:hu-electoral:threshold1994", status: "open" },
+            { projection: { billId: 1, revision: 1 } }
+          ),
+          hu2011ElectoralProposalsCollection<Hu2011ElectoralProposal>(db).findOne(
+            { _id: "1991-default:hu-electoral:system2011", status: "open" },
+            { projection: { billId: 1, revision: 1 } }
+          ),
         ]);
         for (const stage of lifecycle.stages) {
           if (stage.kind !== "chamberVote") continue;
@@ -144,21 +131,21 @@ export async function processOnePartyBillLifecycleForCountry(
         }
       }
       if (countryHasFeature("bgTurn", countryId)) {
-        const proposals = await db
-          .collection<Bg1991ConstitutionalProposal>(BG_1991_PROPOSALS_COLLECTION)
-          .find(
-            {
-              _id: {
-                $in: [
-                  "1991-default:bg-constitutional:constitution1991",
-                  BG_CONTINUED_ASSEMBLY_DISSOLUTION_ID,
-                ],
+        const proposals =
+          await bg1991ConstitutionalProposalsCollection<Bg1991ConstitutionalProposal>(db)
+            .find(
+              {
+                _id: {
+                  $in: [
+                    "1991-default:bg-constitutional:constitution1991",
+                    BG_CONTINUED_ASSEMBLY_DISSOLUTION_ID,
+                  ],
+                },
+                status: "open",
               },
-              status: "open",
-            },
-            { projection: { billId: 1, revision: 1, capacity: 1, disposition: 1 } }
-          )
-          .toArray();
+              { projection: { billId: 1, revision: 1, capacity: 1, disposition: 1 } }
+            )
+            .toArray();
         for (const stage of lifecycle.stages)
           if (stage.kind === "chamberVote")
             stage.passCheck = (bill, totals) => {
@@ -183,12 +170,12 @@ export async function processOnePartyBillLifecycleForCountry(
             };
       }
       if (countryHasFeature("roTurn", countryId)) {
-        const proposal = await db
-          .collection<Ro1992ElectoralProposal>(RO_1992_PROPOSALS_COLLECTION)
-          .findOne(
-            { _id: "1991-default:ro-electoral:parliament1992", status: "open" },
-            { projection: { billId: 1, revision: 1, capacities: 1 } }
-          );
+        const proposal = await ro1992ElectoralProposalsCollection<Ro1992ElectoralProposal>(
+          db
+        ).findOne(
+          { _id: "1991-default:ro-electoral:parliament1992", status: "open" },
+          { projection: { billId: 1, revision: 1, capacities: 1 } }
+        );
         for (const stage of lifecycle.stages)
           if (stage.kind === "chamberVote") {
             stage.passCheck = (bill, totals) => {

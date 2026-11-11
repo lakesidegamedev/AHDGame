@@ -29,7 +29,7 @@ import {
   drawDownEncumbrance,
   getDefenseAppropriation,
 } from "@/lib/db/collections/defenseAppropriation";
-import { applyMoneyMove, MONEY_MOVE_COLLECTION, type MoneyMoveLeg } from "@/lib/banking/moneyMove";
+import { applyMoneyMove, type MoneyMoveLeg } from "@/lib/banking/moneyMove";
 import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
 import { loadDefencePriceRatios } from "@/lib/military/defencePriceRatios";
 import {
@@ -43,6 +43,7 @@ import { emitTx } from "@/lib/financialTxLog/emit";
 import { getCorporateSectorsCollection } from "@/lib/db/collections/corporateSectors";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 /**
  * Idempotency key for one contract's settlement in one turn.
@@ -117,7 +118,7 @@ export async function applyDefenceDeliveries(
   const supplierPaidThisTurn = new Map<string, number>();
   let projectedBalance = opening.balance;
   let projectedEncumbered = opening.encumbered ?? 0;
-  const moveRecords = db.collection<{ _id: string }>(MONEY_MOVE_COLLECTION);
+  const moveRecords = bankMoneyMovesCollection<{ _id: string }>(db);
 
   let lots = 0;
   let paid = 0;

@@ -6,7 +6,6 @@ import type { Character } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { getCountryIdForCurrency } from "@/lib/constants/currencies";
 import { getBankId } from "@/lib/centralBank/helpers";
-import { MONEY_MOVE_COLLECTION } from "@/lib/banking/moneyMove";
 import type { SettlementResult } from "@/lib/banking/settlementJournal";
 import type { LocLedgerEntry } from "@/lib/db/types/locLedger";
 import type { TxInput } from "@/lib/financialTxLog/emit";
@@ -26,6 +25,7 @@ import {
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 export interface LocEffect {
   locAfter?: Character["lineOfCredit"];
@@ -68,9 +68,7 @@ export const locReceiptId = (key: string, suffix: string) =>
   new ObjectId(createHash("sha256").update(`${key}:${suffix}`).digest("hex").slice(0, 24));
 
 export async function loadLocSettlement(db: Db, key: string) {
-  return db
-    .collection<LocRecord>(MONEY_MOVE_COLLECTION)
-    .findOne({ _id: key, kind: "line_of_credit" });
+  return bankMoneyMovesCollection<LocRecord>(db).findOne({ _id: key, kind: "line_of_credit" });
 }
 
 /**
@@ -82,8 +80,7 @@ export async function loadLocSettlements(
   keys: readonly string[]
 ): Promise<Map<string, LocRecord>> {
   if (keys.length === 0) return new Map();
-  const rows = await db
-    .collection<LocRecord>(MONEY_MOVE_COLLECTION)
+  const rows = await bankMoneyMovesCollection<LocRecord>(db)
     .find({ _id: { $in: [...new Set(keys)] }, kind: "line_of_credit" })
     .toArray();
   return new Map(rows.map((row) => [row._id, row]));
@@ -156,7 +153,7 @@ export async function settleLocPlan(
   plan: LocPlan,
   options: { knownAbsent?: boolean } = {}
 ) {
-  const journal = db.collection<LocRecord>(MONEY_MOVE_COLLECTION);
+  const journal = bankMoneyMovesCollection<LocRecord>(db);
   let original = options.knownAbsent ? null : await loadLocSettlement(db, key);
   if (!original) {
     if (
@@ -224,7 +221,7 @@ async function resumeLocRecord(
   key: string,
   record: LocRecord | null
 ): Promise<{ settled: SettlementResult; last: LocRecord | null }> {
-  const journal = db.collection<LocRecord>(MONEY_MOVE_COLLECTION);
+  const journal = bankMoneyMovesCollection<LocRecord>(db);
   const result: SettlementResult = {
     key,
     status: "rejected",
@@ -394,7 +391,7 @@ export function locInterestCredits(amounts: Partial<Record<CurrencyCode, number>
 
 /** Prioritize durable bank owners, then the indexed queue, within one fixed budget. */
 export async function recoverPendingLoc(db: Db, turn: number) {
-  const journal = db.collection<LocRecord>(MONEY_MOVE_COLLECTION);
+  const journal = bankMoneyMovesCollection<LocRecord>(db);
   const [banks, characters] = await Promise.all([
     centralBanksCollection<{
       _id: string;

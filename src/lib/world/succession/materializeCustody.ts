@@ -1,23 +1,18 @@
 import { ObjectId, type ClientSession, type Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { Corporation, CorporateSector } from "@/lib/db/types/corporation";
+import type { Corporation } from "@/lib/db/types/corporation";
 import type { MilitaryUnit } from "@/lib/db/types/militaryUnit";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import type { SuccessionCustodyAssignment } from "./rules/custody";
 import type { FederationStateTransferPlan } from "./territoryTransferPlan";
-import {
-  FEDERATION_ARCHIVED_REGION_ROWS_COLLECTION,
-  type FederationArchivedRegionRow,
-} from "./materializeTerritory";
-import {
-  FEDERATION_ARCHIVED_PUBLIC_CORPORATIONS_COLLECTION,
-  type FederationArchivedPublicCorporation,
-} from "./materializePublicCorporations";
+import { type FederationArchivedRegionRow } from "./materializeTerritory";
+import { type FederationArchivedPublicCorporation } from "./materializePublicCorporations";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { militaryUnitsCollection } from "@/lib/db/repositories/militaryUnits";
-
-const FEDERATION_CUSTODY_RECORDS_COLLECTION = "federationCustodyRecords";
+import { federationCustodyRecordsCollection } from "@/lib/db/repositories/federationCustodyRecords";
+import { federationArchivedRegionRowsCollection } from "@/lib/db/repositories/federationArchivedRegionRows";
+import { federationArchivedPublicCorporationsCollection } from "@/lib/db/repositories/federationArchivedPublicCorporations";
 
 export interface FederationCustodyRecord {
   _id: string;
@@ -105,11 +100,10 @@ export async function materializeFederationCustody(input: {
       const corporationId = objectIdFromAsset(assignment.assetId, "enterprise-shell:");
       const corporations = corporationsCollection(db);
       const corporation = await corporations.findOne({ _id: corporationId }, { session });
-      const archived = await db
-        .collection<FederationArchivedPublicCorporation>(
-          FEDERATION_ARCHIVED_PUBLIC_CORPORATIONS_COLLECTION
-        )
-        .findOne(
+      const archived =
+        await federationArchivedPublicCorporationsCollection<FederationArchivedPublicCorporation>(
+          db
+        ).findOne(
           { _id: `${applicationId}:${corporationId.toString()}`, applicationId },
           { session }
         );
@@ -139,17 +133,17 @@ export async function materializeFederationCustody(input: {
         throw new Error("Federation custody enterprise has an invalid kind");
       const sectorId = objectIdFromAsset(assignment.assetId, "enterprise:");
       if (assignment.disposition === "aggregate-background") {
-        const archived = await db
-          .collection<FederationArchivedRegionRow>(FEDERATION_ARCHIVED_REGION_ROWS_COLLECTION)
-          .findOne(
-            {
-              _id: `${applicationId}:corporateSectors:${sectorId.toString()}`,
-              applicationId,
-              collection: "corporateSectors",
-              successorEntityId: assignment.custodianEntityId,
-            },
-            { session }
-          );
+        const archived = await federationArchivedRegionRowsCollection<FederationArchivedRegionRow>(
+          db
+        ).findOne(
+          {
+            _id: `${applicationId}:corporateSectors:${sectorId.toString()}`,
+            applicationId,
+            collection: "corporateSectors",
+            successorEntityId: assignment.custodianEntityId,
+          },
+          { session }
+        );
         if (!archived) throw new Error("Federation custody enterprise facility was not archived");
       } else {
         const sector = await corporateSectorsCollection(db).findOne(
@@ -170,10 +164,8 @@ export async function materializeFederationCustody(input: {
     });
   }
   if (records.length)
-    await db
-      .collection<FederationCustodyRecord>(FEDERATION_CUSTODY_RECORDS_COLLECTION)
-      .insertMany(records, {
-        session,
-      });
+    await federationCustodyRecordsCollection<FederationCustodyRecord>(db).insertMany(records, {
+      session,
+    });
   return records.length;
 }

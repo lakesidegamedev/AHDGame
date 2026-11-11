@@ -5,7 +5,6 @@ import {
   type BgOrdinaryRace,
 } from "@/lib/countries/bg/rules/ordinaryElectionPlan";
 import { TALLY_WITH_LATEST_SNAPSHOT_ONLY } from "@/lib/elections/engine/tallyProjections";
-import type { Election, ElectionCandidate, ElectionVoteTally, NPP } from "@/lib/db/types";
 import {
   BG_ORDINARY_ASSEMBLY_SEATS,
   BG_LEGACY_ORDINARY_ASSEMBLY_SEATS,
@@ -16,6 +15,7 @@ import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { bgOrdinaryElectionPlansCollection } from "@/lib/db/repositories/bgOrdinaryElectionPlans";
 
 /** Read the full 1991 slate once before any regional race is seated. */
 export async function readBgOrdinaryEligibleParties(db: Db): Promise<ReadonlySet<string> | null> {
@@ -81,7 +81,7 @@ export async function readBgOrdinaryElectionPlan(
 ): Promise<BgOrdinaryElectionPlan | null> {
   if (!Number.isSafeInteger(cycle) || cycle < 1)
     throw new Error("Invalid Bulgarian ordinary cycle");
-  const journal = db.collection<BgOrdinaryPlanRecord>(BG_ORDINARY_PLANS_COLLECTION);
+  const journal = bgOrdinaryElectionPlansCollection<BgOrdinaryPlanRecord>(db);
   const key = `BG:ordinary:${cycle}`;
   const saved = await journal.findOne({ _id: key });
   if (saved) return saved.plan;

@@ -4,7 +4,7 @@
  * members and their mirrors atomically, finishing with a bound composition receipt.
  */
 import { ObjectId, type ClientSession, type Db } from "mongodb";
-import type { CountryGameState, ElectedOfficial, GameState, NPP } from "@/lib/db/types";
+import type { ElectedOfficial } from "@/lib/db/types";
 import type { UnifiedCabinetMember } from "@/lib/db/types/unifiedCabinetMember";
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
 import { loadEnactedRussianCouncilFormation } from "./councilFormationProposals";
@@ -16,7 +16,6 @@ import {
   loadRussianRegionalNpcProfiles,
   type RussianRegionalAuthorityRecord,
   type RussianRegionalCouncilSeatingInputs,
-  RUSSIAN_REGIONAL_AUTHORITIES_COLLECTION,
 } from "./regionalCouncilAuthorities";
 import {
   planRussianCouncilComposition,
@@ -38,8 +37,9 @@ import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameSt
 import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
 import { russianAssemblySeatingsCollection } from "@/lib/db/repositories/russianAssemblySeatings";
 import { russianAssemblyOfficeArchivesCollection } from "@/lib/db/repositories/russianAssemblyOfficeArchives";
+import { russianRegionalAuthoritiesCollection } from "@/lib/db/repositories/russianRegionalAuthorities";
+import { russianCouncilCompositionSeatingsCollection } from "@/lib/db/repositories/russianCouncilCompositionSeatings";
 
-const RUSSIAN_COUNCIL_COMPOSITION_SEATINGS_COLLECTION = "russianCouncilCompositionSeatings";
 export interface RussianCouncilCompositionSeating {
   _id: string;
   countryId: "RU";
@@ -94,9 +94,8 @@ export async function materializeRussianCouncilCompositionSeating(input: {
   const mandate = await loadEnactedRussianCouncilFormation({ db, session, country, game, turn });
   if (!mandate) return false;
   if (!(await loadCurrentRussianDumaClock({ db, session, country, turn }))) return false;
-  const journals = db.collection<RussianCouncilCompositionSeating>(
-    RUSSIAN_COUNCIL_COMPOSITION_SEATINGS_COLLECTION
-  );
+  const journals =
+    russianCouncilCompositionSeatingsCollection<RussianCouncilCompositionSeating>(db);
   const prior = country.ruCouncilComposition
     ? await journals.findOne({ _id: country.ruCouncilComposition.receiptId }, { session })
     : null;
@@ -119,8 +118,7 @@ export async function materializeRussianCouncilCompositionSeating(input: {
     prior.formationRevision !== mandate.revision;
   const authorities =
     input.seatingInputs?.authorities ??
-    (await db
-      .collection<RussianRegionalAuthorityRecord>(RUSSIAN_REGIONAL_AUTHORITIES_COLLECTION)
+    (await russianRegionalAuthoritiesCollection<RussianRegionalAuthorityRecord>(db)
       .find({ countryId: "RU", preset: "1991-default" }, { session, batchSize: 1000 })
       .toArray());
   if (!authorities.length) return false;

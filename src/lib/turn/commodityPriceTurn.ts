@@ -11,15 +11,7 @@ import { loadFinancialCrisisDemand } from "@/lib/livingConflict/financialDemand"
  * logic lives in ./commodity/.
  */
 import { getDb } from "@/lib/mongodb";
-import type {
-  CommodityPrice,
-  StateMetrics,
-  Corporation,
-  CentralBank,
-  ExchangeRate,
-  StateBudget,
-  GameConfig,
-} from "@/lib/db/types";
+import type { CommodityPrice, Corporation, CentralBank, ExchangeRate } from "@/lib/db/types";
 import {
   COUNTRY_CURRENCY_MAP,
   INITIAL_RATES,
@@ -82,7 +74,6 @@ import { readProducerPathClaim } from "@/lib/market/producerMarket/liveMode";
 import {
   fundedLedgers,
   withStatelessCountryDemand,
-  PRODUCER_MARKET_OUTCOMES,
   type FundedLedgerRow,
 } from "@/lib/market/producerMarket/fundedLedgerRules";
 import {
@@ -100,9 +91,6 @@ import {
 import { buildTradeAffinity } from "@/lib/trade/tradeAffinity";
 import { loadActiveFtaPairs } from "@/lib/tariffs/ftaOverrides";
 import { reconcileSignedEmbargoBills } from "@/lib/trade/reconcileEmbargoes";
-import type { Tariff } from "@/lib/db/types/tariff";
-import type { TradeEmbargo } from "@/lib/db/types/tradeEmbargo";
-import type { OrganizationMembership } from "@/lib/db/types/internationalOrganization";
 import { applySphereRoutedMacroContributions } from "@/lib/world/spheres";
 import {
   addBackgroundBooksToCountries,
@@ -177,6 +165,7 @@ import { organizationMembershipsCollection } from "@/lib/db/repositories/organiz
 import { tariffsCollection } from "@/lib/db/repositories/tariffs";
 import { tradeEmbargoesCollection } from "@/lib/db/repositories/tradeEmbargoes";
 import { organizationLegislationCollection } from "@/lib/db/repositories/organizationLegislation";
+import { producerMarketOutcomesCollection } from "@/lib/db/repositories/producerMarketOutcomes";
 
 export interface CommodityPriceTurnResult {
   commoditiesUpdated: number;
@@ -1160,11 +1149,11 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
 
   let fundedBookRows: readonly FundedCountryBookRow[] | undefined;
   if (producerPath === "funded") {
-    const outcomes = await db
-      .collection<{ _id: string; rows: FundedLedgerRow[]; books?: FundedCountryBookRow[] }>(
-        PRODUCER_MARKET_OUTCOMES
-      )
-      .findOne({ _id: `${presetState?.worldEpochId}:${turn}` });
+    const outcomes = await producerMarketOutcomesCollection<{
+      _id: string;
+      rows: FundedLedgerRow[];
+      books?: FundedCountryBookRow[];
+    }>(db).findOne({ _id: `${presetState?.worldEpochId}:${turn}` });
     if (!outcomes) throw new Error(`Funded turn ${turn} has no settled supply and demand`);
     const funded = fundedLedgers(outcomes.rows);
     global.clear();

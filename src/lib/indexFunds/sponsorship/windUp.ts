@@ -46,11 +46,10 @@ import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
 import type { Document } from "mongodb";
 import { indexFundCommandsCollection } from "@/lib/db/repositories/indexFundCommands";
 import { indexFundRedemptionQueueCollection } from "@/lib/db/repositories/indexFundRedemptionQueue";
+import { indexFundTransactionsCollection } from "@/lib/db/repositories/indexFundTransactions";
+import { indexFundPositionsCollection } from "@/lib/db/repositories/indexFundPositions";
 
-const FUND_TX = "indexFundTransactions";
-const REDEMPTION_QUEUE = "indexFundRedemptionQueue";
 const UNSETTLED_REDEMPTION_STATUSES = ["queued", "partial", "processing"];
-const POSITIONS = "indexFundPositions";
 
 export type WindUpResult =
   { ok: false; error: string; status: number } | { ok: true; status: IndexFund["status"] };
@@ -232,9 +231,10 @@ async function clearSettlementBlockers(
 }
 
 async function hasUnsettledRedemptions(db: Db, fund: IndexFund): Promise<boolean> {
-  const count = await db
-    .collection(REDEMPTION_QUEUE)
-    .countDocuments({ fundId: fund._id, status: { $in: UNSETTLED_REDEMPTION_STATUSES } });
+  const count = await indexFundRedemptionQueueCollection<Document>(db).countDocuments({
+    fundId: fund._id,
+    status: { $in: UNSETTLED_REDEMPTION_STATUSES },
+  });
   return count > 0;
 }
 
@@ -307,8 +307,7 @@ export async function completeWindUp(
 
 async function settleWindUp(db: Db, fund: IndexFund, currentTurn: number): Promise<number> {
   const now = new Date();
-  const positions = await db
-    .collection<IndexFundPosition>(POSITIONS)
+  const positions = await indexFundPositionsCollection<IndexFundPosition>(db)
     .find({ fundId: fund._id, units: { $gt: 0 } })
     .toArray();
 
@@ -369,9 +368,10 @@ async function settleWindUp(db: Db, fund: IndexFund, currentTurn: number): Promi
     holdersPaid += payouts.paid.filter((position) => position.holderKind !== "fund_reserve").length;
   }
 
-  await db
-    .collection<IndexFundPosition>(POSITIONS)
-    .updateMany({ fundId: fund._id }, { $set: { units: 0, updatedAt: now } });
+  await indexFundPositionsCollection<IndexFundPosition>(db).updateMany(
+    { fundId: fund._id },
+    { $set: { units: 0, updatedAt: now } }
+  );
 
   const remainingAnchor = Math.max(0, fund.cashAnchor - distributedAnchor);
 
@@ -426,7 +426,7 @@ async function settleWindUp(db: Db, fund: IndexFund, currentTurn: number): Promi
     }
   }
 
-  await db.collection<IndexFundTransaction>(FUND_TX).insertOne({
+  await indexFundTransactionsCollection<IndexFundTransaction>(db).insertOne({
     _id: new ObjectId(),
     fundId: fund._id,
     kind: "seed_capital_return",

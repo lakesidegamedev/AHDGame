@@ -4,7 +4,7 @@
  * a refused QT asset exchange refunds the original market payment before releasing the command.
  */
 import { ObjectId, type Db, type Document } from "mongodb";
-import type { Bond, CentralBank, GameConfig, MonetaryOperationRecord } from "@/lib/db/types";
+import type { Bond, CentralBank, MonetaryOperationRecord } from "@/lib/db/types";
 import { COUNTRY_CURRENCY_MAP, type CurrencyCode } from "@/lib/constants/currencies";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { getBankId } from "@/lib/centralBank/helpers";
@@ -48,6 +48,7 @@ import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { actionAuditLogCollection } from "@/lib/db/repositories/actionAuditLog";
 import { bondMarketPoolsCollection } from "@/lib/db/repositories/bondMarketPools";
 import { bankLiquidityOperationsCollection } from "@/lib/db/repositories/bankLiquidityOperations";
+import { monetaryOperationCommandsCollection } from "@/lib/db/repositories/monetaryOperationCommands";
 
 const COLLECTION = "monetaryOperationCommands";
 export class MonetaryOperationRejected extends Error {}
@@ -93,7 +94,9 @@ export async function existingMonetaryOperation(
   input: ExecuteMonetaryOperationInput
 ): Promise<boolean> {
   if (!input.operationId) return false;
-  const receipt = await db.collection<Receipt>(COLLECTION).findOne({ _id: input.operationId });
+  const receipt = await monetaryOperationCommandsCollection<Receipt>(db).findOne({
+    _id: input.operationId,
+  });
   if (!receipt) return false;
   sameCommand(receipt, input);
   if (receipt.status === "rejected") {
@@ -514,12 +517,10 @@ async function publishAudit(db: Db, receipt: Receipt): Promise<void> {
       !isDeepStrictEqual(await audit.findOne({ _id: record._id }), record)
     )
       throw new Error("Monetary audit row differs from the original command");
-    const marked = await db
-      .collection<Receipt>(COLLECTION)
-      .updateOne(
-        { _id: receipt._id, status: receipt.status },
-        { $set: { auditDelivered: true, recoveryPending: false } }
-      );
+    const marked = await monetaryOperationCommandsCollection<Receipt>(db).updateOne(
+      { _id: receipt._id, status: receipt.status },
+      { $set: { auditDelivered: true, recoveryPending: false } }
+    );
     if (marked.matchedCount !== 1)
       throw new Error("Monetary audit delivered without completion marker");
   } catch (error) {
@@ -543,7 +544,7 @@ async function finish(
     await publishAudit(db, receipt);
     throw new MonetaryOperationRejected(receipt.error ?? "Monetary operation was rejected");
   }
-  const receipts = db.collection<Receipt>(COLLECTION);
+  const receipts = monetaryOperationCommandsCollection<Receipt>(db);
   const banks = centralBanksCollection<
     Omit<CentralBank, "lastMonetaryOperationTurn"> & {
       lastMonetaryOperationTurn?: number | null;
@@ -674,7 +675,7 @@ export async function executeJournaledMonetaryOperation(
     )
   )
     throw new MonetaryOperationRejected("Operation ID already belongs to a liquidity command");
-  const receipts = db.collection<Receipt>(COLLECTION);
+  const receipts = monetaryOperationCommandsCollection<Receipt>(db);
   let receipt = await receipts.findOne({ _id: command.operationId });
   if (!receipt) {
     await receipts.createIndex(
@@ -699,8 +700,7 @@ export async function executeJournaledMonetaryOperation(
   return finish(db, receipt, cooldown);
 }
 export async function resumeMonetaryOperations(db: Db, cooldown: number): Promise<void> {
-  const pending = await db
-    .collection<Receipt>(COLLECTION)
+  const pending = await monetaryOperationCommandsCollection<Receipt>(db)
     .find({ recoveryPending: true })
     .sort({ _id: 1 })
     .limit(100)
@@ -709,9 +709,10 @@ export async function resumeMonetaryOperations(db: Db, cooldown: number): Promis
     try {
       await finish(db, receipt, cooldown);
     } catch (error) {
-      const current = await db
-        .collection<Receipt>(COLLECTION)
-        .findOne({ _id: receipt._id }, { projection: { status: 1 } });
+      const current = await monetaryOperationCommandsCollection<Receipt>(db).findOne(
+        { _id: receipt._id },
+        { projection: { status: 1 } }
+      );
       if (current?.status !== "rejected") throw error;
     }
   }

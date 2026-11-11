@@ -5,11 +5,11 @@
  */
 import { createHash } from "node:crypto";
 import { ObjectId, type ClientSession, type Db } from "mongodb";
-import type { Election, ElectionCandidate, ElectionVoteTally } from "@/lib/db/types";
+import type { Election, ElectionCandidate } from "@/lib/db/types";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
 import { TALLY_WITH_LATEST_SNAPSHOT_ONLY } from "@/lib/elections/engine/tallyProjections";
-import { HU_1991_COUNTS_COLLECTION, type Hu1991AssemblyRecord } from "./assemblyCount1991";
+import { type Hu1991AssemblyRecord } from "./assemblyCount1991";
 import { hu1991RunoffCampaigns } from "./rules/assemblyCampaign1991";
 import { projectHu1991Runoff } from "./rules/campaignBallots1991";
 import { countHuMixed1991 } from "./rules/mixedElection1991";
@@ -18,6 +18,7 @@ import { electionCandidatesCollection } from "@/lib/db/repositories/electionCand
 import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 import type { Document } from "mongodb";
+import { hu1991AssemblyCountsCollection } from "@/lib/db/repositories/hu1991AssemblyCounts";
 
 function stableId(key: string): ObjectId {
   return new ObjectId(createHash("sha256").update(key).digest("hex").slice(0, 24));
@@ -39,7 +40,7 @@ async function materializeHu1991RunoffOpening(input: {
     !Number.isFinite(now.getTime())
   )
     throw new Error("Hungarian runoff opening needs an active transaction, cycle, turn and time");
-  const journal = db.collection<Hu1991AssemblyRecord>(HU_1991_COUNTS_COLLECTION);
+  const journal = hu1991AssemblyCountsCollection<Hu1991AssemblyRecord>(db);
   const receipt = await journal.findOne({ _id: `HU:mixed1989:${cycle}` }, { session });
   if (!receipt || receipt.seatedAtTurn != null || receipt.count.kind !== "pending") return [];
   const activeIds =
@@ -213,7 +214,7 @@ async function materializeHu1991RunoffCount(input: {
     throw new Error(
       "Hungarian runoff certification needs an active transaction, cycle, turn and time"
     );
-  const journal = db.collection<Hu1991AssemblyRecord>(HU_1991_COUNTS_COLLECTION);
+  const journal = hu1991AssemblyCountsCollection<Hu1991AssemblyRecord>(db);
   const receipt = await journal.findOne({ _id: `HU:mixed1989:${cycle}` }, { session });
   if (
     !receipt ||

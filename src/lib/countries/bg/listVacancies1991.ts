@@ -8,8 +8,7 @@ import { ObjectId, type Db, type ClientSession } from "mongodb";
 import type { Character, ElectedOfficial, GameState, NPP } from "@/lib/db/types";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
-import { BG_FOUNDING_COUNTS_COLLECTION, type BgFoundingAssemblyRecord } from "./foundingCount1990";
-import { BG_FOUNDING_OFFICE_ARCHIVES_COLLECTION } from "./foundingSeating1990";
+import { type BgFoundingAssemblyRecord } from "./foundingCount1990";
 import { planBg1991ListReplacements, type Bg1991ListReplacement } from "./rules/listVacancies1991";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
@@ -18,6 +17,9 @@ import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameSt
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 import { notificationsCollection } from "@/lib/db/repositories/notifications";
 import type { Document } from "mongodb";
+import { bg1991ListReplacementsCollection } from "@/lib/db/repositories/bg1991ListReplacements";
+import { bgFoundingAssemblyOfficeArchivesCollection } from "@/lib/db/repositories/bgFoundingAssemblyOfficeArchives";
+import { bgFoundingAssemblyCountsCollection } from "@/lib/db/repositories/bgFoundingAssemblyCounts";
 
 export const BG_1991_LIST_REPLACEMENTS_COLLECTION = "bg1991ListReplacements";
 interface ReplacementReceipt {
@@ -47,7 +49,7 @@ async function readParent(db: Db, turn: number, session?: ClientSession, full = 
   );
   if (!country || country.bgOrdinaryAssemblySinceTurn != null || country.dissolvedTurn != null)
     return null;
-  const parent = await db.collection<Parent>(BG_FOUNDING_COUNTS_COLLECTION).findOne(
+  const parent = await bgFoundingAssemblyCountsCollection<Parent>(db).findOne(
     { countryId: "BG", seatedAtTurn: { $exists: true } },
     {
       session,
@@ -104,8 +106,7 @@ export async function advanceBg1991ListVacancies(
     const occupied = rows.filter((row) => row.seatsHeld === 1 && (row.characterId || row.nppId));
     // Preserve alternate settlements rather than adding native mandates to them.
     if (occupied.some((row) => row.bulgarianFoundingMandate?.receiptId !== parent._id)) return 0;
-    const history = await db
-      .collection<ReplacementReceipt>(BG_1991_LIST_REPLACEMENTS_COLLECTION)
+    const history = await bg1991ListReplacementsCollection<ReplacementReceipt>(db)
       .find(
         { parentReceiptId: parent._id },
         { session, projection: { replacement: 1, generation: 1 } }
@@ -174,13 +175,11 @@ export async function advanceBg1991ListVacancies(
       bg1991MandateGeneration?: number;
     }>(db).updateOne({ _id: "BG" }, { $inc: { bg1991MandateGeneration: 1 } }, { session });
     if (chamber.matchedCount !== 1) throw new Error("Bulgarian chamber authority is missing");
-    const lock = await db
-      .collection<Parent>(BG_FOUNDING_COUNTS_COLLECTION)
-      .updateOne(
-        { _id: parent._id, seatedAtTurn: parent.seatedAtTurn },
-        { $inc: { listReplacementGeneration: 1 } },
-        { session }
-      );
+    const lock = await bgFoundingAssemblyCountsCollection<Parent>(db).updateOne(
+      { _id: parent._id, seatedAtTurn: parent.seatedAtTurn },
+      { $inc: { listReplacementGeneration: 1 } },
+      { session }
+    );
     if (lock.modifiedCount !== 1) throw new Error("Bulgarian list parent changed");
     const additions: ElectedOfficial[] = placements.map(({ slotId, mandate }) => {
       const id = stableId(`${parent._id}:person:${slotId}`),
@@ -216,24 +215,22 @@ export async function advanceBg1991ListVacancies(
     const ids = additions.map((row) => row._id),
       stubs = rows.filter((row) => ids.some((id) => id.equals(row._id)));
     if (stubs.length) {
-      await db
-        .collection<{
-          _id: string;
-          countryId: string;
-          receiptId: string;
-          turn: number;
-          official: ElectedOfficial;
-        }>(BG_FOUNDING_OFFICE_ARCHIVES_COLLECTION)
-        .insertMany(
-          stubs.map((official) => ({
-            _id: `${parent._id}:list:${turn}:${official._id}:departed`,
-            countryId: "BG",
-            receiptId: parent._id,
-            turn,
-            official,
-          })),
-          { session }
-        );
+      await bgFoundingAssemblyOfficeArchivesCollection<{
+        _id: string;
+        countryId: string;
+        receiptId: string;
+        turn: number;
+        official: ElectedOfficial;
+      }>(db).insertMany(
+        stubs.map((official) => ({
+          _id: `${parent._id}:list:${turn}:${official._id}:departed`,
+          countryId: "BG",
+          receiptId: parent._id,
+          turn,
+          official,
+        })),
+        { session }
+      );
       await officials.deleteMany({ _id: { $in: stubs.map((row) => row._id) } }, { session });
     }
     await officials.insertMany(additions, { session });
@@ -325,7 +322,7 @@ export async function advanceBg1991ListVacancies(
       }));
     if (notices.length)
       await notificationsCollection<Document>(db).insertMany(notices, { session });
-    await db.collection<ReplacementReceipt>(BG_1991_LIST_REPLACEMENTS_COLLECTION).insertMany(
+    await bg1991ListReplacementsCollection<ReplacementReceipt>(db).insertMany(
       placements.map((row, index) => ({
         _id: `${parent._id}:list:${row.slotId}:${row.mandate.personId}`,
         parentReceiptId: parent._id,

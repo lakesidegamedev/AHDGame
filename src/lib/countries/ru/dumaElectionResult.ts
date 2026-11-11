@@ -5,13 +5,6 @@
  */
 import { russianDumaElectoralLaw } from "./rules/dumaElectoralLaw";
 import { ObjectId, type ClientSession, type Db } from "mongodb";
-import type {
-  CountryGameState,
-  Election,
-  ElectionCandidate,
-  ElectionVoteTally,
-  GameState,
-} from "@/lib/db/types";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { resolveRussianDumaCohort, type RussianDumaCohortBallot } from "./rules/assemblyCohort";
 import { loadRussianDumaCertificationInputs } from "./dumaCertificationInputs";
@@ -26,6 +19,7 @@ import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { russianDumaElectionResultsCollection } from "@/lib/db/repositories/russianDumaElectionResults";
 
 export const RUSSIAN_DUMA_RESULTS_COLLECTION = "russianDumaElectionResults";
 export interface RussianDumaResultRecord {
@@ -67,7 +61,7 @@ export async function materializeRussianDumaElectionResult(input: {
     !Number.isFinite(now.getTime())
   )
     throw new Error("Duma certification needs an active transaction, turn and time");
-  const results = db.collection<RussianDumaResultRecord>(RUSSIAN_DUMA_RESULTS_COLLECTION);
+  const results = russianDumaElectionResultsCollection<RussianDumaResultRecord>(db);
   const previous = await results.findOne({ _id: cohortId.toHexString() }, { session });
   if (previous) {
     if (

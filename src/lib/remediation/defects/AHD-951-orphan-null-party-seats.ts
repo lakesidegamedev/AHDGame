@@ -25,6 +25,9 @@
 import type { Db } from "mongodb";
 import { MULTI_SEAT_BLOC_OFFICE_TYPES } from "@/lib/elections/vacatedBlocSeats";
 import type { Defect, DetectResult, HealPlan, HealResult, VerifyResult } from "../types";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { ukCommonsVacanciesCollection } from "@/lib/db/repositories/ukCommonsVacancies";
+import type { Document } from "mongodb";
 
 /** Office types where a null-party bloc can only be the vacate bug. */
 const HEALED_OFFICE_TYPES: string[] = [...MULTI_SEAT_BLOC_OFFICE_TYPES];
@@ -40,7 +43,6 @@ const ORPHAN_SHAPE = {
 const HEAL_FILTER = { ...ORPHAN_SHAPE, officeType: { $in: HEALED_OFFICE_TYPES } };
 
 const OFFICIALS = "electedOfficials";
-const VACANCIES = "ukCommonsVacancies";
 
 interface OrphanRow {
   _id: unknown;
@@ -63,16 +65,14 @@ interface OrphanScan {
  */
 async function findVacancyAnchoredIds(db: Db, ids: unknown[]): Promise<Set<string>> {
   if (ids.length === 0) return new Set();
-  const docs = await db
-    .collection<{ officialId?: unknown }>(VACANCIES)
+  const docs = await ukCommonsVacanciesCollection<{ officialId?: unknown }>(db)
     .find({ officialId: { $in: ids } }, { projection: { officialId: 1 } })
     .toArray();
   return new Set(docs.map((doc) => String(doc.officialId)));
 }
 
 async function scanOrphans(db: Db): Promise<OrphanScan> {
-  const candidates = await db
-    .collection<OrphanRow>(OFFICIALS)
+  const candidates = await electedOfficialsCollection<OrphanRow>(db)
     .find(HEAL_FILTER, { projection: { countryId: 1, officeType: 1, state: 1, seatsHeld: 1 } })
     .toArray();
   const anchoredIds = await findVacancyAnchoredIds(
@@ -84,9 +84,10 @@ async function scanOrphans(db: Db): Promise<OrphanScan> {
 }
 
 async function countFlagged(db: Db): Promise<number> {
-  return db
-    .collection(OFFICIALS)
-    .countDocuments({ ...ORPHAN_SHAPE, officeType: { $nin: HEALED_OFFICE_TYPES } });
+  return electedOfficialsCollection<Document>(db).countDocuments({
+    ...ORPHAN_SHAPE,
+    officeType: { $nin: HEALED_OFFICE_TYPES },
+  });
 }
 
 async function detect(db: Db): Promise<DetectResult> {
@@ -143,9 +144,10 @@ async function apply(db: Db, healPlan: HealPlan): Promise<HealResult> {
   const approved = new Set(ids);
   const toDelete = orphans.map((row) => row._id).filter((id) => approved.has(String(id)));
 
-  const res = await db
-    .collection(OFFICIALS)
-    .deleteMany({ ...HEAL_FILTER, _id: { $in: toDelete } } as Record<string, unknown>);
+  const res = await electedOfficialsCollection<Document>(db).deleteMany({
+    ...HEAL_FILTER,
+    _id: { $in: toDelete },
+  } as Record<string, unknown>);
 
   return {
     documentsScanned: orphans.length,

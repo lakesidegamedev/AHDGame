@@ -23,7 +23,6 @@ import {
   type SovereignCouponClaimRecord,
 } from "@/lib/banking/fundedSovereignCoupons";
 import { groupSovereignCouponClaims } from "@/lib/banking/rules/sovereignCoupons";
-import { HEAL_BACKUPS_COLLECTION } from "../backup";
 import type {
   Defect,
   DetectResult,
@@ -35,6 +34,8 @@ import type {
 } from "../types";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
+import { healBackupsCollection } from "@/lib/db/repositories/healBackups";
+import { sovereignCouponClaimsCollection } from "@/lib/db/repositories/sovereignCouponClaims";
 
 export const DEFECT_ID = "AHD-sovereign-coupon-arrears";
 
@@ -77,8 +78,7 @@ function foldableFilter(owned: readonly string[]): Record<string, unknown> {
   };
 }
 
-const claims = (db: Db) =>
-  db.collection<SovereignCouponClaimRecord>(SOVEREIGN_COUPON_CLAIMS_COLLECTION);
+const claims = (db: Db) => sovereignCouponClaimsCollection<SovereignCouponClaimRecord>(db);
 
 async function currentTurn(db: Db): Promise<number> {
   const state = await gameStateCollection<{ _id: string; currentTurn?: number; turn?: number }>(
@@ -330,7 +330,7 @@ async function applyGroup(
   )
     return null;
   const ids = members.map((member) => member._id);
-  const backups = db.collection<HealBackup>(HEAL_BACKUPS_COLLECTION);
+  const backups = healBackupsCollection<HealBackup>(db);
   await backups.insertMany(
     members.map((member) => ({
       runId: ctx.runId ?? "",

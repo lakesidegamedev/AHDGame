@@ -4,16 +4,15 @@ import type { Corporation, CorporateSector } from "@/lib/db/types/corporation";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import type { SuccessionCustodyAssignment } from "./rules/custody";
 import type { FederationStateTransferPlan } from "./territoryTransferPlan";
-import {
-  FEDERATION_ARCHIVED_REGION_ROWS_COLLECTION,
-  type FederationArchivedRegionRow,
-} from "./materializeTerritory";
+import { type FederationArchivedRegionRow } from "./materializeTerritory";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { federationPublicCorporationRebasesCollection } from "@/lib/db/repositories/federationPublicCorporationRebases";
+import { federationArchivedPublicCorporationsCollection } from "@/lib/db/repositories/federationArchivedPublicCorporations";
+import { federationArchivedRegionRowsCollection } from "@/lib/db/repositories/federationArchivedRegionRows";
 
 export const FEDERATION_ARCHIVED_PUBLIC_CORPORATIONS_COLLECTION =
   "federationArchivedPublicCorporations";
-const FEDERATION_PUBLIC_CORPORATION_REBASES_COLLECTION = "federationPublicCorporationRebases";
 
 export interface FederationArchivedPublicCorporation {
   _id: string;
@@ -77,8 +76,9 @@ export async function materializeFederationPublicCorporations(input: {
     const key = sector.corporationId.toString();
     activeByCorporation.set(key, [...(activeByCorporation.get(key) ?? []), sector]);
   }
-  const archivedSectors = await db
-    .collection<FederationArchivedRegionRow>(FEDERATION_ARCHIVED_REGION_ROWS_COLLECTION)
+  const archivedSectors = await federationArchivedRegionRowsCollection<FederationArchivedRegionRow>(
+    db
+  )
     .find({ applicationId, collection: "corporateSectors" }, { session })
     .toArray();
   const archivedByCorporation = new Map<string, FederationArchivedRegionRow[]>();
@@ -113,20 +113,18 @@ export async function materializeFederationPublicCorporations(input: {
       if (transferred.length === 0 && shell?.disposition !== "aggregate-background")
         throw new Error("Federation public corporation has no approved successor assets");
       if (shell) custodians.push(shell.custodianEntityId);
-      await db
-        .collection<FederationArchivedPublicCorporation>(
-          FEDERATION_ARCHIVED_PUBLIC_CORPORATIONS_COLLECTION
-        )
-        .insertOne(
-          {
-            _id: `${applicationId}:${corporationId}`,
-            applicationId,
-            corporationId,
-            custodians: [...new Set(custodians)].sort(),
-            value: corporation,
-          },
-          { session }
-        );
+      await federationArchivedPublicCorporationsCollection<FederationArchivedPublicCorporation>(
+        db
+      ).insertOne(
+        {
+          _id: `${applicationId}:${corporationId}`,
+          applicationId,
+          corporationId,
+          custodians: [...new Set(custodians)].sort(),
+          value: corporation,
+        },
+        { session }
+      );
       const removed = await corporationsCollection(db).deleteOne(
         { _id: corporation._id },
         { session }
@@ -151,20 +149,18 @@ export async function materializeFederationPublicCorporations(input: {
     if (retained.length === 0)
       throw new Error("Retained federation enterprise needs an approved playable headquarters");
     const headquartersState = retained[0];
-    await db
-      .collection<FederationPublicCorporationRebase>(
-        FEDERATION_PUBLIC_CORPORATION_REBASES_COLLECTION
-      )
-      .insertOne(
-        {
-          _id: `${applicationId}:${corporationId}`,
-          applicationId,
-          corporationId,
-          formerHeadquartersState: corporation.headquartersState,
-          headquartersState,
-        },
-        { session }
-      );
+    await federationPublicCorporationRebasesCollection<FederationPublicCorporationRebase>(
+      db
+    ).insertOne(
+      {
+        _id: `${applicationId}:${corporationId}`,
+        applicationId,
+        corporationId,
+        formerHeadquartersState: corporation.headquartersState,
+        headquartersState,
+      },
+      { session }
+    );
     const updated = await corporationsCollection(db).updateOne(
       { _id: corporation._id, headquartersState: corporation.headquartersState },
       { $set: { headquartersState } },

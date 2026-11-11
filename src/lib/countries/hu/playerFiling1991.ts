@@ -4,7 +4,7 @@
  * withdrawal and re-entry reuse the original person and their recorded ballots.
  */
 import { MongoServerError, ObjectId, type ClientSession, type Db } from "mongodb";
-import type { Election, ElectionCandidate, GameState, PoliticalParty } from "@/lib/db/types";
+import type { ElectionCandidate } from "@/lib/db/types";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { chooseHu1991PlayerDistrict } from "./rules/playerFiling1991";
 import { isHu1991AssemblyCampaign } from "./rules/assemblyCampaign1991";
@@ -20,6 +20,7 @@ import { hu1991AssemblyCountsCollection } from "@/lib/db/repositories/hu1991Asse
 import { hu2011ConstituencyByElectionsCollection } from "@/lib/db/repositories/hu2011ConstituencyByElections";
 import { hu2011AssemblyCountsCollection } from "@/lib/db/repositories/hu2011AssemblyCounts";
 import { hu1991ConstituencyByElectionsCollection } from "@/lib/db/repositories/hu1991ConstituencyByElections";
+import { hu1991AssemblyFilingLocksCollection } from "@/lib/db/repositories/hu1991AssemblyFilingLocks";
 export const HU_1991_FILING_LOCKS_COLLECTION = "hu1991AssemblyFilingLocks";
 export type Hu1991FilingFailure =
   | "invalid-ballot"
@@ -222,7 +223,7 @@ export async function materializeHu1991PlayerFiling(input: {
         return reject("invalid-ballot");
     }
   }
-  const locks = db.collection<FilingLock>(HU_1991_FILING_LOCKS_COLLECTION);
+  const locks = hu1991AssemblyFilingLocksCollection<FilingLock>(db);
   const ownerId = candidate.characterId.toHexString();
   const ownerKey = `${receiptId}:player:${ownerId}`;
   const saved = await locks.findOne({ _id: ownerKey }, { session });

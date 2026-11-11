@@ -23,6 +23,7 @@ import {
   tickConflict,
 } from "./engine";
 import { advanceCampaignTurn, normalizeCampaignState } from "./campaign";
+import { livingConflictsCollection } from "@/lib/db/repositories/livingConflicts";
 
 /**
  * The DB-facing turn driver for living conflicts. Loads a conflict's state, opens
@@ -35,8 +36,6 @@ import { advanceCampaignTurn, normalizeCampaignState } from "./campaign";
  * behind `livingConflictsEnabled`, which ships off. Kept a thin orchestration
  * over the pure engine so its logic is testable with a fake db.
  */
-
-const LIVING_CONFLICT_COLLECTION = "livingConflicts";
 
 /** Who is playing which role in a given conflict, assembled by the caller. */
 export interface ConflictParticipants {
@@ -78,21 +77,17 @@ export function nationsForRoles(p: ConflictParticipants, roles: ConflictRole[] |
 }
 
 export async function loadConflictState(db: Db, defKey: string): Promise<LivingConflictState> {
-  const doc = await db
-    .collection<LivingConflictState>(LIVING_CONFLICT_COLLECTION)
-    .findOne({ defKey });
+  const doc = await livingConflictsCollection<LivingConflictState>(db).findOne({ defKey });
   if (!doc) return emptyConflictState(defKey);
   return { ...doc, campaign: normalizeCampaignState(doc.campaign) };
 }
 
 export async function saveConflictState(db: Db, state: LivingConflictState): Promise<void> {
-  await db
-    .collection<LivingConflictState>(LIVING_CONFLICT_COLLECTION)
-    .updateOne(
-      { defKey: state.defKey },
-      { $set: { ...state, updatedAt: new Date() } },
-      { upsert: true }
-    );
+  await livingConflictsCollection<LivingConflictState>(db).updateOne(
+    { defKey: state.defKey },
+    { $set: { ...state, updatedAt: new Date() } },
+    { upsert: true }
+  );
 }
 
 export interface DrivenEvent {

@@ -4,24 +4,16 @@
  * keeping voter counts separate from nominee marks.
  */
 import { type ClientSession, type Db } from "mongodb";
-import type {
-  CountryGameState,
-  Election,
-  ElectionCandidate,
-  ElectionVoteTally,
-  NPP,
-} from "@/lib/db/types";
+import type { CountryGameState, Election, ElectionCandidate } from "@/lib/db/types";
 import type { RussianCouncilCohortBallot } from "./rules/councilCohort";
-import {
-  RUSSIAN_DUMA_RESULTS_COLLECTION,
-  type RussianDumaResultRecord,
-} from "./dumaElectionResult";
+import { type RussianDumaResultRecord } from "./dumaElectionResult";
 
 import { russianDumaBoundRoot } from "./dumaConvocationAuthority";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { russianDumaElectionResultsCollection } from "@/lib/db/repositories/russianDumaElectionResults";
 export async function loadRussianCouncilCertificationInputs(input: {
   db: Db;
   session: ClientSession;
@@ -102,8 +94,7 @@ export async function loadRussianCouncilCertificationInputs(input: {
   const pendingDuma = new Set<string>();
   const dumaRoot = russianDumaBoundRoot(country);
   if (dumaRoot) {
-    const receipts = await db
-      .collection<RussianDumaResultRecord>(RUSSIAN_DUMA_RESULTS_COLLECTION)
+    const receipts = await russianDumaElectionResultsCollection<RussianDumaResultRecord>(db)
       .find(
         {
           countryId: "RU",

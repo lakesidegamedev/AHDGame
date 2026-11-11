@@ -4,22 +4,9 @@
  * preserves its accumulated89-subject receipt atomically before joint seating.
  */
 import { type ClientSession, type Db, type ObjectId } from "mongodb";
-import type {
-  CountryGameState,
-  Election,
-  ElectionCandidate,
-  ElectionVoteTally,
-  GameState,
-} from "@/lib/db/types";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
-import {
-  RUSSIAN_COUNCIL_RESULTS_COLLECTION,
-  type RussianCouncilResultRecord,
-} from "./councilElectionResult";
-import {
-  RUSSIAN_COUNCIL_OPENINGS_COLLECTION,
-  type RussianCouncilOpeningRecord,
-} from "./councilElectionOpening";
+import { type RussianCouncilResultRecord } from "./councilElectionResult";
+import { type RussianCouncilOpeningRecord } from "./councilElectionOpening";
 import { loadRussianCouncilOpeningBinding } from "./councilOpeningBinding";
 import { loadRussianCouncilCertificationInputs } from "./councilCertificationInputs";
 import { resolveRussianCouncilRepeat } from "./rules/councilRepeat";
@@ -30,6 +17,8 @@ import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { russianCouncilElectionResultsCollection } from "@/lib/db/repositories/russianCouncilElectionResults";
+import { russianCouncilElectionOpeningsCollection } from "@/lib/db/repositories/russianCouncilElectionOpenings";
 
 export async function materializeRussianCouncilRepeatResult(input: {
   db: Db;
@@ -49,9 +38,9 @@ export async function materializeRussianCouncilRepeatResult(input: {
     !Number.isFinite(now.getTime())
   )
     throw new Error("Council repeat certification needs a transaction, generation, turn and time");
-  const opening = await db
-    .collection<RussianCouncilOpeningRecord>(RUSSIAN_COUNCIL_OPENINGS_COLLECTION)
-    .findOne({ _id: `${rootCohortId.toHexString()}:repeat:${generation}` }, { session });
+  const opening = await russianCouncilElectionOpeningsCollection<RussianCouncilOpeningRecord>(
+    db
+  ).findOne({ _id: `${rootCohortId.toHexString()}:repeat:${generation}` }, { session });
   if (
     !opening?.rootCohortId?.equals(rootCohortId) ||
     opening.generation !== generation ||
@@ -60,7 +49,7 @@ export async function materializeRussianCouncilRepeatResult(input: {
     opening.openedOnTurn > turn
   )
     throw new Error("Council repeat certification has no valid generation opening");
-  const results = db.collection<RussianCouncilResultRecord>(RUSSIAN_COUNCIL_RESULTS_COLLECTION);
+  const results = russianCouncilElectionResultsCollection<RussianCouncilResultRecord>(db);
   const id = opening.cohortId.toHexString();
   const replay = await results.findOne({ _id: id }, { session });
   if (replay) {

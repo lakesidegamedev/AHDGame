@@ -10,15 +10,12 @@ import { isNppOwned } from "@/lib/corporations/nppOwned";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import type { PrivateSuccessionFirm, PrivateFirmSuccessionPlan } from "./rules/privateFacilities";
 import type { FederationStateTransferPlan } from "./territoryTransferPlan";
-import {
-  FEDERATION_ARCHIVED_REGION_ROWS_COLLECTION,
-  type FederationArchivedRegionRow,
-} from "./materializeTerritory";
-import {
-  FEDERATION_FACILITY_CLAIMS_COLLECTION,
-  type FederationFacilityClaimRecord,
-} from "./facilityClaimLedger";
+import { type FederationArchivedRegionRow } from "./materializeTerritory";
+import { type FederationFacilityClaimRecord } from "./facilityClaimLedger";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { federationPrivateFirmHoldsCollection } from "@/lib/db/repositories/federationPrivateFirmHolds";
+import { federationFacilityClaimsCollection } from "@/lib/db/repositories/federationFacilityClaims";
+import { federationArchivedRegionRowsCollection } from "@/lib/db/repositories/federationArchivedRegionRows";
 
 export const FEDERATION_PRIVATE_FIRM_HOLDS_COLLECTION = "federationPrivateFirmHolds";
 
@@ -103,8 +100,7 @@ export async function materializeFederationPrivateFirms(input: {
   if (new Set(archiveIds).size !== archiveIds.length || new Set(claimIds).size !== claimIds.length)
     throw new Error("Federation player facilities have duplicate compensation claims");
   const archivedRows = claims.length
-    ? await db
-        .collection<FederationArchivedRegionRow>(FEDERATION_ARCHIVED_REGION_ROWS_COLLECTION)
+    ? await federationArchivedRegionRowsCollection<FederationArchivedRegionRow>(db)
         .find(
           { _id: { $in: archiveIds }, applicationId },
           { session, projection: { successorEntityId: 1, "value.corporationId": 1 } }
@@ -112,8 +108,7 @@ export async function materializeFederationPrivateFirms(input: {
         .toArray()
     : [];
   const stagedRows = claims.length
-    ? await db
-        .collection<FederationFacilityClaimRecord>(FEDERATION_FACILITY_CLAIMS_COLLECTION)
+    ? await federationFacilityClaimsCollection<FederationFacilityClaimRecord>(db)
         .find(
           { _id: { $in: claimIds }, applicationId },
           { session, projection: { corporationId: 1, amountAnchor: 1, status: 1 } }
@@ -194,9 +189,9 @@ export async function materializeFederationPrivateFirms(input: {
   }
   // Validate the complete inventory before writing either the holds or the firms.
   if (holds.length) {
-    await db
-      .collection<FederationPrivateFirmHold>(FEDERATION_PRIVATE_FIRM_HOLDS_COLLECTION)
-      .insertMany(holds, { session });
+    await federationPrivateFirmHoldsCollection<FederationPrivateFirmHold>(db).insertMany(holds, {
+      session,
+    });
     const updated = await corporations.bulkWrite(updates, { session });
     if (updated.matchedCount !== updates.length)
       throw new Error("Federation player firm changed while entering protected relocation");

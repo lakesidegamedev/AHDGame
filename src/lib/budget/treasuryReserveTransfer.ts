@@ -2,7 +2,6 @@
 import { ObjectId, type Db, type Document } from "mongodb";
 import { isDeepStrictEqual } from "node:util";
 import * as Sentry from "@sentry/nextjs";
-import type { GameConfig } from "@/lib/db/types";
 import type { TreasuryTransferRecord } from "@/lib/db/types/centralBank";
 import type { ActionAuditRecord } from "@/lib/db/types/actionAuditLog";
 import type { CountryId } from "@/lib/constants/countries";
@@ -13,12 +12,7 @@ import { validateTreasuryReserveTransfer } from "./rules/treasuryReserveTransfer
 import { treasuryAnchorValuation } from "./rules/treasuryAccrual";
 import { resolveCountryCurrencyCode } from "@/lib/currency/govBudgetFields";
 import { getBankId } from "@/lib/centralBank/helpers";
-import {
-  claimMoneyMove,
-  MONEY_MOVE_COLLECTION,
-  SETTLED_KEYS_CAP,
-  legStamp,
-} from "@/lib/banking/moneyMove";
+import { claimMoneyMove, SETTLED_KEYS_CAP, legStamp } from "@/lib/banking/moneyMove";
 import { recoverProjections, type SettlementResult } from "@/lib/banking/settlementJournal";
 import type { TransitionProjection } from "@/lib/banking/rules/boundary";
 import { prepareAuditRecord } from "@/lib/audit/recordAudit";
@@ -38,6 +32,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { actionAuditLogCollection } from "@/lib/db/repositories/actionAuditLog";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 export class TreasuryReserveTransferRejected extends Error {
   constructor(
@@ -375,9 +370,10 @@ async function release(db: Db, key: string, bankId: string): Promise<void> {
 async function publishAudit(db: Db, receipt: Receipt): Promise<void> {
   const plan = receipt.treasuryReserveTransfer;
   if (!plan.audit || plan.auditDelivered) {
-    await db
-      .collection<Receipt>(MONEY_MOVE_COLLECTION)
-      .updateOne({ _id: receipt._id }, { $set: { treasuryReserveRecoveryPending: false } });
+    await bankMoneyMovesCollection<Receipt>(db).updateOne(
+      { _id: receipt._id },
+      { $set: { treasuryReserveRecoveryPending: false } }
+    );
     return;
   }
   try {
@@ -395,7 +391,7 @@ async function publishAudit(db: Db, receipt: Receipt): Promise<void> {
       !isDeepStrictEqual(await actionAuditLogCollection(db).findOne({ _id: audit._id }), audit)
     )
       throw new Error("Treasury transfer audit differs from original receipt");
-    await db.collection<Receipt>(MONEY_MOVE_COLLECTION).updateOne(
+    await bankMoneyMovesCollection<Receipt>(db).updateOne(
       { _id: receipt._id },
       {
         $set: {
@@ -415,7 +411,7 @@ export async function executeTreasuryReserveTransfer(
   command: Command
 ): Promise<TreasuryTransferRecord> {
   const key = commandKey(command.operationId),
-    journal = db.collection<Receipt>(MONEY_MOVE_COLLECTION);
+    journal = bankMoneyMovesCollection<Receipt>(db);
   let receipt = await journal.findOne({ _id: key });
   if (!receipt) {
     await prepare(db, command);
@@ -434,7 +430,7 @@ export async function resumeTreasuryReserveTransfer(
   db: Db,
   key: string
 ): Promise<SettlementResult> {
-  const journal = db.collection<Receipt>(MONEY_MOVE_COLLECTION);
+  const journal = bankMoneyMovesCollection<Receipt>(db);
   let receipt = await journal.findOne({ _id: key });
   if (!receipt?.treasuryReserveTransfer) throw new Error("Treasury transfer receipt missing");
   let plan = receipt.treasuryReserveTransfer;
@@ -703,7 +699,7 @@ export async function resumeTreasuryReserveTransfer(
 const indexed = new WeakSet<Db>();
 export async function resumeTreasuryReserveTransfers(db: Db): Promise<void> {
   if (!indexed.has(db)) {
-    await db.collection(MONEY_MOVE_COLLECTION).createIndex(
+    await bankMoneyMovesCollection<Document>(db).createIndex(
       { treasuryReserveRecoveryPending: 1, _id: 1 },
       {
         name: "treasury_reserve_pending",
@@ -712,8 +708,7 @@ export async function resumeTreasuryReserveTransfers(db: Db): Promise<void> {
     );
     indexed.add(db);
   }
-  const pending = await db
-    .collection<Receipt>(MONEY_MOVE_COLLECTION)
+  const pending = await bankMoneyMovesCollection<Receipt>(db)
     .find({ treasuryReserveRecoveryPending: true })
     .project<{ _id: string }>({ _id: 1 })
     .sort({ _id: 1 })

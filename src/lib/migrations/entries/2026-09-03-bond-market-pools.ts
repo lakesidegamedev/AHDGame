@@ -1,12 +1,12 @@
 import type { Db } from "mongodb";
 import type { Migration, MigrationContext, MigrationResult } from "../types";
 import type { BondMarketPool } from "@/lib/db/types";
-import { BOND_MARKET_POOLS_COLLECTION } from "@/lib/db/types/bondMarketPool";
 import { BOND_POOL_M2_SHARE } from "@/lib/bonds/marketPool";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 import { moneySupplySnapshotsCollection } from "@/lib/db/repositories/moneySupplySnapshots";
+import { bondMarketPoolsCollection } from "@/lib/db/repositories/bondMarketPools";
 
 /**
  * Opening balance sheet for the bond market pools.
@@ -49,8 +49,7 @@ async function seedBondMarketPools(db: Db, ctx: MigrationContext): Promise<Migra
 
   const existing = new Set(
     (
-      await db
-        .collection<BondMarketPool>(BOND_MARKET_POOLS_COLLECTION)
+      await bondMarketPoolsCollection<BondMarketPool>(db)
         .find({}, { projection: { _id: 1 } })
         .toArray()
     ).map((pool) => String(pool._id))
@@ -85,7 +84,7 @@ async function seedBondMarketPools(db: Db, ctx: MigrationContext): Promise<Migra
     };
   }
   if (docs.length > 0) {
-    const result = await db.collection<BondMarketPool>(BOND_MARKET_POOLS_COLLECTION).bulkWrite(
+    const result = await bondMarketPoolsCollection<BondMarketPool>(db).bulkWrite(
       docs.map((doc) => ({
         updateOne: {
           filter: { _id: doc._id },

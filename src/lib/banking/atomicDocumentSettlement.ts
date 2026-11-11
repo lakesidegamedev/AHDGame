@@ -1,15 +1,11 @@
 /** Journal-owned same-document transfers publish cash and their read model atomically. */
 import { type Db, type Document, type Filter, type UpdateFilter } from "mongodb";
 import { isDeepStrictEqual } from "node:util";
-import {
-  claimMoneyMove,
-  MONEY_MOVE_COLLECTION,
-  SETTLED_KEYS_FIELD,
-  SETTLED_KEYS_CAP,
-} from "./moneyMove";
+import { claimMoneyMove, SETTLED_KEYS_FIELD, SETTLED_KEYS_CAP } from "./moneyMove";
 import type { BankingTransition, TransitionProjection } from "./rules/boundary";
 import type { SettlementResult } from "./settlementJournal";
 import { reviveObjectIds } from "./settlementEncoding";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 type AtomicUpdate = {
   $set?: Record<string, unknown>;
@@ -266,9 +262,9 @@ export async function settleAtomicDocumentTransition(
   if (target.expectedSettledKeys !== undefined) {
     // An existing claim owns its original plan even when its own delivery has
     // advanced the generation. A new claim cannot refresh an older quote.
-    const existing = await db
-      .collection<{ _id: string }>(MONEY_MOVE_COLLECTION)
-      .findOne({ _id: transition.key });
+    const existing = await bankMoneyMovesCollection<{ _id: string }>(db).findOne({
+      _id: transition.key,
+    });
     if (existing) return resumeAtomicDocumentSettlement(db, transition.key);
     if (!same(original?.[SETTLED_KEYS_FIELD] ?? null, target.expectedSettledKeys))
       return bad("Atomic quote receipt generation changed");
@@ -303,7 +299,7 @@ export async function settleAtomicDocumentTransition(
     // The money primitive intentionally makes an empty cash move a no-op.
     // Asset exchanges still claim their complete original plan before mutation.
     try {
-      await db.collection<AtomicRecord>(MONEY_MOVE_COLLECTION).insertOne({
+      await bankMoneyMovesCollection<AtomicRecord>(db).insertOne({
         ...extension,
         _id: transition.key,
         kind: transition.kind,
@@ -336,7 +332,7 @@ export async function resumeAtomicDocumentSettlement(
   key: string,
   recoverPendingOwner = true
 ): Promise<SettlementResult> {
-  const journal = db.collection<AtomicRecord>(MONEY_MOVE_COLLECTION);
+  const journal = bankMoneyMovesCollection<AtomicRecord>(db);
   const record = await journal.findOne({ _id: key });
   const result: SettlementResult = {
     status: "rejected",

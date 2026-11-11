@@ -1,13 +1,12 @@
 /** Hold the lender's epoch while a construction instalment is in flight. */
 import { ObjectId, type Db } from "mongodb";
 import type { BankLoan } from "@/lib/db/types/bank";
-import type { CorporateSector } from "@/lib/db/types/corporation";
-import { MONEY_MOVE_COLLECTION } from "./moneyMove";
 import { completeRefusedDebitBatch } from "./constructionBatchCompletion";
 import { resumeSettlement } from "./settlementJournal";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 export async function acquireConstructionServiceLease(
   db: Db,
@@ -157,9 +156,10 @@ export async function recoverConstructionServiceLeases(
       );
       continue;
     }
-    const record = await db
-      .collection<{ _id: string }>(MONEY_MOVE_COLLECTION)
-      .findOne({ _id: key }, { projection: { _id: 1 } });
+    const record = await bankMoneyMovesCollection<{ _id: string }>(db).findOne(
+      { _id: key },
+      { projection: { _id: 1 } }
+    );
     if (record) {
       let result = await resumeSettlement(db, key);
       // A refused borrower debit is final. Each pass drops one refusal and

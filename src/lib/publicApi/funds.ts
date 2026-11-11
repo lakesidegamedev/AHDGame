@@ -1,8 +1,7 @@
 import type { Db } from "mongodb";
 import type { IndexFund } from "@/lib/db/types";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
-
-const INDEX_FUNDS_COLLECTION = "indexFunds";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 
 function fundSummary(f: IndexFund) {
   return {
@@ -30,8 +29,7 @@ export async function queryIndexFunds(db: Db, params: { country?: string; scope?
   if (params.country) filter.countryId = params.country.toUpperCase();
   if (params.scope) filter.scope = params.scope;
 
-  const funds = await db
-    .collection<IndexFund>(INDEX_FUNDS_COLLECTION)
+  const funds = await indexFundsCollection<IndexFund>(db)
     .find(filter)
     .sort({ quotedNav: -1 })
     .toArray();
@@ -42,7 +40,7 @@ export async function queryIndexFunds(db: Db, params: { country?: string; scope?
 }
 
 export async function queryIndexFundDetail(db: Db, slug: string) {
-  const fund = await db.collection<IndexFund>(INDEX_FUNDS_COLLECTION).findOne({ slug });
+  const fund = await indexFundsCollection<IndexFund>(db).findOne({ slug });
 
   if (!fund) return null;
 

@@ -23,6 +23,7 @@ import type { SectorBuildOrder } from "@/lib/db/types";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { macroCountriesCollection } from "@/lib/db/repositories/macroCountries";
+import { retiredCommodityArchiveCollection } from "@/lib/db/repositories/retiredCommodityArchive";
 
 export const REMOVED_COMMODITY = "entertainment_services";
 export const ENTERTAINMENT_REMOVAL_MARKER = "entertainmentCommodityRemovedAtTurn";
@@ -83,7 +84,7 @@ async function archiveAndDelete(
 ): Promise<{ archived: number; deleted: number }> {
   const docs = await db.collection(name).find({ commodity: REMOVED_COMMODITY }).toArray();
   if (docs.length === 0) return { archived: 0, deleted: 0 };
-  await db.collection(RETIRED_COMMODITY_ARCHIVE).bulkWrite(
+  await retiredCommodityArchiveCollection<Document>(db).bulkWrite(
     docs.map((doc) => ({
       replaceOne: {
         filter: { _id: `${name}:${String(doc._id)}` as never },

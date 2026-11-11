@@ -5,11 +5,11 @@
  */
 import { createHash } from "node:crypto";
 import { ObjectId, type ClientSession, type Db } from "mongodb";
-import type { Election, ElectionCandidate, ElectionVoteTally } from "@/lib/db/types";
+import type { Election, ElectionCandidate } from "@/lib/db/types";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
 import { TALLY_WITH_LATEST_SNAPSHOT_ONLY } from "@/lib/elections/engine/tallyProjections";
-import { BG_FOUNDING_COUNTS_COLLECTION, type BgFoundingAssemblyRecord } from "./foundingCount1990";
+import { type BgFoundingAssemblyRecord } from "./foundingCount1990";
 import { bgFoundingRunoffCampaigns } from "./rules/foundingRunoff1990";
 import { projectBgFoundingRunoff } from "./rules/foundingBallots1990";
 import { countBgFoundingElection } from "./rules/foundingCount1990";
@@ -20,6 +20,7 @@ import { electionCandidatesCollection } from "@/lib/db/repositories/electionCand
 import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 import type { Document } from "mongodb";
+import { bgFoundingAssemblyCountsCollection } from "@/lib/db/repositories/bgFoundingAssemblyCounts";
 
 function stableId(key: string): ObjectId {
   return new ObjectId(createHash("sha256").update(key).digest("hex").slice(0, 24));
@@ -41,7 +42,7 @@ async function materializeBgFoundingRunoffOpening(input: {
     !Number.isFinite(now.getTime())
   )
     throw new Error("Bulgarian runoff opening needs an active transaction, cycle, turn and time");
-  const journal = db.collection<BgFoundingAssemblyRecord>(BG_FOUNDING_COUNTS_COLLECTION);
+  const journal = bgFoundingAssemblyCountsCollection<BgFoundingAssemblyRecord>(db);
   let receipt = await journal.findOne({ _id: `BG:founding1990:${cycle}` }, { session });
   if (!receipt || receipt.seatedAtTurn != null || receipt.count.kind !== "pending") return [];
   const activeIds =
@@ -234,7 +235,7 @@ async function materializeBgFoundingRunoffCount(input: {
     throw new Error(
       "Bulgarian runoff certification needs an active transaction, cycle, turn and time"
     );
-  const journal = db.collection<BgFoundingAssemblyRecord>(BG_FOUNDING_COUNTS_COLLECTION);
+  const journal = bgFoundingAssemblyCountsCollection<BgFoundingAssemblyRecord>(db);
   const receipt = await journal.findOne({ _id: `BG:founding1990:${cycle}` }, { session });
   if (
     !receipt ||

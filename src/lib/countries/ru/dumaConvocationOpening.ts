@@ -5,7 +5,7 @@
  */
 import { loadEnactedRussianDumaLaw } from "./dumaElectoralProposals1995";
 import { ObjectId, type ClientSession, type Db } from "mongodb";
-import type { CountryGameState, Election, State, StateRegistrationPool } from "@/lib/db/types";
+import type { Election } from "@/lib/db/types";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
 import { calendarTurn, turnToGameMonth } from "@/lib/utils/gameDate";
@@ -17,7 +17,6 @@ import {
   loadCurrentRussianDumaClock,
   loadRussianDumaAuthority,
   RUSSIAN_DUMA_AUTHORITY_PROJECTION,
-  RUSSIAN_DUMA_CONVOCATIONS_COLLECTION,
   type RussianDumaConvocationRecord,
 } from "./dumaConvocationAuthority";
 import { STATE_POPULATION_FIELDS } from "@/lib/db/collections/states";
@@ -25,6 +24,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 import { stateRegistrationPoolCollection } from "@/lib/db/repositories/stateRegistrationPool";
+import { russianDumaConvocationsCollection } from "@/lib/db/repositories/russianDumaConvocations";
 
 export async function materializeRussianDumaConvocationOpening(input: {
   db: Db;
@@ -204,9 +204,9 @@ export async function materializeRussianDumaConvocationOpening(input: {
   );
   if (claimed.matchedCount !== 1) throw new Error("Duma predecessor changed before opening");
   await elections.insertMany(ballots, { session });
-  await db
-    .collection<RussianDumaConvocationRecord>(RUSSIAN_DUMA_CONVOCATIONS_COLLECTION)
-    .insertOne(record, { session });
+  await russianDumaConvocationsCollection<RussianDumaConvocationRecord>(db).insertOne(record, {
+    session,
+  });
   return { cohortId, number: planned.number, created: true };
 }
 export async function openRussianDumaConvocation(

@@ -11,6 +11,7 @@ import type { Db } from "mongodb";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { producerEconomyTurnsCollection } from "@/lib/db/repositories/producerEconomyTurns";
 import type { Document } from "mongodb";
+import { producerPathClaimsCollection } from "@/lib/db/repositories/producerPathClaims";
 
 export type ProducerPath = "legacy" | "funded";
 
@@ -52,8 +53,6 @@ export function resolveProducerPath(input: ProducerPathInput): ProducerPath {
   return "funded";
 }
 
-const PRODUCER_PATH_CLAIMS = "producerPathClaims";
-
 /** Reads the config, opening marker and latch, then resolves. */
 export async function loadProducerPath(
   db: Db,
@@ -89,12 +88,12 @@ export async function claimProducerPath(
   input: { worldEpoch: string; turn: number; path: ProducerPath; phase: string }
 ): Promise<void> {
   const _id = JSON.stringify([input.worldEpoch, input.turn]);
-  const claims = db.collection<{
+  const claims = producerPathClaimsCollection<{
     _id: string;
     worldEpoch: string;
     turn: number;
     path: ProducerPath;
-  }>(PRODUCER_PATH_CLAIMS);
+  }>(db);
   try {
     await claims.insertOne({
       _id,
@@ -120,9 +119,9 @@ export async function assertLegacyProducerPathClaim(
   turn: number
 ): Promise<void> {
   if (!worldEpoch) return;
-  const claim = await db
-    .collection<{ _id: string; path: ProducerPath }>(PRODUCER_PATH_CLAIMS)
-    .findOne({ _id: JSON.stringify([worldEpoch, turn]) });
+  const claim = await producerPathClaimsCollection<{ _id: string; path: ProducerPath }>(db).findOne(
+    { _id: JSON.stringify([worldEpoch, turn]) }
+  );
   if (claim?.path === "funded")
     throw new Error(`Turn ${turn} settled on the funded producer market; legacy prices refused`);
 }
@@ -134,8 +133,8 @@ export async function readProducerPathClaim(
   turn: number
 ): Promise<ProducerPath | null> {
   if (!worldEpoch) return null;
-  const claim = await db
-    .collection<{ _id: string; path: ProducerPath }>(PRODUCER_PATH_CLAIMS)
-    .findOne({ _id: JSON.stringify([worldEpoch, turn]) });
+  const claim = await producerPathClaimsCollection<{ _id: string; path: ProducerPath }>(db).findOne(
+    { _id: JSON.stringify([worldEpoch, turn]) }
+  );
   return claim?.path ?? null;
 }

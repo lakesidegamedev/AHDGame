@@ -42,6 +42,8 @@ import { emitBankingAuditEvent } from "@/lib/banking/auditEvents";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { savingsAccountsCollection } from "@/lib/db/repositories/savingsAccounts";
+import type { Document } from "mongodb";
 
 export const SAVINGS_ACCOUNTS_COLLECTION = "savingsAccounts";
 
@@ -191,7 +193,7 @@ export async function refreshShadowAccounts(
       };
     });
   if (ops.length === 0) return 0;
-  await db.collection(SAVINGS_ACCOUNTS_COLLECTION).bulkWrite(ops, { ordered: false });
+  await savingsAccountsCollection<Document>(db).bulkWrite(ops, { ordered: false });
   return ops.length;
 }
 
@@ -288,10 +290,7 @@ export async function buildSavingsComparison(
 ): Promise<SavingsComparison> {
   const [rows, accountDocs, charters, banks] = await Promise.all([
     loadLegacySavingsRows(db),
-    db
-      .collection<SavingsAccount>(SAVINGS_ACCOUNTS_COLLECTION)
-      .find({ ownerType: "character" })
-      .toArray(),
+    savingsAccountsCollection<SavingsAccount>(db).find({ ownerType: "character" }).toArray(),
     corporationsCollection(db)
       .find({ "bankCharter.status": "active" })
       .project<Pick<Corporation, "_id" | "bankCharter">>({ bankCharter: 1 })

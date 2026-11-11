@@ -4,7 +4,6 @@
  * existing NPC groups, without creating financial profiles or regional player offices.
  */
 import { ObjectId, type ClientSession, type Db } from "mongodb";
-import type { CountryGameState, ElectedOfficial, GameState, NPP } from "@/lib/db/types";
 import { loadEnactedRussianCouncilFormation } from "./councilFormationProposals";
 import type { UnifiedCabinetMember } from "@/lib/db/types/unifiedCabinetMember";
 import {
@@ -31,6 +30,7 @@ import { nppsCollection } from "@/lib/db/repositories/npps";
 import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
 import { russianDumaElectionResultsCollection } from "@/lib/db/repositories/russianDumaElectionResults";
+import { russianRegionalAuthoritiesCollection } from "@/lib/db/repositories/russianRegionalAuthorities";
 
 export const RUSSIAN_REGIONAL_AUTHORITIES_COLLECTION = "russianRegionalAuthorities";
 export interface RussianRegionalAuthorityRecord extends RussianCouncilRegionalAuthority {
@@ -136,9 +136,7 @@ export async function materializeRussianRegionalAuthorities(input: {
   if (!current) return { kind: "wait" as const, reason: "no-seated-duma" };
   const profiles = await loadRussianRegionalNpcProfiles(db, session);
   const eligible = new Set(profiles.filter((row) => row.eligible).map((row) => row.ownerId));
-  const collection = db.collection<RussianRegionalAuthorityRecord>(
-    RUSSIAN_REGIONAL_AUTHORITIES_COLLECTION
-  );
+  const collection = russianRegionalAuthoritiesCollection<RussianRegionalAuthorityRecord>(db);
   const previous = await collection
     .find({ countryId: "RU", preset: "1991-default" }, { session, batchSize: 1000 })
     .toArray();

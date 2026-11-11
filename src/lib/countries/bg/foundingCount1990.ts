@@ -4,7 +4,6 @@
  * reuse that count instead of recalculating after withdrawals or partial seating.
  */
 import { type ClientSession, type Db } from "mongodb";
-import type { Election, ElectionCandidate, ElectionVoteTally, GameState } from "@/lib/db/types";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { TALLY_WITH_LATEST_SNAPSHOT_ONLY } from "@/lib/elections/engine/tallyProjections";
 import { buildBgFoundingSlates } from "./rules/foundingSlates1990";
@@ -17,6 +16,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { bgFoundingAssemblyCountsCollection } from "@/lib/db/repositories/bgFoundingAssemblyCounts";
 
 export const BG_FOUNDING_COUNTS_COLLECTION = "bgFoundingAssemblyCounts";
 export interface BgFoundingAssemblyRecord {
@@ -72,7 +72,7 @@ async function materializeBgFoundingFirstCount(input: {
   )
     throw new Error("Bulgarian certification needs an active transaction, cycle, turn and time");
   const receiptId = `BG:founding1990:${cycle}`;
-  const journal = db.collection<BgFoundingAssemblyRecord>(BG_FOUNDING_COUNTS_COLLECTION);
+  const journal = bgFoundingAssemblyCountsCollection<BgFoundingAssemblyRecord>(db);
   const saved = await journal.findOne({ _id: receiptId }, { session });
   if (saved) return saved;
   const game = await gameStateCollection(db).findOne(

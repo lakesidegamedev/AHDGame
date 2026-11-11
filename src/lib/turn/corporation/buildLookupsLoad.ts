@@ -1,30 +1,14 @@
 /** The batched reads behind the corporation turn lookups. */
 import type { Db } from "mongodb";
-import type {
-  CorporateSector,
-  CommodityPrice,
-  CentralBank,
-  StateBudget,
-  Tariff,
-  State,
-  ExchangeRate,
-  StateResourceCapacity,
-  UnownedSector,
-} from "@/lib/db/types";
+import type { CommodityPrice, CentralBank, ExchangeRate } from "@/lib/db/types";
 import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
 import { findMergedRegionMetricsMany } from "@/lib/macroMetrics/merge";
 import { getActiveSubsidies } from "@/lib/subsidies/subsidyEffects";
 import { loadActiveFtaPairs } from "@/lib/tariffs/ftaOverrides";
-import type { TradeFlowSnapshot } from "@/lib/db/types/tradeFlowSnapshot";
-import type { OrganizationMembership } from "@/lib/db/types/internationalOrganization";
-import type { TradeEmbargo } from "@/lib/db/types/tradeEmbargo";
 import { loadWorldPreset } from "@/lib/currency/gdpAnchorRate";
-import {
-  type ManufacturingProductProject,
-  MANUFACTURING_PRODUCT_PROJECTS_V2,
-} from "@/lib/products/manufacturingProject";
+import { type ManufacturingProductProject } from "@/lib/products/manufacturingProject";
 import { activeManufacturingProductProjectProjection } from "@/lib/products/manufacturingProjectPersistence";
-import { type MediaProductProject, MEDIA_PRODUCT_PROJECTS } from "@/lib/products/mediaProduct";
+import { type MediaProductProject } from "@/lib/products/mediaProduct";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
@@ -40,6 +24,8 @@ import { organizationMembershipsCollection } from "@/lib/db/repositories/organiz
 import { tariffsCollection } from "@/lib/db/repositories/tariffs";
 import { tradeFlowSnapshotsCollection } from "@/lib/db/repositories/tradeFlowSnapshots";
 import { tradeEmbargoesCollection } from "@/lib/db/repositories/tradeEmbargoes";
+import { mediaProductProjectsV1Collection } from "@/lib/db/repositories/mediaProductProjectsV1";
+import { manufacturingProductProjectsV2Collection } from "@/lib/db/repositories/manufacturingProductProjectsV2";
 
 /** Issues the parallel reads the lookups are built from. */
 export async function loadCorporationLookupInputs({
@@ -301,8 +287,7 @@ export async function loadCorporationLookupInputs({
       .toArray(),
     loadWorldPreset(db),
     options?.productLinesV2Enabled === true
-      ? db
-          .collection<ManufacturingProductProject>(MANUFACTURING_PRODUCT_PROJECTS_V2)
+      ? manufacturingProductProjectsV2Collection<ManufacturingProductProject>(db)
           .find(
             { activeCorporationId: { $exists: true } },
             { projection: activeManufacturingProductProjectProjection() }
@@ -310,8 +295,7 @@ export async function loadCorporationLookupInputs({
           .toArray()
       : Promise.resolve([] as ManufacturingProductProject[]),
     options?.mediaProductSlatesEnabled === true
-      ? db
-          .collection<MediaProductProject>(MEDIA_PRODUCT_PROJECTS)
+      ? mediaProductProjectsV1Collection<MediaProductProject>(db)
           .find({ stage: { $in: ["development", "launch", "growth", "mature", "decline"] } })
           .project<MediaProductProject>({
             _id: 1,

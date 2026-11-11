@@ -4,7 +4,6 @@
  * resumeDemographicFlowReceipt completes partial writes without recomputing flows.
  */
 import { countyPopulationIdentity, freezeCountyPopulationPlans } from "@/lib/counties/projections";
-import type { County } from "@/lib/db/types/county";
 import { countyCountryForId, type CountyPopulation } from "@/lib/counties/rules";
 import { randomUUID } from "node:crypto";
 import { BSON, ObjectId } from "mongodb";
@@ -25,6 +24,9 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 import { countiesCollection } from "@/lib/db/repositories/counties";
 import { regionDemographicsCollection } from "@/lib/db/repositories/regionDemographics";
+import { demographicFlowProjectionsCollection } from "@/lib/db/repositories/demographicFlowProjections";
+import { demographicFlowReceiptsCollection } from "@/lib/db/repositories/demographicFlowReceipts";
+import type { Document } from "mongodb";
 
 export const DEMOGRAPHIC_FLOW_RECEIPTS = "demographicFlowReceipts";
 export const DEMOGRAPHIC_FLOW_PROJECTIONS = "demographicFlowProjections";
@@ -258,14 +260,13 @@ async function loadProjectionDocs(
   db: Db,
   receipt: DemographicFlowReceipt
 ): Promise<DemographicFlowProjection[] | null> {
-  const rows = await db
-    .collection<DemographicFlowProjection>(DEMOGRAPHIC_FLOW_PROJECTIONS)
+  const rows = await demographicFlowProjectionsCollection<DemographicFlowProjection>(db)
     .find({ planId: receipt.planId, worldEpochId: receipt.worldEpochId, turn: receipt.turn })
     .toArray();
   if (rows.length !== receipt.expectedRegionCount) {
-    const latest = await db
-      .collection<DemographicFlowReceipt>(DEMOGRAPHIC_FLOW_RECEIPTS)
-      .findOne({ _id: receipt._id });
+    const latest = await demographicFlowReceiptsCollection<DemographicFlowReceipt>(db).findOne({
+      _id: receipt._id,
+    });
     // A concurrent replay may complete and discard its bulky vectors after
     // this caller read the ready header. Completed metadata remains authoritative.
     if (latest?.status === "complete") return null;
@@ -300,14 +301,14 @@ async function materializeReceipt(
   if (receipt.status === "complete") {
     // Completed metadata is enough for replay. Do not retain full age vectors
     // for every turn; a retry also finishes cleanup after a cleanup failure.
-    await db.collection(DEMOGRAPHIC_FLOW_PROJECTIONS).deleteMany({ planId: receipt.planId });
+    await demographicFlowProjectionsCollection<Document>(db).deleteMany({ planId: receipt.planId });
     return receipt;
   }
   const projections = await loadProjectionDocs(db, receipt);
   if (projections === null) {
-    const latest = await db
-      .collection<DemographicFlowReceipt>(DEMOGRAPHIC_FLOW_RECEIPTS)
-      .findOne({ _id: receipt._id });
+    const latest = await demographicFlowReceiptsCollection<DemographicFlowReceipt>(db).findOne({
+      _id: receipt._id,
+    });
     if (latest?.status !== "complete") throw new Error("Population completion metadata changed");
     return materializeReceipt(db, latest);
   }
@@ -492,21 +493,19 @@ async function materializeReceipt(
     receipt.createdAt
   );
   const completedAt = new Date();
-  const result = await db
-    .collection<DemographicFlowReceipt>(DEMOGRAPHIC_FLOW_RECEIPTS)
-    .updateOne(
-      { _id: receipt._id, status: "ready", planId: receipt.planId },
-      { $set: { status: "complete", completedAt } }
-    );
+  const result = await demographicFlowReceiptsCollection<DemographicFlowReceipt>(db).updateOne(
+    { _id: receipt._id, status: "ready", planId: receipt.planId },
+    { $set: { status: "complete", completedAt } }
+  );
   if (result.matchedCount > 0) {
-    await db.collection(DEMOGRAPHIC_FLOW_PROJECTIONS).deleteMany({ planId: receipt.planId });
+    await demographicFlowProjectionsCollection<Document>(db).deleteMany({ planId: receipt.planId });
     return { ...receipt, status: "complete", completedAt };
   }
-  const latest = await db
-    .collection<DemographicFlowReceipt>(DEMOGRAPHIC_FLOW_RECEIPTS)
-    .findOne({ _id: receipt._id });
+  const latest = await demographicFlowReceiptsCollection<DemographicFlowReceipt>(db).findOne({
+    _id: receipt._id,
+  });
   if (latest?.status === "complete") {
-    await db.collection(DEMOGRAPHIC_FLOW_PROJECTIONS).deleteMany({ planId: latest.planId });
+    await demographicFlowProjectionsCollection<Document>(db).deleteMany({ planId: latest.planId });
     return latest;
   }
   throw new Error(`Could not complete demographic flow receipt ${receipt._id}`);
@@ -515,15 +514,14 @@ async function materializeReceipt(
 const indexReadiness = new WeakMap<Db, Promise<void>>();
 
 async function createJournalIndexes(db: Db): Promise<void> {
-  await db
-    .collection(DEMOGRAPHIC_FLOW_RECEIPTS)
-    .createIndex({ worldEpochId: 1, status: 1, turn: 1 }, { name: DEMOGRAPHIC_FLOW_PENDING_INDEX });
-  await db
-    .collection(DEMOGRAPHIC_FLOW_PROJECTIONS)
-    .createIndex(
-      { planId: 1, regionId: 1 },
-      { name: DEMOGRAPHIC_FLOW_PLAN_REGION_INDEX, unique: true }
-    );
+  await demographicFlowReceiptsCollection<Document>(db).createIndex(
+    { worldEpochId: 1, status: 1, turn: 1 },
+    { name: DEMOGRAPHIC_FLOW_PENDING_INDEX }
+  );
+  await demographicFlowProjectionsCollection<Document>(db).createIndex(
+    { planId: 1, regionId: 1 },
+    { name: DEMOGRAPHIC_FLOW_PLAN_REGION_INDEX, unique: true }
+  );
 }
 
 async function ensureDemographicFlowJournalIndexes(db: Db): Promise<void> {
@@ -545,9 +543,9 @@ export async function loadDemographicFlowReceipt(
 ): Promise<DemographicFlowReceipt | null> {
   assertEpochId(worldEpochId);
   assertTurn(turn);
-  return db
-    .collection<DemographicFlowReceipt>(DEMOGRAPHIC_FLOW_RECEIPTS)
-    .findOne({ _id: demographicFlowBatchId(worldEpochId, turn) });
+  return demographicFlowReceiptsCollection<DemographicFlowReceipt>(db).findOne({
+    _id: demographicFlowBatchId(worldEpochId, turn),
+  });
 }
 
 export async function resumeDemographicFlowReceipt(
@@ -575,8 +573,7 @@ export async function resumePendingDemographicFlowReceipts(
   await ensureDemographicFlowJournalIndexes(db);
   const filter: Record<string, unknown> = { worldEpochId, status: "ready" };
   if (throughTurn !== undefined) filter.turn = { $lte: throughTurn };
-  const receipts = await db
-    .collection<DemographicFlowReceipt>(DEMOGRAPHIC_FLOW_RECEIPTS)
+  const receipts = await demographicFlowReceiptsCollection<DemographicFlowReceipt>(db)
     .find(filter)
     .sort({ turn: 1 })
     .toArray();
@@ -668,9 +665,9 @@ export async function freezeAndApplyDemographicFlowPlan(
     createdAt,
   }));
   if (projections.length > 0) {
-    await db
-      .collection<DemographicFlowProjection>(DEMOGRAPHIC_FLOW_PROJECTIONS)
-      .insertMany(projections);
+    await demographicFlowProjectionsCollection<DemographicFlowProjection>(db).insertMany(
+      projections
+    );
   }
 
   const receipt: DemographicFlowReceipt = {
@@ -686,16 +683,16 @@ export async function freezeAndApplyDemographicFlowPlan(
     ...(civilianLosses ? { civilianLosses } : {}),
   };
   try {
-    await db.collection<DemographicFlowReceipt>(DEMOGRAPHIC_FLOW_RECEIPTS).insertOne(receipt);
+    await demographicFlowReceiptsCollection<DemographicFlowReceipt>(db).insertOne(receipt);
   } catch (error) {
     if (!isDuplicateKey(error)) throw error;
     const winner = await loadDemographicFlowReceipt(db, input.worldEpochId, input.turn);
     if (!winner)
       throw new Error(`Lost demographic flow publisher race without a winner: ${receiptId}`);
     if (winner.planId !== planId && projections.length > 0) {
-      await db
-        .collection<DemographicFlowProjection>(DEMOGRAPHIC_FLOW_PROJECTIONS)
-        .deleteMany({ planId });
+      await demographicFlowProjectionsCollection<DemographicFlowProjection>(db).deleteMany({
+        planId,
+      });
     }
     return (await materializeReceipt(db, winner)).stats;
   }

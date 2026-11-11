@@ -4,14 +4,6 @@
  * replay keeps the original count and cannot change player or financial identity.
  */
 import { type ClientSession, type Db } from "mongodb";
-import type {
-  Election,
-  ElectionCandidate,
-  ElectionVoteTally,
-  GameState,
-  CountryGameState,
-  State,
-} from "@/lib/db/types";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { buildHuMixedPlan } from "./rules/mixedElectionPlan";
 import { coalesceHuModernCampaignActors } from "./rules/campaignActors2011";
@@ -24,6 +16,7 @@ import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { hu2011AssemblyCountsCollection } from "@/lib/db/repositories/hu2011AssemblyCounts";
 export const HU_2011_COUNTS_COLLECTION = "hu2011AssemblyCounts";
 export interface Hu2011AssemblyRecord {
   _id: string;
@@ -61,7 +54,7 @@ async function materializeHu2011Count(input: {
     !Number.isFinite(now.getTime())
   )
     throw new Error("Modern Hungarian count needs a transaction, cycle, turn and time");
-  const journal = db.collection<Hu2011AssemblyRecord>(HU_2011_COUNTS_COLLECTION);
+  const journal = hu2011AssemblyCountsCollection<Hu2011AssemblyRecord>(db);
   const id = `HU:mixed2011:${cycle}`;
   const existing = await journal.findOne({ _id: id }, { session });
   if (existing) return existing;

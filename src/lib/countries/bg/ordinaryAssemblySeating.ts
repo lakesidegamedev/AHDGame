@@ -5,22 +5,9 @@
  */
 import { createHash } from "node:crypto";
 import { ObjectId, type ClientSession, type Db } from "mongodb";
-import type {
-  CountryGameState,
-  ElectedOfficial,
-  Election,
-  ElectionCandidate,
-  ElectionVoteTally,
-  GameState,
-  NPP,
-  State,
-} from "@/lib/db/types";
-import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
+import type { ElectedOfficial } from "@/lib/db/types";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
-import {
-  BG_ORDINARY_PLANS_COLLECTION,
-  type BgOrdinaryPlanRecord,
-} from "@/lib/elections/resolution/bgOrdinaryEligibility";
+import { type BgOrdinaryPlanRecord } from "@/lib/elections/resolution/bgOrdinaryEligibility";
 import { calendarTurn } from "@/lib/utils/gameDate";
 import { settleBgOrdinaryListHolders } from "./rules/ordinaryElectionPlan";
 import { bgOrdinarySeatingClockReady } from "./rules/assemblyClock1991";
@@ -37,6 +24,8 @@ import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameSt
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 import { notificationsCollection } from "@/lib/db/repositories/notifications";
 import type { Document } from "mongodb";
+import { bgAssemblyOfficeArchivesCollection } from "@/lib/db/repositories/bgAssemblyOfficeArchives";
+import { bgOrdinaryElectionPlansCollection } from "@/lib/db/repositories/bgOrdinaryElectionPlans";
 
 interface BgAssemblyOfficeArchive {
   _id: string;
@@ -46,7 +35,6 @@ interface BgAssemblyOfficeArchive {
   official: ElectedOfficial;
 }
 
-const BG_ASSEMBLY_ARCHIVES_COLLECTION = "bgAssemblyOfficeArchives";
 function stableId(key: string): ObjectId {
   return new ObjectId(createHash("sha256").update(key).digest("hex").slice(0, 24));
 }
@@ -68,7 +56,7 @@ async function materializeBgOrdinaryAssembly(input: {
     !Number.isFinite(now.getTime())
   )
     throw new Error("Bulgarian seating requires a transaction, ordinary cycle, turn and time");
-  const journal = db.collection<BgOrdinaryPlanRecord>(BG_ORDINARY_PLANS_COLLECTION);
+  const journal = bgOrdinaryElectionPlansCollection<BgOrdinaryPlanRecord>(db);
   const receipt = await journal.findOne({ _id: `BG:ordinary:${cycle}` }, { session });
   if (!receipt || receipt.seatedAtTurn != null) return false;
   const game = await gameStateCollection(db).findOne(
@@ -249,7 +237,7 @@ async function materializeBgOrdinaryAssembly(input: {
     .find({ countryId: "BG", officeType: "assemblyDeputy" }, { session })
     .toArray();
   if (incumbents.length)
-    await db.collection<BgAssemblyOfficeArchive>(BG_ASSEMBLY_ARCHIVES_COLLECTION).insertMany(
+    await bgAssemblyOfficeArchivesCollection<BgAssemblyOfficeArchive>(db).insertMany(
       incumbents.map((official) => ({
         _id: `${receipt._id}:${official._id.toHexString()}`,
         countryId: "BG" as const,

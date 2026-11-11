@@ -25,9 +25,10 @@ import {
 import { liftedSectorIds, getVentureLine, type VentureSector } from "./lines";
 import { sectorTurnRevenueAnchor } from "./revenue";
 import { refundVentureReceipt } from "./refund";
-import { PRODUCT_VENTURES, ventureDocument } from "./store";
+import { ventureDocument } from "./store";
 import type { ProductVenture, VentureDomain } from "./types";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { productVenturesCollection } from "@/lib/db/repositories/productVentures";
 
 export type VentureNotifier = (inputs: NotificationInput[]) => Promise<void>;
 
@@ -53,8 +54,7 @@ export async function loadVentureBoostBySectorId(
     enabled: Record<VentureDomain, boolean>;
   }
 ): Promise<Map<string, number>> {
-  const released = await db
-    .collection<ProductVenture>(PRODUCT_VENTURES)
+  const released = await productVenturesCollection<ProductVenture>(db)
     .find({ stage: "released", boostEndsTurn: { $gte: input.turn } })
     .toArray();
   const boostsBySector = new Map<string, number[]>();
@@ -118,7 +118,7 @@ export async function processProductVentures(
     paidAnchor: 0,
     boosted: 0,
   };
-  const collection = args.db.collection<ProductVenture>(PRODUCT_VENTURES);
+  const collection = productVenturesCollection<ProductVenture>(args.db);
   const ventures = await collection
     .find({
       stage: { $in: ["development", "released"] },

@@ -3,14 +3,10 @@
  * Seating archives replaced offices and vacates the winners' incompatible seats.
  */
 import { type Db, type ClientSession, type ObjectId } from "mongodb";
-import type { NPP, CountryGameState, ElectedOfficial, ElectionCandidate } from "@/lib/db/types";
+import type { ElectedOfficial } from "@/lib/db/types";
 import { PM_VACANCY_DEADLINE_TURNS } from "@/lib/constants/turnTime";
 import type { UnifiedCabinetMember } from "@/lib/db/types/unifiedCabinetMember";
-import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
-import {
-  RUSSIAN_PRESIDENTIAL_RESULTS_COLLECTION,
-  type RussianPresidentialResultRecord,
-} from "./presidentialElectionResult";
+import { type RussianPresidentialResultRecord } from "./presidentialElectionResult";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
@@ -20,7 +16,8 @@ import { governmentFormationsCollection } from "@/lib/db/repositories/government
 import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
 import { pmAppointmentVotesCollection } from "@/lib/db/repositories/pmAppointmentVotes";
 import type { Document } from "mongodb";
-const RUSSIAN_PRESIDENTIAL_ARCHIVES_COLLECTION = "russianPresidentialOfficeArchives";
+import { russianPresidentialOfficeArchivesCollection } from "@/lib/db/repositories/russianPresidentialOfficeArchives";
+import { russianPresidentialElectionResultsCollection } from "@/lib/db/repositories/russianPresidentialElectionResults";
 interface Archive {
   _id: string;
   preset: "1991-default";
@@ -59,9 +56,7 @@ export async function materializeRussianPresidentialSeating(input: {
     }
   );
   if (!country?.ruPresidencyCertifiedElectionId) return false;
-  const results = db.collection<RussianPresidentialResultRecord>(
-    RUSSIAN_PRESIDENTIAL_RESULTS_COLLECTION
-  );
+  const results = russianPresidentialElectionResultsCollection<RussianPresidentialResultRecord>(db);
   const result = await results.findOne(
     {
       _id: country.ruPresidencyCertifiedElectionId.toHexString(),
@@ -132,7 +127,7 @@ export async function materializeRussianPresidentialSeating(input: {
     .find({ countryId: "RU", $or: identities }, { session })
     .toArray();
   if (winningMinisters.length) {
-    await db.collection<Archive>(RUSSIAN_PRESIDENTIAL_ARCHIVES_COLLECTION).bulkWrite(
+    await russianPresidentialOfficeArchivesCollection<Archive>(db).bulkWrite(
       winningMinisters.map((cabinetMember) => ({
         updateOne: {
           filter: { _id: `${result._id}:cabinet:${cabinetMember._id.toHexString()}` },
@@ -161,7 +156,7 @@ export async function materializeRussianPresidentialSeating(input: {
     )
     .toArray();
   if (old.length) {
-    await db.collection<Archive>(RUSSIAN_PRESIDENTIAL_ARCHIVES_COLLECTION).bulkWrite(
+    await russianPresidentialOfficeArchivesCollection<Archive>(db).bulkWrite(
       old.map((official) => ({
         updateOne: {
           filter: { _id: `${result._id}:${official._id.toHexString()}` },

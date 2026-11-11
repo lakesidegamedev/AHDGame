@@ -30,7 +30,6 @@ import {
   timedBankingStage,
   withBankingTelemetryBatch,
 } from "@/lib/banking/telemetry";
-import { MONEY_MOVE_COLLECTION } from "@/lib/banking/moneyMove";
 import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
 import { computeNpcDepositShare, equityCappedDepositCeiling } from "@/lib/banking/deposits";
 import { domesticDepositRetention } from "@/lib/centralBank/marketEffects";
@@ -86,6 +85,8 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
+import type { Document } from "mongodb";
 
 const BANK_CHARTER_ONLY = { projection: { bankCharter: 1 } };
 
@@ -416,9 +417,9 @@ async function runBankingTurn(
   // summary so a half-applied move shows up in phase results the same turn,
   // not when somebody thinks to open the admin page.
   steps.mark("bankTreasury");
-  summary.unfinishedSettlements = await db
-    .collection(MONEY_MOVE_COLLECTION)
-    .countDocuments({ status: "partial" });
+  summary.unfinishedSettlements = await bankMoneyMovesCollection<Document>(db).countDocuments({
+    status: "partial",
+  });
   steps.mark("unfinishedCount");
 
   return summary;
@@ -1274,13 +1275,12 @@ async function serviceNpcBulkBook(
 ): Promise<NpcBulkResult> {
   const bankIdHex = bankCorporationId.toString();
   const settlementKey = turnMoveKey("npc-book-settlement", `${bankIdHex}:${charteredTurn}`, turn);
-  const recorded = await db
-    .collection<{
-      _id: string;
-      legs: TransitionLeg[];
-      projections?: { projection: TransitionProjection }[];
-      event?: { meta?: { originationFees?: number; interestPaid?: number; writtenOff?: number } };
-    }>(MONEY_MOVE_COLLECTION)
+  const recorded = await bankMoneyMovesCollection<{
+    _id: string;
+    legs: TransitionLeg[];
+    projections?: { projection: TransitionProjection }[];
+    event?: { meta?: { originationFees?: number; interestPaid?: number; writtenOff?: number } };
+  }>(db)
     // A finished settlement re-arms from its own quote (legs, projections,
     // event meta). Its receipt history and stamps are never read here and are
     // most of the record's bytes.

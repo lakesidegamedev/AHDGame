@@ -1,9 +1,10 @@
 /** Update projections retain target proof until their journal acknowledges delivery. */
 import { isDeepStrictEqual } from "node:util";
 import { ObjectId, type Db, type Document, type Filter, type UpdateFilter } from "mongodb";
-import { MONEY_MOVE_COLLECTION, SETTLED_KEYS_CAP } from "./moneyMove";
+import { SETTLED_KEYS_CAP } from "./moneyMove";
 import { reviveObjectIds } from "./settlementEncoding";
 import type { TransitionProjection } from "./rules/boundary";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 const RECEIPT = "pendingSettlementProjection";
 const REVISION = "settlementProjectionRevision";
@@ -58,9 +59,10 @@ export async function bindProjectionTargets(
 > {
   if (!projections.some((p) => isUpdateProjection(p) && !hasStableTarget(p)))
     return { projections };
-  const existing = await db
-    .collection<Journal>(MONEY_MOVE_COLLECTION)
-    .findOne({ _id: key }, { projection: { projections: 1, status: 1, error: 1 } });
+  const existing = await bankMoneyMovesCollection<Journal>(db).findOne(
+    { _id: key },
+    { projection: { projections: 1, status: 1, error: 1 } }
+  );
   if (existing?.status === "rejected")
     return {
       error: existing.error ?? "Original projection binding was rejected",
@@ -137,7 +139,7 @@ async function acknowledge(
   id: unknown,
   receipt: Receipt
 ): Promise<void> {
-  const journal = db.collection<Journal>(MONEY_MOVE_COLLECTION);
+  const journal = bankMoneyMovesCollection<Journal>(db);
   const path = `projections.${receipt.index}`;
   const identity =
     id instanceof ObjectId
@@ -191,7 +193,7 @@ export async function applyProtectedProjection(
     };
   const filter = reviveObjectIds(projection.filter) as Document;
   const target = db.collection<Target>(projection.collection);
-  const journal = db.collection<Journal>(MONEY_MOVE_COLLECTION);
+  const journal = bankMoneyMovesCollection<Journal>(db);
   const id = { _id: filter._id } as Filter<Target>;
   const stamp = `${key}#${index}`;
   for (let attempt = 0; attempt < 5; attempt++) {

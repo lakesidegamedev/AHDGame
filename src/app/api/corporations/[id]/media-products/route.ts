@@ -6,12 +6,12 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQuery";
 import { marketAtLeast, getMarketSystemMode } from "@/lib/market/featureFlag";
-import type { GameConfig, CorporateSector } from "@/lib/db/types";
 import { getMediaProductKind, MEDIA_PRODUCT_KINDS } from "@/lib/products/mediaProductCatalog";
 import { getMediaOperatingModel } from "@/lib/mediaOperatingModels/catalog";
-import { MEDIA_PRODUCT_PROJECTS, type MediaProductProject } from "@/lib/products/mediaProduct";
+import { type MediaProductProject } from "@/lib/products/mediaProduct";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { mediaProductProjectsV1Collection } from "@/lib/db/repositories/mediaProductProjectsV1";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -60,8 +60,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     }
     const corporationId = resolved.corporation._id.toString();
     const [projects, sectors, gameState, currentTurn] = await Promise.all([
-      db
-        .collection<MediaProductProject>(MEDIA_PRODUCT_PROJECTS)
+      mediaProductProjectsV1Collection<MediaProductProject>(db)
         .find({ corporationId })
         .project<MediaProductProject>({
           _id: 1,

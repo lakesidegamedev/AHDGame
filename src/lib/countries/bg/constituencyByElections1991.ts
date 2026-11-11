@@ -19,15 +19,12 @@ import type {
   ElectionVoteTally,
   GameState,
   NPP,
-  PoliticalParty,
-  State,
-  StateRegistrationPool,
 } from "@/lib/db/types";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
 import { scalePoolToRegistered } from "@/lib/elections/rules/registration";
 import { TALLY_WITH_LATEST_SNAPSHOT_ONLY } from "@/lib/elections/engine/tallyProjections";
-import { BG_FOUNDING_COUNTS_COLLECTION, type BgFoundingAssemblyRecord } from "./foundingCount1990";
+import { type BgFoundingAssemblyRecord } from "./foundingCount1990";
 import { BG_1990_CONSTITUENCIES } from "./data/foundingDistricts1990";
 import {
   bgGrandAssemblyAllowsPartialElection,
@@ -52,6 +49,8 @@ import { governmentFormationsCollection } from "@/lib/db/repositories/government
 import { notificationsCollection } from "@/lib/db/repositories/notifications";
 import { stateRegistrationPoolCollection } from "@/lib/db/repositories/stateRegistrationPool";
 import { bgFoundingAssemblyOfficeArchivesCollection } from "@/lib/db/repositories/bgFoundingAssemblyOfficeArchives";
+import { bgGrandConstituencyByElectionsCollection } from "@/lib/db/repositories/bgGrandConstituencyByElections";
+import { bgFoundingAssemblyCountsCollection } from "@/lib/db/repositories/bgFoundingAssemblyCounts";
 
 export const BG_GRAND_BY_ELECTIONS_COLLECTION = "bgGrandConstituencyByElections";
 export interface BgGrandByElectionRecord {
@@ -108,7 +107,7 @@ async function context(db: Db, turn: number, session?: ClientSession, full = fal
       },
     }
   );
-  const parent = await db.collection<Parent>(BG_FOUNDING_COUNTS_COLLECTION).findOne(
+  const parent = await bgFoundingAssemblyCountsCollection<Parent>(db).findOne(
     { countryId: "BG", seatedAtTurn: { $exists: true }, settled: { $exists: true } },
     {
       session,
@@ -146,13 +145,11 @@ async function lockChamber(db: Db, session: ClientSession, parent: Parent) {
     _id: string;
     bg1991MandateGeneration?: number;
   }>(db).updateOne({ _id: "BG" }, { $inc: { bg1991MandateGeneration: 1 } }, { session });
-  const receipt = await db
-    .collection<Parent>(BG_FOUNDING_COUNTS_COLLECTION)
-    .updateOne(
-      { _id: parent._id, seatedAtTurn: parent.seatedAtTurn },
-      { $inc: { byElectionGeneration: 1 } },
-      { session }
-    );
+  const receipt = await bgFoundingAssemblyCountsCollection<Parent>(db).updateOne(
+    { _id: parent._id, seatedAtTurn: parent.seatedAtTurn },
+    { $inc: { byElectionGeneration: 1 } },
+    { session }
+  );
   if (country.matchedCount !== 1 || chamber.matchedCount !== 1 || receipt.matchedCount !== 1)
     throw new Error("Bulgarian partial election lost its chamber authority");
 }
@@ -165,13 +162,11 @@ async function cancelJobs(
 ) {
   if (!jobs.length) return;
   const ids = jobs.flatMap((row) => row.electionIds);
-  await db
-    .collection<BgGrandByElectionRecord>(BG_GRAND_BY_ELECTIONS_COLLECTION)
-    .updateMany(
-      { _id: { $in: jobs.map((row) => row._id) }, status: "open" },
-      { $set: { status: "cancelled", completedAtTurn: turn } },
-      { session }
-    );
+  await bgGrandConstituencyByElectionsCollection<BgGrandByElectionRecord>(db).updateMany(
+    { _id: { $in: jobs.map((row) => row._id) }, status: "open" },
+    { $set: { status: "cancelled", completedAtTurn: turn } },
+    { session }
+  );
   await electionsCollection(db).updateMany(
     { _id: { $in: ids }, status: { $nin: ["resolved", "cancelled"] } },
     { $set: { status: "cancelled", resolving: false, updatedAt: now } },
@@ -194,8 +189,7 @@ export async function openBgGrandConstituencyByElections(
   if (!Number.isSafeInteger(turn) || turn < 1 || !Number.isFinite(now.getTime()))
     throw new Error("Invalid Bulgarian partial-election time");
   const ready = await context(db, turn);
-  const active = await db
-    .collection<BgGrandByElectionRecord>(BG_GRAND_BY_ELECTIONS_COLLECTION)
+  const active = await bgGrandConstituencyByElectionsCollection<BgGrandByElectionRecord>(db)
     .find({ status: "open" }, { projection: { parentReceiptId: 1, electionIds: 1 } })
     .toArray();
   const needsCancellation = active.some(
@@ -217,7 +211,7 @@ export async function openBgGrandConstituencyByElections(
   return runRequiredTransaction(
     async (session) => {
       const current = await context(db, turn, session, true);
-      const journal = db.collection<BgGrandByElectionRecord>(BG_GRAND_BY_ELECTIONS_COLLECTION);
+      const journal = bgGrandConstituencyByElectionsCollection<BgGrandByElectionRecord>(db);
       const jobs = await journal.find({ status: "open" }, { session }).toArray();
       const stale = jobs.filter(
         (row) => !current.available || row.parentReceiptId !== current.parent?._id
@@ -458,7 +452,7 @@ export async function resolveBgGrandConstituencyByElections(
     throw new Error("Invalid Bulgarian partial count time");
   return runRequiredTransaction(
     async (session) => {
-      const journal = db.collection<BgGrandByElectionRecord>(BG_GRAND_BY_ELECTIONS_COLLECTION);
+      const journal = bgGrandConstituencyByElectionsCollection<BgGrandByElectionRecord>(db);
       const jobs = await journal
         .find(
           {

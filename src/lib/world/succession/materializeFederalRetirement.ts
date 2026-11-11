@@ -5,16 +5,6 @@
  */
 import type { ClientSession, Db, ObjectId } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type {
-  Character,
-  CountryGameState,
-  ElectedOfficial,
-  Election,
-  ElectionCandidate,
-  NPP,
-} from "@/lib/db/types";
-import { FEDERATION_ARCHIVED_POLITICAL_ROWS_COLLECTION } from "./materializeRussianCongress";
-import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
@@ -26,6 +16,7 @@ import { governmentFormationsCollection } from "@/lib/db/repositories/government
 import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
 import type { Document } from "mongodb";
 import { ukCabinetCooldownsCollection } from "@/lib/db/repositories/ukCabinetCooldowns";
+import { federationArchivedPoliticalRowsCollection } from "@/lib/db/repositories/federationArchivedPoliticalRows";
 
 type HistoricalPoliticalRow = { _id: ObjectId | string; [key: string]: unknown };
 
@@ -63,22 +54,20 @@ export async function materializeFederationFederalRetirement(input: {
       .find(filter, { session })
       .toArray();
     if (rows.length)
-      await db
-        .collection<{
-          _id: string;
-          applicationId: string;
-          sourceCountryId: CountryId;
-          value: HistoricalPoliticalRow;
-        }>(FEDERATION_ARCHIVED_POLITICAL_ROWS_COLLECTION)
-        .insertMany(
-          rows.map((value) => ({
-            _id: `${applicationId}:${collectionName}:${value._id.toString()}`,
-            applicationId,
-            sourceCountryId,
-            value,
-          })),
-          { session }
-        );
+      await federationArchivedPoliticalRowsCollection<{
+        _id: string;
+        applicationId: string;
+        sourceCountryId: CountryId;
+        value: HistoricalPoliticalRow;
+      }>(db).insertMany(
+        rows.map((value) => ({
+          _id: `${applicationId}:${collectionName}:${value._id.toString()}`,
+          applicationId,
+          sourceCountryId,
+          value,
+        })),
+        { session }
+      );
   }
   const activeElectionIds = await electionsCollection(db)
     .find(

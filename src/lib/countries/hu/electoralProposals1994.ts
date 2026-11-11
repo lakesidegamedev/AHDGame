@@ -4,18 +4,10 @@
  * capacity; rejected decisions remain visible and can be revised by legislators.
  */
 import { ObjectId, type ClientSession, type Db } from "mongodb";
-import type {
-  Bill,
-  Character,
-  CountryGameState,
-  Election,
-  ElectionVoteTally,
-  GameState,
-} from "@/lib/db/types";
+import type { Bill, Character, GameState } from "@/lib/db/types";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { calendarTurn } from "@/lib/utils/gameDate";
 import { hu1994DecisionAvailability, passesHuElectoralAmendment } from "./rules/electoralLaw";
-import type { CountryState } from "@/lib/db/types/countryState";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { billsCollection } from "@/lib/db/repositories/bills";
@@ -23,6 +15,7 @@ import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVot
 import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 import { countryStateCollection } from "@/lib/db/repositories/countryState";
 import { hu1991AssemblyCountsCollection } from "@/lib/db/repositories/hu1991AssemblyCounts";
+import { hu1994ElectoralProposalsCollection } from "@/lib/db/repositories/hu1994ElectoralProposals";
 
 export const HU_1994_PROPOSALS_COLLECTION = "hu1994ElectoralProposals";
 const ID = "1991-default:hu-electoral:threshold1994";
@@ -88,7 +81,7 @@ export async function materializeHu1994ElectoralProposal(input: {
     throw new Error("Hungarian electoral proposal needs a transaction, turn and time");
   const allowed = await availability(db, game, turn, session);
   if (!allowed.available) throw new Hu1994ElectoralConflict(allowed.reason);
-  const proposals = db.collection<Hu1994ElectoralProposal>(HU_1994_PROPOSALS_COLLECTION);
+  const proposals = hu1994ElectoralProposalsCollection<Hu1994ElectoralProposal>(db);
   const prior = await proposals.findOne({ _id: ID }, { session });
   if (prior) {
     if (!Number.isSafeInteger(prior.revision) || prior.revision < 1)
@@ -174,7 +167,7 @@ export async function authorizeHu1994ElectoralProposal(
 ) {
   if (!session.inTransaction())
     throw new Error("Hungarian electoral authorization needs a transaction");
-  const proposals = db.collection<Hu1994ElectoralProposal>(HU_1994_PROPOSALS_COLLECTION);
+  const proposals = hu1994ElectoralProposalsCollection<Hu1994ElectoralProposal>(db);
   const proposal = await proposals.findOne({ _id: ID, status: "open" }, { session });
   if (!proposal || !(await availability(db, game, turn, session)).available) return false;
   if (
@@ -323,9 +316,9 @@ async function rebindHu1994PrimaryCohorts(db: Db, turn: number, now: Date, sessi
 export async function loadHu1994ElectoralDecision(db: Db, game: Calendar, turn: number) {
   if (game.preset !== "1991-default") return null;
   const allowed = await availability(db, game, turn);
-  const proposal = await db
-    .collection<Hu1994ElectoralProposal>(HU_1994_PROPOSALS_COLLECTION)
-    .findOne({ _id: ID });
+  const proposal = await hu1994ElectoralProposalsCollection<Hu1994ElectoralProposal>(db).findOne({
+    _id: ID,
+  });
   const bill = proposal
     ? await billsCollection(db).findOne({ _id: proposal.billId }, { projection: { status: 1 } })
     : null;
@@ -352,9 +345,10 @@ export async function processHu1994ElectoralMandate(
   now: Date
 ) {
   if (game.preset !== "1991-default") return false;
-  const proposal = await db
-    .collection<Hu1994ElectoralProposal>(HU_1994_PROPOSALS_COLLECTION)
-    .findOne({ _id: ID, status: "open" }, { projection: { billId: 1 } });
+  const proposal = await hu1994ElectoralProposalsCollection<Hu1994ElectoralProposal>(db).findOne(
+    { _id: ID, status: "open" },
+    { projection: { billId: 1 } }
+  );
   if (
     !proposal ||
     !(await billsCollection(db).findOne(

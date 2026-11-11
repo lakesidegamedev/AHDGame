@@ -1,12 +1,12 @@
 import type { Db, ObjectId } from "mongodb";
 import {
-  IDENTITY_OBSERVATIONS_COLLECTION,
   type IdentityObservation,
   type IdentityObservationSource,
   type IdentityTrack,
 } from "@/lib/db/types/identityObservation";
 import { isGroupableIdentityValue } from "./guards";
 import { isSingleplayer } from "@/lib/singleplayer";
+import { identityObservationsCollection } from "@/lib/db/repositories/identityObservations";
 
 export interface RecordObservationInput {
   userId: ObjectId;
@@ -50,7 +50,7 @@ export async function recordIdentityObservation(
   { userId, track, value, observedAt, source }: RecordObservationInput
 ): Promise<RecordObservationOutcome> {
   if (!isGroupableIdentityValue(track, value)) return "rejected";
-  const collection = db.collection<IdentityObservation>(IDENTITY_OBSERVATIONS_COLLECTION);
+  const collection = identityObservationsCollection<IdentityObservation>(db);
 
   const openRun = await collection.findOne({ userId, track }, { sort: { lastSeen: -1 } });
 

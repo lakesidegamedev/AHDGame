@@ -20,6 +20,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import type { Document } from "mongodb";
+import { producerOpeningsCollection } from "@/lib/db/repositories/producerOpenings";
 
 export const PRODUCER_OPENINGS = "producerOpenings";
 
@@ -80,7 +81,7 @@ export async function applyProducerOpening(
     ],
   });
 
-  await db.collection(PRODUCER_OPENINGS).updateOne(
+  await producerOpeningsCollection<Document>(db).updateOne(
     { _id: input.planDigest as never },
     {
       $setOnInsert: {
@@ -170,9 +171,10 @@ export async function applyProducerOpening(
     { $set: { producerOpening: marker } }
   );
   if (stamped.matchedCount !== 1) throw new Error("Opening marker could not be stamped");
-  await db
-    .collection(PRODUCER_OPENINGS)
-    .updateOne({ _id: input.planDigest as never }, { $set: { completedAt: new Date() } });
+  await producerOpeningsCollection<Document>(db).updateOne(
+    { _id: input.planDigest as never },
+    { $set: { completedAt: new Date() } }
+  );
   return {
     status: "applied",
     sectors: plan.sectors.length,

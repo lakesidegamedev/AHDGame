@@ -8,6 +8,7 @@ import { stepBlocDyads, type BlocDyad, type BlocPairId } from "./rules/blocTensi
 import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { ConflictType } from "@/lib/db/types/conflict";
+import { coldWarTensionCollection } from "@/lib/db/repositories/coldWarTension";
 
 /**
  * Global cold-war tension: one 0-100 number the whole world shares, with a
@@ -22,7 +23,6 @@ import type { ConflictType } from "@/lib/db/types/conflict";
  * DEFCON, procurement demand, detente goodwill.
  */
 
-const COLD_WAR_TENSION_COLLECTION = "coldWarTension";
 const COLD_WAR_TENSION_ID = "current";
 
 export const TENSION_BASELINE = 12;
@@ -293,9 +293,7 @@ function emptyTensionState(): ColdWarTensionState {
 type StoredState = ColdWarTensionState & { _id: string };
 
 export async function getColdWarTension(db: Db): Promise<ColdWarTensionState> {
-  const doc = await db
-    .collection<StoredState>(COLD_WAR_TENSION_COLLECTION)
-    .findOne({ _id: COLD_WAR_TENSION_ID });
+  const doc = await coldWarTensionCollection<StoredState>(db).findOne({ _id: COLD_WAR_TENSION_ID });
   if (!doc) return emptyTensionState();
   return {
     value: clampTension(doc.value ?? TENSION_BASELINE),
@@ -312,9 +310,11 @@ async function putColdWarTension(db: Db, state: ColdWarTensionState): Promise<vo
   const projection = { ...state, updatedAt: new Date() };
   // Only keyed event CAS writes this receipt list; ordinary writers may hold an older snapshot.
   delete projection.appliedEventIds;
-  await db
-    .collection<StoredState>(COLD_WAR_TENSION_COLLECTION)
-    .updateOne({ _id: COLD_WAR_TENSION_ID }, { $set: projection }, { upsert: true });
+  await coldWarTensionCollection<StoredState>(db).updateOne(
+    { _id: COLD_WAR_TENSION_ID },
+    { $set: projection },
+    { upsert: true }
+  );
 }
 
 /** Apply a discrete spike (or relief, negative delta) and record it. */
@@ -343,7 +343,7 @@ export async function applyTensionEvent(
   if (!options.eventId.trim() || options.eventId.length > 500 || !Number.isFinite(delta))
     throw new Error("Invalid keyed tension event");
   if (state.appliedEventIds?.includes(options.eventId)) return state;
-  const collection = db.collection<StoredState>(COLD_WAR_TENSION_COLLECTION);
+  const collection = coldWarTensionCollection<StoredState>(db);
   await collection.updateOne(
     { _id: COLD_WAR_TENSION_ID },
     { $setOnInsert: emptyTensionState() },

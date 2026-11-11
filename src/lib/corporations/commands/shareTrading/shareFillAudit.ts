@@ -7,7 +7,6 @@ import {
   claimMoneyFlowReceipt,
   failMoneyFlowReceipt,
   keyedInsertId,
-  NON_ATOMIC_MONEY_FLOW_RECEIPTS_COLLECTION,
   type MoneyFlowReceipt,
 } from "@/lib/db/nonAtomicMoneyFlow";
 import { emitTx, type EmitTxOutcome, type TxInput } from "@/lib/financialTxLog/emit";
@@ -16,7 +15,6 @@ import {
   type RecordShareTradeInput,
   type RecordShareTradeOutcome,
 } from "@/lib/corporations/shareTradeHistory";
-import { FUND_TRANSACTION_COLLECTION } from "@/lib/indexFunds/fundQueries";
 import {
   buildShareFillMoneyKey,
   executeShareFillMoneyFlow,
@@ -26,13 +24,15 @@ import {
 } from "./shareFillMoney";
 import type { IndexFundTransaction } from "@/lib/db/types";
 import type { ShareOrder } from "@/lib/db/types/corporation";
-import type { ShareListing, ShareOffer } from "@/lib/db/types/shareListings";
+import type { ShareListing } from "@/lib/db/types/shareListings";
 import type { ShareTradeParty } from "@/lib/db/types/shareTradeHistory";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
 import { shareListingsCollection } from "@/lib/db/repositories/shareListings";
 import { shareOffersCollection } from "@/lib/db/repositories/shareOffers";
+import { nonAtomicMoneyFlowReceiptsCollection } from "@/lib/db/repositories/nonAtomicMoneyFlowReceipts";
+import { indexFundTransactionsCollection } from "@/lib/db/repositories/indexFundTransactions";
 
 /**
  * Durable audit for peer order-book fills.
@@ -118,11 +118,11 @@ export interface ShareFillAuditPlan {
 export type ShareFillReceipt = MoneyFlowReceipt & { shareFillPlan?: ShareFillAuditPlan };
 
 function receipts(db: Db): Collection<MoneyFlowReceipt> {
-  return db.collection<MoneyFlowReceipt>(NON_ATOMIC_MONEY_FLOW_RECEIPTS_COLLECTION);
+  return nonAtomicMoneyFlowReceiptsCollection<MoneyFlowReceipt>(db);
 }
 
 function receiptsEx(db: Db): Collection<ShareFillReceipt> {
-  return db.collection<ShareFillReceipt>(NON_ATOMIC_MONEY_FLOW_RECEIPTS_COLLECTION);
+  return nonAtomicMoneyFlowReceiptsCollection<ShareFillReceipt>(db);
 }
 
 export function isShareFillAuditPlan(value: unknown): value is ShareFillAuditPlan {
@@ -580,9 +580,10 @@ export async function insertShareFillAuditRows(
   }
   if (rows.fundTx) {
     try {
-      await db
-        .collection<IndexFundTransaction>(FUND_TRANSACTION_COLLECTION)
-        .insertOne({ ...rows.fundTx, _id: keyedInsertId(key, SHARE_FILL_FUND_TX_DOMAIN) });
+      await indexFundTransactionsCollection<IndexFundTransaction>(db).insertOne({
+        ...rows.fundTx,
+        _id: keyedInsertId(key, SHARE_FILL_FUND_TX_DOMAIN),
+      });
     } catch (err) {
       if (isDuplicateKeyError(err)) {
         outcome = foldOutcome(outcome, "already-applied");
@@ -727,18 +728,16 @@ async function applyShareFillRecovery(
         // The audit plan precedes both claims and owns the immutable money
         // inputs, including a crash between money-receipt insert and plan store.
         if (money?.status === "in_progress")
-          await db
-            .collection<MoneyFlowReceipt & { shareFillMoneyPlan?: ShareFillMoneyPlan }>(
-              NON_ATOMIC_MONEY_FLOW_RECEIPTS_COLLECTION
-            )
-            .updateOne(
-              {
-                _id: buildShareFillMoneyKey(key),
-                status: "in_progress",
-                shareFillMoneyPlan: { $exists: false },
-              },
-              { $set: { shareFillMoneyPlan: plan.listingMoneyPlan } }
-            );
+          await nonAtomicMoneyFlowReceiptsCollection<
+            MoneyFlowReceipt & { shareFillMoneyPlan?: ShareFillMoneyPlan }
+          >(db).updateOne(
+            {
+              _id: buildShareFillMoneyKey(key),
+              status: "in_progress",
+              shareFillMoneyPlan: { $exists: false },
+            },
+            { $set: { shareFillMoneyPlan: plan.listingMoneyPlan } }
+          );
         await executeShareFillMoneyFlow(db, plan.listingMoneyPlan);
         const committed = await receiptsEx(db).findOne({ _id: key });
         if (committed?.shareFillPlan?.moneyCommitted)

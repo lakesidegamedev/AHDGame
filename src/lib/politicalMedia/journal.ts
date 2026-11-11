@@ -15,6 +15,7 @@ import {
 } from "@/lib/banking/moneyMove";
 import { AD_BONUS_CAP, adExposure, type TargetedAd } from "@/lib/campaignTargeting/rules";
 import { politicalMediaFillRatio } from "./rules";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 export const POLITICAL_MEDIA_ORDER_KIND = "political-media-order";
 const POLITICAL_MEDIA_ESCROW_CURRENCY = "AHD";
@@ -312,12 +313,10 @@ async function settleMove(db: Db, move: MoneyMove): Promise<AppliedMove> {
   if (result.status !== "replayed") {
     return { status: result.status, applied: new Set(result.applied), error: result.error };
   }
-  const record = await db
-    .collection<PoliticalMediaMoveRecord>(MONEY_MOVE_COLLECTION)
-    .findOne(
-      { _id: move.key },
-      { projection: { status: 1, error: 1, "legs.applied": 1, "legs.refusal": 1 } }
-    );
+  const record = await bankMoneyMovesCollection<PoliticalMediaMoveRecord>(db).findOne(
+    { _id: move.key },
+    { projection: { status: 1, error: 1, "legs.applied": 1, "legs.refusal": 1 } }
+  );
   if (!record)
     return { status: "rejected", applied: new Set(), error: `no money move ${move.key}` };
   if (record.status === "partial") {
@@ -465,12 +464,10 @@ export async function fundPoliticalMediaOrder(
   };
   const result = await applyMoneyMove(db, move);
   if (result.status === "rejected" && result.applied.length === 0) {
-    await db
-      .collection<PoliticalMediaMoveRecord>(MONEY_MOVE_COLLECTION)
-      .updateOne(
-        { _id: key, kind: POLITICAL_MEDIA_ORDER_KIND, status: "rejected" },
-        { $set: { "politicalMediaOrder.status": "rejected" } }
-      );
+    await bankMoneyMovesCollection<PoliticalMediaMoveRecord>(db).updateOne(
+      { _id: key, kind: POLITICAL_MEDIA_ORDER_KIND, status: "rejected" },
+      { $set: { "politicalMediaOrder.status": "rejected" } }
+    );
   }
   return result;
 }
@@ -485,8 +482,7 @@ export async function loadPoliticalMediaOrdersForClearing(
   db: Db,
   currentTurn: number
 ): Promise<PoliticalMediaOrderForClearing[]> {
-  const rows = await db
-    .collection<PoliticalMediaMoveRecord>(MONEY_MOVE_COLLECTION)
+  const rows = await bankMoneyMovesCollection<PoliticalMediaMoveRecord>(db)
     .find(
       {
         kind: POLITICAL_MEDIA_ORDER_KIND,
@@ -545,7 +541,7 @@ export async function savePoliticalMediaSettlementPlans(
 ): Promise<Map<string, PoliticalMediaSettlementPlan>> {
   const saved = new Map<string, PoliticalMediaSettlementPlan>();
   if (plans.length === 0) return saved;
-  const orders = db.collection<PoliticalMediaMoveRecord>(MONEY_MOVE_COLLECTION);
+  const orders = bankMoneyMovesCollection<PoliticalMediaMoveRecord>(db);
   const keys = plans.map((entry) => politicalMediaOrderKey(entry.orderId));
   const stored = new Map(
     (
@@ -630,7 +626,7 @@ export async function settlePoliticalMediaOrder(
   turn: number
 ): Promise<MoneyMoveResult[]> {
   const key = politicalMediaOrderKey(orderId);
-  const orders = db.collection<PoliticalMediaMoveRecord>(MONEY_MOVE_COLLECTION);
+  const orders = bankMoneyMovesCollection<PoliticalMediaMoveRecord>(db);
   const order = await orders.findOne({ _id: key, kind: POLITICAL_MEDIA_ORDER_KIND });
   const saved = order?.politicalMediaOrder;
   if (!order || order.status !== "applied" || !saved?.settlementPlan)
@@ -1072,7 +1068,7 @@ export async function settleLoadedPoliticalMediaOrders(
       settledKeys.push(politicalMediaOrderKey(order.orderId));
   }
   if (settledKeys.length > 0) {
-    await db.collection<PoliticalMediaMoveRecord>(MONEY_MOVE_COLLECTION).bulkWrite(
+    await bankMoneyMovesCollection<PoliticalMediaMoveRecord>(db).bulkWrite(
       settledKeys.map((key) => ({
         updateOne: {
           filter: { _id: key, kind: POLITICAL_MEDIA_ORDER_KIND, status: "applied" },
@@ -1142,7 +1138,7 @@ export async function settleLoadedPoliticalMediaOrder(
 /** Apply a fully paid order's game effect once, after its seller receipts land. */
 export async function applyPoliticalMediaOrderEffect(db: Db, orderId: string): Promise<boolean> {
   const key = politicalMediaOrderKey(orderId);
-  const orders = db.collection<PoliticalMediaMoveRecord>(MONEY_MOVE_COLLECTION);
+  const orders = bankMoneyMovesCollection<PoliticalMediaMoveRecord>(db);
   const record = await orders.findOne({
     _id: key,
     kind: POLITICAL_MEDIA_ORDER_KIND,
@@ -1193,7 +1189,7 @@ export async function applyPoliticalMediaOrderEffects(
   orderIds: readonly string[]
 ): Promise<number> {
   if (orderIds.length === 0) return 0;
-  const orders = db.collection<PoliticalMediaMoveRecord>(MONEY_MOVE_COLLECTION);
+  const orders = bankMoneyMovesCollection<PoliticalMediaMoveRecord>(db);
   const records = await orders
     .find(
       {
@@ -1329,7 +1325,7 @@ async function applyPoliticalMediaOrderEffectToOrder(
   order: PoliticalMediaOrderRecord
 ): Promise<boolean> {
   const key = politicalMediaOrderKey(orderId);
-  const orders = db.collection<PoliticalMediaMoveRecord>(MONEY_MOVE_COLLECTION);
+  const orders = bankMoneyMovesCollection<PoliticalMediaMoveRecord>(db);
   if (order.status !== "settled" || !order.settlementPlan) return false;
   if (order.effectApplied) return true;
 

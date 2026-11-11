@@ -2,23 +2,13 @@ import { loadLedgerTurnover } from "./ledgerTurnoverCache";
 import type { Db } from "mongodb";
 import type {
   Bond,
-  CommodityPrice,
-  CorporateSector,
   EconomicVitalSigns,
   ExchangeRate,
-  GameConfig,
   IndexFund,
-  MoneySupplySnapshot,
-  ShareOrder,
-  ShareTradeHistory,
-  StockExchangeSnapshot,
   NppMarketEntryFunnel,
-  UnownedSector,
-  WealthListSnapshot,
 } from "@/lib/db/types";
-import type { CommodityFlow } from "@/lib/db/types/commodityFlow";
 import type { LedgerReconciliation } from "@/lib/ledger/types";
-import type { BalanceSnapshot, LedgerEntry } from "@/lib/ledger/types";
+import type { BalanceSnapshot } from "@/lib/ledger/types";
 import type { CommoditySourcingDoc } from "@/lib/logistics/sourcingLedger";
 import { computeSectorCommodityUnits } from "@/lib/corporations/corpCommodityFlows";
 import { resolveFormalizedGroups } from "@/lib/corporations/groups/groupMembership";
@@ -32,7 +22,6 @@ import {
 import { getAllFundDefinitions } from "@/lib/indexFunds/fundDefinitions";
 import { corpCapitalToAnchor } from "@/lib/currency/corporationCapital";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
-import { NPP_MARKET_ENTRY_FUNNEL_COLLECTION } from "@/lib/turn/npp/entryDiagnostics";
 import { ECONOMIC_VITAL_SIGNS_WINDOW_TURNS } from "./economicVitalSignsHelpers";
 import {
   type Inputs,
@@ -63,6 +52,8 @@ import { shareTradeHistoryCollection } from "@/lib/db/repositories/shareTradeHis
 import { ledgerReconciliationsCollection } from "@/lib/db/repositories/ledgerReconciliations";
 import { wealthListSnapshotsCollection } from "@/lib/db/repositories/wealthListSnapshots";
 import { balanceSnapshotsCollection } from "@/lib/db/repositories/balanceSnapshots";
+import { economicVitalSignsCollection } from "@/lib/db/repositories/economicVitalSigns";
+import { nppMarketEntryFunnelsCollection } from "@/lib/db/repositories/nppMarketEntryFunnels";
 export {
   summarizeLedgerTurnover,
   computeEconomicVitalSigns,
@@ -347,13 +338,10 @@ export async function snapshotEconomicVitalSigns(
       )
       .toArray(),
     unownedSectorsCollection(db).find({}).toArray(),
-    db
-      .collection<NppMarketEntryFunnel>(NPP_MARKET_ENTRY_FUNNEL_COLLECTION)
-      .findOne({ _id: `turn:${turn}` }),
+    nppMarketEntryFunnelsCollection<NppMarketEntryFunnel>(db).findOne({ _id: `turn:${turn}` }),
     loadWorldEraUnitScale(db),
     // Narrow projection on purpose: the full snapshot carries per-cell arrays.
-    db
-      .collection<EconomicVitalSigns>(ECONOMIC_VITAL_SIGNS_COLLECTION)
+    economicVitalSignsCollection<EconomicVitalSigns>(db)
       .find({ turn: { $gte: windowStart, $lt: turn } })
       .project<HistoryProjection>({
         turn: 1,
@@ -491,9 +479,11 @@ export async function snapshotEconomicVitalSigns(
     eraUnitScale,
     sovereignDemand,
   });
-  await db
-    .collection<EconomicVitalSigns>(ECONOMIC_VITAL_SIGNS_COLLECTION)
-    .replaceOne({ _id: snapshot._id }, snapshot, { upsert: true });
+  await economicVitalSignsCollection<EconomicVitalSigns>(db).replaceOne(
+    { _id: snapshot._id },
+    snapshot,
+    { upsert: true }
+  );
   return snapshot;
 }
 

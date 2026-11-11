@@ -4,7 +4,7 @@
  * transaction and preserves Congress until a separate certified chamber handover.
  */
 import { ObjectId, type ClientSession, type Db } from "mongodb";
-import type { CountryGameState, Election, State, StateRegistrationPool } from "@/lib/db/types";
+import type { Election } from "@/lib/db/types";
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
 import { calendarTurn, turnToGameMonth } from "@/lib/utils/gameDate";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
@@ -19,6 +19,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 import { stateRegistrationPoolCollection } from "@/lib/db/repositories/stateRegistrationPool";
+import { russianCouncilElectionOpeningsCollection } from "@/lib/db/repositories/russianCouncilElectionOpenings";
 
 export const RUSSIAN_COUNCIL_OPENINGS_COLLECTION = "russianCouncilElectionOpenings";
 export interface RussianCouncilOpeningRecord {
@@ -94,7 +95,7 @@ export async function materializeRussianCouncilElectionOpening(input: {
   )
     return null;
   const elections = electionsCollection(db);
-  const openings = db.collection<RussianCouncilOpeningRecord>(RUSSIAN_COUNCIL_OPENINGS_COLLECTION);
+  const openings = russianCouncilElectionOpeningsCollection<RussianCouncilOpeningRecord>(db);
   if (country.ruFirstCouncilElectionCohortId) {
     const opening = await openings.findOne(
       { _id: country.ruFirstCouncilElectionCohortId.toHexString() },

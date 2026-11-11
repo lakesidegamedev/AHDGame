@@ -6,6 +6,7 @@ import type { FederationStateTransferPlan } from "./territoryTransferPlan";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import type { Document } from "mongodb";
+import { federationResidentHoldsCollection } from "@/lib/db/repositories/federationResidentHolds";
 
 export const FEDERATION_RESIDENT_HOLDS_COLLECTION = "federationResidentHolds";
 
@@ -120,9 +121,9 @@ export async function materializeFederationResidentHolds(input: {
   }
   // Validate the entire inventory before any write. All four operations share
   // the settlement transaction, so a concurrent change rolls back every hold.
-  await db
-    .collection<FederationResidentHold>(FEDERATION_RESIDENT_HOLDS_COLLECTION)
-    .insertMany(holds, { session });
+  await federationResidentHoldsCollection<FederationResidentHold>(db).insertMany(holds, {
+    session,
+  });
   const updated = await characters.bulkWrite(updates, { session });
   if (updated.matchedCount !== affected.length)
     throw new Error("Federation resident changed while entering protected relocation");

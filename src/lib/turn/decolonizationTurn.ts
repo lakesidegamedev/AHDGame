@@ -9,9 +9,10 @@
 import type { Db } from "mongodb";
 import { DECOLONIZATION_ROSTER_RULE_IDS, runTransition } from "@/lib/world/transitions";
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
+import { appliedWorldTransitionsCollection } from "@/lib/db/repositories/appliedWorldTransitions";
+import type { Document } from "mongodb";
 
 /** Collection recording which transitions have already fired, for idempotency. */
-const APPLIED_COLLECTION = "appliedWorldTransitions";
 
 export interface DecolonizationTurnResult {
   evaluated: number;
@@ -48,8 +49,7 @@ export async function processDecolonizationTurn(
   // already historical fact. The roster's latest window closes in the mid-1970s.
   if (currentYear > DECOLONIZATION_ERA_LAST_YEAR) return EMPTY;
 
-  const applied = await db
-    .collection<{ _id: string }>(APPLIED_COLLECTION)
+  const applied = await appliedWorldTransitionsCollection<{ _id: string }>(db)
     .find({}, { projection: { _id: 1 } })
     .toArray();
   const alreadyApplied = new Set(applied.map((d) => String(d._id)));
@@ -70,13 +70,11 @@ export async function processDecolonizationTurn(
       // a far larger error than imprecise timing.
       const { application } = await runTransition(ruleId, currentYear, currentTurn, {}, { db });
       if (application) {
-        await db
-          .collection(APPLIED_COLLECTION)
-          .updateOne(
-            { _id: ruleId as never },
-            { $set: { ruleId, turn: currentTurn, year: currentYear, appliedAt: new Date() } },
-            { upsert: true }
-          );
+        await appliedWorldTransitionsCollection<Document>(db).updateOne(
+          { _id: ruleId as never },
+          { $set: { ruleId, turn: currentTurn, year: currentYear, appliedAt: new Date() } },
+          { upsert: true }
+        );
         result.applied++;
         result.ruleIds.push(ruleId);
       }

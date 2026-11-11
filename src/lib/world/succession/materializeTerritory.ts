@@ -1,12 +1,12 @@
 import type { ClientSession, Db, Document } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { State } from "@/lib/db/types/state";
 import {
   REGION_SCOPED_COLLECTIONS,
   type RegionScope,
 } from "@/lib/referendum/transfer/regionScopedCollections";
 import type { FederationStateTransferPlan } from "./territoryTransferPlan";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { federationArchivedRegionRowsCollection } from "@/lib/db/repositories/federationArchivedRegionRows";
 
 export const FEDERATION_ARCHIVED_REGION_ROWS_COLLECTION = "federationArchivedRegionRows";
 
@@ -64,9 +64,7 @@ export async function materializeFederationTerritory(input: {
     throw new Error("Federation territory archive needs a complete approved partition");
   if (departed.length === 0) return { statesArchived: 0, regionalRowsArchived: 0 };
   const successorForState = new Map(departed.map((row) => [row.stateId, row.successorEntityId]));
-  const archive = db.collection<FederationArchivedRegionRow>(
-    FEDERATION_ARCHIVED_REGION_ROWS_COLLECTION
-  );
+  const archive = federationArchivedRegionRowsCollection<FederationArchivedRegionRow>(db);
   const archiveRows = async (
     collection: string,
     rows: Document[],

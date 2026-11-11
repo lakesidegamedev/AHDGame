@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { ObjectId } from "mongodb";
-import type { User } from "@/lib/db/types";
 import { getDb } from "@/lib/mongodb";
-import { IDENTITY_OBSERVATIONS_COLLECTION } from "@/lib/db/types/identityObservation";
 import { clearAuthCookie, verifyAuth } from "@/lib/auth";
 import { credentialSessionIsCurrent } from "@/lib/auth/credentialSession";
 import { withNoStore } from "@/lib/api/withNoStore";
@@ -28,6 +26,7 @@ import { usersCollection } from "@/lib/db/repositories/users";
 import { actionLogsCollection } from "@/lib/db/repositories/actionLogs";
 import { characterAchievementsCollection } from "@/lib/db/repositories/characterAchievements";
 import { retiredCharactersCollection } from "@/lib/db/repositories/retiredCharacters";
+import { identityObservationsCollection } from "@/lib/db/repositories/identityObservations";
 
 // DELETE /api/auth/delete-account — Permanently deletes the authenticated user's account, character, and clears offices held.
 // Auth: requireBasicAuth
@@ -192,7 +191,7 @@ export const DELETE = withNoStore(async () => {
     // does NOT take it with it. Purged here so account deletion actually
     // removes the account's IP and fingerprint evidence rather than orphaning
     // 90 days of it.
-    await db.collection(IDENTITY_OBSERVATIONS_COLLECTION).deleteMany({ userId: objectId });
+    await identityObservationsCollection<Document>(db).deleteMany({ userId: objectId });
 
     // App Store rule 5.1.1(v): deleting an account created or linked with
     // Sign in with Apple must revoke the Apple grant. Best effort, so an

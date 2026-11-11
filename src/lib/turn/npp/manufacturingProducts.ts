@@ -1,11 +1,7 @@
 import { ObjectId, type Db } from "mongodb";
 import { marketAtLeast, getMarketSystemMode } from "@/lib/market/featureFlag";
-import type { GameConfig } from "@/lib/db/types/gameConfig";
-import type { Corporation, CorporateSector, StateMetrics } from "@/lib/db/types";
-import {
-  MANUFACTURING_PRODUCT_PROJECTS_V2,
-  type ManufacturingProductProject,
-} from "@/lib/products/manufacturingProject";
+import type { Corporation, CorporateSector } from "@/lib/db/types";
+import { type ManufacturingProductProject } from "@/lib/products/manufacturingProject";
 import { selectNppManufacturingProduct } from "@/lib/products/rules/selectNppManufacturingProduct";
 import type { CommodityPriceRatioFn } from "@/lib/turn/npp/marketSignals";
 import { sectorCapacityBookAnchor } from "@/lib/corporations/sectorProfitBasis";
@@ -17,6 +13,7 @@ import {
 } from "@/lib/products/rules/manufacturingRules";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { manufacturingProductProjectsV2Collection } from "@/lib/db/repositories/manufacturingProductProjectsV2";
 
 export async function loadNppProductProjectsV2(
   db: Db,
@@ -34,34 +31,34 @@ export async function loadNppProductProjectsV2(
   const productLinesEnabled = plantsEnabled && config?.productLinesV2Enabled === true;
   const activeProjectByCorporationId = new Map<string, ManufacturingProductProject>();
   if (productLinesEnabled) {
-    const activeProjects = await db
-      .collection<ManufacturingProductProject>(MANUFACTURING_PRODUCT_PROJECTS_V2)
-      .find<ManufacturingProductProject>({
-        activeCorporationId: { $in: nppCorporations.map((corp) => corp._id.toString()) },
-      })
-      .project<ManufacturingProductProject>({
-        _id: 1,
-        corporationId: 1,
-        activeCorporationId: 1,
-        kindId: 1,
-        stage: 1,
-        stageStartedTurn: 1,
-        allocations: 1,
-        startedTurn: 1,
-        lastProcessedTurn: 1,
-        lastDevelopmentReceiptTurn: 1,
-        advertisingAllocationShare: 1,
-        developmentAdvertisingAnchor: 1,
-        developmentAdvertisingTurns: 1,
-        lastAdvertisingReceiptTurn: 1,
-        productBrand: 1,
-        developmentCompletedTurn: 1,
-        developmentPaidAnchor: 1,
-        paidThresholdAnchor: 1,
-        elapsedDevelopmentTurns: 1,
-        elapsedThresholdTurns: 1,
-      })
-      .toArray();
+    const activeProjects =
+      await manufacturingProductProjectsV2Collection<ManufacturingProductProject>(db)
+        .find<ManufacturingProductProject>({
+          activeCorporationId: { $in: nppCorporations.map((corp) => corp._id.toString()) },
+        })
+        .project<ManufacturingProductProject>({
+          _id: 1,
+          corporationId: 1,
+          activeCorporationId: 1,
+          kindId: 1,
+          stage: 1,
+          stageStartedTurn: 1,
+          allocations: 1,
+          startedTurn: 1,
+          lastProcessedTurn: 1,
+          lastDevelopmentReceiptTurn: 1,
+          advertisingAllocationShare: 1,
+          developmentAdvertisingAnchor: 1,
+          developmentAdvertisingTurns: 1,
+          lastAdvertisingReceiptTurn: 1,
+          productBrand: 1,
+          developmentCompletedTurn: 1,
+          developmentPaidAnchor: 1,
+          paidThresholdAnchor: 1,
+          elapsedDevelopmentTurns: 1,
+          elapsedThresholdTurns: 1,
+        })
+        .toArray();
     for (const project of activeProjects) {
       activeProjectByCorporationId.set(project.corporationId, project);
     }

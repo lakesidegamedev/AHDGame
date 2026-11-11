@@ -30,9 +30,9 @@ import {
 } from "./rules";
 import { getGameStateCollection } from "@/lib/db/collections/gameState";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { acquisitionOffersCollection } from "@/lib/db/repositories/acquisitionOffers";
 
 export const ACQUISITION_OFFER_DURATION_TURNS = 24;
-const OFFERS = "acquisitionOffers";
 
 type Result<T = object> = { ok: false; error: string; status: number } | ({ ok: true } & T);
 
@@ -106,7 +106,7 @@ export async function proposeAcquisitionOffer(
   const barred = acquisitionsBarredByDivestiture(acquirer, currentTurn);
   if (barred) return { ok: false, error: barred, status: 403 };
 
-  const existing = await db.collection<AcquisitionOffer>(OFFERS).findOne({
+  const existing = await acquisitionOffersCollection<AcquisitionOffer>(db).findOne({
     acquirerCorporationId: acquirer._id,
     targetCorporationId: target._id,
     status: "pending",
@@ -160,7 +160,7 @@ export async function proposeAcquisitionOffer(
     if (dealError) return { ok: false, error: dealError, status: 400 };
   }
   const now = new Date();
-  const offers = db.collection<AcquisitionOffer>(OFFERS);
+  const offers = acquisitionOffersCollection<AcquisitionOffer>(db);
 
   // Human-run target (including caretaker-run player corps): unchanged flow.
   // The offer stays pending until the target's CEO accepts, and the target's
@@ -314,7 +314,7 @@ export async function acceptAcquisitionOffer(
   }>
 > {
   const { offer, currentTurn } = input;
-  const offers = db.collection<AcquisitionOffer>(OFFERS);
+  const offers = acquisitionOffersCollection<AcquisitionOffer>(db);
 
   if (offer.status !== "pending")
     return { ok: false, error: "This offer is no longer open", status: 409 };
@@ -414,12 +414,10 @@ export async function resolveAcquisitionOfferStatus(
       { $unset: { acquisitionSettlementId: "" }, $set: { updatedAt: new Date() } }
     );
   }
-  const claim = await db
-    .collection<AcquisitionOffer>(OFFERS)
-    .updateOne(
-      { _id: offer._id, status: "pending" },
-      { $set: { status, resolvedAtTurn: currentTurn, updatedAt: new Date() } }
-    );
+  const claim = await acquisitionOffersCollection<AcquisitionOffer>(db).updateOne(
+    { _id: offer._id, status: "pending" },
+    { $set: { status, resolvedAtTurn: currentTurn, updatedAt: new Date() } }
+  );
   if (claim.matchedCount === 0)
     return { ok: false, error: "This offer is no longer open", status: 409 };
   return { ok: true };
@@ -443,8 +441,7 @@ export async function listDealsForCorp(
   db: Db,
   corpId: ObjectId
 ): Promise<{ incoming: DealSummary[]; outgoing: DealSummary[] }> {
-  const offers = await db
-    .collection<AcquisitionOffer>(OFFERS)
+  const offers = await acquisitionOffersCollection<AcquisitionOffer>(db)
     .find({
       status: "pending",
       $or: [{ targetCorporationId: corpId }, { acquirerCorporationId: corpId }],
@@ -461,12 +458,10 @@ export async function listDealsForCorp(
   const currentTurn = gameState?.currentTurn ?? 0;
   const staleIds = offers.filter((o) => o.expiresAtTurn < currentTurn).map((o) => o._id);
   if (staleIds.length > 0) {
-    await db
-      .collection<AcquisitionOffer>(OFFERS)
-      .updateMany(
-        { _id: { $in: staleIds }, status: "pending" },
-        { $set: { status: "expired", updatedAt: new Date() } }
-      );
+    await acquisitionOffersCollection<AcquisitionOffer>(db).updateMany(
+      { _id: { $in: staleIds }, status: "pending" },
+      { $set: { status: "expired", updatedAt: new Date() } }
+    );
     const live = offers.filter((o) => !staleIds.includes(o._id));
     if (live.length === 0) return { incoming: [], outgoing: [] };
     return listDealsFromOffers(live, db, corpId);

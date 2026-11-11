@@ -25,6 +25,7 @@ import { createNotification } from "@/lib/notifications";
 import { computeMergerConcentration } from "./concentration";
 import { resolveMergerAuthority } from "./authority";
 import { ANTITRUST_LAW_BY_COUNTRY, MERGER_REVIEW_TURNS, thresholdForLevel } from "./constants";
+import { mergerReviewsCollection } from "@/lib/db/repositories/mergerReviews";
 
 export const MERGER_REVIEWS = "mergerReviews";
 
@@ -97,7 +98,7 @@ export async function assertMergerClearance(
   trigger: MergerReviewTrigger,
   currentTurn: number
 ): Promise<MergerClearance> {
-  const reviews = db.collection<MergerReview>(MERGER_REVIEWS);
+  const reviews = mergerReviewsCollection<MergerReview>(db);
 
   const existing = await reviews.findOne({
     acquirerCorporationId: acquirer._id,

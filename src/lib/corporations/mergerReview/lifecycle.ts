@@ -26,7 +26,6 @@ import {
   resolveCorpLiquidCurrencyCode,
 } from "@/lib/currency/corporationCapital";
 import type { CurrencyCode } from "@/lib/constants/currencies";
-import { MERGER_REVIEWS } from "./gate";
 import { controlledGroupIds, settleDivestitureIfSatisfied } from "./divestiture";
 import { loadIndustryBasis } from "../corpMarketShare";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
@@ -38,6 +37,7 @@ import {
 } from "./constants";
 import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { mergerReviewsCollection } from "@/lib/db/repositories/mergerReviews";
 
 export type LifecycleResult<T = object> =
   { ok: false; error: string; status: number } | ({ ok: true } & T);
@@ -102,9 +102,10 @@ export async function decideMergerReview(
 
   // Atomic claim on the pending→decided transition, so two officeholders (or a
   // decision racing the deadline sweep) cannot both resolve it.
-  const claim = await db
-    .collection<MergerReview>(MERGER_REVIEWS)
-    .updateOne({ _id: review._id, status: "pending" }, { $set: set });
+  const claim = await mergerReviewsCollection<MergerReview>(db).updateOne(
+    { _id: review._id, status: "pending" },
+    { $set: set }
+  );
   if (claim.matchedCount === 0)
     return { ok: false, error: "This review has already been decided", status: 409 };
 
@@ -155,8 +156,7 @@ export async function resolveDueMergerReviews(
   db: Db,
   currentTurn: number
 ): Promise<{ resolved: number }> {
-  const due = await db
-    .collection<MergerReview>(MERGER_REVIEWS)
+  const due = await mergerReviewsCollection<MergerReview>(db)
     .find({ status: "pending", decideByTurn: { $lte: currentTurn } })
     .toArray();
   let resolved = 0;

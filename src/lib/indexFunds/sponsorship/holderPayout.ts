@@ -22,8 +22,7 @@ import { buildPersonalBalanceInc, loadCharacterFxRate } from "@/lib/currency/cha
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { loadFundPayoutFxRate } from "@/lib/indexFunds/dividendPassThrough";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
-
-const FUND_TX = "indexFundTransactions";
+import { indexFundTransactionsCollection } from "@/lib/db/repositories/indexFundTransactions";
 
 /** One holder's wind-up payout, before it is settled with the rest of the book. */
 export interface FundHolderCashPayout {
@@ -198,13 +197,11 @@ export async function payFundHoldersCash(
   }
 
   if (paid.length) {
-    await db
-      .collection<IndexFundTransaction>(FUND_TX)
-      .insertMany(
-        paid.map(({ position, payoutAnchor }) =>
-          holderReceiptDoc(fund, position, payoutAnchor, currentTurn, now)
-        )
-      );
+    await indexFundTransactionsCollection<IndexFundTransaction>(db).insertMany(
+      paid.map(({ position, payoutAnchor }) =>
+        holderReceiptDoc(fund, position, payoutAnchor, currentTurn, now)
+      )
+    );
   }
 
   return {
@@ -292,7 +289,7 @@ async function insertHolderReceipt(
   currentTurn: number,
   now: Date
 ): Promise<void> {
-  await db
-    .collection<IndexFundTransaction>(FUND_TX)
-    .insertOne(holderReceiptDoc(fund, position, payoutAnchor, currentTurn, now));
+  await indexFundTransactionsCollection<IndexFundTransaction>(db).insertOne(
+    holderReceiptDoc(fund, position, payoutAnchor, currentTurn, now)
+  );
 }

@@ -17,6 +17,7 @@ import {
 } from "./rules/councilComposition";
 import { billsCollection } from "@/lib/db/repositories/bills";
 import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { russianCouncilFormationProposalsCollection } from "@/lib/db/repositories/russianCouncilFormationProposals";
 export const RUSSIAN_COUNCIL_FORMATION_PROPOSALS_COLLECTION = "russianCouncilFormationProposals";
 export interface RussianCouncilFormationProposal {
   _id: string;
@@ -84,9 +85,8 @@ export async function loadEnactedRussianCouncilFormation(input: {
     }).available
   )
     throw new Error("Council formation requires valid dated authority");
-  const proposal = await db
-    .collection<RussianCouncilFormationProposal>(RUSSIAN_COUNCIL_FORMATION_PROPOSALS_COLLECTION)
-    .findOne(
+  const proposal =
+    await russianCouncilFormationProposalsCollection<RussianCouncilFormationProposal>(db).findOne(
       {
         _id: mandate.proposalId,
         countryId: "RU",
@@ -141,9 +141,7 @@ export async function materializeRussianCouncilFormationProposal(input: {
   );
   const available = availability(game, turn, mode, country);
   if (!available.available) throw new RussianConstitutionalDecisionConflict(available.reason);
-  const proposals = db.collection<RussianCouncilFormationProposal>(
-    RUSSIAN_COUNCIL_FORMATION_PROPOSALS_COLLECTION
-  );
+  const proposals = russianCouncilFormationProposalsCollection<RussianCouncilFormationProposal>(db);
   const id = `1991-default:ru-council:${mode}`;
   const old = await proposals.findOne({ _id: id }, { session });
   if (old) {
@@ -235,9 +233,7 @@ export async function authorizeRussianCouncilFormation(input: {
   if (!session.inTransaction() || !Number.isFinite(now.getTime()))
     throw new Error("Council enactment needs a transaction and time");
   if (game.preset !== "1991-default") return false;
-  const proposals = db.collection<RussianCouncilFormationProposal>(
-    RUSSIAN_COUNCIL_FORMATION_PROPOSALS_COLLECTION
-  );
+  const proposals = russianCouncilFormationProposalsCollection<RussianCouncilFormationProposal>(db);
   const proposal = await proposals.findOne(
     { _id: proposalId, status: "open", preset: "1991-default", countryId: "RU" },
     { session }
@@ -311,13 +307,13 @@ export async function loadRussianCouncilFormationDecisions(
   const country = await countryGameStatesCollection(db).findOne({ _id: "RU" }, { projection });
   if (country?.ruFederalAssemblySinceTurn == null) return [];
   const modes: RussianCouncilCompositionMode[] = ["regionalHeads", "regionalDelegates"];
-  const proposals = await db
-    .collection<RussianCouncilFormationProposal>(RUSSIAN_COUNCIL_FORMATION_PROPOSALS_COLLECTION)
-    .find(
-      { _id: { $in: modes.map((mode) => `1991-default:ru-council:${mode}`) } },
-      { projection: { mode: 1, billId: 1, revision: 1, status: 1 } }
-    )
-    .toArray();
+  const proposals =
+    await russianCouncilFormationProposalsCollection<RussianCouncilFormationProposal>(db)
+      .find(
+        { _id: { $in: modes.map((mode) => `1991-default:ru-council:${mode}`) } },
+        { projection: { mode: 1, billId: 1, revision: 1, status: 1 } }
+      )
+      .toArray();
   const bills = proposals.length
     ? await billsCollection(db)
         .find({ _id: { $in: proposals.map((row) => row.billId) } }, { projection: { status: 1 } })

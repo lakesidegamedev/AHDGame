@@ -20,7 +20,7 @@ import {
 } from "@/lib/corporations/rules/stockTaxReceipt";
 import type { PendingStockTaxReceipt } from "@/lib/budget/rules/capitalGainsTax";
 import type { Db } from "mongodb";
-import type { IndexFund, ShareOrder } from "@/lib/db/types";
+import type { IndexFund } from "@/lib/db/types";
 import { emitTxBulk, loadTxThresholds } from "@/lib/financialTxLog/emit";
 import { buildPersonalBalanceBulkOp } from "@/lib/currency/characterFunds";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
@@ -45,12 +45,12 @@ import {
   type EquityPoolSellDemand,
 } from "@/lib/equities/equityPoolSellAllocation";
 import type { EquityMarketPool } from "@/lib/db/types";
-import { EQUITY_MARKET_POOLS_COLLECTION } from "@/lib/db/types/equityMarketPool";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 import type { Document } from "mongodb";
 import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
+import { equityMarketPoolsCollection } from "@/lib/db/repositories/equityMarketPools";
 
 /** Per-character delta for a corp, plus the fill price for new-entry cost basis. */
 interface ShareDelta {
@@ -636,7 +636,7 @@ export async function fillPendingShareOrders(
     const purchasesIn = Math.round(flow.purchasesIn * 100) / 100;
     const salesOut = Math.round(flow.salesOut * 100) / 100;
     const net = Math.round((purchasesIn - salesOut) * 100) / 100;
-    const update = await db.collection<EquityMarketPool>(EQUITY_MARKET_POOLS_COLLECTION).updateOne(
+    const update = await equityMarketPoolsCollection<EquityMarketPool>(db).updateOne(
       {
         _id: currency,
         ...(net < 0 ? { cashLocal: { $gte: -net } } : {}),

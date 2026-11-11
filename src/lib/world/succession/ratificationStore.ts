@@ -1,6 +1,5 @@
 import type { ObjectId, ClientSession, Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { Bill } from "@/lib/db/types/legislation";
 import type { FederationPoliticalProposalRecord } from "./politicalProposal";
 import {
   evaluateSuccessionApproval,
@@ -9,6 +8,7 @@ import {
 } from "./rules/decision";
 import { billsCollection } from "@/lib/db/repositories/bills";
 import { federationPoliticalProposalsCollection } from "@/lib/db/repositories/federationPoliticalProposals";
+import { federationRatificationsCollection } from "@/lib/db/repositories/federationRatifications";
 
 export const FEDERATION_RATIFICATIONS_COLLECTION = "federationRatifications";
 
@@ -85,8 +85,7 @@ export async function loadPersistedFederationApproval(input: {
   )
     throw new Error("Federation parent mandate has no unique enacted bill");
   const billId = bills[0]._id.toString();
-  const ratifications = await db
-    .collection<FederationRatificationRecord>(FEDERATION_RATIFICATIONS_COLLECTION)
+  const ratifications = await federationRatificationsCollection<FederationRatificationRecord>(db)
     .find(
       {
         presetId: "1991-default",

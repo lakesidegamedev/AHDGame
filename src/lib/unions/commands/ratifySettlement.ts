@@ -35,13 +35,13 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { unionsCollection } from "@/lib/db/repositories/unions";
 import { bargainingCampaignsCollection } from "@/lib/db/repositories/bargainingCampaigns";
+import { bargainingRatificationBallotsCollection } from "@/lib/db/repositories/bargainingRatificationBallots";
 
 export const RATIFICATION_BALLOTS = "bargainingRatificationBallots";
 
 /** Ballots cast on one campaign, newest write per organizer per offer. */
 async function loadBallots(db: Db, campaignId: ObjectId): Promise<BargainingRatificationBallot[]> {
-  return db
-    .collection<BargainingRatificationBallot>(RATIFICATION_BALLOTS)
+  return bargainingRatificationBallotsCollection<BargainingRatificationBallot>(db)
     .find({ campaignId })
     .toArray();
 }
@@ -103,9 +103,10 @@ export async function openSettlementRatification(
   // Ballots from an earlier vote on an earlier offer are not part of this one.
   // They are filtered out by revision anyway; clearing them keeps the
   // collection from growing a tail of dead rows per campaign.
-  await db
-    .collection<BargainingRatificationBallot>(RATIFICATION_BALLOTS)
-    .deleteMany({ campaignId: campaign._id, offerRevision: { $ne: ratification.offerRevision } });
+  await bargainingRatificationBallotsCollection<BargainingRatificationBallot>(db).deleteMany({
+    campaignId: campaign._id,
+    offerRevision: { $ne: ratification.offerRevision },
+  });
   await notifyOrganizers(db, union, campaign, ratification);
 
   return {
@@ -233,7 +234,7 @@ export async function castRatificationBallot(
   }
 
   const now = new Date();
-  await db.collection<BargainingRatificationBallot>(RATIFICATION_BALLOTS).updateOne(
+  await bargainingRatificationBallotsCollection<BargainingRatificationBallot>(db).updateOne(
     {
       campaignId: campaign._id,
       offerRevision: ratification.offerRevision,

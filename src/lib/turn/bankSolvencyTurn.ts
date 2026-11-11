@@ -7,7 +7,7 @@ import { ensureBankFailureResponseWindow } from "@/lib/crises/bankFailureRespons
  */
 import { ObjectId, type Db } from "mongodb";
 import type { Corporation } from "@/lib/db/types";
-import type { BankCharter, BankLoan, InterbankLoan } from "@/lib/db/types/bank";
+import type { BankCharter, BankLoan } from "@/lib/db/types/bank";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { getCountryIdForCurrency } from "@/lib/constants/currencies";
 import { getBankId } from "@/lib/centralBank/helpers";
@@ -17,7 +17,7 @@ import { emitBankingAuditEvent } from "@/lib/banking/auditEvents";
 import { recordBankingStage } from "@/lib/banking/telemetry";
 import { archiveCharter } from "@/lib/banking/charterHistory";
 import { getCashReserves } from "@/lib/banking/bankCash";
-import { MONEY_MOVE_COLLECTION, turnMoveKey } from "@/lib/banking/moneyMove";
+import { turnMoveKey } from "@/lib/banking/moneyMove";
 import { settleTransition } from "@/lib/banking/settlementJournal";
 import { oid } from "@/lib/banking/rules/boundary";
 import { computeConfidence, type ConfidenceBand } from "@/lib/banking/confidence";
@@ -43,6 +43,7 @@ import { getCorporationsCollection } from "@/lib/db/collections/corporations";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
 import { interbankLoansCollection } from "@/lib/db/repositories/interbankLoans";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 // Defined in the rules zone; re-exported for the turn's tests and dashboards.
 export { CONTAGION_PANIC_TURNS, FLIGHT_RATE_BY_BAND, RUN_FAILURE_COVER_FRACTION };
@@ -418,16 +419,16 @@ async function evaluateOneBank(
       // An empty vault can be the result of an unfinished debit. Leave that
       // bank for recovery before testing failure against half-delivered cash.
       if (outflow === 0) {
-        const unfinished = await db
-          .collection<{ _id: string; status?: string }>(MONEY_MOVE_COLLECTION)
-          .findOne(
-            {
-              _id: flightKey,
-              status: "partial",
-            },
-            // Existence only: recovery loads the record it needs.
-            { projection: { _id: 1 } }
-          );
+        const unfinished = await bankMoneyMovesCollection<{ _id: string; status?: string }>(
+          db
+        ).findOne(
+          {
+            _id: flightKey,
+            status: "partial",
+          },
+          // Existence only: recovery loads the record it needs.
+          { projection: { _id: 1 } }
+        );
         if (unfinished) return null;
       }
       const cbDocId = getBankId(getCountryIdForCurrency(currency));

@@ -5,19 +5,10 @@
  */
 import { createHash } from "node:crypto";
 import { ObjectId, type ClientSession, type Db } from "mongodb";
-import type {
-  ElectedOfficial,
-  Election,
-  ElectionCandidate,
-  ElectionVoteTally,
-  GameState,
-  NPP,
-  State,
-} from "@/lib/db/types";
-import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
+import type { ElectedOfficial } from "@/lib/db/types";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
-import { HU_2011_COUNTS_COLLECTION, type Hu2011AssemblyRecord } from "./assemblyCount2011";
+import { type Hu2011AssemblyRecord } from "./assemblyCount2011";
 import { settleHuModernAssembly } from "./rules/modernAssembly2011";
 import { calendarTurn, turnToGameMonth } from "@/lib/utils/gameDate";
 import { charactersCollection } from "@/lib/db/repositories/characters";
@@ -31,8 +22,9 @@ import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVot
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 import { notificationsCollection } from "@/lib/db/repositories/notifications";
 import type { Document } from "mongodb";
+import { hu2011AssemblyOfficeArchivesCollection } from "@/lib/db/repositories/hu2011AssemblyOfficeArchives";
+import { hu2011AssemblyCountsCollection } from "@/lib/db/repositories/hu2011AssemblyCounts";
 
-const HU_2011_OFFICE_ARCHIVES_COLLECTION = "hu2011AssemblyOfficeArchives";
 interface Hu2011AssemblyArchive {
   _id: string;
   countryId: "HU";
@@ -61,7 +53,7 @@ async function materializeHu2011AssemblySeating(input: {
     !Number.isFinite(now.getTime())
   )
     throw new Error("Hungarian handover needs an active transaction, cycle, turn and time");
-  const journal = db.collection<Hu2011AssemblyRecord>(HU_2011_COUNTS_COLLECTION);
+  const journal = hu2011AssemblyCountsCollection<Hu2011AssemblyRecord>(db);
   const receipt = await journal.findOne({ _id: `HU:mixed2011:${cycle}` }, { session });
   if (!receipt || receipt.seatedAtTurn != null || receipt.count.kind !== "counted") return false;
   const game = await gameStateCollection(db).findOne(
@@ -207,7 +199,7 @@ async function materializeHu2011AssemblySeating(input: {
     )
     .toArray();
   if (incumbents.length)
-    await db.collection<Hu2011AssemblyArchive>(HU_2011_OFFICE_ARCHIVES_COLLECTION).insertMany(
+    await hu2011AssemblyOfficeArchivesCollection<Hu2011AssemblyArchive>(db).insertMany(
       incumbents.map((official) => ({
         _id: `${receipt._id}:${official._id.toHexString()}`,
         countryId: "HU" as const,

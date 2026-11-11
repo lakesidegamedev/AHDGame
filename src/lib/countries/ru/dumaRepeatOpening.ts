@@ -5,20 +5,11 @@
  */
 import { russianDumaElectoralLaw } from "./rules/dumaElectoralLaw";
 import { ObjectId, type ClientSession, type Db } from "mongodb";
-import type {
-  CountryGameState,
-  Election,
-  GameState,
-  State,
-  StateRegistrationPool,
-} from "@/lib/db/types";
+import type { Election } from "@/lib/db/types";
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
 import { calendarTurn, turnToGameMonth } from "@/lib/utils/gameDate";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
-import {
-  RUSSIAN_DUMA_RESULTS_COLLECTION,
-  type RussianDumaResultRecord,
-} from "./dumaElectionResult";
+import { type RussianDumaResultRecord } from "./dumaElectionResult";
 import { pendingRussianDumaRepeatBallots } from "./rules/assemblyCohort";
 import { freezeRussianDumaElectorate } from "./rules/assemblyElectorate";
 import { planRussianDumaDistricts } from "./rules/assemblyDistricts";
@@ -37,6 +28,8 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 import { stateRegistrationPoolCollection } from "@/lib/db/repositories/stateRegistrationPool";
+import { russianDumaElectionResultsCollection } from "@/lib/db/repositories/russianDumaElectionResults";
+import { russianDumaRepeatOpeningsCollection } from "@/lib/db/repositories/russianDumaRepeatOpenings";
 
 export const RUSSIAN_DUMA_REPEAT_OPENINGS_COLLECTION = "russianDumaRepeatOpenings";
 export interface RussianDumaRepeatOpeningRecord {
@@ -113,9 +106,10 @@ export async function materializeRussianDumaRepeatOpening(input: {
     turn,
   });
   if (!authority) throw new Error("Duma campaign authority changed");
-  const previous = await db
-    .collection<RussianDumaResultRecord>(RUSSIAN_DUMA_RESULTS_COLLECTION)
-    .findOne({ _id: previousResultId }, { session });
+  const previous = await russianDumaElectionResultsCollection<RussianDumaResultRecord>(db).findOne(
+    { _id: previousResultId },
+    { session }
+  );
   if (
     !previous ||
     previous.countryId !== "RU" ||
@@ -140,9 +134,7 @@ export async function materializeRussianDumaRepeatOpening(input: {
       (!previous.cohortId.equals(rootCohortId) || previous.rootCohortId != null))
   )
     throw new Error("Duma repeat generation identity changed");
-  const openings = db.collection<RussianDumaRepeatOpeningRecord>(
-    RUSSIAN_DUMA_REPEAT_OPENINGS_COLLECTION
-  );
+  const openings = russianDumaRepeatOpeningsCollection<RussianDumaRepeatOpeningRecord>(db);
   if (previousGeneration > 0) {
     const binding = await openings.findOne(
       { _id: `${rootCohortId.toHexString()}:repeat:${previousGeneration}` },
@@ -282,9 +274,9 @@ export async function openRussianDumaRepeat(
   >
 ) {
   // One preflight read sizes the id batch. The transaction rereads and validates the immutable receipt.
-  const previous = await input.db
-    .collection<RussianDumaResultRecord>(RUSSIAN_DUMA_RESULTS_COLLECTION)
-    .findOne({ _id: input.previousResultId }, { projection: { ballots: 1 } });
+  const previous = await russianDumaElectionResultsCollection<RussianDumaResultRecord>(
+    input.db
+  ).findOne({ _id: input.previousResultId }, { projection: { ballots: 1 } });
   if (!previous?.ballots) throw new Error("Duma repeats need preserved predecessor ballots");
   const electionIds = pendingRussianDumaRepeatBallots(previous.ballots).map(() => new ObjectId());
   const cohortId = new ObjectId();

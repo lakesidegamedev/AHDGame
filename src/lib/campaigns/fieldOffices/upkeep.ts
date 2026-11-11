@@ -6,11 +6,11 @@ import {
 } from "@/lib/campaigns/campaignCurrency";
 import { isCampaignEligibleElection } from "@/lib/campaigns/isCampaignEligible";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
-import type { Campaign, CampaignFieldOffice, Election } from "@/lib/db/types";
-import { FIELD_OFFICES_COLLECTION } from "./commands";
+import type { Campaign, CampaignFieldOffice } from "@/lib/db/types";
 import { getFieldOfficeCostAnchor, getFieldOfficeRules } from "./rules";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { campaignFieldOfficesCollection } from "@/lib/db/repositories/campaignFieldOffices";
 
 export interface FieldOfficeUpkeepResult {
   campaignsCharged: number;
@@ -30,7 +30,7 @@ export async function processFieldOfficeUpkeep(db: Db): Promise<FieldOfficeUpkee
     officesClosedInsolvent: 0,
     officesSwept: 0,
   };
-  const officesCol = db.collection<CampaignFieldOffice>(FIELD_OFFICES_COLLECTION);
+  const officesCol = campaignFieldOfficesCollection<CampaignFieldOffice>(db);
   const offices = await officesCol
     .find({}, { projection: { campaignId: 1, electionId: 1, openedTurn: 1, createdAt: 1 } })
     .toArray();

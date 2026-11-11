@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
-import { IDENTITY_OBSERVATIONS_COLLECTION } from "@/lib/db/types/identityObservation";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { withNoStore } from "@/lib/api/withNoStore";
 import { isAuthMigrationFenced } from "@/lib/auth/sourceFence";
@@ -18,6 +17,7 @@ import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficia
 import type { Document } from "mongodb";
 import { usersCollection } from "@/lib/db/repositories/users";
 import { actionLogsCollection } from "@/lib/db/repositories/actionLogs";
+import { identityObservationsCollection } from "@/lib/db/repositories/identityObservations";
 
 // POST /api/admin/users/delete — Permanently delete a user account and their character.
 // Auth: requireAdmin
@@ -172,7 +172,7 @@ export const POST = withNoStore(async (request: Request) => {
     // does NOT take it with it. Purged here so account deletion actually
     // removes the account's IP and fingerprint evidence rather than orphaning
     // 90 days of it.
-    await db.collection(IDENTITY_OBSERVATIONS_COLLECTION).deleteMany({ userId: objectId });
+    await identityObservationsCollection<Document>(db).deleteMany({ userId: objectId });
 
     // Delete the user
     await usersCollectionHandle.deleteOne({ _id: objectId });

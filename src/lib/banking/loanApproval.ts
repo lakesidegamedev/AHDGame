@@ -17,10 +17,10 @@ import { sendSystemMail } from "@/lib/mail/systemMail";
 import { emitBankingAuditEvent } from "@/lib/banking/auditEvents";
 import { approveConstructionFinance, rejectConstructionFinance } from "./constructionFinance";
 import { loadBankingPolicy } from "./policy";
-import { MONEY_MOVE_COLLECTION } from "./moneyMove";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 export type LoanDecisionResult = { ok: true; loan: BankLoan } | { ok: false; error: string };
 
@@ -141,12 +141,10 @@ async function acceptLoanInner(
     if (!policy.constructionFinance && loan.status === "pending") {
       // Disable new disbursements while allowing the original claimed cash
       // operation to recover. A noncash request alone authorizes no payment.
-      const funding = await db
-        .collection<{ _id: string }>(MONEY_MOVE_COLLECTION)
-        .findOne(
-          { _id: `named_loan_disbursement:${bankCorporationId}:${loanId}` },
-          { projection: { _id: 1 } }
-        );
+      const funding = await bankMoneyMovesCollection<{ _id: string }>(db).findOne(
+        { _id: `named_loan_disbursement:${bankCorporationId}:${loanId}` },
+        { projection: { _id: 1 } }
+      );
       if (!funding) return { ok: false, error: "New construction funding is disabled" };
     }
     const result = await approveConstructionFinance(db, bankCorporationId, loanId, true);

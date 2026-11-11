@@ -8,14 +8,6 @@ import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
-import type {
-  Bill,
-  BargainingCampaign,
-  CollectiveAgreement,
-  CorporateSector,
-  Union,
-} from "@/lib/db/types";
-import type { UnionEndorsement, UnionOrganizer } from "@/lib/db/types/union";
 import { OPERATING_SECTOR_TYPE_LABELS } from "@/lib/constants/corporations";
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
 import { isLabourFullMode } from "@/lib/labour/featureFlag";
@@ -59,11 +51,9 @@ import {
   loadBargainingLastEnded,
 } from "@/lib/unions/commands/bargaining";
 import { buildRatificationView, ratificationBlockReason } from "@/lib/unions/ratification";
-import { RATIFICATION_BALLOTS } from "@/lib/unions/commands/ratifySettlement";
 import type { BargainingRatificationBallot } from "@/lib/db/types/union";
 import { getAuthUserWithCharacter } from "@/lib/auth";
 import type { PensionScheme } from "@/lib/db/types/pensionScheme";
-import { PENSION_SCHEMES } from "@/lib/pensions/pensionTurn";
 import {
   describeFundingBand,
   pensionFundingBand,
@@ -89,6 +79,8 @@ import { unionOrganizersCollection } from "@/lib/db/repositories/unionOrganizers
 import { unionEndorsementsCollection } from "@/lib/db/repositories/unionEndorsements";
 import { bargainingCampaignsCollection } from "@/lib/db/repositories/bargainingCampaigns";
 import { collectiveAgreementsCollection } from "@/lib/db/repositories/collectiveAgreements";
+import { bargainingRatificationBallotsCollection } from "@/lib/db/repositories/bargainingRatificationBallots";
+import { pensionSchemesCollection } from "@/lib/db/repositories/pensionSchemes";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -173,7 +165,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
         .sort({ updatedAt: -1 })
         .limit(50)
         .toArray(),
-      db.collection<PensionScheme>(PENSION_SCHEMES).findOne({ unionId: union._id }),
+      pensionSchemesCollection<PensionScheme>(db).findOne({ unionId: union._id }),
     ]);
     const currentTurn = gameState?.currentTurn ?? 0;
 
@@ -231,8 +223,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
       .map((campaign) => campaign._id);
     const [ratificationBallots, viewer] = await Promise.all([
       ratifyingCampaignIds.length
-        ? db
-            .collection<BargainingRatificationBallot>(RATIFICATION_BALLOTS)
+        ? bargainingRatificationBallotsCollection<BargainingRatificationBallot>(db)
             .find({ campaignId: { $in: ratifyingCampaignIds } })
             .toArray()
         : Promise.resolve([]),

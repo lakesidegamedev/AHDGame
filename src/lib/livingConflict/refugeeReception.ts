@@ -5,8 +5,7 @@
  */
 import { ObjectId, type Db } from "mongodb";
 import type { Crisis, CrisisDecisionOption, CrisisInteraction } from "@/lib/db/types/crisis";
-import type { FederalBudget, EnactedLaw } from "@/lib/db/types/budget";
-import type { GameState } from "@/lib/db/types/gameState";
+import type { FederalBudget } from "@/lib/db/types/budget";
 import type { State } from "@/lib/db/types/state";
 import type { LivingConflictState } from "./types";
 import { NATIONAL_SCOPE_IDS } from "@/lib/constants/nationalScope";
@@ -27,8 +26,8 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
 import { crisisInteractionsCollection } from "@/lib/db/repositories/crisisInteractions";
 import { livingConflictsCollection } from "@/lib/db/repositories/livingConflicts";
+import { refugeeReceptionHistoryCollection } from "@/lib/db/repositories/refugeeReceptionHistory";
 
-const REFUGEE_RECEPTION_HISTORY = "refugeeReceptionHistory";
 interface RefugeeReceptionHistory extends RefugeeReceptionResult {
   batchId: string;
   createdAt: Date;
@@ -44,12 +43,10 @@ async function ensureRefugeeReceptionIndexes(db: Db): Promise<void> {
         { populationOrderEpochId: 1, populationOrdersPending: 1 },
         { name: "crisis_population_orders_pending" }
       );
-      await db
-        .collection<RefugeeReceptionHistory>(REFUGEE_RECEPTION_HISTORY)
-        .createIndex(
-          { worldEpochId: 1, serviceEndTurn: 1, destinationCountryId: 1 },
-          { name: "refugee_services_world_country_expiry" }
-        );
+      await refugeeReceptionHistoryCollection<RefugeeReceptionHistory>(db).createIndex(
+        { worldEpochId: 1, serviceEndTurn: 1, destinationCountryId: 1 },
+        { name: "refugee_services_world_country_expiry" }
+      );
     })().catch((error) => {
       indexReadiness.delete(db);
       throw error;
@@ -224,7 +221,7 @@ export async function materializeRefugeeReceptionResults(
 ): Promise<void> {
   if (!results.length) return;
   await ensureRefugeeReceptionIndexes(db);
-  await db.collection<RefugeeReceptionHistory>(REFUGEE_RECEPTION_HISTORY).bulkWrite(
+  await refugeeReceptionHistoryCollection<RefugeeReceptionHistory>(db).bulkWrite(
     results.map((result) => ({
       updateOne: {
         filter: { _id: result._id, batchId },
@@ -234,8 +231,7 @@ export async function materializeRefugeeReceptionResults(
     })),
     { ordered: true }
   );
-  const recorded = await db
-    .collection<RefugeeReceptionHistory>(REFUGEE_RECEPTION_HISTORY)
+  const recorded = await refugeeReceptionHistoryCollection<RefugeeReceptionHistory>(db)
     .find(
       {
         _id: { $in: results.map((result) => result._id) },
@@ -298,8 +294,7 @@ export async function loadRefugeeServiceCosts(db: Db): Promise<Record<string, nu
       : world.currentTurn;
   if (!Number.isSafeInteger(turn) || turn < 1)
     throw new Error("Refugee service costing requires a valid turn");
-  const obligations = await db
-    .collection<RefugeeReceptionHistory>(REFUGEE_RECEPTION_HISTORY)
+  const obligations = await refugeeReceptionHistoryCollection<RefugeeReceptionHistory>(db)
     .find(
       {
         worldEpochId: world.worldEpochId,

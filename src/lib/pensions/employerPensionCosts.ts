@@ -12,7 +12,6 @@
  */
 
 import { ObjectId, type Db } from "mongodb";
-import type { CollectiveAgreement } from "@/lib/db/types";
 import type { PensionScheme } from "@/lib/db/types/pensionScheme";
 import { activeCollectiveAgreementFilter } from "@/lib/unions/bargaining";
 import {
@@ -21,8 +20,8 @@ import {
   pensionSchemeAssetsAnchor,
   pensionTopUpForTurn,
 } from "./rules";
-import { PENSION_SCHEMES } from "./schemeAssets";
 import { collectiveAgreementsCollection } from "@/lib/db/repositories/collectiveAgreements";
+import { pensionSchemesCollection } from "@/lib/db/repositories/pensionSchemes";
 
 export interface EmployerPensionCostAnchorPerTurn {
   /** The bargained rate applied to the covered wage bill. */
@@ -67,8 +66,7 @@ export async function employerPensionCostForTurn(
   const unionIds = [...new Set(agreements.map((a) => a.unionId.toString()))].map(
     (id) => new ObjectId(id)
   );
-  const schemes = await db
-    .collection<PensionScheme>(PENSION_SCHEMES)
+  const schemes = await pensionSchemesCollection<PensionScheme>(db)
     .find({ unionId: { $in: unionIds } })
     .toArray();
   const schemeByUnionId = new Map(schemes.map((s) => [s.unionId.toString(), s]));

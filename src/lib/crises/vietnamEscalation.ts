@@ -1,6 +1,7 @@
 import type { Db } from "mongodb";
 import type { CrisisEffect } from "@/lib/db/types/crisis";
 import { toNativeEffectValue } from "@/lib/crises/effectScale";
+import { vietnamEscalationCollection } from "@/lib/db/repositories/vietnamEscalation";
 
 /**
  * The Vietnam escalation ladder: the shared state behind the chained Vietnam
@@ -394,9 +395,9 @@ type StoredState = VietnamEscalationState & { _id: string };
 
 /** Read the ladder. Returns the empty ladder when the world has never had one. */
 export async function getVietnamEscalation(db: Db): Promise<VietnamEscalationState> {
-  const doc = await db
-    .collection<StoredState>(VIETNAM_ESCALATION_COLLECTION)
-    .findOne({ _id: VIETNAM_ESCALATION_ID });
+  const doc = await vietnamEscalationCollection<StoredState>(db).findOne({
+    _id: VIETNAM_ESCALATION_ID,
+  });
   if (!doc) return emptyVietnamState();
   const empty = emptyVietnamState();
   return {
@@ -425,13 +426,11 @@ export async function openVietnamEscalation(db: Db): Promise<VietnamEscalationSt
 }
 
 async function putVietnamEscalation(db: Db, state: VietnamEscalationState): Promise<void> {
-  await db
-    .collection<StoredState>(VIETNAM_ESCALATION_COLLECTION)
-    .updateOne(
-      { _id: VIETNAM_ESCALATION_ID },
-      { $set: { ...state, updatedAt: new Date() } },
-      { upsert: true }
-    );
+  await vietnamEscalationCollection<StoredState>(db).updateOne(
+    { _id: VIETNAM_ESCALATION_ID },
+    { $set: { ...state, updatedAt: new Date() } },
+    { upsert: true }
+  );
 }
 
 /**

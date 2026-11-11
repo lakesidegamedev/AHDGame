@@ -8,9 +8,8 @@ import {
   TRADE_EMBARGO_MAX_ACTIVE_PER_MEMBER,
   TRADE_EMBARGO_TARGET_COOLDOWN_TURNS,
 } from "@/lib/trade/constants";
-
-const COLLECTION = "tradeEmbargoes";
-const COOLDOWN_COLLECTION = "embargoCooldowns";
+import { tradeEmbargoesCollection } from "@/lib/db/repositories/tradeEmbargoes";
+import { embargoCooldownsCollection } from "@/lib/db/repositories/embargoCooldowns";
 
 /** MongoDB duplicate-key error (E11000) — used to detect the cooldown-gate race. */
 function isDuplicateKeyError(err: unknown): boolean {
@@ -110,7 +109,7 @@ export async function imposeEmbargo(
     };
   }
 
-  const col = db.collection<TradeEmbargo>(COLLECTION);
+  const col = tradeEmbargoesCollection<TradeEmbargo>(db);
   const activeFilter = [
     { expiresTurn: { $exists: false } },
     { expiresTurn: { $gte: input.currentTurn } },
@@ -150,7 +149,7 @@ export async function imposeEmbargo(
   // already exists. This makes two concurrent imposes on the same target
   // race-free: exactly one wins. Survives lift/expiry by design (it outlives the
   // embargo), so a minister can't lift-and-re-impose to dodge it.
-  const cooldownCol = db.collection<TradeEmbargoCooldown>(COOLDOWN_COLLECTION);
+  const cooldownCol = embargoCooldownsCollection<TradeEmbargoCooldown>(db);
   await ensureCooldownIndex(cooldownCol);
   try {
     await cooldownCol.findOneAndUpdate(
@@ -223,7 +222,7 @@ export async function liftEmbargo(
   embargoId: ObjectId,
   sourceCountry: CountryId
 ): Promise<EmbargoCommandResult> {
-  const col = db.collection<TradeEmbargo>(COLLECTION);
+  const col = tradeEmbargoesCollection<TradeEmbargo>(db);
   const embargo = await col.findOne({ _id: embargoId });
   if (!embargo) return { ok: false, error: "Embargo not found." };
   if (embargo.sourceCountry !== sourceCountry) {

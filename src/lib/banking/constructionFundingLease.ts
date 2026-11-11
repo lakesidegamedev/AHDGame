@@ -1,15 +1,13 @@
 /** A bank cannot replace or resolve the epoch behind an unfinished construction debit. */
 import { ObjectId, type Db } from "mongodb";
 import type { ConstructionBuildClaim } from "./rules/constructionBuild";
-import type { BankLoan } from "@/lib/db/types/bank";
-import type { CorporateSector } from "@/lib/db/types/corporation";
 import { oid } from "./rules/boundary";
 import { releaseConstructionAdmission } from "./constructionAdmission";
-import { MONEY_MOVE_COLLECTION } from "./moneyMove";
 import { resumeSettlement, settleTransition } from "./settlementJournal";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 export async function acquireConstructionFundingLease(
   db: Db,
@@ -80,9 +78,10 @@ export async function abortUnfundedConstruction(
   // A contribution that stopped between debit and escrow credit must finish
   // under its original quote before any refund can be calculated.
   const contributionKey = `construction:${claim.claimId}:contribution`;
-  const contribution = await db
-    .collection<{ _id: string }>(MONEY_MOVE_COLLECTION)
-    .findOne({ _id: contributionKey }, { projection: { _id: 1 } });
+  const contribution = await bankMoneyMovesCollection<{ _id: string }>(db).findOne(
+    { _id: contributionKey },
+    { projection: { _id: 1 } }
+  );
   if (contribution) {
     const recovered = await resumeSettlement(db, contributionKey);
     const unfunded =
@@ -204,9 +203,10 @@ export async function releaseCompletedConstructionFunding(
   // Paid queue publication can precede acknowledgement of its atomic receipt.
   // Finish that original receipt before another recovery may change the queue.
   const paidKey = `construction:${claim.claimId}:paid:${claim.order.startTurn}`;
-  const paidJournal = await db
-    .collection<{ _id: string }>(MONEY_MOVE_COLLECTION)
-    .findOne({ _id: paidKey }, { projection: { _id: 1 } });
+  const paidJournal = await bankMoneyMovesCollection<{ _id: string }>(db).findOne(
+    { _id: paidKey },
+    { projection: { _id: 1 } }
+  );
   if (paidJournal) {
     const paid = await resumeSettlement(db, paidKey);
     if (paid.error || !["applied", "replayed"].includes(paid.status)) return false;

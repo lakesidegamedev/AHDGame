@@ -12,7 +12,6 @@ import {
   listFundPositions,
   listFundSnapshots,
   getPosition,
-  FUND_TRANSACTION_COLLECTION,
 } from "@/lib/indexFunds/fundQueries";
 import type { IndexFundTransaction } from "@/lib/db/types";
 import { buildFundNavMetrics } from "@/lib/indexFunds/fundNavMetrics";
@@ -22,6 +21,7 @@ import { listFundBondHoldings } from "@/lib/bonds/fundBondHoldings";
 import { corpCapitalToAnchor, loadValuationFxRates } from "@/lib/currency/corporationCapital";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { indexFundCommandsCollection } from "@/lib/db/repositories/indexFundCommands";
+import { indexFundTransactionsCollection } from "@/lib/db/repositories/indexFundTransactions";
 
 type CorpSummary = {
   _id: ObjectId;
@@ -101,8 +101,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
     };
 
     // Aggregate lifetime dividends received per constituent corp.
-    const dividendAgg = await db
-      .collection<IndexFundTransaction>(FUND_TRANSACTION_COLLECTION)
+    const dividendAgg = await indexFundTransactionsCollection<IndexFundTransaction>(db)
       .aggregate<{ _id: string; total: number }>([
         {
           $match: {

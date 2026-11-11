@@ -48,6 +48,7 @@ import { settlePrimaryUnderwritingFill } from "@/lib/banking/underwritingSettlem
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { bondMarketPoolsCollection } from "@/lib/db/repositories/bondMarketPools";
 
 /** Share of the pool's cash one corporate issue may take at issuance. */
 const CORPORATE_PRIMARY_COMMIT_SHARE = 0.2;
@@ -185,7 +186,7 @@ export async function readPoolForPrimary(
   BondMarketPool,
   "cashLocal" | "targetCashLocal" | "m2Local" | "appetiteByCountry" | "liquidityTargetLocal"
 > | null> {
-  const pool = await db.collection<BondMarketPool>(BOND_MARKET_POOLS_COLLECTION).findOne(
+  const pool = await bondMarketPoolsCollection<BondMarketPool>(db).findOne(
     { _id: currency },
     {
       projection: {
@@ -454,7 +455,7 @@ export async function placeUnsoldBondUnits(
     );
     if (claim.modifiedCount === 0) {
       // Someone else moved the units first; give the pool its cash back.
-      await db.collection<BondMarketPool>(BOND_MARKET_POOLS_COLLECTION).updateOne(
+      await bondMarketPoolsCollection<BondMarketPool>(db).updateOne(
         { _id: currency },
         {
           $inc: { cashLocal: actualPaid, "lifetime.issuanceOut": -actualPaid },

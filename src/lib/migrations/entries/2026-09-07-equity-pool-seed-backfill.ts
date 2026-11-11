@@ -1,8 +1,8 @@
 import type { Db } from "mongodb";
 import type { EquityMarketPool } from "@/lib/db/types/equityMarketPool";
-import { EQUITY_MARKET_POOLS_COLLECTION } from "@/lib/db/types/equityMarketPool";
 import { poolConservationResidual } from "@/lib/equities/poolConservation";
 import type { Migration, MigrationContext, MigrationResult } from "../types";
+import { equityMarketPoolsCollection } from "@/lib/db/repositories/equityMarketPools";
 
 /**
  * Record each equity market pool's opening balance as `seedLocal`.
@@ -41,10 +41,7 @@ export function inferSeedLocal(pool: EquityMarketPool): number {
 }
 
 async function backfillEquityPoolSeed(db: Db, ctx: MigrationContext): Promise<MigrationResult> {
-  const pools = await db
-    .collection<EquityMarketPool>(EQUITY_MARKET_POOLS_COLLECTION)
-    .find({})
-    .toArray();
+  const pools = await equityMarketPoolsCollection<EquityMarketPool>(db).find({}).toArray();
 
   const notes: string[] = [];
   let updated = 0;
@@ -62,9 +59,10 @@ async function backfillEquityPoolSeed(db: Db, ctx: MigrationContext): Promise<Mi
         `residual ${residual.toFixed(2)} (minted ${(pool.lifetime?.inflowIn ?? 0).toFixed(2)})`
     );
     if (!ctx.dryRun) {
-      await db
-        .collection<EquityMarketPool>(EQUITY_MARKET_POOLS_COLLECTION)
-        .updateOne({ _id: pool._id }, { $set: { seedLocal, updatedAt: new Date() } });
+      await equityMarketPoolsCollection<EquityMarketPool>(db).updateOne(
+        { _id: pool._id },
+        { $set: { seedLocal, updatedAt: new Date() } }
+      );
     }
     updated++;
   }
