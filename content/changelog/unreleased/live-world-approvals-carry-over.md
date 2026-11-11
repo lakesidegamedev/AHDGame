@@ -6,7 +6,7 @@ summary: >-
   server updates. Before this fix, the update would have read every record as
   empty.
 tags: [politics, elections]
-badges: [fix]
+badges: [patch]
 areas: [backend]
 ---
 

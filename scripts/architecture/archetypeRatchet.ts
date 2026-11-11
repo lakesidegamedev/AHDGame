@@ -42,6 +42,11 @@ export const ALLOWED_CONCEPTS: ReadonlyArray<{ concept: string; paths: RegExp }>
       /(?:ceoArchetype|nppCorporat|\/turn\/npp\/(?:corp|makeCorp|nppCorp|nppCash|nppShortage|nppTech|nppThrottled|autopilot|decisionSnapshot|extraction|frontier|operatorPolicy|reinvestment|rules\/productFill|strategyCadence|__fixtures__|context|billSponsorship|electionEntry)|nppSurplusActions|nppInvest|\/indexFunds\/|\/corporations\/|\/turn\/corporation\/|npp\/actionAi|corpStrategy)/,
   },
   { concept: "career", paths: /(?:careerArchetype|nppIdiosyncrasy|formNppCabinet)/ },
+  // The boot migration that moves the old stored approvals field has to name it.
+  {
+    concept: "legacy stored field",
+    paths: /\/migrations\/entries\/2026-11-11-bucket-approvals-rename(?:\.test)?\.ts$/,
+  },
   {
     concept: "governing",
     paths:

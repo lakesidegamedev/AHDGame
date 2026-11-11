@@ -5,7 +5,7 @@ summary: >-
   The check that tracks which collections the post-reset scan reads now knows
   about the scan's new retired law check. No change for players.
 tags: [admin]
-badges: [fix]
+badges: [patch]
 areas: [backend]
 ---
 
