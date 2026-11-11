@@ -10,6 +10,10 @@
  * than a set share of the surplus left after the base wage and site bills.
  * A plant that made no surplus last turn pays the base wage only.
  *
+ * The raise is also scaled by the share of last turn's run that actually sold, so
+ * a plant that made more than the market took raises wages only in proportion to
+ * what sold. A receipt with no sales count is read as fully sold.
+ *
  * Everything is per unit of output, so a plant that runs harder or lighter
  * this turn than last pays the raise on this turn's run. The raise is read
  * from last turn's value added and site bill, never from last turn's wages,
@@ -69,6 +73,14 @@ function receiptSiteBill(last: WageShareReceipt): number {
   return (last.otherOperatingPaid ?? 0) + (last.otherOperatingArrears ?? 0);
 }
 
+/** Share of last turn's run that sold, 0 to 1; no sales count reads as fully sold. */
+export function receiptSellThrough(last: WageShareReceipt): number {
+  if (!(last.producedUnits > 0)) return 1;
+  const sold = last.soldUnits;
+  if (typeof sold !== "number" || !Number.isFinite(sold)) return 1;
+  return Math.min(1, Math.max(0, sold / last.producedUnits));
+}
+
 /** This turn's wage bill at the full planned run, never below the base payroll. */
 export function wageShareLabourCost(input: WageShareInput): number {
   const base = input.baseLabourCost;
@@ -90,7 +102,9 @@ export function wageShareLabourCost(input: WageShareInput): number {
     target * valueAddedPerUnit - basePerUnit,
     cap * (valueAddedPerUnit - sitePerUnit - basePerUnit)
   );
-  return raisePerUnit > 0 ? base + raisePerUnit * input.fullRunUnits : base;
+  // Only the part of last turn's run that sold earned the money for a rise.
+  const sellThrough = receiptSellThrough(last);
+  return raisePerUnit > 0 ? base + raisePerUnit * sellThrough * input.fullRunUnits : base;
 }
 
 /*
