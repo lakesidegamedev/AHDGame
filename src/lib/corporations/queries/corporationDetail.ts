@@ -6,7 +6,7 @@ import {
   indexFundOwnershipFraction,
   qualifiesForIndexInclusionBenefit,
 } from "@/lib/corporations/indexOwnership";
-import { resolvePresetIdFromGameState } from "@/lib/world/countryReadinessContract";
+import { resolvePresetIdFromGameState } from "@/lib/world/presetId";
 import { getEraFounderShares } from "@/lib/constants/sectorSeedEra";
 import { caretakerReappointCooldownRemaining } from "@/lib/corporations/caretakerCeo";
 import {

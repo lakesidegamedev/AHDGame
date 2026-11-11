@@ -9,7 +9,7 @@ import { regionUrl } from "@/lib/urls";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { getGdpAnchorRate } from "@/lib/currency/gdpAnchorRate";
 import { getEraUnitScale } from "@/lib/constants/sectorSeedEra";
-import { resolvePresetIdFromGameState } from "@/lib/world/countryReadinessContract";
+import { resolvePresetIdFromGameState } from "@/lib/world/presetId";
 import { formatFundsCompact, roundMarketingStrength } from "@/lib/utils/formatters";
 import type {
   Corporation,

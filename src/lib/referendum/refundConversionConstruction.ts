@@ -20,7 +20,7 @@ import {
 import { emitBuildCapexTxBulk, type BuildCapexTxInput } from "@/lib/corporations/capexTxLog";
 import { unownedPoolCredit } from "@/lib/market/unownedPoolDraw";
 import { getEraUnitScale } from "@/lib/constants/sectorSeedEra";
-import { resolvePresetIdFromGameState } from "@/lib/world/countryReadinessContract";
+import { resolvePresetIdFromGameState } from "@/lib/world/presetId";
 import { quoteConversionConstructionRefund } from "./rules/constructionRefund";
 import { cancelConversionUnderwriting } from "@/lib/banking/cancelConversionUnderwriting";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";

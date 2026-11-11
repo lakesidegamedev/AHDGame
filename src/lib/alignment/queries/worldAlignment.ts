@@ -17,7 +17,7 @@ import { getAlignmentCrisesCollection, getCountryAlignmentsCollection } from "@/
 import type { GameState } from "@/lib/db/types";
 import type { OrganizationMembership } from "@/lib/db/types/internationalOrganization";
 import { resolveGameYear } from "@/lib/era/era";
-import { resolvePresetIdFromGameState } from "@/lib/world/countryReadinessContract";
+import { resolvePresetIdFromGameState } from "@/lib/world/presetId";
 import type { AlignmentStatus } from "../project";
 import {
   eraPoleVocabulary,

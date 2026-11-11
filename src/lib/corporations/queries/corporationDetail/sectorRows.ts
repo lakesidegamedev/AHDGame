@@ -80,7 +80,7 @@ import {
 } from "@/lib/corporations/corpCommodityFlows";
 import { plannedEconomyMediaSupplyFactor, isNewsMediaLane } from "@/lib/constants/sectorStrategies";
 import { isPlannedEconomy } from "@/lib/constants/commandEconomy";
-import { resolvePresetIdFromGameState } from "@/lib/world/countryReadinessContract";
+import { resolvePresetIdFromGameState } from "@/lib/world/presetId";
 import { getEraUnitScale } from "@/lib/constants/sectorSeedEra";
 
 /**

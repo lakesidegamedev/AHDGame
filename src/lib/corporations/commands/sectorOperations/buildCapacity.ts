@@ -34,7 +34,7 @@ import type {
 import { unownedPoolCredit, unownedPoolDrawdown } from "@/lib/market/unownedPoolDraw";
 import { getSectorTechEffects } from "@/lib/constants/techTree";
 import { getEraUnitScale } from "@/lib/constants/sectorSeedEra";
-import { resolvePresetIdFromGameState } from "@/lib/world/countryReadinessContract";
+import { resolvePresetIdFromGameState } from "@/lib/world/presetId";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import {
   anchorToCorpLiquidCapital,

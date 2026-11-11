@@ -56,7 +56,7 @@ import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
 import type { CountryId } from "@/lib/constants/countries";
 import { calculateSplitCostAnchor } from "@/lib/corporations/marketActionCosts";
 import { loadCommandEconomyBlockedCountries } from "@/lib/economy/queries/commandEconomyMarketGate";
-import { resolvePresetIdFromGameState } from "@/lib/world/countryReadinessContract";
+import { resolvePresetIdFromGameState } from "@/lib/world/presetId";
 import { pinStateInTopSuggestions } from "@/lib/corporations/expandSuggestionPin";
 import { fetchCorporationNationalSectorSharesByCountry } from "@/lib/corporations/marketShare";
 import {

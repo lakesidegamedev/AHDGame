@@ -89,16 +89,14 @@ const CLIENT_SAFE = [
 const INHERENTLY_HEAVY = ["src/lib/seeds/regionCensusData.ts"];
 
 /**
- * Exact boundary inherited by the transitive graph walk when it was added.
- * Hash source/target pairs, not internal import counts: a pure shared helper
- * does not add a heavy client edge. The exact hash prevents new boundary edges
- * while keeping 200-plus historical source/target pairs out of this test file.
- * Rehashed when BgFoundingConstituencyPicker moved from the election page's
- * folder to src/components/elections/raceEntry: same target, same count.
+ * Exact legacy boundary of the transitive graph walk. Hash source/target
+ * pairs, not internal import counts: a pure shared helper does not add a heavy
+ * client edge. The exact hash blocks new boundary edges while keeping the
+ * historical pairs out of this file; lower it when edges are removed.
  */
 const LEGACY_TRANSITIVE_COUNTRY_BOUNDARY = {
-  count: 205,
-  sha256: "596ebca8f48e1f430d96558aff59ef165f63d165d75079c7eb1a67a37997d824",
+  count: 76,
+  sha256: "4ede993b6d6e3496538e051a0cade16a795a0b6bcfa75ee541eabe0a8e5a7cea",
 } as const;
 
 /** `import ... from` that is not `import type ... from`, and not a bare side-effect import. */

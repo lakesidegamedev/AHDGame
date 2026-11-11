@@ -6,7 +6,7 @@ import type { GameState } from "@/lib/db/types";
 import type { TurnReferenceData } from "@/lib/corporations/turnReferenceData";
 import type { CommodityType } from "@/lib/constants/commodities";
 import { buildMarketShareBySectorId } from "@/lib/corporations/marketShare";
-import { resolvePresetIdFromGameState } from "@/lib/world/countryReadinessContract";
+import { resolvePresetIdFromGameState } from "@/lib/world/presetId";
 import { buildNationalCommodityBalances } from "@/lib/commodity-map";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
