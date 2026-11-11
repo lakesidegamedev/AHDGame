@@ -20,6 +20,7 @@ import {
   economyResetFullWipeCollections,
   type EconomyResetFullWipeCollection,
 } from "./collections";
+import { loadOldCatalogueEvidence } from "@/lib/admin/resetContract/residueScan";
 import { economyResetPlanDigest } from "./digest";
 import { PRIVATE_HOLDER_COLLECTIONS, type MaturityClaimSource } from "./rules/bonds";
 import type { PartialMoneyMoveSource } from "./rules/moneyMoves";
@@ -430,6 +431,7 @@ async function loadSource(
       bondHistory: corporateBondHistory,
       playerIncomeTaxAssessments: openIncomeTax,
     },
+    retiredLawEvidence: await loadOldCatalogueEvidence(db, true),
     reseedCounts: Object.fromEntries(
       ECONOMY_RESET_RESEED_COLLECTIONS.map((name, i) => [name, reseedCounts[i]])
     ),
