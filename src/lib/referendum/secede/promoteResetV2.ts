@@ -37,6 +37,7 @@ import type { ResetMetricSnapshot } from "@/lib/resetMetrics/rules/snapshot";
 import { RESET_V2_READY } from "@/lib/resetVersions/availability";
 import {
   mergeResetReceiptCountries,
+  isResetV2Country,
   resetSystemVersionsForCountry,
 } from "@/lib/resetVersions/rules";
 import { groupOpeningDepartmentClaims } from "@/lib/resetFinance/rules/departmentOpening";
@@ -83,6 +84,8 @@ export async function promoteResetV2ForIndependence(
   );
   if (!gameState?.resetWorldId) return { promoted: false };
   const { fromCountryId, regionId } = secessionSource(countryId);
+  // Only a reset-v2 parent has opening boards to split.
+  if (!isResetV2Country(fromCountryId)) return { promoted: false };
   const sourceKey = `${fromCountryId}:${regionId}`;
   const versions = resetSystemVersionsForCountry(gameState, RESET_V2_READY, fromCountryId);
   if (!Object.values(versions).some((version) => version === "v2")) {
