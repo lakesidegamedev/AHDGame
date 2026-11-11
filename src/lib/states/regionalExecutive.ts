@@ -13,6 +13,8 @@
  *       - LON → `"Mayor of London"`
  *       - English regions other than LON → `null` (no devolved executive)
  *   - JP: elected `governor` per region → `"Governor"`
+ *   - CA: elected `governor` per province or territory → `"Premier"`
+ *   - QC: elected `governor` per region → `"Prefect"`
  *   - CN: elected `governor` per macro-region → `"Governor"`
  *   - IE: elected `governor` per region, label varies by region (recycled
  *     `governor` officeType for the Cathaoirleach):
@@ -70,6 +72,10 @@ export function resolveExecutiveOffice(
       return { officeType: "governor", label: "Governor" };
     case "CN":
       return { officeType: "governor", label: "Governor" };
+    case "CA":
+      return { officeType: "governor", label: "Premier" };
+    case "QC":
+      return { officeType: "governor", label: "Prefect" };
     case "UK":
       if (upper === "LON") return { officeType: "governor", label: "Mayor of London" };
       if (UK_FIRST_MINISTER_REGIONS.has(upper)) {
