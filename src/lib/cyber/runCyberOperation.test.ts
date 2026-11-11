@@ -127,7 +127,21 @@ describe("launchCyberOperation", () => {
 });
 
 describe("standDownCyber", () => {
+  it("refuses a country that never ran an operation against the target", async () => {
+    expect(await standDownCyber(db, "US", "CN", 10)).toMatchObject({ ok: false, status: 409 });
+    expect(tensions).toHaveLength(0);
+    expect(logRows).toHaveLength(0);
+  });
+
   it("opens a truce that blocks launches in both directions and relieves tension", async () => {
+    await launchCyberOperation({
+      db,
+      attackerId: "CN",
+      targetId: "US",
+      turn: 9,
+      chargeAppropriation: false,
+      rolls: { success: 0.99, attribution: 0.99 },
+    });
     const result = await standDownCyber(db, "CN", "US", 10);
     expect(result.ok).toBe(true);
     expect(tensions[0]).toMatchObject({ kind: "detente" });

@@ -63,6 +63,18 @@ describe("CyberOperationsPanel", () => {
     expect(launch.disabled).toBe(true);
   });
 
+  it("disables stand down against a country the service never targeted", async () => {
+    fetchJsonMock.mockResolvedValue({
+      ...VIEW,
+      targets: [{ ...VIEW.targets[0], standDownRefusal: "no_operation" }],
+    });
+    mount();
+    await screen.findByText("Cyber operations");
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "CN" } });
+    const standDown = screen.getByRole("button", { name: /stand down/i }) as HTMLButtonElement;
+    expect(standDown.disabled).toBe(true);
+  });
+
   it("lists truces and recent operations, naming a sponsor only when traced", async () => {
     mount();
     await screen.findByText("Cyber operations");

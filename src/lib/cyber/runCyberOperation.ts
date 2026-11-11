@@ -25,8 +25,10 @@ import {
   CYBER_ATTRIBUTION_TENSION,
   CYBER_EXPOSURE_TURNS,
   CYBER_REFUSAL_TEXT,
+  CYBER_STAND_DOWN_REFUSAL_TEXT,
   CYBER_STAND_DOWN_RELIEF,
   cyberOperationRefusal,
+  cyberStandDownRefusal,
   resolveCyberOperation,
   truceUntil,
   type CyberOperationResolution,
@@ -349,13 +351,8 @@ export async function standDownCyber(
 ): Promise<StandDownResult> {
   if (attackerId === targetId) return { ok: false, status: 400, error: CYBER_REFUSAL_TEXT.self };
   const history = await loadCyberPairHistory(db, attackerId, targetId);
-  if (history.truceUntilTurn !== null && history.truceUntilTurn > turn) {
-    return {
-      ok: false,
-      status: 409,
-      error: "A cyber truce with that country is already in force.",
-    };
-  }
+  const refusal = cyberStandDownRefusal(attackerId, targetId, history, turn);
+  if (refusal) return { ok: false, status: 409, error: CYBER_STAND_DOWN_REFUSAL_TEXT[refusal] };
   const until = truceUntil(turn);
   const log = await getIntelligenceOpLogCollection(db);
   await log.insertOne({

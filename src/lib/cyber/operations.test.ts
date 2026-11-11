@@ -5,6 +5,7 @@ import {
   attackerCapability,
   cyberAttributionChance,
   cyberOperationRefusal,
+  cyberStandDownRefusal,
   cyberSuccessChance,
   CYBER_AI_MAX_LAUNCHES,
   CYBER_AI_MIN_GAP_TURNS,
@@ -83,6 +84,39 @@ describe("cyberOperationRefusal", () => {
     const history = { lastOperationTurn: 5, truceUntilTurn: truceUntil(5) };
     expect(cyberOperationRefusal("US", "CN", history, 0.5, 5 + CYBER_COOLDOWN_TURNS)).toBe("truce");
     expect(cyberOperationRefusal("US", "CN", history, 0.5, 5 + CYBER_TRUCE_TURNS)).toBeNull();
+  });
+});
+
+describe("cyberStandDownRefusal", () => {
+  it("needs an operation against the target since the last truce began", () => {
+    expect(cyberStandDownRefusal("US", "US", none, 10)).toBe("self");
+    expect(cyberStandDownRefusal("US", "CN", none, 10)).toBe("no_operation");
+    expect(
+      cyberStandDownRefusal("US", "CN", { lastOperationTurn: 8, truceUntilTurn: null }, 10)
+    ).toBeNull();
+    expect(
+      cyberStandDownRefusal("US", "CN", { lastOperationTurn: 8, truceUntilTurn: truceUntil(9) }, 10)
+    ).toBe("truce");
+  });
+
+  it("cannot be repeated after a truce lapses without a new operation", () => {
+    const lapsed = truceUntil(10) + 1;
+    expect(
+      cyberStandDownRefusal(
+        "US",
+        "CN",
+        { lastOperationTurn: 10, truceUntilTurn: truceUntil(10) },
+        lapsed
+      )
+    ).toBe("no_operation");
+    expect(
+      cyberStandDownRefusal(
+        "US",
+        "CN",
+        { lastOperationTurn: lapsed, truceUntilTurn: truceUntil(10) },
+        lapsed
+      )
+    ).toBeNull();
   });
 });
 

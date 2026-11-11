@@ -159,6 +159,38 @@ export const CYBER_REFUSAL_TEXT: Record<CyberRefusal, string> = {
     "An operation against that country was run recently. Teams need time to rebuild access.",
 };
 
+export type CyberStandDownRefusal = "self" | "truce" | "no_operation";
+
+/**
+ * Why a country cannot stand down against a target now, or null when it can. Only a
+ * country that has run an operation against the target since the last truce began may
+ * declare one, so a truce cannot shield a country from attackers it never targeted or
+ * be repeated for tension relief.
+ */
+export function cyberStandDownRefusal(
+  attackerId: string,
+  targetId: string,
+  history: CyberPairHistory,
+  turn: number
+): CyberStandDownRefusal | null {
+  if (attackerId === targetId) return "self";
+  if (history.truceUntilTurn !== null && history.truceUntilTurn > turn) return "truce";
+  if (history.lastOperationTurn === null) return "no_operation";
+  if (
+    history.truceUntilTurn !== null &&
+    history.lastOperationTurn <= history.truceUntilTurn - CYBER_TRUCE_TURNS
+  )
+    return "no_operation";
+  return null;
+}
+
+export const CYBER_STAND_DOWN_REFUSAL_TEXT: Record<CyberStandDownRefusal, string> = {
+  self: CYBER_REFUSAL_TEXT.self,
+  truce: "A cyber truce with that country is already in force.",
+  no_operation:
+    "Your service has run no operation against that country since the last truce, so there is nothing to stand down.",
+};
+
 /** The truce a stand-down declaration opens, from the turn it is made. */
 export function truceUntil(turn: number): number {
   return turn + CYBER_TRUCE_TURNS;
