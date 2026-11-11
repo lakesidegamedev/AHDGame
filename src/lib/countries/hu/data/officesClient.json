@@ -1,0 +1,151 @@
+{
+  "config": {
+    "governmentType": "onePartyState",
+    "regionLabel": "Region",
+    "legislature": {
+      "name": "National Assembly",
+      "lowerChamber": {
+        "key": "nationalAssembly",
+        "name": "National Assembly",
+        "shortName": "Assembly",
+        "seats": 352,
+        "description": "352 deputies of the Országgyűlés, elected to five-year terms in the Hungarian People's Republic - in practice a single-list body controlled by the ruling socialist workers' party."
+      },
+      "upperChamber": {
+        "key": "presidentialCouncil",
+        "name": "Presidential Council",
+        "shortName": "Council",
+        "seats": 21,
+        "description": "The Elnöki Tanács - a 21-member collective head of state that exercised standing legislative authority between Assembly sessions; members chosen by the National Assembly.",
+        "elected": false
+      }
+    },
+    "officeTypes": [
+      {
+        "key": "generalSecretary",
+        "label": "General Secretary",
+        "labelPlural": "General Secretaries",
+        "isExecutive": true,
+        "isSubNational": false
+      },
+      {
+        "key": "chairmanOfPresidentialCouncil",
+        "label": "Chairman of the Presidential Council",
+        "labelPlural": "Chairmen of the Presidential Council",
+        "isExecutive": true,
+        "isSubNational": false,
+        "isHeadOfState": true
+      },
+      {
+        "key": "assemblyDelegate",
+        "label": "Deputy",
+        "labelPlural": "Deputies",
+        "chamberKey": "nationalAssembly",
+        "isExecutive": false,
+        "isSubNational": false
+      },
+      {
+        "key": "centralBankChair",
+        "label": "Governor of the MNB",
+        "labelPlural": "Governors of the MNB",
+        "isExecutive": false,
+        "isSubNational": false
+      }
+    ],
+    "lowerElectionSystem": { "snapElectionsAllowed": false }
+  },
+  "eraOverrides": {
+    "2027-default": {
+      "governmentType": "parliamentaryRepublic",
+      "legislature": {
+        "name": "National Assembly",
+        "lowerChamber": {
+          "key": "nationalAssembly",
+          "name": "National Assembly",
+          "shortName": "Assembly",
+          "seats": 199,
+          "description": "199 deputies elected for four-year terms, with 106 single-member constituencies and 93 national-list seats."
+        }
+      },
+      "officeTypes": [
+        {
+          "key": "primeMinister",
+          "label": "Prime Minister",
+          "labelPlural": "Prime Ministers",
+          "isExecutive": true,
+          "isSubNational": false
+        },
+        {
+          "key": "president",
+          "label": "President",
+          "labelPlural": "Presidents",
+          "isExecutive": true,
+          "isSubNational": false,
+          "isHeadOfState": true
+        },
+        {
+          "key": "assemblyDelegate",
+          "label": "Deputy",
+          "labelPlural": "Deputies",
+          "chamberKey": "nationalAssembly",
+          "isExecutive": false,
+          "isSubNational": false
+        },
+        {
+          "key": "centralBankChair",
+          "label": "Governor of the MNB",
+          "labelPlural": "Governors of the MNB",
+          "isExecutive": false,
+          "isSubNational": false
+        }
+      ],
+      "lowerElectionSystem": { "snapElectionsAllowed": true }
+    },
+    "1991-default": {
+      "governmentType": "parliamentaryRepublic",
+      "legislature": {
+        "name": "National Assembly",
+        "lowerChamber": {
+          "key": "nationalAssembly",
+          "name": "National Assembly",
+          "shortName": "Assembly",
+          "seats": 386,
+          "description": "386 deputies elected in a mixed constituency and list system in 1990."
+        }
+      },
+      "officeTypes": [
+        {
+          "key": "primeMinister",
+          "label": "Prime Minister",
+          "labelPlural": "Prime Ministers",
+          "isExecutive": true,
+          "isSubNational": false
+        },
+        {
+          "key": "president",
+          "label": "President",
+          "labelPlural": "Presidents",
+          "isExecutive": true,
+          "isSubNational": false,
+          "isHeadOfState": true
+        },
+        {
+          "key": "assemblyDelegate",
+          "label": "Deputy",
+          "labelPlural": "Deputies",
+          "chamberKey": "nationalAssembly",
+          "isExecutive": false,
+          "isSubNational": false
+        },
+        {
+          "key": "centralBankChair",
+          "label": "Governor of the MNB",
+          "labelPlural": "Governors of the MNB",
+          "isExecutive": false,
+          "isSubNational": false
+        }
+      ],
+      "lowerElectionSystem": { "snapElectionsAllowed": true }
+    }
+  }
+}

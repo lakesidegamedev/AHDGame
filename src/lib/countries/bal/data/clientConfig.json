@@ -1,0 +1,94 @@
+{
+  "config": {
+    "id": "BAL",
+    "name": "Baltic Republics",
+    "code": "BAL",
+    "status": "coming-soon",
+    "flagEmoji": "🏴",
+    "regionLabel": "Republic",
+    "regionLabelPlural": "Republics",
+    "executiveTitle": "First Secretary",
+    "executiveRealmPhrase": "the Baltic Republics",
+    "executiveLabel": "Soviet",
+    "executivePath": "/country/bal/executive",
+    "governmentType": "onePartyState",
+    "governmentTypeLabel": "One Party State",
+    "descriptor": "The three Baltic Soviet republics, modelled as one playable unit governed by the Communist Party through their Supreme Soviets; a centrally-planned economy on the Soviet ruble.",
+    "heroImage": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a9/Flag_of_the_Soviet_Union.svg/500px-Flag_of_the_Soviet_Union.svg.png",
+    "overviewPath": "/country/bal",
+    "mapPath": "/country/bal/map",
+    "currencyCode": "SUR",
+    "centralGovernmentLabel": "Central Plan",
+    "exchangeName": "GOSPLAN SSR",
+    "exchangeKind": "stateRegister",
+    "financeMinisterCabinetId": "minister_of_finance",
+    "majorPartyIds": ["cpsu_baltic"],
+    "partyCreationNPPs": { "statesRequired": 1, "lockHomeState": true, "nppsPerState": 2 },
+    "legislature": {
+      "name": "Supreme Soviet",
+      "path": "/country/bal/legislature",
+      "bicameral": false,
+      "lowerChamber": {
+        "key": "supremeSoviet",
+        "name": "Supreme Soviet",
+        "shortName": "Soviet",
+        "seats": 300,
+        "description": "Combined deputies of the Estonian, Latvian and Lithuanian SSR Supreme Soviets, elected to single-list terms under the Communist Party."
+      },
+      "upperChamber": {
+        "key": "presidium",
+        "name": "Presidium",
+        "shortName": "Presidium",
+        "seats": 21,
+        "description": "The Presidium of the Supreme Soviet - a standing organ acting between sessions.",
+        "elected": false
+      }
+    },
+    "officeTypes": [
+      {
+        "key": "firstSecretary",
+        "label": "First Secretary",
+        "isExecutive": true,
+        "isSubNational": false,
+        "labelPlural": "First Secretaries"
+      },
+      {
+        "key": "chairmanOfPresidium",
+        "label": "Chairman of the Presidium",
+        "isExecutive": true,
+        "isSubNational": false,
+        "isHeadOfState": true,
+        "labelPlural": "Chairmen of the Presidium"
+      },
+      {
+        "key": "sovietDeputy",
+        "label": "Deputy",
+        "chamberKey": "supremeSoviet",
+        "isExecutive": false,
+        "isSubNational": false,
+        "labelPlural": "Deputies"
+      },
+      {
+        "key": "centralBankChair",
+        "label": "Gosbank Chair",
+        "isExecutive": false,
+        "isSubNational": false,
+        "labelPlural": "Gosbank Chairs"
+      }
+    ],
+    "electionSystems": {
+      "lowerChamber": "fptp",
+      "headOfGovernment": "parliamentary",
+      "headOfState": "ceremonial"
+    },
+    "lowerElectionSystem": { "snapElectionsAllowed": false },
+    "centralBank": {
+      "name": "State Bank (Gosbank)",
+      "abbreviation": "Gosbank",
+      "heroImage": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a9/Flag_of_the_Soviet_Union.svg/500px-Flag_of_the_Soviet_Union.svg.png",
+      "defaultPrimeRate": 3
+    },
+    "usdExchangeRate": 1.35
+  },
+  "eraOverrides": { "1953-default": { "usdExchangeRate": 0.1111111111111111 } }
+}

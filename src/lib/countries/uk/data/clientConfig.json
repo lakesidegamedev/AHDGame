@@ -1,0 +1,134 @@
+{
+  "config": {
+    "id": "UK",
+    "name": "United Kingdom",
+    "code": "GB",
+    "status": "active",
+    "flagEmoji": "🇬🇧",
+    "regionLabel": "Nation",
+    "regionLabelPlural": "Nations & Regions",
+    "executiveTitle": "Prime Minister",
+    "executiveRealmPhrase": "the United Kingdom",
+    "executiveLabel": "10 Downing Street",
+    "executivePath": "/country/uk/executive",
+    "governmentType": "parliamentaryMonarchy",
+    "governmentTypeLabel": "Constitutional Monarchy",
+    "descriptor": "A constitutional monarchy and parliamentary democracy across four nations, where the Prime Minister leads the government through a majority in the 650-seat House of Commons.",
+    "heroImage": "https://flagcdn.com/w640/gb.png",
+    "overviewPath": "/country/uk",
+    "mapPath": "/country/uk/map",
+    "currencyCode": "GBP",
+    "centralGovernmentLabel": "Westminster Funding",
+    "exchangeName": "FTSE",
+    "financeMinisterCabinetId": "chancellor",
+    "regionalBillAssentTitle": "First Minister",
+    "majorPartyIds": ["LAB", "CON"],
+    "partyCreationNPPs": { "statesRequired": 2, "lockHomeState": false, "nppsPerState": 1 },
+    "legislature": {
+      "name": "Parliament",
+      "path": "/country/uk/legislature",
+      "bicameral": false,
+      "lowerChamber": {
+        "key": "commons",
+        "name": "House of Commons",
+        "shortName": "Commons",
+        "seats": 650,
+        "description": "650 elected MPs from single-member constituencies. The primary legislative chamber."
+      },
+      "upperChamber": {
+        "key": "lords",
+        "name": "House of Lords",
+        "shortName": "Lords",
+        "seats": 784,
+        "description": "Appointed and hereditary peers. Revises and scrutinises legislation."
+      }
+    },
+    "subNationalChamber": {
+      "key": "regionalCouncil",
+      "name": "Regional Council",
+      "shortName": "Regional Council",
+      "regionalModel": true
+    },
+    "officeTypes": [
+      {
+        "key": "primeMinister",
+        "label": "Prime Minister",
+        "isExecutive": true,
+        "isSubNational": false,
+        "labelPlural": "Prime Ministers"
+      },
+      {
+        "key": "commons",
+        "label": "Member of Parliament",
+        "chamberKey": "commons",
+        "isExecutive": false,
+        "isSubNational": false,
+        "labelPlural": "Members of Parliament"
+      },
+      {
+        "key": "regionalCouncil",
+        "label": "Regional Councillor",
+        "chamberKey": "regionalCouncil",
+        "isExecutive": false,
+        "isSubNational": true,
+        "labelPlural": "Regional Councillors"
+      },
+      {
+        "key": "governor",
+        "label": "First Minister",
+        "isExecutive": false,
+        "isSubNational": true,
+        "labelPlural": "First Ministers"
+      },
+      {
+        "key": "centralBankChair",
+        "label": "Governor of the Bank of England",
+        "isExecutive": false,
+        "isSubNational": false,
+        "labelPlural": "Governors of the Bank of England"
+      }
+    ],
+    "electionSystems": {
+      "lowerChamber": "pr_hareQuota",
+      "subNationalChamber": "pr_hareQuota",
+      "headOfGovernment": "parliamentary",
+      "headOfState": "ceremonial"
+    },
+    "lowerElectionSystem": { "snapElectionsAllowed": true },
+    "centralBank": {
+      "name": "Bank of England",
+      "abbreviation": "BoE",
+      "heroImage": "/api/images/hero/bank-of-england",
+      "heroAlt": "Bank of England, Threadneedle Street, London",
+      "defaultPrimeRate": 3
+    },
+    "usdExchangeRate": 1
+  },
+  "eraOverrides": {
+    "1991-default": { "usdExchangeRate": 1.7543859649122808 },
+    "1953-default": {
+      "legislature": {
+        "name": "Parliament",
+        "path": "/country/uk/legislature",
+        "bicameral": false,
+        "lowerChamber": {
+          "key": "commons",
+          "name": "House of Commons",
+          "shortName": "Commons",
+          "seats": 625,
+          "description": "625 elected MPs from single-member constituencies (1950–1955 redistribution). The primary legislative chamber."
+        },
+        "upperChamber": {
+          "key": "lords",
+          "name": "House of Lords",
+          "shortName": "Lords",
+          "seats": 784,
+          "description": "Appointed and hereditary peers. Revises and scrutinises legislation."
+        }
+      },
+      "usdExchangeRate": 2.801120448179272
+    }
+  },
+  "nationalAddressName": "Address to the Nation",
+  "regionalAssentOfficeKey": "governor"
+}

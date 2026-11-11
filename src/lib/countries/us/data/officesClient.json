@@ -1,0 +1,109 @@
+{
+  "config": {
+    "governmentType": "presidential",
+    "regionLabel": "State",
+    "legislature": {
+      "name": "Congress",
+      "lowerChamber": {
+        "key": "house",
+        "name": "House of Representatives",
+        "shortName": "House",
+        "seats": 435,
+        "description": "435 representatives, two-year terms. All revenue bills originate here."
+      },
+      "upperChamber": {
+        "key": "senate",
+        "name": "Senate",
+        "shortName": "Senate",
+        "seats": 100,
+        "description": "100 senators, six-year staggered terms. Confirms judges and cabinet.",
+        "elected": true,
+        "regionElectedClasses": true
+      }
+    },
+    "subNationalChamber": {
+      "key": "stateSenate",
+      "name": "State Senate",
+      "shortName": "State Senate"
+    },
+    "officeTypes": [
+      {
+        "key": "president",
+        "label": "President",
+        "labelPlural": "Presidents",
+        "isExecutive": true,
+        "isSubNational": false
+      },
+      {
+        "key": "vicePresident",
+        "label": "Vice President",
+        "labelPlural": "Vice Presidents",
+        "isExecutive": true,
+        "isSubNational": false
+      },
+      {
+        "key": "senate",
+        "label": "Senator",
+        "labelPlural": "Senators",
+        "chamberKey": "senate",
+        "isExecutive": false,
+        "isSubNational": false
+      },
+      {
+        "key": "house",
+        "label": "Representative",
+        "labelPlural": "Representatives",
+        "chamberKey": "house",
+        "isExecutive": false,
+        "isSubNational": false
+      },
+      {
+        "key": "governor",
+        "label": "Governor",
+        "labelPlural": "Governors",
+        "isExecutive": false,
+        "isSubNational": true
+      },
+      {
+        "key": "stateSenate",
+        "label": "State Senator",
+        "labelPlural": "State Senators",
+        "isExecutive": false,
+        "isSubNational": true
+      },
+      {
+        "key": "centralBankChair",
+        "label": "Federal Reserve Chair",
+        "labelPlural": "Federal Reserve Chairs",
+        "isExecutive": false,
+        "isSubNational": false
+      }
+    ],
+    "lowerElectionSystem": { "snapElectionsAllowed": false },
+    "upperElectionSystem": { "snapElectionsAllowed": false }
+  },
+  "eraOverrides": {
+    "1953-default": {
+      "legislature": {
+        "name": "Congress",
+        "lowerChamber": {
+          "key": "house",
+          "name": "House of Representatives",
+          "shortName": "House",
+          "seats": 435,
+          "description": "435 representatives, two-year terms. All revenue bills originate here."
+        },
+        "upperChamber": {
+          "key": "senate",
+          "name": "Senate",
+          "shortName": "Senate",
+          "seats": 96,
+          "description": "96 senators from 48 states, six-year staggered terms.",
+          "elected": true,
+          "regionElectedClasses": true
+        }
+      }
+    }
+  },
+  "regionalAssentOfficeKey": "governor"
+}

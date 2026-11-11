@@ -1,0 +1,100 @@
+{
+  "config": {
+    "id": "SCO",
+    "name": "Scotland",
+    "code": "SCO",
+    "status": "coming-soon",
+    "flagEmoji": "🏴󠁧󠁢󠁳󠁣󠁴󠁿",
+    "regionLabel": "Region",
+    "regionLabelPlural": "Regions",
+    "executiveTitle": "First Minister",
+    "executiveRealmPhrase": "Scotland",
+    "executiveLabel": "Bute House",
+    "executivePath": "/country/sco/executive",
+    "governmentType": "parliamentaryRepublic",
+    "governmentTypeLabel": "Parliamentary Republic",
+    "descriptor": "A parliamentary republic where the First Minister leads government through a Holyrood majority, elected by the Additional Member System across Scotland's regions.",
+    "heroImage": "https://flagcdn.com/w640/gb-sct.png",
+    "overviewPath": "/country/sco",
+    "mapPath": "/country/sco/map",
+    "currencyCode": "GBP",
+    "centralGovernmentLabel": "Scottish Block Grant",
+    "exchangeName": "FTSE",
+    "financeMinisterCabinetId": "financeSecretary",
+    "regionalBillAssentTitle": "Provost",
+    "majorPartyIds": ["SNP", "LAB"],
+    "partyCreationNPPs": { "statesRequired": 2, "lockHomeState": false, "nppsPerState": 1 },
+    "legislature": {
+      "name": "Scottish Parliament",
+      "path": "/country/sco/legislature",
+      "bicameral": false,
+      "lowerChamber": {
+        "key": "holyrood",
+        "name": "Scottish Parliament",
+        "shortName": "Holyrood",
+        "seats": 129,
+        "description": "129 MSPs elected by the Additional Member System - 73 constituency seats plus 56 regional list seats."
+      }
+    },
+    "subNationalChamber": {
+      "key": "regionalCouncil",
+      "name": "Regional Council",
+      "shortName": "Council",
+      "regionalModel": true
+    },
+    "officeTypes": [
+      {
+        "key": "firstMinister",
+        "label": "First Minister",
+        "isExecutive": true,
+        "isSubNational": false,
+        "labelPlural": "First Ministers"
+      },
+      {
+        "key": "holyrood",
+        "label": "Member of the Scottish Parliament",
+        "chamberKey": "holyrood",
+        "isExecutive": false,
+        "isSubNational": false,
+        "labelPlural": "Members of the Scottish Parliament"
+      },
+      {
+        "key": "governor",
+        "label": "Provost",
+        "isExecutive": false,
+        "isSubNational": true,
+        "labelPlural": "Provosts"
+      },
+      {
+        "key": "regionalCouncil",
+        "label": "Regional Councillor",
+        "chamberKey": "regionalCouncil",
+        "isExecutive": false,
+        "isSubNational": true,
+        "labelPlural": "Regional Councillors"
+      },
+      {
+        "key": "centralBankChair",
+        "label": "Governor of the Bank of England",
+        "isExecutive": false,
+        "isSubNational": false,
+        "labelPlural": "Governors of the Bank of England"
+      }
+    ],
+    "electionSystems": {
+      "lowerChamber": "ams",
+      "subNationalChamber": "pr_hareQuota",
+      "headOfGovernment": "parliamentary",
+      "headOfState": "ceremonial"
+    },
+    "lowerElectionSystem": { "snapElectionsAllowed": true },
+    "centralBank": {
+      "name": "Bank of England",
+      "abbreviation": "BoE",
+      "heroImage": "/api/images/hero/bank-of-england",
+      "defaultPrimeRate": 3,
+      "sharedBankId": "UK"
+    },
+    "usdExchangeRate": 1
+  }
+}

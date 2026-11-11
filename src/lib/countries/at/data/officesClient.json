@@ -1,0 +1,70 @@
+{
+  "config": {
+    "governmentType": "parliamentaryRepublic",
+    "regionLabel": "Region",
+    "legislature": {
+      "name": "Nationalrat",
+      "lowerChamber": {
+        "key": "nationalrat",
+        "name": "Nationalrat",
+        "shortName": "Nationalrat",
+        "seats": 183,
+        "description": "183 deputies elected by proportional representation for four-year terms."
+      },
+      "upperChamber": {
+        "key": "bundesrat",
+        "name": "Bundesrat",
+        "shortName": "Bundesrat",
+        "seats": 61,
+        "description": "61 members delegated by the nine Landtage in proportion to Land population; a suspensive-veto chamber outside the confidence loop."
+      }
+    },
+    "officeTypes": [
+      {
+        "key": "primeMinister",
+        "label": "Chancellor",
+        "labelPlural": "Chancellors",
+        "isExecutive": true,
+        "isSubNational": false
+      },
+      {
+        "key": "president",
+        "label": "President",
+        "labelPlural": "Presidents",
+        "isExecutive": true,
+        "isSubNational": false,
+        "isHeadOfState": true
+      },
+      {
+        "key": "deputy",
+        "label": "Deputy",
+        "labelPlural": "Deputies",
+        "chamberKey": "nationalrat",
+        "isExecutive": false,
+        "isSubNational": false
+      },
+      {
+        "key": "centralBankChair",
+        "label": "Governor of the Oesterreichische Nationalbank",
+        "labelPlural": "Governors of the Oesterreichische Nationalbank",
+        "isExecutive": false,
+        "isSubNational": false
+      }
+    ],
+    "lowerElectionSystem": { "snapElectionsAllowed": true }
+  },
+  "eraOverrides": {
+    "1953-default": {
+      "legislature": {
+        "name": "Nationalrat",
+        "lowerChamber": {
+          "key": "nationalrat",
+          "name": "Nationalrat",
+          "shortName": "Nationalrat",
+          "seats": 165,
+          "description": "165 deputies of the Nationalrat (the pre-1971 chamber size), elected by proportional representation under the ÖVP–SPÖ grand coalition."
+        }
+      }
+    }
+  }
+}

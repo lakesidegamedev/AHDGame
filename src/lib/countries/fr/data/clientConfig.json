@@ -1,0 +1,178 @@
+{
+  "config": {
+    "id": "FR",
+    "name": "France",
+    "code": "FR",
+    "status": "coming-soon",
+    "flagEmoji": "🇫🇷",
+    "regionLabel": "Region",
+    "regionLabelPlural": "Regions",
+    "executiveTitle": "President",
+    "executiveRealmPhrase": "France",
+    "executiveLabel": "Élysée",
+    "executivePath": "/country/fr/executive",
+    "governmentType": "presidential",
+    "governmentTypeLabel": "Semi-Presidential Republic",
+    "descriptor": "A semi-presidential republic: a directly-elected President leads alongside a Prime Minister answerable to the 491-seat National Assembly, with an indirectly-elected Senate.",
+    "heroImage": "https://flagcdn.com/w640/fr.png",
+    "overviewPath": "/country/fr",
+    "mapPath": "/country/fr/map",
+    "currencyCode": "FRF",
+    "centralGovernmentLabel": "State Budget",
+    "financeMinisterCabinetId": "minister_of_finance",
+    "majorPartyIds": ["fr_rpr", "fr_ps"],
+    "partyCreationNPPs": { "statesRequired": 2, "lockHomeState": false, "nppsPerState": 1 },
+    "legislature": {
+      "name": "Parliament",
+      "path": "/country/fr/legislature",
+      "bicameral": true,
+      "lowerChamber": {
+        "key": "assembleeNationale",
+        "name": "National Assembly",
+        "shortName": "Assemblée",
+        "seats": 491,
+        "description": "491 deputies elected from single-member constituencies by two-round majority vote for five-year terms."
+      },
+      "upperChamber": {
+        "key": "senat",
+        "name": "Senate",
+        "shortName": "Sénat",
+        "seats": 305,
+        "description": "305 senators elected indirectly by an electoral college of local officials for nine-year terms.",
+        "elected": true
+      }
+    },
+    "officeTypes": [
+      {
+        "key": "president",
+        "label": "President",
+        "isExecutive": true,
+        "isSubNational": false,
+        "isHeadOfState": true,
+        "labelPlural": "Presidents"
+      },
+      {
+        "key": "primeMinister",
+        "label": "Prime Minister",
+        "isExecutive": true,
+        "isSubNational": false,
+        "labelPlural": "Prime Ministers"
+      },
+      {
+        "key": "deputy",
+        "label": "Deputy",
+        "chamberKey": "assembleeNationale",
+        "isExecutive": false,
+        "isSubNational": false,
+        "labelPlural": "Deputies"
+      },
+      {
+        "key": "senator",
+        "label": "Senator",
+        "chamberKey": "senat",
+        "isExecutive": false,
+        "isSubNational": false,
+        "labelPlural": "Senators"
+      },
+      {
+        "key": "centralBankChair",
+        "label": "Governor of the Banque de France",
+        "isExecutive": false,
+        "isSubNational": false,
+        "labelPlural": "Governors of the Banque de France"
+      }
+    ],
+    "electionSystems": {
+      "lowerChamber": "pr_hareQuota",
+      "upperChamber": "pr_hareQuota",
+      "headOfState": "fptp"
+    },
+    "lowerElectionSystem": { "snapElectionsAllowed": true },
+    "upperElectionSystem": { "snapElectionsAllowed": false },
+    "centralBank": {
+      "name": "Banque de France",
+      "abbreviation": "BdF",
+      "heroImage": "https://flagcdn.com/w640/fr.png",
+      "defaultPrimeRate": 9.5
+    },
+    "usdExchangeRate": 0.238
+  },
+  "eraOverrides": {
+    "2027-default": { "usdExchangeRate": 1.0869565217391304 },
+    "1991-default": { "usdExchangeRate": 0.17723844774567454 },
+    "1953-default": {
+      "executiveTitle": "President of the Council",
+      "executiveLabel": "Matignon",
+      "governmentType": "parliamentaryRepublic",
+      "governmentTypeLabel": "Parliamentary Republic",
+      "descriptor": "A parliamentary republic: a President elected by Parliament shares the stage with a President of the Council answerable to the 627-seat National Assembly, with an indirectly-elected Council of the Republic.",
+      "legislature": {
+        "name": "Parliament",
+        "path": "/country/fr/legislature",
+        "bicameral": true,
+        "lowerChamber": {
+          "key": "assembleeNationale",
+          "name": "National Assembly",
+          "shortName": "Assemblée",
+          "seats": 627,
+          "description": "627 deputies elected in the June 1951 election by proportional representation. The chamber that made and unmade Fourth Republic cabinets."
+        },
+        "upperChamber": {
+          "key": "senat",
+          "name": "Council of the Republic",
+          "shortName": "Conseil",
+          "seats": 320,
+          "description": "320 councillors of the Conseil de la République, elected indirectly by local authorities for six-year terms. A weaker revising chamber under the Fourth Republic.",
+          "elected": true
+        }
+      },
+      "officeTypes": [
+        {
+          "key": "primeMinister",
+          "label": "President of the Council",
+          "isExecutive": true,
+          "isSubNational": false,
+          "labelPlural": "Presidents of the Council"
+        },
+        {
+          "key": "president",
+          "label": "President",
+          "isExecutive": true,
+          "isSubNational": false,
+          "isHeadOfState": true,
+          "labelPlural": "Presidents"
+        },
+        {
+          "key": "deputy",
+          "label": "Deputy",
+          "chamberKey": "assembleeNationale",
+          "isExecutive": false,
+          "isSubNational": false,
+          "labelPlural": "Deputies"
+        },
+        {
+          "key": "senator",
+          "label": "Councillor of the Republic",
+          "chamberKey": "senat",
+          "isExecutive": false,
+          "isSubNational": false,
+          "labelPlural": "Councillors of the Republic"
+        },
+        {
+          "key": "centralBankChair",
+          "label": "Governor of the Banque de France",
+          "isExecutive": false,
+          "isSubNational": false,
+          "labelPlural": "Governors of the Banque de France"
+        }
+      ],
+      "electionSystems": {
+        "lowerChamber": "pr_hareQuota",
+        "upperChamber": "pr_hareQuota",
+        "headOfGovernment": "parliamentary",
+        "headOfState": "ceremonial"
+      },
+      "usdExchangeRate": 0.002857142857142857
+    }
+  }
+}

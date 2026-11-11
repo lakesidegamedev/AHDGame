@@ -1,0 +1,249 @@
+{
+  "config": {
+    "id": "PL",
+    "name": "Poland",
+    "code": "PL",
+    "status": "coming-soon",
+    "flagEmoji": "🇵🇱",
+    "regionLabel": "Region",
+    "regionLabelPlural": "Regions",
+    "executiveTitle": "First Secretary",
+    "executiveRealmPhrase": "Poland",
+    "executiveLabel": "Council of Ministers",
+    "executivePath": "/country/pl/executive",
+    "governmentType": "onePartyState",
+    "governmentTypeLabel": "One Party State",
+    "descriptor": "A one-party socialist state where the ruling workers' party's First Secretary governs through the Sejm; the economy is centrally planned until reform.",
+    "heroImage": "https://flagcdn.com/w640/pl.png",
+    "overviewPath": "/country/pl",
+    "mapPath": "/country/pl/map",
+    "currencyCode": "PLZ",
+    "centralGovernmentLabel": "Central Plan",
+    "exchangeName": "PKPG",
+    "exchangeKind": "stateRegister",
+    "financeMinisterCabinetId": "minister_of_finance",
+    "rulingPartyId": 1,
+    "majorPartyIds": ["pzpr"],
+    "partyCreationNPPs": { "statesRequired": 1, "lockHomeState": true, "nppsPerState": 2 },
+    "legislature": {
+      "name": "Sejm",
+      "path": "/country/pl/legislature",
+      "bicameral": false,
+      "lowerChamber": {
+        "key": "sejm",
+        "name": "Sejm",
+        "shortName": "Sejm",
+        "seats": 460,
+        "description": "460 deputies of the Sejm, elected to four-year terms - a single-list body led by the ruling workers' party within the National Unity Front."
+      },
+      "upperChamber": {
+        "key": "councilOfState",
+        "name": "Council of State",
+        "shortName": "Council",
+        "seats": 17,
+        "description": "The Rada Państwa - a collective head of state exercising standing authority between Sejm sessions; chosen by the Sejm.",
+        "elected": false
+      }
+    },
+    "officeTypes": [
+      {
+        "key": "firstSecretary",
+        "label": "First Secretary",
+        "isExecutive": true,
+        "isSubNational": false,
+        "labelPlural": "First Secretaries"
+      },
+      {
+        "key": "chairmanOfStateCouncil",
+        "label": "Chairman of the Council of State",
+        "isExecutive": true,
+        "isSubNational": false,
+        "isHeadOfState": true,
+        "labelPlural": "Chairmen of the Council of State"
+      },
+      {
+        "key": "sejmDeputy",
+        "label": "Deputy",
+        "chamberKey": "sejm",
+        "isExecutive": false,
+        "isSubNational": false,
+        "labelPlural": "Deputies"
+      },
+      {
+        "key": "centralBankChair",
+        "label": "President of the NBP",
+        "isExecutive": false,
+        "isSubNational": false,
+        "labelPlural": "Presidents of the NBP"
+      }
+    ],
+    "electionSystems": {
+      "lowerChamber": "fptp",
+      "headOfGovernment": "parliamentary",
+      "headOfState": "ceremonial"
+    },
+    "lowerElectionSystem": { "snapElectionsAllowed": false },
+    "centralBank": {
+      "name": "National Bank of Poland",
+      "abbreviation": "NBP",
+      "heroImage": "https://flagcdn.com/w640/pl.png",
+      "defaultPrimeRate": 5
+    },
+    "usdExchangeRate": 0.04
+  },
+  "eraOverrides": {
+    "2027-default": {
+      "executiveTitle": "Prime Minister",
+      "governmentType": "parliamentaryRepublic",
+      "governmentTypeLabel": "Parliamentary Republic",
+      "descriptor": "The Prime Minister governs with the confidence of the 460-seat Sejm, elected by proportional vote, alongside the 100-seat Senate and a directly elected President.",
+      "currencyCode": "PLN",
+      "rulingPartyId": null,
+      "legislature": {
+        "name": "National Assembly",
+        "path": "/country/pl/legislature",
+        "bicameral": true,
+        "lowerChamber": {
+          "key": "sejm",
+          "name": "Sejm",
+          "shortName": "Sejm",
+          "seats": 460,
+          "description": "460 deputies elected by proportional representation to four-year terms, resting on the October 2023 result."
+        },
+        "upperChamber": {
+          "key": "senat",
+          "name": "Senate",
+          "shortName": "Senate",
+          "seats": 100,
+          "description": "100 senators elected by first-past-the-post in single-member constituencies to four-year terms.",
+          "elected": true
+        }
+      },
+      "officeTypes": [
+        {
+          "key": "primeMinister",
+          "label": "Prime Minister",
+          "isExecutive": true,
+          "isSubNational": false,
+          "labelPlural": "Prime Ministers"
+        },
+        {
+          "key": "president",
+          "label": "President",
+          "isExecutive": true,
+          "isSubNational": false,
+          "isHeadOfState": true,
+          "labelPlural": "Presidents"
+        },
+        {
+          "key": "sejmDeputy",
+          "label": "Deputy",
+          "chamberKey": "sejm",
+          "isExecutive": false,
+          "isSubNational": false,
+          "labelPlural": "Deputies"
+        },
+        {
+          "key": "senator",
+          "label": "Senator",
+          "chamberKey": "senat",
+          "isExecutive": false,
+          "isSubNational": false,
+          "labelPlural": "Senators"
+        },
+        {
+          "key": "centralBankChair",
+          "label": "President of the NBP",
+          "isExecutive": false,
+          "isSubNational": false,
+          "labelPlural": "Presidents of the NBP"
+        }
+      ],
+      "electionSystems": {
+        "lowerChamber": "pr_hareQuota",
+        "upperChamber": "fptp",
+        "headOfGovernment": "parliamentary",
+        "headOfState": "ceremonial"
+      },
+      "lowerElectionSystem": { "snapElectionsAllowed": true },
+      "upperElectionSystem": { "snapElectionsAllowed": true },
+      "usdExchangeRate": 0.2511805485783181
+    },
+    "1991-default": {
+      "executiveTitle": "Prime Minister",
+      "governmentType": "parliamentaryRepublic",
+      "governmentTypeLabel": "Parliamentary Republic",
+      "rulingPartyId": null,
+      "legislature": {
+        "name": "National Assembly",
+        "path": "/country/pl/legislature",
+        "bicameral": true,
+        "lowerChamber": {
+          "key": "sejm",
+          "name": "Sejm",
+          "shortName": "Sejm",
+          "seats": 460,
+          "description": "460 deputies elected through proportional representation."
+        },
+        "upperChamber": {
+          "key": "senat",
+          "name": "Senate",
+          "shortName": "Senate",
+          "seats": 100,
+          "description": "100 elected senators, two per voivodeship with extra seats for Warsaw and Katowice.",
+          "elected": true
+        }
+      },
+      "officeTypes": [
+        {
+          "key": "primeMinister",
+          "label": "Prime Minister",
+          "isExecutive": true,
+          "isSubNational": false,
+          "labelPlural": "Prime Ministers"
+        },
+        {
+          "key": "president",
+          "label": "President",
+          "isExecutive": true,
+          "isSubNational": false,
+          "isHeadOfState": true,
+          "labelPlural": "Presidents"
+        },
+        {
+          "key": "sejmDeputy",
+          "label": "Deputy",
+          "chamberKey": "sejm",
+          "isExecutive": false,
+          "isSubNational": false,
+          "labelPlural": "Deputies"
+        },
+        {
+          "key": "senator",
+          "label": "Senator",
+          "chamberKey": "senat",
+          "isExecutive": false,
+          "isSubNational": false,
+          "labelPlural": "Senators"
+        },
+        {
+          "key": "centralBankChair",
+          "label": "President of the NBP",
+          "isExecutive": false,
+          "isSubNational": false,
+          "labelPlural": "Presidents of the NBP"
+        }
+      ],
+      "electionSystems": {
+        "lowerChamber": "pr_hareQuota",
+        "upperChamber": "fptp",
+        "headOfGovernment": "parliamentary",
+        "headOfState": "ceremonial"
+      },
+      "lowerElectionSystem": { "snapElectionsAllowed": true },
+      "upperElectionSystem": { "snapElectionsAllowed": true },
+      "usdExchangeRate": 0.00010526315789473685
+    },
+    "1953-default": { "usdExchangeRate": 0.041666666666666664 }
+  }
+}

@@ -1,0 +1,149 @@
+{
+  "config": {
+    "id": "SE",
+    "name": "Sweden",
+    "code": "SE",
+    "status": "coming-soon",
+    "flagEmoji": "🇸🇪",
+    "regionLabel": "County",
+    "regionLabelPlural": "Counties",
+    "executiveTitle": "Prime Minister",
+    "executiveRealmPhrase": "Sweden",
+    "executiveLabel": "Rosenbad",
+    "executivePath": "/country/se/executive",
+    "governmentType": "parliamentaryMonarchy",
+    "governmentTypeLabel": "Constitutional Monarchy",
+    "descriptor": "A constitutional monarchy with a unicameral 349-seat Riksdag elected by proportional representation, home to the world's most developed social-democratic welfare state.",
+    "heroImage": "https://flagcdn.com/w640/se.png",
+    "overviewPath": "/country/se",
+    "mapPath": "/country/se/map",
+    "currencyCode": "SEK",
+    "centralGovernmentLabel": "State Budget",
+    "financeMinisterCabinetId": "minister_of_finance",
+    "majorPartyIds": ["se_sap", "se_m"],
+    "partyCreationNPPs": { "statesRequired": 2, "lockHomeState": false, "nppsPerState": 1 },
+    "legislature": {
+      "name": "Riksdag",
+      "path": "/country/se/legislature",
+      "bicameral": false,
+      "lowerChamber": {
+        "key": "riksdag",
+        "name": "Riksdag",
+        "shortName": "Riksdag",
+        "seats": 349,
+        "description": "349 members elected by proportional representation (with a 4% threshold) for fixed terms."
+      },
+      "upperChamber": {
+        "key": "forstaKammaren",
+        "name": "First Chamber (abolished 1970)",
+        "shortName": "First Chamber",
+        "seats": 151,
+        "description": "The former indirectly-elected upper house, abolished in the 1970 unicameral reform. Not part of the legislative loop."
+      }
+    },
+    "officeTypes": [
+      {
+        "key": "primeMinister",
+        "label": "Prime Minister",
+        "isExecutive": true,
+        "isSubNational": false,
+        "labelPlural": "Prime Ministers"
+      },
+      {
+        "key": "monarch",
+        "label": "King",
+        "isExecutive": true,
+        "isSubNational": false,
+        "isHeadOfState": true,
+        "labelPlural": "Kings"
+      },
+      {
+        "key": "member",
+        "label": "Member of the Riksdag",
+        "chamberKey": "riksdag",
+        "isExecutive": false,
+        "isSubNational": false,
+        "labelPlural": "Members of the Riksdag"
+      },
+      {
+        "key": "centralBankChair",
+        "label": "Governor of the Riksbank",
+        "isExecutive": false,
+        "isSubNational": false,
+        "labelPlural": "Governors of the Riksbank"
+      }
+    ],
+    "electionSystems": {
+      "lowerChamber": "pr_hareQuota",
+      "headOfGovernment": "parliamentary",
+      "headOfState": "ceremonial"
+    },
+    "lowerElectionSystem": { "snapElectionsAllowed": false },
+    "centralBank": {
+      "name": "Sveriges Riksbank",
+      "abbreviation": "Riksbank",
+      "heroImage": "https://flagcdn.com/w640/se.png",
+      "defaultPrimeRate": 9
+    },
+    "usdExchangeRate": 0.233
+  },
+  "eraOverrides": {
+    "1991-default": { "usdExchangeRate": 0.16535849722197743 },
+    "1953-default": {
+      "descriptor": "A constitutional monarchy with a bicameral Riksdag: a 230-seat directly elected Second Chamber and a 150-seat First Chamber indirectly elected by local councils.",
+      "majorPartyIds": ["se_sap", "se_h"],
+      "legislature": {
+        "name": "Riksdag",
+        "path": "/country/se/legislature",
+        "bicameral": false,
+        "lowerChamber": {
+          "key": "riksdag",
+          "name": "Second Chamber",
+          "shortName": "Andra kammaren",
+          "seats": 230,
+          "description": "230 members elected by proportional representation — the directly elected, confidence-giving chamber of the bicameral Riksdag."
+        },
+        "upperChamber": {
+          "key": "forstaKammaren",
+          "name": "First Chamber",
+          "shortName": "Första kammaren",
+          "seats": 150,
+          "description": "150 members indirectly elected by county and city councils on staggered eight-year terms. May revise or delay legislation, but the Second Chamber ultimately prevails. Not player-managed."
+        }
+      },
+      "officeTypes": [
+        {
+          "key": "primeMinister",
+          "label": "Prime Minister",
+          "isExecutive": true,
+          "isSubNational": false,
+          "labelPlural": "Prime Ministers"
+        },
+        {
+          "key": "monarch",
+          "label": "King",
+          "isExecutive": true,
+          "isSubNational": false,
+          "isHeadOfState": true,
+          "labelPlural": "Kings"
+        },
+        {
+          "key": "member",
+          "label": "Member of the Second Chamber",
+          "chamberKey": "riksdag",
+          "isExecutive": false,
+          "isSubNational": false,
+          "labelPlural": "Members of the Second Chamber"
+        },
+        {
+          "key": "centralBankChair",
+          "label": "Governor of the Riksbank",
+          "isExecutive": false,
+          "isSubNational": false,
+          "labelPlural": "Governors of the Riksbank"
+        }
+      ],
+      "usdExchangeRate": 0.19342359767891684
+    }
+  }
+}

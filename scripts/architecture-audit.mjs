@@ -167,17 +167,6 @@ const SIZE_CAP_EXEMPT = [
   // line whenever an entity gains geometry, which is data entry rather than a
   // decomposition signal — `alignmentRoster.test.ts` is what keeps it honest.
   "src/lib/constants/alignmentRoster.ts",
-  // GENERATED client projection of COUNTRY_CONFIGS: one typed record per country
-  // plus the per-era override rows, and no runtime logic beyond five lookup
-  // helpers. Splitting it would put one data table across several files without
-  // shrinking the browser bundle, which is the only reason it exists.
-  "src/lib/constants/countryClientConfig.ts",
-  // GENERATED chamber/office projection of the same registry, written by the
-  // same script: one typed record per country plus the per-era overlay rows,
-  // with six lookup helpers and no branching of its own. It exists so the
-  // elections, region and bill pages stop shipping the full client config; the
-  // data is the same, so splitting the table would only add files.
-  "src/lib/constants/countryOfficesClient.ts",
   // Pure-data crisis/disaster template declarations (one object per template).
   "src/lib/crises/templates.ts",
   // Pure-data tech-tree node declarations (NodeSpec records, no logic).
@@ -252,9 +241,6 @@ const GENERATED_HEADER = /generated\b[^\n]{0,40}do not edit/i;
 const GENERATED_HEADER_LINES = 10;
 
 const GENERATED_TS_ALLOWLIST = new Set([
-  // Client projections of the country registry: the browser bundle needs them.
-  "src/lib/constants/countryClientConfig.ts",
-  "src/lib/constants/countryOfficesClient.ts",
   // Country module facts and era stubs read by client-safe registries.
   "src/lib/countries/at/geographyFacts.ts",
   "src/lib/countries/at/institutionsFacts.ts",
