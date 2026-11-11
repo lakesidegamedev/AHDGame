@@ -6,6 +6,7 @@
 import { ObjectId, type Db } from "mongodb";
 import { isBankHolder } from "./rules/accounts";
 import type { SavingsAccount } from "@/lib/db/types/savingsAccount";
+import type { CurrencyCode } from "@/lib/constants/currencies";
 import { loadBankingPolicy } from "@/lib/banking/policy";
 import { savingsReadsAuthoritative } from "@/lib/banking/rules/policy";
 import { getBankId } from "@/lib/centralBank/helpers";
@@ -19,7 +20,17 @@ import { savingsClosureTransition } from "./rules/closure";
 export async function closeCharacterSavings(
   db: Db,
   ownerId: ObjectId,
-  options: { allowMissingHolderWriteOff?: boolean } = {}
+  options: {
+    allowMissingHolderWriteOff?: boolean;
+    /** Close only this currency's account (default: every currency). */
+    currency?: CurrencyCode;
+    /**
+     * Leave the owner's legacy savings fields alone. A currency change
+     * re-denominates them itself, so zeroing them here would erase the balance
+     * before it converts.
+     */
+    keepLegacyProjection?: boolean;
+  } = {}
 ): Promise<void> {
   const [policy, turn, owner, accounts] = await Promise.all([
     loadBankingPolicy(db),
@@ -27,7 +38,12 @@ export async function closeCharacterSavings(
     db.collection("characters").findOne({ _id: ownerId }, { projection: { _id: 1 } }),
     db
       .collection<SavingsAccount>("savingsAccounts")
-      .find({ ownerType: "character", ownerId, status: { $ne: "closed" } })
+      .find({
+        ownerType: "character",
+        ownerId,
+        status: { $ne: "closed" },
+        ...(options.currency ? { currency: options.currency } : {}),
+      })
       .toArray(),
   ]);
   for (const original of accounts) {
@@ -69,7 +85,7 @@ export async function closeCharacterSavings(
         centralBankId: getBankId(getCountryIdForCurrency(account.currency)),
         turn: account.closureClaimedTurn,
         liabilityRecognized: savingsReadsAuthoritative(policy, account.currency),
-        ownerExists: !!owner,
+        ownerExists: !!owner && !options.keepLegacyProjection,
         holderMissing,
       })
     );
