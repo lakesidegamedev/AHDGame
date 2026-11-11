@@ -67,6 +67,11 @@ export interface EconomyResetSource {
   partialWipeCounts: Record<string, number>;
   /** Rows in the reference collections the reset reseeds (commodityPrices, exchangeRates). */
   reseedCounts: Record<string, number>;
+  /**
+   * Kept political collections that still name a retired-catalogue law id. The
+   * economy reset never replaces the law book, so any hit needs a world reset.
+   */
+  retiredLawEvidence: { collection: string; id: string; lawIds: string[] }[];
   campaignRates: CampaignCurrencyRates;
   /** Live local-per-anchor rate by currency. */
   anchorRates: Record<string, number>;
@@ -164,6 +169,8 @@ function currencyTopologyBlockers(
 export function buildEconomyResetPlan(source: EconomyResetSource): EconomyResetPlan {
   const blockers: string[] = [];
   const warnings: string[] = [];
+  for (const row of source.retiredLawEvidence)
+    blockers.push(`retired-law-id:${row.collection}:${row.id}:${[...row.lawIds].sort().join("+")}`);
 
   // --- Wallets -----------------------------------------------------------
   const characters = byId(source.characters).map((character) => {
