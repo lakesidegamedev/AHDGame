@@ -96,7 +96,13 @@
       "headOfState": "ceremonial"
     },
     "lowerElectionSystem": { "snapElectionsAllowed": true },
-    "centralBank": { "name": "Bank of Canada", "abbreviation": "BoC", "defaultPrimeRate": 2.25 },
+    "centralBank": {
+      "name": "Bank of Canada",
+      "abbreviation": "BoC",
+      "heroImage": "/api/images/hero/bank-of-canada",
+      "heroAlt": "Bank of Canada, Wellington Street, Ottawa",
+      "defaultPrimeRate": 2.25
+    },
     "usdExchangeRate": 1
   },
   "nationalAddressName": "Speech from the Throne",

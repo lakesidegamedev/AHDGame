@@ -110,7 +110,7 @@ const executiveSurface: ExecutiveSurfaceConfig = {
   deskKind: "orders",
   deskLabel: "Orders in Council",
   rosterTitle: "Cabinet",
-  heroImage: "https://flagcdn.com/w640/ca.png",
+  heroImage: "/api/images/hero/parliament-hill",
   heroAlt: "Parliament Hill, Ottawa",
 };
 
@@ -140,7 +140,7 @@ const parliamentarySurface: ParliamentaryExecutiveSurface = {
     emptyText: "No MPs elected yet.",
   },
   hero: {
-    image: "https://flagcdn.com/w640/ca.png",
+    image: "/api/images/hero/parliament-hill",
     alt: "Parliament Hill, Ottawa",
     title: "Government of Canada",
     tagline: "Office of the Prime Minister · Cabinet and the confidence of the House",
