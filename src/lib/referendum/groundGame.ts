@@ -81,7 +81,7 @@ async function spendGroundGameInTransaction(
     const turn = await getCurrentTurn(db);
     const spend = await spendPoliticalStrength(
       {
-        countryId: "UK",
+        countryId: ref.countryId,
         partyId: input.partyId,
         scope: "state",
         stateId: ref.regionId,
