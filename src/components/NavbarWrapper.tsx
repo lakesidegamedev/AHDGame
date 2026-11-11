@@ -631,7 +631,7 @@ export function NavbarWrapper({
                 src={CDN_LOGO_URL}
                 priority
                 unoptimized
-                alt="A House Divided Logo"
+                alt=""
                 width={40}
                 height={40}
                 className="object-contain"

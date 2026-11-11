@@ -14,6 +14,7 @@ import type { SupplyOffersResponse } from "./supplyOfferUi";
 import { StockMarketChart } from "@/app/country/[code]/stockmarket/components/MarketOverview";
 import { useMarketJson } from "./useMarketJson";
 import { useEnabledCountries, useCountryDisplayName } from "@/contexts/RegisteredCountriesContext";
+import { useHasSession } from "@/contexts/AuthDataContext";
 import { buildRuntimeExchangeMeta } from "@/app/country/[code]/stockmarket/stockMarketRouting";
 import {
   ExchangeSelector,
@@ -123,8 +124,13 @@ export function MarketHub() {
   // through the response cache.
   const commodities = useMarketJson<{ commodities?: CommodityData[] }>("/api/commodities");
   const sectors = useMarketJson<SectorsForSaleResponse>(sectorsUrl(1));
+  // Standing supply offers name the viewer's corporations and require auth, so
+  // a signed-out visit must not request them (the 401 is a console error).
+  const hasSession = useHasSession();
   const offers = useMarketJson<SupplyOffersResponse>(
-    `/api/supply-offers?${offersQuery(DEFAULT_OFFER_FILTERS, 1, SUPPLY_PAGE_SIZE)}`
+    hasSession
+      ? `/api/supply-offers?${offersQuery(DEFAULT_OFFER_FILTERS, 1, SUPPLY_PAGE_SIZE)}`
+      : null
   );
   const list = commodities.data?.commodities ?? null;
   const supplyEnabled = offers.data?.enabled === true;

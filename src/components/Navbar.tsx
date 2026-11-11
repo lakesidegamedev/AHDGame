@@ -353,14 +353,18 @@ export const Navbar = React.memo(function Navbar({
         {/* Logo */}
         <Link
           href="/profile"
+          aria-label="A House Divided"
           className="flex items-center gap-2 transition-opacity hover:opacity-80 shrink-0"
           onClick={closeMobileMenu}
         >
+          {/* Decorative: the wordmark next to it names the link, and the link
+              carries the aria-label so the label survives below `sm`, where the
+              wordmark is hidden. */}
           <Image
             src={CDN_LOGO_URL}
             priority
             unoptimized
-            alt="A House Divided Logo"
+            alt=""
             width={36}
             height={36}
             className="object-contain shrink-0"
