@@ -79,7 +79,7 @@ When the truce lapses, operations are possible again, subject to the normal cool
 
 You cannot block an attack in the moment. What you can do is raise your resilience ahead of time:
 
-- Pass a strict cyber resilience mandate.
+- Pass a strict cyber resilience mandate. In Canada the Security Intelligence and Cyber Act plays that part: levels above its starting level add resilience and lower ones remove it.
 - Keep research and development spending up.
 - Keep the utility network in good repair.
 

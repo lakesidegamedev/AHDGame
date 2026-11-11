@@ -53,6 +53,28 @@ describe("loadCyberResilience", () => {
     expect(br.resilience).toBeNull();
   });
 
+  it("reads Canada's security act as its cyber mandate, level 2 being neutral", async () => {
+    const base = {
+      politicalMetrics: [{ countryId: "CA", values: { "infrastructure.utilities": 60 } }],
+      macroMetrics: [{ countryId: "CA", economic: { rdIntensity: { value: 3 } } }],
+    };
+    const at = async (level: number | null) => {
+      const { db } = fakeDb({
+        ...base,
+        statePolicies:
+          level === null
+            ? []
+            : [{ legislationTypeId: "ca.defense.security.primary", policyOptionIndex: level }],
+      });
+      return (await loadCyberResilience(db, ["CA"]))[0].resilience!;
+    };
+    expect(cyberMandateTypeIdFor("CA")).toBe("ca.defense.security.primary");
+    expect(await at(2)).toBeCloseTo(await at(null));
+    expect(await at(4)).toBeGreaterThan(await at(3));
+    expect(await at(3)).toBeGreaterThan(await at(2));
+    expect(await at(0)).toBeLessThan(await at(2));
+  });
+
   it("reads a legacy mandate ladder for a country still on the old catalogue", async () => {
     const { db } = fakeDb({
       politicalMetrics: [
