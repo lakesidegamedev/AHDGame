@@ -5,7 +5,7 @@ summary: >-
   New 2027 worlds can now build Canada's provinces, parties, voters and
   Parliament, ready for when the country opens to players.
 tags: [canada, elections, parties]
-badges: [content]
+badges: [minor]
 areas: [backend]
 ---
 

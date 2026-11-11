@@ -5,7 +5,7 @@ summary: >-
   Canada has an opening national budget in Canadian dollars, ready for when
   the country opens to players.
 tags: [canada, budget, economy]
-badges: [content]
+badges: [minor]
 areas: [backend]
 ---
 

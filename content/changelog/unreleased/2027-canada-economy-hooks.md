@@ -5,7 +5,7 @@ summary: >-
   The Canadian dollar now has its own exchange rate and home country, ready
   for when Canada opens to players.
 tags: [canada, economy, forex]
-badges: [content]
+badges: [minor]
 areas: [backend]
 ---
 
