@@ -46,14 +46,14 @@ const REVENUE_KEY = /\brevenue\s*:/;
  * to the writer.
  *
  * There is no way to follow the variable back to its shape with a grep, so this
- * rule does not try. It keys on the COLLECTION NAME being named right at the
- * insert, and treats any such indirect insert as a revenue writer that must be
+ * rule does not try. It keys on the collection (by name or its typed getter)
+ * being named right at the insert, and treats any such indirect insert as a revenue writer that must be
  * registered and attested. The cost of being wrong is one registry entry
  * explaining that the docs carry no `revenue`; the cost of not having the rule
  * is a silent, unreviewed writer, which is what this file exists to prevent.
  */
 const INDIRECT_INSERT =
-  /(?:\.collection\s*(?:<[^>]*>)?\s*\(\s*["'`]corporateSectors["'`]\s*\)|getCorporateSectorsCollection\s*\([^)]*\)\s*\))\s*\.insert(?:One|Many)\s*\(\s*[A-Za-z_$]/;
+  /(?:\.collection\s*(?:<[^>]*>)?\s*\(\s*["'`]corporateSectors["'`]\s*\)|getCorporateSectorsCollection\s*\([^)]*\)\s*\)|\bcorporateSectorsCollection\s*(?:<[^>]*>)?\s*\([^)]*\))\s*\.insert(?:One|Many)\s*\(\s*[A-Za-z_$]/;
 
 /**
  * Return the source text of the object literal that begins at `open` (the index
