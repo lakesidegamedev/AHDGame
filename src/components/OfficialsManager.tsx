@@ -3,7 +3,7 @@
 import { useEffect, useCallback } from "react";
 import { useOfficialsState } from "./officials/useOfficialsState";
 import { getMessageStyle } from "@/lib/utils/formatters";
-import { US_STATES } from "@/lib/constants/usStateCodes";
+import { US_STATES } from "@/lib/countries/us/usStateCodes";
 import { OfficialsFilters } from "./officials/OfficialsFilters";
 import { OfficialsList } from "./officials/OfficialsList";
 import { apiErrorText } from "@/lib/errors/catalog";

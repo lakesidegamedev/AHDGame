@@ -1,4 +1,4 @@
-import * as Sentry from "@sentry/nextjs";
+import { logger } from "@/lib/observability/logger";
 import type { CountryId } from "@/lib/constants/countries";
 import { TurnMustStopError } from "@/lib/turn/turnMustStop";
 
@@ -51,8 +51,10 @@ export async function runCountryElectionEntries(
         failed.push(name);
         firstError ??= error;
         if (error instanceof TurnMustStopError) mustStop ??= error;
-        console.error(`[Turn] Country election family "${name}" failed`, error);
-        Sentry.captureException(error, { extra: { phase: "countryElections", family: name } });
+        logger.error("Turn", `Country election family "${name}" failed`, error, {
+          phase: "countryElections",
+          family: name,
+        });
       } finally {
         durationMs[name] = Date.now() - startedAt;
       }

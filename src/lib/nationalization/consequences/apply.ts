@@ -12,6 +12,7 @@ import type {
   LeaderConfidenceHistoryEntry,
 } from "@/lib/db/types/countryLeaderState";
 import { logWireEvent } from "@/lib/wireEvent";
+import { logger } from "@/lib/observability/logger";
 import { getCountryConfig } from "@/lib/constants/countries";
 import type { CountryId } from "@/lib/constants/countries";
 import { readInvestorConfidence, writeInvestorConfidence } from "../investorConfidence";
@@ -121,7 +122,9 @@ export async function applyNationalizationConsequences(
           tensionDelta
         );
       } catch (err) {
-        console.error("[nationalization] tension event for a foreign taking failed:", err);
+        logger.error("nationalization", "Tension event for a foreign taking failed", err, {
+          countryId: ctx.countryId,
+        });
       }
     }
   }

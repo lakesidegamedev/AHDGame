@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 
 import * as barrel from "../constants";
 import * as flags from "./flags";
-import * as usStateCodes from "./usStateCodes";
+import * as usStateCodes from "../countries/us/usStateCodes";
 
 /**
  * Browser modules must not import the `@/lib/constants` barrel for names that
@@ -17,7 +17,7 @@ const ROOTS = ["src/app", "src/components", "src/hooks", "src/contexts", "src/li
 const SLIM_NAMES = new Map<string, string>([
   ...Object.keys(flags).map((name) => [name, "@/lib/constants/flags"] as [string, string]),
   ...Object.keys(usStateCodes).map(
-    (name) => [name, "@/lib/constants/usStateCodes"] as [string, string]
+    (name) => [name, "@/lib/countries/us/usStateCodes"] as [string, string]
   ),
 ]);
 
