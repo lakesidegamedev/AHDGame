@@ -23,6 +23,8 @@ describe("archetype counter", () => {
       isAllowedConcept("src/lib/migrations/entries/2026-11-11-bucket-approvals-rename.ts")
     ).toBe(true);
     expect(isAllowedConcept("src/lib/migrations/entries/2026-12-01-other.ts")).toBe(false);
+    expect(isAllowedConcept("src/simulation/engine/legacyPhaseNames.ts")).toBe(true);
+    expect(isAllowedConcept("src/simulation/engine/turnPhaseResumeResults.ts")).toBe(false);
     expect(isAllowedConcept("src/lib/demographics/granularElectorate.ts")).toBe(false);
     expect(isScannedFile("src/lib/demographics/granularElectorate.ts")).toBe(true);
     expect(isScannedFile("src/lib/military/arsenal.ts")).toBe(false);
