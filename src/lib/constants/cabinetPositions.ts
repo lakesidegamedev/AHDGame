@@ -30,6 +30,7 @@ import { SCO_CABINET_POSITIONS } from "./scoCabinet";
 import { WAL_CABINET_POSITIONS } from "./walCabinet";
 import { CABINET_POSITIONS } from "./cabinet";
 import { ECON_COUNTRY_CABINET_POSITIONS } from "./econCountryCabinet";
+import { CA_CABINET_POSITIONS } from "@/lib/countries/ca/cabinet/positions";
 
 /** One era display-name band; the last band with `from <= year` wins. */
 export interface CabinetNameBand {
@@ -114,6 +115,7 @@ const POSITIONS_BY_COUNTRY: Record<string, ReadonlyArray<CabinetPositionDef>> = 
   FI: ECON_COUNTRY_CABINET_POSITIONS,
   GR: ECON_COUNTRY_CABINET_POSITIONS,
   BR: ECON_COUNTRY_CABINET_POSITIONS,
+  CA: CA_CABINET_POSITIONS,
 };
 
 /** Get cabinet positions list for a country. */

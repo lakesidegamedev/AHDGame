@@ -1,4 +1,7 @@
 import type { CountryInstitutions } from "../contract";
+import { CA_CABINET_POSITIONS } from "./cabinet/positions";
+import { CA_CABINET_MECHANICS } from "./cabinet/mechanics";
+import { CA_MINISTERIAL_ORDERS } from "./cabinet/orders";
 import {
   CA_CABINET_GROUPS,
   CA_CABINET_SEAT_IDS,
@@ -13,7 +16,7 @@ import {
 
 /**
  * Canada's institutions. The facts live in `./institutionsFacts`; the cabinet
- * positions, orders and mechanics are added with the executive module.
+ * is heavy and composed here.
  */
 export const CA_INSTITUTIONS: CountryInstitutions = {
   config: CA_CONFIG,
@@ -27,6 +30,9 @@ export const CA_INSTITUTIONS: CountryInstitutions = {
     ordersOfBattle: CA_ORDERS_OF_BATTLE,
   },
   cabinet: {
+    positions: CA_CABINET_POSITIONS,
+    orders: CA_MINISTERIAL_ORDERS,
+    mechanics: CA_CABINET_MECHANICS,
     groups: CA_CABINET_GROUPS,
   },
 };

@@ -62,4 +62,15 @@ export const SEED_TAX_RATES_1953: Record<LawCountryId, Record<SeedTaxType, numbe
     salesTax: 19,
     tariffs: 0,
   },
+  // Canada's table is its 2027 opening, not 1953: combined federal and
+  // provincial effective rates. Income tax, corporate tax and sales tax are
+  // the blended national rates; payroll is pension plus employment insurance.
+  CA: {
+    incomeTax: 26,
+    domesticCorporateTax: 26,
+    foreignCorporateTax: 26,
+    payrollTax: 9.8,
+    salesTax: 9,
+    tariffs: 1,
+  },
 };

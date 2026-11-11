@@ -33,6 +33,7 @@ export const ANTITRUST_LAW_BY_COUNTRY: Partial<Record<CountryId, string>> = {
   UK: "uk.economy.competition.primary",
   RU: "ru.economy.competition.primary",
   DD: "dd.economy.competition.primary",
+  CA: "ca.economy.competition.primary",
 };
 
 /**
@@ -50,6 +51,7 @@ export const MERGER_AUTHORITY_SEAT_BY_COUNTRY: Partial<Record<CountryId, string>
   UK: "business_secretary",
   RU: "minister_of_internal_trade",
   DD: "minister_of_internal_trade",
+  CA: "minister_of_industry",
   // Germany has no competition statute of its OWN — this seat exists for the
   // CARRIED one: a reunification hands DE the GDR's competition primary
   // (`carriedLawIdFor` resolves it on the ANTITRUST_LAW_BY_COUNTRY miss), and
