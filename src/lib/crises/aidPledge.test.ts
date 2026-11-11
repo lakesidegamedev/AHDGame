@@ -4,13 +4,16 @@ import type { Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 import type { CrisisInteraction } from "@/lib/db/types/crisis";
 import { submitCrisisAidPledge } from "./aidPledge";
-import { spendFromTreasury } from "@/lib/budget/treasurySpend";
+import { refundTreasurySpend, spendFromTreasury } from "@/lib/budget/treasurySpend";
 import { applyCrisisEffects } from "@/lib/crises/applyEffects";
 import { applyEffectsForCrisis } from "@/lib/crises/interactionEngine";
 import { proposeCrisisAidBill } from "@/lib/legislature/commands/proposeCrisisAidBill";
 
 vi.mock("@/lib/wireEvent", () => ({ logWireEvent: vi.fn().mockResolvedValue(undefined) }));
-vi.mock("@/lib/budget/treasurySpend", () => ({ spendFromTreasury: vi.fn() }));
+vi.mock("@/lib/budget/treasurySpend", () => ({
+  spendFromTreasury: vi.fn(),
+  refundTreasurySpend: vi.fn(),
+}));
 vi.mock("@/lib/crises/applyEffects", () => ({ applyCrisisEffects: vi.fn() }));
 vi.mock("@/lib/crises/interactionEngine", () => ({ applyEffectsForCrisis: vi.fn() }));
 vi.mock("@/lib/legislature/commands/proposeCrisisAidBill", () => ({
@@ -125,5 +128,37 @@ describe("submitCrisisAidPledge", () => {
       vi.mocked(spendFromTreasury).mock.invocationCallOrder[0],
     ];
     expect(order[0]).toBeLessThan(order[1]);
+  });
+
+  it("refunds the spend, reverses the effects and frees the slot when the bill cannot be filed", async () => {
+    const interaction = makeInteraction();
+    db.collectionMocks.crisisInteractions.findOne.mockResolvedValue(interaction);
+    db.collectionMocks.federalBudget.findOne.mockResolvedValue({ gdp: 1_000_000_000_000 });
+    db.collectionMocks.crises.findOne.mockResolvedValue({ name: "Flood" });
+    vi.mocked(spendFromTreasury).mockResolvedValue({ fromSurplus: 1, addedToDebt: 0 } as never);
+    vi.mocked(proposeCrisisAidBill).mockRejectedValue(new Error("bill insert failed"));
+
+    await expect(
+      submitCrisisAidPledge(db as unknown as Db, pledgeInput(interaction))
+    ).rejects.toThrow("bill insert failed");
+
+    const inserted = db.collectionMocks.crisisAidCommitments.insertOne.mock.calls[0][0];
+    expect(refundTreasurySpend).toHaveBeenCalledWith(
+      expect.anything(),
+      "US",
+      inserted.treasuryDebited,
+      expect.objectContaining({
+        flow: "crisis_aid",
+        key: `crisis-aid:${interaction.crisisId.toString()}:US`,
+      })
+    );
+    expect(applyEffectsForCrisis).toHaveBeenLastCalledWith(
+      expect.anything(),
+      interaction.crisisId,
+      inserted.recoveryEffects.map((e: { value: number }) => ({ ...e, value: -e.value }))
+    );
+    expect(db.collectionMocks.crisisAidCommitments.deleteOne).toHaveBeenCalledWith({
+      _id: inserted._id,
+    });
   });
 });
