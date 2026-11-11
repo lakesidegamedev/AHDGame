@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { calculateEnactedLawAnnualCost } from "@/lib/budget/costs";
 import type { EnactedLaw } from "@/lib/db/types";
@@ -40,6 +42,16 @@ describe("saved-world cost classes", () => {
       year: 2006,
     });
     expect(cost).toBeCloseTo(67_600, 6);
+  });
+});
+
+describe("saved-world cost class table source", () => {
+  it("lists each law type once", () => {
+    // Two branches can each move the same removed rows here; a repeated key
+    // compiles under the test runner but fails the type checker.
+    const source = readFileSync(join(__dirname, "savedWorldCostClasses.ts"), "utf8");
+    const keys = [...source.matchAll(/^  ([a-z0-9_]+): "/gm)].map((m) => m[1]);
+    expect(keys.filter((key, i) => keys.indexOf(key) !== i)).toEqual([]);
   });
 });
 
