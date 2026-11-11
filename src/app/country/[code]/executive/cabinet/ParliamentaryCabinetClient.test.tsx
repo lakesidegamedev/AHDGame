@@ -72,6 +72,18 @@ describe("ParliamentaryCabinetClient", () => {
     ).toBeTruthy();
   });
 
+  it.each([
+    ["CA", "Cabinet of Canada", "Parliament Hill · Ministers appointed by the Prime Minister"],
+    ["QC", "Executive Council of Quebec", "Parliament Building · Ministers appointed by the Premier"],
+  ] as const)("renders the %s cabinet from config", async (country, title, tagline) => {
+    mockFetch([]);
+    const config = PARLIAMENTARY_CABINET_CONFIGS[country];
+    expect(config.positions.length).toBeGreaterThan(10);
+    render(<ParliamentaryCabinetClient config={config} />);
+    await waitFor(() => expect(screen.getByText(title)).toBeTruthy());
+    expect(screen.getByText(tagline)).toBeTruthy();
+  });
+
   it("uses the imperial possessive for the UK title", async () => {
     mockFetch([]);
     render(<ParliamentaryCabinetClient config={PARLIAMENTARY_CABINET_CONFIGS.UK} />);
