@@ -10,6 +10,7 @@ import type {
 } from "@/lib/db/types";
 import { projectCharacterGeneration, calculateTaxAmount } from "@/lib/utils/fundGeneration";
 import { resolveCampaignPriceLevel } from "@/lib/campaigns/rules/priceLevel";
+import { hasGdpBaseline } from "@/lib/campaigns/rules/gdpBaseline";
 import { campaignAnchorToLocal } from "@/lib/campaigns/campaignCurrency";
 import { getHomeCurrency } from "@/lib/currency/characterFunds";
 import type { AnyBulkWriteOperation } from "mongodb";
@@ -97,9 +98,21 @@ export async function processFundGeneration(
       const nationalTreasuryTxEntries: BulkTreasuryTransactionArgs[] = [];
       const stateTreasuryTxEntries: BulkTreasuryTransactionArgs[] = [];
 
+      // Countries with no GDP baseline row cannot be priced. The resolver throws
+      // for them, and this loop has no per-character catch, so a single such
+      // character used to abort the phase and cost every player the turn's
+      // campaign income. Skip them instead and report once after the loop.
+      const unpricedCountries = new Map<string, number>();
+
       for (const character of characters) {
         const state = stateMap.get(character.homeState);
         if (!state) continue;
+
+        const incomeCountry = character.countryId ?? "US";
+        if (!hasGdpBaseline(incomeCountry)) {
+          unpricedCountries.set(incomeCountry, (unpricedCountries.get(incomeCountry) ?? 0) + 1);
+          continue;
+        }
 
         // Generation constants are anchor (₳); campaign funds are stored LOCAL and
         // are decoupled from live forex. Denominate to local at the frozen base
@@ -195,6 +208,20 @@ export async function processFundGeneration(
             _id: party._id,
           });
         }
+      }
+
+      if (unpricedCountries.size > 0) {
+        Sentry.captureMessage(
+          "fundGeneration skipped characters of countries with no GDP baseline",
+          {
+            level: "warning",
+            extra: {
+              turn: turn ?? 0,
+              preset,
+              skippedByCountry: Object.fromEntries(unpricedCountries),
+            },
+          }
+        );
       }
 
       if (characterOps.length > 0) {

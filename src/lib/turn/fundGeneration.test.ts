@@ -109,6 +109,33 @@ describe("fundGeneration", () => {
       expect(result.totalGenerated).toBe(0);
     });
 
+    it("skips a character whose country has no GDP baseline instead of aborting the phase", async () => {
+      const unpriced = createCharacter({ homeState: "SCO-EDI", countryId: "SCO" });
+      const priced = createCharacter({ party: "independent" });
+      const states = [createState("US-CA", 100000), createState("SCO-EDI", 100000)];
+
+      // The real resolver throws for SCO; the mock mirrors that so the test
+      // fails if the skip is removed and SCO reaches the projection.
+      vi.mocked(projectCharacterGeneration).mockImplementation(({ countryId }) => {
+        if (countryId === "SCO") throw new Error("no GDP baseline for country SCO");
+        return 1000;
+      });
+
+      setupCollection<State>("states", states);
+      setupCollection<PoliticalParty>("politicalParties", []);
+      setupCollection<StatePartyOrg>("statePartyOrg", []);
+
+      const result = await processFundGeneration([unpriced, priced], new Date());
+
+      expect(result.totalGenerated).toBe(1000);
+      expect(projectCharacterGeneration).toHaveBeenCalledTimes(1);
+      expect(db.collectionMocks["characters"]!.bulkWrite).toHaveBeenCalledWith([
+        expect.objectContaining({
+          updateOne: expect.objectContaining({ filter: { _id: priced._id } }),
+        }),
+      ]);
+    });
+
     it("gives full funds to independent characters (no taxes)", async () => {
       const character = createCharacter({ party: "independent" });
       const state = createState("US-CA", 100000);

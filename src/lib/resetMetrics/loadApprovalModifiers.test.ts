@@ -116,6 +116,38 @@ describe("Metrics v2 approval source", () => {
     db.collection("resetMetricSnapshots").find().toArray.mockResolvedValue(behind);
     await expect(loadPoliticalApprovalBases(db as unknown as Db, "UK")).rejects.toThrow();
   });
+  it("judges lag per country when the prefetched batch spans countries refreshed on different turns", async () => {
+    const all = buildOpeningMetricSnapshots1991("approval-test", 1).filter((board) =>
+      ["UK", "JP"].includes(board.countryId)
+    );
+    const jpRegions = all
+      .filter((board) => board.countryId === "JP" && board.regionId)
+      .map((board) => board.regionId!);
+    const later = { ...game, currentTurn: 4 } as GameState;
+    // UK refreshed through turn 4, JP one refresh behind: each country is uniform
+    // on its own, only the combined batch is mixed.
+    const batch = all.map((board) => ({
+      ...board,
+      asOfTurn: board.countryId === "UK" ? 4 : 3,
+    }));
+    expect(new Set(batch.map((board) => board.asOfTurn)).size).toBe(2);
+    const jp = await loadResetApprovalModifiers(
+      db as unknown as Db,
+      "JP",
+      jpRegions,
+      later,
+      undefined,
+      batch
+    );
+    expect(jp!.metrics.length).toBe(jpRegions.length);
+    // A genuinely partial JP refresh still fails closed.
+    const partial = batch.map((board, i) =>
+      board.countryId === "JP" && i % 2 ? { ...board, asOfTurn: 4 } : board
+    );
+    await expect(
+      loadResetApprovalModifiers(db as unknown as Db, "JP", jpRegions, later, undefined, partial)
+    ).rejects.toThrow("Approval needs a current Metrics v2 board for JP/");
+  });
   it("does not query the v2 collection when the country is not activated", async () => {
     const count = db.collection("resetMetricSnapshots").find.mock.calls.length;
     expect(await loadResetApprovalModifiers(db as unknown as Db, "DE", [], game)).toBeNull();

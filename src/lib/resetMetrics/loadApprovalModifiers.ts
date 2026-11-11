@@ -74,11 +74,15 @@ export async function loadResetApprovalModifiers(
         }
       )
       .toArray());
-  const byId = new Map(boards.map((board) => [board._id, board]));
+  // The prefetched batch spans every active country. Each country's lag is
+  // judged on its own boards: another country refreshed a turn ahead must not
+  // turn a uniformly one-turn-behind country into a "write in progress".
+  const countryBoards = boards.filter((board) => board.countryId === countryId);
+  const byId = new Map(countryBoards.map((board) => [board._id, board]));
   const expectedTurn = turn ?? gameState!.currentTurn;
   // A whole country one failed refresh behind reads its last refresh. A mix of
   // refreshed and unrefreshed boards is a write in progress and still fails.
-  const boardTurns = new Set(boards.map((board) => board.asOfTurn));
+  const boardTurns = new Set(countryBoards.map((board) => board.asOfTurn));
   const uniformLagTurn = boardTurns.size === 1 ? [...boardTurns][0] : undefined;
   const lagging = (asOfTurn: number) =>
     asOfTurn === expectedTurn ||
