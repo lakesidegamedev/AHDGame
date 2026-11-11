@@ -5,7 +5,7 @@ summary: >-
   A new Canada page in the wiki covers the House of Commons, forming a
   government, the provinces, Quebec's sovereignty mood, the parties and money.
 tags: [canada, wiki]
-badges: [content]
+badges: [minor]
 areas: [frontend]
 ---
 

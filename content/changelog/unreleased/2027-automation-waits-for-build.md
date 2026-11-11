@@ -5,7 +5,7 @@ summary: >-
   A sector waiting for an automated method to be built keeps its full crew and
   pays no automation levy until the new method is running.
 tags: [corporations, automation]
-badges: [fix]
+badges: [patch]
 areas: [engine]
 ---
 

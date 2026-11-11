@@ -6,7 +6,7 @@ summary: >-
   already runs keep their cost in the national budget, and its minimum wage
   stays in force.
 tags: [budget, legislation, labour]
-badges: [fix]
+badges: [patch]
 areas: [engine]
 ---
 

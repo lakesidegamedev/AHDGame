@@ -5,7 +5,7 @@ summary: >-
   Each Chinese province keeps a share of the corporate tax raised there. That
   share now uses the rate the national government actually sets.
 tags: [budget, regions]
-badges: [fix]
+badges: [patch]
 areas: [engine]
 ---
 

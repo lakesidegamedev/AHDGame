@@ -37,9 +37,9 @@ function hasCost(type: (typeof legislationTypes)[number]): boolean {
 
 describe("law administration catalog", () => {
   it("classifies every US, UK, and Japan law", () => {
-    // The one law book for US and UK, the Japan catalog, and the mechanical laws.
+    // The one law book for US, UK and Japan, and the mechanical laws.
     expect(initialCatalog.filter((type) => !/__(?:income|capital)_/.test(type._id))).toHaveLength(
-      513
+      456
     );
     expect(initialCatalog.some((type) => type._id.endsWith("__income_low"))).toBe(true);
     expect(initialCatalog.some((type) => type._id.endsWith("__capital_low"))).toBe(true);

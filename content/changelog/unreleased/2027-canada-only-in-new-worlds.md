@@ -5,7 +5,7 @@ summary: >-
   Worlds that were already running before Canada was added carry on exactly as
   before, without a Canada they never set up.
 tags: [world]
-badges: [fix]
+badges: [patch]
 areas: [engine]
 ---
 

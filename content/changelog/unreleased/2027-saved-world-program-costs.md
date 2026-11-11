@@ -5,7 +5,7 @@ summary: >-
   In worlds started before Japan and Germany moved to their new law books, the
   programmes they already run keep their cost in the national budget.
 tags: [budget, legislation]
-badges: [fix]
+badges: [patch]
 areas: [engine]
 ---
 

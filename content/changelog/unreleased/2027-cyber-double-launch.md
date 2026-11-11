@@ -5,7 +5,7 @@ summary: >-
   Two cyber launches sent against the same country at the same moment no
   longer both go through: the second is refused and its cost returned.
 tags: [cyber, intelligence]
-badges: [fix]
+badges: [patch]
 areas: [backend]
 ---
 

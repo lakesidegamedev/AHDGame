@@ -5,7 +5,7 @@ summary: >-
   The German states again receive their share of national income tax and VAT
   in worlds where the national tax rates have not been changed by a bill.
 tags: [budget, germany]
-badges: [fix]
+badges: [patch]
 areas: [engine]
 ---
 
