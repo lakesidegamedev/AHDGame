@@ -37,6 +37,7 @@ import {
 } from "@/components/bills/embargoProvisionTypes";
 import { useEnabledCountryIds } from "@/lib/hooks/useEnabledCountryIds";
 import { formatEmbargoProvisionLabel } from "@/lib/legislature/embargoProvisionLabel";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 interface CatalogOption {
   option: { choice: LawChoice; annualAllocation: number };
@@ -159,7 +160,11 @@ type Step = "starting" | "family" | "level" | "review" | "overview";
 
 function resetMetricCountry(countryId: CountryId): ResetMetricScoreCountry | null {
   const normalized = countryId.toUpperCase();
-  return normalized === "US" || normalized === "UK" || normalized === "JP" ? normalized : null;
+  return countryHasFeature("usUi", normalized) ||
+    countryHasFeature("ukUi", normalized) ||
+    countryHasFeature("jpUi", normalized)
+    ? normalized
+    : null;
 }
 
 function categoryForDomain(domain: string, scope: "national" | "regional"): BillCategory {

@@ -14,6 +14,7 @@ import { useAuthMe } from "@/contexts/AuthDataContext";
 import { DEFAULT_CYCLE_ANCHOR_CONTEXT } from "@/lib/elections/cycleAnchorContext";
 import { UK_REGION_NAMES, RU_REGION_NAMES } from "@/lib/constants/states";
 import { US_STATE_AND_DC_NAMES } from "@/lib/constants/usStateNames";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 interface Election {
   _id: string;
@@ -251,13 +252,16 @@ export default function StateElectionResultsPage({
         const electionData: Election = wrapper.election;
         // A US presidential state lives inside the race's own page now: the
         // stage opens the state, zoomed, with its counties beside the map.
-        if (electionData.electionType === "president" && code.toUpperCase() === "US") {
+        if (
+          electionData.electionType === "president" &&
+          countryHasFeature("usUi", code.toUpperCase())
+        ) {
           router.replace(`/elections/${encodeURIComponent(id)}?state=${stateUpper}`);
           return;
         }
         setElection(electionData);
 
-        const isUS = code.toUpperCase() === "US";
+        const isUS = countryHasFeature("usUi", code.toUpperCase());
         if (!isUS) {
           // Non-US: the subdivision registry decides which election types are
           // supported — an unsupported type just 404s into the error state.

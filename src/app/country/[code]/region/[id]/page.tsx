@@ -53,6 +53,7 @@ import {
 } from "./regionData";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { getRegionOfficialBuckets } from "@/lib/legislature/chamberOfficeType";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 interface Props {
   params: Promise<{ code: string; id: string }>;
@@ -251,7 +252,10 @@ async function renderUKRegion(regionCode: string) {
     : null;
   // English non-London regions have no devolved executive — hide the chip.
   const showUKExecutive =
-    stateId === "SCO" || stateId === "WAL" || stateId === "NIR" || stateId === "LON";
+    countryHasFeature("scoUi", stateId) ||
+    countryHasFeature("walUi", stateId) ||
+    stateId === "NIR" ||
+    stateId === "LON";
 
   // Office-link visibility: holder OR authorized party officer of an NPP-held
   // First Minister's office (state Chair/Vice; national Chair/Vice when neither).
@@ -611,7 +615,9 @@ async function renderGenericRegion(countryId: CountryId, regionCode: string) {
           }
           motto={STATE_MOTTOS[state._id] ?? null}
           comprising={
-            countryId === "IE" ? (IE_REGION_CONSTITUENT_COUNCILS[state._id] ?? null) : null
+            countryHasFeature("ieUi", countryId)
+              ? (IE_REGION_CONSTITUENT_COUNCILS[state._id] ?? null)
+              : null
           }
           relocate={{
             userHomeState: userData?.character?.homeState,

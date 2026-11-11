@@ -9,6 +9,7 @@ import { STATE_NAMES } from "../presMap/usStates";
 import type { FieldOfficeLayerConfig } from "../presMap/useFieldOfficeLayer";
 import { useRaceModeSlots } from "./RaceModeContext";
 import type { ElectionDetail } from "../../components/ElectionDetailTypes";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /**
  * What the presidential map shows for the reader's campaign: the Campaign
@@ -37,7 +38,7 @@ export function useRaceMapCampaign(election: ElectionDetail): {
   const desk = slots?.desk ?? null;
   const inPage = slots?.mapAbove ?? false;
   const inCampaignMode = desk !== null;
-  const us = election.countryId === "US";
+  const us = countryHasFeature("usUi", election.countryId);
 
   // Campaign mode follows the campaign on screen and only if the viewer is on
   // it (owner access). Race mode follows the viewer's own campaign in the race.

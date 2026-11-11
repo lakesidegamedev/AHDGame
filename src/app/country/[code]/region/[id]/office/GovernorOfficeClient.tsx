@@ -24,6 +24,7 @@ import type { Race } from "./tabs/endorsements/RaceList";
 import type { DevolutionPolicy } from "@/lib/db/types/governorOfficeState";
 import { isUKDevolutionRegion } from "@/lib/constants/devolution";
 import { TabFallback } from "@/components/state/TabFallback";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 // Only the Overview tab is open on arrival; the others are one click away and
 // each pulls its own heavy tree (the legislation tab drags the metric catalog
@@ -121,7 +122,9 @@ function buildTabs(showDevolution: boolean): Array<{ key: TabKey; label: string 
 
 export function GovernorOfficeClient(props: Props) {
   const showDevolution =
-    props.countryId === "UK" && isUKDevolutionRegion(props.stateId) && props.devolution != null;
+    countryHasFeature("ukUi", props.countryId) &&
+    isUKDevolutionRegion(props.stateId) &&
+    props.devolution != null;
   const tabs = buildTabs(showDevolution);
   const [active, setActive] = useState<TabKey>("overview");
   const router = useRouter();

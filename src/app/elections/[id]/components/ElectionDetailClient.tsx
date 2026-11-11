@@ -47,6 +47,7 @@ import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { useRaceEntry } from "@/components/elections/raceEntry/useRaceEntry";
 import { RaceModeProvider } from "../blend/raceMode/RaceModeContext";
 import { useRaceMode } from "../blend/raceMode/useRaceMode";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 // The stage screens are mutually exclusive: a race is concluded, in its general
 // phase, in its primary, or in the final-night broadcast, and exactly one of
@@ -104,7 +105,9 @@ export function ElectionDetailClient({ id, initialElection }: ElectionDetailClie
   const [loading, setLoading] = useState(initialElection === null);
   const [error, setError] = useState("");
   const [adminOpen, setAdminOpen] = useState(false);
-  const fallbackCountry = searchParams.get("country")?.toUpperCase() === "UK" ? "uk" : "us";
+  const fallbackCountry = countryHasFeature("ukUi", searchParams.get("country")?.toUpperCase())
+    ? "uk"
+    : "us";
 
   // Preset-aware cycle anchor (1991 vs 2019 starting-year). Read here so the
   // hook fires unconditionally on every render — it MUST sit above the
@@ -193,7 +196,7 @@ export function ElectionDetailClient({ id, initialElection }: ElectionDetailClie
   const wireWanted =
     signedIn &&
     election?.electionType === "president" &&
-    election.countryId !== "RU" &&
+    !countryHasFeature("ruUi", election.countryId) &&
     presidentialResultsLive(election);
   const fetchWire = React.useCallback(
     async (signal?: AbortSignal) => {
@@ -343,7 +346,9 @@ export function ElectionDetailClient({ id, initialElection }: ElectionDetailClie
   // to switch to (not Russia, down-ballot races, or a race that has not opened).
   const raceMode = useRaceMode({
     enabled:
-      election?.electionType === "president" && election.countryId !== "RU" && !election.isUpcoming,
+      election?.electionType === "president" &&
+      !countryHasFeature("ruUi", election.countryId) &&
+      !election.isUpcoming,
     myCampaignId: election?.myCampaignId,
     countryId: election?.countryId,
   });
@@ -461,7 +466,7 @@ export function ElectionDetailClient({ id, initialElection }: ElectionDetailClie
   // the schedule, a second results table) repeated the stage and is gone.
   const showRaceDetail =
     election.electionType === "president" &&
-    election.countryId !== "RU" &&
+    !countryHasFeature("ruUi", election.countryId) &&
     !localIsUpcoming &&
     !campaignMode;
   const desktopTail =
@@ -548,7 +553,7 @@ export function ElectionDetailClient({ id, initialElection }: ElectionDetailClie
   // EV bar, a state tile board and persuasion drivers. Down-ballot races have
   // no college, so they keep the existing view.
   if (
-    election.countryId !== "RU" &&
+    !countryHasFeature("ruUi", election.countryId) &&
     election.electionType === "president" &&
     isGeneralPhase &&
     !localIsEnded &&
@@ -583,7 +588,7 @@ export function ElectionDetailClient({ id, initialElection }: ElectionDetailClie
   // across party fields. Down-ballot races have no delegate model, so they keep
   // the existing view.
   if (
-    election.countryId !== "RU" &&
+    !countryHasFeature("ruUi", election.countryId) &&
     election.electionType === "president" &&
     localInPrimary &&
     !localIsUpcoming
@@ -722,7 +727,7 @@ export function ElectionDetailClient({ id, initialElection }: ElectionDetailClie
                 renders the stage, which carries presence on its own map, so
                 this only reaches the upcoming page (you invest between
                 cycles). */}
-            {election.countryId === "US" &&
+            {countryHasFeature("usUi", election.countryId) &&
               election.electionType === "president" &&
               !!election.myCharId && (
                 <section id="state-org" className="mt-6 scroll-mt-6">
