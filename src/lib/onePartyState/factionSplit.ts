@@ -45,6 +45,7 @@ export { pickDefectors } from "./rules/factionDefection";
 import { pickDefectors } from "./rules/factionDefection";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export interface FactionSplitResult {
   newPartySequentialId: number;
@@ -76,7 +77,7 @@ export async function fireFactionSplit(
   if (runtime.rulingPartyId === null) return null;
 
   // Find the ruling party (carries default ideology + isDefault flag we'll inherit)
-  const rulingParty = await db.collection<PoliticalParty>("politicalParties").findOne({
+  const rulingParty = await politicalPartiesCollection(db).findOne({
     countryId,
     sequentialId: runtime.rulingPartyId,
   });
@@ -213,7 +214,7 @@ export async function fireFactionSplit(
     createdAt: now,
     updatedAt: now,
   };
-  await db.collection<PoliticalParty>("politicalParties").insertOne(newParty);
+  await politicalPartiesCollection(db).insertOne(newParty);
 
   // Re-assign each defector character's party affiliation.
   const defectorIds = defectors.flatMap((d) => (d.characterId ? [d.characterId] : []));

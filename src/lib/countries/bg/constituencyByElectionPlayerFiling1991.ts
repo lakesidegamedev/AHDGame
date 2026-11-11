@@ -27,6 +27,7 @@ import {
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 interface Lock {
   _id: string;
@@ -160,12 +161,10 @@ export async function materializeBgGrandPartialPlayerFiling(
     const sequence = Number(candidate.party);
     if (!Number.isSafeInteger(sequence) || sequence < 1 || String(sequence) !== candidate.party)
       return reject("unregistered-party");
-    const party = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne(
-        { countryId: "BG", sequentialId: sequence },
-        { session, projection: { regimeStatus: 1 } }
-      );
+    const party = await politicalPartiesCollection(db).findOne(
+      { countryId: "BG", sequentialId: sequence },
+      { session, projection: { regimeStatus: 1 } }
+    );
     if (!party || party.regimeStatus === "banned") return reject("unregistered-party");
   }
   const activeJobs = await db

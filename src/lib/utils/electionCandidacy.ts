@@ -20,6 +20,7 @@ import { withdrawPlayerEndorsementsOnPartyChange } from "@/lib/elections/playerE
 import type { CongressLeader } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 /**
  * Move an Independent player's live governmental candidacies onto the party
@@ -339,9 +340,7 @@ export async function cleanupPartyPositionsOnSwitch(
     nationalPartyQuery.countryId = countryId;
   }
 
-  const nationalParty = await db
-    .collection<PoliticalParty>("politicalParties")
-    .findOne(nationalPartyQuery);
+  const nationalParty = await politicalPartiesCollection(db).findOne(nationalPartyQuery);
 
   if (nationalParty) {
     const setUpdates: Record<string, unknown> = { updatedAt: now };
@@ -385,9 +384,7 @@ export async function cleanupPartyPositionsOnSwitch(
       if (hasSetUpdates || hasPullUpdates) updateOp.$set = setUpdates;
       if (hasPullUpdates) updateOp.$pull = pullUpdates;
 
-      await db
-        .collection<PoliticalParty>("politicalParties")
-        .updateOne({ _id: nationalParty._id }, updateOp);
+      await politicalPartiesCollection(db).updateOne({ _id: nationalParty._id }, updateOp);
 
       // If chair was cleared, sync any coalition this party leads
       if (clearedNationalLeadership.includes("chair")) {

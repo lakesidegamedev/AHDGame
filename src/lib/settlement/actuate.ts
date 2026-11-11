@@ -58,6 +58,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import type { Document } from "mongodb";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export interface ActuationResult {
   actuated: boolean;
@@ -758,8 +759,7 @@ async function adoptChallengerSettlement(
       .map((id) => Number(id))
       .filter((id) => Number.isInteger(id))
   );
-  const survivorParties = await db
-    .collection("politicalParties")
+  const survivorParties = await politicalPartiesCollection<Document>(db)
     .find<{ sequentialId?: number }>(
       { countryId: params.survivor },
       { projection: { sequentialId: 1 } }

@@ -28,6 +28,7 @@ import { getGovernmentFormationsCollection } from "@/lib/db/collections/governme
 import { resolveOppositionLeaderForCountry } from "@/lib/parliament/oppositionLeader";
 import { getEligibleCabinetCharacters } from "@/lib/countries/uk/cabinetEligibility";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 const appointSchema = z.object({
   positionId: z.string(),
@@ -138,12 +139,10 @@ export async function appointShadowCabinetHandler(request: Request, countryId: C
       characterName: chosen.name,
       appointedAt: new Date(),
     };
-    await db
-      .collection<PoliticalParty>("politicalParties")
-      .updateOne(
-        { _id: oppositionParty._id },
-        { $set: { [`shadowCabinet.${positionId}`]: appointment, updatedAt: new Date() } }
-      );
+    await politicalPartiesCollection(db).updateOne(
+      { _id: oppositionParty._id },
+      { $set: { [`shadowCabinet.${positionId}`]: appointment, updatedAt: new Date() } }
+    );
 
     return NextResponse.json({
       success: true,
@@ -186,12 +185,10 @@ export async function clearShadowCabinetHandler(request: Request, countryId: Cou
       throw notFound("That shadow cabinet post is already vacant");
     }
 
-    await db
-      .collection<PoliticalParty>("politicalParties")
-      .updateOne(
-        { _id: oppositionParty._id },
-        { $unset: { [`shadowCabinet.${positionId}`]: "" }, $set: { updatedAt: new Date() } }
-      );
+    await politicalPartiesCollection(db).updateOne(
+      { _id: oppositionParty._id },
+      { $unset: { [`shadowCabinet.${positionId}`]: "" }, $set: { updatedAt: new Date() } }
+    );
 
     return NextResponse.json({
       success: true,

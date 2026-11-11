@@ -18,6 +18,7 @@
 
 import type { Db, ObjectId } from "mongodb";
 import type { Coalition, PoliticalParty } from "@/lib/db/types";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 /**
  * Re-syncs every coalition led by `partyId` to point at the party's
@@ -33,9 +34,10 @@ export async function syncCoalitionChairsForParty(
   partyId: ObjectId,
   now: Date = new Date()
 ): Promise<number> {
-  const party = await db
-    .collection<PoliticalParty>("politicalParties")
-    .findOne({ _id: partyId }, { projection: { chairId: 1 } });
+  const party = await politicalPartiesCollection(db).findOne(
+    { _id: partyId },
+    { projection: { chairId: 1 } }
+  );
   // Note: party may exist with chairId === null (vacant) — that's a
   // legitimate sync target, not a skip case.
   if (!party) return 0;
@@ -72,8 +74,7 @@ export async function reconcileAllCoalitionChairs(db: Db, now: Date = new Date()
     (s) => coalitions.find((c) => c.chairPartyId.toString() === s)!.chairPartyId
   );
 
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const parties = await politicalPartiesCollection(db)
     .find({ _id: { $in: partyIds } }, { projection: { _id: 1, chairId: 1 } })
     .toArray();
   const chairByParty = new Map<string, ObjectId | null>(

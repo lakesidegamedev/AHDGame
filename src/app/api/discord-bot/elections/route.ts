@@ -6,6 +6,7 @@ import { checkRateLimit, rateLimitResponse, BOT_READ_LIMITS } from "@/lib/api/ra
 import { getEnabledCountryIds } from "@/lib/countryAccess";
 import type { Election, ElectionCandidate, PoliticalParty } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 // GET /api/discord-bot/elections — Returns active and upcoming elections with candidate lists, optionally filtered by country or state.
 // Auth: requireAdminOrApiKey
@@ -80,8 +81,7 @@ export async function GET(request: Request) {
     // Use composite keys (countryId:sequentialId) to avoid cross-country collisions
     const partySeqIds = [...new Set(candidates.map((c) => c.party))].map(Number).filter(Boolean);
     const electionCountryIds = [...new Set(elections.map((e) => e.countryId ?? "US"))];
-    const parties = await db
-      .collection<PoliticalParty>("politicalParties")
+    const parties = await politicalPartiesCollection(db)
       .find({ sequentialId: { $in: partySeqIds }, countryId: { $in: electionCountryIds } })
       .toArray();
     const partyMap = new Map(parties.map((p) => [`${p.countryId ?? "US"}:${p.sequentialId}`, p]));

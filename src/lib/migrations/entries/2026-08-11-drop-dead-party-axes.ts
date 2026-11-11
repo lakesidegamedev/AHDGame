@@ -1,5 +1,7 @@
 import type { Db } from "mongodb";
 import type { Migration, MigrationContext, MigrationResult } from "../types";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import type { Document } from "mongodb";
 
 /**
  * Drop the retired `foreignPolicy` / `culture` party axes. Both were written
@@ -34,7 +36,7 @@ async function run(db: Db, ctx: MigrationContext): Promise<MigrationResult> {
     ],
   };
 
-  const partiesToClean = await db.collection("politicalParties").countDocuments(partyFilter);
+  const partiesToClean = await politicalPartiesCollection<Document>(db).countDocuments(partyFilter);
   const chartersToClean = await db.collection("partyCharters").countDocuments(charterFilter);
   const scanned = partiesToClean + chartersToClean;
 
@@ -45,7 +47,7 @@ async function run(db: Db, ctx: MigrationContext): Promise<MigrationResult> {
     return { documentsScanned: scanned, documentsUpdated: 0, notes };
   }
 
-  const parties = await db.collection("politicalParties").updateMany(partyFilter, {
+  const parties = await politicalPartiesCollection<Document>(db).updateMany(partyFilter, {
     $unset: {
       foreignPolicy: "",
       culture: "",

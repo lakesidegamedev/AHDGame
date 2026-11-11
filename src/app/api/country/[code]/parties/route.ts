@@ -13,6 +13,7 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { draftCharter } from "@/lib/charters/draftCharter";
 import { getPartyFrontiers } from "@/lib/parties/partyFrontier";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 // GET /api/country/[code]/parties — Return all political parties in the country with member counts and leadership
 // Auth: public
@@ -34,8 +35,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
     // active, joinable, or merge-targetable party in the country listing.
     const partyFilter = { countryId, isDefunct: { $ne: true } };
 
-    const parties = await db
-      .collection<PoliticalParty>("politicalParties")
+    const parties = await politicalPartiesCollection(db)
       .find(partyFilter)
       .sort({ isDefault: -1, name: 1 })
       .toArray();

@@ -122,6 +122,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 const MIN_BASE_ACTIONS_PER_TURN = 4;
 
@@ -178,9 +179,10 @@ async function getCharacterData() {
           const partySeqId = parseInt(character.party as string, 10);
           if (isNaN(partySeqId)) return null;
           const charCountry = character.countryId ?? "US";
-          return db
-            .collection<PoliticalParty>("politicalParties")
-            .findOne({ sequentialId: partySeqId, countryId: charCountry });
+          return politicalPartiesCollection(db).findOne({
+            sequentialId: partySeqId,
+            countryId: charCountry,
+          });
         })()
       : Promise.resolve(null),
     hasParty
@@ -310,8 +312,7 @@ async function getCharacterData() {
   if (careerPartyIds.length > 0) {
     const numericIds = careerPartyIds.map(Number).filter((n) => !isNaN(n));
     if (numericIds.length > 0) {
-      const parties = await db
-        .collection<PoliticalParty>("politicalParties")
+      const parties = await politicalPartiesCollection(db)
         .find({ sequentialId: { $in: numericIds } })
         .project({ sequentialId: 1, name: 1, countryId: 1 })
         .toArray();

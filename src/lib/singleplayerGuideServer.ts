@@ -9,6 +9,8 @@ import {
 } from "@/lib/singleplayerGuide";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import type { Document } from "mongodb";
 
 /**
  * Load the first-game guide for the local world. Cheap for the common case: a
@@ -55,9 +57,10 @@ export async function loadSingleplayerGuide(db: Db): Promise<SingleplayerGuide> 
     const [signals, partyCount] = await Promise.all([
       loadOnboardingSignals(db, character._id),
       // The collection is "politicalParties", not "parties".
-      db
-        .collection("politicalParties")
-        .countDocuments({ countryId: character.countryId }, { limit: 1 }),
+      politicalPartiesCollection<Document>(db).countDocuments(
+        { countryId: character.countryId },
+        { limit: 1 }
+      ),
     ]);
     hasCampaignActed = signals.hasCampaignActed;
     partiesAvailable = partyCount > 0;

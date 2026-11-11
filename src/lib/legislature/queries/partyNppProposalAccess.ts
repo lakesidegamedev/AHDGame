@@ -19,6 +19,7 @@ import { isSameCountry } from "@/lib/api/sameCountry";
 import { STATE_TERMINAL_STATUSES } from "@/lib/congress/billProposalLimits";
 import { canDirectRegionalPartyNpp, hasPartyNppSeats } from "../rules/partyNppProposal";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export async function resolvePartyNppProposalAccess(
   db: Db,
@@ -37,12 +38,10 @@ export async function resolvePartyNppProposalAccess(
   if (!Number.isSafeInteger(partyNumber) || partyNumber <= 0) return denied;
   stateId = stateId.toUpperCase();
   const [party, regionalParty] = await Promise.all([
-    db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne(
-        { countryId, sequentialId: partyNumber },
-        { projection: { chairId: 1, sequentialId: 1 } }
-      ),
+    politicalPartiesCollection(db).findOne(
+      { countryId, sequentialId: partyNumber },
+      { projection: { chairId: 1, sequentialId: 1 } }
+    ),
     db
       .collection<StatePartyOrg>("statePartyOrg")
       .findOne({ countryId, stateId, partyId: character.party }, { projection: { chairId: 1 } }),

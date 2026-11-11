@@ -5,6 +5,7 @@ import type { Character, Election, ElectionCandidate, PoliticalParty } from "@/l
 import { officeLabelFor } from "@/lib/utils/officeLabel";
 import { raceLabel } from "@/components/state/overview/raceLabel";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 const NEUTRAL_PARTY_COLOR = "#6b6b7a";
 
@@ -147,10 +148,7 @@ export async function getStateRoster(
   }
 
   // Party names/colors: one bounded fetch (a handful of parties per country).
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
-    .find({ countryId })
-    .toArray();
+  const parties = await politicalPartiesCollection(db).find({ countryId }).toArray();
   const partyBySequentialId = new Map(parties.map((p) => [String(p.sequentialId), p]));
 
   // Active-candidacy lookup, scoped to just this page's characters that

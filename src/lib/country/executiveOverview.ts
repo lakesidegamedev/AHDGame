@@ -49,6 +49,7 @@ import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 /**
  * Coerce a character id that is typed `ObjectId` but may have been persisted as
@@ -160,9 +161,10 @@ async function handleUS() {
     if (char) {
       const charCountry: CountryId = char.countryId ?? ("US" as CountryId);
       const party = char.party
-        ? await db
-            .collection<PoliticalParty>("politicalParties")
-            .findOne({ sequentialId: Number(char.party), countryId: charCountry })
+        ? await politicalPartiesCollection(db).findOne({
+            sequentialId: Number(char.party),
+            countryId: charCountry,
+          })
         : null;
       president = {
         id: presidentOfficial!._id.toString(),
@@ -183,9 +185,10 @@ async function handleUS() {
     if (char) {
       const charCountry: CountryId = char.countryId ?? ("US" as CountryId);
       const party = char.party
-        ? await db
-            .collection<PoliticalParty>("politicalParties")
-            .findOne({ sequentialId: Number(char.party), countryId: charCountry })
+        ? await politicalPartiesCollection(db).findOne({
+            sequentialId: Number(char.party),
+            countryId: charCountry,
+          })
         : null;
       vicePresident = {
         id: vicePresidentOfficial!._id.toString(),
@@ -299,9 +302,10 @@ async function handleParliamentary(countryId: CountryId) {
     if (char) {
       const charCountry: CountryId = char.countryId ?? countryId;
       const party = char.party
-        ? await db
-            .collection<PoliticalParty>("politicalParties")
-            .findOne({ sequentialId: Number(char.party), countryId: charCountry })
+        ? await politicalPartiesCollection(db).findOne({
+            sequentialId: Number(char.party),
+            countryId: charCountry,
+          })
         : null;
       primeMinister = {
         id: pmCharacterId.toString(),
@@ -334,9 +338,10 @@ async function handleParliamentary(countryId: CountryId) {
       if (hosChar) {
         const hosCountry: CountryId = hosChar.countryId ?? countryId;
         const hosParty = hosChar.party
-          ? await db
-              .collection<PoliticalParty>("politicalParties")
-              .findOne({ sequentialId: Number(hosChar.party), countryId: hosCountry })
+          ? await politicalPartiesCollection(db).findOne({
+              sequentialId: Number(hosChar.party),
+              countryId: hosCountry,
+            })
           : null;
         headOfState = {
           id: hosOfficial._id.toString(),

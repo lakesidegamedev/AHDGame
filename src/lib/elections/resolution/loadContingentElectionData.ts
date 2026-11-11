@@ -21,6 +21,7 @@ import {
 } from "@/lib/elections/resolution/contingentElection";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 function partyKey(countryId: string, partyId: string): string {
   return `${countryId}:${partyId}`;
@@ -183,8 +184,7 @@ export async function loadContingentElectionData(
               $or: [{ characterId: { $ne: null } }, { nppId: { $exists: true }, isNPP: true }],
             })
             .toArray(),
-    db
-      .collection<PoliticalParty>("politicalParties")
+    politicalPartiesCollection(db)
       .find({ countryId: countryId as CountryId })
       .project<
         Pick<PoliticalParty, "countryId" | "sequentialId" | "economicPosition" | "socialPosition">

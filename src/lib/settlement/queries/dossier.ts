@@ -53,6 +53,7 @@ import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export interface DossierPaymentView {
   mode: SettlementPaymentMode;
@@ -288,8 +289,7 @@ async function bundestagSubtitle(db: Db): Promise<string> {
   const total = entries.reduce((sum, [, seats]) => sum + seats, 0);
   if (total === 0) return "Bonn";
 
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const parties = await politicalPartiesCollection(db)
     .find(
       { countryId: "DE", sequentialId: { $in: entries.map(([id]) => Number(id)) } },
       { projection: { sequentialId: 1, name: 1, abbreviation: 1 } }

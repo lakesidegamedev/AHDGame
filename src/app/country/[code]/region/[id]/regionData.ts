@@ -26,6 +26,7 @@ import { WAL_GEOGRAPHY } from "@/lib/countries/wal/geography";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 /**
  * Coerce a Mongo timestamp field to an ISO string for client serialization.
@@ -104,12 +105,10 @@ export async function getCurrentPartyNav(
   }
 
   const db = await getDb();
-  const party = await db
-    .collection<PoliticalParty>("politicalParties")
-    .findOne(
-      { sequentialId: Number(character.party), countryId: character.countryId },
-      { projection: { name: 1, countryId: 1 } }
-    );
+  const party = await politicalPartiesCollection(db).findOne(
+    { sequentialId: Number(character.party), countryId: character.countryId },
+    { projection: { name: 1, countryId: 1 } }
+  );
   if (!party) return null;
 
   return {
@@ -201,8 +200,7 @@ export async function getRegionPartyOrg(stateId: string, countryId: CountryId) {
     const partyIds = [...new Set(partyOrg.map((po) => po.partyId))];
     const partySeqIds = partyIds.map(Number).filter(Boolean);
     const parties = partySeqIds.length
-      ? await db
-          .collection<PoliticalParty>("politicalParties")
+      ? await politicalPartiesCollection(db)
           .find({
             sequentialId: { $in: partySeqIds },
             countryId,
@@ -343,8 +341,7 @@ export async function getRegionNPPs(stateId: string, countryId: CountryId) {
     const partyIds = [...new Set(npps.map((n) => n.party).filter(Boolean))];
     const partySeqIds = partyIds.map(Number).filter(Boolean);
     const parties = partySeqIds.length
-      ? await db
-          .collection<PoliticalParty>("politicalParties")
+      ? await politicalPartiesCollection(db)
           .find({ sequentialId: { $in: partySeqIds }, countryId })
           .toArray()
       : [];
@@ -388,8 +385,7 @@ export async function getRegionOfficials(stateId: string, countryId: CountryId) 
         .find({ _id: { $in: nppIds } })
         .toArray(),
       partySeqIds.length
-        ? db
-            .collection<PoliticalParty>("politicalParties")
+        ? politicalPartiesCollection(db)
             .find({ sequentialId: { $in: partySeqIds }, countryId })
             .toArray()
         : Promise.resolve([] as PoliticalParty[]),

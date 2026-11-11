@@ -24,6 +24,7 @@ import {
   nppActionPointRegen,
 } from "@/lib/npp/actionPoints";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 // Per-turn Political Strength for national and state parties:
 // - Flat passive: NATIONAL_PASSIVE_PS_PER_TURN (20) / STATE_PASSIVE_PS_PER_TURN (5),
@@ -138,10 +139,7 @@ export async function processPartyActionGeneration(
   };
 
   // ─── National parties ──────────────────────────────────────────────────
-  const nationalParties = await db
-    .collection<PoliticalParty>("politicalParties")
-    .find({})
-    .toArray();
+  const nationalParties = await politicalPartiesCollection(db).find({}).toArray();
 
   const nationalLedgerRows: Omit<PartyPoliticalStrengthLedgerRow, "_id">[] = [];
   // NPP Action Point regen rides this loop independently of PS: a party already
@@ -263,9 +261,7 @@ export async function processPartyActionGeneration(
   }
 
   if (nationalApOps.length > 0 || nationalPsOps.length > 0) {
-    await db
-      .collection<PoliticalParty>("politicalParties")
-      .bulkWrite([...nationalApOps, ...nationalPsOps]);
+    await politicalPartiesCollection(db).bulkWrite([...nationalApOps, ...nationalPsOps]);
   }
 
   // ─── State parties ─────────────────────────────────────────────────────

@@ -38,6 +38,7 @@ import type { Caucus, CaucusMembership } from "@/lib/db/types/caucus";
 import type { CountryId } from "@/lib/constants/countries";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 /**
  * UK party leadership removal shell commands.
@@ -891,9 +892,10 @@ export async function resolveLeadershipChallenge(
   await releaseActiveChallenge(db, leadership, challenge, now);
 
   if (removed) {
-    const party = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ countryId, sequentialId: parseInt(challenge.partyId, 10) });
+    const party = await politicalPartiesCollection(db).findOne({
+      countryId,
+      sequentialId: parseInt(challenge.partyId, 10),
+    });
     if (!party || !party.chairId || !party.chairId.equals(challenge.targetCharacterId)) {
       // Leadership already changed hands mid-ballot: the challenge is moot.
       await appendChallengeHistory(
@@ -909,9 +911,10 @@ export async function resolveLeadershipChallenge(
       );
       return { resolved: true, removed: false };
     }
-    await db
-      .collection<PoliticalParty>("politicalParties")
-      .updateOne({ _id: party._id }, { $set: { chairId: null, updatedAt: now } });
+    await politicalPartiesCollection(db).updateOne(
+      { _id: party._id },
+      { $set: { chairId: null, updatedAt: now } }
+    );
     await appendChallengeHistory(
       db,
       leadership,

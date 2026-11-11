@@ -6,6 +6,7 @@ import type { Coalition } from "@/lib/db/types/coalition";
 import type { PoliticalParty } from "@/lib/db/types/party";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 // GET /api/coalitions/[id]?country=us — Returns full coalition details
 export async function GET(
@@ -42,8 +43,7 @@ export async function GET(
     const allPartyIds = [...memberPartyIds, ...invitePartyIds, ...requestPartyIds];
 
     // Fetch all relevant parties
-    const parties = await db
-      .collection<PoliticalParty>("politicalParties")
+    const parties = await politicalPartiesCollection(db)
       .find({ _id: { $in: allPartyIds } })
       .toArray();
 

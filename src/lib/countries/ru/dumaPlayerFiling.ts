@@ -25,6 +25,7 @@ import { loadPendingRussianCouncilOwners } from "./pendingCouncilMandates";
 import { russianDumaConvocationOfficeCompatible } from "./rules/dumaConvocation";
 import { decideRussianDumaFiling } from "./rules/assemblyFiling";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 export async function validateRussianDumaPlayerFiling(input: {
   db: Db;
   election: Election;
@@ -142,12 +143,10 @@ export async function validateRussianDumaPlayerFiling(input: {
     Number.isSafeInteger(partySequence) &&
     partySequence > 0 &&
     String(partySequence) === character.party
-      ? await db
-          .collection<PoliticalParty>("politicalParties")
-          .findOne(
-            { countryId: "RU", sequentialId: partySequence, regimeStatus: { $ne: "banned" } },
-            { projection: { countryId: 1, sequentialId: 1, regimeStatus: 1 } }
-          )
+      ? await politicalPartiesCollection(db).findOne(
+          { countryId: "RU", sequentialId: partySequence, regimeStatus: { $ne: "banned" } },
+          { projection: { countryId: 1, sequentialId: 1, regimeStatus: 1 } }
+        )
       : null;
   const pendingCouncil = await loadPendingRussianCouncilOwners({
     db,

@@ -18,6 +18,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import type { Document } from "mongodb";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 /**
  * Internal helper called by `signCharter` once the 3-of-3 threshold is hit.
@@ -60,9 +61,10 @@ export async function ratifyCharter(
   }
   // Idempotent fast-path: charter already ratified.
   if (charter.status === "ratified" && charter.partyId) {
-    const existing = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ sequentialId: Number(charter.partyId), countryId: charter.countryId });
+    const existing = await politicalPartiesCollection(db).findOne({
+      sequentialId: Number(charter.partyId),
+      countryId: charter.countryId,
+    });
     return {
       partyId: charter.partyId,
       partySequentialId: Number(charter.partyId),
@@ -132,7 +134,7 @@ export async function ratifyCharter(
     createdAt: now,
     updatedAt: now,
   };
-  await db.collection<PoliticalParty>("politicalParties").insertOne(newParty);
+  await politicalPartiesCollection(db).insertOne(newParty);
 
   // Atomic claim: only one concurrent caller wins this transition. The
   // status guard `pending-signatures` ensures double-ratification by
@@ -159,12 +161,13 @@ export async function ratifyCharter(
     // Lost the race — another caller already ratified. Roll back the
     // party row we just inserted (the winner's row is the canonical one)
     // and return the winning ratification's partyId.
-    await db.collection<PoliticalParty>("politicalParties").deleteOne({ _id: newParty._id });
+    await politicalPartiesCollection(db).deleteOne({ _id: newParty._id });
     const winner = await db.collection<PartyCharter>("partyCharters").findOne({ _id: charterId });
     if (winner?.status === "ratified" && winner.partyId) {
-      const winningParty = await db
-        .collection<PoliticalParty>("politicalParties")
-        .findOne({ sequentialId: Number(winner.partyId), countryId: charter.countryId });
+      const winningParty = await politicalPartiesCollection(db).findOne({
+        sequentialId: Number(winner.partyId),
+        countryId: charter.countryId,
+      });
       return {
         partyId: winner.partyId,
         partySequentialId: Number(winner.partyId),
@@ -341,9 +344,10 @@ export async function ratifyCharter(
   // memberCount on the new party reflects all founder characters (the
   // initial anchor-only count from the insert was a placeholder). Correct
   // it here.
-  await db
-    .collection<PoliticalParty>("politicalParties")
-    .updateOne({ _id: newParty._id }, { $set: { memberCount: founderCharacters.length } });
+  await politicalPartiesCollection(db).updateOne(
+    { _id: newParty._id },
+    { $set: { memberCount: founderCharacters.length } }
+  );
 
   // Open the party's first national leadership elections immediately. The
   // shared election sweep keeps the seated founder out of the chair race for
@@ -483,9 +487,10 @@ export async function ratifyCharter(
       }
       await db.collection("npps").insertMany(npcDocs);
       // Bump the party's memberCount to reflect the cohort.
-      await db
-        .collection<PoliticalParty>("politicalParties")
-        .updateOne({ _id: newParty._id }, { $inc: { memberCount: npcDocs.length } });
+      await politicalPartiesCollection(db).updateOne(
+        { _id: newParty._id },
+        { $inc: { memberCount: npcDocs.length } }
+      );
     }
   } catch {
     /* non-fatal */

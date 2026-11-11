@@ -25,6 +25,7 @@ import { ACTING_TENURE_TURNS } from "@/lib/cabinet/actingScope";
 import { getActingChargesCollection } from "@/lib/db/collections/actingAppointmentCharges";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 // GET /api/whitehouse/cabinet — Returns all cabinet positions with current members, pending nominations, and the caller's senator/president status.
 // Country-scoped via ?country= (default US).
@@ -55,7 +56,7 @@ export async function GET(request: Request) {
         authUser
           ? charactersCollection(db).findOne({ userId: new ObjectId(authUser.userId) })
           : Promise.resolve(null),
-        db.collection<PoliticalParty>("politicalParties").find({ countryId }).toArray(),
+        politicalPartiesCollection(db).find({ countryId }).toArray(),
       ]);
 
     // Build party lookup map using composite key for safety

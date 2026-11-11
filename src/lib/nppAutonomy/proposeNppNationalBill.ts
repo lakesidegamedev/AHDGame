@@ -37,6 +37,7 @@ import { RESET_V2_READY } from "@/lib/resetVersions/availability";
 import { resetSystemVersionsForCountry } from "@/lib/resetVersions/rules";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 const VOTING_DURATION_HOURS = NPP_BILL_VOTING_DURATION_HOURS;
 
@@ -98,9 +99,10 @@ export async function proposeNppNationalBill(
     return { ok: false, reason: "Autonomous legacy bills are disabled under legislation v2." };
   }
   if (runtimeState.governmentType === "onePartyState" && npp.party) {
-    const sponsorParty = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ sequentialId: parseInt(npp.party, 10), countryId });
+    const sponsorParty = await politicalPartiesCollection(db).findOne({
+      sequentialId: parseInt(npp.party, 10),
+      countryId,
+    });
     // RUNTIME shape, not `config` — the static config never learns about a
     // conversion, so it would silently disable this guard for a runtime-converted
     // one-party state. Matches the NPP bench-vote gate in `turn/npp/billVoting`.

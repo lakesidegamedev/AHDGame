@@ -16,6 +16,7 @@ import { allocateSeats } from "@/lib/elections/resolution/seatAllocation";
 import type { ElectionVoteTally, PoliticalParty } from "@/lib/db/types";
 import { getPartyHex } from "@/lib/utils/politics";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 // GET /api/elections/[id]/state/[stateId]/subdivision-results — sub-region
 // vote distribution + seat-consistent winners for a region in an election.
@@ -127,8 +128,7 @@ export async function GET(
     const uniquePartySeqIds = [...new Set(Object.values(tally.candidateParties ?? {}))]
       .map(Number)
       .filter(Boolean);
-    const partyDocs = await db
-      .collection<PoliticalParty>("politicalParties")
+    const partyDocs = await politicalPartiesCollection(db)
       .find({ sequentialId: { $in: uniquePartySeqIds }, countryId: election.countryId })
       .toArray();
     const partyBySeqId = new Map(partyDocs.map((p) => [String(p.sequentialId), p]));

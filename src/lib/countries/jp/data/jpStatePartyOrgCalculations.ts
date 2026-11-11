@@ -1,6 +1,7 @@
 import type { Db } from "mongodb";
 import type { StatePartyOrg, PoliticalParty } from "@/lib/db/types";
 import { JP_REGION_VOTE_SHARES_1990 } from "./jpRegionVoteShares1990";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 /**
  * Calculate JP state party organization levels from estimated vote shares.
@@ -119,8 +120,7 @@ function calculateJPPartyOrg(voteShare: number): number {
  * 1991, `cdp` / `ishin` / `dpfp` under 2019).
  */
 export async function buildJPPartySlugToSeqId(db: Db): Promise<Record<string, string>> {
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const parties = await politicalPartiesCollection(db)
     .find({ countryId: "JP" })
     .project<{ name: string; sequentialId: number }>({ name: 1, sequentialId: 1 })
     .toArray();

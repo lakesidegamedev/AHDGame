@@ -16,6 +16,7 @@ import type { Db } from "mongodb";
 import type { PoliticalParty, StatePartyOrg, StateRegistrationPool } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import type { Defect, DetectResult, HealPlan, HealResult, VerifyResult } from "../types";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 interface DefunctParty {
   countryId: CountryId;
@@ -58,8 +59,7 @@ function roundShare(value: number): number {
 }
 
 async function survey(db: Db): Promise<Survey> {
-  const defunctParties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const defunctParties = await politicalPartiesCollection(db)
     .find(
       { isDefunct: true },
       { projection: { countryId: 1, sequentialId: 1, name: 1, abbreviation: 1 } }
@@ -127,8 +127,7 @@ async function survey(db: Db): Promise<Survey> {
   const countryIds = [...new Set(affectedStates.map((state) => state.countryId))];
   const [allRows, activeParties, poolRows] = await Promise.all([
     db.collection<StatePartyOrg>("statePartyOrg").find({ $or: affectedStates }).toArray(),
-    db
-      .collection<PoliticalParty>("politicalParties")
+    politicalPartiesCollection(db)
       .find(
         { countryId: { $in: countryIds }, isDefunct: { $ne: true } },
         { projection: { countryId: 1, sequentialId: 1 } }
@@ -281,8 +280,7 @@ async function apply(db: Db, healPlan: HealPlan, ctx: { now: Date }): Promise<He
     ).values()
   );
   const stillDefunct = partyPairs.length
-    ? await db
-        .collection<PoliticalParty>("politicalParties")
+    ? await politicalPartiesCollection(db)
         .find({
           isDefunct: true,
           $or: partyPairs,

@@ -52,6 +52,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 /**
  * Whether to show the "Campaign Manager" navbar link. Returns true for: admins,
@@ -100,7 +101,7 @@ async function computeCanSeeCampaignManager(args: {
   ];
   if (partySeqIds.length === 0) return false;
 
-  const officerMatch = await db.collection<PoliticalParty>("politicalParties").findOne(
+  const officerMatch = await politicalPartiesCollection(db).findOne(
     {
       sequentialId: { $in: partySeqIds },
       countryId: characterCountryId,
@@ -356,12 +357,10 @@ export async function GET() {
           ? statesCollection(db).findOne({ _id: character.homeState }, { projection: { name: 1 } })
           : null,
         character.party && Number.isFinite(Number(character.party))
-          ? db
-              .collection<PoliticalParty>("politicalParties")
-              .findOne(
-                { sequentialId: Number(character.party), countryId: character.countryId },
-                { projection: { name: 1, sequentialId: 1, countryId: 1 } }
-              )
+          ? politicalPartiesCollection(db).findOne(
+              { sequentialId: Number(character.party), countryId: character.countryId },
+              { projection: { name: 1, sequentialId: 1, countryId: 1 } }
+            )
           : null,
         db.collection<Notification>("notifications").countDocuments({
           userId: userOid,

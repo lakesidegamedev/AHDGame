@@ -25,6 +25,7 @@ import {
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 // Static sim-harness parameters — the "conditions we specified" for a run.
 // Source-of-truth lives in scripts/sim/runWorld.ts (country allowlist,
@@ -483,8 +484,7 @@ export async function collectExperimentsReport(
       .find({}, { projection: { _id: 0, createdAt: 0 } })
       .sort({ turn: 1 })
       .toArray(),
-    db
-      .collection<PoliticalParty>("politicalParties")
+    politicalPartiesCollection(db)
       .find(
         {},
         { projection: { sequentialId: 1, countryId: 1, name: 1, abbreviation: 1, color: 1 } }

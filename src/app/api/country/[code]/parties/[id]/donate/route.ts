@@ -26,6 +26,7 @@ import {
   type MoneyFlowLegOutcome,
 } from "@/lib/db/nonAtomicMoneyFlow";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -110,7 +111,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const flowKey = headerKey ?? randomUUID();
     const fingerprint = `${authUser.character._id.toHexString()}:${party._id.toHexString()}:${amount}:${campaignFundsField}`;
     const characters = charactersCollection(db);
-    const parties = db.collection<PoliticalParty>("politicalParties");
+    const parties = politicalPartiesCollection(db);
     const receipts = await getMoneyFlowReceiptsCollection(db);
     const previousReceipt = headerKey ? await receipts.findOne({ _id: flowKey }) : null;
     if (previousReceipt && previousReceipt.fingerprint !== fingerprint) {

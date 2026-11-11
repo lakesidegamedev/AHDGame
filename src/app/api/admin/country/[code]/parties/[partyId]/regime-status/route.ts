@@ -21,6 +21,7 @@ import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import type { PoliticalParty } from "@/lib/db/types";
 import { processBanPartyEffects, processUnbanPartyEffects } from "@/lib/onePartyState/banFlow";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 const BODY_SCHEMA = z.object({
   newStatus: z.union([z.literal("ruling"), z.literal("approved"), z.literal("banned"), z.null()]),
@@ -54,9 +55,10 @@ export async function POST(
 
     const db = await getDb();
     const partySeqId = parseInt(partyId, 10);
-    const party = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ countryId, sequentialId: partySeqId });
+    const party = await politicalPartiesCollection(db).findOne({
+      countryId,
+      sequentialId: partySeqId,
+    });
     if (!party) {
       return errorResponse(404, "Party not found");
     }
@@ -86,12 +88,10 @@ export async function POST(
       if (party.regimeStatus === "banned") {
         await processUnbanPartyEffects(db, { partyId: party._id, reason });
       } else {
-        await db
-          .collection<PoliticalParty>("politicalParties")
-          .updateOne(
-            { _id: party._id },
-            { $set: { regimeStatus: "approved", updatedAt: new Date() } }
-          );
+        await politicalPartiesCollection(db).updateOne(
+          { _id: party._id },
+          { $set: { regimeStatus: "approved", updatedAt: new Date() } }
+        );
       }
     } else if (newStatus === "ruling") {
       // Atomic two-step: demote any current ruling party in this country,
@@ -103,26 +103,26 @@ export async function POST(
       // race-free guard against concurrent double-promote; we surface its
       // E11000 as a 409 conflict so admins see a meaningful error rather
       // than a 500.
-      const currentRuling = await db
-        .collection<PoliticalParty>("politicalParties")
-        .findOne({ countryId, regimeStatus: "ruling" });
+      const currentRuling = await politicalPartiesCollection(db).findOne({
+        countryId,
+        regimeStatus: "ruling",
+      });
       const now = new Date();
       if (currentRuling && !currentRuling._id.equals(party._id)) {
-        await db
-          .collection<PoliticalParty>("politicalParties")
-          .updateOne(
-            { _id: currentRuling._id },
-            { $set: { regimeStatus: "approved", updatedAt: now } }
-          );
+        await politicalPartiesCollection(db).updateOne(
+          { _id: currentRuling._id },
+          { $set: { regimeStatus: "approved", updatedAt: now } }
+        );
         impact.previousRulingDemoted = {
           id: String(currentRuling.sequentialId),
           name: currentRuling.name,
         };
       }
       try {
-        await db
-          .collection<PoliticalParty>("politicalParties")
-          .updateOne({ _id: party._id }, { $set: { regimeStatus: "ruling", updatedAt: now } });
+        await politicalPartiesCollection(db).updateOne(
+          { _id: party._id },
+          { $set: { regimeStatus: "ruling", updatedAt: now } }
+        );
       } catch (err) {
         if (isDuplicateKeyError(err)) {
           throw conflict(
@@ -133,9 +133,10 @@ export async function POST(
       }
     } else {
       // newStatus === null — escape hatch for non-one-party countries
-      await db
-        .collection<PoliticalParty>("politicalParties")
-        .updateOne({ _id: party._id }, { $set: { regimeStatus: null, updatedAt: new Date() } });
+      await politicalPartiesCollection(db).updateOne(
+        { _id: party._id },
+        { $set: { regimeStatus: null, updatedAt: new Date() } }
+      );
     }
 
     return NextResponse.json({

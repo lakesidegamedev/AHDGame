@@ -32,6 +32,7 @@ import {
   playerWikiStarter,
 } from "@/lib/wiki/playerPages";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 const claimSchema = z.object({
   target: z.enum(["player", "corporation", "party"]),
@@ -103,7 +104,7 @@ export async function POST(request: Request) {
       category = "corporations";
     } else {
       // Party: caller must currently be chair/vice-chair/treasurer of a party.
-      const party = await db.collection<PoliticalParty>("politicalParties").findOne({
+      const party = await politicalPartiesCollection(db).findOne({
         $or: [
           { chairId: user.character._id },
           { viceChairId: user.character._id },

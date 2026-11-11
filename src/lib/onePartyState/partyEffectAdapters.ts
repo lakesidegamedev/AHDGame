@@ -8,6 +8,7 @@ import { ObjectId, type Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { PoliticalParty } from "@/lib/db/types";
 import type { PurgeEvent, PurgeSeverity } from "@/lib/turn/rulingPartyPriorities";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export interface RecordPurgeEventInput {
   severity: PurgeSeverity;
@@ -63,12 +64,10 @@ export async function legalizeBannedParty(
   countryId: CountryId,
   partyId: number
 ): Promise<void> {
-  await db
-    .collection<PoliticalParty>("politicalParties")
-    .updateOne(
-      { sequentialId: partyId, countryId, regimeStatus: "banned" },
-      { $set: { regimeStatus: "approved", updatedAt: new Date() } }
-    );
+  await politicalPartiesCollection(db).updateOne(
+    { sequentialId: partyId, countryId, regimeStatus: "banned" },
+    { $set: { regimeStatus: "approved", updatedAt: new Date() } }
+  );
 }
 
 /**
@@ -82,12 +81,10 @@ export async function banApprovedParty(
   countryId: CountryId,
   partyId: number
 ): Promise<void> {
-  await db
-    .collection<PoliticalParty>("politicalParties")
-    .updateOne(
-      { sequentialId: partyId, countryId, regimeStatus: "approved" },
-      { $set: { regimeStatus: "banned", updatedAt: new Date() } }
-    );
+  await politicalPartiesCollection(db).updateOne(
+    { sequentialId: partyId, countryId, regimeStatus: "approved" },
+    { $set: { regimeStatus: "banned", updatedAt: new Date() } }
+  );
 }
 
 /**
@@ -95,10 +92,8 @@ export async function banApprovedParty(
  * `"approved"`. Used by Stage 4's "resist" decision.
  */
 export async function banAllApprovedParties(db: Db, countryId: CountryId): Promise<void> {
-  await db
-    .collection<PoliticalParty>("politicalParties")
-    .updateMany(
-      { countryId, regimeStatus: "approved" },
-      { $set: { regimeStatus: "banned", updatedAt: new Date() } }
-    );
+  await politicalPartiesCollection(db).updateMany(
+    { countryId, regimeStatus: "approved" },
+    { $set: { regimeStatus: "banned", updatedAt: new Date() } }
+  );
 }

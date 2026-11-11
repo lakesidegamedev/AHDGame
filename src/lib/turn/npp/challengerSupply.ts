@@ -28,6 +28,7 @@ import { getAllCountryAccess } from "@/lib/countryAccess";
 import { getChallengerSupplyPolicy } from "./rules/challengerSupply";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 /**
  * Directly-elected SINGLE-SEAT offices that need a bench challenger to be
@@ -199,8 +200,7 @@ export async function processChallengerGeneration(now: Date): Promise<number> {
 
   // Top-2 default ("major") parties per country — same convention as the admin
   // generator and the party-fielding gate.
-  const partyDocs = await db
-    .collection<PoliticalParty>("politicalParties")
+  const partyDocs = await politicalPartiesCollection(db)
     .find(
       { isDefunct: { $ne: true }, regimeStatus: { $ne: "banned" } },
       {

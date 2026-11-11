@@ -16,6 +16,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import type { Document } from "mongodb";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 /**
  * True when `stateId` is eligible for US federal seat backfill (House,
@@ -277,8 +278,7 @@ async function backfillSubNationalChamber(
       isUsBackfillEligibleState(s._id, houseSeatsByState ?? {})
   );
   if (states.length === 0) return 0;
-  const parties = await db
-    .collection("politicalParties")
+  const parties = await politicalPartiesCollection<Document>(db)
     .find({ countryId }, { projection: { sequentialId: 1, name: 1 } })
     .sort({ sequentialId: 1 })
     .toArray();
@@ -421,8 +421,7 @@ async function backfillChamber(
       !countryHasFeature("usTurn", countryId) ||
       isUsBackfillEligibleState(s._id, houseSeatsByState ?? {})
   );
-  const parties = await db
-    .collection("politicalParties")
+  const parties = await politicalPartiesCollection<Document>(db)
     .find({ countryId }, { projection: { sequentialId: 1, name: 1 } })
     .sort({ sequentialId: 1 })
     .toArray();

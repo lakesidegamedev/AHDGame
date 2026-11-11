@@ -37,6 +37,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 interface CandidateElection {
   election: Election;
@@ -161,9 +162,10 @@ export async function getCharacterById(characterId: string) {
     const partySeqId = parseInt(character.party, 10);
     const partyQuery =
       character.party && character.party !== "independent" && !isNaN(partySeqId)
-        ? db
-            .collection<PoliticalParty>("politicalParties")
-            .findOne({ sequentialId: partySeqId, countryId: charCountryId })
+        ? politicalPartiesCollection(db).findOne({
+            sequentialId: partySeqId,
+            countryId: charCountryId,
+          })
         : Promise.resolve(null);
 
     const hasParty = character.party && character.party !== "independent";
@@ -215,8 +217,7 @@ export async function getCharacterById(characterId: string) {
       partyQuery,
       activeOrUpcomingCandidaciesPromise,
       careerPartyIdsNumeric.length > 0
-        ? db
-            .collection<PoliticalParty>("politicalParties")
+        ? politicalPartiesCollection(db)
             .find({ sequentialId: { $in: careerPartyIdsNumeric } })
             .project({ sequentialId: 1, name: 1, countryId: 1 })
             .toArray()

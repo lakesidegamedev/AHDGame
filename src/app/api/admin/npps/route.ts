@@ -18,6 +18,7 @@ import { handleGenerateNPPs } from "./lib/generate";
 import { handleRemoveNPPs } from "./lib/remove";
 import { handleSpawnNPPs } from "./lib/spawn";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 // GET /api/admin/npps — Returns NPP statistics including totals, counts by state and party, and recent NPPs
 // Auth: requireAdmin
@@ -41,7 +42,7 @@ export async function GET() {
 
     // Get party info for name lookup - key by countryId:sequentialId since
     // different countries can have the same sequentialId for different parties
-    const allParties = await db.collection<PoliticalParty>("politicalParties").find({}).toArray();
+    const allParties = await politicalPartiesCollection(db).find({}).toArray();
     const partyMap = new Map<string, { name: string; color: string }>();
     for (const p of allParties) {
       partyMap.set(`${p.countryId}:${p.sequentialId}`, {

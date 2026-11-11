@@ -10,6 +10,7 @@ import { getAllCountryAccess } from "@/lib/countryAccess";
 import { generateNPP, type NPPGenerationContext } from "./generator";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 /** Supply an unseated candidate bench for required modern default parties. */
 export async function seedModernPartyBench(
@@ -25,8 +26,7 @@ export async function seedModernPartyBench(
   );
   const noParties = state?.startingPartiesMode === "none";
   const parties = (
-    await db
-      .collection<PoliticalParty>("politicalParties")
+    await politicalPartiesCollection(db)
       .find(
         { isDefault: true, memberCount: 0 },
         {

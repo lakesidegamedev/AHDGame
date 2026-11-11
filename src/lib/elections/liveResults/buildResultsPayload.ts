@@ -51,6 +51,8 @@ import type { Election, ElectionCandidate, ElectionVoteTally, GameState } from "
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import type { Document } from "mongodb";
 
 const ENDED_STATUSES = new Set(["completed", "resolved", "cancelled"]);
 const INDEPENDENT_COLOR = "#9CA3AF";
@@ -59,8 +61,7 @@ async function loadPartyMap(
   db: Db,
   countryId: string
 ): Promise<Map<string, ElectionNightPartyInfo>> {
-  const docs = await db
-    .collection("politicalParties")
+  const docs = await politicalPartiesCollection<Document>(db)
     .find({ countryId })
     .project<{ sequentialId: number; name: string; abbreviation?: string; color?: string }>({
       sequentialId: 1,

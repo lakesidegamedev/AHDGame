@@ -29,6 +29,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import type { Document } from "mongodb";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 /** Region-party ledger collections dissolved on secession (the new country reseeds). */
 const REGION_PARTY_LEDGERS = [
@@ -88,8 +89,7 @@ export async function splitParties(
         (g.organization ?? 0) >= TIER_LOSE_REGION_ORG_PCT
     );
 
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const parties = await politicalPartiesCollection(db)
     .find({ countryId: fromCountryId })
     .toArray()
     .then((rows) => rows.map((row) => ({ ...row })));
@@ -112,8 +112,7 @@ export async function splitParties(
     .then((rows) => rows.map((row) => ({ ...row })));
 
   // Next free sequentialId in the new country (stood up fresh — usually 1).
-  const existingNew = await db
-    .collection<PoliticalParty>("politicalParties")
+  const existingNew = await politicalPartiesCollection(db)
     .find({ countryId: toCountryId })
     .toArray();
   const nextSequentialId = existingNew.reduce((m, p) => Math.max(m, p.sequentialId ?? 0), 0) + 1;
@@ -129,12 +128,10 @@ export async function splitParties(
 
   // ── Wholesale: flip the region-homed major's doc to the new country ─────────
   for (const oldSeq of plan.wholesale) {
-    await db
-      .collection<PoliticalParty>("politicalParties")
-      .updateOne(
-        { sequentialId: oldSeq, countryId: fromCountryId },
-        { $set: { countryId: toCountryId, sequentialId: plan.idMap[oldSeq], updatedAt: now } }
-      );
+    await politicalPartiesCollection(db).updateOne(
+      { sequentialId: oldSeq, countryId: fromCountryId },
+      { $set: { countryId: toCountryId, sequentialId: plan.idMap[oldSeq], updatedAt: now } }
+    );
   }
 
   // Snapshot both actor rosters before any party id changes can collide.
@@ -195,8 +192,7 @@ export async function splitParties(
       },
     };
   });
-  if (leadershipOps.length)
-    await db.collection<PoliticalParty>("politicalParties").bulkWrite(leadershipOps);
+  if (leadershipOps.length) await politicalPartiesCollection(db).bulkWrite(leadershipOps);
 
   const movedOrgs: StatePartyOrg[] = [];
   const refunds = new Map<number, number>();
@@ -279,8 +275,7 @@ export async function splitParties(
       },
     };
   });
-  if (refundOps.length)
-    await db.collection<PoliticalParty>("politicalParties").bulkWrite(refundOps);
+  if (refundOps.length) await politicalPartiesCollection(db).bulkWrite(refundOps);
   if (pools.length && removedRegistration > 0)
     await db.collection<{ _id: string; independent: number }>("stateRegistrationPool").bulkWrite(
       pools.map((pool) => ({

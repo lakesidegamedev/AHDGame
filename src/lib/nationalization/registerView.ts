@@ -28,6 +28,7 @@ import {
   FOUNDING_CONFIDENCE_PENALTY_MAX,
   type CompensationTier,
 } from "./constants";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 /** A NPC/unowned taking — no investor it expropriated, so no approval/political movement. */
 function isNpcOrUnowned(triggers: string[]): boolean {
@@ -220,9 +221,10 @@ export async function loadRegisterStanding(
   let economicPosition: number | null = null;
   const seq = Number(leader?.governingPartyId);
   if (Number.isFinite(seq)) {
-    const party = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ countryId, sequentialId: seq }, { projection: { economicPosition: 1 } });
+    const party = await politicalPartiesCollection(db).findOne(
+      { countryId, sequentialId: seq },
+      { projection: { economicPosition: 1 } }
+    );
     if (party && typeof party.economicPosition === "number")
       economicPosition = party.economicPosition;
   }

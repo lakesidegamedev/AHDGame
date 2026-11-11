@@ -21,6 +21,7 @@ import { bypassNextImageOptimization } from "@/lib/images/bypassImageOptimizatio
 import { NPP_MAX_DONOR_BASE_LEVEL } from "@/lib/npp/actionAi";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -128,9 +129,10 @@ async function getNPPData(id: string) {
     const partySeqId = parseInt(npp.party, 10);
     const nppCountry = npp.countryId ?? "US";
     if (!isNaN(partySeqId)) {
-      party = await db
-        .collection<PoliticalParty>("politicalParties")
-        .findOne({ sequentialId: partySeqId, countryId: nppCountry });
+      party = await politicalPartiesCollection(db).findOne({
+        sequentialId: partySeqId,
+        countryId: nppCountry,
+      });
     }
   }
 

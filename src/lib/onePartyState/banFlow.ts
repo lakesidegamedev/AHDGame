@@ -20,6 +20,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import type { Document } from "mongodb";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export interface BanPartyInput {
   countryId: CountryId;
@@ -86,7 +87,7 @@ export async function processBanPartyEffects(
   }
 
   // Flip the party doc with audit fields.
-  await db.collection("politicalParties").updateOne(
+  await politicalPartiesCollection<Document>(db).updateOne(
     { _id: partyId },
     {
       $set: {
@@ -114,7 +115,7 @@ export async function processUnbanPartyEffects(db: Db, input: UnbanPartyInput): 
   const { partyId, reason } = input;
   const now = new Date();
 
-  await db.collection("politicalParties").updateOne(
+  await politicalPartiesCollection<Document>(db).updateOne(
     { _id: partyId },
     {
       $set: {

@@ -21,6 +21,7 @@ import { generateNPP, type NPPGenerationContext } from "./generator";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 /** Called only by fresh historical bootstrap, never by a turn or reference refresh. */
 export async function seedModernOpeningCandidates(
@@ -59,8 +60,7 @@ export async function seedModernOpeningCandidates(
   const covered = new Set(candidates.map((c) => String(c.electionId)));
   const empty = races.filter((r) => !covered.has(String(r._id)));
   if (empty.length === 0) return 0;
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const parties = await politicalPartiesCollection(db)
     .find({ isDefault: true }, { projection: { sequentialId: 1, countryId: 1 } })
     .sort({ sequentialId: 1 })
     .toArray();

@@ -2,6 +2,7 @@ import type { AnyBulkWriteOperation, Db } from "mongodb";
 import type { PoliticalParty } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export interface ReconcileMemberCountsResult {
   partiesChecked: number;
@@ -41,8 +42,7 @@ export async function reconcilePartyMemberCounts(db: Db): Promise<ReconcileMembe
         { $group: { _id: { party: "$party", countryId: "$countryId" }, count: { $sum: 1 } } },
       ])
       .toArray(),
-    db
-      .collection<PoliticalParty>("politicalParties")
+    politicalPartiesCollection(db)
       .find({})
       .project<{ sequentialId: number; countryId: CountryId; memberCount: number }>({
         sequentialId: 1,
@@ -75,7 +75,7 @@ export async function reconcilePartyMemberCounts(db: Db): Promise<ReconcileMembe
   }
 
   if (ops.length > 0) {
-    await db.collection<PoliticalParty>("politicalParties").bulkWrite(ops);
+    await politicalPartiesCollection(db).bulkWrite(ops);
   }
 
   return { partiesChecked: parties.length, partiesUpdated: ops.length };

@@ -11,6 +11,7 @@ import { bgRegions2027 } from "@/lib/countries/bg/data/bgRegions2027";
 import { bgParties } from "@/lib/countries/bg/data/bgParties";
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 /** Political, demographic and regional metric substrate. Demographics use the
  * modern BG Layer-1 model; metrics are authored 2027 gameplay estimates
@@ -45,7 +46,7 @@ export async function seedBG2027(
     const { seedOrder: _order, validForPresets: _presets, ...data } = seed;
     void _order;
     void _presets;
-    const collection = db.collection<PoliticalParty>("politicalParties");
+    const collection = politicalPartiesCollection(db);
     const existing = await collection.findOne({ name: seed.name, countryId: "BG" });
     if (existing)
       await collection.updateOne({ _id: existing._id }, { $set: { ...data, updatedAt: now } });
@@ -60,8 +61,7 @@ export async function seedBG2027(
         updatedAt: now,
       } as PoliticalParty);
   }
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const parties = await politicalPartiesCollection(db)
     .find({ countryId: "BG", isDefault: true })
     .toArray();
   for (const region of bgRegions2027)

@@ -3,6 +3,7 @@ import type { StatePartyOrg, PoliticalParty } from "@/lib/db/types";
 import { DE_LAND_VOTE_SHARES_1990 } from "@/lib/seeds/de/deLandVoteShares1990";
 import { DE_LAND_VOTE_SHARES_1953 } from "@/lib/seeds/de/deLandVoteShares1953";
 import { DE_LAND_VOTE_SHARES_2025 } from "@/lib/seeds/de/deLandVoteShares2025";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 /**
  * Calculate DE state party organization levels from Bundestag Zweitstimmen
@@ -84,8 +85,7 @@ function calculateDEPartyOrg(voteShare: number): number {
  * and `lnk` under 2019).
  */
 export async function buildDEPartySlugToSeqId(db: Db): Promise<Record<string, string>> {
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const parties = await politicalPartiesCollection(db)
     .find({ countryId: "DE" })
     .project<{ name: string; sequentialId: number }>({ name: 1, sequentialId: 1 })
     .toArray();

@@ -10,6 +10,7 @@ import { getEnabledCountryIds } from "@/lib/countryAccess";
 import type { Character, NPP } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -164,8 +165,7 @@ export async function GET(request: Request) {
     const partySeqIds = partyIds.map((id) => Number(id)).filter((n) => Number.isFinite(n));
 
     const [partyDocs, stateDocs] = await Promise.all([
-      db
-        .collection<{ sequentialId: number; name: string; color?: string }>("politicalParties")
+      politicalPartiesCollection<{ sequentialId: number; name: string; color?: string }>(db)
         .find(
           { sequentialId: { $in: partySeqIds }, countryId },
           { projection: { sequentialId: 1, name: 1, color: 1 } }

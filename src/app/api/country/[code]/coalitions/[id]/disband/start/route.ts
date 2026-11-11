@@ -9,6 +9,7 @@ import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { getGameTime } from "@/lib/time/gameTime";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 const DISBAND_VOTE_DURATION_HOURS = 24;
 const DISBAND_VOTE_DURATION_MS = DISBAND_VOTE_DURATION_HOURS * 60 * 60 * 1000;
@@ -83,8 +84,7 @@ export async function POST(
 
     // Notify all member party chairs
     const memberPartyIds = coalition.members.map((m) => m.partyId);
-    const memberParties = await db
-      .collection<PoliticalParty>("politicalParties")
+    const memberParties = await politicalPartiesCollection(db)
       .find({ _id: { $in: memberPartyIds } }, { projection: { _id: 1, chairId: 1 } })
       .toArray();
 

@@ -22,6 +22,7 @@ import {
 } from "@/lib/elections/resolution/contingentHouseVoteStandings";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export interface ContingentHouseVoteViewCandidate {
   id: string;
@@ -129,8 +130,7 @@ export async function buildContingentHouseVoteView(
     viewerCharacterId
       ? charactersCollection(db).findOne({ _id: viewerCharacterId }, { projection: { party: 1 } })
       : Promise.resolve(null),
-    db
-      .collection<PoliticalParty>("politicalParties")
+    politicalPartiesCollection(db)
       .find({ countryId })
       .project<Pick<PoliticalParty, "sequentialId" | "name" | "chairId">>({
         sequentialId: 1,

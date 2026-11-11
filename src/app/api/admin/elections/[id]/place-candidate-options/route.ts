@@ -9,6 +9,7 @@ import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import type { Election, NPP, PoliticalParty } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -66,11 +67,7 @@ export async function GET(request: Request, { params }: RouteParams) {
         .project({ _id: 1, name: 1, party: 1 })
         .sort({ name: 1 })
         .toArray(),
-      db
-        .collection<PoliticalParty>("politicalParties")
-        .find({})
-        .project({ _id: 1, name: 1 })
-        .toArray(),
+      politicalPartiesCollection(db).find({}).project({ _id: 1, name: 1 }).toArray(),
     ]);
 
     const characterOptions = characters.map((c) => ({

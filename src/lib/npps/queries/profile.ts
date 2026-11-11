@@ -2,6 +2,7 @@ import { ObjectId, type Db } from "mongodb";
 import type { NPP, PoliticalParty, State } from "@/lib/db/types";
 import { getOfficeLabel } from "@/lib/utils/officeTitle";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export async function getNppProfile(db: Db, nppId: ObjectId) {
   const npp = await db.collection<NPP>("npps").findOne({ _id: nppId });
@@ -10,7 +11,7 @@ export async function getNppProfile(db: Db, nppId: ObjectId) {
   const [state, party] = await Promise.all([
     statesCollection(db).findOne({ _id: npp.homeState, countryId: npp.countryId }),
     Number.isFinite(Number(npp.party))
-      ? db.collection<PoliticalParty>("politicalParties").findOne({
+      ? politicalPartiesCollection(db).findOne({
           sequentialId: Number(npp.party),
           countryId: npp.countryId ?? "US",
         })

@@ -17,6 +17,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export const BALANCE_SNAPSHOTS_COLLECTION = "balanceSnapshots";
 export const BALANCE_CHECKPOINTS_COLLECTION = "balanceSnapshotCheckpoints";
@@ -188,9 +189,11 @@ async function collectBalanceState(
   // Collection is `politicalParties` (there is no `parties` collection) - the
   // party `subjectId` on financialTxLog rows is the politicalParties `_id`, so
   // this is the balance the party primary legs reconcile against.
-  const parties = db.collection<{ _id: ObjectId; treasury?: number; countryId?: string }>(
-    "politicalParties"
-  );
+  const parties = politicalPartiesCollection<{
+    _id: ObjectId;
+    treasury?: number;
+    countryId?: string;
+  }>(db);
   const partyCursor = parties.find({}, { projection: { treasury: 1, countryId: 1 } });
   for await (const p of partyCursor) {
     if (typeof p.treasury !== "number") continue;

@@ -8,6 +8,8 @@ import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import type { CreateIndexesOptions, IndexSpecification } from "mongodb";
 import { ALL_WRITE_GUARD_INDEXES } from "@/lib/admin/seed/indexes/writeGuardSpecs";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import type { Document } from "mongodb";
 
 const MIGRATION_ID = "create-indexes-v3";
 
@@ -127,8 +129,7 @@ export async function POST() {
 
     // Pre-flight: check for duplicate (countryId, sequentialId) pairs in politicalParties
     // before attempting the unique index, which would hard-fail on duplicates.
-    const dupes = await db
-      .collection("politicalParties")
+    const dupes = await politicalPartiesCollection<Document>(db)
       .aggregate([
         {
           $group: {

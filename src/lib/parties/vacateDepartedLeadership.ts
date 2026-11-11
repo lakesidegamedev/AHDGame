@@ -1,5 +1,6 @@
 import type { Db, ObjectId } from "mongodb";
 import type { PoliticalParty } from "@/lib/db/types";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 /**
  * Vacate party leadership slots (chair / vice chair / treasurer) that still
@@ -31,7 +32,7 @@ export async function vacateDepartedLeadership(
     filter.sequentialId = { $ne: opts.exceptPartySequentialId };
   }
 
-  await db.collection<PoliticalParty>("politicalParties").updateMany(filter, [
+  await politicalPartiesCollection(db).updateMany(filter, [
     {
       $set: {
         chairId: { $cond: [{ $in: ["$chairId", ids] }, null, "$chairId"] },

@@ -19,6 +19,7 @@ import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 // GET /api/discord-bot/sync-roles — Returns the Discord roles a user should hold based on their in-game party, office, and investment status.
 // Auth: requireAdminOrApiKey
@@ -63,9 +64,10 @@ export async function GET(request: Request) {
     let partyColor: string | null = null;
     const charCountryId = character.countryId ?? "US";
     if (character.party && character.party !== "independent") {
-      const party = await db
-        .collection<PoliticalParty>("politicalParties")
-        .findOne({ sequentialId: Number(character.party), countryId: charCountryId });
+      const party = await politicalPartiesCollection(db).findOne({
+        sequentialId: Number(character.party),
+        countryId: charCountryId,
+      });
       if (party) {
         partySlug = String(party.sequentialId);
         partyName = party.name;
@@ -313,8 +315,7 @@ export async function POST(request: Request) {
       }
     }
     const parties = partyLookups.length
-      ? await db
-          .collection<PoliticalParty>("politicalParties")
+      ? await politicalPartiesCollection(db)
           .find({
             $or: partyLookups.map((l) => ({
               countryId: l.countryId,

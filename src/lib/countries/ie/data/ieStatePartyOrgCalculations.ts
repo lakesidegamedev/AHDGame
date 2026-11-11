@@ -5,6 +5,7 @@ import {
   IE_REGION_VOTE_SHARES_1989,
   IE_REGION_VOTE_SHARES_1953,
 } from "@/lib/seeds/ie/ieRegionVoteShares";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 /**
  * Calculate IE state party organization levels from estimated regional vote
@@ -47,8 +48,7 @@ function calculateIEPartyOrg(voteShare: number): number {
  * actually exist under the active preset.
  */
 export async function buildIEPartySlugToSeqId(db: Db): Promise<Record<string, string>> {
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const parties = await politicalPartiesCollection(db)
     .find({ countryId: "IE" })
     .project<{ name: string; sequentialId: number }>({ name: 1, sequentialId: 1 })
     .toArray();

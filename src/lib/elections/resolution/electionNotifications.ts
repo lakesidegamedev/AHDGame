@@ -16,6 +16,7 @@ import {
 } from "@/lib/discordWebhooks";
 import { generateChamberDiagramSVG, getChamberComposition } from "@/lib/charts/parliamentChart";
 import { generateDiscordEventCard } from "@/lib/discord/eventCard";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export type ElectionNewsOutcome = {
   electionType: string;
@@ -47,8 +48,11 @@ export async function sendBatchedElectionResults(
     return { countryId, sequentialId: parseInt(sequentialId, 10) };
   });
 
-  const parties = await db
-    .collection<{ sequentialId: number; countryId: string; name: string }>("politicalParties")
+  const parties = await politicalPartiesCollection<{
+    sequentialId: number;
+    countryId: string;
+    name: string;
+  }>(db)
     .find({
       $or: partyLookups.map((p) => ({
         countryId: p.countryId,

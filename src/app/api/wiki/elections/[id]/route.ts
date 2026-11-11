@@ -19,6 +19,7 @@ import type {
 } from "@/lib/db/types";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 const ELECTION_TYPE_LABELS: Record<string, string> = {
   president: "President",
@@ -102,8 +103,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
       statesCollection(db).findOne({ _id: election.state, countryId: election.countryId }),
       db.collection<ElectionVoteTally>("electionVoteTallies").findOne({ electionId }),
       // Filter parties by election's country to avoid cross-country sequential ID collisions
-      db
-        .collection<PoliticalParty>("politicalParties")
+      politicalPartiesCollection(db)
         .find({ countryId: election.countryId ?? "US" })
         .project({ sequentialId: 1, name: 1, color: 1, abbreviation: 1 })
         .toArray(),

@@ -39,6 +39,7 @@ import { getGameTime } from "@/lib/time/gameTime";
 import { primaryClosedFilter, electionOpenFilter } from "@/lib/elections/electionDeadlineFilters";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 // POST /api/admin/elections/resolve-primaries — Eliminates primary losers and initializes vote tallies for elections whose primary phase has ended.
 // Auth: requireAdmin
@@ -72,8 +73,7 @@ export const POST = withAdminRoute(async (_auth) => {
   }
 
   // Use composite keys to avoid cross-country sequential ID collisions
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const parties = await politicalPartiesCollection(db)
     .find(
       {},
       {

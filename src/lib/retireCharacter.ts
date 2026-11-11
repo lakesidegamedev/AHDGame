@@ -48,6 +48,7 @@ import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 /**
  * Core retirement function: snapshots a character, cleans up all gameplay
@@ -173,7 +174,7 @@ export async function retireCharacter(
 
   let partyName = "Independent";
   if (character.party !== "independent") {
-    const partyDoc = await db.collection("politicalParties").findOne({
+    const partyDoc = await politicalPartiesCollection<Document>(db).findOne({
       sequentialId: Number(character.party),
       countryId: character.countryId,
     });
@@ -364,12 +365,10 @@ export async function retireCharacter(
     );
 
   if (character.party !== "independent") {
-    await db
-      .collection("politicalParties")
-      .updateOne(
-        { sequentialId: Number(character.party), countryId: character.countryId },
-        { $inc: { memberCount: -1 } }
-      );
+    await politicalPartiesCollection<Document>(db).updateOne(
+      { sequentialId: Number(character.party), countryId: character.countryId },
+      { $inc: { memberCount: -1 } }
+    );
   }
 
   if (character.party !== "independent") {
@@ -377,7 +376,7 @@ export async function retireCharacter(
       sequentialId: Number(character.party),
       countryId: character.countryId,
     };
-    const partyDoc = await db.collection<PoliticalParty>("politicalParties").findOne(partyQuery);
+    const partyDoc = await politicalPartiesCollection(db).findOne(partyQuery);
     if (partyDoc) {
       const partySet: Record<string, unknown> = {};
       if (partyDoc.chairId?.toString() === characterId.toString()) partySet.chairId = null;
@@ -401,9 +400,7 @@ export async function retireCharacter(
         if (!updateOp.$set) updateOp.$set = { updatedAt: now };
       }
       if (Object.keys(updateOp).length > 0) {
-        await db
-          .collection<PoliticalParty>("politicalParties")
-          .updateOne({ _id: partyDoc._id }, updateOp);
+        await politicalPartiesCollection(db).updateOne({ _id: partyDoc._id }, updateOp);
       }
 
       if (partySet.chairId === null) {

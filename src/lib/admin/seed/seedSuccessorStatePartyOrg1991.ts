@@ -4,6 +4,7 @@ import { SUCCESSOR_REGIONS_1991 } from "@/lib/seeds/reference/successorRegions19
 import { SUCCESSOR_PARTIES_1991 } from "@/lib/seeds/reference/successorParties1991";
 import { sovietUnionRegions1991 } from "@/lib/countries/ru/data/sovietUnionRegions1991";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 /**
  * January 1991 founding footprints. The nationally organized transition parties
@@ -23,8 +24,7 @@ export async function seedSuccessorStatePartyOrg1991(
     await db
       .collection<StatePartyOrg>("statePartyOrg")
       .deleteMany({ countryId: { $in: countries } });
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const parties = await politicalPartiesCollection(db)
     .find({ countryId: { $in: countries }, isDefault: true })
     .project({ countryId: 1, name: 1, sequentialId: 1 })
     .toArray();

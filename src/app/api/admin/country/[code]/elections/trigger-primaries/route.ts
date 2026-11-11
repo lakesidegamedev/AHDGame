@@ -45,6 +45,7 @@ import { primaryOpenFilter } from "@/lib/elections/electionDeadlineFilters";
 import { archiveCampaignsForCandidates } from "@/lib/campaigns/archiveWithdrawnCampaigns";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export async function POST(request: Request, { params }: { params: Promise<{ code: string }> }) {
   try {
@@ -153,8 +154,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
       const enriched = await fetchEnrichedCandidates(activeCandidates);
       // Filter parties by election's countryId to avoid cross-country collisions
       const electionCountryId = election.countryId ?? "US";
-      const parties = await db
-        .collection<PoliticalParty>("politicalParties")
+      const parties = await politicalPartiesCollection(db)
         .find({ countryId: electionCountryId })
         .toArray();
       const partyMap = new Map(parties.map((p) => [String(p.sequentialId), p]));

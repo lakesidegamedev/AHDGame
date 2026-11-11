@@ -54,6 +54,7 @@ import { resetTaxesFor } from "@/lib/resetLegislation/taxCatalog";
 import type { ResetCountry } from "@/lib/resetLegislation/fundingOwner";
 import { getNationalDocId } from "@/lib/constants/nationalScope";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 const CABINET_VOTE_DURATION_MS = 24 * 3_600_000; // 24 hours
 type BillListProvisionDisplay = NonNullable<BillDisplay["provisions"]>[number];
@@ -99,8 +100,7 @@ export async function listCabinetBills(countryId: CountryId) {
           { projection: { provisions: 1 } }
         )
         .toArray(),
-      db
-        .collection<{ sequentialId: number; name?: string; color?: string }>("politicalParties")
+      politicalPartiesCollection<{ sequentialId: number; name?: string; color?: string }>(db)
         .find({ countryId })
         .toArray(),
     ]);

@@ -49,6 +49,7 @@ import {
 } from "@/lib/turn/npp/rules/privatizationSponsorship";
 import { NPP_BILL_VOTING_DURATION_HOURS } from "./constants";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 const PRIVATIZATION_BILL_CATEGORY = "state ownership";
 
@@ -225,9 +226,10 @@ export async function proposeNppPrivatizationBill(
   // One-party-state banned-party guard, as for every other NPP bill.
   const runtime = await getCountryState(db, countryId);
   if (runtime.governmentType === "onePartyState" && npp.party) {
-    const party = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ countryId, sequentialId: Number(npp.party) });
+    const party = await politicalPartiesCollection(db).findOne({
+      countryId,
+      sequentialId: Number(npp.party),
+    });
     if (isBannedParty({ governmentType: runtime.governmentType }, party)) {
       return { ok: false, reason: "banned party" };
     }

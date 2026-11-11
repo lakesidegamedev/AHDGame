@@ -15,6 +15,7 @@ import {
 } from "./rules/foundingRenewal1990";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 export const BG_FOUNDING_FILING_LOCKS_COLLECTION = "bgFoundingAssemblyFilingLocks";
 export type BgFoundingFilingFailure =
   | "invalid-ballot"
@@ -129,7 +130,7 @@ export async function materializeBgFoundingPlayerFiling(input: {
     const sequence = Number(candidate.party);
     if (!Number.isSafeInteger(sequence) || sequence < 1 || String(sequence) !== candidate.party)
       return reject("unregistered-party");
-    const party = await db.collection<PoliticalParty>("politicalParties").findOne(
+    const party = await politicalPartiesCollection(db).findOne(
       {
         countryId: "BG",
         sequentialId: sequence,

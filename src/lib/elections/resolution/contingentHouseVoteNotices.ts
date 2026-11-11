@@ -21,6 +21,7 @@ import { createSystemNewsPost } from "@/lib/news";
 import { logger } from "@/lib/observability/logger";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 type HouseVote = NonNullable<ElectionVoteTally["contingentHouseVote"]>;
 type Role = "member" | "candidate" | "whip";
@@ -72,8 +73,7 @@ async function loadAudience(
         party: 1,
       })
       .toArray(),
-    db
-      .collection<PoliticalParty>("politicalParties")
+    politicalPartiesCollection(db)
       .find({ countryId: countryId as CountryId, chairId: { $ne: null } })
       .project<Pick<PoliticalParty, "chairId" | "sequentialId">>({ chairId: 1, sequentialId: 1 })
       .toArray(),

@@ -11,6 +11,7 @@ import {
 import { resolvePartyTier } from "@/lib/parties/partyTier";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 /**
  * Per-axis stance distance (on the shared -5..+5 economic/social axes) within
@@ -129,8 +130,7 @@ export async function loadImpeachmentFallbackContext(
       { _id: impeachment.targetCharacterId },
       { projection: { policies: 1 } }
     ),
-    db
-      .collection<PoliticalParty>("politicalParties")
+    politicalPartiesCollection(db)
       .find({ countryId: impeachment.countryId })
       .project<Pick<PoliticalParty, "sequentialId" | "tier" | "isDefault">>({
         sequentialId: 1,
@@ -236,8 +236,7 @@ export async function autoVoteNppsForImpeachmentStage(
   const partyNumIds = collectPartyIds(officials, targetParty);
   const majorPartyIds = new Set<string>();
   if (partyNumIds.length > 0) {
-    const parties = await db
-      .collection<PoliticalParty>("politicalParties")
+    const parties = await politicalPartiesCollection(db)
       .find({ countryId: impeachment.countryId, sequentialId: { $in: partyNumIds } })
       .project<Pick<PoliticalParty, "sequentialId" | "tier" | "isDefault">>({
         sequentialId: 1,

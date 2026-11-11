@@ -50,6 +50,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 /** Read a country's national treasury balance (the unified fiscal cash position). */
 async function getTreasuryBalance(db: Db, countryId: string): Promise<number> {
@@ -180,9 +181,10 @@ export async function resolveCharacterRoles(
     );
     if (chair) roles.push("centralBankChair");
   }
-  const ledParty = await db
-    .collection<{ abbreviation: string }>("politicalParties")
-    .findOne({ chairId: character._id }, { projection: { abbreviation: 1 } });
+  const ledParty = await politicalPartiesCollection<{ abbreviation: string }>(db).findOne(
+    { chairId: character._id },
+    { projection: { abbreviation: 1 } }
+  );
   if (ledParty?.abbreviation) {
     roles.push("partyLeader", `partyLeader:${ledParty.abbreviation}`);
   }

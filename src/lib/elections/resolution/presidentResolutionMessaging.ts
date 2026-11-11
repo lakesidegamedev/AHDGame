@@ -17,6 +17,7 @@ import { isNppContingentId } from "@/lib/elections/resolution/contingentPersonId
 import type { ContingentElectionResult } from "@/lib/elections/resolution/contingentElection";
 import { logger } from "@/lib/observability/logger";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export type PresidentialResolutionMode = "majority" | "contingent" | "contingent_deadlock";
 
@@ -283,8 +284,7 @@ async function sendPresidentialElectionWebhook(
     now,
   } = ctx;
 
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const parties = await politicalPartiesCollection(db)
     .find({})
     .project<Pick<PoliticalParty, "_id" | "countryId" | "sequentialId" | "name" | "color">>({
       countryId: 1,

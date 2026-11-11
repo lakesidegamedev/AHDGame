@@ -16,6 +16,7 @@ import { loadRacePresence } from "@/lib/politicalOperations/racePresence";
 import { loadCampaignFxRate } from "@/lib/currency/campaignFxRate";
 import { statePresenceNextCost } from "@/lib/campaigns/statePresenceCost";
 import type { CharacterStateOrg, PoliticalParty } from "@/lib/db/types";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 /**
  * GET /api/political-operations/state-org/list
@@ -75,12 +76,10 @@ async function handleGET(request?: Request) {
       // (blue / red / grey) when the doc is missing or the party is the
       // sentinel "independent".
       character.party && character.party !== "independent"
-        ? db
-            .collection<PoliticalParty>("politicalParties")
-            .findOne(
-              { countryId: "US", sequentialId: Number(character.party) },
-              { projection: { color: 1, name: 1, abbreviation: 1 } }
-            )
+        ? politicalPartiesCollection(db).findOne(
+            { countryId: "US", sequentialId: Number(character.party) },
+            { projection: { color: 1, name: 1, abbreviation: 1 } }
+          )
         : Promise.resolve(null),
       loadUsPoliticalStateIds(db),
       // Every candidate in the live presidential race, so the map can show the

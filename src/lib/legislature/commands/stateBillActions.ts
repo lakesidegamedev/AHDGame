@@ -22,6 +22,7 @@ import { captureBillStatusChanged } from "@/lib/analytics/billStatusAnalytics";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 const OVERRIDE_VOTING_HOURS = 24;
 
@@ -83,9 +84,10 @@ export async function castStateBillVote(
   // restrictions lift immediately on conversion.
   const runtimeState = await getCountryState(db, countryId);
   if (runtimeState.governmentType === "onePartyState" && character.party) {
-    const voterParty = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ sequentialId: parseInt(character.party, 10), countryId });
+    const voterParty = await politicalPartiesCollection(db).findOne({
+      sequentialId: parseInt(character.party, 10),
+      countryId,
+    });
     // RUNTIME shape, not `countryConfig` — see the note in `nationalBillActions`.
     if (isBannedParty({ governmentType: runtimeState.governmentType }, voterParty)) {
       return {

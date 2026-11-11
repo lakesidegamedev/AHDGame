@@ -40,6 +40,7 @@ import { officeRemapFor, remapOffice } from "@/lib/country/dissolvingOfficeRemap
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 /**
  * Region-scoped party collections.
@@ -219,13 +220,12 @@ export async function evacuateRegionPolitics(
         cash.set(Number(org.partyId), (cash.get(Number(org.partyId)) ?? 0) + org.treasury);
     }
     if (cash.size) {
-      const parties = await db
-        .collection<PoliticalParty>("politicalParties")
+      const parties = await politicalPartiesCollection(db)
         .find({ countryId: fromCountryId, sequentialId: { $in: [...cash.keys()] } })
         .toArray();
       if (parties.length !== cash.size)
         throw new Error("Regional party cash has no surviving owner");
-      await db.collection<PoliticalParty>("politicalParties").bulkWrite(
+      await politicalPartiesCollection(db).bulkWrite(
         parties.map((party) => ({
           updateOne: {
             filter: { _id: party._id },

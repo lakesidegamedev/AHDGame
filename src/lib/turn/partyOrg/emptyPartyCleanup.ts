@@ -29,6 +29,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export interface EmptyPartyCleanupResult {
   deletedParties: string[];
@@ -60,8 +61,7 @@ export async function cleanupEmptyParties(): Promise<EmptyPartyCleanupResult> {
   const db = await getDb();
 
   // Find non-default parties (we'll check actual membership, not the memberCount field)
-  const nonDefaultParties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const nonDefaultParties = await politicalPartiesCollection(db)
     .find({ isDefault: { $ne: true } })
     .toArray();
 
@@ -377,9 +377,7 @@ export async function cleanupEmptyParties(): Promise<EmptyPartyCleanupResult> {
         const nextMember = [...remainingMembers].sort(
           (a, b) => a.joinedAt.getTime() - b.joinedAt.getTime()
         )[0]!;
-        const nextParty = await db
-          .collection<PoliticalParty>("politicalParties")
-          .findOne({ _id: nextMember.partyId });
+        const nextParty = await politicalPartiesCollection(db).findOne({ _id: nextMember.partyId });
 
         const newChairCharacterId = nextParty?.chairId ?? null;
 
@@ -408,7 +406,7 @@ export async function cleanupEmptyParties(): Promise<EmptyPartyCleanupResult> {
   }
 
   // 7. Finally, delete the parties themselves
-  await db.collection<PoliticalParty>("politicalParties").deleteMany({ _id: { $in: partyIds } });
+  await politicalPartiesCollection(db).deleteMany({ _id: { $in: partyIds } });
 
   const result: EmptyPartyCleanupResult = {
     deletedParties: partySeqIds,

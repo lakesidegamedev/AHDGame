@@ -7,6 +7,7 @@ import type { Db } from "@/lib/mongodb";
 import { getNextSequentialId } from "@/lib/db/sequentialId";
 import { getEraContext } from "@/lib/era/context";
 import { DEFAULT_CANDIDATE_SUPPORT } from "@/lib/elections/engine/electionFormulaFactors";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 type PartyData = { countryId: string; partyId: string };
 
@@ -43,8 +44,7 @@ export async function handleGenerateNPPs(
   );
 
   // Load party docs to map sequentialIds and determine country
-  const allPartyDocs = await db
-    .collection<import("@/lib/db/types").PoliticalParty>("politicalParties")
+  const allPartyDocs = await politicalPartiesCollection<import("@/lib/db/types").PoliticalParty>(db)
     .find({ isDefault: true })
     .toArray();
   // Build country-aware party list

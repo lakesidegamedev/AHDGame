@@ -22,6 +22,7 @@ import { US_SENATE_2020 } from "@/lib/constants/historicalSeats";
 import type { CountryId } from "@/lib/constants/countries";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export async function getPmAppointmentCandidates(
   db: Db,
@@ -95,8 +96,7 @@ export async function getPmAppointmentCandidates(
     .toArray();
   const charMap = new Map(characters.map((char) => [char._id.toString(), char]));
 
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const parties = await politicalPartiesCollection(db)
     .find({ countryId, sequentialId: { $in: eligibility.qualifyingPartyIds } })
     .toArray();
   const partyNameMap = new Map(parties.map((party) => [party.sequentialId.toString(), party.name]));
@@ -202,8 +202,7 @@ export async function getHosAppointmentCandidates(
     .toArray();
   const nppMap = new Map(npps.map((npp) => [npp._id.toString(), npp]));
 
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const parties = await politicalPartiesCollection(db)
     .find({ countryId, sequentialId: { $in: eligibility.qualifyingPartyIds } })
     .toArray();
   const partyNameMap = new Map(parties.map((party) => [party.sequentialId.toString(), party.name]));

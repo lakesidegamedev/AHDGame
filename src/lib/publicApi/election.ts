@@ -14,6 +14,7 @@ import type {
 import { computeElectionPhase } from "@/lib/elections/phases";
 import { getGameTime, type GameTimeContext } from "@/lib/time/gameTime";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -293,8 +294,7 @@ export async function queryElectionList(
   const partySeqIds = [...new Set(allCandidates.map((c) => c.party))].map(Number).filter(Boolean);
   const parties =
     partySeqIds.length > 0
-      ? await db
-          .collection<PoliticalParty>("politicalParties")
+      ? await politicalPartiesCollection(db)
           .find({
             sequentialId: { $in: partySeqIds },
             countryId: country,
@@ -453,8 +453,7 @@ export async function queryElectionDetail(db: Db, electionId: string) {
     .filter(Boolean);
   const parties =
     partySeqIds.length > 0
-      ? await db
-          .collection<PoliticalParty>("politicalParties")
+      ? await politicalPartiesCollection(db)
           .find({
             sequentialId: { $in: partySeqIds },
             countryId: (election as unknown as Record<string, unknown>).countryId ?? "US",

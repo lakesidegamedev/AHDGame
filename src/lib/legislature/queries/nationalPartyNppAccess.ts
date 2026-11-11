@@ -12,6 +12,7 @@ import { buildActiveNationalBillFilter } from "../nationalBillScope";
 import { hasPartyNppSeats } from "../rules/partyNppProposal";
 import { canDirectNationalPartyNpp, pickNationalPartySponsor } from "../rules/nationalPartyNpp";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export async function resolveNationalPartyNppAccess(
   db: Db,
@@ -24,12 +25,10 @@ export async function resolveNationalPartyNppAccess(
   if (!character?.party || !isSameCountry(character, { countryId })) return denied;
   const partyNumber = Number(character.party);
   if (!Number.isSafeInteger(partyNumber) || partyNumber <= 0) return denied;
-  const party = await db
-    .collection<PoliticalParty>("politicalParties")
-    .findOne(
-      { countryId, sequentialId: partyNumber },
-      { projection: { chairId: 1, sequentialId: 1 } }
-    );
+  const party = await politicalPartiesCollection(db).findOne(
+    { countryId, sequentialId: partyNumber },
+    { projection: { chairId: 1, sequentialId: 1 } }
+  );
   if (
     !party ||
     !canDirectNationalPartyNpp({

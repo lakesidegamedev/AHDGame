@@ -25,6 +25,7 @@ import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export async function seedUKRegions(
   db: Db,
@@ -76,15 +77,17 @@ export async function seedUKParties(db: Db, log: (msg: string) => void, preset?:
     void _seedOrder;
     void _validForPresets;
     // Check if party already exists by name + country
-    const existing = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ name: party.name, countryId: party.countryId });
+    const existing = await politicalPartiesCollection(db).findOne({
+      name: party.name,
+      countryId: party.countryId,
+    });
 
     if (existing) {
       // Update existing party (preserve _id and sequentialId)
-      await db
-        .collection<PoliticalParty>("politicalParties")
-        .updateOne({ _id: existing._id }, { $set: { ...partyData, updatedAt: now } });
+      await politicalPartiesCollection(db).updateOne(
+        { _id: existing._id },
+        { $set: { ...partyData, updatedAt: now } }
+      );
     } else {
       // Insert new party with generated _id and sequentialId
       const sequentialId = await getNextSequentialId(db, "party", party.countryId);
@@ -97,7 +100,7 @@ export async function seedUKParties(db: Db, log: (msg: string) => void, preset?:
         createdAt: now,
         updatedAt: now,
       };
-      await db.collection<PoliticalParty>("politicalParties").insertOne(doc);
+      await politicalPartiesCollection(db).insertOne(doc);
     }
   }
   log(`Seeded ${eligibleParties.length} UK parties (preset: ${activePreset})`);
@@ -122,14 +125,16 @@ export async function seedNIParties(db: Db, log: (msg: string) => void) {
     const { seedOrder: _seedOrder, validForPresets: _validForPresets, ...partyData } = party;
     void _seedOrder;
     void _validForPresets;
-    const existing = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ name: party.name, countryId: party.countryId });
+    const existing = await politicalPartiesCollection(db).findOne({
+      name: party.name,
+      countryId: party.countryId,
+    });
 
     if (existing) {
-      await db
-        .collection<PoliticalParty>("politicalParties")
-        .updateOne({ _id: existing._id }, { $set: { ...partyData, updatedAt: now } });
+      await politicalPartiesCollection(db).updateOne(
+        { _id: existing._id },
+        { $set: { ...partyData, updatedAt: now } }
+      );
       log(`Updated existing party: ${party.name}`);
     } else {
       const sequentialId = await getNextSequentialId(db, "party", party.countryId);
@@ -142,7 +147,7 @@ export async function seedNIParties(db: Db, log: (msg: string) => void) {
         createdAt: now,
         updatedAt: now,
       };
-      await db.collection<PoliticalParty>("politicalParties").insertOne(doc);
+      await politicalPartiesCollection(db).insertOne(doc);
       log(`Created party: ${party.name} (sequentialId: ${sequentialId})`);
     }
   }
@@ -637,14 +642,16 @@ export async function seedUKRegionalCouncil(db: Db, reset: boolean, log: (msg: s
         const info = SLUG_TO_PARTY[slug];
         if (info) {
           // Try by name first
-          let party = await db
-            .collection<PoliticalParty>("politicalParties")
-            .findOne({ name: info.name, countryId: "UK" });
+          let party = await politicalPartiesCollection(db).findOne({
+            name: info.name,
+            countryId: "UK",
+          });
           // Fallback: try by abbreviation
           if (!party) {
-            party = await db
-              .collection<PoliticalParty>("politicalParties")
-              .findOne({ abbreviation: info.abbr, countryId: "UK" });
+            party = await politicalPartiesCollection(db).findOne({
+              abbreviation: info.abbr,
+              countryId: "UK",
+            });
           }
           if (party) {
             seqId = String(party.sequentialId);
@@ -654,7 +661,7 @@ export async function seedUKRegionalCouncil(db: Db, reset: boolean, log: (msg: s
       }
       if (!seqId) {
         // Final fallback: use Labour or Conservative
-        const fallback = await db.collection<PoliticalParty>("politicalParties").findOne({
+        const fallback = await politicalPartiesCollection(db).findOne({
           countryId: "UK",
           abbreviation: { $in: ["LAB", "CON"] },
         });

@@ -20,6 +20,7 @@ import { getGovernmentFormationsCollection } from "@/lib/db/collections/governme
 import { getCountryState } from "@/lib/countryState";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 const negotiate: DecisionOption = {
   id: "negotiate",
@@ -113,19 +114,15 @@ const concedeLeadership: DecisionOption = {
     // subsequent reads see the new rulingPartyId.
     const runtime = await getCountryState(ctx.db, ctx.countryId);
     if (runtime.rulingPartyId !== null) {
-      await ctx.db
-        .collection<PoliticalParty>("politicalParties")
-        .updateOne(
-          { sequentialId: runtime.rulingPartyId, countryId: ctx.countryId },
-          { $set: { regimeStatus: "approved", updatedAt: new Date() } }
-        );
-    }
-    await ctx.db
-      .collection<PoliticalParty>("politicalParties")
-      .updateOne(
-        { sequentialId: partyId, countryId: ctx.countryId },
-        { $set: { regimeStatus: "ruling", updatedAt: new Date() } }
+      await politicalPartiesCollection(ctx.db).updateOne(
+        { sequentialId: runtime.rulingPartyId, countryId: ctx.countryId },
+        { $set: { regimeStatus: "approved", updatedAt: new Date() } }
       );
+    }
+    await politicalPartiesCollection(ctx.db).updateOne(
+      { sequentialId: partyId, countryId: ctx.countryId },
+      { $set: { regimeStatus: "ruling", updatedAt: new Date() } }
+    );
     const { updateCountryState } = await import("@/lib/countryState");
     await updateCountryState(ctx.db, ctx.countryId, { rulingPartyId: partyId });
 
@@ -215,12 +212,10 @@ async function reMergeDefectors(
     );
   // Defected party is now empty — flip to banned so it doesn't linger
   // as a ghost approved party with no members.
-  await db
-    .collection<PoliticalParty>("politicalParties")
-    .updateOne(
-      { sequentialId: defectedPartyId, countryId },
-      { $set: { regimeStatus: "banned", memberCount: 0, updatedAt: now } }
-    );
+  await politicalPartiesCollection(db).updateOne(
+    { sequentialId: defectedPartyId, countryId },
+    { $set: { regimeStatus: "banned", memberCount: 0, updatedAt: now } }
+  );
 }
 
 function readDefectedPartyId(payload: Record<string, unknown>): number | null {

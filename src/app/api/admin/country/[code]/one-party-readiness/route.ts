@@ -16,6 +16,7 @@ import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import type { Document } from "mongodb";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 interface ReadinessCheck {
   name: string;
@@ -56,7 +57,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
 
     // 2. Parties seeded (expect at least the majorPartyIds count)
     const expectedPartyCount = Math.max(config.majorPartyIds.length, 1);
-    const partyCount = await db.collection("politicalParties").countDocuments({ countryId });
+    const partyCount = await politicalPartiesCollection<Document>(db).countDocuments({ countryId });
     checks.push({
       name: "Parties",
       status: partyCount >= expectedPartyCount ? "ok" : partyCount > 0 ? "warning" : "missing",

@@ -4,6 +4,7 @@
  */
 import type { Db, ObjectId } from "mongodb";
 import { editorialAudienceFavorabilityNudge, type EditorialPosition } from "./rules";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 interface ActiveElection {
   _id: ObjectId;
@@ -84,8 +85,7 @@ export async function applyMediaEditorialEffects(args: {
   if (candidates.length === 0) return;
 
   const countryIds = [...new Set(relevantElections.map((election) => election.countryId))];
-  const parties = await db
-    .collection<EditorialParty>("politicalParties")
+  const parties = await politicalPartiesCollection<EditorialParty>(db)
     .find(
       { countryId: { $in: countryIds } },
       {

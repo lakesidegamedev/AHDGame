@@ -20,6 +20,7 @@
 import type { Db, ObjectId } from "mongodb";
 import type { PoliticalParty, StatePartyOrg } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export interface VacateResult {
   characterIds: string[];
@@ -61,8 +62,7 @@ export async function vacatePartyLeadershipForBannedUser(
 
   // Find every party doc that seats one of these characters anywhere, so we
   // can record per-position counts and cascade chair changes to coalitions.
-  const partyDocs = await db
-    .collection<PoliticalParty>("politicalParties")
+  const partyDocs = await politicalPartiesCollection(db)
     .find({
       $or: [
         { chairId: { $in: characterIds } },
@@ -112,9 +112,7 @@ export async function vacatePartyLeadershipForBannedUser(
     }
 
     if (Object.keys(updateOp).length > 0) {
-      await db
-        .collection<PoliticalParty>("politicalParties")
-        .updateOne({ _id: party._id }, updateOp);
+      await politicalPartiesCollection(db).updateOne({ _id: party._id }, updateOp);
     }
   }
 

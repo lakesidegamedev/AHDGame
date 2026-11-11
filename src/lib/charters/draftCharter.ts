@@ -26,6 +26,7 @@ import { getEnabledCountryIdsFromDb } from "@/lib/countryAccess";
 import { retainsDefaultPartyNameReservation } from "./rules/defaultNameReservation";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 /**
  * Names + abbreviations reserved for preset-gated default parties (e.g.
@@ -171,12 +172,10 @@ export async function draftCharter(input: DraftCharterInput, db: Db): Promise<Dr
   // simultaneous drafts from racing to ratify the same name.
   const nameRegex = new RegExp(`^${escapeRegex(input.proposedName)}$`, "i");
   const upperAbbr = input.proposedAbbr.toUpperCase();
-  const livePartyConflict = await db
-    .collection<PoliticalParty>("politicalParties")
-    .findOne(
-      { countryId: input.countryId, $or: [{ name: nameRegex }, { abbreviation: upperAbbr }] },
-      { projection: { name: 1, abbreviation: 1 } }
-    );
+  const livePartyConflict = await politicalPartiesCollection(db).findOne(
+    { countryId: input.countryId, $or: [{ name: nameRegex }, { abbreviation: upperAbbr }] },
+    { projection: { name: 1, abbreviation: 1 } }
+  );
   if (livePartyConflict) {
     if (livePartyConflict.abbreviation === upperAbbr) {
       return { ok: false, reason: "abbreviation-taken" };

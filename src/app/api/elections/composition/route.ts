@@ -35,6 +35,7 @@ import type {
 } from "@/lib/elections/electionResponseTypes";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export type { PartySeats, CompositionResponse } from "@/lib/elections/electionResponseTypes";
 
@@ -80,7 +81,7 @@ export async function GET(request: Request) {
 
     const [officials, parties, activeElections, gameTime] = await Promise.all([
       electedOfficialsCollection(db).find(countryScope).toArray(),
-      db.collection<PoliticalParty>("politicalParties").find({ countryId }).toArray(),
+      politicalPartiesCollection(db).find({ countryId }).toArray(),
       db
         .collection<Election>("elections")
         .find({ status: { $in: ["active", "upcoming"] }, ...countryScope })

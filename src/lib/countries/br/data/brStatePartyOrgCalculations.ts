@@ -1,5 +1,6 @@
 import type { Db } from "mongodb";
 import type { StatePartyOrg, PoliticalParty } from "@/lib/db/types";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 /*
  * Calculate BR state party organization levels from estimated regional vote shares.
@@ -100,8 +101,7 @@ function calculateBRPartyOrg(voteShare: number): number {
  * actually exist under the active preset.
  */
 export async function buildBRPartySlugToSeqId(db: Db): Promise<Record<string, string>> {
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const parties = await politicalPartiesCollection(db)
     .find({ countryId: "BR" })
     .project<{ name: string; sequentialId: number }>({ name: 1, sequentialId: 1 })
     .toArray();

@@ -33,6 +33,7 @@ import {
   nationalIndexNav,
 } from "./rules/nationalIndex";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 /** True for the 2027 world's background countries, which carry a national state. */
 export function isBackgroundNation(
@@ -90,8 +91,7 @@ export async function loadBackgroundNationContext(
       )
       .toArray(),
     needParties.length > 0
-      ? db
-          .collection<PoliticalParty>("politicalParties")
+      ? politicalPartiesCollection(db)
           .find(
             { countryId: { $in: needParties as never[] }, isDefunct: { $ne: true } },
             {

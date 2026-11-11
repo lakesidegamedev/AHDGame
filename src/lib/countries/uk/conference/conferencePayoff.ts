@@ -31,6 +31,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import { partySeqIdOf } from "./conferenceShared";
 import { runtimeConfig } from "@/lib/config/runtime";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export interface ConferencePayoff {
   applied: boolean;
@@ -60,8 +61,7 @@ async function computePayoffIntent(
   party: PoliticalParty,
   proposal: UKPartyConference["proposal"]
 ): Promise<{ grant: number; groups: string[] }> {
-  const partyNow =
-    (await db.collection<PoliticalParty>("politicalParties").findOne({ _id: party._id })) ?? party;
+  const partyNow = (await politicalPartiesCollection(db).findOne({ _id: party._id })) ?? party;
   let groups: string[] = [];
   if (proposal && isConferencePayoffEnabled(runtimeConfig.ukConferencePayoff())) {
     const catalog = pledgeCatalogFor(countryId);
@@ -165,16 +165,14 @@ export async function applyConferencePayoff(
   }
 
   if (working.payoffCohesionAppliedTurn == null && intentGrant > 0) {
-    const partyNow =
-      (await db.collection<PoliticalParty>("politicalParties").findOne({ _id: party._id })) ??
-      party;
+    const partyNow = (await politicalPartiesCollection(db).findOne({ _id: party._id })) ?? party;
     if ((partyNow.lastConferencePayoffId ?? null) !== working._id) {
       // Reclamp at apply time: the party may have earned PS after the claim
       // fixed the intent, and the tier cap stays binding. A zero effective
       // grant settles as skipped-at-cap below.
       const effective = Math.min(intentGrant, cohesionCapRoom(partyNow));
       if (effective > 0) {
-        await db.collection<PoliticalParty>("politicalParties").updateOne(
+        await politicalPartiesCollection(db).updateOne(
           { _id: partyNow._id, lastConferencePayoffId: { $ne: working._id } },
           {
             $inc: { politicalStrength: effective },
@@ -195,8 +193,7 @@ export async function applyConferencePayoff(
         .toArray()
     ).map((row) => row.groupId)
   );
-  const partyCheck =
-    (await db.collection<PoliticalParty>("politicalParties").findOne({ _id: party._id })) ?? party;
+  const partyCheck = (await politicalPartiesCollection(db).findOne({ _id: party._id })) ?? party;
   const cohesionDone =
     working.payoffCohesionAppliedTurn != null ||
     intentGrant <= 0 ||

@@ -10,6 +10,7 @@ import type { PoliticalParty, StatePartyOrg } from "@/lib/db/types";
 import { getReferendumCollection } from "@/lib/db/collections/referendum";
 import { canSpendOnStateParty } from "@/lib/parties/access";
 import { spendGroundGame } from "@/lib/referendum/groundGame";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 // POST /api/country/[code]/referendum/[refId]/ground-game
 // Auth: requireHumanSessionWithCharacter; nation-gated (the acting character must
@@ -65,9 +66,7 @@ export async function POST(
         return errorResponse(400, "You are not in a party.");
       }
       const [partyDoc, stateParty] = await Promise.all([
-        db
-          .collection<PoliticalParty>("politicalParties")
-          .findOne({ countryId, sequentialId: Number(partyId) }),
+        politicalPartiesCollection(db).findOne({ countryId, sequentialId: Number(partyId) }),
         db
           .collection<StatePartyOrg>("statePartyOrg")
           .findOne({ countryId, stateId: ref.regionId, partyId: String(partyId) }),

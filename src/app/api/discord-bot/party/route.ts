@@ -10,6 +10,7 @@ import { getEnabledCountryIds } from "@/lib/countryAccess";
 import type { PoliticalParty, Character } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -46,9 +47,10 @@ export async function GET(request: Request) {
 
     const db = await getDb();
 
-    const party = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ sequentialId: Number(partyId), countryId: country as CountryId });
+    const party = await politicalPartiesCollection(db).findOne({
+      sequentialId: Number(partyId),
+      countryId: country as CountryId,
+    });
 
     if (!party) {
       return NextResponse.json({ found: false });

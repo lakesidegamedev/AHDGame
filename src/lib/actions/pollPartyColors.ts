@@ -1,5 +1,6 @@
 import type { Db } from "mongodb";
 import type { PoliticalParty } from "@/lib/db/types";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 /** Neutral fallback for independents, NPPs and parties with no stored color. */
 const POLL_NEUTRAL_PARTY_COLOR = "#9CA3AF";
@@ -36,8 +37,7 @@ export async function loadPollPartyColors(
   let parties: Pick<PoliticalParty, "sequentialId" | "color">[] = [];
   if (numeric.length > 0) {
     try {
-      parties = await db
-        .collection<PoliticalParty>("politicalParties")
+      parties = await politicalPartiesCollection(db)
         .find(
           {
             countryId: countryId as PoliticalParty["countryId"],

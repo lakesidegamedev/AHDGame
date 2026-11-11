@@ -10,6 +10,7 @@ import type { StatePartyElection, StatePartyVote } from "@/lib/db/types/statePar
 import { isInNewCharacterCooldown } from "@/lib/auth/newCharacterCooldown";
 import { getLeadershipEligibility } from "@/lib/parties/leadershipTenure";
 import type { DueSoonContext, DueSoonItem } from "./types";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 const ROW_LIMIT = 20;
 
@@ -28,12 +29,10 @@ export async function partyBallots(ctx: DueSoonContext): Promise<DueSoonItem[]> 
   if (!member?.party || !ctx.countryId) return [];
   const partyId = member.party;
   const countryId = ctx.countryId;
-  const party = await ctx.db
-    .collection<PoliticalParty>("politicalParties")
-    .findOne(
-      { sequentialId: Number(partyId), countryId },
-      { projection: { name: 1, sequentialId: 1, leadershipElectionMethod: 1 } }
-    );
+  const party = await politicalPartiesCollection(ctx.db).findOne(
+    { sequentialId: Number(partyId), countryId },
+    { projection: { name: 1, sequentialId: 1, leadershipElectionMethod: 1 } }
+  );
   if (!party || party.leadershipElectionMethod === "committee") return [];
   const canonicalId = String(party.sequentialId);
 

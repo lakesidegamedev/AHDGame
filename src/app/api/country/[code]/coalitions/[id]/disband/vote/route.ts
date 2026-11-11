@@ -10,6 +10,7 @@ import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { getGameTime } from "@/lib/time/gameTime";
 import { canActAsChair } from "@/lib/parties/actingChair";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 const voteSchema = z.object({
   vote: z.enum(["yes", "no"]),
@@ -72,9 +73,10 @@ export async function POST(
     }
 
     // Find the user's party and verify they are the national chair
-    const party = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ chairId: character._id, countryId });
+    const party = await politicalPartiesCollection(db).findOne({
+      chairId: character._id,
+      countryId,
+    });
     if (!party) {
       throw forbidden("You must be a national party chair to vote on a disband.");
     }

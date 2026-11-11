@@ -7,6 +7,7 @@ import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { getPartyHex } from "@/lib/utils/politics";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export interface MapOfficeholder {
   id: string;
@@ -48,8 +49,7 @@ export async function computeMapOfficeholders(
         }
       )
       .toArray(),
-    db
-      .collection<PoliticalParty>("politicalParties")
+    politicalPartiesCollection(db)
       .find({ countryId }, { projection: { sequentialId: 1, name: 1, color: 1 } })
       .toArray(),
   ]);

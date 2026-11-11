@@ -21,6 +21,7 @@ import { getExecutiveOfficialFilter } from "@/lib/elections/executiveOfficeFilte
 import { hasReachedExecutiveTermLimit } from "@/lib/elections/executiveTermLimits";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -117,10 +118,7 @@ export async function GET(request: Request, { params }: RouteParams) {
             .find({ _id: { $in: userIds } })
             .toArray()
         : [],
-      db
-        .collection<PoliticalParty>("politicalParties")
-        .find({ countryId: electionCountry })
-        .toArray(),
+      politicalPartiesCollection(db).find({ countryId: electionCountry }).toArray(),
       db
         .collection<ElectionCandidate>("electionCandidates")
         // Suspended candidates (who dropped out to endorse) remain eligible as a

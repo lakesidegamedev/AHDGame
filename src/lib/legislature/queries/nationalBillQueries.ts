@@ -82,6 +82,7 @@ import { loadBillLegislationTypes } from "@/lib/legislature/queries/loadBillLegi
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 const BILL_PAGE_LIMIT = 50;
 
@@ -268,7 +269,7 @@ export async function listNationalLegislatureBills(
       .limit(BILL_PAGE_LIMIT)
       .toArray(),
     db.collection<Bill>("bills").countDocuments(billFilter),
-    db.collection<PoliticalParty>("politicalParties").find({ countryId }).toArray(),
+    politicalPartiesCollection(db).find({ countryId }).toArray(),
   ]);
   const lowerKey = config.legislature.lowerChamber.key;
   const upperKeyForGet = config.legislature.upperChamber?.key;
@@ -861,8 +862,7 @@ export async function getNationalBillDetail(
   const uniqueCharacterIds = [...new Set(characterVoteIds)];
   const uniqueNppIds = [...new Set(nppIds)];
 
-  const allParties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const allParties = await politicalPartiesCollection(db)
     .find({ countryId: country })
     .project({ sequentialId: 1, slug: 1 })
     .toArray();

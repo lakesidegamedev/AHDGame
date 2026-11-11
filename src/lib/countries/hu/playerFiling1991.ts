@@ -12,6 +12,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import type { Document } from "mongodb";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 export const HU_1991_FILING_LOCKS_COLLECTION = "hu1991AssemblyFilingLocks";
 export type Hu1991FilingFailure =
   | "invalid-ballot"
@@ -135,7 +136,7 @@ export async function materializeHu1991PlayerFiling(input: {
     const sequence = Number(candidate.party);
     if (!Number.isSafeInteger(sequence) || sequence < 1 || String(sequence) !== candidate.party)
       return reject("unregistered-party");
-    const party = await db.collection<PoliticalParty>("politicalParties").findOne(
+    const party = await politicalPartiesCollection(db).findOne(
       {
         countryId: "HU",
         sequentialId: sequence,

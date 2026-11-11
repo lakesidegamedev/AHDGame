@@ -8,6 +8,7 @@ import type { StatePartyOrg, State, PoliticalParty } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { validateOrganization } from "@/lib/utils/partyOrg";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 // GET - Fetch party org for a state or all states
 // Returns organization data for ALL parties, defaulting to 0 for parties without records
@@ -22,8 +23,7 @@ export async function GET(request: Request) {
     const db = await getDb();
 
     // Fetch all parties for reference
-    const parties = await db
-      .collection<PoliticalParty>("politicalParties")
+    const parties = await politicalPartiesCollection(db)
       .find({})
       .sort({ isDefault: -1, memberCount: -1, name: 1 })
       .toArray();
@@ -114,7 +114,7 @@ export async function PATCH(request: Request) {
 
     // Validate party exists — scope by the state's country so a partyId that
     // collides across countries resolves to the right party.
-    const party = await db.collection<PoliticalParty>("politicalParties").findOne({
+    const party = await politicalPartiesCollection(db).findOne({
       sequentialId: Number(partyId),
       countryId: state.countryId,
     });

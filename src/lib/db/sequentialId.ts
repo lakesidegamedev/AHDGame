@@ -1,6 +1,8 @@
 import type { Db } from "mongodb";
 import type { Counter } from "./types/counter";
 import type { CountryId } from "../constants/countries";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import type { Document } from "mongodb";
 
 /**
  * Get the next sequential ID for a given entity type.
@@ -128,8 +130,7 @@ export async function resetPartyCounters(db: Db, countryIds?: readonly string[])
  * insert starts at 1 via upsert in getNextSequentialId).
  */
 export async function realignPartyCountersToExisting(db: Db): Promise<void> {
-  const groups = (await db
-    .collection("politicalParties")
+  const groups = (await politicalPartiesCollection<Document>(db)
     .aggregate([{ $group: { _id: "$countryId", maxSeq: { $max: "$sequentialId" } } }])
     .toArray()) as Array<{ _id: string; maxSeq: number | null }>;
 

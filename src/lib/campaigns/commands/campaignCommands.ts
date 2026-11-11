@@ -32,6 +32,7 @@ import {
   getCurrentTurn,
 } from "./campaignManagementCommands";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 export {
   appointCampaignManager,
   contributeCampaignStrength,
@@ -316,9 +317,10 @@ export async function donateToCampaign(params: {
       throw badRequest("Invalid party id");
     }
 
-    const party = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ sequentialId: numericPartyId, countryId: user.character.countryId });
+    const party = await politicalPartiesCollection(db).findOne({
+      sequentialId: numericPartyId,
+      countryId: user.character.countryId,
+    });
     if (!party) {
       throw notFound("Party not found");
     }
@@ -406,11 +408,13 @@ export async function donateToCampaign(params: {
     };
 
     const applyPartyDonationInTransaction = async (session: ClientSession) => {
-      const debitResult = await db
-        .collection<PoliticalParty>("politicalParties")
-        .updateOne({ _id: party._id, treasury: { $gte: amountPartyLocal } }, partyDebit, {
+      const debitResult = await politicalPartiesCollection(db).updateOne(
+        { _id: party._id, treasury: { $gte: amountPartyLocal } },
+        partyDebit,
+        {
           session,
-        });
+        }
+      );
       if (debitResult.matchedCount === 0) {
         throw badRequest("Insufficient party funds");
       }
@@ -423,9 +427,10 @@ export async function donateToCampaign(params: {
     };
 
     const applyPartyDonationWithoutTransaction = async () => {
-      const debitResult = await db
-        .collection<PoliticalParty>("politicalParties")
-        .updateOne({ _id: party._id, treasury: { $gte: amountPartyLocal } }, partyDebit);
+      const debitResult = await politicalPartiesCollection(db).updateOne(
+        { _id: party._id, treasury: { $gte: amountPartyLocal } },
+        partyDebit
+      );
       if (debitResult.matchedCount === 0) {
         throw badRequest("Insufficient party funds");
       }
@@ -434,12 +439,10 @@ export async function donateToCampaign(params: {
         .collection<Campaign>("campaigns")
         .updateOne({ _id: campaignId }, campaignUpdate);
       if (campaignUpdateResult.matchedCount === 0) {
-        await db
-          .collection<PoliticalParty>("politicalParties")
-          .updateOne(
-            { _id: party._id },
-            { $inc: { treasury: amountPartyLocal }, $set: { updatedAt: new Date() } }
-          );
+        await politicalPartiesCollection(db).updateOne(
+          { _id: party._id },
+          { $inc: { treasury: amountPartyLocal }, $set: { updatedAt: new Date() } }
+        );
         throw notFound("Campaign not found");
       }
     };

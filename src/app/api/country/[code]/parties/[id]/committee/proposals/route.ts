@@ -24,6 +24,7 @@ import type {
   ProposalsResponse,
 } from "@/lib/parties/dto/partyView";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -57,9 +58,10 @@ async function toProposalView(
 
   let mergeField: ProposalView["merge"] | undefined;
   if (proposal.type === "merge" && proposal.merge) {
-    const targetParty = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ _id: proposal.merge.targetPartyId }, { projection: { name: 1 } });
+    const targetParty = await politicalPartiesCollection(db).findOne(
+      { _id: proposal.merge.targetPartyId },
+      { projection: { name: 1 } }
+    );
     mergeField = {
       targetPartyId: proposal.merge.targetPartyId.toString(),
       targetPartyName: targetParty?.name ?? "Unknown",
@@ -127,12 +129,10 @@ async function toProposalView(
 
 async function getTargetEligibleSize(db: Db, proposal: CommitteeProposal): Promise<number> {
   if (proposal.type !== "merge" || !proposal.merge) return 0;
-  const target = await db
-    .collection<PoliticalParty>("politicalParties")
-    .findOne(
-      { _id: proposal.merge.targetPartyId },
-      { projection: { committeeIds: 1, chairId: 1, viceChairId: 1, treasurerId: 1 } }
-    );
+  const target = await politicalPartiesCollection(db).findOne(
+    { _id: proposal.merge.targetPartyId },
+    { projection: { committeeIds: 1, chairId: 1, viceChairId: 1, treasurerId: 1 } }
+  );
   if (!target) return 0;
   return getEligibleVoterSet(target).size;
 }
@@ -192,8 +192,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const incomingProposingIds = [...new Set(rawIncoming.map((p) => p.partyId.toString()))];
     const proposingPartiesForIncoming =
       incomingProposingIds.length > 0
-        ? await db
-            .collection<PoliticalParty>("politicalParties")
+        ? await politicalPartiesCollection(db)
             .find({ _id: { $in: rawIncoming.map((p) => p.partyId) } })
             .project<{
               _id: ObjectId;
@@ -378,12 +377,10 @@ export async function POST(request: Request, { params }: RouteParams) {
       if (targetPartyObjId.toString() === party._id.toString()) {
         return errorResponse(400, "Cannot merge a party with itself");
       }
-      const targetParty = await db
-        .collection<PoliticalParty>("politicalParties")
-        .findOne(
-          { _id: targetPartyObjId },
-          { projection: { countryId: 1, sequentialId: 1, isDefunct: 1 } }
-        );
+      const targetParty = await politicalPartiesCollection(db).findOne(
+        { _id: targetPartyObjId },
+        { projection: { countryId: 1, sequentialId: 1, isDefunct: 1 } }
+      );
       if (!targetParty) {
         return errorResponse(404, "Target party not found");
       }

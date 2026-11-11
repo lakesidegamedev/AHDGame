@@ -13,6 +13,7 @@ import { getSuggestionsCollection } from "@/lib/db/collections/suggestions";
 import { fetchBordersByUserIds } from "@/lib/db/patreonBorders";
 import { createNotification } from "@/lib/notifications";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 // GET /api/suggestions/public/[issueNumber]/comments — List comments (newest first, or ?order=asc
 // for oldest first; paginated).
@@ -76,8 +77,7 @@ export async function GET(
     }
     const partyMap = new Map<string, PoliticalParty>();
     if (partySeqIds.size > 0) {
-      const parties = await db
-        .collection<PoliticalParty>("politicalParties")
+      const parties = await politicalPartiesCollection(db)
         .find({ sequentialId: { $in: [...partySeqIds].map(Number) } })
         .toArray();
       for (const p of parties) partyMap.set(`${p.countryId}:${p.sequentialId}`, p);
@@ -211,7 +211,7 @@ export async function POST(
 
     let authorPartyAbbrev: string | null = null;
     if (character.party && character.party !== "independent") {
-      const party = await db.collection<PoliticalParty>("politicalParties").findOne({
+      const party = await politicalPartiesCollection(db).findOne({
         sequentialId: parseInt(character.party),
         countryId: character.countryId,
       });

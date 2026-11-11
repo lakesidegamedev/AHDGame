@@ -64,6 +64,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export interface CampaignListItem {
   id: string;
@@ -703,12 +704,10 @@ async function buildBriefing(args: {
           stateNameById,
         });
       } else {
-        const party = await db
-          .collection<PoliticalParty>("politicalParties")
-          .findOne(
-            { sequentialId: Number(campaign.party), countryId: election.countryId },
-            { projection: { primaryCalendar: 1, economicPosition: 1 } }
-          );
+        const party = await politicalPartiesCollection(db).findOne(
+          { sequentialId: Number(campaign.party), countryId: election.countryId },
+          { projection: { primaryCalendar: 1, economicPosition: 1 } }
+        );
         const family = resolvePartyFamily(campaign.party, {
           primaryCalendar: party?.primaryCalendar ?? null,
           economicPosition: party?.economicPosition,
@@ -886,7 +885,7 @@ async function getPartyTreasuryAccess(
     return undefined;
   }
 
-  const candidateParty = await db.collection<PoliticalParty>("politicalParties").findOne(
+  const candidateParty = await politicalPartiesCollection(db).findOne(
     {
       sequentialId: Number(campaign.party),
       countryId: election.countryId,

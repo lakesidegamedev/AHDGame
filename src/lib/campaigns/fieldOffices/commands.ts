@@ -32,6 +32,7 @@ import {
 } from "./rules";
 import { loadFieldOfficeRegionMap } from "./subdivisions";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export const FIELD_OFFICES_COLLECTION = "campaignFieldOffices";
 
@@ -68,12 +69,10 @@ export async function loadCampaignOrientation(
 ): Promise<number> {
   const seq = Number(campaign.party);
   if (!Number.isFinite(seq) || seq <= 0) return 0;
-  const party = await db
-    .collection<PoliticalParty>("politicalParties")
-    .findOne(
-      { sequentialId: seq, countryId: countryId as PoliticalParty["countryId"] },
-      { projection: { economicPosition: 1 } }
-    );
+  const party = await politicalPartiesCollection(db).findOne(
+    { sequentialId: seq, countryId: countryId as PoliticalParty["countryId"] },
+    { projection: { economicPosition: 1 } }
+  );
   return Math.sign(party?.economicPosition ?? 0);
 }
 

@@ -11,13 +11,15 @@
 import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { PoliticalParty } from "@/lib/db/types";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export async function clearAllRegimeStatusForCountry(
   db: Db,
   countryId: CountryId
 ): Promise<{ modifiedCount: number }> {
-  const result = await db
-    .collection<PoliticalParty>("politicalParties")
-    .updateMany({ countryId }, { $set: { regimeStatus: null, updatedAt: new Date() } });
+  const result = await politicalPartiesCollection(db).updateMany(
+    { countryId },
+    { $set: { regimeStatus: null, updatedAt: new Date() } }
+  );
   return { modifiedCount: result.modifiedCount ?? 0 };
 }

@@ -28,6 +28,7 @@ import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
 import type { GameConfig } from "@/lib/db/types/gameConfig";
 import { getStatesCollection } from "@/lib/db/collections/states";
 import { getCharactersCollection } from "@/lib/db/collections/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 /**
  * Process fund generation for all characters each turn.
@@ -76,10 +77,7 @@ export async function processFundGeneration(
       const nationalGdpIndex = nationalGdpPerCapitaIndex(stateMap.values());
 
       // Use composite keys to avoid cross-country sequential ID collisions
-      const parties = await db
-        .collection<PoliticalPartyType>("politicalParties")
-        .find({})
-        .toArray();
+      const parties = await politicalPartiesCollection<PoliticalPartyType>(db).find({}).toArray();
       const partyMap = new Map(parties.map((p) => [`${p.countryId ?? "US"}:${p.sequentialId}`, p]));
 
       const statePartyOrgs = await db.collection<StatePartyOrg>("statePartyOrg").find({}).toArray();
@@ -220,7 +218,7 @@ export async function processFundGeneration(
             update: { $inc: { treasury: amount }, $set: { updatedAt: now } },
           },
         }));
-        await db.collection<PoliticalPartyType>("politicalParties").bulkWrite(partyOps);
+        await politicalPartiesCollection<PoliticalPartyType>(db).bulkWrite(partyOps);
 
         // Emit per-party treasury audit rows. Fund-generation aggregates a
         // turn's worth of national-tax dues; one credit row per party.

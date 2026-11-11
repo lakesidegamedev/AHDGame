@@ -9,6 +9,7 @@ import { WIKI_CREATE_COOLDOWN_HOURS } from "@/lib/wiki/createCooldown";
 import type { PoliticalParty, WikiPage } from "@/lib/db/types";
 import { ClaimButton } from "./ClaimButton";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export const metadata: Metadata = wikiPublicPageMetadata({
   title: "My wiki pages | A House Divided",
@@ -43,7 +44,7 @@ export default async function MyWikiPage() {
       ceoId: character._id,
       userId: character.userId,
     }),
-    db.collection<PoliticalParty>("politicalParties").findOne({
+    politicalPartiesCollection(db).findOne({
       $or: [
         { chairId: character._id },
         { viceChairId: character._id },

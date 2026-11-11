@@ -23,6 +23,7 @@ import type {
 } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export interface CabinetEligibleCharacter {
   _id: string;
@@ -170,8 +171,7 @@ export async function getEligibleCabinetCharacters(
   }
 
   // Party lookup: name for display + regimeStatus for OPS banned-party filtering.
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const parties = await politicalPartiesCollection(db)
     .find({ countryId })
     .project({ sequentialId: 1, name: 1, regimeStatus: 1 })
     .toArray();

@@ -20,6 +20,7 @@ import type {
 import type { NewsPostView, NewsReplyView } from "@/lib/news/dto/newsView";
 import { serializeNewsPost, serializeNewsReply } from "@/lib/news/dto/newsView";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 interface CreateNewsPostInput {
   userId: string;
@@ -487,12 +488,10 @@ async function sendNewsDiscordWebhook(
     let partyName: string | undefined;
     const partyId = character.party ? parseInt(String(character.party), 10) : Number.NaN;
     if (!Number.isNaN(partyId)) {
-      const partyDoc = await db
-        .collection<PoliticalParty>("politicalParties")
-        .findOne(
-          { sequentialId: partyId, countryId: character.countryId } as Record<string, unknown>,
-          { projection: { name: 1 } }
-        );
+      const partyDoc = await politicalPartiesCollection(db).findOne(
+        { sequentialId: partyId, countryId: character.countryId } as Record<string, unknown>,
+        { projection: { name: 1 } }
+      );
       partyName = partyDoc?.name ?? String(character.party);
     }
 

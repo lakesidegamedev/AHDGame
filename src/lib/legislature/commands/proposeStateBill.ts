@@ -23,6 +23,7 @@ import { snapshotPolicyProvisionsInPlace } from "@/lib/legislature/provisionEnri
 import { validateStateBillProvisions } from "@/lib/legislature/commands/validateStateBillProvisions";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 const VOTING_DURATION_HOURS = 24;
 
@@ -100,9 +101,10 @@ export async function proposeStateBill(
   // lifts the banned-party restriction.
   const runtimeState = await getCountryState(db, countryId);
   if (runtimeState.governmentType === "onePartyState" && character.party) {
-    const sponsorParty = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ sequentialId: parseInt(character.party, 10), countryId });
+    const sponsorParty = await politicalPartiesCollection(db).findOne({
+      sequentialId: parseInt(character.party, 10),
+      countryId,
+    });
     // RUNTIME shape, not `postCountryConfig` — see the note in `nationalBillActions`.
     if (isBannedParty({ governmentType: runtimeState.governmentType }, sponsorParty)) {
       return {

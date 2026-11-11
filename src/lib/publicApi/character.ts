@@ -20,6 +20,7 @@ import { partyUrl } from "@/lib/urls";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -97,8 +98,7 @@ async function enrichPublicCharacters(db: Db, characters: Character[]): Promise<
 
   const [parties, states, userDocs, activeCandidacies] = await Promise.all([
     partyLookups.length > 0
-      ? db
-          .collection<PoliticalParty>("politicalParties")
+      ? politicalPartiesCollection(db)
           .find({
             $or: partyLookups.map((l) => ({
               countryId: l.countryId,

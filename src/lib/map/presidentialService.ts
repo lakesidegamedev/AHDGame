@@ -11,6 +11,7 @@ import {} from "@/lib/constants";
 import { loadApportionment } from "@/lib/elections/apportionment";
 import { getGameStateCollection } from "@/lib/db/collections";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export interface MapPresidentialState {
   leadingParty: string;
@@ -50,7 +51,7 @@ export async function computePresidentialMap(
   totalElectoralVotes?: number;
 }> {
   const [parties, allStates] = await Promise.all([
-    db.collection<PoliticalParty>("politicalParties").find({ countryId }).toArray(),
+    politicalPartiesCollection(db).find({ countryId }).toArray(),
     statesCollection(db).find({ countryId }).toArray(),
   ]);
 

@@ -2,6 +2,7 @@ import type { Db } from "mongodb";
 import type { PoliticalParty } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 /**
  * Recompute and persist a party's denormalized `memberCount` from live
@@ -27,8 +28,9 @@ export async function recomputePartyMemberCount(
     db.collection("npps").countDocuments({ party: partyKey, countryId, retiredAt: null }),
   ]);
   const memberCount = characterCount + nppCount;
-  await db
-    .collection<PoliticalParty>("politicalParties")
-    .updateOne({ sequentialId, countryId }, { $set: { memberCount, updatedAt: new Date() } });
+  await politicalPartiesCollection(db).updateOne(
+    { sequentialId, countryId },
+    { $set: { memberCount, updatedAt: new Date() } }
+  );
   return memberCount;
 }

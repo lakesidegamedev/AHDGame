@@ -58,6 +58,7 @@ import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export type {
   PollingData,
@@ -309,8 +310,7 @@ export async function resolveElections(
           )
           .toArray()
       : Promise.resolve([] as NPP[]),
-    db
-      .collection<PoliticalParty>("politicalParties")
+    politicalPartiesCollection(db)
       .find({ countryId: { $in: uniqueCountryIds } })
       .toArray(),
     db

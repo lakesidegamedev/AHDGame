@@ -7,6 +7,7 @@ import { handleRouteError, badRequest, notFound, errorResponse } from "@/lib/api
 import type { Coalition } from "@/lib/db/types/coalition";
 import type { PoliticalParty } from "@/lib/db/types/party";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 const removePartySchema = z.object({
   partySequentialId: z.number().int().positive(),
@@ -43,9 +44,10 @@ export async function POST(
       throw notFound("Coalition not found.");
     }
 
-    const party = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ sequentialId: partySequentialId, countryId });
+    const party = await politicalPartiesCollection(db).findOne({
+      sequentialId: partySequentialId,
+      countryId,
+    });
     if (!party) {
       throw notFound("Party not found.");
     }
@@ -70,9 +72,9 @@ export async function POST(
       );
       const nextMember = sorted[0]!;
 
-      const newChairParty = await db
-        .collection<PoliticalParty>("politicalParties")
-        .findOne({ _id: nextMember.partyId });
+      const newChairParty = await politicalPartiesCollection(db).findOne({
+        _id: nextMember.partyId,
+      });
 
       const newChairCharacterId = newChairParty?.chairId ?? null;
 
@@ -101,9 +103,10 @@ export async function POST(
     // Clear coalitionId on the removed party only if it actually pointed at this coalition.
     // See leave/kick routes for the same conditional-clear rationale.
     if (party.coalitionId && party.coalitionId.equals(coalition._id)) {
-      await db
-        .collection<PoliticalParty>("politicalParties")
-        .updateOne({ _id: party._id }, { $set: { coalitionId: null } });
+      await politicalPartiesCollection(db).updateOne(
+        { _id: party._id },
+        { $set: { coalitionId: null } }
+      );
     }
 
     return NextResponse.json({ success: true });

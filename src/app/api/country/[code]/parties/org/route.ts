@@ -7,6 +7,7 @@ import { getDb } from "@/lib/mongodb";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import type { StatePartyOrg, PoliticalParty } from "@/lib/db/types";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 // GET /api/country/[code]/parties/org — Return aggregate party organization totals across all states
 // Auth: public
@@ -25,8 +26,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     const orgFilter = { organization: { $gt: 0 }, countryId };
 
     const [parties, orgRecords] = await Promise.all([
-      db
-        .collection<PoliticalParty>("politicalParties")
+      politicalPartiesCollection(db)
         .find(partyFilter)
         .project({ _id: 1, name: 1, abbreviation: 1, color: 1, sequentialId: 1 })
         .toArray(),

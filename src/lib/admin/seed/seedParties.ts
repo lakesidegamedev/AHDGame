@@ -4,6 +4,7 @@ import { getNextSequentialId } from "@/lib/db/sequentialId";
 import { politicalParties } from "@/lib/seeds/reference/politicalParties";
 import { generateStatePartyOrg } from "@/lib/seeds/reference/statePartyOrg";
 import { fillAbsentSeedFields } from "./fillAbsentSeedFields";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export async function seedParties(db: Db, log: (msg: string) => void) {
   // NOTE: Never drop politicalParties collection - it would delete player-created third parties
@@ -15,9 +16,10 @@ export async function seedParties(db: Db, log: (msg: string) => void) {
   for (const party of politicalParties) {
     const { seedOrder: _seedOrder, validForPresets: _validForPresets, ...partyData } = party;
     // Check if party already exists by name + country
-    const existing = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ name: party.name, countryId: party.countryId });
+    const existing = await politicalPartiesCollection(db).findOne({
+      name: party.name,
+      countryId: party.countryId,
+    });
 
     if (existing) {
       // Fill gaps only — never overwrite. This runs against LIVE worlds, where
@@ -31,9 +33,10 @@ export async function seedParties(db: Db, log: (msg: string) => void) {
         preserved++;
         continue;
       }
-      await db
-        .collection<PoliticalParty>("politicalParties")
-        .updateOne({ _id: existing._id }, { $set: { ...gaps, updatedAt: now } });
+      await politicalPartiesCollection(db).updateOne(
+        { _id: existing._id },
+        { $set: { ...gaps, updatedAt: now } }
+      );
       filled++;
     } else {
       // Insert new party with generated _id and sequentialId
@@ -45,7 +48,7 @@ export async function seedParties(db: Db, log: (msg: string) => void) {
         createdAt: now,
         updatedAt: now,
       };
-      await db.collection<PoliticalParty>("politicalParties").insertOne(doc);
+      await politicalPartiesCollection(db).insertOne(doc);
       created++;
     }
   }

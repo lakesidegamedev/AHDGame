@@ -25,6 +25,7 @@ import type { Character, ElectedOfficial, PoliticalParty } from "@/lib/db/types"
 import type { CountryId } from "@/lib/constants/countries";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export async function proposePmAppointment(
   db: Db,
@@ -446,9 +447,10 @@ export async function proposeNoConfidence(
   // reaching this command, but the gate protects future one-party
   // states that opt into confidence votes from non-ruling-party VONCs.
   const proposerPartySeqId = parseInt(proposerOfficial.party ?? "0", 10);
-  const proposerParty = await db
-    .collection<PoliticalParty>("politicalParties")
-    .findOne({ countryId, sequentialId: proposerPartySeqId });
+  const proposerParty = await politicalPartiesCollection(db).findOne({
+    countryId,
+    sequentialId: proposerPartySeqId,
+  });
   // Runtime governmentType so a post-Stage-4 conversion immediately
   // changes the ruling-party VONC gate.
   const vonRuntime = await getCountryState(db, countryId);

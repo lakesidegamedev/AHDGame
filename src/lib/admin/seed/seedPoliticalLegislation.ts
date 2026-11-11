@@ -48,6 +48,7 @@ import {
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
 
 /** Player books refit per category to their authored opening composition, by world year. */
 const OPENING_COMPOSITION_REFIT: Readonly<Partial<Record<number, readonly LawCountryId[]>>> = {
@@ -322,7 +323,10 @@ async function calibratePlayerOpeningPrograms(
     const budgetId = getNationalBudgetId(countryId);
     const budget = await federalBudgetCollection(db).findOne({ _id: budgetId });
     if (!budget) {
-      const regions = await db.collection("states").countDocuments({ countryId }, { limit: 1 });
+      const regions = await statesCollection<Document>(db).countDocuments(
+        { countryId },
+        { limit: 1 }
+      );
       if (regions === 0) continue;
       throw new Error(`Missing ${year} ${countryId} national budget after law sync`);
     }

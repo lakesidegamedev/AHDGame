@@ -2,6 +2,7 @@ import { ObjectId, type Db } from "mongodb";
 import type { PoliticalParty, User } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export interface ReporterDisplay {
   characterName: string | null;
@@ -39,8 +40,7 @@ export async function loadReporterDisplayMap(
   }
   const partyMap = new Map<string, PoliticalParty>();
   if (partyIds.size > 0) {
-    const parties = await db
-      .collection<PoliticalParty>("politicalParties")
+    const parties = await politicalPartiesCollection(db)
       .find({ sequentialId: { $in: [...partyIds].map(Number) } })
       .toArray();
     for (const p of parties) {

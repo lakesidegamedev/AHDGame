@@ -12,6 +12,7 @@ import { canInviteToCoalition, isBannedParty } from "@/lib/turn/onePartyConstrai
 import { getCountryState } from "@/lib/countryState";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 const inviteSchema = z.object({
   partySequentialId: z.number().int().positive(),
@@ -61,9 +62,10 @@ export async function POST(
     }
 
     // Find target party
-    const targetParty = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ sequentialId: parsed.data.partySequentialId, countryId });
+    const targetParty = await politicalPartiesCollection(db).findOne({
+      sequentialId: parsed.data.partySequentialId,
+      countryId,
+    });
     if (!targetParty) {
       throw notFound("Target party not found.");
     }
@@ -74,9 +76,10 @@ export async function POST(
     const runtimeConfig = { governmentType: runtime.governmentType };
     if (runtime.governmentType === "onePartyState") {
       const invitingPartySeqId = parseInt(character.party ?? "0", 10);
-      const invitingParty = await db
-        .collection<PoliticalParty>("politicalParties")
-        .findOne({ sequentialId: invitingPartySeqId, countryId });
+      const invitingParty = await politicalPartiesCollection(db).findOne({
+        sequentialId: invitingPartySeqId,
+        countryId,
+      });
       if (!canInviteToCoalition(runtimeConfig, invitingParty)) {
         throw forbidden("Only the ruling party may invite parties to a coalition in this country.");
       }

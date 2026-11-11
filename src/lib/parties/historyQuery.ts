@@ -6,6 +6,7 @@ import type {
   PartyMembershipEventReason,
   PoliticalParty,
 } from "@/lib/db/types";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 /** Shape passed to the UI for one observed membership transition. */
 export interface PartyHistoryEntry {
@@ -104,8 +105,7 @@ export async function fetchPartyNameChanges(
     .filter((id) => Number.isInteger(id));
   if (sequentialIds.length === 0) return [];
 
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const parties = await politicalPartiesCollection(db)
     .find({ sequentialId: { $in: sequentialIds } })
     .project({ _id: 1, countryId: 1, sequentialId: 1 })
     .toArray();

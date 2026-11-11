@@ -18,6 +18,8 @@ import type {
   StateElectionIssue,
 } from "@/lib/admin/partyElectionIssues";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import type { Document } from "mongodb";
 
 /**
  * GET /api/admin/heal/party-elections
@@ -271,8 +273,7 @@ export async function POST() {
         const partySeqId = Number.parseInt(election.partyId, 10);
         if (!Number.isNaN(partySeqId)) {
           // Find all parties with this sequentialId to handle cross-country cases
-          const parties = await db
-            .collection("politicalParties")
+          const parties = await politicalPartiesCollection<Document>(db)
             .find({ sequentialId: partySeqId })
             .toArray();
           if (parties.length === 1 && parties[0].countryId) {
@@ -346,8 +347,7 @@ export async function POST() {
         const partySeqId = Number.parseInt(election.partyId, 10);
         if (!Number.isNaN(partySeqId)) {
           // Find all parties with this sequentialId to handle cross-country cases
-          const parties = await db
-            .collection("politicalParties")
+          const parties = await politicalPartiesCollection<Document>(db)
             .find({ sequentialId: partySeqId })
             .toArray();
           if (parties.length === 1 && parties[0].countryId) {

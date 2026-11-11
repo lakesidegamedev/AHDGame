@@ -25,6 +25,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import type { PoliticalParty, StatePartyOrg, StateRegistrationPool } from "@/lib/db/types";
 import { NUMERIC_BSON_TYPE } from "@/lib/db/queryHelpers";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 interface SeedResult {
   presetUsed: string;
@@ -93,7 +94,7 @@ export async function seedRegistrationLanes(
 
   // Build a per-country `abbr → sequentialId` lookup once. Parties seeded
   // via `runSeed` / country seeders have a stable `abbreviation` field.
-  const allParties = await db.collection<PoliticalParty>("politicalParties").find({}).toArray();
+  const allParties = await politicalPartiesCollection(db).find({}).toArray();
   const abbrLookup: Record<CountryId, Map<string, string>> = {
     US: new Map(),
     UK: new Map(),

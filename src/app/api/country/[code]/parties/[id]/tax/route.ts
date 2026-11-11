@@ -8,6 +8,7 @@ import { findPartyBySequentialId } from "@/lib/db/partyLookup";
 import type { PoliticalParty } from "@/lib/db/types";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -66,7 +67,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const now = new Date();
 
     // Update the tax rate
-    await db.collection<PoliticalParty>("politicalParties").updateOne(
+    await politicalPartiesCollection(db).updateOne(
       { _id: party._id },
       {
         $set: {

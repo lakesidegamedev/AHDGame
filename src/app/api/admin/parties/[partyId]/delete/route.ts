@@ -25,6 +25,7 @@ import { notifyGovernorOfSenateVacancy } from "@/lib/governors/senateVacancy";
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export async function POST(request: Request, { params }: { params: Promise<{ partyId: string }> }) {
   try {
@@ -48,9 +49,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ par
     const db = await getDb();
 
     // Resolve party by (sequentialId, countryId) — the canonical unique key.
-    const party = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ sequentialId: partySeqId, countryId });
+    const party = await politicalPartiesCollection(db).findOne({
+      sequentialId: partySeqId,
+      countryId,
+    });
     if (!party) {
       return errorResponse(404, "Party not found");
     }
@@ -155,7 +157,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ par
       .deleteMany({ partyId: partySeqIdStr, stateId: { $in: countryStateIds } });
 
     // Delete the national party by its ObjectId _id — the canonical primary key.
-    await db.collection<PoliticalParty>("politicalParties").deleteOne({ _id: party._id });
+    await politicalPartiesCollection(db).deleteOne({ _id: party._id });
 
     return NextResponse.json({
       success: true,

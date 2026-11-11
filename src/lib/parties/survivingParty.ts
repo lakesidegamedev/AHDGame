@@ -6,6 +6,7 @@
  */
 import type { Db, ObjectId } from "mongodb";
 import type { PoliticalParty } from "@/lib/db/types";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export type SurvivingPartyResolver = (
   partyId: string | null | undefined
@@ -26,16 +27,14 @@ export async function loadSurvivingPartyResolver(
   db: Db,
   countryId: string
 ): Promise<SurvivingPartyResolver> {
-  const merged = await db
-    .collection<PoliticalParty>("politicalParties")
+  const merged = await politicalPartiesCollection(db)
     .find({ countryId, mergedIntoPartyId: { $exists: true, $ne: null } } as never, {
       projection: { _id: 1, sequentialId: 1, mergedIntoPartyId: 1 },
     })
     .toArray();
   if (merged.length === 0) return identity;
 
-  const targets = await db
-    .collection<PoliticalParty>("politicalParties")
+  const targets = await politicalPartiesCollection(db)
     .find({ _id: { $in: merged.map((p) => p.mergedIntoPartyId as ObjectId) } } as never, {
       projection: { _id: 1, sequentialId: 1 },
     })

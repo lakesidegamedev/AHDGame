@@ -5,6 +5,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import { emitTreasuryTransaction } from "@/lib/treasury/emit";
 import type { OrgBuildFundingScope } from "@/lib/politicalStrength/buildOrgFunding";
 import { witnessOrgBuildCharge, type OrgBuildLedgerOptions } from "@/lib/parties/orgBuildLedger";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 /**
  * Cash side of the Build Org action, counterpart to `spendPoliticalStrength`.
@@ -94,13 +95,11 @@ export async function chargeOrgBuildFunds(
     );
   } else {
     holderId = input.partyId;
-    before = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOneAndUpdate(
-        { countryId: input.countryId, sequentialId: Number(input.partyId) },
-        debitPipeline(amount, input.now),
-        { returnDocument: "before" }
-      );
+    before = await politicalPartiesCollection(db).findOneAndUpdate(
+      { countryId: input.countryId, sequentialId: Number(input.partyId) },
+      debitPipeline(amount, input.now),
+      { returnDocument: "before" }
+    );
   }
 
   if (!before) return { charged: 0 };

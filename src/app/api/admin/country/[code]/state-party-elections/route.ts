@@ -41,6 +41,7 @@ import type {
 } from "@/lib/db/types";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { getGameTime } from "@/lib/time/gameTime";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 // Schema for POST requests
 const batchSchema = z.object({
@@ -71,7 +72,7 @@ export const GET = withAdminRoute(
     const { currentTurn } = await getGameTime();
 
     // Fetch all parties for name lookup
-    const parties = await db.collection<PoliticalParty>("politicalParties").find({}).toArray();
+    const parties = await politicalPartiesCollection(db).find({}).toArray();
     const partyByCountryAndSeqId = new Map<string, PoliticalParty>();
     for (const p of parties) {
       partyByCountryAndSeqId.set(`${p.countryId}:${p.sequentialId}`, p);

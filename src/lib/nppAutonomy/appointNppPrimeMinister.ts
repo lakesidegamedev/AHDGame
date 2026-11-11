@@ -24,6 +24,7 @@ import { chooseAutonomousCabinet } from "@/lib/government/rules/autonomousSuppor
 import { refusalBlocks } from "@/lib/government/rules/coalitionRefusals";
 import { isNppAutonomyActive } from "./featureFlag";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 /**
  * Seat an NPP Prime Minister for `countryId` when government formation has
@@ -64,8 +65,7 @@ export async function appointNppPrimeMinister(
 
   const majorityThreshold =
     gov.majorityThreshold ?? getCountryConfig(countryId, preset).coalitionThreshold;
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const parties = await politicalPartiesCollection(db)
     .find(
       { countryId, sequentialId: { $in: Object.keys(seatsByParty).map(Number) } },
       {

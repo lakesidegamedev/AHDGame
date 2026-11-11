@@ -16,6 +16,7 @@ import { PartyTerritoryError } from "./relocationTerritory";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import type { Document } from "mongodb";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export interface ApplyCharacterPartyJoinArgs {
   db: Db;
@@ -206,12 +207,10 @@ export async function applyCharacterPartyJoin(
       // We just verified the character's country matches the new party's country
       // via isSameCountry upstream, so countryId (URL/new-party country) == old-party country.
       if (oldParty && oldParty !== "independent") {
-        await db
-          .collection<PoliticalParty>("politicalParties")
-          .updateOne(
-            { sequentialId: parseInt(oldParty, 10), countryId },
-            { $inc: { memberCount: -1 } }
-          );
+        await politicalPartiesCollection(db).updateOne(
+          { sequentialId: parseInt(oldParty, 10), countryId },
+          { $inc: { memberCount: -1 } }
+        );
       }
 
       // Vacant national chair: optionally auto-assign to joiner (gameConfig
@@ -236,7 +235,7 @@ export async function applyCharacterPartyJoin(
         partyUpdate.updatedAt = now;
       }
 
-      await db.collection<PoliticalParty>("politicalParties").updateOne(
+      await politicalPartiesCollection(db).updateOne(
         { _id: party._id },
         {
           $inc: { memberCount: 1 },
@@ -265,12 +264,10 @@ export async function applyCharacterPartyJoin(
       if (oldParty && oldParty !== "independent") {
         const oldSeq = parseInt(oldParty, 10);
         if (!isNaN(oldSeq)) {
-          oldPartyDoc = await db
-            .collection<PoliticalParty>("politicalParties")
-            .findOne(
-              { sequentialId: oldSeq, countryId },
-              { projection: { sequentialId: 1, name: 1, countryId: 1 } }
-            );
+          oldPartyDoc = await politicalPartiesCollection(db).findOne(
+            { sequentialId: oldSeq, countryId },
+            { projection: { sequentialId: 1, name: 1, countryId: 1 } }
+          );
         }
       }
 

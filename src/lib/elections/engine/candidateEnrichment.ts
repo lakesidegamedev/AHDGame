@@ -22,6 +22,7 @@ import {
 import { buildPartyChairMaps, resolvePartyChairPrimaryRole } from "@/lib/primaryScore";
 import type { StatePartyOrg } from "@/lib/db/types/statePartyOrg";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 // ─── Fetch & enrich candidate stats ──────────────────────────────────────────
 
@@ -161,8 +162,7 @@ export async function loadCandidateEnrichmentPreload(
  * that loop over elections load this once per country and pass it in.
  */
 async function loadEnrichmentParties(db: Db, countryId?: CountryId): Promise<EnrichmentParty[]> {
-  return db
-    .collection<EnrichmentParty>("politicalParties")
+  return politicalPartiesCollection<EnrichmentParty>(db)
     .find(countryId ? { countryId } : {})
     .toArray();
 }

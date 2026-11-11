@@ -27,6 +27,7 @@ import { createInitialCampaign } from "@/lib/campaigns/createInitialCampaign";
 import { isCampaignEligibleElection } from "@/lib/campaigns/isCampaignEligible";
 import { getGameTime } from "@/lib/time/gameTime";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -76,8 +77,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     // Filter parties by election's countryId to avoid cross-country collisions
     const electionCountryId = election.countryId ?? "US";
-    const parties = await db
-      .collection<PoliticalParty>("politicalParties")
+    const parties = await politicalPartiesCollection(db)
       .find({ countryId: electionCountryId })
       .toArray();
     const partyMap = new Map(parties.map((p) => [String(p.sequentialId), p]));

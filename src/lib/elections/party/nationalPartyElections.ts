@@ -48,6 +48,7 @@ import {
 } from "./nationalPartyElectionConstants";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export {
   NATIONAL_ELECTION_DURATION_TURNS,
@@ -108,7 +109,7 @@ export async function createMissingNationalElections(
   );
 
   const [parties, activeElections, deferredElections] = await Promise.all([
-    db.collection<PoliticalParty>("politicalParties").find(scopedPartiesQuery).toArray(),
+    politicalPartiesCollection(db).find(scopedPartiesQuery).toArray(),
     db
       .collection<NationalPartyElection>("nationalPartyElections")
       .find(scopedActiveElectionQuery)
@@ -319,7 +320,7 @@ async function createMissingFoundingLeadershipElections(
   const scopedActiveElectionQuery = applyOptionalCountryScope({ status: "voting" }, countryId);
 
   const [parties, activeElections] = await Promise.all([
-    db.collection<PoliticalParty>("politicalParties").find(scopedPartiesQuery).toArray(),
+    politicalPartiesCollection(db).find(scopedPartiesQuery).toArray(),
     db
       .collection<NationalPartyElection>("nationalPartyElections")
       .find(scopedActiveElectionQuery)
@@ -492,8 +493,7 @@ export async function processCompletedNationalElections(
       ])
       .toArray(),
     sequentialPartyIds.length > 0
-      ? db
-          .collection<PoliticalParty>("politicalParties")
+      ? politicalPartiesCollection(db)
           .find({ sequentialId: { $in: sequentialPartyIds }, countryId: { $in: countryIds } })
           .toArray()
       : Promise.resolve([] as PoliticalParty[]),
@@ -810,7 +810,7 @@ export async function processCompletedNationalElections(
     );
 
   if (partyOps.length > 0) {
-    await db.collection<PoliticalParty>("politicalParties").bulkWrite(partyOps);
+    await politicalPartiesCollection(db).bulkWrite(partyOps);
   }
 
   // Sync coalition chairCharacterId when the leading party's chair changes.
@@ -850,8 +850,7 @@ export async function vacateInactiveNationalLeadership(
 ): Promise<number> {
   const now = new Date(effectiveNow);
 
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const parties = await politicalPartiesCollection(db)
     .find({
       $or: [
         { chairId: { $ne: null } },
@@ -951,7 +950,7 @@ export async function vacateInactiveNationalLeadership(
   }
 
   if (partyOps.length > 0) {
-    await db.collection<PoliticalParty>("politicalParties").bulkWrite(partyOps);
+    await politicalPartiesCollection(db).bulkWrite(partyOps);
     // Coalition chair follows the party chair (same as the chairChanges sync):
     // when the party chair is vacated for inactivity, null the led coalition's
     // chairCharacterId so it doesn't dangle on a departed leader.

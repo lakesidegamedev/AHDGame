@@ -74,6 +74,7 @@ import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 type ViewerCharacter = Character | null;
 
@@ -165,7 +166,7 @@ export async function buildCentralBankChairData(
     if (character) {
       const chairParty =
         character.party != null
-          ? await db.collection<PoliticalParty>("politicalParties").findOne({
+          ? await politicalPartiesCollection(db).findOne({
               sequentialId: Number(character.party),
               countryId: character.countryId,
             })

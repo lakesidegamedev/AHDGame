@@ -54,6 +54,7 @@ import {
 } from "@/lib/countries/jp/elections/shugiinFilingIndexes";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 const hu1991EntryBody = z
   .object({
@@ -181,7 +182,7 @@ export async function POST(request: Request, { params }: RouteParams) {
           const partySequentialId = Number.parseInt(character.party ?? "", 10);
           const registeredParty =
             Number.isSafeInteger(partySequentialId) && partySequentialId > 0
-              ? await db.collection<PoliticalParty>("politicalParties").findOne({
+              ? await politicalPartiesCollection(db).findOne({
                   countryId: "JP",
                   sequentialId: partySequentialId,
                 })
@@ -348,9 +349,10 @@ export async function POST(request: Request, { params }: RouteParams) {
       const characterPartySeqId = Number.parseInt(character.party ?? "0", 10);
       const characterParty =
         Number.isFinite(characterPartySeqId) && characterPartySeqId > 0
-          ? await db
-              .collection<PoliticalParty>("politicalParties")
-              .findOne({ countryId: electionCountry, sequentialId: characterPartySeqId })
+          ? await politicalPartiesCollection(db).findOne({
+              countryId: electionCountry,
+              sequentialId: characterPartySeqId,
+            })
           : null;
 
       if (!canFieldLegislativeCandidate(electionRuntimeConfig, characterParty)) {

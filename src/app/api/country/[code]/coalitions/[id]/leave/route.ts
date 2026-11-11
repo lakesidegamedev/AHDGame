@@ -9,6 +9,7 @@ import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { canActAsChair } from "@/lib/parties/actingChair";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 // POST /api/coalitions/[id]/leave?country= — Leave a coalition
 export async function POST(
@@ -36,9 +37,10 @@ export async function POST(
     const db = await getDb();
 
     // Find the user's party
-    const party = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ sequentialId: Number(character.party), countryId });
+    const party = await politicalPartiesCollection(db).findOne({
+      sequentialId: Number(character.party),
+      countryId,
+    });
     if (!party) {
       throw notFound("Your party was not found.");
     }
@@ -81,9 +83,9 @@ export async function POST(
       const nextMember = sorted[0]!;
 
       // Look up new chair party to get their national chair character
-      const newChairParty = await db
-        .collection<PoliticalParty>("politicalParties")
-        .findOne({ _id: nextMember.partyId });
+      const newChairParty = await politicalPartiesCollection(db).findOne({
+        _id: nextMember.partyId,
+      });
 
       const newChairCharacterId = newChairParty?.chairId ?? null;
 
@@ -135,9 +137,10 @@ export async function POST(
     // If coalitionId points elsewhere (data corruption — see invite/accept + join/accept gaps
     // pre-fix), clearing it would orphan the party from the coalition it really belongs to.
     if (party.coalitionId && party.coalitionId.equals(coalition._id)) {
-      await db
-        .collection<PoliticalParty>("politicalParties")
-        .updateOne({ _id: party._id }, { $set: { coalitionId: null } });
+      await politicalPartiesCollection(db).updateOne(
+        { _id: party._id },
+        { $set: { coalitionId: null } }
+      );
     }
 
     return NextResponse.json({ success: true, message: `Left ${coalition.name}` });

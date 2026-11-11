@@ -15,6 +15,7 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { requirePlayerTransfersEnabled } from "@/lib/api/requirePlayerTransfers";
 import { emitTreasuryTransaction } from "@/lib/treasury/emit";
 import { isSameCountry } from "@/lib/api/sameCountry";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; slug: string }>;
@@ -102,9 +103,7 @@ export async function POST(request: Request, { params }: RouteParams) {
         throw badRequest(`Insufficient caucus funds. Available: $${treasury.toLocaleString()}`);
       }
 
-      await db
-        .collection<PoliticalParty>("politicalParties")
-        .updateOne({ _id: party._id }, partyCredit, { session });
+      await politicalPartiesCollection(db).updateOne({ _id: party._id }, partyCredit, { session });
     };
 
     const applyTransferWithoutTransaction = async () => {
@@ -120,9 +119,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       }
 
       try {
-        await db
-          .collection<PoliticalParty>("politicalParties")
-          .updateOne({ _id: party._id }, partyCredit);
+        await politicalPartiesCollection(db).updateOne({ _id: party._id }, partyCredit);
       } catch (error) {
         await db.collection<Caucus>("caucuses").updateOne(
           { _id: caucus._id },

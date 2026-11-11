@@ -1,6 +1,7 @@
 import type { Db } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import type { PoliticalParty, StatePartyOrg } from "@/lib/db/types";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 /**
  * Per-turn validator for `Party.priorityRegion`. Auto-evicts ineligible
@@ -32,8 +33,7 @@ export async function processPriorityRegionDecay(
     statesEvicted: 0,
   };
 
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const parties = await politicalPartiesCollection(db)
     .find({ priorityRegion: { $exists: true } })
     .toArray();
   result.partiesScanned = parties.length;
@@ -61,7 +61,7 @@ export async function processPriorityRegionDecay(
     if (evicted === 0) continue;
 
     result.statesEvicted += evicted;
-    await db.collection<PoliticalParty>("politicalParties").updateOne(
+    await politicalPartiesCollection(db).updateOne(
       { _id: party._id },
       {
         $set: {

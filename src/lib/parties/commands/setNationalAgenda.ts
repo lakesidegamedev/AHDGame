@@ -2,6 +2,7 @@ import type { Db, ObjectId } from "mongodb";
 import { ObjectId as ObjectIdCtor } from "mongodb";
 import type { PartyAgenda, PoliticalParty } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 /**
  * Chair-only command to set the National Agenda for a party.
@@ -36,7 +37,7 @@ export async function setNationalAgenda(
   const headline = input.headline.trim();
   if (!headline) return { ok: false, reason: "blank-headline" };
 
-  const party = await db.collection<PoliticalParty>("politicalParties").findOne({
+  const party = await politicalPartiesCollection(db).findOne({
     countryId: input.countryId,
     sequentialId: Number(input.partyId),
   });

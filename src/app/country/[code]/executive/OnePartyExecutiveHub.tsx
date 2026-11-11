@@ -54,6 +54,7 @@ import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 type PartyRowMeta = {
   seqKey: string;
@@ -424,8 +425,7 @@ export async function OnePartyExecutiveHub({ countryId }: { countryId: CountryId
       sortedParties.map(([key]) => Number.parseInt(key, 10)).filter((n) => !Number.isNaN(n))
     ),
   ];
-  const partyDocs = await db
-    .collection<PoliticalParty>("politicalParties")
+  const partyDocs = await politicalPartiesCollection(db)
     .find({ countryId, sequentialId: { $in: partySeqNums } })
     .toArray();
   const partyBySeq = new Map(partyDocs.map((party) => [String(party.sequentialId), party]));
@@ -440,7 +440,7 @@ export async function OnePartyExecutiveHub({ countryId }: { countryId: CountryId
   const governingPartyDoc =
     govPartyId && !Number.isNaN(Number.parseInt(govPartyId, 10))
       ? (partyBySeq.get(govPartyId) ??
-        (await db.collection<PoliticalParty>("politicalParties").findOne({
+        (await politicalPartiesCollection(db).findOne({
           countryId,
           sequentialId: Number.parseInt(govPartyId, 10),
         })))
@@ -452,7 +452,7 @@ export async function OnePartyExecutiveHub({ countryId }: { countryId: CountryId
     if (!Number.isNaN(seq)) {
       premierPartyDoc =
         partyBySeq.get(premier.party) ??
-        (await db.collection<PoliticalParty>("politicalParties").findOne({
+        (await politicalPartiesCollection(db).findOne({
           countryId,
           sequentialId: seq,
         }));
@@ -540,7 +540,7 @@ export async function OnePartyExecutiveHub({ countryId }: { countryId: CountryId
     if (!Number.isNaN(seq)) {
       presidentPartyDoc =
         partyBySeq.get(presidentOfficial.party) ??
-        (await db.collection<PoliticalParty>("politicalParties").findOne({
+        (await politicalPartiesCollection(db).findOne({
           countryId,
           sequentialId: seq,
         }));

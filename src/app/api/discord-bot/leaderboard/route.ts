@@ -9,6 +9,7 @@ import { getEnabledCountryIds } from "@/lib/countryAccess";
 import type { User, PoliticalParty } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -100,8 +101,7 @@ export async function GET(request: Request) {
     }
     const parties =
       partyLookups.length > 0
-        ? await db
-            .collection<PoliticalParty>("politicalParties")
+        ? await politicalPartiesCollection(db)
             .find({
               $or: partyLookups.map((l) => ({
                 countryId: l.countryId,

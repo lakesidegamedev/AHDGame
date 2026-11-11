@@ -16,6 +16,8 @@ import { buildCeoAffiliations, type NppCorpCeoAffiliation } from "@/lib/admin/np
 import { nppAutonomyAtLeast } from "@/lib/nppAutonomy/featureFlag";
 import { NPP_ENGINE_LEVEL } from "@/lib/nppAutonomy/engineVersion";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import type { Document } from "mongodb";
 
 export interface GatherNppCeoAffiliationsOptions {
   /** Load each free NPP's CEO track record (v6 selection only). */
@@ -37,8 +39,7 @@ export async function gatherNppCeoAffiliations(
   countryId: CountryId,
   options: GatherNppCeoAffiliationsOptions = {}
 ): Promise<NppCorpCeoAffiliation[]> {
-  const partyDocs = await db
-    .collection("politicalParties")
+  const partyDocs = await politicalPartiesCollection<Document>(db)
     .find({ countryId, isDefunct: { $ne: true } })
     .project<{ sequentialId: number }>({ sequentialId: 1 })
     .toArray();

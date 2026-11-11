@@ -10,6 +10,8 @@ import {
 import type { GameState } from "@/lib/db/types/gameState";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import type { Document } from "mongodb";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -101,8 +103,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     const allPartyIds = [...new Set([...charPartyMap.values()].filter(Boolean))];
     const parties =
       allPartyIds.length > 0
-        ? await db
-            .collection("politicalParties")
+        ? await politicalPartiesCollection<Document>(db)
             .find({
               countryId: "US",
               sequentialId: { $in: allPartyIds.map((id: string) => Number(id)) },

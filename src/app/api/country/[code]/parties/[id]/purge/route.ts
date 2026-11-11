@@ -32,6 +32,7 @@ import { prunePurgeRejoinBlocks } from "@/lib/parties/antiAbuseGuards";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import type { Document } from "mongodb";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 // POST /api/country/[code]/parties/[id]/purge — Chair expels a regular member from the party.
 // Auth: requireAuthWithCharacter (chair only)
@@ -180,7 +181,7 @@ export async function POST(
       );
 
       // Update party: decrement count and record purge turn + count
-      await db.collection<PoliticalParty>("politicalParties").updateOne(
+      await politicalPartiesCollection(db).updateOne(
         { _id: party._id },
         {
           $inc: { memberCount: -1 },

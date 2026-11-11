@@ -11,6 +11,7 @@ import {
 } from "./districtedResolution";
 import { buildNomineesByParty, buildSeatResult } from "./districtedSeatResult";
 import { getMultiSeatMinShare } from "@/lib/elections/resolution/seatAllocation";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export interface DistrictedArgs {
   countryId: string;
@@ -150,8 +151,7 @@ export async function districtedHouseResolution(
   // Build a party→pool lookup keyed by the identifier forms candidate.party may use.
   const parties =
     args.preloadedParties ??
-    (await db
-      .collection<PoliticalParty>("politicalParties")
+    (await politicalPartiesCollection(db)
       .find({ countryId: args.countryId } as Partial<PoliticalParty>)
       .toArray());
   const poolByKey = new Map<string, Pool>();

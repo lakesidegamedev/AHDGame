@@ -21,6 +21,7 @@ import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 const HISTORY_CAP = 12;
@@ -36,8 +37,7 @@ export async function queryCountrySummary(db: Db, country: string) {
         $in: ["president", "prime_minister", "primeMinister", "chancellor", "taoiseach"],
       },
     } as Filter<ElectedOfficial>),
-    db
-      .collection<PoliticalParty>("politicalParties")
+    politicalPartiesCollection(db)
       .find({ countryId: country } as Filter<PoliticalParty>)
       .toArray(),
     electedOfficialsCollection(db)
@@ -261,8 +261,7 @@ export async function queryLegislature(db: Db, country: string) {
         ...(countryHasFeature("bgAdmin", country) ? { officeType: "assemblyDeputy" } : {}),
       } as Filter<ElectedOfficial>)
       .toArray(),
-    db
-      .collection<PoliticalParty>("politicalParties")
+    politicalPartiesCollection(db)
       .find({ countryId: country } as Filter<PoliticalParty>)
       .toArray(),
     db

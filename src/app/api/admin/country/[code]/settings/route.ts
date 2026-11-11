@@ -35,6 +35,8 @@ import {
 import { enterCountryForPlayers, exitCountryForPlayers } from "@/lib/world/playerHandoff";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import type { Document } from "mongodb";
 
 interface RouteContext {
   params: Promise<{ code: string }>;
@@ -148,7 +150,7 @@ export const GET = withAdminRoute(async (_auth, request: Request, { params }: Ro
     gameStateCollection(db).findOne({ _id: "current" }),
     charactersCollection(db).countDocuments({ countryId }),
     db.collection("npps").countDocuments({ countryId }),
-    db.collection("politicalParties").countDocuments({ countryId }),
+    politicalPartiesCollection<Document>(db).countDocuments({ countryId }),
   ]);
 
   const presetId = resolvePresetIdFromGameState(gameState);

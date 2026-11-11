@@ -47,6 +47,7 @@ export type {
 import { countedTurns } from "@/lib/elections/snapshotTurns";
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 // ─── Route handler ────────────────────────────────────────────────────────────
 
@@ -102,7 +103,7 @@ export async function GET(request: Request) {
             { $group: { _id: "$electionId", doc: { $first: "$$ROOT" } } },
           ])
           .toArray(),
-        db.collection("politicalParties").find({}).toArray(),
+        politicalPartiesCollection<Document>(db).find({}).toArray(),
         statesCollection<Document>(db)
           .find({}, { projection: { _id: 1, name: 1 } })
           .toArray(),

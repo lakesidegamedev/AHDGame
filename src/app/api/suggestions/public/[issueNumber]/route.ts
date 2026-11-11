@@ -14,6 +14,7 @@ import {
   discordSubmitHandleForChip,
   discordSubmitPrimaryLabel,
 } from "@/lib/suggestions/discordSubmitAttribution";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 // GET /api/suggestions/public/[issueNumber] — Public suggestion detail for forum thread.
 // Auth: public
@@ -61,7 +62,7 @@ export const GET = withNoStore(async function GET(
       reporterCountryId = character?.countryId ?? null;
 
       if (character?.party && character.party !== "independent") {
-        const party = await db.collection<PoliticalParty>("politicalParties").findOne({
+        const party = await politicalPartiesCollection(db).findOne({
           sequentialId: parseInt(character.party),
           countryId: character.countryId,
         });

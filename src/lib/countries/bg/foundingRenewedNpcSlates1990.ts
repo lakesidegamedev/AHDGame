@@ -12,6 +12,7 @@ import {
   bgFoundingOpenNominationDistricts,
 } from "./rules/foundingRenewal1990";
 import { BG_1990_CONSTITUENCIES } from "./data/foundingDistricts1990";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 function stableId(key: string) {
   return new ObjectId(createHash("sha256").update(key).digest("hex").slice(0, 24));
@@ -30,8 +31,7 @@ export async function planBgFoundingRenewedNpcSlates(input: {
   const regions = [
     ...new Set(BG_1990_CONSTITUENCIES.filter((row) => open.has(row.id)).map((row) => row.regionId)),
   ];
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const parties = await politicalPartiesCollection(db)
     .find(
       { countryId: "BG", regimeStatus: { $ne: "banned" } },
       { session, projection: { sequentialId: 1 } }

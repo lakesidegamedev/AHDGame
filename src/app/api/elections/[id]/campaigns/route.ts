@@ -24,6 +24,7 @@ import { campaignAnchorToLocal, getCampaignCurrency } from "@/lib/campaigns/camp
 import { isCampaignUpgradeGeneralPhase } from "@/lib/elections/phases";
 import { getGameTime } from "@/lib/time/gameTime";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -174,8 +175,7 @@ export async function GET(request: Request, { params }: RouteParams) {
             .toArray()
         : Promise.resolve([]),
       partyIds.size > 0
-        ? db
-            .collection<PoliticalParty>("politicalParties")
+        ? politicalPartiesCollection(db)
             .find(
               { countryId: electionCountryId, sequentialId: { $in: Array.from(partyIds) } },
               { projection: { sequentialId: 1, name: 1, abbreviation: 1, color: 1 } }

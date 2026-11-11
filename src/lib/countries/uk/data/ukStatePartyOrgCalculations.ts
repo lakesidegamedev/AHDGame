@@ -4,6 +4,7 @@ import { UK_REGION_POLLING_2024 } from "@/lib/countries/uk/data/ukRegionPolling2
 import { UK_REGION_POLLING_1992 } from "@/lib/countries/uk/data/ukRegionPolling1992";
 import { UK_REGION_POLLING_1951 } from "@/lib/countries/uk/data/ukRegionPolling1951";
 import type { StatePartyOrg, PoliticalParty } from "@/lib/db/types";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 /**
  * Calculate UK state party organization levels from era polling data
@@ -58,8 +59,7 @@ function calculateUKPartyOrg(voteShare: number): number {
  * preset switches).
  */
 export async function buildUKPartySlugToSeqId(db: Db): Promise<Record<string, string>> {
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const parties = await politicalPartiesCollection(db)
     .find({ countryId: "UK" })
     .project<{ name: string; sequentialId: number }>({ name: 1, sequentialId: 1 })
     .toArray();

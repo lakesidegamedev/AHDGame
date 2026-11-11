@@ -11,6 +11,7 @@ import {
   psInvestmentRate,
 } from "@/lib/turn/politicalStrength/strengthConstants";
 import type { PoliticalParty } from "@/lib/db/types";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -81,12 +82,10 @@ export async function POST(request: Request, { params }: RouteParams) {
   }
 
   const now = new Date();
-  await db
-    .collection<PoliticalParty>("politicalParties")
-    .updateOne(
-      { _id: party._id },
-      { $set: { psInvestmentBudget: parsed.data.budget, updatedAt: now } }
-    );
+  await politicalPartiesCollection(db).updateOne(
+    { _id: party._id },
+    { $set: { psInvestmentBudget: parsed.data.budget, updatedAt: now } }
+  );
 
   return NextResponse.json({
     ok: true,

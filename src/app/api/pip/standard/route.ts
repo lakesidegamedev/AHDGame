@@ -20,6 +20,7 @@ import {
 import type { User, Notification, PoliticalParty, State, StatePartyOrg } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export async function GET() {
   try {
@@ -53,7 +54,7 @@ export async function GET() {
         ? statesCollection(db).findOne({ _id: character.homeState, countryId: character.countryId })
         : null,
       character.party && Number.isFinite(Number(character.party))
-        ? db.collection<PoliticalParty>("politicalParties").findOne({
+        ? politicalPartiesCollection(db).findOne({
             sequentialId: Number(character.party),
             countryId: character.countryId,
           })
