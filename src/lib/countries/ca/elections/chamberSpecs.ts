@@ -17,6 +17,8 @@ export const CA_COMMONS_SPEC = defineChamberSpec({
   electionType: "caCommons",
   constituencies: "regions",
   seats: { kind: "stateField", field: "houseDistricts", missing: "throw" },
+  // Descriptive: Canada elects by first past the post. The resolver allocates a region's
+  // seats by vote share (see the election systems in the country facts).
   electoralSystem: "plurality",
   cycle: { anchor: "caCommons", periodHours: 192 },
   gate: "countryLive",

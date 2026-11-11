@@ -75,7 +75,7 @@ export const CA_CONFIG: CountryConfig = {
     key: "provincialLegislature",
     name: "Provincial Legislature",
     shortName: "Provincial Legislature",
-    seats: 780,
+    seats: 778,
     description:
       "Elected members of the provincial and territorial legislatures, on fixed four-year terms.",
     regionalModel: true,

@@ -3,7 +3,7 @@ date: 2026-11-11
 title: "Canada's provincial legislatures hold elections"
 summary: >-
   Each Canadian province and territory now elects its own legislature, on its
-  own fixed election date, for 780 seats in total.
+  own fixed election date, for 778 seats in total.
 tags: [elections, canada]
 badges: [minor]
 areas: [engine]

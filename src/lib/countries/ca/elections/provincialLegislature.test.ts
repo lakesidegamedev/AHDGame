@@ -22,13 +22,13 @@ describe("Canada provincial legislatures", () => {
   });
 
   it("seat the configured provincial chamber size", () => {
-    expect(CA_PROVINCIAL_SEATS_TOTAL).toBe(780);
+    expect(CA_PROVINCIAL_SEATS_TOTAL).toBe(778);
     expect(CA_CONFIG.subNationalChamber?.seats).toBe(CA_PROVINCIAL_SEATS_TOTAL);
     const total = caRegions2027.reduce(
       (sum, region) => sum + seatsForRegion(CA_PROVINCIAL_SPEC, region._id, region),
       0
     );
-    expect(total).toBe(780);
+    expect(total).toBe(778);
   });
 
   it("end each legislature's first race in its fixed-date election year", () => {

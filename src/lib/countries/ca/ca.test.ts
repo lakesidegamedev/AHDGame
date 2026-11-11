@@ -46,7 +46,7 @@ describe("Canada regions", () => {
     }
   });
 
-  it("elects 343 MPs, 105 senators and 780 provincial members in total", () => {
+  it("elects 343 MPs, 105 senators and 778 provincial members in total", () => {
     const commons = caRegions2027.reduce((sum, r) => sum + r.houseDistricts, 0);
     const senate = caRegions2027.reduce((sum, r) => sum + r.stateSenateSeats, 0);
     expect(commons).toBe(343);
@@ -54,7 +54,7 @@ describe("Canada regions", () => {
     expect(CA.elections.seats?.totals).toEqual({
       caCommons: 343,
       caSenate: 105,
-      provincialLegislature: 780,
+      provincialLegislature: 778,
     });
     expect(CA.institutions.config.legislature.lowerChamber.seats).toBe(343);
     expect(CA.institutions.config.legislature.upperChamber?.seats).toBe(105);
