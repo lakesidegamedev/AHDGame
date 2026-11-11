@@ -8,7 +8,9 @@ describe("GET /.well-known/apple-app-site-association", () => {
     const body = await res.json();
     const detail = body.applinks.details[0];
     expect(detail.appIDs).toEqual(["QNQ5G88K5D.net.lakesidegames.ahdclient"]);
-    const excluded = detail.components.filter((c: { exclude?: boolean }) => c.exclude).map((c: { "/": string }) => c["/"]);
+    const excluded = detail.components
+      .filter((c: { exclude?: boolean }) => c.exclude)
+      .map((c: { "/": string }) => c["/"]);
     expect(excluded).toEqual(["/api/*", "/login*", "/auth*", "/register*", "/logout*"]);
     expect(detail.components.at(-1)).toEqual({ "/": "/*" });
   });
