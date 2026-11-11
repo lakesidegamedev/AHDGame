@@ -30,6 +30,7 @@ import { bgParties } from "@/lib/seeds/bg/bgParties";
 import { blrParties } from "@/lib/seeds/blr/blrParties";
 import { csParties } from "@/lib/seeds/cs/csParties";
 import { balParties } from "@/lib/seeds/bal/balParties";
+import { caParties } from "@/lib/countries/ca/data/caParties";
 import { isPartyValidForPreset } from "@/lib/seeds/ensureDefaultParties";
 import type { PartySeed } from "@/lib/seeds/reference/politicalParties";
 
@@ -51,6 +52,7 @@ const ALL_PARTIES: PartySeed[] = [
   ...blrParties,
   ...csParties,
   ...balParties,
+  ...caParties,
 ];
 
 function partyNamesForPreset(preset: string): Set<string> {
