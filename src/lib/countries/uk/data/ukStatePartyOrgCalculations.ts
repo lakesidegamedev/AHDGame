@@ -5,6 +5,7 @@ import { UK_REGION_POLLING_1992 } from "@/lib/countries/uk/data/ukRegionPolling1
 import { UK_REGION_POLLING_1951 } from "@/lib/countries/uk/data/ukRegionPolling1951";
 import type { StatePartyOrg, PoliticalParty } from "@/lib/db/types";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { organizationFromVoteShare } from "@/lib/parties/rules/voteShareOrganization";
 
 /**
  * Calculate UK state party organization levels from era polling data
@@ -17,9 +18,6 @@ import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParti
  * - 0% vote → 5 org (minimal presence)
  * - 50% vote → 70 org (dominant party)
  */
-
-const MIN_ORG = 5;
-const MAX_ORG = 70;
 
 /**
  * UK party slug to display name, resolved to politicalParties.name for
@@ -39,17 +37,6 @@ const UK_PARTY_SLUG_TO_NAME: Record<string, string> = {
   uk_sf: "Sinn Féin",
   uk_uup: "Ulster Unionist Party",
 };
-
-/**
- * Calculate initial organization level from vote share.
- * @param voteShare - Party's vote share in region (0-100%)
- * @returns Organization level (5-70)
- */
-function calculateUKPartyOrg(voteShare: number): number {
-  // Scale linearly: 0% → MIN_ORG, 50% → MAX_ORG
-  const scaled = MIN_ORG + (voteShare / 50) * (MAX_ORG - MIN_ORG);
-  return Math.min(Math.max(Math.round(scaled), MIN_ORG), MAX_ORG);
-}
 
 /**
  * Build a runtime slug → sequentialId map by reading politicalParties from
@@ -106,10 +93,10 @@ export async function calculateUKStatePartyOrgs(
       if (!partySeqId) continue; // party not in DB (e.g. UUP under 2019 preset)
       // Every party in the polling table gets a row in every region. The
       // formerly-regional parties (SNP/Plaid/DUP/SF/UUP) poll 0 outside their
-      // historic home nation, so they land on the MIN_ORG floor with a 0
+      // historic home nation, so they land on the organization floor with a 0
       // registration share — present and organisable, but starting from
       // nothing rather than barred outright.
-      const org = calculateUKPartyOrg(voteShare);
+      const org = organizationFromVoteShare(voteShare);
 
       orgs.push({
         _id: `${regionId}_${partySeqId}`,

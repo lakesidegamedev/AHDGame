@@ -6,6 +6,7 @@ import {
   IE_REGION_VOTE_SHARES_1953,
 } from "@/lib/seeds/ie/ieRegionVoteShares";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { organizationFromVoteShare } from "@/lib/parties/rules/voteShareOrganization";
 
 /**
  * Calculate IE state party organization levels from estimated regional vote
@@ -24,9 +25,6 @@ import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParti
  * hardcoded ordering assumptions.
  */
 
-const MIN_ORG = 5;
-const MAX_ORG = 70;
-
 const IE_PARTY_SLUG_TO_NAME: Record<string, string> = {
   ff: "Fianna Fáil",
   fg: "Fine Gael",
@@ -36,11 +34,6 @@ const IE_PARTY_SLUG_TO_NAME: Record<string, string> = {
   wp: "Workers' Party",
   pd: "Progressive Democrats",
 };
-
-function calculateIEPartyOrg(voteShare: number): number {
-  const scaled = MIN_ORG + (voteShare / 50) * (MAX_ORG - MIN_ORG);
-  return Math.min(Math.max(Math.round(scaled), MIN_ORG), MAX_ORG);
-}
 
 /**
  * Resolve each IE party slug to the matching `sequentialId` in the DB.
@@ -84,7 +77,7 @@ export async function calculateIEStatePartyOrgs(
     for (const [partySlug, voteShare] of Object.entries(partyVotes)) {
       const partySeqId = slugToSeqId[partySlug];
       if (!partySeqId) continue;
-      const org = calculateIEPartyOrg(voteShare);
+      const org = organizationFromVoteShare(voteShare);
 
       orgs.push({
         _id: `${regionId}_${partySeqId}`,
