@@ -41,7 +41,11 @@ Holding Sea Control costs each ship 12 readiness a turn and it regains 6, a net 
 
 A carrier on station and sea control also cut or protect a land front's supply; see [Fighting a Battle](/wiki/fighting-a-battle). Combat weight ranks carrier, submarine, amphibious group, destroyer, frigate, in that order. A formation is worth what the rest of the military system says it is worth, after readiness, equipment, veterancy, damage and supply.
 
-**Berth cost** is the footprint a hull asks of the port it operates from. An ally's port gives you three quarters of its berths, a neutral's less than half, a hostile coast a fifth. Formations over capacity lose supply.
+**Berth cost** is the footprint a hull asks of its support base. Each regional port-rating point provides three berth units. A fleet can operate in nearby water while drawing on its home ports; a land region is not itself a naval operating station. Home and guest navies share the port network's physical capacity, and overcrowding reduces supply. Aircraft do not use naval berths.
+
+On the Naval and air command page, **Friendly-base access** lets a defense holder offer another nation naval or air access. The guest must accept, either nation can revoke, and access does not apply between enemies. Agreed naval bases support the base region and adjacent seas, with a three-quarter national berth allowance; agreed airbases shorten the distance to deployed wings. Alliance membership alone does not create an agreed forward base. Neutral and hostile anchorages still provide limited local support.
+
+The station comparison shows estimated next-turn supply, support base, berth allowance and shared load. Supply changes when a turn runs, not gradually over several turns. Airlift Wings on Airlift add 25 supply to their own country's formations at their station and one region away; the bonus does not stack.
 
 ## Postures (standing orders)
 

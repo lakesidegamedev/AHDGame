@@ -172,17 +172,19 @@ export function resolveSectorHeadcount(args: {
   labourPerUnitFactor?: number;
   /** 2027 world: per-state workers automation no longer employs. */
   automationDisplacedByState?: Map<string, number>;
-}): { desiredWorkers: number; workers: number } {
+}): { desiredWorkers: number; workers: number; referenceDesiredWorkers: number } {
   const rawSkill =
     args.rawWorkforceSkillByState.get(args.stateId) ??
     args.politicalBoard?.["education.adultSkills"] ??
     null;
   const factor = args.labourPerUnitFactor ?? 1;
+  const conventionalWorkers = calculateWorkers(args.revenue, rawSkill);
+  // The method-adjusted crew, so a funded automated plant is compared like for like.
+  const referenceDesiredWorkers =
+    factor < 1 ? Math.max(1, Math.round(conventionalWorkers * factor)) : conventionalWorkers;
   const desiredWorkers = args.fundedHeadcount
     ? args.fundedHeadcount.desiredWorkers
-    : factor < 1
-      ? Math.max(1, Math.round(calculateWorkers(args.revenue, rawSkill) * factor))
-      : calculateWorkers(args.revenue, rawSkill);
+    : referenceDesiredWorkers;
   accumulateLabourDemand(args.labourDemandByState, args.stateId, desiredWorkers);
   if (args.automationDisplacedByState) {
     accumulateLabourDemand(
@@ -201,10 +203,26 @@ export function resolveSectorHeadcount(args: {
   }
   return {
     desiredWorkers,
+    referenceDesiredWorkers,
     workers: args.fundedHeadcount
       ? args.fundedHeadcount.workers
       : filledWorkers(desiredWorkers, args.staffingFactor),
   };
+}
+
+/**
+ * Share of the crew-share payroll basis a funded plant actually employs.
+ * A funded run can sit far below `plantCrewShare`; pricing payroll at the crew
+ * share while dividing by the funded headcount inflated wages per worker (and
+ * the labour cost the pension charge reads) by the ratio of the two. Capped at
+ * 1 so a funded crew above the reference never raises the basis.
+ */
+export function fundedPayrollShare(args: {
+  fundedDesiredWorkers: number;
+  referenceDesiredWorkers: number;
+}): number {
+  if (!(args.referenceDesiredWorkers > 0)) return 1;
+  return Math.max(0, Math.min(1, args.fundedDesiredWorkers / args.referenceDesiredWorkers));
 }
 
 export interface SectorLabourEconomicsInput {

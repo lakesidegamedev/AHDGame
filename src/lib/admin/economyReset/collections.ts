@@ -332,6 +332,7 @@ export const ECONOMY_RESET_KEEP_COLLECTIONS: readonly string[] = Object.freeze([
   "nationalPartyLeadership",
   "nationalPartyVotes",
   "navairChannels",
+  "navairBasing",
   "navairEngagements",
   "newsPosts",
   "newsReactions",

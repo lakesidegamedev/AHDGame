@@ -22,7 +22,11 @@ import {
   CASUALTY_RATE_SCALE,
   FRONT_SUPPLY,
 } from "./config";
-import { applyReserveOdds, battleEffectiveRatio } from "./rules/battleFortune";
+import {
+  applyReserveOdds,
+  battleEffectiveRatio,
+  enemyEngagedExposure,
+} from "./rules/battleFortune";
 import { readinessBaselineOf } from "./readinessDrift";
 import { EQUIPMENT_TRACK_MAX } from "./arsenal";
 import {
@@ -892,7 +896,9 @@ function unitOutcomes(
   reserveRes: number,
   plan?: EngagementPlan,
   sideRawTotal?: number,
-  contingentSustain?: Map<string, { rearShare: number; reserveRes: number }>
+  contingentSustain?: Map<string, { rearShare: number; reserveRes: number }>,
+  /** Casualty multiplier from the enemy's engaged share of the front; 1 = no change. */
+  exposure: number = 1
 ): { unitResults: UnitResult[]; loss: number } {
   const att = units.filter((u) => u.theaterId === frontId);
   const cvOf = (u: CombatUnit) => combatValue(u, natMods, generalMods(genForUnit(binding, u)));
@@ -920,7 +926,10 @@ function unitOutcomes(
     const intensity =
       ((1 - ratio) * 0.5 + r() * 0.25) * armorMit * moraleMit * rc * sustainOf(u) * gcas;
     const casualties = Math.round(
-      u.personnel * Math.min(0.4, Math.max(0, intensity) * CASUALTY_RATE_SCALE) * (0.6 + share)
+      u.personnel *
+        Math.min(0.4, Math.max(0, intensity) * CASUALTY_RATE_SCALE) *
+        (0.6 + share) *
+        exposure
     );
     /**
      * Readiness is SUBTRACTED, not assigned. `armorMit` and `rc` are correct for a
@@ -1361,8 +1370,10 @@ export function resolvePvpBattle(
     sides: BattleSide[],
     profile: OwnSideProfile,
     sideRatio: number,
-    plan: EngagementPlan
+    plan: EngagementPlan,
+    enemyShare: number
   ): { unitResults: UnitResult[]; loss: number } => {
+    const exposure = enemyEngagedExposure(enemyShare, ATTRITION.engagedForceFloor);
     const unitResults: UnitResult[] = [];
     let loss = 0;
     // One denominator for the whole side: each contingent's combat value summed
@@ -1392,7 +1403,8 @@ export function resolvePvpBattle(
         profile.reserveRes,
         plan,
         sideRawTotal,
-        profile.contingentSustain
+        profile.contingentSustain,
+        exposure
       );
       // Stamp attribution on the way into the shared list. This is the only point
       // that still knows which contingent produced these results — once they are
@@ -1402,8 +1414,8 @@ export function resolvePvpBattle(
     }
     return { unitResults, loss };
   };
-  const attOut = sideOutcomes(attackers, PA, effRatio, fc.attackerPlan);
-  const defOut = sideOutcomes(defenders, PD, 1 - effRatio, fc.defenderPlan);
+  const attOut = sideOutcomes(attackers, PA, effRatio, fc.attackerPlan, 1 - ratio);
+  const defOut = sideOutcomes(defenders, PD, 1 - effRatio, fc.defenderPlan, ratio);
 
   // Breaking off saves men: the side that disengaged takes a fraction of the
   // casualties it would have fighting the engagement out.

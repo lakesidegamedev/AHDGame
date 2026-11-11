@@ -119,6 +119,23 @@ describe("resolvePvpBattle", () => {
     expect(wins).toBeGreaterThan(15);
   });
 
+  it("an overwhelming attacker does not bleed more per man than a thin defence", () => {
+    let attLoss = 0;
+    let attMen = 0;
+    let defLoss = 0;
+    let defMen = 0;
+    for (let s = 0; s < 20; s++) {
+      const a = side("US", "A", [300, 300, 300], "afghan");
+      const d = side("CN", "B", [40], "afghan");
+      const r = resolvePvpBattle([a], [d], "afghan", s);
+      attLoss += r.attacker.loss;
+      defLoss += r.defender.loss;
+      attMen += a.units.reduce((x, u) => x + u.personnel, 0);
+      defMen += d.units.reduce((x, u) => x + u.personnel, 0);
+    }
+    expect(attLoss / attMen).toBeLessThan((defLoss / defMen) * 0.5);
+  });
+
   it("only engages units at the theater", () => {
     const a = side("US", "A", [100], "afghan");
     a.units.push(

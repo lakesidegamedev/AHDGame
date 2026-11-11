@@ -191,6 +191,8 @@ async function sendApns(device: PushDevice, preview: PushPreview): Promise<Deliv
           alert: { title: preview.title, subtitle: preview.subtitle, body: preview.body },
           sound: "default",
           "thread-id": `ahd-${preview.thread}`,
+          // Lets the iOS app show its "Open inbox" action on the alert.
+          category: "ahd-alert",
         },
         path: preview.path,
         href: preview.href,

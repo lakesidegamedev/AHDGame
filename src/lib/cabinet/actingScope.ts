@@ -19,6 +19,7 @@ export const CABINET_ROUTE_SCOPES: Record<string, CabinetLeverScope | "operation
   "battle/declare": "operational",
   "battle/auto-join": "operational",
   "navair/mission": "operational",
+  "navair/basing": "operational",
   manpower: "operational",
   order: "operational",
   banner: "operational",

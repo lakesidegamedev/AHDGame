@@ -64,6 +64,8 @@ import {
   type DurableShiftAccumulators,
 } from "@/lib/demographics/durableRealignment";
 import type { ActivePolicy, LegislationTypeMap } from "./policyEffects";
+import type { ResetLawProgramDocument } from "@/lib/resetLegislation/program";
+import { regionalFamilyLeanPolicies } from "@/lib/resetLegislation/familyLeanEffects";
 
 /**
  * Lean shift per turn at maximum policy strength (magnitude 1, state scope).
@@ -542,6 +544,7 @@ export async function processAllStateDemographics(
           preset: 1,
           currentYear: 1,
           startingYear: 1,
+          resetWorldId: 1,
         },
       }
     ),
@@ -565,6 +568,22 @@ export async function processAllStateDemographics(
   const legTypeMap: LegislationTypeMap = new Map();
   for (const legType of allLegTypes) {
     legTypeMap.set(legType._id, legType);
+  }
+
+  // Enacted regional reset-law programs push their region's lean like state
+  // policies do. One bulk read, only in a reset world.
+  let regionalFamilyPolicies = new Map<string, ActivePolicy[]>();
+  if (gameState?.resetWorldId) {
+    const programs = await db
+      .collection<ResetLawProgramDocument>("resetLawPrograms")
+      .find(
+        { worldId: gameState.resetWorldId, scope: "regional" },
+        { projection: { regionId: 1, familyId: 1, choice: 1, scope: 1 } }
+      )
+      .toArray();
+    const { policiesByRegion, types } = regionalFamilyLeanPolicies(programs);
+    regionalFamilyPolicies = policiesByRegion;
+    for (const [id, type] of types) legTypeMap.set(id, type);
   }
 
   // Group policies by stateId
@@ -631,7 +650,11 @@ export async function processAllStateDemographics(
       ...p,
       scopeMultiplier: 1.0,
     }));
-    const policies = [...stateWithMultiplier, ...nationalPolicies];
+    const policies = [
+      ...stateWithMultiplier,
+      ...(regionalFamilyPolicies.get(state._id) ?? []),
+      ...nationalPolicies,
+    ];
 
     // Policy-less states still decay toward baseline, so there is no fast path.
     const demographics = demographicsMap.get(state._id);

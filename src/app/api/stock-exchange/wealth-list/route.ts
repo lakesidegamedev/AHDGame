@@ -16,6 +16,7 @@ import {
   computeCharacterWealth,
   sumBondValueByCharacter,
   sumStockValueByCharacter,
+  withHeldStakeIssuers,
   loadFundValueByCharacter,
 } from "@/lib/wealth/computeCharacterWealth";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
@@ -142,6 +143,7 @@ async function computeWealthListFallback(
           | "shareholders"
           | "liquidCurrencyCode"
           | "countryId"
+          | "totalShares"
         >
       >({
         _id: 1,
@@ -152,6 +154,7 @@ async function computeWealthListFallback(
         shareholders: 1,
         liquidCurrencyCode: 1,
         countryId: 1,
+        totalShares: 1,
       })
       .toArray(),
     bondsCollection(db)
@@ -181,7 +184,11 @@ async function computeWealthListFallback(
     }
   }
 
-  const stockValueByCharId = sumStockValueByCharacter(corporations, characterIdSet, fxByCurrency);
+  const stockValueByCharId = sumStockValueByCharacter(
+    await withHeldStakeIssuers(db, corporations),
+    characterIdSet,
+    fxByCurrency
+  );
   const bondValueByCharId = sumBondValueByCharacter(bonds, characterIdSet, fxByCurrency);
   const fundValueByCharId = await loadFundValueByCharacter(db, characterIds, characterIdSet);
   const incomeTaxDebts = await loadUnpaidIncomeTaxByCharacter(db, exchangeRates);

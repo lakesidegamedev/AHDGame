@@ -37,7 +37,8 @@ export function splitLiveDepartmentAccounts(
     row.programAllocationPercents = {};
   }
   for (const row of kept) {
-    if (row.accruedThroughTurn !== turn)
+    // The general treasury settlement advances only the accounts it settles.
+    if (!row.externallySettled && row.accruedThroughTurn !== turn)
       throw new Error("Source department and treasury turns disagree");
     const definition = definitions.find(
       (item) => item.id === row.departmentId && item.countryId === row.countryId
