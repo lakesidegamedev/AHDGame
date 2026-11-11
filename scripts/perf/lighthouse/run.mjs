@@ -1,23 +1,14 @@
 #!/usr/bin/env node
 /**
- * Lighthouse scorecard for the top-35 public pages.
+ * Lighthouse scorecard for the top-35 public pages in `pages.mjs`: per-page
+ * JSON/HTML reports, a Markdown summary, and an optional floor-budget gate.
  *
- * Runs the same audit Lighthouse's CLI would (mobile or desktop preset) against
- * every page in `pages.mjs`, writes per-page JSON/HTML reports plus a Markdown
- * summary, and optionally fails when a page drops under its floor budget.
+ * node scripts/perf/lighthouse/run.mjs --base=<url> --strategy=mobile|desktop
+ *   [--pages=/,/faq] [--runs=3 (median)] [--out=<dir>] [--budget=strict|off]
+ *   [--chrome-path=<chrome>]
  *
- * Usage:
- *   node scripts/perf/lighthouse/run.mjs \
- *     --base=https://ahousedividedgame.com \
- *     --strategy=mobile \
- *     [--pages=/,/faq]        # subset, comma separated
- *     [--runs=3]              # median across N runs (default 1)
- *     [--out=scripts/perf/lighthouse/results]
- *     [--budget=strict|off]   # strict exits 1 on a floor breach
- *     [--chrome-path=/path/to/chrome]
- *
- * Requires the `lighthouse` and `chrome-launcher` devDependencies and a Chrome
- * install (CHROME_PATH, --chrome-path, or a system Chrome).
+ * Needs the `lighthouse` and `chrome-launcher` devDependencies and a Chrome
+ * (CHROME_PATH, --chrome-path, or a system install).
  */
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";

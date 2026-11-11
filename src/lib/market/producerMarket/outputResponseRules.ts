@@ -248,17 +248,14 @@ export const FLOOR_RECOVERY_STEP = 0.01;
 export const FLOOR_RECOVERY_STOCK_COVER = 1;
 
 /**
- * Floor recovery. In a market oversupplied by a few percent every seller is
- * rationed pro rata and nobody reads sold out, so a plant at the floor plans
- * only expected sales (below the floor) and never grows. A plant at or near the
- * floor that still sells most of what it offers steps up by a small fixed share
- * of capacity a turn instead, capped at the band.
+ * Floor recovery. In a market a few percent oversupplied every seller is
+ * rationed pro rata and nobody reads sold out, so a floor plant plans only its
+ * expected sales and never grows. One that still sells most of what it offers
+ * steps up by a small fixed share of capacity a turn, capped at the band.
  *
- * Holds back when: the plant lost money per unit sold (marginal-loss brake), it
- * sold out already (the sold-out growth owns that), sell-through is under
- * FLOOR_RECOVERY_SELL_THROUGH, or it already carries more than
- * FLOOR_RECOVERY_STOCK_COVER turns of sales in stock (stock still piling up).
- * Returns `next` unchanged when it does not apply. Pure.
+ * Holds back on a marginal loss, a sell-out (sold-out growth owns that),
+ * sell-through under FLOOR_RECOVERY_SELL_THROUGH, or stock above
+ * FLOOR_RECOVERY_STOCK_COVER turns of sales. Otherwise returns `next`. Pure.
  */
 export function floorRecoveryRunShare(
   prior: PriorReceipt | null | undefined,
@@ -570,10 +567,9 @@ export function planRecoveryRunShare(
   prior: PriorReceipt | null | undefined,
   options: Parameters<typeof planRecoveryRunShareCore>[1] = {}
 ): number {
-  // Stage 3 (owner 2026-11-08): a line selling every unit below its running cost
-  // was held at its sales by the floor and grew on the sell-out, so it ran until
-  // its company's cash hit zero and every plant stopped at once (49 car plants
-  // on turn 761). It now steps down a cut a turn and may plan below its sales.
+  // A line selling every unit below its running cost steps down a cut a turn and
+  // may plan below its sales; held at its sales by the floor it would run until
+  // its company's cash hit zero and every plant stopped at once.
   if (options.lossCutBelowSales && prior) {
     const signals = runSignals(prior, options.floor ?? OUTPUT_RUN_FLOOR);
     const base = planBaseRunShare(prior, options.floor ?? OUTPUT_RUN_FLOOR);
@@ -605,9 +601,8 @@ export function planRecoveryRunShare(
   )
     return next;
   const sold = finite(prior.soldUnits);
-  // Stage 2 (owner 2026-11-08): stock held beyond the cover is sold from the pile,
-  // not made again. Gas plants sold what they made each turn and kept an equal
-  // pile, so the floor held the run at full and world stock grew ~28k units a turn.
+  // Stock held beyond the cover is sold from the pile, not made again; otherwise a
+  // plant selling what it makes while keeping an equal pile grows world stock.
   const cover = options.stockCoverTurns;
   const excessStock =
     typeof cover === "number" && Number.isFinite(cover) && cover >= 0

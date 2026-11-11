@@ -1,24 +1,12 @@
 /**
- * The "top 35" page cohort for the Lighthouse scorecard.
+ * The "top 35" page cohort for the Lighthouse scorecard: every sitemap URL at
+ * priority >= 0.7 plus the main anonymous navigation surfaces, using canonical
+ * redirect targets. A deterministic proxy, since no per-page traffic export is
+ * available locally. Keep it in sync with `src/app/sitemap.ts` and the README.
  *
- * There is no per-page traffic export available to a local checkout, so the
- * cohort is a deterministic proxy for the pages that matter most:
- *
- *   1. every URL the sitemap marks priority >= 0.7 (landing, guides, world,
- *      news, changelog), and
- *   2. the primary anonymous navigation surfaces (account, market, politics,
- *      world tools), using the canonical redirect targets where a legacy path
- *      just 308s.
- *
- * Keep this list in sync with `src/app/sitemap.ts`. If you add or remove a
- * page, re-run the audit and update `scripts/perf/lighthouse/README.md`.
- *
- * `seo: false` marks pages that are deliberately not indexable (robots.txt
- * disallow, or a page-level noindex for account and per-country surfaces).
- * Lighthouse's `is-crawlable` audit fails on them by design, so their SEO score
- * is reported but excluded from budgets and averages. `/news` is marked here
- * because it renders noindex while the database has no public posts; a run
- * against seeded data can drop that flag.
+ * `seo: false` marks pages that are deliberately not indexable, where the
+ * `is-crawlable` audit fails by design; their SEO score is reported but kept
+ * out of budgets and averages. `/news` is noindex while it has no public posts.
  */
 export const TOP_PAGES = [
   { path: "/", name: "landing", group: "marketing" },

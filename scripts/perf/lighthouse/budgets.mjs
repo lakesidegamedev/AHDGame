@@ -1,17 +1,11 @@
 /**
  * Score and metric budgets for the top-35 Lighthouse cohort.
  *
- * `floor` is the gate: a page may not regress below it. `target` is the number
- * we are working toward (the scorecard prints the gap, it does not fail on it).
- *
- * Floors are set from the measured baseline with headroom, because Lighthouse
- * on this box shares the CPU with everything else the host runs: Total Blocking
- * Time in particular can double between two otherwise identical runs, and the
- * performance score follows it. The stable categories (accessibility, best
- * practices, SEO) get tight floors; performance gets a catastrophic-regression
- * floor only.
- *
- * Metric ceilings are reported in the summary, not gated, for the same reason.
+ * `floor` is the gate a page may not regress below; `target` is the goal the
+ * scorecard reports the gap to without failing. Total Blocking Time on a shared
+ * CPU can double between identical runs, so performance gets only a
+ * catastrophic-regression floor while accessibility, best practices and SEO
+ * get tight ones. Metric ceilings are reported, not gated, for the same reason.
  */
 export const SCORE_BUDGETS = {
   mobile: {

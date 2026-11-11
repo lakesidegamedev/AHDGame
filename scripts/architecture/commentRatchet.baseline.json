@@ -2227,7 +2227,7 @@
     },
     "src/app/country/[code]/parties/[id]/PartyHubPage.tsx": {
       "longBlocks": 0,
-      "narrativeLines": 3
+      "narrativeLines": 1
     },
     "src/app/country/[code]/PeaceBanner.tsx": {
       "longBlocks": 1,
@@ -8967,7 +8967,7 @@
     },
     "src/lib/market/producerMarket/outputResponseRules.ts": {
       "longBlocks": 3,
-      "narrativeLines": 2
+      "narrativeLines": 0
     },
     "src/lib/market/producerMarket/producerCreditRules.ts": {
       "longBlocks": 1,
