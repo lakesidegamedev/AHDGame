@@ -321,7 +321,7 @@ export const LEGACY_DYNAMIC_COLLECTION_SITES: readonly LegacyDynamicCollectionSi
     file: "src/lib/country/mergeCountry.ts",
     owner: "sweepNationalStrays",
     argument: "collection",
-    scopeHash: "b083d38533f9f6af1d67834580ae83b94d04f89500eae81dc3d279d26505c86e",
+    scopeHash: "ce144eca417d0a85dd587fe7a9edee0af30477d24b9821450f5cf701fe8e4d44",
     count: 1,
     reason: "The world-transition operation iterates its explicit collection descriptors.",
   },
