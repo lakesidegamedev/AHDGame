@@ -18,6 +18,7 @@ import type { State } from "@/lib/db/types";
 
 import type { MapSectorSpecializationState, MapOverviewResponse } from "@/lib/map/overviewTypes";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { isParliamentaryMapCountry } from "@/app/country/[code]/map/mapVariant";
 
 // Re-export for any consumer that still imports types from the route file.
 // New consumers should import from "@/lib/map/overviewTypes".
@@ -276,6 +277,31 @@ export async function GET(request: Request) {
       return NextResponse.json({
         partyOrg,
         senate,
+        house,
+        governor,
+        approval,
+        lean,
+        presidential: {},
+        sectorSpecializations,
+        regions,
+      } satisfies MapOverviewResponse);
+    }
+
+    // Any other country with a parliamentary map: party org, lower house,
+    // regional executives, approval and lean, all read generically.
+    if (isParliamentaryMapCountry(countryId)) {
+      const [partyOrg, house, governor, approval, lean, sectorSpecializations] = await Promise.all([
+        computePartyOrgMap(db, countryId),
+        computeHouseMap(db, countryId),
+        computeGovernorMap(db, countryId),
+        computeApprovalMap(db, countryId),
+        computeLeanMap(db, countryId),
+        computeSectorSpecializationMap(db, countryId),
+      ]);
+
+      return NextResponse.json({
+        partyOrg,
+        senate: {},
         house,
         governor,
         approval,
