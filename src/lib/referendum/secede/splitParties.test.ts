@@ -138,4 +138,39 @@ describe("splitParties", () => {
     // Region party-ledger history dissolved.
     expect(cols.partyBudget).toHaveLength(0);
   });
+
+  // Regression: several UK-wide parties slating the same seceding-region election all
+  // collapse to "independent", which broke the unique (country, party, election) slate
+  // index and failed the referendum phase on every turn.
+  it("collapses duplicate slates for one election instead of colliding on the unique index", async () => {
+    const { db, cols } = seedWorld();
+    cols.recruitmentSlates = [
+      { _id: "s1", countryId: "SCO", partyId: "20", electionId: "e1" },
+      { _id: "s2", countryId: "SCO", partyId: "21", electionId: "e1" },
+      { _id: "s3", countryId: "SCO", partyId: "22", electionId: "e1" },
+      { _id: "s4", countryId: "SCO", partyId: "independent", electionId: "e2" },
+      { _id: "s5", countryId: "SCO", partyId: "21", electionId: "e2" },
+      { _id: "s6", countryId: "SCO", partyId: "21", electionId: "e3" },
+    ];
+    cols.slateCandidates = [
+      { _id: "c1", slateId: "s2", countryId: "SCO", partyId: "21", electionId: "e1" },
+      { _id: "c2", slateId: "s6", countryId: "SCO", partyId: "21", electionId: "e3" },
+    ];
+
+    await splitParties(db, "SCO", "UK", "SCO");
+
+    const keys = cols.recruitmentSlates.map((r) => `${r.countryId}|${r.partyId}|${r.electionId}`);
+    expect(new Set(keys).size).toBe(keys.length);
+    expect(keys.sort()).toEqual([
+      "SCO|1|e1",
+      "SCO|independent|e1",
+      "SCO|independent|e2",
+      "SCO|independent|e3",
+    ]);
+    // The pre-existing independent slate wins over the one that would move onto it.
+    expect(cols.recruitmentSlates.some((r) => r._id === "s4")).toBe(true);
+    expect(cols.recruitmentSlates.some((r) => r._id === "s5")).toBe(false);
+    // Candidate rows of a retired slate go with it; others stay.
+    expect(cols.slateCandidates.map((c) => c._id)).toContain("c2");
+  });
 });
