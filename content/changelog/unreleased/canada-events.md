@@ -6,7 +6,7 @@ summary: >-
   a trade permit between provinces, a northern housing visit and the town's
   old hockey arena.
 tags: [events, canada]
-badges: [feature]
+badges: [minor]
 areas: [engine]
 ---
 

@@ -6,7 +6,7 @@ summary: >-
   goes to a by-election instead of staying empty until the next general
   election. Canadian snap elections also elect each province's full delegation.
 tags: [elections, canada]
-badges: [feature]
+badges: [minor]
 areas: [engine]
 ---
 

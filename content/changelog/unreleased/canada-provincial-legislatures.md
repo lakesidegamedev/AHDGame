@@ -5,7 +5,7 @@ summary: >-
   Each Canadian province and territory now elects its own legislature, on its
   own fixed election date, for 780 seats in total.
 tags: [elections, canada]
-badges: [feature]
+badges: [minor]
 areas: [engine]
 ---
 
