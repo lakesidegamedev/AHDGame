@@ -19,6 +19,7 @@ import {
 } from "@/lib/turn/parliamentaryGovernment";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { parliamentaryGovernmentsCollection } from "@/lib/db/repositories/parliamentaryGovernments";
 
 export interface ResolvedOppositionLeader {
   /** Character id of the Leader of the Opposition (party or coalition chair). */
@@ -76,7 +77,7 @@ export async function resolveOppositionLeaderForCountry(
 
   const [govFormation, parlGov, lowerOfficials, partyDocs] = await Promise.all([
     getGovernmentFormationsCollection(db).findOne({ _id: countryId }),
-    db.collection<ParliamentaryGovernment>("parliamentaryGovernments").findOne({ _id: countryId }),
+    parliamentaryGovernmentsCollection(db).findOne({ _id: countryId }),
     electedOfficialsCollection(db).find({ officeType: lowerChamberKey, countryId }).toArray(),
     politicalPartiesCollection(db).find({ countryId }).toArray(),
   ]);

@@ -5,6 +5,7 @@ import { corporationWikiSlug, partyWikiSlug, playerWikiSlug } from "./playerPage
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { wikiPagesCollection } from "@/lib/db/repositories/wikiPages";
 
 const OBJECT_ID_HEX_RE = /^[a-f0-9]{24}$/;
 const PLAYER_LEGACY_RE = /^player-([a-f0-9]{24})$/;
@@ -37,7 +38,7 @@ export async function syncPriorWikiSubmissions(
   db: Db,
   moderatorId: ObjectId
 ): Promise<SyncPriorSubmissionsResult> {
-  const wikiPages = db.collection<WikiPage>("wikiPages");
+  const wikiPages = wikiPagesCollection(db);
   const renamed: SyncPriorRenamed[] = [];
   const skipped: SyncPriorSkipped[] = [];
   const now = new Date();

@@ -15,6 +15,10 @@ import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSecto
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
+import { parliamentSeatsHistoryCollection } from "@/lib/db/repositories/parliamentSeatsHistory";
+import { economicVitalSignsCollection } from "@/lib/db/repositories/economicVitalSigns";
+import { countryStateCollection } from "@/lib/db/repositories/countryState";
+import { countryLeaderStatesCollection } from "@/lib/db/repositories/countryLeaderStates";
 
 const ELECTION_STATUS_FIELDS = {
   upcoming: "electionCountUpcoming",
@@ -124,7 +128,7 @@ export async function collectLocalStatistics(db: Db): Promise<LocalStatisticsPay
         },
       ])
       .toArray(),
-    db.collection<EconomicVitalSigns>("economicVitalSigns").findOne(
+    economicVitalSignsCollection(db).findOne(
       {},
       {
         sort: { turn: -1 },
@@ -147,8 +151,7 @@ export async function collectLocalStatistics(db: Db): Promise<LocalStatisticsPay
         }
       )
       .toArray(),
-    db
-      .collection("countryState")
+    countryStateCollection<Document>(db)
       .find({}, { projection: { _id: 1, governmentType: 1, rulingPartyId: 1 } })
       .toArray(),
     federalBudgetCollection(db)
@@ -163,14 +166,12 @@ export async function collectLocalStatistics(db: Db): Promise<LocalStatisticsPay
       ])
       .toArray(),
     governmentFormationsCollection<Document>(db).countDocuments(),
-    db
-      .collection("parliamentSeatsHistory")
+    parliamentSeatsHistoryCollection<Document>(db)
       .find({}, { projection: { turn: 1, seats: 1 } })
       .sort({ turn: -1 })
       .limit(2000)
       .toArray(),
-    db
-      .collection("countryLeaderStates")
+    countryLeaderStatesCollection<Document>(db)
       .find({}, { projection: { popularLegitimacy: 1 } })
       .toArray(),
   ]);

@@ -7,6 +7,7 @@ import { DEMOGRAPHIC_TURNOUT_RATES } from "@/lib/seeds/demographicCategories";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
 import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
+import { demographicDefaultsCollection } from "@/lib/db/repositories/demographicDefaults";
 
 /** The static US bundle seeded here is the 2019 census. */
 const US_STATIC_PRESET = "2019-default";
@@ -15,9 +16,7 @@ export async function seedDemographics(db: Db, reset: boolean, log: (msg: string
   if (reset) {
     const usIds = [...STATE_IDS];
     await stateDemographicsCollection(db).deleteMany({ _id: { $in: usIds } });
-    await db
-      .collection<StateDemographics>("demographicDefaults")
-      .deleteMany({ _id: { $in: usIds } });
+    await demographicDefaultsCollection(db).deleteMany({ _id: { $in: usIds } });
     await stateDemographicTurnoutCollection(db).deleteMany({ _id: { $in: usIds } });
   }
 
@@ -56,9 +55,7 @@ export async function seedDemographics(db: Db, reset: boolean, log: (msg: string
   });
   if (stateDemoUpserts.length > 0) {
     await stateDemographicsCollection(db).bulkWrite(stateDemoUpserts, { ordered: false });
-    await db
-      .collection<StateDemographics>("demographicDefaults")
-      .bulkWrite(stateDemoUpserts, { ordered: false });
+    await demographicDefaultsCollection(db).bulkWrite(stateDemoUpserts, { ordered: false });
     await statesCollection(db).bulkWrite(stateLeanOps, { ordered: false });
   }
 

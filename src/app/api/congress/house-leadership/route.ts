@@ -56,6 +56,8 @@ import type {
 } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { influenceHistoryCollection } from "@/lib/db/repositories/influenceHistory";
+import type { Document } from "mongodb";
 
 const ROLE_TO_LABEL: Record<HouseLeadershipElectionRole, string> = {
   majority_leader: "Majority Leader",
@@ -368,7 +370,7 @@ export async function POST(request: Request) {
       );
 
       // Log transaction
-      await db.collection("influenceHistory").insertOne({
+      await influenceHistoryCollection<Document>(db).insertOne({
         characterId: character._id,
         amount: -3,
         reason: `Withdrew from ${roleLabel} election`,

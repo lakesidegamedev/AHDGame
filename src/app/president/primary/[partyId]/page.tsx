@@ -34,6 +34,7 @@ import { NppAbbr } from "@/components/elections/NppAbbr";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { playerEndorsementsCollection } from "@/lib/db/repositories/playerEndorsements";
 
 // Presidential primary standings can change every turn and after live player
 // actions (endorsements, surge, in-state campaigning), so cached route output
@@ -150,7 +151,7 @@ export default async function PartyPrimaryPage({ params, searchParams }: PagePro
   // The viewer's own endorsement in this race, which only this page shows.
   let viewerEndorsedCandidateId: string | null = null;
   if (viewerChar) {
-    const activeEnd = await db.collection<PlayerEndorsement>("playerEndorsements").findOne({
+    const activeEnd = await playerEndorsementsCollection(db).findOne({
       characterId: viewerChar._id,
       electionId: election._id,
       isActive: true,

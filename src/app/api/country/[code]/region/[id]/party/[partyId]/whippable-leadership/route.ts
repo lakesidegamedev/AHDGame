@@ -22,6 +22,7 @@ import type { Impeachment } from "@/lib/db/types/impeachment";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { cabinetNominationsCollection } from "@/lib/db/repositories/cabinetNominations";
+import { billWhipsCollection } from "@/lib/db/repositories/billWhips";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; partyId: string }>;
@@ -130,8 +131,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
       const impeachmentIds = impeachments.map((impeachment) => impeachment._id);
       const impeachmentWhips =
         impeachmentIds.length > 0
-          ? await db
-              .collection<BillWhip>("billWhips")
+          ? await billWhipsCollection(db)
               .find({
                 targetType: "impeachmentVote",
                 targetId: { $in: impeachmentIds },
@@ -193,8 +193,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
       );
 
       if (activeNominations.length > 0) {
-        const existingWhips = await db
-          .collection<BillWhip>("billWhips")
+        const existingWhips = await billWhipsCollection(db)
           .find({
             targetType: "cabinetNomination",
             targetId: { $in: activeNominations.map((nomination) => nomination._id) },

@@ -16,6 +16,7 @@ import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficia
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { billsCollection } from "@/lib/db/repositories/bills";
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { tariffsCollection } from "@/lib/db/repositories/tariffs";
 
 export type NppTradeBillIntent = "raise_tariff" | "lower_tariff";
 
@@ -94,7 +95,7 @@ export async function proposeNppForeignPolicyBill(
     return { ok: false, reason: "A targeted tariff bill is already before the legislature." };
   }
 
-  const currentTariff = await db.collection<Tariff>("tariffs").findOne({
+  const currentTariff = await tariffsCollection(db).findOne({
     countryId,
     scopeType: "origin_country",
     targetOriginCountryId: targetCountryId,

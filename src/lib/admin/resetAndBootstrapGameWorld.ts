@@ -60,6 +60,8 @@ import { clearReferenceForRebuild } from "@/lib/admin/seed/referenceRebuildClear
 import { runResidueScan } from "@/lib/admin/resetContract/residueScan";
 import { formatResidueViolation } from "@/lib/admin/resetContract/rules/residueScan";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { seedDiagnosticsCollection } from "@/lib/db/repositories/seedDiagnostics";
+import type { Document } from "mongodb";
 
 export interface ResetAndBootstrapOptions {
   /** 1991 only: leave political offices vacant for player-created parties. */
@@ -695,7 +697,7 @@ export async function resetAndBootstrapGameWorld(
             preset,
             trigger: "post-reset",
           });
-          await db.collection("seedDiagnostics").insertOne(errorReport as never);
+          await seedDiagnosticsCollection<Document>(db).insertOne(errorReport as never);
         } catch {
           // Persistence of the error report is best-effort.
         }

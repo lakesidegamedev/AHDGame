@@ -21,6 +21,12 @@ import type {
 } from "@/lib/db/types";
 import { cleanupCaucusParticipationForCharacters } from "@/lib/caucus/cleanupCaucusParticipationForCharacters";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statePartyCandidatesCollection } from "@/lib/db/repositories/statePartyCandidates";
+import { nationalPartyCandidatesCollection } from "@/lib/db/repositories/nationalPartyCandidates";
+import { nationalCommitteeCandidatesCollection } from "@/lib/db/repositories/nationalCommitteeCandidates";
+import { statePartyVotesCollection } from "@/lib/db/repositories/statePartyVotes";
+import { nationalPartyVotesCollection } from "@/lib/db/repositories/nationalPartyVotes";
+import { nationalCommitteeVotesCollection } from "@/lib/db/repositories/nationalCommitteeVotes";
 
 export interface CleanupResult {
   characterIds: string[];
@@ -62,31 +68,21 @@ export async function cleanupPartyElectionsForBannedUser(
 
   // Six independent collections plus caucus cleanup, all in one round.
   const [npcRes, npvRes, spcRes, spvRes, nccRes, ncvRes, caucusCleanup] = await Promise.all([
-    db
-      .collection<NationalPartyCandidate>("nationalPartyCandidates")
-      .updateMany(
-        { characterId: { $in: characterIds }, status: "active" },
-        { $set: { status: "withdrawn", withdrawnAt: now } }
-      ),
-    db
-      .collection<NationalPartyVote>("nationalPartyVotes")
-      .deleteMany({ voterId: { $in: characterIds } }),
-    db
-      .collection<StatePartyCandidate>("statePartyCandidates")
-      .updateMany(
-        { characterId: { $in: characterIds }, status: "active" },
-        { $set: { status: "withdrawn", withdrawnAt: now } }
-      ),
-    db.collection<StatePartyVote>("statePartyVotes").deleteMany({ voterId: { $in: characterIds } }),
-    db
-      .collection<NationalCommitteeCandidate>("nationalCommitteeCandidates")
-      .updateMany(
-        { characterId: { $in: characterIds }, status: "active" },
-        { $set: { status: "withdrawn", withdrawnAt: now } }
-      ),
-    db
-      .collection<NationalCommitteeVote>("nationalCommitteeVotes")
-      .deleteMany({ voterId: { $in: characterIds } }),
+    nationalPartyCandidatesCollection(db).updateMany(
+      { characterId: { $in: characterIds }, status: "active" },
+      { $set: { status: "withdrawn", withdrawnAt: now } }
+    ),
+    nationalPartyVotesCollection(db).deleteMany({ voterId: { $in: characterIds } }),
+    statePartyCandidatesCollection(db).updateMany(
+      { characterId: { $in: characterIds }, status: "active" },
+      { $set: { status: "withdrawn", withdrawnAt: now } }
+    ),
+    statePartyVotesCollection(db).deleteMany({ voterId: { $in: characterIds } }),
+    nationalCommitteeCandidatesCollection(db).updateMany(
+      { characterId: { $in: characterIds }, status: "active" },
+      { $set: { status: "withdrawn", withdrawnAt: now } }
+    ),
+    nationalCommitteeVotesCollection(db).deleteMany({ voterId: { $in: characterIds } }),
     cleanupCaucusParticipationForCharacters(db, characterIds, {
       removeMembership: false,
       now,

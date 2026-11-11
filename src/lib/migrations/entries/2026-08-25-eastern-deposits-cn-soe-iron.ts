@@ -8,6 +8,7 @@ import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import type { Migration, MigrationResult } from "../types";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { stateResourceCapacityCollection } from "@/lib/db/repositories/stateResourceCapacity";
 
 /**
  * Markets repair plan P2a: author the eastern-bloc deposits and point the
@@ -92,8 +93,7 @@ async function backfillEasternDeposits(db: Db, dryRun: boolean): Promise<Migrati
   const capacityMap = getStateResourceCapacity(preset);
 
   // ── Part 1: deposit backfill, empty docs only ──────────────────────────
-  const existing = await db
-    .collection<StateResourceCapacity>("stateResourceCapacity")
+  const existing = await stateResourceCapacityCollection(db)
     .find({ stateId: { $in: [...BACKFILL_STATE_IDS] } })
     .toArray();
   const existingByState = new Map(existing.map((doc) => [doc.stateId, doc]));
@@ -146,9 +146,7 @@ async function backfillEasternDeposits(db: Db, dryRun: boolean): Promise<Migrati
 
   let documentsUpdated = 0;
   if (ops.length > 0) {
-    const result = await db
-      .collection<StateResourceCapacity>("stateResourceCapacity")
-      .bulkWrite(ops, { ordered: true });
+    const result = await stateResourceCapacityCollection(db).bulkWrite(ops, { ordered: true });
     documentsUpdated += result.modifiedCount + result.upsertedCount;
   }
 

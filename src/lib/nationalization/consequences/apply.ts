@@ -37,6 +37,7 @@ import type {
 } from "./types";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { countryLeaderStatesCollection } from "@/lib/db/repositories/countryLeaderStates";
 
 export async function applyNationalizationConsequences(
   db: Db,
@@ -152,9 +153,10 @@ function countryName(countryId: CountryId): string {
 
 /** Active regime's governing party id (most-recently-updated leader-state). */
 async function resolveActiveGoverningPartyId(db: Db, countryId: CountryId): Promise<string | null> {
-  const leader = await db
-    .collection<CountryLeaderState>("countryLeaderStates")
-    .findOne({ countryId }, { sort: { updatedAt: -1 } });
+  const leader = await countryLeaderStatesCollection(db).findOne(
+    { countryId },
+    { sort: { updatedAt: -1 } }
+  );
   return leader?.governingPartyId ?? null;
 }
 
@@ -232,7 +234,7 @@ async function applyLegitimacyDelta(
   turn: number,
   reason: string = "nationalization"
 ): Promise<void> {
-  const coll = db.collection<CountryLeaderState>("countryLeaderStates");
+  const coll = countryLeaderStatesCollection(db);
   // A country accumulates one leader-state doc per leader over time; target the
   // ACTIVE regime (most-recently-updated), not an arbitrary/stale former leader.
   const leader = await coll.findOne({ countryId }, { sort: { updatedAt: -1 } });

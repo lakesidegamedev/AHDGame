@@ -5,6 +5,9 @@ import type { State } from "@/lib/db/types/state";
 import { scaleDeep } from "../secede/docScale";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { infraProjectsCollection } from "@/lib/db/repositories/infraProjects";
+import type { Document } from "mongodb";
+import { conflictCapacityObligationsCollection } from "@/lib/db/repositories/conflictCapacityObligations";
 
 export async function convertPublicCurrency(
   db: Db,
@@ -42,12 +45,14 @@ export async function convertPublicCurrency(
     { _id: regionId },
     { $mul: { "economic.medianIncome.value": scale } }
   );
-  await db
-    .collection("infraProjects")
-    .updateMany({ regionId }, { $mul: { upkeepBase: scale, constructionCostBase: scale } });
-  await db
-    .collection("conflictCapacityObligations")
-    .updateMany({ regionId }, { $mul: { capitalStockBefore: scale, destroyedCapital: scale } });
+  await infraProjectsCollection<Document>(db).updateMany(
+    { regionId },
+    { $mul: { upkeepBase: scale, constructionCostBase: scale } }
+  );
+  await conflictCapacityObligationsCollection<Document>(db).updateMany(
+    { regionId },
+    { $mul: { capitalStockBefore: scale, destroyedCapital: scale } }
+  );
 }
 
 async function convertBudgetMoney(

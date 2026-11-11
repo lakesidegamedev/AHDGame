@@ -25,6 +25,8 @@ import { electionsCollection } from "@/lib/db/repositories/elections";
 import { billsCollection } from "@/lib/db/repositories/bills";
 import { unionsCollection } from "@/lib/db/repositories/unions";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { militaryUnitsCollection } from "@/lib/db/repositories/militaryUnits";
+import { referendumsCollection } from "@/lib/db/repositories/referendums";
 
 export type { OverviewCounts } from "@/lib/country/overviewCounts";
 
@@ -217,15 +219,18 @@ async function assembleOverviewCounts(db: Db, countryId: CountryId): Promise<Ove
     ),
     orNull(resolveCommandEconomyActive(db, countryId)).then((v) => v ?? false),
     orNull(unionsCollection<Document>(db).countDocuments({ countryId })),
-    orNull(db.collection("referendums").countDocuments({ countryId, status: "campaigning" })),
-    orNull(db.collection("referendums").countDocuments({ countryId })),
+    orNull(
+      referendumsCollection<Document>(db).countDocuments({ countryId, status: "campaigning" })
+    ),
+    orNull(referendumsCollection<Document>(db).countDocuments({ countryId })),
     orNull(resolveFiscalFigures(db, countryId)),
     orNull(resolveColdWarDefcon(db, countryId)),
     // Hulls and wings this nation owns. Gates the command link: no fleet, no row.
     orNull(
-      db
-        .collection("militaryUnits")
-        .countDocuments({ countryId, domain: { $in: ["naval", "air"] } })
+      militaryUnitsCollection<Document>(db).countDocuments({
+        countryId,
+        domain: { $in: ["naval", "air"] },
+      })
     ),
   ]);
   return {

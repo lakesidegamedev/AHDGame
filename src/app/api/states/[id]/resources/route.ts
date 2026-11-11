@@ -17,6 +17,8 @@ import { isProspectingEnabled, isContractIssuanceEnabled } from "@/lib/extractio
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
+import { stateResourceCapacityCollection } from "@/lib/db/repositories/stateResourceCapacity";
+import { extractionContractsCollection } from "@/lib/db/repositories/extractionContracts";
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -43,9 +45,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       )
       .toArray();
     const [capacityDoc, contracts, commodityPrices, config] = await Promise.all([
-      db.collection<StateResourceCapacity>("stateResourceCapacity").findOne(scope),
-      db
-        .collection<ExtractionContract>("extractionContracts")
+      stateResourceCapacityCollection(db).findOne(scope),
+      extractionContractsCollection(db)
         .find({ ...scope, ...activeExtractionContractFilter() })
         .toArray(),
       commodityPricesCollection(db)

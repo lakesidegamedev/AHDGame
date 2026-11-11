@@ -28,6 +28,8 @@ import {
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { billsCollection } from "@/lib/db/repositories/bills";
 import { unionsCollection } from "@/lib/db/repositories/unions";
+import { unionEndorsementsCollection } from "@/lib/db/repositories/unionEndorsements";
+import type { Document } from "mongodb";
 
 export type UnionActionResult =
   { ok: true; status: 200; [key: string]: unknown } | { ok: false; status: number; error: string };
@@ -316,13 +318,11 @@ export async function endorseBill(
     };
   }
 
-  await db
-    .collection("unionEndorsements")
-    .updateOne(
-      { unionId: union._id, billId: billObjectId },
-      { $set: { stance, createdAt: new Date() } },
-      { upsert: true }
-    );
+  await unionEndorsementsCollection<Document>(db).updateOne(
+    { unionId: union._id, billId: billObjectId },
+    { $set: { stance, createdAt: new Date() } },
+    { upsert: true }
+  );
 
   return { ok: true, status: 200, stance };
 }

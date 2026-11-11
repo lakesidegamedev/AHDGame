@@ -88,6 +88,8 @@ import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
 import { politicalMetricsCollection } from "@/lib/db/repositories/politicalMetrics";
+import { stockExchangeSnapshotsCollection } from "@/lib/db/repositories/stockExchangeSnapshots";
+import { shareTradeHistoryCollection } from "@/lib/db/repositories/shareTradeHistory";
 
 const EXCHANGE_NAMES: Record<string, string> = getExchangeNamesMap();
 
@@ -1117,8 +1119,7 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
           [h.h1?.turn, h.h24?.turn, h.h48?.turn].filter((t): t is number => t != null)
         )
       );
-      const splitRows = await database
-        .collection<ShareTradeHistory>("shareTradeHistory")
+      const splitRows = await shareTradeHistoryCollection(database)
         .find({
           corporationId: { $in: corpIds },
           kind: { $in: ["stock_split", "reverse_split"] },
@@ -1200,7 +1201,7 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
       });
 
       // Upsert all snapshots
-      const collection = database.collection<StockExchangeSnapshot>("stockExchangeSnapshots");
+      const collection = stockExchangeSnapshotsCollection(database);
       await Promise.all(
         snapshots.map((snapshot) =>
           collection.updateOne({ _id: snapshot._id }, { $set: snapshot }, { upsert: true })

@@ -29,6 +29,10 @@ import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParti
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import type { Document } from "mongodb";
+import { parliamentSeatsHistoryCollection } from "@/lib/db/repositories/parliamentSeatsHistory";
+import { corporationCountryHistoryCollection } from "@/lib/db/repositories/corporationCountryHistory";
+import { simRunsCollection } from "@/lib/db/repositories/simRuns";
+import { partyHistoryCollection } from "@/lib/db/repositories/partyHistory";
 
 // Static sim-harness parameters — the "conditions we specified" for a run.
 // Source-of-truth lives in scripts/sim/runWorld.ts (country allowlist,
@@ -470,18 +474,15 @@ export async function collectExperimentsReport(
     gameConfigDoc,
     simRunDoc,
   ] = await Promise.all([
-    db
-      .collection("parliamentSeatsHistory")
+    parliamentSeatsHistoryCollection<Document>(db)
       .find({}, { projection: { _id: 0, createdAt: 0 } })
       .sort({ turn: 1 })
       .toArray(),
-    db
-      .collection("partyHistory")
+    partyHistoryCollection<Document>(db)
       .find({}, { projection: { _id: 0, createdAt: 0 } })
       .sort({ turn: 1 })
       .toArray(),
-    db
-      .collection("corporationCountryHistory")
+    corporationCountryHistoryCollection<Document>(db)
       .find({}, { projection: { _id: 0, createdAt: 0 } })
       .sort({ turn: 1 })
       .toArray(),
@@ -495,7 +496,7 @@ export async function collectExperimentsReport(
     gameStateCollection(db).findOne({ _id: "current" }),
     gameConfigCollection<Document>(db).findOne({ _id: "default" as never }),
     options.runId
-      ? db.collection<Record<string, unknown>>("simRuns").findOne(
+      ? simRunsCollection<Record<string, unknown>>(db).findOne(
           {
             dbName: db.databaseName,
             $or: [{ runId: options.runId }, { _id: options.runId as never }],

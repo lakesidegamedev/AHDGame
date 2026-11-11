@@ -53,6 +53,7 @@ import { getCorporateSectorsCollection } from "@/lib/db/collections/corporateSec
 import { getGameStateCollection } from "@/lib/db/collections/gameState";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
+import { stateResourceCapacityCollection } from "@/lib/db/repositories/stateResourceCapacity";
 
 const NPC_CORPORATION_USER_ID = new ObjectId("000000000000000000000000");
 
@@ -400,8 +401,7 @@ export async function processExtractionAutoStrategy(
     stateSupplyByResource.set(r, cp.stateSupply ?? {});
   }
 
-  const caps = await db
-    .collection<StateResourceCapacity>("stateResourceCapacity")
+  const caps = await stateResourceCapacityCollection(db)
     .find({})
     .project({ stateId: 1, countryId: 1, resources: 1 })
     .toArray();

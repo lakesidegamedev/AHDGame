@@ -15,6 +15,8 @@ import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficia
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { countryStateCollection } from "@/lib/db/repositories/countryState";
+import { countryLeaderStatesCollection } from "@/lib/db/repositories/countryLeaderStates";
 
 export const migration: Migration = {
   id: "2026-10-04-government-accountability",
@@ -30,10 +32,11 @@ export const migration: Migration = {
           { projection: { countryId: 1, party: 1, characterId: 1, nppId: 1, characterName: 1 } }
         )
         .toArray(),
-      db
-        .collection<{ _id: CountryId; governmentType: string; hasLeaderConfidenceModel?: boolean }>(
-          "countryState"
-        )
+      countryStateCollection<{
+        _id: CountryId;
+        governmentType: string;
+        hasLeaderConfidenceModel?: boolean;
+      }>(db)
         .find({})
         .toArray(),
       gameStateCollection<{ _id: string; currentTurn?: number; preset?: string }>(db).findOne({
@@ -117,9 +120,9 @@ export const migration: Migration = {
       if (gov.pmNppId && runtime?.hasLeaderConfidenceModel) {
         const reference = { kind: "npp" as const, id: gov.pmNppId };
         if (
-          !(await db
-            .collection<{ _id: string }>("countryLeaderStates")
-            .findOne({ _id: leaderStateId(gov.countryId, reference) }))
+          !(await countryLeaderStatesCollection<{ _id: string }>(db).findOne({
+            _id: leaderStateId(gov.countryId, reference),
+          }))
         ) {
           initialized++;
           if (!dryRun)

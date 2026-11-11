@@ -40,6 +40,7 @@ import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
+import { countryLeaderStatesCollection } from "@/lib/db/repositories/countryLeaderStates";
 
 export {
   annualDeathProbability,
@@ -73,8 +74,7 @@ async function loadLeaderTerms(db: Db, now: Date): Promise<Map<string, number | 
     governmentFormationsCollection(db)
       .find({ status: "formed" }, { projection: { pmNppId: 1, presidentNppId: 1, hosNppId: 1 } })
       .toArray(),
-    db
-      .collection<CountryLeaderState>("countryLeaderStates")
+    countryLeaderStatesCollection(db)
       .find({ leaderNppId: { $ne: null } }, { projection: { leaderNppId: 1 } })
       .toArray(),
   ]);
@@ -417,7 +417,7 @@ async function seatSuccessors(
     })),
     { ordered: false }
   );
-  await db.collection<CountryLeaderState>("countryLeaderStates").bulkWrite(
+  await countryLeaderStatesCollection(db).bulkWrite(
     successions.map(({ deadId, successor }) => ({
       updateMany: {
         filter: { leaderNppId: deadId },

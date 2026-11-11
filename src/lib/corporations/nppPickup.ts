@@ -28,6 +28,7 @@ import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { defenceContractsCollection } from "@/lib/db/repositories/defenceContracts";
 
 /**
  * Share of a leaving plant's built capacity an NPP operator takes over. The
@@ -419,7 +420,7 @@ async function repointContracts(
       },
     },
   }));
-  await db.collection<DefenceContract>("defenceContracts").bulkWrite(defenceOps, {
+  await defenceContractsCollection(db).bulkWrite(defenceOps, {
     ordered: false,
   });
 

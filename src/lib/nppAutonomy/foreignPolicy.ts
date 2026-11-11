@@ -69,6 +69,11 @@ import { nppsCollection } from "@/lib/db/repositories/npps";
 import { billsCollection } from "@/lib/db/repositories/bills";
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
+import { militaryUnitsCollection } from "@/lib/db/repositories/militaryUnits";
+import { organizationMembershipsCollection } from "@/lib/db/repositories/organizationMemberships";
+import { tariffsCollection } from "@/lib/db/repositories/tariffs";
+import { tradeFlowSnapshotsCollection } from "@/lib/db/repositories/tradeFlowSnapshots";
+import { conflictsCollection } from "@/lib/db/repositories/conflicts";
 function buildOpinion(context: ForeignPolicyContext, targetCountryId: CountryId): CountryOpinion {
   const factors: OpinionFactor[] = [];
   const sourceAlignment = context.alignments.find(
@@ -346,13 +351,12 @@ async function loadContext(
     }>(db).findOne({ _id: "current" }),
     db.collection<CountryAlignment>("countryAlignments").find({}).toArray(),
     db.collection<PersistedSphereMembership>("sphereMemberships").find({}).toArray(),
-    db.collection<OrganizationMembership>("organizationMemberships").find({}).toArray(),
-    db
-      .collection<ConflictDoc>("conflicts")
+    organizationMembershipsCollection(db).find({}).toArray(),
+    conflictsCollection(db)
       .find({ status: { $in: ["active", "escalating", "winding_down"] } })
       .toArray(),
     db.collection<TradeEmbargo>("tradeEmbargoes").find({}).toArray(),
-    db.collection<Tariff>("tariffs").find({}).toArray(),
+    tariffsCollection(db).find({}).toArray(),
     billsCollection(db)
       .find({
         ...buildActiveNationalBillFilter(countryId, NATIONAL_TERMINAL_STATUSES as BillStatus[]),
@@ -376,7 +380,7 @@ async function loadContext(
       .collection<OrganizationLeadershipElection>("organizationLeadershipElections")
       .find({ status: "pending" })
       .toArray(),
-    db.collection<TradeFlowSnapshot>("tradeFlowSnapshots").findOne({}, { sort: { turn: -1 } }),
+    tradeFlowSnapshotsCollection(db).findOne({}, { sort: { turn: -1 } }),
     federalBudgetCollection<{ countryId: CountryId; debtToGdpRatio?: number }>(db).findOne({
       countryId,
     }),
@@ -389,7 +393,7 @@ async function loadContext(
       .sort({ turn: -1 })
       .limit(20)
       .toArray(),
-    db.collection<MilitaryUnit>("militaryUnits").find({ countryId }).toArray(),
+    militaryUnitsCollection(db).find({ countryId }).toArray(),
     governmentApprovalsCollection(db).findOne({ _id: countryId }),
     db
       .collection<BattleDeclarationDoc>("battleDeclarations")

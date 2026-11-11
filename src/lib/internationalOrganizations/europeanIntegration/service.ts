@@ -19,6 +19,8 @@ import {
   type EuropeanIntegrationState,
 } from "./rules";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { organizationMembershipsCollection } from "@/lib/db/repositories/organizationMemberships";
+import { macroCountriesCollection } from "@/lib/db/repositories/macroCountries";
 
 export async function ensureEuropeanIntegrationState(
   db: Db,
@@ -76,8 +78,7 @@ export async function loadEuropeanTreatyContext(db: Db, turn?: number) {
         },
       }
     ),
-    db
-      .collection<{ countryId: string; joinedTurn?: number }>("organizationMemberships")
+    organizationMembershipsCollection<{ countryId: string; joinedTurn?: number }>(db)
       .find({ organizationId: "EU" }, { projection: { countryId: 1, joinedTurn: 1 } })
       .toArray(),
   ]);
@@ -159,8 +160,7 @@ export async function reconcileEuropeanTreatyLive(db: Db, turn: number): Promise
   const context = await loadEuropeanTreatyContext(db, turn);
   if (!context || !canRatifyMaastricht(context.date, context.state.stage)) return false;
   // One projected read for every background member, never one read per country.
-  const countries = await db
-    .collection<MacroCountryState>("macroCountries")
+  const countries = await macroCountriesCollection<MacroCountryState>(db)
     .find(
       { _id: { $in: context.members }, ...ACTIVE_MACRO_COUNTRY_FILTER },
       {

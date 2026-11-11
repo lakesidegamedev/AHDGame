@@ -3,6 +3,7 @@ import type { GovernorAddress } from "@/lib/db/types";
 import type { StateDemographicTurnout } from "@/lib/db/types/stateDemographicTurnout";
 import { readTurnoutModifier, turnoutModifierPath } from "@/lib/demographics/turnoutTarget";
 import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
+import { governorAddressesCollection } from "@/lib/db/repositories/governorAddresses";
 
 /**
  * Turn phase: expire address effects whose `expiresAtTurn` has passed.
@@ -15,8 +16,7 @@ export async function processGovernorAddressExpiry(
   db: Db,
   currentTurn: number
 ): Promise<{ approvalExpired: number; demographicExpired: number; turnoutReverted: number }> {
-  const candidates = await db
-    .collection<GovernorAddress>("governorAddresses")
+  const candidates = await governorAddressesCollection(db)
     .find({
       $or: [
         {
@@ -108,9 +108,7 @@ export async function processGovernorAddressExpiry(
       }
     }
     if (Object.keys(setOps).length > 0) {
-      await db
-        .collection<GovernorAddress>("governorAddresses")
-        .updateOne({ _id: a._id }, { $set: setOps });
+      await governorAddressesCollection(db).updateOne({ _id: a._id }, { $set: setOps });
     }
   }
   return { approvalExpired, demographicExpired, turnoutReverted };

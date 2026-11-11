@@ -22,6 +22,8 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { actionLogsCollection } from "@/lib/db/repositories/actionLogs";
+import type { Document } from "mongodb";
 
 /**
  * Maximum NET favorability any one target can be moved by player support/attack
@@ -58,8 +60,7 @@ async function netFavorabilitySwingThisTurn(
   turn: number
 ): Promise<number> {
   const targetField = targetType === "character" ? "targetCharacterId" : "targetNPPId";
-  const rows = await db
-    .collection<{ result?: { targetFavorabilityChange?: number } }>("actionLogs")
+  const rows = await actionLogsCollection<{ result?: { targetFavorabilityChange?: number } }>(db)
     .find(
       {
         [targetField]: targetId,
@@ -554,7 +555,7 @@ export async function executeSimpleInfluence(
     const targetIdField = targetType === "character" ? "targetCharacterId" : "targetNPPId";
     const targetNameField = targetType === "character" ? "targetCharacterName" : "targetNPPName";
 
-    await db.collection("actionLogs").insertOne({
+    await actionLogsCollection<Document>(db).insertOne({
       characterId: myCharacter._id,
       userId: new ObjectId(userId),
       actionType: "barnstorm",
@@ -711,7 +712,7 @@ export async function executeSimpleInfluence(
   const targetIdField = targetType === "character" ? "targetCharacterId" : "targetNPPId";
   const targetNameField = targetType === "character" ? "targetCharacterName" : "targetNPPName";
 
-  await db.collection("actionLogs").insertOne({
+  await actionLogsCollection<Document>(db).insertOne({
     characterId: myCharacter._id,
     userId: new ObjectId(userId),
     actionType: action === "raise" ? "supportPlayer" : "attackPlayer",

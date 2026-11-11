@@ -16,6 +16,7 @@ import type { CommodityPrice } from "@/lib/db/types/commodityPrice";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
+import { sourcingNetworkLoadCollection } from "@/lib/db/repositories/sourcingNetworkLoad";
 
 const countryIdSchema = z.enum(ZOD_COUNTRY_ENUM);
 
@@ -33,8 +34,7 @@ export async function GET(request: Request) {
 
     // Latest ledger turn, country's state ids, and freight capacity by state.
     const [latest, countryStates, freightPrice, openLogistics] = await Promise.all([
-      db
-        .collection<SourcingNetworkDoc>("sourcingNetworkLoad")
+      sourcingNetworkLoadCollection<SourcingNetworkDoc>(db)
         .find({})
         .sort({ turn: -1 })
         .limit(1)

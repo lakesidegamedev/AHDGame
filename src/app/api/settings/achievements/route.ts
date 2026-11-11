@@ -7,6 +7,8 @@ import { z } from "zod";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { characterAchievementsCollection } from "@/lib/db/repositories/characterAchievements";
+import type { Document } from "mongodb";
 
 const patchSchema = z.object({
   highlightedAchievementIds: z
@@ -50,8 +52,7 @@ export async function PATCH(request: Request) {
       return errorResponse(400, "Maximum 5 achievements can be highlighted");
     }
 
-    const earnedIds = await db
-      .collection("characterAchievements")
+    const earnedIds = await characterAchievementsCollection<Document>(db)
       .find({ characterId: character._id })
       .project({ achievementId: 1 })
       .toArray();

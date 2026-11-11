@@ -57,6 +57,7 @@ import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficia
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import type { Document } from "mongodb";
 import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
+import { supremeCourtSeatsCollection } from "@/lib/db/repositories/supremeCourtSeats";
 /*
  * Fallback if `gameConfig.chairActionBonus` is missing on legacy configs.
  * The per-country config in `countries.ts` sets each centralBankChair office
@@ -131,8 +132,7 @@ export async function processActionRefresh(
    * holds. Only player-held seats (justiceCharacterId set) draw the bonuses; NPP-
    * or historical-roster-held seats have no controlling player to benefit.
    */
-  const justiceSeatRows = await db
-    .collection<SupremeCourtSeat>("supremeCourtSeats")
+  const justiceSeatRows = await supremeCourtSeatsCollection(db)
     .find({ justiceCharacterId: { $ne: null } }, { projection: { justiceCharacterId: 1 } })
     .toArray();
   const seatedJusticeCharacterIds = new Set(

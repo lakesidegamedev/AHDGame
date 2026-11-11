@@ -100,6 +100,7 @@ import type { Document } from "mongodb";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { organizationMembershipsCollection } from "@/lib/db/repositories/organizationMemberships";
 
 /** Per-region net internal-migration change capped per turn (circuit-breaker). */
 const MAX_INTERNAL_CHANGE_FRACTION = 0.05;
@@ -288,8 +289,7 @@ export async function runDemographicFlows(
       // above carries no political values, so without this every region would
       // share one mortality curve.
       loadPoliticalMacroInputs(db, turn),
-      db
-        .collection<OrganizationMembership>("organizationMemberships")
+      organizationMembershipsCollection(db)
         .find({ organizationId: "EU" }, { projection: { countryId: 1, status: 1 } })
         .toArray(),
     ]);

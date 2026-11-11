@@ -16,6 +16,8 @@ import {
 } from "@/lib/equities/primaryMarket";
 import { emitTx } from "@/lib/financialTxLog/emit";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporationVotesCollection } from "@/lib/db/repositories/corporationVotes";
+import type { Document } from "mongodb";
 
 export async function applyPassedVoteEffects(opts: {
   db: Db;
@@ -63,12 +65,10 @@ export async function applyPassedVoteEffects(opts: {
         isPrivate: corporation.isPrivate === true,
       });
       // Cancel all other open votes — they are invalidated by the country change
-      await db
-        .collection("corporationVotes")
-        .updateMany(
-          { corporationId: corporation._id, status: "open", _id: { $ne: vote._id } },
-          { $set: { status: "cancelled", resolvedAt: now, updatedAt: now } }
-        );
+      await corporationVotesCollection<Document>(db).updateMany(
+        { corporationId: corporation._id, status: "open", _id: { $ne: vote._id } },
+        { $set: { status: "cancelled", resolvedAt: now, updatedAt: now } }
+      );
       await corporationsCollection(db).updateOne(
         { _id: corporation._id },
         {

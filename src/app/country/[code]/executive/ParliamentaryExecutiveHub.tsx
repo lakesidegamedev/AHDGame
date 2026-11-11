@@ -59,6 +59,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { parliamentaryGovernmentsCollection } from "@/lib/db/repositories/parliamentaryGovernments";
 
 type PartyRowMeta = {
   seqKey: string;
@@ -106,7 +107,7 @@ export async function ParliamentaryExecutiveHub({ countryId }: { countryId: Coun
 
   const [parlGov, govFormation, imperialPossessive, chamberSeats] = await Promise.all([
     // Legacy collection — only UK/JP ever wrote it; null elsewhere.
-    db.collection<ParliamentaryGovernment>("parliamentaryGovernments").findOne({ _id: countryId }),
+    parliamentaryGovernmentsCollection(db).findOne({ _id: countryId }),
     getGovernmentFormationsCollection(db).findOne({ _id: countryId }),
     surface.heroTitleUsesImperialPossessive
       ? fetchImperialPossessive(db, countryId)

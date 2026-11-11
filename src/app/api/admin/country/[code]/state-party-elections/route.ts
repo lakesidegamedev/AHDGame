@@ -43,6 +43,15 @@ import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { getGameTime } from "@/lib/time/gameTime";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nationalPartyElectionsCollection } from "@/lib/db/repositories/nationalPartyElections";
+import { statePartyCandidatesCollection } from "@/lib/db/repositories/statePartyCandidates";
+import type { Document } from "mongodb";
+import { nationalPartyCandidatesCollection } from "@/lib/db/repositories/nationalPartyCandidates";
+import { nationalCommitteeCandidatesCollection } from "@/lib/db/repositories/nationalCommitteeCandidates";
+import { statePartyElectionsCollection } from "@/lib/db/repositories/statePartyElections";
+import { statePartyVotesCollection } from "@/lib/db/repositories/statePartyVotes";
+import { nationalPartyVotesCollection } from "@/lib/db/repositories/nationalPartyVotes";
+import { nationalCommitteeVotesCollection } from "@/lib/db/repositories/nationalCommitteeVotes";
+import { nationalCommitteeElectionsCollection } from "@/lib/db/repositories/nationalCommitteeElections";
 
 // Schema for POST requests
 const batchSchema = z.object({
@@ -112,8 +121,7 @@ export const GET = withAdminRoute(
       if (filterPosition && filterPosition !== "committee") stateQuery.position = filterPosition;
       if (filterStatus) stateQuery.status = filterStatus;
 
-      const stateElections = await db
-        .collection<StatePartyElection>("statePartyElections")
+      const stateElections = await statePartyElectionsCollection(db)
         .find(stateQuery)
         .sort({ endTurn: 1, stateId: 1, partyId: 1 })
         .toArray();
@@ -137,8 +145,7 @@ export const GET = withAdminRoute(
 
       const [stateVotes, stateCands] = await Promise.all([
         stateIds.length > 0
-          ? db
-              .collection("statePartyVotes")
+          ? statePartyVotesCollection<Document>(db)
               .aggregate<{ _id: string; count: number }>([
                 { $match: { electionId: { $in: stateIds } } },
                 { $group: { _id: { $toString: "$electionId" }, count: { $sum: 1 } } },
@@ -146,8 +153,7 @@ export const GET = withAdminRoute(
               .toArray()
           : [],
         stateIds.length > 0
-          ? db
-              .collection("statePartyCandidates")
+          ? statePartyCandidatesCollection<Document>(db)
               .aggregate<{ _id: string; count: number }>([
                 { $match: { electionId: { $in: stateIds }, status: "active" } },
                 { $group: { _id: { $toString: "$electionId" }, count: { $sum: 1 } } },
@@ -208,8 +214,7 @@ export const GET = withAdminRoute(
 
       const [nationalVotes, nationalCands] = await Promise.all([
         nationalIds.length > 0
-          ? db
-              .collection("nationalPartyVotes")
+          ? nationalPartyVotesCollection<Document>(db)
               .aggregate<{ _id: string; count: number }>([
                 { $match: { electionId: { $in: nationalIds } } },
                 { $group: { _id: { $toString: "$electionId" }, count: { $sum: 1 } } },
@@ -217,8 +222,7 @@ export const GET = withAdminRoute(
               .toArray()
           : [],
         nationalIds.length > 0
-          ? db
-              .collection("nationalPartyCandidates")
+          ? nationalPartyCandidatesCollection<Document>(db)
               .aggregate<{ _id: string; count: number }>([
                 { $match: { electionId: { $in: nationalIds }, status: "active" } },
                 { $group: { _id: { $toString: "$electionId" }, count: { $sum: 1 } } },
@@ -260,8 +264,7 @@ export const GET = withAdminRoute(
       if (filterParty) committeeQuery.partyId = filterParty;
       if (filterStatus) committeeQuery.status = filterStatus;
 
-      const committeeElections = await db
-        .collection<NationalCommitteeElection>("nationalCommitteeElections")
+      const committeeElections = await nationalCommitteeElectionsCollection(db)
         .find(committeeQuery)
         .sort({ endTurn: 1, partyId: 1 })
         .toArray();
@@ -279,8 +282,7 @@ export const GET = withAdminRoute(
 
       const [committeeVotes, committeeCands] = await Promise.all([
         committeeIds.length > 0
-          ? db
-              .collection("nationalCommitteeVotes")
+          ? nationalCommitteeVotesCollection<Document>(db)
               .aggregate<{ _id: string; count: number }>([
                 { $match: { electionId: { $in: committeeIds } } },
                 { $group: { _id: { $toString: "$electionId" }, count: { $sum: 1 } } },
@@ -288,8 +290,7 @@ export const GET = withAdminRoute(
               .toArray()
           : [],
         committeeIds.length > 0
-          ? db
-              .collection("nationalCommitteeCandidates")
+          ? nationalCommitteeCandidatesCollection<Document>(db)
               .aggregate<{ _id: string; count: number }>([
                 { $match: { electionId: { $in: committeeIds }, status: "active" } },
                 { $group: { _id: { $toString: "$electionId" }, count: { $sum: 1 } } },
@@ -451,18 +452,12 @@ export const POST = withAdminRoute(
 
       const [stateVotingElections, nationalVotingElections, committeeVotingElections] =
         await Promise.all([
-          db
-            .collection<StatePartyElection>("statePartyElections")
-            .find(stateElectionFilter)
-            .toArray(),
+          statePartyElectionsCollection(db).find(stateElectionFilter).toArray(),
           includeNational
             ? nationalPartyElectionsCollection(db).find(nationalElectionFilter).toArray()
             : Promise.resolve([] as NationalPartyElection[]),
           includeCommittee
-            ? db
-                .collection<NationalCommitteeElection>("nationalCommitteeElections")
-                .find(committeeElectionFilter)
-                .toArray()
+            ? nationalCommitteeElectionsCollection(db).find(committeeElectionFilter).toArray()
             : Promise.resolve([] as NationalCommitteeElection[]),
         ]);
       const stateElectionIds = stateVotingElections.map((e) => e._id);
@@ -472,21 +467,17 @@ export const POST = withAdminRoute(
       // Cancel all voting state elections and their candidates
       const stateElectionsCancelled =
         stateElectionIds.length > 0
-          ? await db
-              .collection<StatePartyElection>("statePartyElections")
-              .updateMany(
-                { _id: { $in: stateElectionIds } },
-                { $set: { status: "cancelled", updatedAt: now } }
-              )
+          ? await statePartyElectionsCollection(db).updateMany(
+              { _id: { $in: stateElectionIds } },
+              { $set: { status: "cancelled", updatedAt: now } }
+            )
           : { modifiedCount: 0 };
 
       if (stateElectionIds.length > 0) {
-        await db
-          .collection("statePartyCandidates")
-          .updateMany(
-            { electionId: { $in: stateElectionIds }, status: "active" },
-            { $set: { status: "withdrawn", withdrawnAt: now } }
-          );
+        await statePartyCandidatesCollection<Document>(db).updateMany(
+          { electionId: { $in: stateElectionIds }, status: "active" },
+          { $set: { status: "withdrawn", withdrawnAt: now } }
+        );
       }
 
       // Cancel all voting national elections and their candidates
@@ -497,30 +488,24 @@ export const POST = withAdminRoute(
           { $set: { status: "cancelled", updatedAt: now } }
         );
 
-        await db
-          .collection("nationalPartyCandidates")
-          .updateMany(
-            { electionId: { $in: nationalElectionIds }, status: "active" },
-            { $set: { status: "withdrawn", withdrawnAt: now } }
-          );
+        await nationalPartyCandidatesCollection<Document>(db).updateMany(
+          { electionId: { $in: nationalElectionIds }, status: "active" },
+          { $set: { status: "withdrawn", withdrawnAt: now } }
+        );
       }
 
       // Cancel all voting committee elections and their candidates
       let committeeElectionsCancelled = { modifiedCount: 0 };
       if (includeCommittee && committeeElectionIds.length > 0) {
-        committeeElectionsCancelled = await db
-          .collection<NationalCommitteeElection>("nationalCommitteeElections")
-          .updateMany(
-            { _id: { $in: committeeElectionIds } },
-            { $set: { status: "cancelled", updatedAt: now } }
-          );
+        committeeElectionsCancelled = await nationalCommitteeElectionsCollection(db).updateMany(
+          { _id: { $in: committeeElectionIds } },
+          { $set: { status: "cancelled", updatedAt: now } }
+        );
 
-        await db
-          .collection("nationalCommitteeCandidates")
-          .updateMany(
-            { electionId: { $in: committeeElectionIds }, status: "active" },
-            { $set: { status: "withdrawn", withdrawnAt: now } }
-          );
+        await nationalCommitteeCandidatesCollection<Document>(db).updateMany(
+          { electionId: { $in: committeeElectionIds }, status: "active" },
+          { $set: { status: "withdrawn", withdrawnAt: now } }
+        );
       }
 
       // Create new elections

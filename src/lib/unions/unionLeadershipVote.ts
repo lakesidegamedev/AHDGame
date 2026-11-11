@@ -1,10 +1,10 @@
 import type { Db, ObjectId } from "mongodb";
 import type { Union, UnionLeaderVote, UnionOrganizer } from "@/lib/db/types/union";
+import { unionOrganizersCollection } from "@/lib/db/repositories/unionOrganizers";
 
 /** Load every organizer's banked strength for one union, keyed by character id. */
 export async function loadUnionVoteWeights(db: Db, unionId: ObjectId): Promise<UnionVoteWeights> {
-  const organizers = await db
-    .collection<UnionOrganizer>("unionOrganizers")
+  const organizers = await unionOrganizersCollection(db)
     .find({ unionId }, { projection: { characterId: 1, strength: 1 } })
     .toArray();
   const weights: UnionVoteWeights = new Map();

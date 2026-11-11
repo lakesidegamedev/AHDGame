@@ -33,6 +33,7 @@ import { getNppsCollection } from "@/lib/db/collections/npps";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { corporationPrivatizationVotesCollection } from "@/lib/db/repositories/corporationPrivatizationVotes";
 
 export interface ResolveInput {
   db: Db;
@@ -115,14 +116,12 @@ export async function resolvePrivatizationVote(input: ResolveInput): Promise<Res
   // FIRST. Only the winner of the transition does payouts. The loser sees
   // matchedCount === 0 and bails out as already_resolved.
   const finalStatus: "passed" | "failed" = passed ? "passed" : "failed";
-  const claim = await db
-    .collection<CorporationPrivatizationVote>("corporationPrivatizationVotes")
-    .updateOne(
-      // The tallied votes are part of the claim: a cast that lands after the
-      // tally leaves the vote open for the next resolver to count it.
-      { _id: vote._id, status: "open", votes: vote.votes },
-      { $set: { status: finalStatus, resolvedAt: now, updatedAt: now } }
-    );
+  const claim = await corporationPrivatizationVotesCollection(db).updateOne(
+    // The tallied votes are part of the claim: a cast that lands after the
+    // tally leaves the vote open for the next resolver to count it.
+    { _id: vote._id, status: "open", votes: vote.votes },
+    { $set: { status: finalStatus, resolvedAt: now, updatedAt: now } }
+  );
   if (claim.matchedCount === 0) {
     // Another resolver already claimed this vote, or a cast moved the tally.
     // Bail out: the claimant owns the side effects, or the next pass recounts.

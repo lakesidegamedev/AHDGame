@@ -7,6 +7,7 @@ import { EQUITY_MARKET_POOLS_COLLECTION } from "@/lib/db/types/equityMarketPool"
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { debitEquityPoolGated, EQUITY_POOL_M2_SHARE } from "./marketPool";
 import { poolConservationResidual } from "./poolConservation";
+import { moneySupplySnapshotsCollection } from "@/lib/db/repositories/moneySupplySnapshots";
 
 const EQUITY_POOL_SWEEP_TRIGGER_MULTIPLE = 2;
 const EQUITY_POOL_SWEEP_TO_MULTIPLE = 1.5;
@@ -65,10 +66,12 @@ export async function processEquityMarketPoolTurn(
     sweptLocalByCurrency: {} as Record<string, number>,
   };
   for (const pool of pools) {
-    const latest = await db
-      .collection<{ currencyCode: string; m2?: number; turn: number; accountingVersion?: number }>(
-        "moneySupplySnapshots"
-      )
+    const latest = await moneySupplySnapshotsCollection<{
+      currencyCode: string;
+      m2?: number;
+      turn: number;
+      accountingVersion?: number;
+    }>(db)
       .find(
         { currencyCode: pool._id },
         { projection: { m2: 1, accountingVersion: 1 }, sort: { turn: -1 }, limit: 1 }

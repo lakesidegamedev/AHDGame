@@ -16,6 +16,7 @@ import { mergeRegionalSubstrates } from "@/lib/demographics/nationalElectorate";
 import type { EnrichedCandidate } from "./types";
 import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
 import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
+import { demographicDefaultsCollection } from "@/lib/db/repositories/demographicDefaults";
 
 export interface NationwideElectoratePreload {
   state: State;
@@ -285,7 +286,7 @@ export async function loadNationalRegionDocs(
   const [demographics, turnout, defaults] = await Promise.all([
     stateDemographicsCollection(db).find(filter).toArray(),
     stateDemographicTurnoutCollection(db).find(filter).toArray(),
-    db.collection<StateDemographics>("demographicDefaults").find(filter).toArray(),
+    demographicDefaultsCollection(db).find(filter).toArray(),
   ]);
   return {
     stateMap: new Map(states.map((row) => [row._id as string, row])),

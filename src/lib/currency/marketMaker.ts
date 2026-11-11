@@ -30,6 +30,7 @@ import {
 } from "./marketMakerReceipt";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { tradeHistoryCollection } from "@/lib/db/repositories/tradeHistory";
 
 interface MarketMakerTradeParams {
   /** Stable accepted income-event identity for garnished residual conversions. */
@@ -448,9 +449,9 @@ async function executeMarketMakerTradeInner(
     source: source ?? "manual",
     ...(sourceRef ? { sourceRef } : {}),
   };
-  const { insertedId: tradeHistoryId } = await db
-    .collection<TradeHistoryEntry>("tradeHistory")
-    .insertOne(tradeEntry as TradeHistoryEntry);
+  const { insertedId: tradeHistoryId } = await tradeHistoryCollection(db).insertOne(
+    tradeEntry as TradeHistoryEntry
+  );
 
   // Distribute spread fee: destroy sink; forexRevenue to the source currency's
   // CB; the reserve slice (in fromCurrency) accrues to the destination currency's

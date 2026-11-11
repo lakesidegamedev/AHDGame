@@ -9,6 +9,9 @@ import { getSuggestionsCollection } from "@/lib/db/collections/suggestions";
 import { getSuggestionReactionsCollection } from "@/lib/db/collections/suggestionReactions";
 import type { NewsPost, NewsReaction, SuggestionReaction, User } from "@/lib/db/types";
 import { usersCollection } from "@/lib/db/repositories/users";
+import { newsPostsCollection } from "@/lib/db/repositories/newsPosts";
+import type { Document } from "mongodb";
+import { newsReactionsCollection } from "@/lib/db/repositories/newsReactions";
 
 const schema = z.object({
   discordUserId: z.string().min(1),
@@ -49,17 +52,16 @@ export async function POST(request: Request) {
     if (channelType === "news") {
       const reaction = emoji === "👍" ? "agree" : "disagree";
 
-      const post = await db
-        .collection<NewsPost>("newsPosts")
-        .findOne({ discordMessageId: messageId }, { projection: { _id: 1, reactions: 1 } });
+      const post = await newsPostsCollection(db).findOne(
+        { discordMessageId: messageId },
+        { projection: { _id: 1, reactions: 1 } }
+      );
       if (!post) {
         return statusResponse(404, { linked: true, itemFound: false });
       }
 
       const postId = post._id;
-      const existing = await db
-        .collection<NewsReaction>("newsReactions")
-        .findOne({ postId, userId });
+      const existing = await newsReactionsCollection(db).findOne({ postId, userId });
 
       let agreeChange = 0;
       let disagreeChange = 0;
@@ -67,14 +69,15 @@ export async function POST(request: Request) {
 
       if (existing) {
         if (existing.reaction === reaction) {
-          await db.collection("newsReactions").deleteOne({ _id: existing._id });
+          await newsReactionsCollection<Document>(db).deleteOne({ _id: existing._id });
           if (reaction === "agree") agreeChange = -1;
           else disagreeChange = -1;
           userReaction = null;
         } else {
-          await db
-            .collection("newsReactions")
-            .updateOne({ _id: existing._id }, { $set: { reaction } });
+          await newsReactionsCollection<Document>(db).updateOne(
+            { _id: existing._id },
+            { $set: { reaction } }
+          );
           if (reaction === "agree") {
             agreeChange = 1;
             disagreeChange = -1;
@@ -86,7 +89,7 @@ export async function POST(request: Request) {
         }
       } else {
         const doc: Omit<NewsReaction, "_id"> = { postId, userId, reaction, createdAt: new Date() };
-        await db.collection("newsReactions").insertOne(doc);
+        await newsReactionsCollection<Document>(db).insertOne(doc);
         if (reaction === "agree") agreeChange = 1;
         else disagreeChange = 1;
         userReaction = reaction;
@@ -96,12 +99,13 @@ export async function POST(request: Request) {
       if (agreeChange !== 0) update["reactions.agree"] = agreeChange;
       if (disagreeChange !== 0) update["reactions.disagree"] = disagreeChange;
       if (Object.keys(update).length > 0) {
-        await db.collection("newsPosts").updateOne({ _id: postId }, { $inc: update });
+        await newsPostsCollection<Document>(db).updateOne({ _id: postId }, { $inc: update });
       }
 
-      const updated = await db
-        .collection<NewsPost>("newsPosts")
-        .findOne({ _id: postId }, { projection: { reactions: 1 } });
+      const updated = await newsPostsCollection(db).findOne(
+        { _id: postId },
+        { projection: { reactions: 1 } }
+      );
       return NextResponse.json({
         linked: true,
         itemFound: true,

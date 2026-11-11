@@ -17,6 +17,7 @@ import { z } from "zod";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { usersCollection } from "@/lib/db/repositories/users";
 import type { Document } from "mongodb";
+import { retiredCharactersCollection } from "@/lib/db/repositories/retiredCharacters";
 
 // GET /api/admin/users/retire-character?userId=xxx — Fetch retired characters for a user.
 // Auth: requireAdmin
@@ -33,8 +34,7 @@ export async function GET(request: Request) {
     }
 
     const db = await getDb();
-    const retired = await db
-      .collection<RetiredCharacter>("retiredCharacters")
+    const retired = await retiredCharactersCollection(db)
       .find({ userId: new ObjectId(userIdParam) })
       .sort({ retiredAt: -1 })
       .toArray();

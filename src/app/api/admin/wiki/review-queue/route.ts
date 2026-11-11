@@ -5,6 +5,7 @@ import { handleRouteError } from "@/lib/api/errors";
 import type { ObjectId } from "mongodb";
 import type { User, WikiPage } from "@/lib/db/types";
 import { usersCollection } from "@/lib/db/repositories/users";
+import { wikiPagesCollection } from "@/lib/db/repositories/wikiPages";
 
 // GET /api/admin/wiki/review-queue — Returns all wiki pages with pending_review status awaiting moderation.
 // Auth: requireModerator (admin or moderator)
@@ -15,7 +16,7 @@ export async function GET() {
     if (!auth.ok) return auth.response;
 
     const db = await getDb();
-    const wikiPages = db.collection<WikiPage>("wikiPages");
+    const wikiPages = wikiPagesCollection(db);
 
     const pending = await wikiPages
       .find({ status: "pending_review" })

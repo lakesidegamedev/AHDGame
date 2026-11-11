@@ -30,6 +30,7 @@ import { CA_REGION_NAMES } from "@/lib/countries/ca/geographyFacts";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
+import { seatsCollection } from "@/lib/db/repositories/seats";
 
 // State name lookup for display names
 const STATE_NAMES = US_STATE_NAMES;
@@ -264,7 +265,7 @@ export async function seedSeats(
   log: (msg: string) => void,
   preset: string
 ): Promise<void> {
-  const col = db.collection<Seat>("seats");
+  const col = seatsCollection(db);
   const now = new Date();
   // House seat counts per state depend on the preset's apportionment era.
   const houseSeatsByState = getHouseSeats(preset);

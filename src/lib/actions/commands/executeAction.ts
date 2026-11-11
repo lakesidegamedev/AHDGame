@@ -48,6 +48,8 @@ import { applySlantToAdvertise, loadStateSlant } from "@/lib/mediaEditorial/slan
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { actionLogsCollection } from "@/lib/db/repositories/actionLogs";
+import type { Document } from "mongodb";
 
 function clampAddExpression(fieldPath: string, delta: number, min: number, max: number) {
   return {
@@ -571,7 +573,7 @@ async function executeCharacterActionImpl(
       // actionLogs scans and award lookups for every action in a batch.
       const userOid = actor.userId;
       dbStartedAt = Date.now();
-      const actionLogResult = await db.collection("actionLogs").insertOne(actionLog);
+      const actionLogResult = await actionLogsCollection<Document>(db).insertOne(actionLog);
       timing.actionLogMs += Date.now() - dbStartedAt;
       auditEntries.push({
         source: "api",

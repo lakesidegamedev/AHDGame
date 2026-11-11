@@ -7,6 +7,8 @@ import { getGameTime } from "@/lib/time/gameTime";
 import { DISCORD_COLORS, sendCountryGameEvent } from "@/lib/discordWebhooks";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { supremeCourtSeatsCollection } from "@/lib/db/repositories/supremeCourtSeats";
+import { scotusNominationsCollection } from "@/lib/db/repositories/scotusNominations";
 
 const VOTING_DURATION_HOURS = 24;
 const VOTING_DURATION_MS = VOTING_DURATION_HOURS * 60 * 60 * 1000;
@@ -42,15 +44,16 @@ export async function createJusticeNomination(
   db: Db,
   params: NominateJusticeParams
 ): Promise<NominateJusticeResult> {
-  const seat = await db
-    .collection<SupremeCourtSeat>("supremeCourtSeats")
-    .findOne({ countryId: params.countryId, seatNumber: params.seatNumber });
+  const seat = await supremeCourtSeatsCollection(db).findOne({
+    countryId: params.countryId,
+    seatNumber: params.seatNumber,
+  });
   if (!seat) return { ok: false, error: "Unknown seat" };
   if (seat.justiceCharacterId || seat.justiceNppId || seat.justiceMode === "historical") {
     return { ok: false, error: "Seat is not vacant" };
   }
 
-  const existingActive = await db.collection<ScotusNomination>("scotusNominations").findOne({
+  const existingActive = await scotusNominationsCollection(db).findOne({
     countryId: params.countryId,
     seatNumber: params.seatNumber,
     status: "active",
@@ -125,9 +128,10 @@ export async function createJusticeNomination(
     updatedAt: now,
   };
 
-  const result = await db
-    .collection<ScotusNomination>("scotusNominations")
-    .insertOne({ _id: new ObjectId(), ...nomination } as ScotusNomination);
+  const result = await scotusNominationsCollection(db).insertOne({
+    _id: new ObjectId(),
+    ...nomination,
+  } as ScotusNomination);
 
   sendCountryGameEvent("US", {
     title: "Supreme Court Nomination",

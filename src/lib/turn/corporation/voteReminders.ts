@@ -15,6 +15,8 @@ import { resolvePrivatizationVote } from "@/lib/corporations/commands/privatizat
 import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { corporationVotesCollection } from "@/lib/db/repositories/corporationVotes";
+import { corporationPrivatizationVotesCollection } from "@/lib/db/repositories/corporationPrivatizationVotes";
 
 type ReminderVote = CorporationVote | CorporationPrivatizationVote;
 
@@ -35,12 +37,10 @@ export async function processVoteReminders(db: Db, currentTurn: number): Promise
   const reminderDeadline = currentTurn + 4;
 
   const [genericVotes, privVotes] = await Promise.all([
-    db
-      .collection<CorporationVote>("corporationVotes")
+    corporationVotesCollection(db)
       .find({ status: "open", deadlineAtTurn: reminderDeadline })
       .toArray(),
-    db
-      .collection<CorporationPrivatizationVote>("corporationPrivatizationVotes")
+    corporationPrivatizationVotesCollection(db)
       .find({ status: "open", deadlineAtTurn: reminderDeadline })
       .toArray(),
   ]);
@@ -144,11 +144,8 @@ export async function processVoteAutoResolve(
   stockTaxActive = false
 ): Promise<void> {
   const [genericVotes, privVotes] = await Promise.all([
-    db.collection<CorporationVote>("corporationVotes").find({ status: "open" }).toArray(),
-    db
-      .collection<CorporationPrivatizationVote>("corporationPrivatizationVotes")
-      .find({ status: "open" })
-      .toArray(),
+    corporationVotesCollection(db).find({ status: "open" }).toArray(),
+    corporationPrivatizationVotesCollection(db).find({ status: "open" }).toArray(),
   ]);
 
   // Pre-batch corporation lookups for generic votes

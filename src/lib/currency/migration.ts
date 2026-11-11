@@ -23,6 +23,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import type { Document } from "mongodb";
 import { currencyOrdersCollection } from "@/lib/db/repositories/currencyOrders";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { tradeHistoryCollection } from "@/lib/db/repositories/tradeHistory";
 
 const BATCH_SIZE = 500;
 
@@ -344,10 +345,11 @@ export async function migrateCorporationLiquidCapital(db: Db): Promise<Migration
  */
 export async function createForexIndexes(db: Db): Promise<void> {
   await Promise.all([
-    db.collection("tradeHistory").createIndex({ turn: -1 }, { background: true }),
-    db
-      .collection("tradeHistory")
-      .createIndex({ buyerCharacterId: 1, turn: -1 }, { background: true }),
+    tradeHistoryCollection<Document>(db).createIndex({ turn: -1 }, { background: true }),
+    tradeHistoryCollection<Document>(db).createIndex(
+      { buyerCharacterId: 1, turn: -1 },
+      { background: true }
+    ),
     currencyOrdersCollection<Document>(db).createIndex(
       { status: 1, expiresAtTurn: 1 },
       { background: true }

@@ -18,6 +18,7 @@ import { industryConversionFields } from "@/lib/corporations/retooling/conversio
 import { freeTransitionConversion } from "@/lib/market/producerMarket/transitionRules";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { stateResourceCapacityCollection } from "@/lib/db/repositories/stateResourceCapacity";
 
 interface RouteParams {
   params: Promise<{ id: string; sectorId: string }>;
@@ -93,9 +94,10 @@ export async function convertSectorIndustryCore(
 
   if (to.sectorType === "extraction") {
     const strategy = (SECTOR_STRATEGIES[input.targetLane] ?? []).find((s) => s.id === strategyId);
-    const capacity = await db
-      .collection<StateResourceCapacity>("stateResourceCapacity")
-      .findOne({ stateId: sector.stateId }, { projection: { resources: 1 } });
+    const capacity = await stateResourceCapacityCollection(db).findOne(
+      { stateId: sector.stateId },
+      { projection: { resources: 1 } }
+    );
     if (
       strategy &&
       isExtractionStrategyZeroYield(strategy, capacity ? (capacity.resources ?? null) : undefined)

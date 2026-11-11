@@ -49,6 +49,8 @@ import { usersCollection } from "@/lib/db/repositories/users";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { activityLogCollection } from "@/lib/db/repositories/activityLog";
 import type { Document } from "mongodb";
+import { actionLogsCollection } from "@/lib/db/repositories/actionLogs";
+import { suspiciousCharactersCollection } from "@/lib/db/repositories/suspiciousCharacters";
 
 // ─── Tunables ────────────────────────────────────────────────────────────
 
@@ -187,11 +189,10 @@ async function selectCandidateUserIds(
         type: "turn_summary",
         timestamp: { $gte: since },
       }),
-      db.collection("actionLogs").distinct("userId", {
+      actionLogsCollection<Document>(db).distinct("userId", {
         createdAt: { $gte: since },
       }),
-      db
-        .collection<{ userId: ObjectId }>("suspiciousCharacters")
+      suspiciousCharactersCollection<{ userId: ObjectId }>(db)
         .find({}, { projection: { userId: 1 } })
         .toArray(),
     ]);
@@ -672,8 +673,7 @@ async function buildCandidateFacets(
   }
 
   if (candidateUserIds.length > 0) {
-    const actionRows = await db
-      .collection<ActionLog>("actionLogs")
+    const actionRows = await actionLogsCollection(db)
       .find(
         { userId: { $in: candidateUserIds }, createdAt: { $gte: since } },
         { projection: { userId: 1, createdAt: 1, targetState: 1 }, limit: MAX_ACTION_ROWS }

@@ -45,6 +45,8 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
 import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 import { usersCollection } from "@/lib/db/repositories/users";
+import { corporationVotesCollection } from "@/lib/db/repositories/corporationVotes";
+import { shareListingsCollection } from "@/lib/db/repositories/shareListings";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -119,9 +121,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     const subBlock = subsidiaryIssuanceBlockReason(corporation);
     if (subBlock) return errorResponse(403, subBlock);
 
-    const openShareholderVote = await db
-      .collection<CorporationVote>("corporationVotes")
-      .findOne({ corporationId: corporation._id, status: "open" }, { projection: { _id: 1 } });
+    const openShareholderVote = await corporationVotesCollection(db).findOne(
+      { corporationId: corporation._id, status: "open" },
+      { projection: { _id: 1 } }
+    );
     if (openShareholderVote) {
       return errorResponse(400, "Cannot issue shares while a shareholder vote is open");
     }
@@ -329,8 +332,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     if (freshCorp) {
       const [openListings, openSellOrders] = await Promise.all([
-        db
-          .collection<ShareListing>("shareListings")
+        shareListingsCollection(db)
           .find({ corporationId: corporation._id, status: "open" })
           .toArray(),
         shareOrdersCollection(db)

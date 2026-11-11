@@ -58,6 +58,9 @@ import {
 } from "@/lib/congress/leadership/electionRoleMap";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { cabinetNominationsCollection } from "@/lib/db/repositories/cabinetNominations";
+import { billWhipsCollection } from "@/lib/db/repositories/billWhips";
+import { scotusNominationsCollection } from "@/lib/db/repositories/scotusNominations";
+import { speakerElectionsCollection } from "@/lib/db/repositories/speakerElections";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -223,9 +226,7 @@ export async function handleWhippableLeadership(request: Request, { params }: Ro
 
     // Get active Speaker election (US only)
     const speakerElection = isUS
-      ? await db
-          .collection<SpeakerElection>("speakerElections")
-          .findOne({ _id: "current", status: "voting" })
+      ? await speakerElectionsCollection(db).findOne({ _id: "current", status: "voting" })
       : null;
 
     // Get the open motion to vacate the chair (US only). Resolution is lazy, so
@@ -294,8 +295,7 @@ export async function handleWhippableLeadership(request: Request, { params }: Ro
     }
 
     // Get existing national whips for leadership elections
-    const existingWhips = await db
-      .collection<BillWhip>("billWhips")
+    const existingWhips = await billWhipsCollection(db)
       .find({
         targetType: {
           $in: [
@@ -619,8 +619,7 @@ export async function handleWhippableLeadership(request: Request, { params }: Ro
     }
 
     if (countryId === COUNTRY_CONFIGS.US.id && hasUpperNPPs) {
-      const nominations = await db
-        .collection<ScotusNomination>("scotusNominations")
+      const nominations = await scotusNominationsCollection(db)
         .find({ countryId, status: "active" })
         .toArray();
       for (const nomination of nominations) {

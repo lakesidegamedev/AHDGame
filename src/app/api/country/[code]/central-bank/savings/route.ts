@@ -36,6 +36,7 @@ import {
 } from "@/lib/banking/rules/rates";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { portfolioHistoryCollection } from "@/lib/db/repositories/portfolioHistory";
 
 const DEFAULT_PRIME = 2.5;
 
@@ -78,8 +79,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
       // Most recent 500 turns; sort descending server-side then reverse for the
       // chart consumer (ascending) so long-lived characters don't see the chart
       // truncate to the oldest 500 snapshots.
-      db
-        .collection<PortfolioHistory>("portfolioHistory")
+      portfolioHistoryCollection(db)
         .find({ characterId: character._id })
         .sort({ turn: -1 })
         .limit(500)

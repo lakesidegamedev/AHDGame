@@ -7,6 +7,7 @@ import { handleRouteError } from "@/lib/api/errors";
 import { resolveCorporation } from "@/lib/api/corporations/resolveQuery";
 import { bulkFetchCharacterNames, getCharacterByUserId } from "@/lib/db/characterLookup";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
+import { shareListingsCollection } from "@/lib/db/repositories/shareListings";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -51,8 +52,7 @@ export async function getShareListingsView(_request: Request, { params }: RouteP
 
     const now = new Date();
     const nowTurn = await getCurrentTurn(db);
-    const listings = await db
-      .collection<ShareListing>("shareListings")
+    const listings = await shareListingsCollection(db)
       .find({
         corporationId: corporation._id,
         status: "open",
@@ -72,8 +72,7 @@ export async function getShareListingsView(_request: Request, { params }: RouteP
 
     // Public record of completed negotiated sales: these settle outside the
     // normal price band, so who paid what stays visible to everyone.
-    const negotiatedDeals = await db
-      .collection<ShareListing>("shareListings")
+    const negotiatedDeals = await shareListingsCollection(db)
       .find({ corporationId: corporation._id, status: "filled", negotiated: { $exists: true } })
       .sort({ updatedAt: -1, createdAt: -1 })
       .limit(10)

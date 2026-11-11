@@ -15,6 +15,7 @@ import type { SeedPresetId } from "@/lib/constants/turnTime";
 import { dataPresetFor } from "@/lib/seeds/presetSelector";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { governorOfficeStateCollection } from "@/lib/db/repositories/governorOfficeState";
 
 /**
  * Default Devolution Policy per (UK region, preset) for newly-seeded First
@@ -82,8 +83,7 @@ export async function seedOfficeStates(
 
   // Pre-fetch existing rows so we can decide insert vs skip without a per-key
   // round-trip.
-  const existing = await db
-    .collection<GovernorOfficeState>("governorOfficeState")
+  const existing = await governorOfficeStateCollection(db)
     .find({})
     .project<{ countryId: CountryId; stateId: string }>({ countryId: 1, stateId: 1 })
     .toArray();
@@ -158,7 +158,7 @@ export async function seedOfficeStates(
   }
 
   if (inserts.length > 0) {
-    await db.collection<GovernorOfficeState>("governorOfficeState").insertMany(inserts);
+    await governorOfficeStateCollection(db).insertMany(inserts);
   }
   return { inserted, skipped };
 }

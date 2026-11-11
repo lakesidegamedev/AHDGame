@@ -12,6 +12,7 @@ import type { ScotusNomination } from "@/lib/db/types/scotus";
 import { computeCabinetNominationTally } from "@/lib/congress/governmentVoteBreakdown";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { scotusNominationsCollection } from "@/lib/db/repositories/scotusNominations";
 
 // GET /api/congress/scotus-nominations/[id] — Returns full detail for a single SCOTUS nomination including vote tallies.
 // Auth: public
@@ -30,9 +31,7 @@ export const GET = withNoStore(async function GET(
     }
 
     const db = await getDb();
-    const nomination = await db
-      .collection<ScotusNomination>("scotusNominations")
-      .findOne({ _id: nominationOid });
+    const nomination = await scotusNominationsCollection(db).findOne({ _id: nominationOid });
 
     if (!nomination) {
       return errorResponse(404, "Nomination not found");

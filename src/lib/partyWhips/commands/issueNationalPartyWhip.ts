@@ -62,6 +62,10 @@ import { legislationTypesCollection } from "@/lib/db/repositories/legislationTyp
 import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
 import { cabinetNominationsCollection } from "@/lib/db/repositories/cabinetNominations";
 import type { Document } from "mongodb";
+import { billWhipsCollection } from "@/lib/db/repositories/billWhips";
+import { scotusNominationsCollection } from "@/lib/db/repositories/scotusNominations";
+import { speakerElectionsCollection } from "@/lib/db/repositories/speakerElections";
+import { leadershipElectionsCollection } from "@/lib/db/repositories/leadershipElections";
 
 export const nationalPartyWhipSchema = z
   .object({
@@ -191,8 +195,7 @@ export async function issueNationalPartyWhip({
 
   // Check existing whips (max 2 per target/chamber for national party NPP whips).
   // Legacy docs without `audience` are treated as "npp" so they still count.
-  const existingWhips = await db
-    .collection<BillWhip>("billWhips")
+  const existingWhips = await billWhipsCollection(db)
     .find({
       targetType,
       targetId: storedTargetId,
@@ -288,15 +291,15 @@ async function resolveWhipTarget(
   if (targetType === "speakerElection") {
     const speakerElection = isUSCongressLeadershipTarget
       ? normalizedTargetId === "current"
-        ? await db
-            .collection<{ _id: string; status: string; startedAt?: Date }>("speakerElections")
-            .findOne({
-              _id: "current",
-              status: "voting",
-            })
+        ? await speakerElectionsCollection<{ _id: string; status: string; startedAt?: Date }>(
+            db
+          ).findOne({
+            _id: "current",
+            status: "voting",
+          })
         : null
       : targetOid
-        ? await db.collection("speakerElections").findOne({
+        ? await speakerElectionsCollection<Document>(db).findOne({
             _id: targetOid,
             status: "active",
           })
@@ -320,7 +323,7 @@ async function resolveWhipTarget(
             status: "voting",
           })
       : targetOid
-        ? await db.collection("leadershipElections").findOne({
+        ? await leadershipElectionsCollection<Document>(db).findOne({
             _id: targetOid,
             status: "active",
           })
@@ -428,9 +431,11 @@ async function resolveWhipTarget(
     if (countryId !== COUNTRY_CONFIGS.US.id || chamber !== "senate") {
       return fail(400, "Supreme Court nominations can only be whipped in the US Senate");
     }
-    const nomination = await db
-      .collection<ScotusNomination>("scotusNominations")
-      .findOne({ _id: requireObjectId(targetOid), countryId, status: "active" });
+    const nomination = await scotusNominationsCollection(db).findOne({
+      _id: requireObjectId(targetOid),
+      countryId,
+      status: "active",
+    });
     if (!nomination) return fail(404, "Supreme Court nomination not found or not active");
     const gameTime = await getGameTime();
     if (
@@ -494,8 +499,7 @@ async function issuePlayerWhip(
   { storedTargetId, whipWindowStart }: ResolvedTarget
 ): Promise<IssueNationalPartyWhipResult> {
   const characterId = character._id;
-  const existingCharacterWhips = await db
-    .collection<BillWhip>("billWhips")
+  const existingCharacterWhips = await billWhipsCollection(db)
     .find({
       targetType,
       targetId: storedTargetId,
@@ -537,7 +541,7 @@ async function issuePlayerWhip(
     createdAt: pwNow,
     updatedAt: pwNow,
   };
-  const pwInsert = await db.collection<BillWhip>("billWhips").insertOne(playerWhipDoc as BillWhip);
+  const pwInsert = await billWhipsCollection(db).insertOne(playerWhipDoc as BillWhip);
 
   recordAudit({
     source: "api",
@@ -643,7 +647,7 @@ async function issueNppWhip(
     updatedAt: now,
   };
 
-  const result = await db.collection<BillWhip>("billWhips").insertOne(whipDoc as BillWhip);
+  const result = await billWhipsCollection(db).insertOne(whipDoc as BillWhip);
 
   recordAudit({
     source: "api",

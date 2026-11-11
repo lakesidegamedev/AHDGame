@@ -131,6 +131,9 @@ import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
 import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
+import { demographicDefaultsCollection } from "@/lib/db/repositories/demographicDefaults";
+import { executiveEndorsementsCollection } from "@/lib/db/repositories/executiveEndorsements";
+import { stateRegistrationPoolCollection } from "@/lib/db/repositories/stateRegistrationPool";
 
 // ─── Accumulate one turn of votes into a tally ───────────────────────────────
 
@@ -278,9 +281,7 @@ export async function accumulateVoteTurn(
         _id: stateId,
         countryId: election.countryId,
       }),
-      db
-        .collection<StateRegistrationPool>("stateRegistrationPool")
-        .findOne({ stateId, countryId: election.countryId }),
+      stateRegistrationPoolCollection(db).findOne({ stateId, countryId: election.countryId }),
       gameStateCollection(db).findOne(
         { _id: "current" },
         {
@@ -427,9 +428,10 @@ export async function accumulateVoteTurn(
       options?.preload?.demographicDefaultsByState?.get(stateId) ??
       (options?.preload
         ? null
-        : await db
-            .collection<StateDemographics>("demographicDefaults")
-            .findOne({ _id: stateId, countryId: election.countryId }));
+        : await demographicDefaultsCollection(db).findOne({
+            _id: stateId,
+            countryId: election.countryId,
+          }));
     const substrate = buildGranularElectorateSubstrate({
       campaignRulesVersion: election.campaignRulesVersion,
       currentTurn: turnNumber,
@@ -885,8 +887,7 @@ export async function accumulateVoteTurn(
     memo?.executiveEndorsedCandidateIdsByElection?.get(electionId.toString()) ??
     new Set(
       (
-        await db
-          .collection<ExecutiveEndorsement>("executiveEndorsements")
+        await executiveEndorsementsCollection(db)
           .find({ electionId, isActive: true })
           .project<{ candidateId: ObjectId }>({ candidateId: 1 })
           .toArray()

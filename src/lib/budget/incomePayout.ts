@@ -36,6 +36,7 @@ import { imperialCharactersCollection } from "@/lib/db/repositories/imperialChar
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { playerIncomeTaxAssessmentsCollection } from "@/lib/db/repositories/playerIncomeTaxAssessments";
 
 export interface IncomeCredit {
   characterId: ObjectId;
@@ -271,8 +272,7 @@ export async function creditIncomeAfterTax(
           priceIndexByCountry.get(context.countryId)
         );
       }
-      const debts = await db
-        .collection<Assessment>("playerIncomeTaxAssessments")
+      const debts = await playerIncomeTaxAssessmentsCollection<Assessment>(db)
         .find(
           {
             worldId,
@@ -619,9 +619,9 @@ export async function creditIncomeAfterTax(
           throw new Error("Bank cannot fund income withholding");
       }
       if (assessments.length)
-        await db
-          .collection<Assessment>("playerIncomeTaxAssessments")
-          .bulkWrite(assessments, { session });
+        await playerIncomeTaxAssessmentsCollection<Assessment>(db).bulkWrite(assessments, {
+          session,
+        });
       const nationalOps = [...national]
         .filter(([, row]) => row.amount > 0)
         .map(([id, row]) => ({

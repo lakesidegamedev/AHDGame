@@ -53,6 +53,9 @@ import { activateDefenceBid } from "./defence";
 import type { publishTenderSchema, bidSchema } from "./schemas";
 import type { GovernmentTender, ContractBid } from "./types";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { stateResourceCapacityCollection } from "@/lib/db/repositories/stateResourceCapacity";
+import type { Document } from "mongodb";
+import { extractionContractsCollection } from "@/lib/db/repositories/extractionContracts";
 
 /**
  * When live plant floors rise past a frozen open-tender maximum (yen-scale GDP drift or
@@ -192,9 +195,10 @@ export async function publishTender(
     const config = await loadContractIssuanceSettings(db);
     if (!config.contractIssuanceEnabled)
       throw new ContractError("Extraction contract issuance is disabled.");
-    const capacity = await db
-      .collection("stateResourceCapacity")
-      .findOne({ stateId: input.terms.stateId, countryId });
+    const capacity = await stateResourceCapacityCollection<Document>(db).findOne({
+      stateId: input.terms.stateId,
+      countryId,
+    });
     if (!(capacity?.resources?.[input.terms.resource] > 0))
       throw new ContractError("This resource is not available in this country's selected state.");
   }
@@ -470,7 +474,7 @@ async function awardLocked(
     await activateDefenceBid(db, t, bid, user, turn, now);
   } else {
     const settings = await loadContractIssuanceSettings(db);
-    const col = db.collection<ExtractionContract>("extractionContracts");
+    const col = extractionContractsCollection(db);
     let contract = await col.findOne({ _id: new ObjectId(t.contractId) });
     if (!contractsEnabled && !contract)
       throw new ContractError(GOVERNMENT_CONTRACTS_DISABLED_MESSAGE, 503);

@@ -12,6 +12,9 @@ import { officePoolTopUpStatus } from "@/lib/actions/officePoolTopUpRules";
 import type { GovernorOfficeState, GameState, LegislationType } from "@/lib/db/types";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { governorExecutiveOrdersCollection } from "@/lib/db/repositories/governorExecutiveOrders";
+import type { Document } from "mongodb";
+import { governorOfficeStateCollection } from "@/lib/db/repositories/governorOfficeState";
 
 /**
  * Federal Executive Orders — head-of-government equivalent of Governor's
@@ -105,17 +108,15 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
     // active orders, history, AP balance, current turn, and national
     // legislation types (id + name + policyOptions for from/to display).
     const [active, history, officeState, gameStateDoc, legislationTypes] = await Promise.all([
-      db
-        .collection("governorExecutiveOrders")
+      governorExecutiveOrdersCollection<Document>(db)
         .find({ countryId, stateId, status: "active" })
         .toArray(),
-      db
-        .collection("governorExecutiveOrders")
+      governorExecutiveOrdersCollection<Document>(db)
         .find({ countryId, stateId, status: { $in: ["expired", "rescinded", "superseded"] } })
         .sort({ issuedAtTurn: -1 })
         .limit(10)
         .toArray(),
-      db.collection<GovernorOfficeState>("governorOfficeState").findOne({ countryId, stateId }),
+      governorOfficeStateCollection(db).findOne({ countryId, stateId }),
       gameStateCollection(db).findOne({ _id: "current" }),
       legislationTypesCollection(db)
         .find({

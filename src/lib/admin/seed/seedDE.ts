@@ -27,6 +27,7 @@ import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
 import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
 import { stateBaselinesCollection } from "@/lib/db/repositories/stateBaselines";
+import { demographicDefaultsCollection } from "@/lib/db/repositories/demographicDefaults";
 
 /**
  * The region roster DE actually governs in a given preset.
@@ -113,7 +114,7 @@ export async function seedDEDemographics(
 ) {
   if (reset) {
     await stateDemographicsCollection<Document>(db).deleteMany({ countryId: "DE" });
-    await db.collection("demographicDefaults").deleteMany({ countryId: "DE" });
+    await demographicDefaultsCollection<Document>(db).deleteMany({ countryId: "DE" });
     await stateDemographicTurnoutCollection<Document>(db).deleteMany({ countryId: "DE" });
   }
 
@@ -154,9 +155,11 @@ export async function seedDEDemographics(
       { $set: storedDemographics },
       { upsert: true }
     );
-    await db
-      .collection<StateDemographics>("demographicDefaults")
-      .updateOne({ _id: sd._id }, { $set: storedDemographics }, { upsert: true });
+    await demographicDefaultsCollection(db).updateOne(
+      { _id: sd._id },
+      { $set: storedDemographics },
+      { upsert: true }
+    );
 
     const lean = calculateStateLeanForCache(sd, [], {
       countryId: "DE",

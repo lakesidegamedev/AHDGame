@@ -59,6 +59,8 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
+import { militaryUnitsCollection } from "@/lib/db/repositories/militaryUnits";
+import { tradeFlowSnapshotsCollection } from "@/lib/db/repositories/tradeFlowSnapshots";
 
 let openingCalibrationCache: {
   gross: ReturnType<typeof openingGrossPurchasingInputs1991>;
@@ -152,8 +154,7 @@ export async function collectResetMetricOwnerReadings(
       )
       .toArray(),
     readinessDue
-      ? db
-          .collection<MilitaryUnit>("militaryUnits")
+      ? militaryUnitsCollection(db)
           .find(
             { countryId: { $in: countryIds } },
             {
@@ -171,8 +172,7 @@ export async function collectResetMetricOwnerReadings(
       : Promise.resolve([]),
   ]);
   const [trade, states, world] = await Promise.all([
-    db
-      .collection<TradeFlowSnapshot>("tradeFlowSnapshots")
+    tradeFlowSnapshotsCollection(db)
       .find({ turn }, { projection: { turn: 1, national: 1 } })
       .toArray(),
     statesCollection(db)

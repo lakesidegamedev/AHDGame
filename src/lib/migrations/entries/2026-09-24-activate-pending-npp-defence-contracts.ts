@@ -4,6 +4,7 @@ import type { DefenceContract } from "@/lib/db/types/defenceContract";
 import { isNppOwned } from "@/lib/corporations/nppOwned";
 import type { Migration, MigrationContext, MigrationResult } from "../types";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { defenceContractsCollection } from "@/lib/db/repositories/defenceContracts";
 
 type NppOwnershipRow = Pick<Corporation, "_id" | "ceoType" | "caretakerCeo">;
 
@@ -25,7 +26,7 @@ async function activatePendingNppDefenceContracts(
     };
   }
 
-  const contracts = db.collection<DefenceContract>("defenceContracts");
+  const contracts = defenceContractsCollection(db);
   const filter = {
     status: "pending" as const,
     corporationId: { $in: nppCorporationIds },

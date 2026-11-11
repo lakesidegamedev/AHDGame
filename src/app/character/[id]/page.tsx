@@ -93,6 +93,7 @@ import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
+import { supremeCourtSeatsCollection } from "@/lib/db/repositories/supremeCourtSeats";
 
 const MIN_BASE_ACTIONS_PER_TURN = 4;
 
@@ -249,9 +250,10 @@ export default async function CharacterPage({ params }: PageProps) {
       congressLeadersCollection(apDb)
         .find({ characterId: character._id }, { projection: { role: 1 } })
         .toArray(),
-      apDb
-        .collection<SupremeCourtSeat>("supremeCourtSeats")
-        .findOne({ justiceCharacterId: character._id }, { projection: { _id: 1 } }),
+      supremeCourtSeatsCollection(apDb).findOne(
+        { justiceCharacterId: character._id },
+        { projection: { _id: 1 } }
+      ),
       needsPartyPool
         ? charactersCollection(apDb)
             .aggregate<{ totalInfluence: number; memberCount: number }>([

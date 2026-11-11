@@ -9,6 +9,7 @@ import type { Migration, MigrationResult } from "../types";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
 import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
+import { governorExecutiveOrdersCollection } from "@/lib/db/repositories/governorExecutiveOrders";
 
 const STATE_ID = "KAZ";
 
@@ -31,10 +32,7 @@ async function repairKazakhLawLevels(db: Db, dryRun: boolean): Promise<Migration
       .find({ _id: { $in: legislationTypeIds } })
       .toArray(),
     enactedLawsCollection(db).find({ stateId: STATE_ID }).toArray(),
-    db
-      .collection<GovernorExecutiveOrder>("governorExecutiveOrders")
-      .find({ stateId: STATE_ID })
-      .toArray(),
+    governorExecutiveOrdersCollection(db).find({ stateId: STATE_ID }).toArray(),
   ]);
 
   const legislationTypesById = new Map(

@@ -51,6 +51,8 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
+import { supplyAgreementsCollection } from "@/lib/db/repositories/supplyAgreements";
+import { supplyListingsCollection } from "@/lib/db/repositories/supplyListings";
 
 /** Fill below this: the seller cannot move output and will discount to lock a buyer. */
 export const NPP_CONTRACT_GLUT_FILL = 0.5;
@@ -886,7 +888,7 @@ export async function syncAiSupplyListings(
 ): Promise<{ upserted: number; removed: number }> {
   const { turn, now } = args;
   const desired = decideAiSupplyListings(args);
-  const collection = db.collection<SupplyListing>("supplyListings");
+  const collection = supplyListingsCollection(db);
   const corpObjectIds = args.parties.map((p) => new ObjectId(p.corpId));
   const existing = await collection
     .find(
@@ -1095,8 +1097,7 @@ export async function processNppSupplyAgreements(
     corporateSectorsCollection(db)
       .find({ corporationId: { $in: corpIds } }, { projection: NPP_SUPPLY_SECTOR_PROJECTION })
       .toArray(),
-    db
-      .collection<SupplyAgreement>("supplyAgreements")
+    supplyAgreementsCollection(db)
       .find(
         {
           status: { $in: ["pending", "active", "cancelling"] },
@@ -1273,7 +1274,7 @@ export async function processNppSupplyAgreements(
     }
   }
 
-  const agreementsCollection = db.collection<SupplyAgreement>("supplyAgreements");
+  const agreementsCollection = supplyAgreementsCollection(db);
   const durationById = new Map(agreements.map((a) => [a.id, a.durationTurns]));
   // Contracts AI corporations signed with each other before AI contracts had a
   // term never expire, and every live contract is settled and rewritten each

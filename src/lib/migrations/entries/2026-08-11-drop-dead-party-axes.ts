@@ -2,6 +2,7 @@ import type { Db } from "mongodb";
 import type { Migration, MigrationContext, MigrationResult } from "../types";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import type { Document } from "mongodb";
+import { partyChartersCollection } from "@/lib/db/repositories/partyCharters";
 
 /**
  * Drop the retired `foreignPolicy` / `culture` party axes. Both were written
@@ -37,7 +38,7 @@ async function run(db: Db, ctx: MigrationContext): Promise<MigrationResult> {
   };
 
   const partiesToClean = await politicalPartiesCollection<Document>(db).countDocuments(partyFilter);
-  const chartersToClean = await db.collection("partyCharters").countDocuments(charterFilter);
+  const chartersToClean = await partyChartersCollection<Document>(db).countDocuments(charterFilter);
   const scanned = partiesToClean + chartersToClean;
 
   if (ctx.dryRun) {
@@ -55,7 +56,7 @@ async function run(db: Db, ctx: MigrationContext): Promise<MigrationResult> {
       "positionShiftCooldowns.culture": "",
     },
   });
-  const charters = await db.collection("partyCharters").updateMany(charterFilter, {
+  const charters = await partyChartersCollection<Document>(db).updateMany(charterFilter, {
     $unset: { "platform.foreignPolicy": "", "platform.culture": "" },
   });
 

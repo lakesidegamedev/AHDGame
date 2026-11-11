@@ -20,6 +20,7 @@ import {
 } from "@/lib/unions/underground";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { unionsCollection } from "@/lib/db/repositories/unions";
+import { unionOrganizersCollection } from "@/lib/db/repositories/unionOrganizers";
 
 export type OrganizeUndergroundResult =
   | {
@@ -82,7 +83,7 @@ export async function organizeUnderground(
   }
 
   const currentTurn = await getCurrentTurn(db);
-  const organizers = db.collection<UnionOrganizer>("unionOrganizers");
+  const organizers = unionOrganizersCollection(db);
   // Prosecution follows the character across unions, not only the cell that
   // the government caught. The organizer row remains the authoritative bar.
   const prosecuted = await organizers.findOne({

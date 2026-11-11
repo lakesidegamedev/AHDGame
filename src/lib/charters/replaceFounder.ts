@@ -2,6 +2,7 @@ import type { Db, ObjectId } from "mongodb";
 import type { PartyCharter, PartyCharterSignature } from "@/lib/db/types";
 import { adjacentStates } from "@/lib/constants/stateAdjacency";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { partyChartersCollection } from "@/lib/db/repositories/partyCharters";
 
 /**
  * Replace a founder slot. Accepts two entry states:
@@ -37,7 +38,7 @@ export async function replaceFounder(
   db: Db,
   now: Date = new Date()
 ): Promise<ReplaceFounderResult> {
-  const charter = await db.collection<PartyCharter>("partyCharters").findOne({ _id: charterId });
+  const charter = await partyChartersCollection(db).findOne({ _id: charterId });
   if (!charter) return { ok: false, reason: "charter-not-found" };
   const isVoluntary = charter.status === "pending-signatures";
   if (charter.status !== "founder-replacement" && !isVoluntary) {
@@ -114,7 +115,7 @@ export async function replaceFounder(
       $not: { $elemMatch: { characterId: outgoingCharacterId, signedAt: { $ne: null } } },
     };
   }
-  const result = await db.collection<PartyCharter>("partyCharters").updateOne(guard, {
+  const result = await partyChartersCollection(db).updateOne(guard, {
     $set: {
       foundersCharacterIds: newFounders,
       signatures: newSignatures,

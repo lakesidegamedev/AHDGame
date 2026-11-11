@@ -7,6 +7,7 @@ import { parseBoundedIntParam } from "@/lib/api/validate";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { usersCollection } from "@/lib/db/repositories/users";
 import type { Document } from "mongodb";
+import { userApiKeysCollection } from "@/lib/db/repositories/userApiKeys";
 
 interface UserApiKeyRow {
   _id: string;
@@ -50,8 +51,7 @@ export const GET = withAdminAuth(async (_auth, request: Request) => {
         .toArray();
       matchingUserIds = users.map((u) => u._id);
       // Also match keys by name
-      const keysByName = await db
-        .collection("userApiKeys")
+      const keysByName = await userApiKeysCollection<Document>(db)
         .find({ name: { $regex: search, $options: "i" } })
         .project({ userId: 1 })
         .limit(100)
@@ -62,15 +62,14 @@ export const GET = withAdminAuth(async (_auth, request: Request) => {
     }
 
     const [keys, total] = await Promise.all([
-      db
-        .collection("userApiKeys")
+      userApiKeysCollection<Document>(db)
         .find(filter)
         .project({ tokenHash: 0 })
         .sort({ createdAt: -1 })
         .skip(offset)
         .limit(limit)
         .toArray(),
-      db.collection("userApiKeys").countDocuments(filter),
+      userApiKeysCollection<Document>(db).countDocuments(filter),
     ]);
 
     // Resolve user info
@@ -118,12 +117,10 @@ export const DELETE = withAdminAuth(async (_auth, request: Request) => {
     }
 
     const db = await getDb();
-    const result = await db
-      .collection("userApiKeys")
-      .updateOne(
-        { _id: new ObjectId(keyId), revokedAt: null },
-        { $set: { revokedAt: new Date(), updatedAt: new Date() } }
-      );
+    const result = await userApiKeysCollection<Document>(db).updateOne(
+      { _id: new ObjectId(keyId), revokedAt: null },
+      { $set: { revokedAt: new Date(), updatedAt: new Date() } }
+    );
 
     if (result.matchedCount === 0) {
       return errorResponse(404, "Key not found or already revoked");

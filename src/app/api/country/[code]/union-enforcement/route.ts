@@ -34,6 +34,7 @@ import { enforcementTreasuryCostPerTurn } from "@/lib/unions/enforcementCosts";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { unionsCollection } from "@/lib/db/repositories/unions";
+import { unionOrganizersCollection } from "@/lib/db/repositories/unionOrganizers";
 
 const bodySchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("posture"), posture: z.enum(["tolerant", "normal", "crackdown"]) }),
@@ -114,8 +115,7 @@ export async function GET(_request: Request, { params }: Context) {
       .find({ countryId, exposedUntilTurn: { $gte: turn } }, { projection: { _id: 1 } })
       .toArray();
     const organizers = exposed.length
-      ? await db
-          .collection<UnionOrganizer>("unionOrganizers")
+      ? await unionOrganizersCollection(db)
           .find(
             {
               unionId: { $in: exposed.map((union) => union._id) },
@@ -224,7 +224,7 @@ export async function POST(request: Request, { params }: Context) {
       if (!ObjectId.isValid(parsed.data.characterId)) {
         return errorResponse(400, "Invalid organizer ID");
       }
-      const organizers = db.collection<UnionOrganizer>("unionOrganizers");
+      const organizers = unionOrganizersCollection(db);
       const organizer = await organizers.findOne({
         unionId: union._id,
         characterId: new ObjectId(parsed.data.characterId),

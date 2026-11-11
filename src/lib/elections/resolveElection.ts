@@ -65,6 +65,9 @@ import { electionCandidatesCollection } from "@/lib/db/repositories/electionCand
 import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { playerEndorsementsCollection } from "@/lib/db/repositories/playerEndorsements";
+import { nppEndorsementsCollection } from "@/lib/db/repositories/nppEndorsements";
+import { congressionalDistrictsCollection } from "@/lib/db/repositories/congressionalDistricts";
 
 export type {
   PollingData,
@@ -414,12 +417,10 @@ export async function resolveElections(
       campaignsRaw,
       statePartyOrgsRaw,
     ] = await Promise.all([
-      db
-        .collection<NPPEndorsement>("nppEndorsements")
+      nppEndorsementsCollection(db)
         .find(buildActiveVisibleNppEndorsementFilter({ electionId: { $in: electionIds } }))
         .toArray(),
-      db
-        .collection<PlayerEndorsement>("playerEndorsements")
+      playerEndorsementsCollection(db)
         .find({ electionId: { $in: electionIds }, isActive: true })
         .toArray(),
       // Only the last 72 turns per election are kept (see snapsLimited),
@@ -571,8 +572,7 @@ export async function resolveElections(
       ? statesCollection(db).find({ $or: regionFilters }).toArray()
       : Promise.resolve([] as State[]),
     shouldBatchHouseDistricts && houseStates.length
-      ? db
-          .collection<CongressionalDistrict>("congressionalDistricts")
+      ? congressionalDistrictsCollection(db)
           .find({ countryId: "US", stateId: { $in: houseStates } })
           .toArray()
       : Promise.resolve(undefined),

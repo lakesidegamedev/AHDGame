@@ -32,6 +32,9 @@ import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParti
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
 import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
+import { partyChartersCollection } from "@/lib/db/repositories/partyCharters";
+import { partyBudgetCollection } from "@/lib/db/repositories/partyBudget";
+import { demographicDefaultsCollection } from "@/lib/db/repositories/demographicDefaults";
 
 export interface FinalizeResetOptions {
   /** 1991 only: leave political offices vacant for player-created parties. */
@@ -173,10 +176,7 @@ export async function finalizeResetGameWorld(
   }
 
   let demographicsReset = 0;
-  const defaultDemographics = await db
-    .collection<StateDemographics>("demographicDefaults")
-    .find({})
-    .toArray();
+  const defaultDemographics = await demographicDefaultsCollection(db).find({}).toArray();
 
   if (defaultDemographics.length > 0) {
     for (const defaultDemo of defaultDemographics) {
@@ -210,7 +210,7 @@ export async function finalizeResetGameWorld(
     // Phase 6 reset: drop ALL charter rows so stale ratified / migrated
     // charters can't immunize newly-resequenced parties from cleanup, and
     // so the migration script can re-run idempotently on the fresh seed.
-    await db.collection("partyCharters").deleteMany({});
+    await partyChartersCollection<Document>(db).deleteMany({});
   } else {
     customPartiesResult = await politicalPartiesCollection(db).deleteMany({
       isDefault: { $ne: true },
@@ -226,8 +226,7 @@ export async function finalizeResetGameWorld(
     const survivingKeys = new Set(
       survivingPartyIds.map((p) => `${p.countryId}:${String(p.sequentialId)}`)
     );
-    const allCharters = (await db
-      .collection("partyCharters")
+    const allCharters = (await partyChartersCollection<Document>(db)
       .find({})
       .project({ _id: 1, partyId: 1, countryId: 1 })
       .toArray()) as Array<{ _id: ObjectId; partyId: string | null; countryId: string }>;
@@ -240,7 +239,7 @@ export async function finalizeResetGameWorld(
       )
       .map((c) => c._id);
     if (staleIds.length > 0) {
-      await db.collection("partyCharters").deleteMany({ _id: { $in: staleIds } });
+      await partyChartersCollection<Document>(db).deleteMany({ _id: { $in: staleIds } });
     }
 
     await politicalPartiesCollection(db).updateMany(
@@ -365,7 +364,7 @@ export async function finalizeResetGameWorld(
       ...partyOrgCleanupResult,
       deletedCount: partyOrgCleanupResult.deletedCount + strandedOrgRows,
     };
-    await deleteRowsOfRemovedParties(db.collection("partyBudget"), defaultPartyKeys);
+    await deleteRowsOfRemovedParties(partyBudgetCollection<Document>(db), defaultPartyKeys);
 
     await statePartyOrgCollection(db).updateMany(
       { partyId: { $in: defaultPartyIds } },

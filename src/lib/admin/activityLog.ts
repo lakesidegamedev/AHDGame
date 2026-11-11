@@ -6,6 +6,8 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { usersCollection } from "@/lib/db/repositories/users";
 import type { Document } from "mongodb";
 import { activityLogCollection } from "@/lib/db/repositories/activityLog";
+import { actionLogsCollection } from "@/lib/db/repositories/actionLogs";
+import { suspiciousCharactersCollection } from "@/lib/db/repositories/suspiciousCharacters";
 
 export interface IdentityLookup {
   characterName?: string;
@@ -117,8 +119,7 @@ export async function fetchActivityLog(
   // restriction (all entries).
   let idRestriction: Record<string, unknown> | undefined;
   if (params.flagSeverities && params.flagSeverities.length > 0) {
-    const flagged = await db
-      .collection("suspiciousCharacters")
+    const flagged = await suspiciousCharactersCollection<Document>(db)
       .find(
         { highestSeverity: { $in: params.flagSeverities } },
         { projection: { characterId: 1, userId: 1 } }
@@ -205,8 +206,7 @@ export async function fetchActivityLog(
     } else if (andClauses.length > 1) {
       filter.$and = andClauses;
     }
-    const rows = (await db
-      .collection<ActionLog>("actionLogs")
+    const rows = (await actionLogsCollection(db)
       .find(filter)
       .sort({ _id: -1 })
       .limit(params.limit + 1)

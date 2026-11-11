@@ -6,6 +6,9 @@ import { getAuthUser } from "@/lib/auth";
 import { getEnabledCountryIds } from "@/lib/countryAccess";
 import { withPublicNewsVisibility } from "@/lib/news/publicModeration";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { newsPostsCollection } from "@/lib/db/repositories/newsPosts";
+import type { Document } from "mongodb";
+import { userSubscriptionsCollection } from "@/lib/db/repositories/userSubscriptions";
 
 export interface LeaderboardEntry {
   characterId: string;
@@ -34,8 +37,7 @@ export async function GET() {
     const db = await getDb();
 
     // Aggregate news post stats per author (top-level posts only)
-    const postStats = await db
-      .collection("newsPosts")
+    const postStats = await newsPostsCollection<Document>(db)
       .aggregate<{ _id: string; totalLikes: number; postCount: number }>([
         {
           $match: withPublicNewsVisibility({
@@ -59,8 +61,7 @@ export async function GET() {
     );
 
     // Aggregate subscriber counts per character
-    const subStats = await db
-      .collection("userSubscriptions")
+    const subStats = await userSubscriptionsCollection<Document>(db)
       .aggregate<{ _id: string; subscriberCount: number }>([
         {
           $group: {

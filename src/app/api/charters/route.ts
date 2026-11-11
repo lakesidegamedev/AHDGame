@@ -12,6 +12,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
 import type { PartyCharter, PartyCharterStatus } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { partyChartersCollection } from "@/lib/db/repositories/partyCharters";
 
 function draftCharterErrorMessage(reason: string): string {
   switch (reason) {
@@ -83,8 +84,7 @@ async function handleGET(request: Request) {
       filter.status = status;
     }
 
-    const charters = await db
-      .collection<PartyCharter>("partyCharters")
+    const charters = await partyChartersCollection(db)
       .find(filter)
       .sort({ createdAt: -1 })
       .limit(50)

@@ -25,6 +25,7 @@ import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameSt
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
 import type { Document } from "mongodb";
+import { ukCabinetCooldownsCollection } from "@/lib/db/repositories/ukCabinetCooldowns";
 
 type HistoricalPoliticalRow = { _id: ObjectId | string; [key: string]: unknown };
 
@@ -116,7 +117,10 @@ export async function materializeFederationFederalRetirement(input: {
     { countryId: sourceCountryId },
     { session }
   );
-  await db.collection("ukCabinetCooldowns").deleteMany({ countryId: sourceCountryId }, { session });
+  await ukCabinetCooldownsCollection<Document>(db).deleteMany(
+    { countryId: sourceCountryId },
+    { session }
+  );
   const elections = await electionsCollection(db).updateMany(
     { countryId: sourceCountryId, status: { $in: ["upcoming", "active"] } },
     { $set: { status: "cancelled", updatedAt: now } },

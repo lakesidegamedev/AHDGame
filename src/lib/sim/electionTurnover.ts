@@ -14,6 +14,9 @@ import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { seedDiagnosticsCollection } from "@/lib/db/repositories/seedDiagnostics";
+import { parliamentSeatsHistoryCollection } from "@/lib/db/repositories/parliamentSeatsHistory";
+import { simRunsCollection } from "@/lib/db/repositories/simRuns";
 type ElectionRow = Omit<ElectionRecord, "_id"> & { _id: ObjectId; status: string };
 type CandidateRow = Omit<CandidateRecord, "_id" | "electionId" | "characterId" | "nppId"> & {
   _id: ObjectId;
@@ -110,8 +113,7 @@ export async function collectElectionTurnoverReport(db: Db, window: ElectionTurn
           }
         )
         .toArray(),
-      db
-        .collection("parliamentSeatsHistory")
+      parliamentSeatsHistoryCollection<Document>(db)
         .aggregate([
           { $match: { officeType: { $nin: ["president", "vicePresident"] } } },
           {
@@ -145,8 +147,7 @@ export async function collectElectionTurnoverReport(db: Db, window: ElectionTurn
         { _id: "default" as never },
         { projection: { preset: 1, redistrictingEnabled: 1 } }
       ),
-      db
-        .collection("simRuns")
+      simRunsCollection<Document>(db)
         .find(
           {},
           {
@@ -165,8 +166,7 @@ export async function collectElectionTurnoverReport(db: Db, window: ElectionTurn
         .sort({ startedAt: -1 })
         .limit(1)
         .toArray(),
-      db
-        .collection("seedDiagnostics")
+      seedDiagnosticsCollection<Document>(db)
         .find(
           { mode: "conformance", trigger: "worldsim-post-bootstrap" },
           { projection: { _id: 0, featureManifest: 1 } }

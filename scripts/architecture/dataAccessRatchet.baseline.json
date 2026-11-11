@@ -1,74 +1,14 @@
 {
   "note": "Data access ratchet. Direct .collection() calls on front-door collections outside src/lib/db/collections, and untyped .collection() calls, may only go down. Use the getter in src/lib/db/collections; after converting call sites run `npm run data-access:lower`.",
   "files": {
-    "src/app/api/admin/achievements/bulk-grant/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/admin/achievements/grant/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/admin/achievements/revoke/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/admin/achievements/seed/route.ts": {
-      "untyped": 5
-    },
-    "src/app/api/admin/bot-api-keys/route.ts": {
-      "untyped": 2
-    },
     "src/app/api/admin/client-diagnostics/route.ts": {
       "untyped": 1
-    },
-    "src/app/api/admin/code-quality/snapshots/latest/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/admin/code-quality/snapshots/route.ts": {
-      "untyped": 2
-    },
-    "src/app/api/admin/corporations/[id]/imf-bailout/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/admin/country/[code]/one-party-readiness/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/admin/country/[code]/state-party-elections/route.ts": {
-      "untyped": 9
-    },
-    "src/app/api/admin/debug/stock-exchange-snapshot/route.ts": {
-      "untyped": 4
-    },
-    "src/app/api/admin/elections/sync-date/route.ts": {
-      "untyped": 3
-    },
-    "src/app/api/admin/events/pree/reseed/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/admin/events/pree/toggle/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/admin/feedback/backfill-github/route.ts": {
-      "untyped": 5
-    },
-    "src/app/api/admin/heal/party-elections/route.ts": {
-      "untyped": 5
-    },
-    "src/app/api/admin/health/snapshots/latest/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/admin/health/snapshots/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/admin/investment-funds/clear/route.ts": {
-      "untyped": 4
     },
     "src/app/api/admin/investment-funds/route.ts": {
       "untyped": 1
     },
     "src/app/api/admin/leadership-elections/route.ts": {
-      "untyped": 10
-    },
-    "src/app/api/admin/logs/hourly/route.ts": {
-      "untyped": 1
+      "untyped": 9
     },
     "src/app/api/admin/migrations/create-indexes/diagnose/route.ts": {
       "untyped": 1
@@ -76,116 +16,23 @@
     "src/app/api/admin/migrations/create-indexes/route.ts": {
       "untyped": 1
     },
-    "src/app/api/admin/news/[id]/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/admin/roadmap/[id]/route.ts": {
-      "untyped": 2
-    },
-    "src/app/api/admin/roadmap/categories/[id]/route.ts": {
-      "untyped": 4
-    },
-    "src/app/api/admin/roadmap/categories/route.ts": {
-      "untyped": 2
-    },
-    "src/app/api/admin/roadmap/route.ts": {
-      "untyped": 2
-    },
-    "src/app/api/admin/seed-diagnostic/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/admin/setup/route.ts": {
-      "untyped": 3
-    },
-    "src/app/api/admin/suggestions/[id]/route.ts": {
-      "untyped": 2
-    },
-    "src/app/api/admin/suggestions/bulk-delete/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/admin/user-api-keys/[id]/rotate/route.ts": {
-      "untyped": 3
-    },
-    "src/app/api/admin/user-api-keys/route.ts": {
-      "untyped": 4
-    },
-    "src/app/api/admin/users/ban/route.ts": {
-      "untyped": 2
-    },
     "src/app/api/admin/users/delete/route.ts": {
-      "untyped": 2
+      "untyped": 1
     },
     "src/app/api/auth/delete-account/route.ts": {
-      "untyped": 4
-    },
-    "src/app/api/auth/me/route.ts": {
-      "untyped": 2
+      "untyped": 1
     },
     "src/app/api/bonds/[bondId]/sell/route.ts": {
       "untyped": 2
     },
-    "src/app/api/client-nav/route.ts": {
-      "untyped": 3
-    },
     "src/app/api/client/diagnostics/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/congress/house-leadership/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/congress/senate-leadership/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/contracts/extraction/[id]/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/contracts/extraction/route.ts": {
       "untyped": 1
     },
     "src/app/api/corporations/[id]/bond-default/cash/route.ts": {
       "untyped": 2
     },
-    "src/app/api/corporations/[id]/ceo/resign/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/corporations/[id]/dissolve/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/corporations/[id]/my-voting-identities/route.ts": {
-      "untyped": 1
-    },
     "src/app/api/corporations/[id]/shares/self-issue/route.ts": {
       "untyped": 2
-    },
-    "src/app/api/country/[code]/executive/acts/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/country/[code]/executive/cabinet/[positionId]/defence-contracts/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/country/[code]/executive/orders/route.ts": {
-      "untyped": 2
-    },
-    "src/app/api/country/[code]/federation/proposal/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/country/[code]/government-contracts/access/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/country/[code]/map/overview/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/country/[code]/national-corporation/[id]/remove-ceo/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/country/[code]/national-corporation/[id]/resign-ceo/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/country/[code]/overview-counts/route.ts": {
-      "untyped": 3
-    },
-    "src/app/api/country/[code]/parties/[id]/caucuses/[slug]/election/route.ts": {
-      "untyped": 1
     },
     "src/app/api/country/[code]/parties/[id]/caucuses/[slug]/members/[memberId]/route.ts": {
       "untyped": 1
@@ -193,130 +40,28 @@
     "src/app/api/country/[code]/parties/[id]/caucuses/[slug]/members/route.ts": {
       "untyped": 1
     },
-    "src/app/api/country/[code]/parties/[id]/committee/enter/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/country/[code]/parties/[id]/election/enter/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/country/[code]/region/[id]/office/address/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/country/[code]/region/[id]/office/orders/route.ts": {
-      "untyped": 2
-    },
-    "src/app/api/country/[code]/region/[id]/party/[partyId]/election/enter/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/crises/[id]/interaction/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/discord-bot/blackjack/place-wager/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/discord-bot/reactions/route.ts": {
-      "untyped": 4
-    },
-    "src/app/api/elections/[id]/enter/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/investment-funds/[slug]/subscribe/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/moderator/achievements/grant/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/moderator/news/[id]/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/news/leaderboard/route.ts": {
-      "untyped": 2
-    },
-    "src/app/api/pip/standard/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/roadmap/route.ts": {
-      "untyped": 2
-    },
-    "src/app/api/settings/achievements/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/settings/bot-api-keys/route.ts": {
-      "untyped": 3
-    },
-    "src/app/api/settings/retired-characters/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/settings/user-api-keys/[id]/rotate/route.ts": {
-      "untyped": 3
-    },
-    "src/app/api/settings/user-api-keys/route.ts": {
-      "untyped": 4
-    },
     "src/app/api/upload/avatar/route.ts": {
       "untyped": 1
     },
     "src/app/api/upload/profile-header/route.ts": {
       "untyped": 1
     },
-    "src/app/api/v1/key/route.ts": {
-      "untyped": 1
-    },
-    "src/app/wiki/[slug]/edit/page.tsx": {
-      "untyped": 1
-    },
-    "src/app/wiki/[slug]/page.tsx": {
-      "untyped": 1
-    },
-    "src/app/wiki/random-events/page.tsx": {
-      "untyped": 1
-    },
-    "src/lib/account/cascadeCharacterDeletion.ts": {
-      "untyped": 2
-    },
-    "src/lib/account/syncSuspiciousFlagsForBanState.ts": {
-      "untyped": 2
-    },
-    "src/lib/achievements/earnedCounts.ts": {
-      "untyped": 1
-    },
-    "src/lib/achievements/progress.ts": {
-      "untyped": 4
-    },
-    "src/lib/achievements/triggers.ts": {
-      "untyped": 8
-    },
-    "src/lib/actions/commands/executeAction.ts": {
-      "untyped": 1
-    },
     "src/lib/actions/officePoolTopUp.ts": {
       "untyped": 1
     },
-    "src/lib/actions/pollCommission.ts": {
-      "untyped": 1
-    },
-    "src/lib/admin/activityLog.ts": {
-      "untyped": 1
-    },
     "src/lib/admin/bootstrapGameWorld.ts": {
-      "untyped": 4
+      "untyped": 2
     },
     "src/lib/admin/countryReadinessReport.ts": {
       "untyped": 1
     },
     "src/lib/admin/economyReset/apply.ts": {
-      "untyped": 8
+      "untyped": 3
     },
     "src/lib/admin/economyReset/census.ts": {
-      "untyped": 6
-    },
-    "src/lib/admin/finalizeResetGameWorld.ts": {
-      "untyped": 4
+      "untyped": 3
     },
     "src/lib/admin/recover1991Bootstrap.ts": {
-      "untyped": 1
-    },
-    "src/lib/admin/resetAndBootstrapGameWorld.ts": {
       "untyped": 1
     },
     "src/lib/admin/resetContract/applyPreservedFieldContracts.ts": {
@@ -326,7 +71,7 @@
       "untyped": 3
     },
     "src/lib/admin/resetGameWorld.ts": {
-      "untyped": 6
+      "untyped": 1
     },
     "src/lib/admin/seed/applyEraCurrencyTopology.ts": {
       "untyped": 1
@@ -344,64 +89,25 @@
       "untyped": 1
     },
     "src/lib/admin/seed/runCoreSeed.ts": {
-      "untyped": 7
-    },
-    "src/lib/admin/seed/seedAchievements.ts": {
-      "untyped": 6
-    },
-    "src/lib/admin/seed/seedBudgets.ts": {
-      "untyped": 2
-    },
-    "src/lib/admin/seed/seedColdWarFoundations.ts": {
-      "untyped": 3
-    },
-    "src/lib/admin/seed/seedDE.ts": {
-      "untyped": 1
-    },
-    "src/lib/admin/seed/seedLegislationTypes.ts": {
-      "untyped": 1
-    },
-    "src/lib/admin/seed/seedPolicies.ts": {
       "untyped": 1
     },
     "src/lib/admin/seed/seedRegionMetrics.ts": {
       "untyped": 1
     },
-    "src/lib/admin/seed/seedStateResourceCapacity.ts": {
-      "untyped": 3
-    },
-    "src/lib/admin/seed/seedUnions.ts": {
-      "untyped": 3
-    },
     "src/lib/admin/seedDiagnostic/conformance.ts": {
-      "untyped": 8
+      "untyped": 3
     },
     "src/lib/admin/seedDiagnostic/index.ts": {
       "untyped": 3
     },
     "src/lib/admin/seedDiagnostic/regionDerivedCoverage.ts": {
-      "untyped": 2
+      "untyped": 1
     },
     "src/lib/admin/startingParties.ts": {
-      "untyped": 4
+      "untyped": 3
     },
     "src/lib/advertising/persistence.ts": {
       "untyped": 2
-    },
-    "src/lib/altDetection/run.ts": {
-      "untyped": 1
-    },
-    "src/lib/api/abuseDetection.ts": {
-      "untyped": 3
-    },
-    "src/lib/api/botApiAuth.ts": {
-      "untyped": 3
-    },
-    "src/lib/api/userApiAuth.ts": {
-      "untyped": 4
-    },
-    "src/lib/auth/providerIdentityIndexes.ts": {
-      "untyped": 1
     },
     "src/lib/auth/sourceOwnershipProof.ts": {
       "untyped": 2
@@ -424,34 +130,10 @@
     "src/lib/banking/settlementJournal.ts": {
       "untyped": 1
     },
-    "src/lib/billEnactment.ts": {
-      "untyped": 1
-    },
-    "src/lib/bonds/executeCorporationBondDefaultDissolution.ts": {
-      "untyped": 1
-    },
     "src/lib/bonds/saleRecovery.ts": {
       "untyped": 1
     },
     "src/lib/budget/treasuryReserveTransfer.ts": {
-      "untyped": 1
-    },
-    "src/lib/cabinetTransition.ts": {
-      "untyped": 2
-    },
-    "src/lib/campaigns/queries/campaignQueries.ts": {
-      "untyped": 2
-    },
-    "src/lib/caucus/cleanupCaucusParticipationForCharacters.ts": {
-      "untyped": 3
-    },
-    "src/lib/character/financialData.ts": {
-      "untyped": 1
-    },
-    "src/lib/character/performRelocation.ts": {
-      "untyped": 1
-    },
-    "src/lib/client/widgetExtras.ts": {
       "untyped": 1
     },
     "src/lib/congress/billProposalLimits.ts": {
@@ -466,18 +148,6 @@
     "src/lib/congress/leadershipVoteBallots.ts": {
       "untyped": 1
     },
-    "src/lib/congress/speaker/actions.ts": {
-      "untyped": 1
-    },
-    "src/lib/constants/countryReadinessExpectations.ts": {
-      "untyped": 1
-    },
-    "src/lib/contests/history.ts": {
-      "untyped": 1
-    },
-    "src/lib/corporations/applyPriceMultipliers.ts": {
-      "untyped": 1
-    },
     "src/lib/corporations/cancelShareOrder.ts": {
       "untyped": 1
     },
@@ -489,31 +159,7 @@
       "federalBudget": 1,
       "untyped": 4
     },
-    "src/lib/corporations/commands/capitalOperations/relocateHeadquarters.ts": {
-      "untyped": 1
-    },
-    "src/lib/corporations/commands/founding/foundCorporation.ts": {
-      "untyped": 2
-    },
-    "src/lib/corporations/commands/shareTrading/createShareListing.ts": {
-      "untyped": 2
-    },
-    "src/lib/corporations/commands/shareTrading/sellPublicShares.ts": {
-      "untyped": 2
-    },
-    "src/lib/corporations/economicActionLog.ts": {
-      "untyped": 1
-    },
-    "src/lib/corporations/offTypeHandover.ts": {
-      "untyped": 2
-    },
     "src/lib/corporations/sentimentEvents.ts": {
-      "untyped": 1
-    },
-    "src/lib/corporations/votes/voteEffects.ts": {
-      "untyped": 1
-    },
-    "src/lib/corporations/votes/voteService.ts": {
       "untyped": 1
     },
     "src/lib/countries/hu/constituencyByElections1991.ts": {
@@ -525,9 +171,6 @@
     "src/lib/countries/hu/listVacancies1991.ts": {
       "untyped": 2
     },
-    "src/lib/countries/jp/elections/billLifecycle.ts": {
-      "untyped": 1
-    },
     "src/lib/countries/jp/elections/shugiinFilingIndexes.ts": {
       "untyped": 1
     },
@@ -537,28 +180,13 @@
     "src/lib/countries/ru/data/2026-08-30-purge-retired-ru-metric-regions.ts": {
       "untyped": 1
     },
-    "src/lib/countries/ru/dumaConvocationSeating.ts": {
-      "untyped": 1
-    },
-    "src/lib/countries/ru/presidentialSeating.ts": {
-      "untyped": 1
-    },
     "src/lib/countries/ru/ruConvocation.ts": {
       "untyped": 1
     },
     "src/lib/countries/ru/seedRU.ts": {
       "untyped": 1
     },
-    "src/lib/countries/uk/devolution/service.ts": {
-      "untyped": 1
-    },
-    "src/lib/countries/uk/seed.ts": {
-      "untyped": 1
-    },
     "src/lib/country/mergeCountry.ts": {
-      "untyped": 7
-    },
-    "src/lib/country/mergeMilitary.ts": {
       "untyped": 2
     },
     "src/lib/country/mergePartiesIntoCountry.ts": {
@@ -567,16 +195,10 @@
     "src/lib/country/mergeRegion.ts": {
       "untyped": 3
     },
-    "src/lib/country/regionEconomyView.ts": {
-      "untyped": 1
-    },
     "src/lib/currency/autoConvert.ts": {
       "untyped": 5
     },
     "src/lib/currency/marketMaker.ts": {
-      "untyped": 2
-    },
-    "src/lib/currency/migration.ts": {
       "untyped": 2
     },
     "src/lib/db/collections/activityLog.ts": {
@@ -591,29 +213,8 @@
     "src/lib/demographics/flowJournal.ts": {
       "untyped": 5
     },
-    "src/lib/elections/engine/candidateEnrichment.ts": {
-      "untyped": 1
-    },
-    "src/lib/elections/responseCredit.ts": {
-      "untyped": 1
-    },
     "src/lib/forex/fillRecovery.ts": {
       "untyped": 1
-    },
-    "src/lib/government/commands/appointments.ts": {
-      "untyped": 1
-    },
-    "src/lib/governmentContracts/commands.ts": {
-      "untyped": 1
-    },
-    "src/lib/governmentContracts/reservations.ts": {
-      "untyped": 8
-    },
-    "src/lib/indexFunds/corporationTrade.ts": {
-      "untyped": 2
-    },
-    "src/lib/indexFunds/fundCrossRebalancing.ts": {
-      "untyped": 2
     },
     "src/lib/indexFunds/fundFloatSettlement.ts": {
       "untyped": 1
@@ -636,37 +237,19 @@
     "src/lib/indexFunds/queuedPayoutSettlement.ts": {
       "untyped": 3
     },
-    "src/lib/indexFunds/redeemFundShares.ts": {
-      "untyped": 4
-    },
-    "src/lib/indexFunds/sponsorship/charterFund.ts": {
-      "untyped": 1
-    },
     "src/lib/indexFunds/sponsorship/holderPayout.ts": {
       "untyped": 1
     },
-    "src/lib/indexFunds/sponsorship/sponsorUnits.ts": {
-      "untyped": 3
-    },
     "src/lib/indexFunds/sponsorship/windUp.ts": {
-      "untyped": 3
+      "untyped": 1
     },
     "src/lib/influence/simpleInfluence.ts": {
-      "untyped": 4
+      "untyped": 2
     },
     "src/lib/internationalOrganizations/cashLedger.ts": {
       "untyped": 2
     },
-    "src/lib/lineOfCredit/ledger.ts": {
-      "untyped": 1
-    },
     "src/lib/lineOfCredit/settlement.ts": {
-      "untyped": 1
-    },
-    "src/lib/livingConflict/financialDemand.ts": {
-      "untyped": 1
-    },
-    "src/lib/market/producerMarket/liveMode.ts": {
       "untyped": 1
     },
     "src/lib/market/producerMarket/openingApply.ts": {
@@ -678,9 +261,6 @@
     "src/lib/migrations/entries/2026-07-01-union-indexes.ts": {
       "untyped": 2
     },
-    "src/lib/migrations/entries/2026-08-11-drop-dead-party-axes.ts": {
-      "untyped": 2
-    },
     "src/lib/migrations/entries/2026-08-26-repair-out-of-range-policy-levels.ts": {
       "untyped": 1
     },
@@ -688,9 +268,6 @@
       "untyped": 1
     },
     "src/lib/migrations/entries/2026-08-31-intelligence-indexes.ts": {
-      "untyped": 1
-    },
-    "src/lib/migrations/entries/2026-09-06-client-diagnostics-ttl-index.ts": {
       "untyped": 1
     },
     "src/lib/migrations/entries/2026-09-06-client-statistics-ttl-index.ts": {
@@ -702,19 +279,7 @@
     "src/lib/migrations/entries/2026-09-11-source-fence-indexes.ts": {
       "untyped": 2
     },
-    "src/lib/migrations/entries/2026-09-17-supply-listing-indexes.ts": {
-      "untyped": 1
-    },
-    "src/lib/migrations/entries/2026-09-20-turn-clock-indexes.ts": {
-      "untyped": 1
-    },
-    "src/lib/migrations/entries/2026-09-25-federal-budget-snapshot-history-index.ts": {
-      "untyped": 1
-    },
     "src/lib/migrations/entries/2026-09-26-market-chart-indexes.ts": {
-      "untyped": 1
-    },
-    "src/lib/migrations/entries/2026-09-29-union-prosecution-bar-index.ts": {
       "untyped": 1
     },
     "src/lib/migrations/entries/2026-09-30-long-horizon-telemetry-indexes.ts": {
@@ -723,14 +288,8 @@
     "src/lib/migrations/entries/2026-10-01-reconcile-seed-indexes.ts": {
       "untyped": 2
     },
-    "src/lib/migrations/entries/2026-10-04-bank-failure-politics-index.ts": {
-      "untyped": 1
-    },
     "src/lib/migrations/entries/2026-10-04-industry-model-market-indexes.ts": {
       "untyped": 2
-    },
-    "src/lib/migrations/entries/2026-10-04-manufacturing-product-projects-v2-index.ts": {
-      "untyped": 1
     },
     "src/lib/migrations/entries/2026-10-04-media-discriminator-market-indexes.ts": {
       "untyped": 2
@@ -741,32 +300,8 @@
     "src/lib/migrations/entries/2026-10-04-political-media-order-indexes.ts": {
       "untyped": 1
     },
-    "src/lib/migrations/entries/2026-10-09-corporate-fund-positions.ts": {
-      "untyped": 2
-    },
-    "src/lib/migrations/entries/2026-10-09-market-cap-tick-indexes.ts": {
-      "untyped": 2
-    },
-    "src/lib/migrations/entries/2026-10-10-supply-agreement-status-index.ts": {
-      "untyped": 1
-    },
-    "src/lib/migrations/entries/2026-10-12-bank-fund-subscriptions.ts": {
-      "untyped": 2
-    },
-    "src/lib/migrations/entries/2026-10-13-org-head-agenda-index.ts": {
-      "untyped": 1
-    },
-    "src/lib/migrations/entries/2026-10-14-contest-account-history.ts": {
-      "untyped": 2
-    },
-    "src/lib/migrations/entries/2026-10-14-government-contract-bidding.ts": {
-      "untyped": 3
-    },
     "src/lib/migrations/entries/2026-10-16-income-tax-tiers.ts": {
       "untyped": 2
-    },
-    "src/lib/migrations/entries/2026-10-16-scotus-career-achievements.ts": {
-      "untyped": 4
     },
     "src/lib/migrations/entries/2026-10-16-stock-holding-tax-tiers.ts": {
       "untyped": 2
@@ -774,38 +309,8 @@
     "src/lib/migrations/entries/2026-10-23-drop-log-text-indexes.ts": {
       "untyped": 1
     },
-    "src/lib/migrations/entries/2026-10-30-county-populations.ts": {
-      "untyped": 2
-    },
-    "src/lib/migrations/entries/2026-11-01-uk-jp-subdivision-populations.ts": {
-      "untyped": 2
-    },
     "src/lib/migrations/indexPlans.ts": {
       "untyped": 1
-    },
-    "src/lib/moneySupply/seed.ts": {
-      "untyped": 1
-    },
-    "src/lib/news.ts": {
-      "untyped": 2
-    },
-    "src/lib/news/commands/newsCommands.ts": {
-      "untyped": 9
-    },
-    "src/lib/onboarding/checklist.ts": {
-      "untyped": 3
-    },
-    "src/lib/onboarding/firstDays.ts": {
-      "untyped": 1
-    },
-    "src/lib/parties/proposals.ts": {
-      "untyped": 1
-    },
-    "src/lib/partyWhips/commands/issueCaucusWhip.ts": {
-      "untyped": 2
-    },
-    "src/lib/partyWhips/commands/issueNationalPartyWhip.ts": {
-      "untyped": 2
     },
     "src/lib/policyShift.ts": {
       "untyped": 1
@@ -817,42 +322,18 @@
       "untyped": 1
     },
     "src/lib/propagateNameChange.ts": {
-      "untyped": 10
-    },
-    "src/lib/recap/buildSeasonRecaps.ts": {
-      "untyped": 1
-    },
-    "src/lib/recap/loadStoryData.ts": {
-      "untyped": 4
-    },
-    "src/lib/redistricting/seedDistricts.ts": {
-      "untyped": 1
-    },
-    "src/lib/referendum/refundConversionConstruction.ts": {
-      "untyped": 1
-    },
-    "src/lib/referendum/secede/carryOverOfficials.ts": {
       "untyped": 2
     },
-    "src/lib/referendum/secede/expandToSubRegions.ts": {
-      "untyped": 1
-    },
-    "src/lib/referendum/secede/secedeRegion.ts": {
+    "src/lib/referendum/secede/carryOverOfficials.ts": {
       "untyped": 1
     },
     "src/lib/referendum/secede/splitParties.ts": {
-      "untyped": 7
-    },
-    "src/lib/referendum/transfer/convertPublicCurrency.ts": {
-      "untyped": 2
+      "untyped": 5
     },
     "src/lib/referendum/transfer/evacuateRegionPolitics.ts": {
-      "untyped": 4
+      "untyped": 3
     },
     "src/lib/referendum/transfer/regionScopedCollections.ts": {
-      "untyped": 1
-    },
-    "src/lib/referendum/transfer/transferRegion.ts": {
       "untyped": 1
     },
     "src/lib/remediation/adhoc.ts": {
@@ -873,9 +354,6 @@
     "src/lib/remediation/defects/AHD-command-economy-private-sector-ownership.ts": {
       "untyped": 2
     },
-    "src/lib/remediation/defects/AHD-tinky-stale-vote-excess.ts": {
-      "untyped": 1
-    },
     "src/lib/remediation/inspect.ts": {
       "untyped": 5
     },
@@ -888,161 +366,47 @@
     "src/lib/retention/retention.ts": {
       "untyped": 2
     },
-    "src/lib/retireCharacter.ts": {
-      "untyped": 12
-    },
     "src/lib/savings/shadow.ts": {
       "untyped": 1
     },
-    "src/lib/scotus/seedScotus.ts": {
-      "untyped": 3
-    },
-    "src/lib/settings/resignations.ts": {
-      "untyped": 1
-    },
     "src/lib/sidebarWidgets/widgetData.ts": {
-      "untyped": 2
-    },
-    "src/lib/sim/driveSyntheticActors.ts": {
       "untyped": 1
-    },
-    "src/lib/sim/economyTelemetry.ts": {
-      "untyped": 7
-    },
-    "src/lib/sim/electionTurnover.ts": {
-      "untyped": 3
-    },
-    "src/lib/sim/experimentsReport.ts": {
-      "untyped": 3
     },
     "src/lib/sim/materializeSyntheticActors.ts": {
-      "untyped": 5
-    },
-    "src/lib/sim/metrics.ts": {
-      "untyped": 4
-    },
-    "src/lib/sim/worldsimBootstrapConformance.ts": {
       "untyped": 2
     },
     "src/lib/singleplayer/saveArchive.ts": {
       "untyped": 6
     },
-    "src/lib/singleplayerBatch.ts": {
-      "untyped": 1
-    },
-    "src/lib/singleplayerStatistics.ts": {
-      "untyped": 3
-    },
-    "src/lib/treasury/payoutCap.ts": {
-      "untyped": 1
-    },
     "src/lib/turn/atomicClaim.ts": {
-      "untyped": 1
-    },
-    "src/lib/turn/automationDetection.ts": {
       "untyped": 1
     },
     "src/lib/turn/bankingTurn.ts": {
       "untyped": 1
     },
-    "src/lib/turn/bondTurnLedger.ts": {
-      "untyped": 2
-    },
-    "src/lib/turn/campaignTurn.ts": {
-      "untyped": 4
-    },
-    "src/lib/turn/commodity/persistence.ts": {
-      "untyped": 8
-    },
-    "src/lib/turn/commodity/sourcingSettlement.ts": {
-      "untyped": 5
-    },
-    "src/lib/turn/corporation/corporateTaxPriority.ts": {
-      "untyped": 1
-    },
-    "src/lib/turn/corporation/corporationTurnPayouts.ts": {
-      "untyped": 1
-    },
-    "src/lib/turn/corporation/corporationTurnSideEffects.ts": {
-      "untyped": 1
-    },
-    "src/lib/turn/corporation/index.ts": {
-      "untyped": 2
-    },
-    "src/lib/turn/corporation/loadSettleableSupplyAgreements.ts": {
-      "untyped": 1
-    },
-    "src/lib/turn/corporation/marketCapSnapshot.ts": {
-      "untyped": 1
-    },
     "src/lib/turn/corporation/migrateEntertainmentRemoval.ts": {
-      "untyped": 4
+      "untyped": 3
     },
     "src/lib/turn/corporation/producerMarketShadowPhase.ts": {
-      "untyped": 1
-    },
-    "src/lib/turn/corporationCountrySnapshot.ts": {
       "untyped": 1
     },
     "src/lib/turn/decolonizationTurn.ts": {
       "untyped": 1
     },
-    "src/lib/turn/gameHealthSnapshot.ts": {
-      "untyped": 4
-    },
     "src/lib/turn/history/freezeOfficeHistoryIterations.ts": {
       "untyped": 2
-    },
-    "src/lib/turn/inflationRecalc.ts": {
-      "untyped": 1
-    },
-    "src/lib/turn/internationalOrganizationsPhase.ts": {
-      "untyped": 1
-    },
-    "src/lib/turn/investorWealthSnapshots.ts": {
-      "untyped": 1
     },
     "src/lib/turn/npp/leadershipVoting.ts": {
       "untyped": 2
     },
-    "src/lib/turn/parliamentaryGovernment.ts": {
-      "untyped": 6
-    },
-    "src/lib/turn/parliamentSeatsSnapshot.ts": {
-      "untyped": 1
-    },
-    "src/lib/turn/portfolioSnapshot.ts": {
-      "untyped": 1
-    },
-    "src/lib/turn/postTurnScans.ts": {
-      "untyped": 1
-    },
     "src/lib/turn/subhour/rewindHalfTick.ts": {
       "untyped": 2
     },
-    "src/lib/turn/suspiciousDetection.ts": {
-      "untyped": 6
-    },
-    "src/lib/unions/commands/resignUnionLeadership.ts": {
-      "untyped": 2
-    },
-    "src/lib/unions/commands/unionActions.ts": {
-      "untyped": 1
-    },
-    "src/lib/utils/governmentApproval.ts": {
-      "untyped": 1
-    },
-    "src/lib/world/careerEvidence.ts": {
-      "untyped": 2
-    },
-    "src/lib/world/legacyLeaderboard.ts": {
-      "untyped": 1
-    },
     "src/lib/world/succession/materializeFederalRetirement.ts": {
-      "untyped": 2
+      "untyped": 1
     },
     "src/lib/world/succession/materializeRussianCongress.ts": {
-      "untyped": 7
+      "untyped": 4
     },
     "src/lib/world/succession/materializeTerritory.ts": {
       "untyped": 1

@@ -44,6 +44,8 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
 import type { Document } from "mongodb";
+import { indexFundCommandsCollection } from "@/lib/db/repositories/indexFundCommands";
+import { indexFundRedemptionQueueCollection } from "@/lib/db/repositories/indexFundRedemptionQueue";
 
 const FUND_TX = "indexFundTransactions";
 const REDEMPTION_QUEUE = "indexFundRedemptionQueue";
@@ -289,12 +291,14 @@ export async function completeWindUp(
       placerFundId: fund._id,
       status: "open",
     });
-    const withdrawals = await tx
-      .collection("indexFundRedemptionQueue")
-      .countDocuments({ fundId: fund._id, status: { $in: ["queued", "partial", "processing"] } });
-    const subscriptions = await tx
-      .collection("indexFundCommands")
-      .countDocuments({ "subscription.fundId": fund._id, "subscription.status": "queued" });
+    const withdrawals = await indexFundRedemptionQueueCollection<Document>(tx).countDocuments({
+      fundId: fund._id,
+      status: { $in: ["queued", "partial", "processing"] },
+    });
+    const subscriptions = await indexFundCommandsCollection<Document>(tx).countDocuments({
+      "subscription.fundId": fund._id,
+      "subscription.status": "queued",
+    });
     if (bonds || orders || withdrawals || subscriptions)
       throw new Error("Fund settlement must finish before wind-up");
     return settleWindUp(tx, current, currentTurn);

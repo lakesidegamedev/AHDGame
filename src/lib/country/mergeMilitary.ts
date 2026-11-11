@@ -35,6 +35,8 @@ import { EMPTY_ARSENAL_STOCK } from "@/lib/db/types/nationalArsenal";
 import { blendGrade } from "@/lib/military/arsenal";
 import { getMilitaryCommandsCollection } from "@/lib/db/collections/militaryCommands";
 import { getMilitaryFormationsCollection } from "@/lib/db/collections/militaryFormations";
+import { nationalDoctrineCollection } from "@/lib/db/repositories/nationalDoctrine";
+import { militaryUnitsCollection } from "@/lib/db/repositories/militaryUnits";
 
 export interface MergeMilitaryArgs {
   fromCountryId: CountryId;
@@ -105,9 +107,10 @@ export async function mergeMilitary(db: Db, args: MergeMilitaryArgs): Promise<Me
   const now = new Date();
 
   // ── Units: per-doc, a countryId flip is the whole move ─────────────────────
-  const units = await db
-    .collection("militaryUnits")
-    .updateMany({ countryId: fromCountryId }, { $set: { countryId: toCountryId, updatedAt: now } });
+  const units = await militaryUnitsCollection<Document>(db).updateMany(
+    { countryId: fromCountryId },
+    { $set: { countryId: toCountryId, updatedAt: now } }
+  );
 
   // ── Command groups: concatenated. The absorbed commands cover regions the
   //    survivor's never did (they just changed country), so the sets are
@@ -189,7 +192,7 @@ export async function mergeMilitary(db: Db, args: MergeMilitaryArgs): Promise<Me
   //    A survivor with no doctrine doc at all still falls through to rescoping
   //    the absorbed one, which is right: the loser's doctrine beats none. ─────
   await mergeOneDocPerCountry(
-    db.collection("nationalDoctrine"),
+    nationalDoctrineCollection<Document>(db),
     fromCountryId,
     toCountryId,
     now,

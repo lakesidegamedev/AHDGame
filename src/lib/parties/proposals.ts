@@ -43,6 +43,10 @@ import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 import { nationalPartyElectionsCollection } from "@/lib/db/repositories/nationalPartyElections";
+import { nationalPartyVotesCollection } from "@/lib/db/repositories/nationalPartyVotes";
+import { nationalCommitteeElectionsCollection } from "@/lib/db/repositories/nationalCommitteeElections";
+import { stateRegistrationPoolCollection } from "@/lib/db/repositories/stateRegistrationPool";
+import { committeeProposalsCollection } from "@/lib/db/repositories/committeeProposals";
 
 // ─── Pure helpers ────────────────────────────────────────────────────────────
 
@@ -196,8 +200,7 @@ export async function applyElectionMethodEffect(
   if (activeElections.length === 0) return;
 
   const electionIds = activeElections.map((election) => election._id);
-  const votes = await db
-    .collection<NationalPartyVote>("nationalPartyVotes")
+  const votes = await nationalPartyVotesCollection(db)
     .find({
       electionId: { $in: electionIds },
       voterPartyInfluence: { $exists: false },
@@ -220,7 +223,7 @@ export async function applyElectionMethodEffect(
     ])
   );
 
-  await db.collection<NationalPartyVote>("nationalPartyVotes").bulkWrite(
+  await nationalPartyVotesCollection(db).bulkWrite(
     votes.map((vote) => ({
       updateOne: {
         filter: {
@@ -302,8 +305,7 @@ export async function applyElectionDurationEffect(
   }
 
   // 5. Stretch in-flight committee elections with identical logic.
-  const committeeRows = await db
-    .collection<NationalCommitteeElection>("nationalCommitteeElections")
+  const committeeRows = await nationalCommitteeElectionsCollection(db)
     .find({ partyId: partyKey, countryId: countryKey, status: "voting" })
     .toArray();
 
@@ -332,9 +334,7 @@ export async function applyElectionDurationEffect(
     ];
   });
   if (committeeOps.length > 0) {
-    await db
-      .collection<NationalCommitteeElection>("nationalCommitteeElections")
-      .bulkWrite(committeeOps);
+    await nationalCommitteeElectionsCollection(db).bulkWrite(committeeOps);
   }
 }
 
@@ -786,9 +786,9 @@ export async function mergePartyInto(
         }
       );
       if (registrationReleases.length > 0) {
-        await db
-          .collection<StateRegistrationPool>("stateRegistrationPool")
-          .bulkWrite(registrationReleases, { ordered: false });
+        await stateRegistrationPoolCollection(db).bulkWrite(registrationReleases, {
+          ordered: false,
+        });
       }
       await statePartyOrgCol.deleteMany({ partyId: proposingStrId, countryId });
 
@@ -1043,7 +1043,7 @@ export async function mergePartyInto(
       const cancelRace = { $set: { status: "cancelled", updatedAt: now } };
       await Promise.all([
         nationalPartyElectionsCollection<Document>(db).updateMany(openRaces, cancelRace),
-        db.collection<Document>("nationalCommitteeElections").updateMany(openRaces, cancelRace),
+        nationalCommitteeElectionsCollection<Document>(db).updateMany(openRaces, cancelRace),
       ]);
 
       // 10. Update target party member count
@@ -1065,12 +1065,10 @@ async function markResolved(
 ): Promise<void> {
   // The claim in attemptResolution is the real single-resolver guarantee; the
   // status filter here keeps a stale resolver from overwriting a manual repair.
-  await db
-    .collection("committeeProposals")
-    .updateOne(
-      { _id: id, status: "open" },
-      { $set: { status, resolvedAtTurn: turn, updatedAt: new Date() } }
-    );
+  await committeeProposalsCollection<Document>(db).updateOne(
+    { _id: id, status: "open" },
+    { $set: { status, resolvedAtTurn: turn, updatedAt: new Date() } }
+  );
 }
 
 /**
@@ -1086,12 +1084,10 @@ async function markProposalTerminal(
   status: "expired" | "rejected",
   currentTurn: number
 ): Promise<void> {
-  await db
-    .collection<CommitteeProposal>("committeeProposals")
-    .updateOne(
-      { _id: proposal._id, status: "open" },
-      { $set: { status, resolvedAtTurn: currentTurn, updatedAt: new Date() } }
-    );
+  await committeeProposalsCollection(db).updateOne(
+    { _id: proposal._id, status: "open" },
+    { $set: { status, resolvedAtTurn: currentTurn, updatedAt: new Date() } }
+  );
 }
 
 export async function attemptResolution(
@@ -1172,7 +1168,7 @@ export async function attemptResolution(
   // released: an effect that failed half-way must not be silently retried, so
   // a claimed-but-open proposal stays open with resolutionError set for an
   // operator to finish by hand.
-  const coll = db.collection<CommitteeProposal>("committeeProposals");
+  const coll = committeeProposalsCollection(db);
   const claimed = await coll.updateOne(
     {
       _id: proposal._id,
@@ -1255,7 +1251,7 @@ export async function castVote(
   const now = new Date();
   const newVote: CommitteeProposalVote = { voterId, vote, votedAt: now };
 
-  const coll = db.collection<CommitteeProposal>("committeeProposals");
+  const coll = committeeProposalsCollection(db);
   // Two atomic writes, ordered so the "one entry per voter" invariant holds
   // under every interleaving. The push only lands when the voter is absent from
   // the array; if it did not match, the voter is already present (or the
@@ -1292,9 +1288,7 @@ export async function castVote(
     );
   }
 
-  const updated = await db
-    .collection<CommitteeProposal>("committeeProposals")
-    .findOne({ _id: proposalId });
+  const updated = await committeeProposalsCollection(db).findOne({ _id: proposalId });
   if (!updated) return null;
 
   await attemptResolution(db, updated, currentTurn);
@@ -1314,8 +1308,7 @@ export async function castVote(
  * Returns count resolved (regardless of pass / reject).
  */
 export async function expireOpenProposals(db: Db, currentTurn: number): Promise<number> {
-  const expired = await db
-    .collection<CommitteeProposal>("committeeProposals")
+  const expired = await committeeProposalsCollection(db)
     .find({ status: "open", expiresAtTurn: { $lte: currentTurn } })
     .toArray();
   let resolved = 0;

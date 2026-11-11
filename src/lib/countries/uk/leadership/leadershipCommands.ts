@@ -39,6 +39,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { caucusesCollection } from "@/lib/db/repositories/caucuses";
 
 /**
  * UK party leadership removal shell commands.
@@ -192,8 +193,7 @@ export async function getCommitteeSnapshot(
           })
           .project({ memberId: 1, caucusId: 1 })
           .toArray(),
-    db
-      .collection<Caucus>("caucuses")
+    caucusesCollection(db)
       .find({ countryId, partyId: partySeqIdOf(party), disbandedAt: null })
       .project({ slug: 1 })
       .toArray(),

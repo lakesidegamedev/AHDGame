@@ -25,6 +25,7 @@ import type {
 } from "@/lib/parties/dto/partyView";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { committeeProposalsCollection } from "@/lib/db/repositories/committeeProposals";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -170,19 +171,16 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const canProposeAny = isChair || isViceChair || isCommitteeMember;
 
     const [rawOpen, rawPast, rawIncoming] = await Promise.all([
-      db
-        .collection<CommitteeProposal>("committeeProposals")
+      committeeProposalsCollection(db)
         .find({ partyId: party._id, status: "open" })
         .sort({ createdAt: -1 })
         .toArray(),
-      db
-        .collection<CommitteeProposal>("committeeProposals")
+      committeeProposalsCollection(db)
         .find({ partyId: party._id, status: { $in: ["passed", "rejected", "expired"] } })
         .sort({ createdAt: -1 })
         .limit(20)
         .toArray(),
-      db
-        .collection<CommitteeProposal>("committeeProposals")
+      committeeProposalsCollection(db)
         .find({ "merge.targetPartyId": party._id, status: "open" })
         .sort({ createdAt: -1 })
         .toArray(),
@@ -356,7 +354,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     // Duplicate-open guard: don't allow a second open proposal of the same
     // type/axis on the same party while the first is still pending. Prevents
     // racing the cooldown via two concurrent proposals.
-    const duplicateOpen = await db.collection<CommitteeProposal>("committeeProposals").findOne({
+    const duplicateOpen = await committeeProposalsCollection(db).findOne({
       partyId: party._id,
       status: "open",
       type: body.type,
@@ -474,9 +472,9 @@ export async function POST(request: Request, { params }: RouteParams) {
         body.type === "transactionApprovalMode" ? { mode: body.mode } : undefined,
     };
 
-    const result = await db
-      .collection<CommitteeProposal>("committeeProposals")
-      .insertOne(proposalDoc as CommitteeProposal);
+    const result = await committeeProposalsCollection(db).insertOne(
+      proposalDoc as CommitteeProposal
+    );
 
     return NextResponse.json({ success: true, proposalId: result.insertedId.toString() });
   } catch (error) {

@@ -16,6 +16,7 @@ import {
 } from "@/lib/constants/justiceActions";
 import { z } from "zod";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { supremeCourtSeatsCollection } from "@/lib/db/repositories/supremeCourtSeats";
 
 const actionSchema = z.object({
   seatNumber: z.number().int().min(1).max(9),
@@ -46,7 +47,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const { seatNumber, actionId } = parsed.data;
 
     const db = await getDb();
-    const seatsCol = db.collection<SupremeCourtSeat>("supremeCourtSeats");
+    const seatsCol = supremeCourtSeatsCollection(db);
     const seat = await seatsCol.findOne({ countryId, seatNumber });
 
     const isSeatedJustice =

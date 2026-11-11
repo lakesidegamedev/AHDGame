@@ -18,6 +18,7 @@ import type { MacroEconomicValues, StateMetricValues } from "@/lib/constants/cor
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { politicalMetricsCollection } from "@/lib/db/repositories/politicalMetrics";
+import { stateResourceCapacityCollection } from "@/lib/db/repositories/stateResourceCapacity";
 
 export interface StateViewContext {
   states: TurnStateProjection[];
@@ -67,8 +68,7 @@ export async function loadStateViewContext(
       ? await Promise.all([
           // Legacy-shaped view for the margin engine's stored reads.
           findMergedRegionMetricsMany(db, { _id: { $in: uniqueStateIds } }),
-          db
-            .collection<StateResourceCapacity>("stateResourceCapacity")
+          stateResourceCapacityCollection(db)
             .find(
               { stateId: { $in: uniqueStateIds } },
               { projection: { stateId: 1, resources: 1 } }

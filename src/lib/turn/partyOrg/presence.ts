@@ -4,6 +4,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { partyBudgetCollection } from "@/lib/db/repositories/partyBudget";
 
 /**
  * Check if a party has presence in a state.
@@ -67,12 +68,10 @@ export async function updatePartyPresence(db: Db, stateId: string, partyId: stri
 
   // If presence lost, reset org building budget to 0
   if (!hasPresence) {
-    await db
-      .collection<PartyBudget>("partyBudget")
-      .updateOne(
-        { partyId, scope: "state", stateId },
-        { $set: { orgBuildingPercent: 0, updatedAt: new Date() } }
-      );
+    await partyBudgetCollection(db).updateOne(
+      { partyId, scope: "state", stateId },
+      { $set: { orgBuildingPercent: 0, updatedAt: new Date() } }
+    );
 
     console.log(`[Presence] ${partyId} lost presence in ${stateId}, org building reset to 0`);
   }

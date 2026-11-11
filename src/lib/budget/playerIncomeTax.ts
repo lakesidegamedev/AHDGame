@@ -34,6 +34,8 @@ import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { playerIncomeTaxAssessmentsCollection } from "@/lib/db/repositories/playerIncomeTaxAssessments";
+import { tradeHistoryCollection } from "@/lib/db/repositories/tradeHistory";
 
 /**
  * Pass-through distributions already taxed at source (the owner tax on
@@ -132,8 +134,7 @@ export async function processPlayerIncomeTax(
     exchangeRatesCollection(db)
       .find({}, { projection: { currencyCode: 1, rate: 1 } })
       .toArray(),
-    db
-      .collection<TradeHistoryEntry>("tradeHistory")
+    tradeHistoryCollection(db)
       .find(
         { turn, source: { $in: ["auto_dividend", "auto_coupon"] } },
         {
@@ -223,8 +224,7 @@ export async function processPlayerIncomeTax(
     conversionByKey.set(key, total);
   }
   const worldId = gameState.resetWorldId ?? "legacy";
-  const existingPlans = await db
-    .collection<PlayerIncomeTaxTurnPlan>("playerIncomeTaxAssessments")
+  const existingPlans = await playerIncomeTaxAssessmentsCollection<PlayerIncomeTaxTurnPlan>(db)
     .find({ status: "plan", worldId, turn })
     .toArray();
   // A request can pass the turn guard just before the turn starts, then
@@ -236,8 +236,7 @@ export async function processPlayerIncomeTax(
   const earliestDue = receiptDueTurns.reduce((earliest, due) => Math.min(earliest, due), turn);
   const previousPlans =
     receiptDueTurns.length && earliestDue < turn
-      ? await db
-          .collection<PlayerIncomeTaxTurnPlan>("playerIncomeTaxAssessments")
+      ? await playerIncomeTaxAssessmentsCollection<PlayerIncomeTaxTurnPlan>(db)
           .find(
             { status: "plan", worldId, turn: { $gte: earliestDue, $lt: turn } },
             { projection: { characterId: 1, ownerCollection: 1, stockTaxReceiptIds: 1 } }
@@ -491,9 +490,8 @@ export async function processPlayerIncomeTax(
     });
   }
   if (planOps.length)
-    await db.collection<PlayerIncomeTaxTurnPlan>("playerIncomeTaxAssessments").bulkWrite(planOps);
-  const ownedPlans = await db
-    .collection<PlayerIncomeTaxTurnPlan>("playerIncomeTaxAssessments")
+    await playerIncomeTaxAssessmentsCollection<PlayerIncomeTaxTurnPlan>(db).bulkWrite(planOps);
+  const ownedPlans = await playerIncomeTaxAssessmentsCollection<PlayerIncomeTaxTurnPlan>(db)
     .find({ status: "plan", worldId, turn })
     .toArray();
   for (const plan of ownedPlans) {
@@ -520,9 +518,9 @@ export async function processPlayerIncomeTax(
   if (tierOps.length) await charactersCollection(db).bulkWrite(tierOps);
   if (imperialTierOps.length) await imperialCharactersCollection(db).bulkWrite(imperialTierOps);
   const inserted = assessmentOps.length
-    ? await db
-        .collection<PlayerIncomeTaxAssessment>("playerIncomeTaxAssessments")
-        .bulkWrite(assessmentOps)
+    ? await playerIncomeTaxAssessmentsCollection<PlayerIncomeTaxAssessment>(db).bulkWrite(
+        assessmentOps
+      )
     : undefined;
   await settlePlayerIncomeTaxAssessments(
     db,
@@ -534,8 +532,8 @@ export async function processPlayerIncomeTax(
     turnLengthMinutes,
     gameState.forexEnabled === true
   );
-  const pending = await db
-    .collection<PlayerIncomeTaxAssessment>("playerIncomeTaxAssessments")
-    .countDocuments({ worldId: gameState.resetWorldId ?? "legacy", status: "unpaid" });
+  const pending = await playerIncomeTaxAssessmentsCollection<PlayerIncomeTaxAssessment>(
+    db
+  ).countDocuments({ worldId: gameState.resetWorldId ?? "legacy", status: "unpaid" });
   return { assessed: inserted?.upsertedCount ?? 0, pending };
 }

@@ -4,6 +4,7 @@ import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { buildOrderRevertPolicyFields } from "./revertPolicy";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
+import { governorExecutiveOrdersCollection } from "@/lib/db/repositories/governorExecutiveOrders";
 
 export interface RescindOrderInput {
   orderId: ObjectId;
@@ -21,9 +22,7 @@ export async function rescindOrder(
   db: Db,
   input: RescindOrderInput
 ): Promise<{ status: number; body: { success?: boolean; error?: string } }> {
-  const order = await db
-    .collection<GovernorExecutiveOrder>("governorExecutiveOrders")
-    .findOne({ _id: input.orderId });
+  const order = await governorExecutiveOrdersCollection(db).findOne({ _id: input.orderId });
   if (!order) return { status: 404, body: { error: "Order not found." } };
   if (order.status !== "active") {
     return { status: 400, body: { error: `Order is already ${order.status}.` } };
@@ -61,7 +60,7 @@ export async function rescindOrder(
   }
   // else: policy was overwritten by a bill; leave bill's effect in place.
 
-  await db.collection<GovernorExecutiveOrder>("governorExecutiveOrders").updateOne(
+  await governorExecutiveOrdersCollection(db).updateOne(
     { _id: order._id! },
     {
       $set: {

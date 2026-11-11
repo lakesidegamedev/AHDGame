@@ -22,6 +22,7 @@ import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
+import { parliamentaryGovernmentsCollection } from "@/lib/db/repositories/parliamentaryGovernments";
 
 export interface RelocationOutcome {
   resignedFromOffice: string | null;
@@ -187,7 +188,7 @@ export async function performRelocation(
         },
       }
     );
-    await db.collection("parliamentaryGovernments").updateMany(
+    await parliamentaryGovernmentsCollection<Document>(db).updateMany(
       { pmCharacterId: characterId },
       {
         $set: {

@@ -20,6 +20,7 @@ import {
 } from "@/lib/partyWhips/playerWhipSummary";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { billsCollection } from "@/lib/db/repositories/bills";
+import { billWhipsCollection } from "@/lib/db/repositories/billWhips";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -192,8 +193,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     }
 
     const billIds = activeBills.map((b) => b._id);
-    const existingWhips = await db
-      .collection<BillWhip>("billWhips")
+    const existingWhips = await billWhipsCollection(db)
       .find({
         targetType: "bill",
         targetId: { $in: billIds },

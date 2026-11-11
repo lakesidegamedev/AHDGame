@@ -10,6 +10,7 @@ import { getAchievementBySlug } from "./index";
 import { invalidateRarityCache } from "./cache";
 import { resolveOfficeHolderGrants } from "./officeHolderRules";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { characterAchievementsCollection } from "@/lib/db/repositories/characterAchievements";
 
 export async function awardOfficeHolderAchievements(
   db: Db,
@@ -54,7 +55,7 @@ export async function awardOfficeHolderAchievements(
     const achievementIds = [...defIds.values()].filter((id): id is ObjectId => id != null);
     if (achievementIds.length === 0) return 0;
 
-    const col = db.collection<CharacterAchievement>("characterAchievements");
+    const col = characterAchievementsCollection(db);
     const existing = await col
       .find(
         {

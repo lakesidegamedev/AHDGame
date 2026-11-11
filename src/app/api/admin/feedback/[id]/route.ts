@@ -11,6 +11,7 @@ import { adminFeedbackPatchSchema } from "@/lib/api/schemas/admin";
 import type { Feedback, User } from "@/lib/db/types";
 import { servicesConfig } from "@/lib/config/services";
 import { usersCollection } from "@/lib/db/repositories/users";
+import { feedbackCollection } from "@/lib/db/repositories/feedback";
 
 // PATCH /api/admin/feedback/[id] — Update feedback status and/or admin notes, notifying the reporter on status change.
 // Auth: requireAdmin
@@ -41,12 +42,12 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     let feedback: Feedback | null = null;
     const issueNum = parseInt(id, 10);
     if (!isNaN(issueNum) && issueNum >= 1) {
-      feedback = await db.collection<Feedback>("feedback").findOne({ issueNumber: issueNum });
+      feedback = await feedbackCollection(db).findOne({ issueNumber: issueNum });
     }
     if (!feedback) {
       const oid = parseObjectId(id);
       if (oid) {
-        feedback = await db.collection<Feedback>("feedback").findOne({ _id: oid });
+        feedback = await feedbackCollection(db).findOne({ _id: oid });
       }
     }
 
@@ -76,7 +77,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       return NextResponse.json({ message: "No changes" });
     }
 
-    await db.collection<Feedback>("feedback").updateOne({ _id: feedback._id }, { $set: updates });
+    await feedbackCollection(db).updateOne({ _id: feedback._id }, { $set: updates });
 
     // Sync to GitHub issue when linked — keep admin panel and GitHub consistent.
     // Fall back to extracting the issue number from the URL for legacy records

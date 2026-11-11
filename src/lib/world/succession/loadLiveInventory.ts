@@ -10,6 +10,7 @@ import { buildSourceRegionHierarchy } from "./sourceRegionHierarchy";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { militaryUnitsCollection } from "@/lib/db/repositories/militaryUnits";
 
 export interface LiveSuccessionInventory {
   sourceRegions: SuccessionRegion[];
@@ -52,8 +53,7 @@ export async function loadLiveSuccessionInventory(
         .toArray()
     : [];
   const corporationsWithSites = new Set(sectors.map((sector) => sector.corporationId.toString()));
-  const units = await db
-    .collection<MilitaryUnit>("militaryUnits")
+  const units = await militaryUnitsCollection(db)
     .find({ countryId: sourceCountryId }, { session })
     .toArray();
   return {

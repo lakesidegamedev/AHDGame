@@ -7,6 +7,7 @@ import { adminDemographicsPostSchema } from "@/lib/api/schemas/admin";
 import type { StateDemographics, AdminLog } from "@/lib/db/types";
 import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
 import { adminLogsCollection } from "@/lib/db/repositories/adminLogs";
+import { demographicDefaultsCollection } from "@/lib/db/repositories/demographicDefaults";
 
 // GET /api/admin/demographics — Returns one state's stored demographics (state query param).
 // Auth: requireAdmin
@@ -62,10 +63,10 @@ export async function POST(request: Request) {
     }
 
     // Clear existing defaults and insert current values
-    await db.collection<StateDemographics>("demographicDefaults").deleteMany({});
+    await demographicDefaultsCollection(db).deleteMany({});
 
     for (const demo of currentDemographics) {
-      await db.collection<StateDemographics>("demographicDefaults").insertOne({
+      await demographicDefaultsCollection(db).insertOne({
         _id: demo._id,
         countryId: demo.countryId,
         categoryWeights: demo.categoryWeights,

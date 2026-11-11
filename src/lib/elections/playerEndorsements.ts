@@ -4,6 +4,7 @@ import { applyEndorsementSupportBump } from "@/lib/elections/campaigns/supportEv
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { playerEndorsementsCollection } from "@/lib/db/repositories/playerEndorsements";
 
 /**
  * Party-alignment lifecycle for player endorsements.
@@ -123,12 +124,10 @@ async function withdrawPrimaryMisalignedRows(
     await applyEndorsementSupportBump(db, candidate.characterId, true);
   }
 
-  await db
-    .collection<PlayerEndorsement>("playerEndorsements")
-    .updateMany(
-      { _id: { $in: misaligned.map((e) => e._id) } },
-      { $set: { isActive: false, withdrawnAt: now } }
-    );
+  await playerEndorsementsCollection(db).updateMany(
+    { _id: { $in: misaligned.map((e) => e._id) } },
+    { $set: { isActive: false, withdrawnAt: now } }
+  );
 
   return misaligned.length;
 }
@@ -147,8 +146,7 @@ export async function withdrawPlayerEndorsementsOnPartyChange(
   newParty: string,
   clock: EndorsementPhaseClock
 ): Promise<number> {
-  const active = await db
-    .collection<PlayerEndorsement>("playerEndorsements")
+  const active = await playerEndorsementsCollection(db)
     .find({ characterId, isActive: true })
     .toArray();
   if (active.length === 0) return 0;
@@ -178,10 +176,7 @@ export async function sweepPartyMismatchedPlayerEndorsements(
   currentTurn: number,
   now: Date
 ): Promise<number> {
-  const active = await db
-    .collection<PlayerEndorsement>("playerEndorsements")
-    .find({ isActive: true })
-    .toArray();
+  const active = await playerEndorsementsCollection(db).find({ isActive: true }).toArray();
   if (active.length === 0) return 0;
 
   const withdrawn = await withdrawPrimaryMisalignedRows({ db, currentTurn, now }, active);

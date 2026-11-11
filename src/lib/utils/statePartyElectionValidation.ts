@@ -14,6 +14,7 @@ import type {
 } from "@/lib/db/types";
 import { errorResponse } from "@/lib/api/errors";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { statePartyElectionsCollection } from "@/lib/db/repositories/statePartyElections";
 
 interface ValidationResult {
   success: true;
@@ -79,7 +80,7 @@ export async function validateStatePartyElectionAccess(
     };
   }
 
-  const election = await db.collection<StatePartyElection>("statePartyElections").findOne(
+  const election = await statePartyElectionsCollection(db).findOne(
     {
       stateId,
       partyId: canonicalPartyId,

@@ -1,6 +1,7 @@
 import type { Db } from "mongodb";
 import type { Caucus, CaucusMembership, CaucusPolicyPosition } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
+import { caucusesCollection } from "@/lib/db/repositories/caucuses";
 
 /**
  * Normalise a chair-authored caucus name into a URL slug. Lowercased, ASCII
@@ -39,7 +40,7 @@ export async function reclaimSlug(
   if (newOwnerCaucusId) {
     filter._id = { $ne: newOwnerCaucusId };
   }
-  const result = await db.collection<Caucus>("caucuses").updateMany(filter, {
+  const result = await caucusesCollection(db).updateMany(filter, {
     $pull: { previousSlugs: slug },
     $set: { updatedAt: new Date() },
   });
@@ -71,7 +72,7 @@ export async function findCaucusBySlug(
   partyId: string,
   slug: string
 ): Promise<CaucusSlugResolution | null> {
-  const collection = db.collection<Caucus>("caucuses");
+  const collection = caucusesCollection(db);
 
   const current = await collection.findOne({
     countryId,
@@ -98,8 +99,7 @@ export async function listCaucusesForParty(
   countryId: CountryId,
   partyId: string
 ): Promise<Caucus[]> {
-  return db
-    .collection<Caucus>("caucuses")
+  return caucusesCollection(db)
     .find({ countryId, partyId, disbandedAt: null })
     .sort({ name: 1 })
     .toArray();

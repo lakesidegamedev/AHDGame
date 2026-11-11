@@ -26,6 +26,7 @@ import { nppsCollection } from "@/lib/db/repositories/npps";
 import type { Document } from "mongodb";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
+import { governorOfficeStateCollection } from "@/lib/db/repositories/governorOfficeState";
 
 export async function readUKDevolutionState(
   db: Db,
@@ -197,7 +198,7 @@ export async function vacateUKRegionalExecutives(
       },
       $unset: { characterName: "", party: "" },
     });
-    await db.collection("governorOfficeState").updateMany(
+    await governorOfficeStateCollection<Document>(db).updateMany(
       { countryId: "UK", stateId: { $in: [...inactive] } },
       {
         $set: { characterId: null, characterName: "", gubernatorialActions: 0, updatedAt: now },

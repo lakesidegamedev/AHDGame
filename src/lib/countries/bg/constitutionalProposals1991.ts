@@ -48,6 +48,7 @@ import { billsCollection } from "@/lib/db/repositories/bills";
 import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { countryStateCollection } from "@/lib/db/repositories/countryState";
 
 export const BG_1991_PROPOSALS_COLLECTION = "bg1991ConstitutionalProposals";
 const ID = "1991-default:bg-constitutional:constitution1991";
@@ -75,9 +76,10 @@ async function availability(db: Db, game: Calendar, turn: number, session?: Clie
     { _id: "current" },
     { session, projection: { preset: 1, preIteration: 1, preIterationTurns: 1 } }
   );
-  const runtime = await db
-    .collection<CountryState>("countryState")
-    .findOne({ _id: "BG" }, { session, projection: { governmentType: 1 } });
+  const runtime = await countryStateCollection(db).findOne(
+    { _id: "BG" },
+    { session, projection: { governmentType: 1 } }
+  );
   const country = await countryGameStatesCollection(db).findOne(
     { _id: "BG" },
     {

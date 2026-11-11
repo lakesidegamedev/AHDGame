@@ -80,6 +80,8 @@ import { billsCollection } from "@/lib/db/repositories/bills";
 import type { Document } from "mongodb";
 import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
 import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
+import { ukCabinetCooldownsCollection } from "@/lib/db/repositories/ukCabinetCooldowns";
+import { billWhipsCollection } from "@/lib/db/repositories/billWhips";
 
 export { resolveGoverningPartyIdsFromDocuments };
 
@@ -363,7 +365,7 @@ export async function updateParliamentaryGovernmentSeats(
       // player with a null currentOffice despite a live electedOfficials seat.
       await clearCabinetOnTransition(db, countryId);
       await Promise.all([
-        db.collection("ukCabinetCooldowns").deleteMany({ countryId }),
+        ukCabinetCooldownsCollection<Document>(db).deleteMany({ countryId }),
         cabinetMembersCollection<Document>(db).deleteMany({ countryId }),
       ]);
       return;
@@ -625,7 +627,7 @@ export async function appointPrimeMinister(
 
   // Clear cabinet
   await clearCabinetOnTransition(db, countryId);
-  await db.collection("ukCabinetCooldowns").deleteMany({ countryId });
+  await ukCabinetCooldownsCollection<Document>(db).deleteMany({ countryId });
 
   // Scope PM clear to this country — other countries may have their own PM
   const clearPM = { $set: { currentOffice: null, updatedAt: now } };
@@ -876,8 +878,7 @@ export async function autoAyeNPPsForParliamentaryAppointment(
     ? new Set(vote.coalitionPartyIds)
     : new Set([vote.nomineePartyId]);
 
-  const whips = await db
-    .collection("billWhips")
+  const whips = await billWhipsCollection<Document>(db)
     .find<{ partyId: string; direction: "for" | "against" }>({
       targetType: "pmAppointmentVote",
       targetId: voteId,
@@ -972,8 +973,7 @@ export async function autoVoteNPPsForNoConfidence(
   if (governingPartyIds.size === 0) return;
   const offices = officeLayout ?? (await loadRuntimeCountryOffices(db, countryId));
 
-  const whips = await db
-    .collection("billWhips")
+  const whips = await billWhipsCollection<Document>(db)
     .find<{ partyId: string; direction: "for" | "against" }>({
       targetType: "noConfidenceVote",
       targetId: voteId,
@@ -1164,7 +1164,7 @@ export async function resolveParliamentaryAppointmentVote(
       { $set: { status: "cancelled", closedAt: now, updatedAt: now } }
     );
 
-    await db.collection("ukCabinetCooldowns").deleteMany({ countryId });
+    await ukCabinetCooldownsCollection<Document>(db).deleteMany({ countryId });
 
     // PM appointment votes are character-only; the null arm is defensive.
     const nomineeChar = vote.nomineeCharacterId
@@ -1810,7 +1810,7 @@ export async function unformGovernmentAndVacatePM(
   // null currentOffice despite a live electedOfficials seat.
   await clearCabinetOnTransition(db, countryId);
   await Promise.all([
-    db.collection("ukCabinetCooldowns").deleteMany({ countryId }),
+    ukCabinetCooldownsCollection<Document>(db).deleteMany({ countryId }),
     // Extra sweep catches any position not in the country's position map.
     cabinetMembersCollection<Document>(db).deleteMany({ countryId }),
   ]);

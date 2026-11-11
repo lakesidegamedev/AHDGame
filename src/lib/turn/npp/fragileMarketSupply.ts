@@ -28,6 +28,7 @@ import {
 } from "@/lib/turn/npp/marketSignals";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { stateResourceCapacityCollection } from "@/lib/db/repositories/stateResourceCapacity";
 
 export async function loadNppPlacementSignals(
   db: Db,
@@ -36,8 +37,7 @@ export async function loadNppPlacementSignals(
   statePriceRatioOf: NonNullable<PlacementSignals["statePriceRatioOf"]>
 ): Promise<PlacementSignals> {
   const [capacity, eraUnitScale, config, gameState] = await Promise.all([
-    db
-      .collection<StateResourceCapacity>("stateResourceCapacity")
+    stateResourceCapacityCollection(db)
       .find({}, { projection: { stateId: 1, resources: 1 } })
       .toArray(),
     loadWorldEraUnitScale(db),

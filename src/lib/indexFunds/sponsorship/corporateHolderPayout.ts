@@ -12,6 +12,7 @@ import {
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { escheatUnclaimedFundCash } from "./unclaimedResidual";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { indexFundTransactionsCollection } from "@/lib/db/repositories/indexFundTransactions";
 
 export async function payCorporateWindUpHolders(
   db: Db,
@@ -96,7 +97,7 @@ export async function payCorporateWindUpHolders(
     const credited = await corporationsCollection(db).bulkWrite(operations);
     if (credited.matchedCount !== operations.length)
       throw new Error("Corporate fund payout failed");
-    await db.collection<IndexFundTransaction>("indexFundTransactions").insertMany(transactions);
+    await indexFundTransactionsCollection(db).insertMany(transactions);
   }
   return { holdersPaid: operations.length, distributedAnchor };
 }

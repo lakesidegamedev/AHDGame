@@ -39,6 +39,11 @@ import { imperialCharactersCollection } from "@/lib/db/repositories/imperialChar
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 import { usersCollection } from "@/lib/db/repositories/users";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { bondHistoryCollection } from "@/lib/db/repositories/bondHistory";
+import { playerIncomeTaxAssessmentsCollection } from "@/lib/db/repositories/playerIncomeTaxAssessments";
+import { defenceContractsCollection } from "@/lib/db/repositories/defenceContracts";
+import { pensionSchemesCollection } from "@/lib/db/repositories/pensionSchemes";
+import { producerEconomyAccountsCollection } from "@/lib/db/repositories/producerEconomyAccounts";
 
 export const ECONOMY_RESET_PROCESSING_KIND = "economyReset";
 
@@ -333,26 +338,23 @@ async function loadSource(
     centralBanksCollection<Document>(db)
       .find({}, { projection: { reserveBalance: 1, pendingLocReserveCredit: 1 } })
       .toArray(),
-    db
-      .collection<Document>("producerEconomyAccounts")
+    producerEconomyAccountsCollection<Document>(db)
       .find(
         { kind: "publicBuyer", worldEpoch: fence.worldEpochId },
         { projection: { countryId: 1, currency: 1, cash: 1 } }
       )
       .toArray(),
-    db
-      .collection<Document>("defenceContracts")
+    defenceContractsCollection<Document>(db)
       .find(
         { status: { $in: ["pending", "active"] } },
         { projection: { countryId: 1, encumberedAmount: 1 } }
       )
       .toArray(),
-    db
-      .collection<Document>("pensionSchemes")
+    pensionSchemesCollection(db)
       .find({}, { projection: { assetsAnchor: 1, investedValueAnchor: 1 } })
       .toArray(),
-    db.collection("playerIncomeTaxAssessments").countDocuments(VOIDED_INCOME_TAX_FILTER),
-    db.collection("playerIncomeTaxAssessments").countDocuments({ status: "collected" }),
+    playerIncomeTaxAssessmentsCollection<Document>(db).countDocuments(VOIDED_INCOME_TAX_FILTER),
+    playerIncomeTaxAssessmentsCollection<Document>(db).countDocuments({ status: "collected" }),
     db
       .collection(NON_ATOMIC_MONEY_FLOW_RECEIPTS_COLLECTION)
       .countDocuments({ status: "in_progress" }),
@@ -397,7 +399,7 @@ async function loadSource(
   const corporateBondHistory =
     corporateIds.length === 0
       ? 0
-      : await db.collection("bondHistory").countDocuments({ bondId: { $in: corporateIds } });
+      : await bondHistoryCollection<Document>(db).countDocuments({ bondId: { $in: corporateIds } });
 
   const nationalBudgets = budgets.filter(
     (budget) =>

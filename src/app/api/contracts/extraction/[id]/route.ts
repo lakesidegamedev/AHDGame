@@ -8,6 +8,8 @@ import { handleRouteError, notFound, badRequest } from "@/lib/api/errors";
 import { schemas } from "@/lib/api/validate";
 import type { GameState } from "@/lib/db/types/gameState";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { extractionContractsCollection } from "@/lib/db/repositories/extractionContracts";
+import type { Document } from "mongodb";
 
 export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -21,12 +23,10 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
     const gameState = await gameStateCollection(db).findOne({ _id: "current" });
     const currentTurn = gameState?.currentTurn ?? 0;
 
-    const result = await db
-      .collection("extractionContracts")
-      .updateOne(
-        { _id: new ObjectId(id), revokedTurn: { $exists: false } },
-        { $set: { revokedTurn: currentTurn, updatedAt: new Date() } }
-      );
+    const result = await extractionContractsCollection<Document>(db).updateOne(
+      { _id: new ObjectId(id), revokedTurn: { $exists: false } },
+      { $set: { revokedTurn: currentTurn, updatedAt: new Date() } }
+    );
 
     if (result.matchedCount === 0) throw notFound("Contract not found or already revoked");
 

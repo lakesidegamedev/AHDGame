@@ -116,6 +116,7 @@ import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
+import { sourcingNetworkLoadCollection } from "@/lib/db/repositories/sourcingNetworkLoad";
 
 type LegacyFederalTaxRates = Partial<FederalTaxRates> & {
   corporateTax?: number;
@@ -221,8 +222,7 @@ export async function loadLatestSourcedImportAggregates(
   db: Db,
   upToTurn: number
 ): Promise<Map<string, { tariffPaid: number; importValue: number }>> {
-  const docs = await db
-    .collection<SourcingNetworkDoc>("sourcingNetworkLoad")
+  const docs = await sourcingNetworkLoadCollection<SourcingNetworkDoc>(db)
     .find({ turn: { $lte: upToTurn } })
     .sort({ turn: -1 })
     .limit(1)

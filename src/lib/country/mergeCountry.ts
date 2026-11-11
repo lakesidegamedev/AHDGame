@@ -63,6 +63,9 @@ import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSecto
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { billsCollection } from "@/lib/db/repositories/bills";
 import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { organizationMembershipsCollection } from "@/lib/db/repositories/organizationMemberships";
+import { subsidiesCollection } from "@/lib/db/repositories/subsidies";
+import { tariffsCollection } from "@/lib/db/repositories/tariffs";
 
 export interface MergeCountryArgs {
   /** The country being absorbed. Retired when this completes. */
@@ -255,8 +258,7 @@ async function transferOrRetireOrgMemberships(
   toCountryId: CountryId,
   currentTurn: number
 ): Promise<void> {
-  const memberships = await db
-    .collection("organizationMemberships")
+  const memberships = await organizationMembershipsCollection<Document>(db)
     .find<{ organizationId: string }>({ countryId: fromCountryId })
     .toArray();
   if (memberships.length === 0) return;
@@ -313,9 +315,10 @@ async function sweepNationalStrays(
   // (the `subsidies` collection is in REGION_SCOPED_COLLECTIONS by stateId), so
   // whatever still carries the old countryId here is a national programme — the
   // unified treasury inherits the obligation.
-  await db
-    .collection("subsidies")
-    .updateMany({ countryId: fromCountryId }, { $set: { countryId: toCountryId, updatedAt: now } });
+  await subsidiesCollection<Document>(db).updateMany(
+    { countryId: fromCountryId },
+    { $set: { countryId: toCountryId, updatedAt: now } }
+  );
   // Tariffs are collision-aware IN THE WINNER'S FAVOUR: where BOTH states
   // legislated a tariff on the same scope (same sector, same origin country,
   // same corporation, or both economy-wide), one record has to go, because two
@@ -337,8 +340,7 @@ async function sweepNationalStrays(
   // policy, colliding or not.
   const tariffWinner = absorbedTariffsWin ? fromCountryId : toCountryId;
   const tariffLoser = absorbedTariffsWin ? toCountryId : fromCountryId;
-  const winningTariffs = await db
-    .collection("tariffs")
+  const winningTariffs = await tariffsCollection<Document>(db)
     .find<{
       scopeType: string;
       targetSectorType?: unknown;
@@ -350,7 +352,7 @@ async function sweepNationalStrays(
     // One $or delete for every colliding scope, not a round trip per tariff.
     // An explicit null in each key matches both a missing and a null field, so
     // "economy_wide vs economy_wide" collides exactly like a shared sector.
-    await db.collection("tariffs").deleteMany({
+    await tariffsCollection<Document>(db).deleteMany({
       countryId: tariffLoser,
       $or: winningTariffs.map((tariff) => ({
         scopeType: tariff.scopeType,
@@ -360,9 +362,10 @@ async function sweepNationalStrays(
       })),
     });
   }
-  await db
-    .collection("tariffs")
-    .updateMany({ countryId: fromCountryId }, { $set: { countryId: toCountryId, updatedAt: now } });
+  await tariffsCollection<Document>(db).updateMany(
+    { countryId: fromCountryId },
+    { $set: { countryId: toCountryId, updatedAt: now } }
+  );
   await billsCollection<Document>(db).updateMany(
     { countryId: fromCountryId, status: { $in: NON_TERMINAL_BILL_STATUSES } },
     { $set: { status: "failed", failedAt: now, updatedAt: now } }

@@ -8,6 +8,7 @@ import { repealUndergroundConversion } from "@/lib/unions/underground";
 import { unionStrength } from "@/lib/unions/unionEconomy";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { unionsCollection } from "@/lib/db/repositories/unions";
+import { unionOrganizersCollection } from "@/lib/db/repositories/unionOrganizers";
 
 /** Bounds enforced on the bias axis regardless of what a bill's raw input claims. */
 export const UNION_LAW_BIAS_MIN = -50;
@@ -120,7 +121,7 @@ export async function applyUnionLawProvision(
         }
       );
       if (countryUnionIds.length > 0) {
-        await db.collection<UnionOrganizer>("unionOrganizers").updateMany(
+        await unionOrganizersCollection(db).updateMany(
           { unionId: { $in: countryUnionIds.map((union) => union._id) } },
           {
             $unset: { undergroundStrength: "", lastUndergroundDriveTurn: "" },
@@ -168,7 +169,7 @@ export async function applyUnionLawProvision(
       );
     }
     if (countryUnions.length > 0) {
-      await db.collection<UnionOrganizer>("unionOrganizers").updateMany(
+      await unionOrganizersCollection(db).updateMany(
         { unionId: { $in: countryUnions.map((union) => union._id) } },
         {
           $unset: { undergroundStrength: "", lastUndergroundDriveTurn: "" },

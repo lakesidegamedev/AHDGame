@@ -110,6 +110,8 @@ import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
 import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
+import { demographicDefaultsCollection } from "@/lib/db/repositories/demographicDefaults";
+import { stateRegistrationPoolCollection } from "@/lib/db/repositories/stateRegistrationPool";
 
 export type { ElectionSweepScope } from "./electionSweepScope";
 export { recordPrimarySnapshots } from "./primarySnapshots";
@@ -857,8 +859,7 @@ export async function accumulateGeneralElectionVotes(
             )
             .toArray(),
           stateDemographicTurnoutCollection(db).find(regionalScope).toArray(),
-          db
-            .collection<StateRegistrationPool>("stateRegistrationPool")
+          stateRegistrationPoolCollection(db)
             .find(
               nationwideCountries.length > 0
                 ? {
@@ -873,7 +874,7 @@ export async function accumulateGeneralElectionVotes(
           loadElectionDemographicsGameState(db),
           // Seeded snapshots for the granular substrate's legislation
           // lean-drift fold (only consumed when the flag is on).
-          db.collection<StateDemographics>("demographicDefaults").find(regionalScope).toArray(),
+          demographicDefaultsCollection(db).find(regionalScope).toArray(),
           Promise.all(
             midtermCountries.map(
               async (countryId) =>

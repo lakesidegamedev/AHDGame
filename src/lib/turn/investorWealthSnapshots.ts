@@ -43,6 +43,9 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 import { usersCollection } from "@/lib/db/repositories/users";
+import { investorRankingSnapshotsCollection } from "@/lib/db/repositories/investorRankingSnapshots";
+import { wealthListHistoryCollection } from "@/lib/db/repositories/wealthListHistory";
+import type { Document } from "mongodb";
 
 /**
  * Generate pre-computed global investor rankings.
@@ -126,7 +129,7 @@ export async function generateInvestorRankingSnapshot(currentTurn: number, db?: 
 
   // Exclude _id from $set — MongoDB rejects updates that modify the immutable _id field
   // when the document already exists (e.g. persists across game resets).
-  await database.collection<InvestorRankingSnapshot>("investorRankingSnapshots").updateOne(
+  await investorRankingSnapshotsCollection(database).updateOne(
     { _id: "global" },
     {
       $set: {
@@ -428,7 +431,7 @@ export async function generateWealthListSnapshots(currentTurn: number, db?: Db):
   }
 
   if (historyOps.length > 0) {
-    await database.collection("wealthListHistory").bulkWrite(historyOps as never);
+    await wealthListHistoryCollection<Document>(database).bulkWrite(historyOps as never);
   }
   if (snapshotOps.length > 0) {
     await collection.bulkWrite(snapshotOps as never);

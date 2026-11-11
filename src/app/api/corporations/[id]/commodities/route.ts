@@ -37,6 +37,9 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { stateResourceCapacityCollection } from "@/lib/db/repositories/stateResourceCapacity";
+import { commodityFlowsCollection } from "@/lib/db/repositories/commodityFlows";
+import { supplyAgreementsCollection } from "@/lib/db/repositories/supplyAgreements";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -163,8 +166,7 @@ export async function GET(request: Request, { params }: RouteParams) {
         .project<{ _id: string; name: string; region: string }>({ _id: 1, name: 1, region: 1 })
         .toArray(),
       // Latest global flow ledger row per commodity (market context).
-      db
-        .collection<CommodityFlow>("commodityFlows")
+      commodityFlowsCollection(db)
         .aggregate<CommodityFlow>([
           { $sort: { turn: -1 } },
           { $group: { _id: "$commodity", doc: { $first: "$$ROOT" } } },
@@ -189,14 +191,12 @@ export async function GET(request: Request, { params }: RouteParams) {
       exchangeRatesCollection(db)
         .find({}, { projection: { currencyCode: 1, rate: 1 } })
         .toArray(),
-      db
-        .collection<StateResourceCapacity>("stateResourceCapacity")
+      stateResourceCapacityCollection(db)
         .find({ stateId: { $in: stateIds } }, { projection: { stateId: 1, resources: 1 } })
         .toArray(),
       loadWorldPreset(db),
       canViewPrivateSupply
-        ? db
-            .collection<SupplyAgreement>("supplyAgreements")
+        ? supplyAgreementsCollection(db)
             .find({
               buyerCorpId: corporation._id,
               status: { $in: ["active", "cancelling"] },

@@ -15,6 +15,7 @@ import {
   DEVOLUTION_POLICY_CHANGE_COOLDOWN_TURNS,
 } from "@/lib/constants/devolution";
 import { sovereigntyRegionIn } from "@/lib/referendum/rules/sovereigntyRegions";
+import { governorOfficeStateCollection } from "@/lib/db/repositories/governorOfficeState";
 
 export interface ChangeDevolutionPolicyInput {
   countryId: CountryId;
@@ -54,9 +55,7 @@ export async function changeDevolutionPolicy(
   const now = new Date();
   const currentTurn = await getCurrentTurn(db);
 
-  const officeState = await db
-    .collection<GovernorOfficeState>("governorOfficeState")
-    .findOne({ countryId, stateId });
+  const officeState = await governorOfficeStateCollection(db).findOne({ countryId, stateId });
   if (!officeState) {
     return {
       status: 400,
@@ -96,7 +95,7 @@ export async function changeDevolutionPolicy(
   };
   const inc = adminOverride ? {} : { gubernatorialActions: -DEVOLUTION_POLICY_CHANGE_AP_COST };
 
-  await db.collection<GovernorOfficeState>("governorOfficeState").updateOne(
+  await governorOfficeStateCollection(db).updateOne(
     { countryId, stateId },
     {
       $set: update,

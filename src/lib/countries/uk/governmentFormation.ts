@@ -40,6 +40,7 @@ import {
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
+import { parliamentaryGovernmentsCollection } from "@/lib/db/repositories/parliamentaryGovernments";
 
 // ---------------------------------------------------------------------------
 // Exported helpers — delegate to shared system, maintain original signatures
@@ -161,9 +162,7 @@ async function seedGovernmentFormation(db: Db): Promise<void> {
   const majorityThreshold = lowerChamberMajorityThreshold(totalSeats);
 
   const ukGov = await db.collection<UKGovernment>("ukGovernment").findOne({ _id: "current" });
-  const parlGov = await db
-    .collection<ParliamentaryGovernment>("parliamentaryGovernments")
-    .findOne({ _id: "UK" });
+  const parlGov = await parliamentaryGovernmentsCollection(db).findOne({ _id: "UK" });
   const legacyPmId = ukGov?.pmCharacterId ?? parlGov?.pmCharacterId ?? null;
 
   const pmChar = legacyPmId ? await charactersCollection(db).findOne({ _id: legacyPmId }) : null;

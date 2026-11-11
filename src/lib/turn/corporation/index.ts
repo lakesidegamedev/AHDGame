@@ -75,6 +75,9 @@ import { runCorporationTurnSideEffects } from "./corporationTurnSideEffects";
 import { settleCorporationTurnPayouts } from "./corporationTurnPayouts";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
+import { producerEconomyTurnsCollection } from "@/lib/db/repositories/producerEconomyTurns";
+import type { Document } from "mongodb";
+import { commodityQualityCollection } from "@/lib/db/repositories/commodityQuality";
 
 export type { CorporationTurnResult } from "./corporationTurnRuntime";
 
@@ -469,8 +472,7 @@ export async function processCorporationTurn(
   let newCommodityQuality: Map<CommodityType, number> | null = null;
   if (sectorQualityEnabled || lookups.productLinesV2Enabled || mediaProductSlatesEnabled) {
     const laggedQ = new Map<CommodityType, number>();
-    const qDocs = await db
-      .collection("commodityQuality")
+    const qDocs = await commodityQualityCollection<Document>(db)
       .find<{ commodity: CommodityType; quality: number }>(
         {},
         { projection: { commodity: 1, quality: 1 } }
@@ -696,9 +698,10 @@ export async function processCorporationTurn(
         : undefined,
       marketGovernorConfig?.producerTransitionPackageEnabled
     );
-    const earlier = await db
-      .collection("producerEconomyTurns")
-      .findOne({ worldEpoch, turn: { $lt: producerTurn } }, { projection: { _id: 1 } });
+    const earlier = await producerEconomyTurnsCollection<Document>(db).findOne(
+      { worldEpoch, turn: { $lt: producerTurn } },
+      { projection: { _id: 1 } }
+    );
     // A failed funded settlement must stop the turn: advancing would leave every
     // plant a generation behind, so no later funded turn could reconcile.
     funded = await runFundedProducerTurn(db, {

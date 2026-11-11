@@ -26,6 +26,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
 import { crisisInteractionsCollection } from "@/lib/db/repositories/crisisInteractions";
+import { livingConflictsCollection } from "@/lib/db/repositories/livingConflicts";
 
 const REFUGEE_RECEPTION_HISTORY = "refugeeReceptionHistory";
 interface RefugeeReceptionHistory extends RefugeeReceptionResult {
@@ -127,12 +128,10 @@ export async function prepareRefugeeReceptionOrder(
         { projection: { _id: 1, population: 1 } }
       )
       .toArray(),
-    db
-      .collection<LivingConflictState>("livingConflicts")
-      .findOne(
-        { defKey: spec.conflictKey },
-        { projection: { hasOpened: 1, status: 1, tracks: 1 } }
-      ),
+    livingConflictsCollection<LivingConflictState>(db).findOne(
+      { defKey: spec.conflictKey },
+      { projection: { hasOpened: 1, status: 1, tracks: 1 } }
+    ),
     federalBudgetCollection(db).findOne(
       { countryId: countryId as FederalBudget["countryId"] },
       { projection: { gdp: 1, gdpSmoothed: 1 } }

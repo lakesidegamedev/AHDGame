@@ -2,6 +2,7 @@ import type { Db } from "mongodb";
 import type { CommodityType } from "@/lib/constants/commodities";
 import type { TradeFlowSnapshot } from "@/lib/db/types/tradeFlowSnapshot";
 import type { ReachableBookEntry, ReachableBooksDoc } from "@/lib/trade/reachableBook";
+import { tradeFlowSnapshotsCollection } from "@/lib/db/repositories/tradeFlowSnapshots";
 
 /**
  * Load the latest turn's reachable books.
@@ -14,12 +15,10 @@ export async function loadReachableBooks(
   db: Db,
   observedTurn?: number
 ): Promise<ReachableBooksDoc | null> {
-  const doc = await db
-    .collection<TradeFlowSnapshot>("tradeFlowSnapshots")
-    .findOne(
-      { books: { $exists: true }, ...(observedTurn == null ? {} : { turn: observedTurn }) },
-      { sort: { turn: -1 }, projection: { books: 1 } }
-    );
+  const doc = await tradeFlowSnapshotsCollection(db).findOne(
+    { books: { $exists: true }, ...(observedTurn == null ? {} : { turn: observedTurn }) },
+    { sort: { turn: -1 }, projection: { books: 1 } }
+  );
   return doc?.books ?? null;
 }
 

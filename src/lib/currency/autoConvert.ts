@@ -23,6 +23,7 @@ import {
   getCrossRate,
 } from "@/lib/currency/marketMaker";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { tradeHistoryCollection } from "@/lib/db/repositories/tradeHistory";
 
 interface AutoConvertParams {
   character: PersonalWealthHolder & { _id: ObjectId };
@@ -604,7 +605,7 @@ export async function reverseExplicitPayConversion(
       { $inc: { [requiredField]: -received, [`currencyBalances.personal.${payCurrency}`]: paid } }
     );
   if (result.modifiedCount === 0) return false;
-  await db.collection<TradeHistoryEntry>("tradeHistory").insertOne({
+  await tradeHistoryCollection(db).insertOne({
     buyerCharacterId: characterId,
     sellerCharacterId: null,
     fromCurrency: requiredCurrency,

@@ -18,6 +18,8 @@ import type {
 } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { nationalPartyElectionsCollection } from "@/lib/db/repositories/nationalPartyElections";
+import { caucusesCollection } from "@/lib/db/repositories/caucuses";
+import { caucusChairVotesCollection } from "@/lib/db/repositories/caucusChairVotes";
 
 const CAUCUS_ELECTION_LABEL = "Caucus Chair";
 
@@ -121,7 +123,7 @@ export async function createMissingCaucusChairElections(currentTurn: number): Pr
   const now = new Date();
 
   const [caucuses, activeElections, activeNationalChairElections] = await Promise.all([
-    db.collection<Caucus>("caucuses").find({ disbandedAt: null }).toArray(),
+    caucusesCollection(db).find({ disbandedAt: null }).toArray(),
     db.collection<CaucusChairElection>("caucusChairElections").find({ status: "voting" }).toArray(),
     nationalPartyElectionsCollection(db).find({ status: "voting", position: "chair" }).toArray(),
   ]);
@@ -169,7 +171,7 @@ export async function createMissingCaucusChairElections(currentTurn: number): Pr
   await Promise.all(
     toCreate.map((caucus, index) =>
       Promise.all([
-        db.collection<Caucus>("caucuses").updateOne(
+        caucusesCollection(db).updateOne(
           { _id: caucus._id },
           {
             $set: {
@@ -212,16 +214,14 @@ export async function processCompletedCaucusChairElections(currentTurn: number):
   }
 
   const [caucuses, allCandidatesRaw, allVoteCounts] = await Promise.all([
-    db
-      .collection<Caucus>("caucuses")
+    caucusesCollection(db)
       .find({ _id: { $in: caucusIds } })
       .toArray(),
     db
       .collection<CaucusChairCandidate>("caucusChairCandidates")
       .find({ electionId: { $in: electionIds }, status: "active" })
       .toArray(),
-    db
-      .collection<CaucusChairVote>("caucusChairVotes")
+    caucusChairVotesCollection(db)
       .aggregate<{ electionId: ObjectId; candidateId: ObjectId; count: number }>([
         { $match: voteMatch },
         {
@@ -321,7 +321,7 @@ export async function processCompletedCaucusChairElections(currentTurn: number):
     if (!winnerId || !winnerName) continue;
 
     const previousChairId = caucus.chairId;
-    await db.collection<Caucus>("caucuses").updateOne(
+    await caucusesCollection(db).updateOne(
       { _id: caucus._id },
       {
         $set: {

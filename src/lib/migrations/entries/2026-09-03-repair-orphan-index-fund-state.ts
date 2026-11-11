@@ -4,6 +4,7 @@ import { INDEX_FUND_INITIAL_NAV } from "@/lib/indexFunds/unitAccounting";
 import type { Migration, MigrationContext, MigrationResult } from "../types";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { indexFundPositionsCollection } from "@/lib/db/repositories/indexFundPositions";
 
 type FundState = Pick<
   IndexFund,
@@ -56,8 +57,7 @@ async function repairOrphanIndexFundState(db: Db, ctx: MigrationContext): Promis
   }
   const fundIds = funds.map((fund) => fund._id);
   const positions = fundIds.length
-    ? await db
-        .collection<IndexFundPosition>("indexFundPositions")
+    ? await indexFundPositionsCollection(db)
         .find({ fundId: { $in: fundIds } }, { projection: { fundId: 1, holderKind: 1, units: 1 } })
         .toArray()
     : [];
@@ -166,7 +166,7 @@ async function repairOrphanIndexFundState(db: Db, ctx: MigrationContext): Promis
   }
 
   if (reserveOps.length > 0) {
-    await db.collection<IndexFundPosition>("indexFundPositions").bulkWrite(reserveOps);
+    await indexFundPositionsCollection(db).bulkWrite(reserveOps);
   }
   let updated = 0;
   if (fundOps.length > 0) {

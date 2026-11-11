@@ -19,6 +19,7 @@ import { emitTx } from "@/lib/financialTxLog/emit";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { shareListingsCollection } from "@/lib/db/repositories/shareListings";
 
 export interface CancelListingResult {
   ok: true;
@@ -43,12 +44,10 @@ type PreparedRefund = {
 };
 
 async function restoreListingOpen(db: Db, listingId: ShareListing["_id"], now: Date) {
-  await db
-    .collection<ShareListing>("shareListings")
-    .updateOne(
-      { _id: listingId, status: "cancelled" },
-      { $set: { status: "open", updatedAt: now } }
-    );
+  await shareListingsCollection(db).updateOne(
+    { _id: listingId, status: "cancelled" },
+    { $set: { status: "open", updatedAt: now } }
+  );
 }
 
 async function restoreOfferPending(db: Db, offerId: ShareOffer["_id"], now: Date) {
@@ -79,7 +78,7 @@ export async function cancelShareListingAndRefund(
 ): Promise<CancelListingResult | CancelListingError> {
   if (listing.status !== "open") return { ok: false, error: "Listing is not open" };
 
-  const listingClaim = await db.collection<ShareListing>("shareListings").updateOne(
+  const listingClaim = await shareListingsCollection(db).updateOne(
     {
       _id: listing._id,
       status: "open",

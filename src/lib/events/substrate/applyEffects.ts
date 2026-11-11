@@ -44,6 +44,7 @@ import { electionCandidatesCollection } from "@/lib/db/repositories/electionCand
 import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 import type { Document } from "mongodb";
 import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
+import { sentimentPulsesCollection } from "@/lib/db/repositories/sentimentPulses";
 
 function isCompletedSettlement(result: SettlementResult): boolean {
   return result.status === "applied" || (result.status === "replayed" && !result.error);
@@ -628,7 +629,7 @@ export async function applyDeclarativeEffects(
           createdAt: new Date(),
           eventType: `pree.${ctx.instance.kind}`,
         };
-        await ctx.db.collection<SentimentPulse>("sentimentPulses").insertOne({
+        await sentimentPulsesCollection(ctx.db).insertOne({
           _id: new ObjectId(),
           ...pulse,
         });

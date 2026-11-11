@@ -68,6 +68,7 @@ import type { PoliticalMediaSettlementPlan } from "@/lib/politicalMedia/journal"
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import type { Document } from "mongodb";
+import { commodityQualityCollection } from "@/lib/db/repositories/commodityQuality";
 
 /** Runs the side effects that follow sector processing and the bulk writes; returns the NPP sectors founded this turn. */
 export async function runCorporationTurnSideEffects({
@@ -576,7 +577,7 @@ export async function runCorporationTurnSideEffects({
   // Persist per-commodity output quality for next turn's input pillar (quality
   // propagation). Upsert by commodity so the lagged read above stays one turn behind.
   if (newCommodityQuality && newCommodityQuality.size > 0) {
-    await db.collection("commodityQuality").bulkWrite(
+    await commodityQualityCollection<Document>(db).bulkWrite(
       [...newCommodityQuality].map(([commodity, quality]) => ({
         updateOne: {
           filter: { commodity },

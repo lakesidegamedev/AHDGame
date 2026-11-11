@@ -6,6 +6,7 @@ import { isCgnatProneDevice, type DeviceClass } from "@/lib/utils/userAgent";
 import type { BannedDevice, BannedIp, GameConfig, User } from "@/lib/db/types";
 import { usersCollection } from "@/lib/db/repositories/users";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { bannedDevicesCollection } from "@/lib/db/repositories/bannedDevices";
 
 interface RegistrationSignals {
   clientIp: string;
@@ -110,9 +111,10 @@ export async function assertRegistrationAllowed(
     bannedDeviceClauses.push({ kind: "fingerprint", value: { $in: fingerprintCandidates } });
   }
   if (bannedDeviceClauses.length > 0) {
-    const bannedDevice = await db
-      .collection<BannedDevice>("bannedDevices")
-      .findOne({ $or: bannedDeviceClauses }, { projection: { _id: 1 } });
+    const bannedDevice = await bannedDevicesCollection(db).findOne(
+      { $or: bannedDeviceClauses },
+      { projection: { _id: 1 } }
+    );
     if (bannedDevice) {
       throw forbidden("Registration is not available from this device.");
     }

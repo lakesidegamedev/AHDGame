@@ -60,6 +60,7 @@ import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemograp
 import { cabinetNominationsCollection } from "@/lib/db/repositories/cabinetNominations";
 import type { Document } from "mongodb";
 import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
+import { billWhipsCollection } from "@/lib/db/repositories/billWhips";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; partyId: string }>;
@@ -227,8 +228,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     // Check existing whips (max 2 per target/chamber)
-    const existingWhips = await db
-      .collection<BillWhip>("billWhips")
+    const existingWhips = await billWhipsCollection(db)
       .find({
         targetType,
         targetId: targetOid,
@@ -265,7 +265,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       updatedAt: now,
     };
 
-    const result = await db.collection<BillWhip>("billWhips").insertOne(whipDoc as BillWhip);
+    const result = await billWhipsCollection(db).insertOne(whipDoc as BillWhip);
 
     // Fetch party NPPs in this state/chamber and cast their votes immediately
     const nppOfficials = await electedOfficialsCollection(db)

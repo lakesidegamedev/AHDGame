@@ -2,6 +2,8 @@ import { redirect, notFound } from "next/navigation";
 import { getAuthUserWithCharacter } from "@/lib/auth";
 import { getDb } from "@/lib/mongodb";
 import { WikiEditorClient } from "@/components/wiki/WikiEditorClient";
+import { wikiPagesCollection } from "@/lib/db/repositories/wikiPages";
+import type { Document } from "mongodb";
 
 interface EditPageProps {
   params: Promise<{ slug: string }>;
@@ -24,7 +26,7 @@ export default async function WikiEditPage({ params }: EditPageProps) {
   }
 
   const db = await getDb();
-  const page = await db.collection("wikiPages").findOne({ slug });
+  const page = await wikiPagesCollection<Document>(db).findOne({ slug });
 
   if (!page) {
     notFound();

@@ -136,6 +136,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import type { Document } from "mongodb";
 import { ledgerEntriesCollection } from "@/lib/db/repositories/ledgerEntries";
+import { producerEconomyTurnsCollection } from "@/lib/db/repositories/producerEconomyTurns";
 
 /** Owner decision 2026-10-18: households open with about 3 turns of wages. */
 export const HOUSEHOLD_OPENING_APPROVAL = "owner 2026-10-18: household opening cash about 3 turns";
@@ -202,8 +203,9 @@ export async function readProducerOpeningTurn(
   worldEpoch: string,
   turn: number
 ): Promise<number> {
-  const last = await db
-    .collection<{ _id: string; turn: number; status: string }>("producerEconomyTurns")
+  const last = await producerEconomyTurnsCollection<{ _id: string; turn: number; status: string }>(
+    db
+  )
     .find({ worldEpoch, turn: { $lt: turn } }, { projection: { turn: 1, status: 1 } })
     .sort({ turn: -1 })
     .limit(1)

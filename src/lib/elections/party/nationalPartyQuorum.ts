@@ -7,6 +7,7 @@ import { applyOptionalCountryScope } from "./nationalPartyElectionScope";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nationalPartyElectionsCollection } from "@/lib/db/repositories/nationalPartyElections";
+import { nationalPartyVotesCollection } from "@/lib/db/repositories/nationalPartyVotes";
 
 // ─── Quorum Acceleration ─────────────────────────────────────────────────────
 
@@ -100,8 +101,7 @@ export async function applyQuorumAcceleration(
 
   // Count distinct voters per chair election
   const electionIds = candidateElections.map((e) => e._id);
-  const voteCountsRaw = await db
-    .collection<NationalPartyVote>("nationalPartyVotes")
+  const voteCountsRaw = await nationalPartyVotesCollection(db)
     .aggregate<{
       electionId: ObjectId;
       distinctVoters: number;

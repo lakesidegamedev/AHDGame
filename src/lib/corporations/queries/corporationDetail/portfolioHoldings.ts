@@ -30,6 +30,7 @@ import type { SupplyAgreement } from "@/lib/db/types/supplyAgreement";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
+import { supplyAgreementsCollection } from "@/lib/db/repositories/supplyAgreements";
 
 export interface LatestCorpIncomeRow {
   income?: number;
@@ -229,8 +230,7 @@ export async function loadPortfolioHoldings(
       : 0;
 
   const supplySettlementTurn = latestCorpIncomeRow?.turn ?? currentTurn;
-  const supplyAgreementDocs = await db
-    .collection<SupplyAgreement>("supplyAgreements")
+  const supplyAgreementDocs = await supplyAgreementsCollection(db)
     .find(
       {
         $or: [{ supplierCorpId: corporation._id }, { buyerCorpId: corporation._id }],

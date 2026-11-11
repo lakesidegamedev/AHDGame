@@ -25,6 +25,7 @@ import {
 } from "@/lib/corporations/superShares";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { corporationVotesCollection } from "@/lib/db/repositories/corporationVotes";
 
 const OpenVoteSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("governance_change"), newLegalStructure: z.string() }),
@@ -77,8 +78,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     const statusFilter = url.searchParams.get("status");
     const query: Record<string, unknown> = { corporationId: corporation._id };
     if (statusFilter) query.status = statusFilter;
-    const votes = await db
-      .collection<CorporationVote>("corporationVotes")
+    const votes = await corporationVotesCollection(db)
       .find(query)
       .sort({ createdAt: -1 })
       .toArray();
@@ -191,9 +191,9 @@ export async function POST(request: Request, { params }: RouteParams) {
     });
     if (!result.ok) return errorResponse(result.status, result.error);
 
-    const inserted = await db
-      .collection<CorporationVote>("corporationVotes")
-      .findOne({ _id: new ObjectId(result.voteId) });
+    const inserted = await corporationVotesCollection(db).findOne({
+      _id: new ObjectId(result.voteId),
+    });
     if (inserted) {
       await notifyVoteEvent({
         db,

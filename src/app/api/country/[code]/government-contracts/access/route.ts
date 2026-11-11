@@ -22,6 +22,8 @@ import { defenceContractWindow } from "@/lib/military/defenceContractLimits";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { stateResourceCapacityCollection } from "@/lib/db/repositories/stateResourceCapacity";
+import type { Document } from "mongodb";
 export async function GET(request: Request, { params }: { params: Promise<{ code: string }> }) {
   try {
     const { code } = await params;
@@ -33,8 +35,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
       countryId,
       game?.preset ?? DEFAULT_SEED_PRESET
     );
-    const states = await db
-      .collection("stateResourceCapacity")
+    const states = await stateResourceCapacityCollection<Document>(db)
       .find({ countryId }, { projection: { stateId: 1, resources: 1 } })
       .toArray();
     const settings = await loadContractIssuanceSettings(db);

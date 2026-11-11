@@ -5,6 +5,7 @@ import { ladderBounds } from "@/lib/legislature/policyLadder";
 import { policyFieldsFromOption } from "@/lib/governorOffice/orders/revertPolicy";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
+import { governorExecutiveOrdersCollection } from "@/lib/db/repositories/governorExecutiveOrders";
 
 /**
  * Clamp policy levels that exceed their legislation type's ladder.
@@ -28,8 +29,7 @@ async function repairOutOfRangePolicyLevels(db: Db, dryRun: boolean): Promise<Mi
   const policies = (await statePoliciesCollection(db)
     .find({ policyOptionIndex: { $exists: true } })
     .toArray()) as StatePolicy[];
-  const orders = (await db
-    .collection<GovernorExecutiveOrder>("governorExecutiveOrders")
+  const orders = (await governorExecutiveOrdersCollection(db)
     .find({})
     .toArray()) as GovernorExecutiveOrder[];
 

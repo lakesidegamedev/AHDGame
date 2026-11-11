@@ -13,6 +13,7 @@ import type { CountryState } from "@/lib/db/types/countryState";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { billsCollection } from "@/lib/db/repositories/bills";
 import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { countryStateCollection } from "@/lib/db/repositories/countryState";
 
 export const HU_2011_PROPOSALS_COLLECTION = "hu2011ElectoralProposals";
 const ID = "1991-default:hu-electoral:system2011";
@@ -37,9 +38,10 @@ async function availability(db: Db, game: Calendar, turn: number, session?: Clie
     { _id: "current" },
     { session, projection: { preset: 1, huAssemblyReformedAtYear: 1 } }
   );
-  const runtime = await db
-    .collection<CountryState>("countryState")
-    .findOne({ _id: "HU" }, { session, projection: { governmentType: 1 } });
+  const runtime = await countryStateCollection(db).findOne(
+    { _id: "HU" },
+    { session, projection: { governmentType: 1 } }
+  );
   const country = await countryGameStatesCollection(db).findOne(
     { _id: "HU" },
     { session, projection: { huElectoralSystem2011SinceTurn: 1 } }

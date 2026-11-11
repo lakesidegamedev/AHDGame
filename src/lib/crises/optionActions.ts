@@ -73,6 +73,7 @@ import { crisesCollection } from "@/lib/db/repositories/crises";
 import { unionsCollection } from "@/lib/db/repositories/unions";
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 import { politicalMetricsCollection } from "@/lib/db/repositories/politicalMetrics";
+import { docketCasesCollection } from "@/lib/db/repositories/docketCases";
 
 /** Crisis actions name an operating lane; rows store its identity. */
 function laneFilter(sectorType: string) {
@@ -293,7 +294,7 @@ async function spawnNationalizationChallenge(
     updatedAt: now,
   };
 
-  await db.collection<DocketCase>("docketCases").insertOne(docketCase);
+  await docketCasesCollection(db).insertOne(docketCase);
 }
 
 // ── 3. Emergency nationalization bill ──────────────────────────────────────

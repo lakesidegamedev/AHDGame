@@ -24,6 +24,7 @@ import { validateBid, ContractError } from "./eligibility";
 import { tenders } from "./persistence";
 import type { GovernmentTender, ContractBid } from "./types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { defenceContractsCollection } from "@/lib/db/repositories/defenceContracts";
 
 export async function activateDefenceBid(
   db: Db,
@@ -33,7 +34,7 @@ export async function activateDefenceBid(
   turn: number,
   now: Date
 ) {
-  const col = db.collection<DefenceContract>("defenceContracts");
+  const col = defenceContractsCollection(db);
   const existing = await col.findOne({ _id: new ObjectId(t.contractId) });
   if (existing) {
     await finishAward(db, t, existing);

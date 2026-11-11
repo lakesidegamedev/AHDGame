@@ -3,6 +3,8 @@ import type { CountryId } from "@/lib/constants/countries";
 import type { SupremeCourtSeat, DocketCase } from "@/lib/db/types/scotus";
 import { getGameState } from "@/lib/gameState";
 import { divergentDeathChance, type DivergentDeathChance } from "@/lib/scotus/tenure";
+import { supremeCourtSeatsCollection } from "@/lib/db/repositories/supremeCourtSeats";
+import { docketCasesCollection } from "@/lib/db/repositories/docketCases";
 
 /**
  * Read layer for visibility. Exact UI is out of scope
@@ -32,11 +34,7 @@ export async function getScotusComposition(
   countryId: CountryId
 ): Promise<ScotusSeatSummary[]> {
   const [seats, gameState] = await Promise.all([
-    db
-      .collection<SupremeCourtSeat>("supremeCourtSeats")
-      .find({ countryId })
-      .sort({ seatNumber: 1 })
-      .toArray(),
+    supremeCourtSeatsCollection(db).find({ countryId }).sort({ seatNumber: 1 }).toArray(),
     getGameState(db),
   ]);
   const currentTurn = gameState?.currentTurn;
@@ -68,8 +66,7 @@ export async function getScotusCaseHistory(
   countryId: CountryId,
   preset?: string
 ): Promise<DocketCase[]> {
-  return db
-    .collection<DocketCase>("docketCases")
+  return docketCasesCollection(db)
     .find({
       countryId,
       status: "decided",
@@ -86,8 +83,7 @@ export async function getScotusUpcomingCases(
 ): Promise<
   Array<Pick<DocketCase, "caseKey" | "title" | "axis" | "decisionYear" | "hearingDueTurn">>
 > {
-  return db
-    .collection<DocketCase>("docketCases")
+  return docketCasesCollection(db)
     .find({ countryId, status: "pending" })
     .project<Pick<DocketCase, "caseKey" | "title" | "axis" | "decisionYear" | "hearingDueTurn">>({
       _id: 0,

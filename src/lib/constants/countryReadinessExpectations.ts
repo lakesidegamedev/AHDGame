@@ -10,6 +10,9 @@ import type { CountryId } from "@/lib/constants/countries";
 import { checkGovernmentFormation } from "@/lib/constants/readinessChecks";
 import { JP_READINESS_EXPECTATIONS } from "@/lib/countries/jp/data/jpReadinessExpectations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { landeslistenCollection } from "@/lib/db/repositories/landeslisten";
+import type { Document } from "mongodb";
+import { countryLeaderStatesCollection } from "@/lib/db/repositories/countryLeaderStates";
 
 export interface ReadinessCheck {
   name: string;
@@ -50,9 +53,9 @@ export interface CountryReadinessExpectations {
 
 /** RU: leader-confidence state (post-Premier-install). */
 async function checkRUCountryLeaderStates(db: Db): Promise<ReadinessCheck> {
-  const count = await db
-    .collection<{ _id: string }>("countryLeaderStates")
-    .countDocuments({ _id: { $regex: "^RU_" } });
+  const count = await countryLeaderStatesCollection<{ _id: string }>(db).countDocuments({
+    _id: { $regex: "^RU_" },
+  });
   return {
     name: "CountryLeaderStates",
     status: count > 0 ? "ok" : "warning",
@@ -63,9 +66,9 @@ async function checkRUCountryLeaderStates(db: Db): Promise<ReadinessCheck> {
 
 /** CN: leader-confidence state (post-PM-install). */
 async function checkCNCountryLeaderStates(db: Db): Promise<ReadinessCheck> {
-  const count = await db
-    .collection<{ _id: string }>("countryLeaderStates")
-    .countDocuments({ _id: { $regex: "^CN_" } });
+  const count = await countryLeaderStatesCollection<{ _id: string }>(db).countDocuments({
+    _id: { $regex: "^CN_" },
+  });
   const characterCount = await charactersCollection(db).countDocuments({ countryId: "CN" });
   return {
     name: "CountryLeaderStates",
@@ -84,7 +87,7 @@ async function checkCNCountryLeaderStates(db: Db): Promise<ReadinessCheck> {
 
 /** DE: Landeslisten populated. */
 async function checkDELandeslisten(db: Db): Promise<ReadinessCheck> {
-  const count = await db.collection("landeslisten").countDocuments({ countryId: "DE" });
+  const count = await landeslistenCollection<Document>(db).countDocuments({ countryId: "DE" });
   const characterCount = await charactersCollection(db).countDocuments({ countryId: "DE" });
   return {
     name: "Landeslisten",

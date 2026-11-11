@@ -6,6 +6,7 @@ import {
   CEO_SELF_ACQUISITION_WINDOW_TURNS,
 } from "@/lib/constants/corporations";
 import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
+import { shareTradeHistoryCollection } from "@/lib/db/repositories/shareTradeHistory";
 
 export type CeoHolderField = "characterId" | "imperialCharacterId";
 
@@ -35,8 +36,7 @@ export async function ceoSelfAcquisitionWindow(
   currentTurn: number
 ): Promise<CeoSelfAcquisitionWindow> {
   const windowStart = currentTurn - CEO_SELF_ACQUISITION_WINDOW_TURNS;
-  const rows = await db
-    .collection<ShareTradeHistory>("shareTradeHistory")
+  const rows = await shareTradeHistoryCollection(db)
     .find({
       corporationId: corp._id,
       [`to.${holderField}`]: ceoId,

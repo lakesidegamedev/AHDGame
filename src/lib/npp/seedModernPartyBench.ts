@@ -14,6 +14,7 @@ import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParti
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import type { Document } from "mongodb";
+import { countersCollection } from "@/lib/db/repositories/counters";
 
 /** Supply an unseated candidate bench for required modern default parties. */
 export async function seedModernPartyBench(
@@ -121,13 +122,11 @@ export async function seedModernPartyBench(
       )
     );
   }
-  const counter = await db
-    .collection<Counter>("counters")
-    .findOneAndUpdate(
-      { _id: "npp" },
-      { $inc: { seq: actors.length } },
-      { upsert: true, returnDocument: "after" }
-    );
+  const counter = await countersCollection(db).findOneAndUpdate(
+    { _id: "npp" },
+    { $inc: { seq: actors.length } },
+    { upsert: true, returnDocument: "after" }
+  );
   if (!counter) throw new Error("Failed to reserve modern party bench IDs");
   actors.forEach((actor, index) => {
     actor.sequentialId = counter.seq - actors.length + index + 1;

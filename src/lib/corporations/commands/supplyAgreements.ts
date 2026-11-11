@@ -43,6 +43,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { supplyAgreementsCollection } from "@/lib/db/repositories/supplyAgreements";
 
 /**
  * Private supply agreement lifecycle (bilateral, both-consent). Either CEO can
@@ -343,7 +344,7 @@ export async function proposeSupplyAgreement(request: Request, initiatingCorpId:
       createdAt: now,
       updatedAt: now,
     };
-    const res = await db.collection<SupplyAgreement>("supplyAgreements").insertOne(doc);
+    const res = await supplyAgreementsCollection(db).insertOne(doc);
 
     recordAudit({
       source: "api",
@@ -401,9 +402,9 @@ export async function updateSupplyAgreement(request: Request, corpId: string, ag
     const ceoCheck = requireCeo(corp, auth.user.userId);
     if (ceoCheck) return ceoCheck;
 
-    const agreement = await db
-      .collection<SupplyAgreement>("supplyAgreements")
-      .findOne({ _id: new ObjectId(agreementId) });
+    const agreement = await supplyAgreementsCollection(db).findOne({
+      _id: new ObjectId(agreementId),
+    });
     if (!agreement) {
       return errorResponse(404, "Agreement not found");
     }
@@ -471,7 +472,7 @@ export async function updateSupplyAgreement(request: Request, corpId: string, ag
         exclusive: currentOffer.exclusive,
         ...(durationTurns !== undefined ? { durationTurns } : {}),
       };
-      const accepted = await db.collection<SupplyAgreement>("supplyAgreements").updateOne(
+      const accepted = await supplyAgreementsCollection(db).updateOne(
         { _id: agreement._id, status: "pending", proposedByCorpId: currentOfferAuthor },
         {
           $set: {
@@ -597,7 +598,7 @@ export async function updateSupplyAgreement(request: Request, corpId: string, ag
         $push: { offers: offer },
         ...(body.durationTurns === undefined ? { $unset: { durationTurns: "" } } : {}),
       };
-      const result = await db.collection<SupplyAgreement>("supplyAgreements").updateOne(
+      const result = await supplyAgreementsCollection(db).updateOne(
         {
           _id: agreement._id,
           status: "pending",
@@ -668,7 +669,7 @@ export async function updateSupplyAgreement(request: Request, corpId: string, ag
       // Notice scales with the term left on a fixed-term contract.
       const cancelEffectiveTurn = contractCancelEffectiveTurn(currentTurn, agreement.expiresAtTurn);
       const noticeTurns = cancelEffectiveTurn - currentTurn;
-      await db.collection<SupplyAgreement>("supplyAgreements").updateOne(
+      await supplyAgreementsCollection(db).updateOne(
         { _id: agreement._id, status: agreement.status },
         {
           $set: {

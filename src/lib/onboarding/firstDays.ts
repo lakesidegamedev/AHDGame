@@ -5,6 +5,7 @@ import { formatElectionTypeLabel } from "@/lib/utils/electionLabels";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import type { Document } from "mongodb";
+import { actionLogsCollection } from "@/lib/db/repositories/actionLogs";
 
 /**
  * The first-days panel: three goals a new character can act on immediately,
@@ -88,12 +89,10 @@ export async function loadFirstDays(
   if (!isInFirstDays(character, now.getTime())) return null;
 
   const [campaigns, candidacies, elections] = await Promise.all([
-    db
-      .collection("actionLogs")
-      .countDocuments(
-        { characterId: character._id, actionType: "campaign" },
-        { limit: FIRST_DAYS_CAMPAIGN_GOAL }
-      ),
+    actionLogsCollection<Document>(db).countDocuments(
+      { characterId: character._id, actionType: "campaign" },
+      { limit: FIRST_DAYS_CAMPAIGN_GOAL }
+    ),
     electionCandidatesCollection<Document>(db).countDocuments(
       { characterId: character._id },
       { limit: 1 }

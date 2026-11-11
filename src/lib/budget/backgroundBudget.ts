@@ -20,6 +20,7 @@ import {
   type BackgroundFiscalState,
 } from "@/lib/world/macro/rules/backgroundBudget";
 import { governmentEconomicPosition } from "@/lib/world/macro/rules/nationalPolitics";
+import { macroCountriesCollection } from "@/lib/db/repositories/macroCountries";
 
 export interface BackgroundBudgetSource {
   countryId: string;
@@ -39,8 +40,7 @@ export interface BackgroundBudgetSource {
 export async function loadBackgroundBudgetSources(
   db: Db
 ): Promise<Map<string, BackgroundBudgetSource>> {
-  const docs = await db
-    .collection<MacroCountryState>("macroCountries")
+  const docs = await macroCountriesCollection<MacroCountryState>(db)
     .find(
       {
         simulationTier: "background-macro",

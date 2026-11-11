@@ -82,6 +82,8 @@ import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParti
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { partyBudgetCollection } from "@/lib/db/repositories/partyBudget";
+import { stateRegistrationPoolCollection } from "@/lib/db/repositories/stateRegistrationPool";
 
 type StoredPartyBudget = PartyBudget & { countryId?: CountryId };
 
@@ -586,10 +588,7 @@ export async function processPartyGOTV(
         allNPPs,
         officials
       );
-      const pools = await db
-        .collection<StateRegistrationPool>("stateRegistrationPool")
-        .find({})
-        .toArray();
+      const pools = await stateRegistrationPoolCollection(db).find({}).toArray();
       for (const pool of pools) {
         registrationPoolMap.set(`${pool.countryId}:${pool.stateId}`, pool);
       }
@@ -1143,7 +1142,7 @@ export async function processPartyGOTV(
   }
 
   if (db && budgetCountryBackfills.size > 0) {
-    await db.collection<StoredPartyBudget>("partyBudget").bulkWrite(
+    await partyBudgetCollection<StoredPartyBudget>(db).bulkWrite(
       [...budgetCountryBackfills.entries()].map(([budgetId, countryId]) => ({
         updateOne: {
           filter: { _id: new ObjectId(budgetId), countryId: { $exists: false } },
@@ -1216,7 +1215,7 @@ export async function processPartyGOTV(
       ...registrationPoolUnregDrawn.keys(),
       ...registrationPoolIndepDrawn.keys(),
     ]);
-    await db.collection<StateRegistrationPool>("stateRegistrationPool").bulkWrite(
+    await stateRegistrationPoolCollection(db).bulkWrite(
       [...poolIds].map((poolId) => ({
         updateOne: {
           filter: { _id: poolId },

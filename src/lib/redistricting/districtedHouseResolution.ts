@@ -12,6 +12,7 @@ import {
 import { buildNomineesByParty, buildSeatResult } from "./districtedSeatResult";
 import { getMultiSeatMinShare } from "@/lib/elections/resolution/seatAllocation";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { congressionalDistrictsCollection } from "@/lib/db/repositories/congressionalDistricts";
 
 export interface DistrictedArgs {
   countryId: string;
@@ -142,8 +143,7 @@ export async function districtedHouseResolution(
 ): Promise<SeatResult | null> {
   const docs =
     args.preloadedDistricts ??
-    (await db
-      .collection<CongressionalDistrict>("congressionalDistricts")
+    (await congressionalDistrictsCollection(db)
       .find({ countryId: args.countryId, stateId: args.stateId } as Partial<CongressionalDistrict>)
       .toArray());
   if (docs.length === 0) return null;
@@ -190,7 +190,7 @@ export async function districtedHouseResolution(
     // NPP winners resolve against the `npps` collection, not `characters`, so
     // stamp holderNppId and leave holderCharacterId null (and vice versa).
     const charIdRaw = nppIdRaw ? null : (args.candidateCharacterId[candidateId] ?? null);
-    await db.collection<CongressionalDistrict>("congressionalDistricts").updateOne(
+    await congressionalDistrictsCollection(db).updateOne(
       { _id: d._id },
       {
         $set: {

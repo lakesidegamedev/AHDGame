@@ -38,6 +38,7 @@ import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficia
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { landeslistenCollection } from "@/lib/db/repositories/landeslisten";
 
 const VOTE_THRESHOLD = BUNDESTAG_VOTE_THRESHOLD;
 
@@ -341,10 +342,7 @@ async function buildCandidateMap(
   allocations: LandListAllocation[]
 ): Promise<Map<string, RepIdentity[]>> {
   const map = new Map<string, RepIdentity[]>();
-  const lists = await db
-    .collection<Landesliste>("landeslisten")
-    .find({ countryId: "DE", cycle })
-    .toArray();
+  const lists = await landeslistenCollection(db).find({ countryId: "DE", cycle }).toArray();
   const listByKey = new Map(lists.map((l) => [`${l.partyId}:${l.landId}`, l]));
 
   // First pass: determine the ordered candidate ObjectIds per bloc.

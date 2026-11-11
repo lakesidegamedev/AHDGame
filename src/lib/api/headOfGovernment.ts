@@ -13,6 +13,7 @@ import type { ElectedOfficial } from "@/lib/db/types/officials";
 import type { ParliamentaryGovernment } from "@/lib/db/types/parliamentaryGovernment";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { parliamentaryGovernmentsCollection } from "@/lib/db/repositories/parliamentaryGovernments";
 
 /**
  * Head-of-government resolution for diplomatic auth and viewer-role lookups.
@@ -59,9 +60,7 @@ export async function getHeadOfGovernmentCharacterId(
   const formation = await getGovernmentFormationsCollection(db).findOne({ _id: countryId });
   if (formation) return formation.pmCharacterId ?? null;
 
-  const legacy = await db
-    .collection<ParliamentaryGovernment>("parliamentaryGovernments")
-    .findOne({ _id: countryId as string });
+  const legacy = await parliamentaryGovernmentsCollection(db).findOne({ _id: countryId as string });
   return legacy?.pmCharacterId ?? null;
 }
 
@@ -129,8 +128,7 @@ export async function getHeadOfGovernmentCharacterIds(
     (countryId) => !separatePmCountries.has(countryId) && !formationByCountry.has(countryId)
   );
   const legacyGovernments = legacyCountries.length
-    ? await db
-        .collection<ParliamentaryGovernment>("parliamentaryGovernments")
+    ? await parliamentaryGovernmentsCollection(db)
         .find({ _id: { $in: legacyCountries } })
         .toArray()
     : [];
@@ -195,8 +193,7 @@ export async function findCountryHeadedBy(
   const fmHit = formations.find((f) => f.pmCharacterId?.toString() === idStr);
   if (fmHit) return fmHit.countryId;
 
-  const legacy = await db
-    .collection<ParliamentaryGovernment>("parliamentaryGovernments")
+  const legacy = await parliamentaryGovernmentsCollection(db)
     .find({ pmCharacterId: { $ne: null } })
     .toArray();
   const legacyHit = legacy.find((l) => l.pmCharacterId?.toString() === idStr);

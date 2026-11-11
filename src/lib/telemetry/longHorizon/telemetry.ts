@@ -48,6 +48,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
+import { simRunsCollection } from "@/lib/db/repositories/simRuns";
 
 /** Run manifest row (`simRuns`), read best-effort from the same database. */
 interface SimRunManifest {
@@ -98,12 +99,10 @@ export async function resolveLongHorizonContext(
 ): Promise<LongHorizonContext | null> {
   const [gameState, simRun, officials, formations] = await Promise.all([
     gameStateCollection(db).findOne({ _id: "current" as never }),
-    db
-      .collection<SimRunManifest>("simRuns")
-      .findOne(
-        { dbName: db.databaseName, status: "running" },
-        { sort: { startedAt: -1, _id: -1 } }
-      ),
+    simRunsCollection<SimRunManifest>(db).findOne(
+      { dbName: db.databaseName, status: "running" },
+      { sort: { startedAt: -1, _id: -1 } }
+    ),
     electedOfficialsCollection(db)
       .find(
         {},

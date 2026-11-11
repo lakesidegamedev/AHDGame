@@ -16,6 +16,8 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { shareTradeHistoryCollection } from "@/lib/db/repositories/shareTradeHistory";
+import type { Document } from "mongodb";
 
 export const DEFECT_ID = "AHD-tinky-stale-vote-excess";
 
@@ -185,7 +187,7 @@ async function survey(db: Db): Promise<Survey> {
     federalBudgetCollection(db)
       .find({ countryId: { $in: treasuryCountries } })
       .toArray(),
-    db.collection("shareTradeHistory").countDocuments({
+    shareTradeHistoryCollection<Document>(db).countDocuments({
       _id: { $in: SOURCE_TRADE_IDS.map((id) => new ObjectId(id)) },
       corporationId: new ObjectId(CORPORATION_ID),
     }),

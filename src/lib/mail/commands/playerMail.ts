@@ -5,6 +5,7 @@ import { createNotifications } from "@/lib/notifications";
 import { containsSlur } from "@/lib/moderation";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { usersCollection } from "@/lib/db/repositories/users";
+import { playerMailCollection } from "@/lib/db/repositories/playerMail";
 
 type MailSender = Pick<Character, "_id" | "name" | "sequentialId" | "userId">;
 
@@ -53,7 +54,7 @@ export async function sendPlayerMail(
     createdAt: now,
   };
 
-  await db.collection<Omit<PlayerMail, "_id">>("playerMail").insertOne(mail);
+  await playerMailCollection<Omit<PlayerMail, "_id">>(db).insertOne(mail);
 }
 
 export async function markReceivedMailRead(db: Db, userId: string, mailId: string): Promise<void> {
@@ -63,17 +64,20 @@ export async function markReceivedMailRead(db: Db, userId: string, mailId: strin
 
   const mailOid = new ObjectId(mailId);
   const userOid = new ObjectId(userId);
-  const mail = await db
-    .collection<PlayerMail>("playerMail")
-    .findOne({ _id: mailOid, toUserId: userOid, deletedByRecipient: false });
+  const mail = await playerMailCollection(db).findOne({
+    _id: mailOid,
+    toUserId: userOid,
+    deletedByRecipient: false,
+  });
 
   if (!mail) {
     throw notFound("Mail not found");
   }
 
-  await db
-    .collection<PlayerMail>("playerMail")
-    .updateOne({ _id: mailOid, toUserId: userOid }, { $set: { read: true } });
+  await playerMailCollection(db).updateOne(
+    { _id: mailOid, toUserId: userOid },
+    { $set: { read: true } }
+  );
 }
 
 /**
@@ -89,12 +93,10 @@ export async function markReceivedMailReadMany(
   const mailOids = mailIds.filter((id) => ObjectId.isValid(id)).map((id) => new ObjectId(id));
   if (mailOids.length === 0) return;
 
-  await db
-    .collection<PlayerMail>("playerMail")
-    .updateMany(
-      { _id: { $in: mailOids }, toUserId: new ObjectId(userId), deletedByRecipient: false },
-      { $set: { read: true } }
-    );
+  await playerMailCollection(db).updateMany(
+    { _id: { $in: mailOids }, toUserId: new ObjectId(userId), deletedByRecipient: false },
+    { $set: { read: true } }
+  );
 }
 
 export async function deleteReceivedMail(db: Db, userId: string, mailId: string): Promise<void> {
@@ -104,20 +106,23 @@ export async function deleteReceivedMail(db: Db, userId: string, mailId: string)
 
   const mailOid = new ObjectId(mailId);
   const userOid = new ObjectId(userId);
-  const mail = await db
-    .collection<PlayerMail>("playerMail")
-    .findOne({ _id: mailOid, toUserId: userOid, deletedByRecipient: false });
+  const mail = await playerMailCollection(db).findOne({
+    _id: mailOid,
+    toUserId: userOid,
+    deletedByRecipient: false,
+  });
 
   if (!mail) {
     throw notFound("Mail not found");
   }
 
-  await db
-    .collection<PlayerMail>("playerMail")
-    .updateOne({ _id: mailOid, toUserId: userOid }, { $set: { deletedByRecipient: true } });
+  await playerMailCollection(db).updateOne(
+    { _id: mailOid, toUserId: userOid },
+    { $set: { deletedByRecipient: true } }
+  );
 
   if (mail.deletedBySender) {
-    await db.collection<PlayerMail>("playerMail").deleteOne({ _id: mailOid });
+    await playerMailCollection(db).deleteOne({ _id: mailOid });
   }
 }
 
@@ -127,20 +132,23 @@ export async function deleteSentMail(db: Db, characterId: ObjectId, mailId: stri
   }
 
   const mailOid = new ObjectId(mailId);
-  const mail = await db
-    .collection<PlayerMail>("playerMail")
-    .findOne({ _id: mailOid, fromCharacterId: characterId, deletedBySender: false });
+  const mail = await playerMailCollection(db).findOne({
+    _id: mailOid,
+    fromCharacterId: characterId,
+    deletedBySender: false,
+  });
 
   if (!mail) {
     throw notFound("Mail not found");
   }
 
-  await db
-    .collection<PlayerMail>("playerMail")
-    .updateOne({ _id: mailOid, fromCharacterId: characterId }, { $set: { deletedBySender: true } });
+  await playerMailCollection(db).updateOne(
+    { _id: mailOid, fromCharacterId: characterId },
+    { $set: { deletedBySender: true } }
+  );
 
   if (mail.deletedByRecipient) {
-    await db.collection<PlayerMail>("playerMail").deleteOne({ _id: mailOid });
+    await playerMailCollection(db).deleteOne({ _id: mailOid });
   }
 }
 
@@ -151,9 +159,11 @@ export async function reportReceivedMail(db: Db, userId: string, mailId: string)
 
   const mailOid = new ObjectId(mailId);
   const userOid = new ObjectId(userId);
-  const mail = await db
-    .collection<PlayerMail>("playerMail")
-    .findOne({ _id: mailOid, toUserId: userOid, deletedByRecipient: false });
+  const mail = await playerMailCollection(db).findOne({
+    _id: mailOid,
+    toUserId: userOid,
+    deletedByRecipient: false,
+  });
 
   if (!mail) {
     throw forbidden("Forbidden");

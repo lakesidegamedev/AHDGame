@@ -35,6 +35,7 @@ import { electionsCollection } from "@/lib/db/repositories/elections";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 import { usersCollection } from "@/lib/db/repositories/users";
 import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
+import { wikiPagesCollection } from "@/lib/db/repositories/wikiPages";
 
 /**
  * Maximum accepted `q` length (after trimming). Longer queries are rejected
@@ -454,7 +455,7 @@ export async function runUniversalSearch({
     if (!isAdmin && !isModerator) {
       (wikiQuery as Record<string, unknown>).private = { $ne: true };
     }
-    const wikiPages = await db.collection<WikiPage>("wikiPages").find(wikiQuery).limit(5).toArray();
+    const wikiPages = await wikiPagesCollection(db).find(wikiQuery).limit(5).toArray();
 
     for (const page of wikiPages) {
       results.push({

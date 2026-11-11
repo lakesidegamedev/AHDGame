@@ -5,6 +5,8 @@ import type { Bill } from "@/lib/db/types";
 import { getOfficeTypeForChamber } from "@/lib/legislature/chamberOfficeType";
 import type { BillLifecycleConfig, SponsorNotifier } from "@/lib/turn/billLifecycle/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { billWhipsCollection } from "@/lib/db/repositories/billWhips";
+import type { Document } from "mongodb";
 
 const VOTING_HOURS = 24;
 
@@ -118,7 +120,7 @@ export const JP_NATIONAL_CONFIG: BillLifecycleConfig = {
       onEnterHook: async (db, bill) => {
         // Clear Shūgiin whip records from the original phase so the override is a
         // fresh vote (2-whip allowance + cross-pressure resolver reset).
-        await db.collection("billWhips").deleteMany({
+        await billWhipsCollection<Document>(db).deleteMany({
           targetType: "bill",
           targetId: (bill as { _id: unknown })._id,
           chamber: "shugiin",

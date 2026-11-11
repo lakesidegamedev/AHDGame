@@ -31,6 +31,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { adminLogsCollection } from "@/lib/db/repositories/adminLogs";
 import { activityLogCollection } from "@/lib/db/repositories/activityLog";
 import type { Document } from "mongodb";
+import { caucusesCollection } from "@/lib/db/repositories/caucuses";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; slug: string }>;
@@ -154,9 +155,11 @@ export async function POST(request: Request, { params }: RouteParams) {
     };
 
     const applySendInTransaction = async (session: ClientSession) => {
-      const debitResult = await db
-        .collection<Caucus>("caucuses")
-        .updateOne({ _id: caucus._id, treasury: { $gte: sendAmount } }, caucusDebit, { session });
+      const debitResult = await caucusesCollection(db).updateOne(
+        { _id: caucus._id, treasury: { $gte: sendAmount } },
+        caucusDebit,
+        { session }
+      );
 
       if (debitResult.matchedCount === 0) {
         throw badRequest("Insufficient caucus funds");
@@ -174,9 +177,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     };
 
     const applySendWithoutTransaction = async () => {
-      const debitResult = await db
-        .collection<Caucus>("caucuses")
-        .updateOne({ _id: caucus._id, treasury: { $gte: sendAmount } }, caucusDebit);
+      const debitResult = await caucusesCollection(db).updateOne(
+        { _id: caucus._id, treasury: { $gte: sendAmount } },
+        caucusDebit
+      );
 
       if (debitResult.matchedCount === 0) {
         return errorResponse(400, "Insufficient caucus funds");
@@ -186,12 +190,10 @@ export async function POST(request: Request, { params }: RouteParams) {
       // from here must either complete the credit or refund the debit.
       const refundDebit = async (reason: string, cause?: unknown): Promise<void> => {
         try {
-          const refundResult = await db
-            .collection<Caucus>("caucuses")
-            .updateOne(
-              { _id: caucus._id },
-              { $inc: { treasury: sendAmount }, $set: { updatedAt: new Date() } }
-            );
+          const refundResult = await caucusesCollection(db).updateOne(
+            { _id: caucus._id },
+            { $inc: { treasury: sendAmount }, $set: { updatedAt: new Date() } }
+          );
           if (refundResult.matchedCount !== 1) {
             throw new Error("Caucus treasury no longer exists during refund");
           }

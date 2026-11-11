@@ -4,6 +4,7 @@ import { getDb } from "@/lib/mongodb";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
 import type { PartyCharter } from "@/lib/db/types";
+import { partyChartersCollection } from "@/lib/db/repositories/partyCharters";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -24,9 +25,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     }
 
     const db = await getDb();
-    const charter = await db
-      .collection<PartyCharter>("partyCharters")
-      .findOne({ _id: new ObjectId(id) });
+    const charter = await partyChartersCollection(db).findOne({ _id: new ObjectId(id) });
     if (!charter) {
       return errorResponse(404, "Charter not found");
     }

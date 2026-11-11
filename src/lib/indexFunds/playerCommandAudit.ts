@@ -9,6 +9,8 @@ import { finalizeLedgerEntry } from "@/lib/ledger/emit";
 import { ledgerTurnFromClock } from "@/lib/ledger/ledgerTurn";
 import { prepareAuditRecord } from "@/lib/audit/recordAudit";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { indexFundTransactionsCollection } from "@/lib/db/repositories/indexFundTransactions";
+import { indexFundCommandsCollection } from "@/lib/db/repositories/indexFundCommands";
 
 /** Original native amounts are frozen with completion, never recalculated from current FX. */
 export interface FundCommandAudit {
@@ -50,7 +52,7 @@ function derivedId(id: ObjectId, kind: string): ObjectId {
 
 /** Completed orders replay only their audit outbox, never their financial operation. */
 export async function resumeFundCommandAudit(db: Db, key: string): Promise<void> {
-  const commands = db.collection<Receipt>("indexFundCommands");
+  const commands = indexFundCommandsCollection<Receipt>(db);
   let receipt = await commands.findOne({ _id: key });
   if (receipt?.state !== "completed" || !receipt.audit || receipt.auditCompletedAt) return;
   if (!receipt.auditPlan) {
@@ -62,16 +64,14 @@ export async function resumeFundCommandAudit(db: Db, key: string): Promise<void>
     ]);
     const inputs: TxInput[] = [];
     for (const entry of audit.entries) {
-      const transaction = await db
-        .collection<IndexFundTransaction>("indexFundTransactions")
-        .findOne({
-          _id: entry.transactionId,
-          fundId: audit.fundId,
-          ...(audit.holderKind === "corporation"
-            ? { corporationId: audit.holderId, holderKind: "corporation" }
-            : { characterId: audit.holderId, holderKind: "character" }),
-          kind: { $in: ["subscription", "redemption"] },
-        });
+      const transaction = await indexFundTransactionsCollection(db).findOne({
+        _id: entry.transactionId,
+        fundId: audit.fundId,
+        ...(audit.holderKind === "corporation"
+          ? { corporationId: audit.holderId, holderKind: "corporation" }
+          : { characterId: audit.holderId, holderKind: "character" }),
+        kind: { $in: ["subscription", "redemption"] },
+      });
       if (!transaction) throw new Error("Fund command audit witness is missing");
       const sign = transaction.kind === "subscription" ? -1 : 1;
       if (!Number.isFinite(entry.amountNative) || Math.sign(entry.amountNative) !== sign)

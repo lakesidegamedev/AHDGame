@@ -4,6 +4,7 @@ import type { ProducerPayablesState } from "@/lib/db/types/producerEconomy";
 import type { ProducerCashBinding } from "./cashSettlementRules";
 import type { ProducerPayable } from "./payablesRules";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { producerEconomyAccountsCollection } from "@/lib/db/repositories/producerEconomyAccounts";
 
 function snapshot(claims: readonly ProducerPayable[]): string {
   return JSON.stringify(
@@ -41,10 +42,10 @@ export async function verifyOpeningProducerPayables(
           .toArray()
       : [],
     wallets.length
-      ? db
-          .collection<{ _id: string; producerPayables?: ProducerPayablesState }>(
-            "producerEconomyAccounts"
-          )
+      ? producerEconomyAccountsCollection<{
+          _id: string;
+          producerPayables?: ProducerPayablesState;
+        }>(db)
           .find(
             {
               _id: { $in: wallets.map((binding) => binding.economyAccountId) },

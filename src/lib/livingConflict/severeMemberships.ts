@@ -6,6 +6,7 @@ import { PACIFIC_STRAIT_KEY, memberCountries } from "./rules/futureConflicts";
 import { resolveConflictParticipants } from "./rules/participants";
 import { PANDEMIC_KEY, pandemicParticipants } from "./rules/pandemic";
 import type { LivingConflictState } from "./types";
+import { livingConflictsCollection } from "@/lib/db/repositories/livingConflicts";
 
 type StoredMembership = Pick<
   LivingConflictState,
@@ -25,8 +26,7 @@ export async function loadLivingConflictSevereCountryIds(
   db: Db,
   availableCountryIds: ReadonlySet<string>
 ): Promise<string[][]> {
-  const states = await db
-    .collection<LivingConflictState>("livingConflicts")
+  const states = await livingConflictsCollection<LivingConflictState>(db)
     .find(
       { hasOpened: true, status: "active" },
       {

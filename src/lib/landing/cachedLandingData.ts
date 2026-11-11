@@ -8,6 +8,7 @@ import { buildGovernmentTypeMap } from "@/lib/landing/governmentTypeMap";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { countryStateCollection } from "@/lib/db/repositories/countryState";
 
 /** Crisis fields the marketing landing consumes (serializable). */
 export type LandingCrisisSnapshot = {
@@ -55,8 +56,7 @@ async function loadLandingData(): Promise<LandingDataSnapshot> {
         { $group: { _id: "$countryId", count: { $sum: 1 } } },
       ])
       .toArray(),
-    db
-      .collection<CountryState>("countryState")
+    countryStateCollection(db)
       .find({}, { projection: { _id: 1, governmentType: 1 } })
       .toArray(),
   ]);

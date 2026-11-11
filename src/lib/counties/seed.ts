@@ -21,6 +21,7 @@ import {
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { countiesCollection } from "@/lib/db/repositories/counties";
 
 export async function seedCountyPopulations(
   db: Db,
@@ -77,8 +78,7 @@ export async function seedCountyPopulations(
   );
   const rows = groups.flat();
   const expectedById = new Map(rows.map((row) => [row._id, row]));
-  const existing = await db
-    .collection<County>("counties")
+  const existing = await countiesCollection(db)
     .find(
       { $or: [{ countryId: { $in: [...countryIds] } }, { _id: { $in: rows.map((c) => c._id) } }] },
       { projection: { _id: 1, countryId: 1, stateId: 1, population: 1 } }
@@ -110,9 +110,9 @@ export async function seedCountyPopulations(
   }
   if (options.apply === false) return rows.length;
   if (options.replace)
-    await db.collection<County>("counties").deleteMany({ countryId: { $in: [...countryIds] } });
+    await countiesCollection(db).deleteMany({ countryId: { $in: [...countryIds] } });
   if (rows.length)
-    await db.collection<County>("counties").bulkWrite(
+    await countiesCollection(db).bulkWrite(
       rows.map((row) => ({
         updateOne: {
           filter: { _id: row._id },
@@ -122,8 +122,7 @@ export async function seedCountyPopulations(
       })),
       { ordered: true }
     );
-  const persisted = await db
-    .collection<County>("counties")
+  const persisted = await countiesCollection(db)
     .find(
       { countryId: { $in: [...countryIds] } },
       { projection: { _id: 1, stateId: 1, population: 1 } }

@@ -6,6 +6,8 @@ import {
   FINANCIAL_DEMAND_WINDOW,
   financialHouseholdDemandMultiplier,
 } from "./rules/financialDemand";
+import { livingConflictsCollection } from "@/lib/db/repositories/livingConflicts";
+import type { Document } from "mongodb";
 
 interface CreditHistory {
   _id: string;
@@ -19,9 +21,10 @@ export async function loadFinancialCrisisDemand(
   banks: Pick<Corporation, "countryId" | "bankCharter">[],
   budgets: Pick<FederalBudget, "countryId" | "gdp" | "gdpSmoothed" | "currencyCode">[]
 ): Promise<Map<string, number>> {
-  const crisis = await db
-    .collection("livingConflicts")
-    .findOne({ defKey: GLOBAL_FINANCIAL_CRISIS_KEY, hasOpened: true }, { projection: { _id: 1 } });
+  const crisis = await livingConflictsCollection<Document>(db).findOne(
+    { defKey: GLOBAL_FINANCIAL_CRISIS_KEY, hasOpened: true },
+    { projection: { _id: 1 } }
+  );
   if (!crisis) return new Map();
   const [actions, history] = await Promise.all([
     db

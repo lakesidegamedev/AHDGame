@@ -27,6 +27,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { macroCountriesCollection } from "@/lib/db/repositories/macroCountries";
 
 const FEDERATION_LEGACY_SERVICE_TURNS_COLLECTION = "federationLegacyServiceTurns";
 
@@ -175,8 +176,7 @@ export async function materializeLegacyFederationServiceTurn(input: {
     turn,
     ratesLocalPerAnchor: rates,
   });
-  const macroCountries = await db
-    .collection<MacroCountryState>("macroCountries")
+  const macroCountries = await macroCountriesCollection<MacroCountryState>(db)
     .find(
       { _id: { $in: ids }, presetId: "1991-default", simulationTier: "background-macro" },
       { session }
@@ -272,7 +272,7 @@ export async function materializeLegacyFederationServiceTurn(input: {
       "Successor cash"
     );
     const riskLoss = call > 0 ? Math.min(0.02, (arrears / call) * 0.02) : 0;
-    const updated = await db.collection<MacroCountryState>("macroCountries").updateOne(
+    const updated = await macroCountriesCollection<MacroCountryState>(db).updateOne(
       {
         _id: id,
         federationTreasuryMinor: macro.federationTreasuryMinor,

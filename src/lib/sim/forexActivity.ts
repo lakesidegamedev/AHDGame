@@ -10,6 +10,7 @@ import { summarizeForexActivity, type ForexActivityRecord } from "@/lib/sim/rule
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { currencyOrdersCollection } from "@/lib/db/repositories/currencyOrders";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { tradeHistoryCollection } from "@/lib/db/repositories/tradeHistory";
 
 export async function collectForexActivity(db: Db): Promise<ForexActivityRecord> {
   const [state, orders, trades, rates] = await Promise.all([
@@ -19,8 +20,7 @@ export async function collectForexActivity(db: Db): Promise<ForexActivityRecord>
     currencyOrdersCollection(db)
       .find({}, { projection: { status: 1, amount: 1, filledAmount: 1 } })
       .toArray(),
-    db
-      .collection<TradeHistoryEntry>("tradeHistory")
+    tradeHistoryCollection(db)
       .find({}, { projection: { amount: 1, rate: 1, spread: 1 } })
       .toArray(),
     exchangeRatesCollection(db)

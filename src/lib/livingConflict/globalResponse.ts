@@ -84,6 +84,8 @@ import { crisesCollection } from "@/lib/db/repositories/crises";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { crisisInteractionsCollection } from "@/lib/db/repositories/crisisInteractions";
 import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
+import { militaryUnitsCollection } from "@/lib/db/repositories/militaryUnits";
+import { livingConflictsCollection } from "@/lib/db/repositories/livingConflicts";
 
 /**
  * The deep module for shared world-event responses. Callers only need to ask
@@ -127,8 +129,7 @@ export async function loadCampaignCapability(
   const [budget, approval, units] = await Promise.all([
     federalBudgetCollection(db).findOne({ countryId: countryId as FederalBudget["countryId"] }),
     governmentApprovalsCollection(db).findOne({ _id: countryId as GovernmentApproval["_id"] }),
-    db
-      .collection<MilitaryUnit>("militaryUnits")
+    militaryUnitsCollection(db)
       .find({ countryId: countryId as MilitaryUnit["countryId"] })
       .project<Pick<MilitaryUnit, "personnel" | "readiness" | "equipment">>({
         personnel: 1,
@@ -339,7 +340,7 @@ export async function recordGlobalResponseCommitment(
 ): Promise<void> {
   const definition = crisis.globalResponse;
   if (!definition || !option.campaignCommitment) return;
-  const collection = db.collection<LivingConflictState>("livingConflicts");
+  const collection = livingConflictsCollection<LivingConflictState>(db);
   const responseId = `${crisis.livingConflictEventId ?? definition.eventKey}:${countryId}`;
   const powersKey = `emergencyPowers:${countryId}`;
   const powersPath = `tracks.${powersKey}`;

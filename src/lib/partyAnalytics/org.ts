@@ -9,6 +9,7 @@ import type {
 } from "./types";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { partyBudgetCollection } from "@/lib/db/repositories/partyBudget";
 
 interface StateOrgBudgetSummary {
   stateId: string;
@@ -72,8 +73,7 @@ export async function buildPartyOrgAnalytics(
     statesCollection(db)
       .find({ _id: { $in: stateIds }, countryId })
       .toArray(),
-    db
-      .collection<PartyBudget>("partyBudget")
+    partyBudgetCollection(db)
       .find({ countryId, partyId, scope: "state", stateId: { $in: stateIds } })
       .toArray(),
   ]);
@@ -130,7 +130,7 @@ export async function buildStatePartyOrgAnalytics(
 
   const [state, budget] = await Promise.all([
     statesCollection(db).findOne({ _id: stateId, countryId }),
-    db.collection<PartyBudget>("partyBudget").findOne({
+    partyBudgetCollection(db).findOne({
       countryId,
       partyId,
       scope: "state",

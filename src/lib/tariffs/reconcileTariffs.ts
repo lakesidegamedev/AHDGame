@@ -6,6 +6,7 @@ import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { billsCollection } from "@/lib/db/repositories/bills";
+import { tariffsCollection } from "@/lib/db/repositories/tariffs";
 
 const BASELINE_TARIFF_COUNTRIES = [
   COUNTRY_CONFIGS.US.id,
@@ -34,7 +35,7 @@ async function ensureBaselineEconomyWideTariffs(db: Db, countryId?: CountryId): 
     if (!BASELINE_TARIFF_COUNTRIES.includes(candidateCountryId)) continue;
     const baselineCountryId = candidateCountryId as BaselineTariffCountryId;
 
-    const existingTariff = await db.collection<Tariff>("tariffs").findOne({
+    const existingTariff = await tariffsCollection(db).findOne({
       countryId: baselineCountryId,
       scopeType: "economy_wide",
     });
@@ -47,7 +48,7 @@ async function ensureBaselineEconomyWideTariffs(db: Db, countryId?: CountryId): 
     if (typeof rate !== "number") continue;
 
     const now = new Date();
-    await db.collection<Tariff>("tariffs").updateOne(
+    await tariffsCollection(db).updateOne(
       {
         countryId: baselineCountryId,
         scopeType: "economy_wide",
@@ -102,7 +103,7 @@ export async function reconcileSignedTariffBills(db: Db, countryId?: CountryId):
   const flush = async () => {
     if (pending.length === 0) return;
     const operations = pending.splice(0);
-    await db.collection<Tariff>("tariffs").bulkWrite(operations, { ordered: true });
+    await tariffsCollection(db).bulkWrite(operations, { ordered: true });
   };
 
   for (const bill of signedBills) {

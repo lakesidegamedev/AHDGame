@@ -25,6 +25,8 @@ import {
   type SeedDiagnosticFeatureManifest,
   type SeedDiagnosticReport,
 } from "@/lib/admin/seedDiagnostic";
+import { seedDiagnosticsCollection } from "@/lib/db/repositories/seedDiagnostics";
+import type { Document } from "mongodb";
 
 /** Trigger identifying a fresh worldsim bootstrap conformance report. */
 const WORLDSIM_BOOTSTRAP_TRIGGER = "worldsim-post-bootstrap" as const;
@@ -120,7 +122,7 @@ export async function runWorldsimBootstrapConformance(
   db: Db,
   provenance: WorldsimBootstrapProvenance
 ): Promise<WorldsimBootstrapConformanceResult> {
-  const existing = (await db.collection("seedDiagnostics").findOne({
+  const existing = (await seedDiagnosticsCollection<Document>(db).findOne({
     mode: "conformance",
     trigger: WORLDSIM_BOOTSTRAP_TRIGGER,
   } as never)) as SeedDiagnosticReport | null;
@@ -157,7 +159,7 @@ export async function runWorldsimBootstrapConformance(
       featureManifest: provenance.featureManifest,
     });
     try {
-      await db.collection("seedDiagnostics").insertOne(errorReport as never);
+      await seedDiagnosticsCollection<Document>(db).insertOne(errorReport as never);
     } catch {
       // Persistence of the error report is best-effort.
     }

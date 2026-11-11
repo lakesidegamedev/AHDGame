@@ -3,6 +3,8 @@ import { getDb } from "@/lib/mongodb";
 import type { NewsPost, NewsCategory } from "@/lib/db/types";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { newsPostsCollection } from "@/lib/db/repositories/newsPosts";
+import type { Document } from "mongodb";
 
 const SYSTEM_AUTHOR_NAME = "National Wire Service";
 
@@ -31,10 +33,12 @@ export async function createSystemNewsPost(
   };
 
   if (options.id)
-    await db
-      .collection("newsPosts")
-      .updateOne({ _id: options.id }, { $setOnInsert: post }, { upsert: true });
-  else await db.collection("newsPosts").insertOne(post);
+    await newsPostsCollection<Document>(db).updateOne(
+      { _id: options.id },
+      { $setOnInsert: post },
+      { upsert: true }
+    );
+  else await newsPostsCollection<Document>(db).insertOne(post);
 }
 
 // ─── Election result aggregation ──────────────────────────────────────────────

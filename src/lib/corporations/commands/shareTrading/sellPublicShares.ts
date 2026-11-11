@@ -74,6 +74,8 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
 import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 import { usersCollection } from "@/lib/db/repositories/users";
+import { corporationCeoVotesCollection } from "@/lib/db/repositories/corporationCeoVotes";
+import type { Document } from "mongodb";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -635,8 +637,7 @@ export async function sellPublicShares(request: Request, { params }: RouteParams
         throw new Error("Imperial seller not found");
       }
       if (shouldVacateCeo) {
-        void db
-          .collection("corporationCeoVotes")
+        void corporationCeoVotesCollection<Document>(db)
           .deleteMany({ corporationId: corporation._id })
           .catch(() => undefined);
         await closeCeoTenure(db, corporation._id, {
@@ -973,8 +974,7 @@ export async function sellPublicShares(request: Request, { params }: RouteParams
       throw new Error("Seller character not found");
     }
     if (shouldVacateCeo) {
-      void db
-        .collection("corporationCeoVotes")
+      void corporationCeoVotesCollection<Document>(db)
         .deleteMany({ corporationId: corporation._id })
         .catch(() => undefined);
       await closeCeoTenure(db, corporation._id, {

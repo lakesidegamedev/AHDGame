@@ -45,6 +45,7 @@ import type { Document } from "mongodb";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
 import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
+import { macroMetricsHistoryCollection } from "@/lib/db/repositories/macroMetricsHistory";
 
 /**
  * Which referendum component a metric feeds, and which sign of `ratePerTurn`
@@ -178,7 +179,7 @@ export async function loadResponseCredit(
     billsCollection<Document>(db)
       .find({ _id: { $in: billIds } }, { projection: { title: 1, budgetValidation: 1 } })
       .toArray(),
-    db.collection("macroMetricsHistory").findOne({ _id: nationalDocId as never }),
+    macroMetricsHistoryCollection<Document>(db).findOne({ _id: nationalDocId as never }),
   ]);
 
   const typeById = new Map(legTypes.map((t) => [String(t._id), t]));

@@ -22,6 +22,9 @@ import type { Document } from "mongodb";
 import { billsCollection } from "@/lib/db/repositories/bills";
 import { unionsCollection } from "@/lib/db/repositories/unions";
 import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
+import { actionLogsCollection } from "@/lib/db/repositories/actionLogs";
+import { indexFundPositionsCollection } from "@/lib/db/repositories/indexFundPositions";
+import { unionOrganizersCollection } from "@/lib/db/repositories/unionOrganizers";
 
 /**
  * Canonical new-player onboarding checklist.
@@ -351,12 +354,10 @@ export async function loadOnboardingSignals(
         { limit: 1 }
       )
       .then((n) => n > 0),
-    db
-      .collection("indexFundPositions")
+    indexFundPositionsCollection<Document>(db)
       .countDocuments({ holderKind: "character", characterId, units: { $gt: 0 } }, { limit: 1 })
       .then((n) => n > 0),
-    db
-      .collection("actionLogs")
+    actionLogsCollection<Document>(db)
       .countDocuments({ characterId, actionType: "campaign" }, { limit: 1 })
       .then((n) => n > 0),
     // Player-run seat only. `ceoType` defaults to "character" when absent
@@ -375,8 +376,7 @@ export async function loadOnboardingSignals(
     unionsCollection<Document>(db)
       .countDocuments({ ownerId: characterId }, { limit: 1 })
       .then((n) => n > 0),
-    db
-      .collection("unionOrganizers")
+    unionOrganizersCollection<Document>(db)
       .countDocuments({ characterId }, { limit: 1 })
       .then((n) => n > 0),
   ]);

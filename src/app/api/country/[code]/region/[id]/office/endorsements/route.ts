@@ -15,6 +15,7 @@ import { createEndorsement } from "@/lib/governorOffice/endorsements/createEndor
 import type { GovernorEndorsement, Election, ElectionCandidate } from "@/lib/db/types";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { governorEndorsementsCollection } from "@/lib/db/repositories/governorEndorsements";
 
 // POST /api/country/[code]/region/[id]/office/endorsements — Endorse a candidate.
 // Auth: requireHumanSessionWithCharacter; must be the office-holder.
@@ -101,8 +102,7 @@ export async function GET(
       : scopedElections;
 
     const active = characterId
-      ? await db
-          .collection<GovernorEndorsement>("governorEndorsements")
+      ? await governorEndorsementsCollection(db)
           .find({
             countryId,
             stateId,

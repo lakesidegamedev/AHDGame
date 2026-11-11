@@ -22,6 +22,9 @@ import { isSameCountry } from "@/lib/api/sameCountry";
 import { CANONICAL_VOTING_ELECTION_SORT } from "@/lib/elections/canonicalVotingElection";
 import { usersCollection } from "@/lib/db/repositories/users";
 import type { Document } from "mongodb";
+import { nationalCommitteeCandidatesCollection } from "@/lib/db/repositories/nationalCommitteeCandidates";
+import { nationalCommitteeVotesCollection } from "@/lib/db/repositories/nationalCommitteeVotes";
+import { nationalCommitteeElectionsCollection } from "@/lib/db/repositories/nationalCommitteeElections";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -98,12 +101,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     const { candidateIds } = parsed.data;
 
     // Find active election for this party in this country
-    const election = await db
-      .collection<NationalCommitteeElection>("nationalCommitteeElections")
-      .findOne(
-        { partyId, countryId: partyCountryId, status: "voting" },
-        { sort: CANONICAL_VOTING_ELECTION_SORT }
-      );
+    const election = await nationalCommitteeElectionsCollection(db).findOne(
+      { partyId, countryId: partyCountryId, status: "voting" },
+      { sort: CANONICAL_VOTING_ELECTION_SORT }
+    );
 
     if (!election) {
       return errorResponse(400, "No active committee election");
@@ -137,8 +138,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     // submission would block the player from changing any of their votes.
     let validIds: ObjectId[] = [];
     if (uniqueIds.length > 0) {
-      const activeCandidates = await db
-        .collection<NationalCommitteeCandidate>("nationalCommitteeCandidates")
+      const activeCandidates = await nationalCommitteeCandidatesCollection(db)
         .find({
           electionId: election._id,
           characterId: { $in: uniqueIds },
@@ -151,7 +151,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     // Upsert vote (replace previous votes)
     try {
-      await db.collection<NationalCommitteeVote>("nationalCommitteeVotes").updateOne(
+      await nationalCommitteeVotesCollection(db).updateOne(
         { electionId: election._id, voterId },
         {
           $set: {
@@ -168,7 +168,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     } catch (error) {
       if (!isNationalCommitteeVoteDuplicateKey(error)) throw error;
 
-      await db.collection<NationalCommitteeVote>("nationalCommitteeVotes").updateOne(
+      await nationalCommitteeVotesCollection(db).updateOne(
         { electionId: election._id, voterId },
         {
           $set: {

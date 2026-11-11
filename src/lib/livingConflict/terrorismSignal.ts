@@ -5,9 +5,10 @@
 import type { Db } from "mongodb";
 import type { LivingConflictState } from "./types";
 import { TERRORISM_KEY, type TerrorismSignal } from "./rules/transnationalTerrorism";
+import { livingConflictsCollection } from "@/lib/db/repositories/livingConflicts";
 
 export async function loadTerrorismSignal(db: Db): Promise<TerrorismSignal | null> {
-  return db.collection<LivingConflictState>("livingConflicts").findOne(
+  return livingConflictsCollection<LivingConflictState>(db).findOne(
     { defKey: TERRORISM_KEY },
     {
       projection: {

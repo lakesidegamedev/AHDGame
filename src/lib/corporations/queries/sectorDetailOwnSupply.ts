@@ -21,6 +21,7 @@ import {
   type OwnSupplyOutput,
   type OwnSupplyReach,
 } from "@/lib/corporations/rules/ownSupplyReach";
+import { supplyAgreementsCollection } from "@/lib/db/repositories/supplyAgreements";
 
 export type OwnSupplyRow = OwnSupplyReach & { sourceStateNames: string[] };
 
@@ -75,8 +76,7 @@ export async function explainOwnSupplyReach(args: {
   }
   if (sourcesByCommodity.size === 0) return;
 
-  const agreements = await args.db
-    .collection<SupplyAgreement>("supplyAgreements")
+  const agreements = await supplyAgreementsCollection(args.db)
     .find(
       {
         buyerCorpId: args.corporation._id,

@@ -10,6 +10,7 @@ import type {
   NPPEndorsementSource,
   NPPEndorsementWithdrawalReason,
 } from "@/lib/db/types";
+import { nppEndorsementsCollection } from "@/lib/db/repositories/nppEndorsements";
 
 const NPP_ENDORSEMENT_REEVALUATION_TURNS = 4;
 export const NPP_ENDORSEMENT_DIRECT_FAVORABILITY_PER_ENDORSEMENT = 1.5;
@@ -170,7 +171,7 @@ export async function withdrawNppEndorsement(
   reason: NPPEndorsementWithdrawalReason,
   now: Date
 ): Promise<void> {
-  await db.collection<NPPEndorsement>("nppEndorsements").updateOne(
+  await nppEndorsementsCollection(db).updateOne(
     { _id: endorsementId, isActive: true },
     {
       $set: {
@@ -205,7 +206,7 @@ export async function upsertNppEndorsement(
   }
 
   const targetId = getEndorsementTargetId(input.candidate);
-  const endorsementsCol = db.collection<NPPEndorsement>("nppEndorsements");
+  const endorsementsCol = nppEndorsementsCollection(db);
   const existing = await endorsementsCol
     .find(
       {

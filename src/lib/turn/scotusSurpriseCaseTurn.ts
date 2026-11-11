@@ -44,6 +44,8 @@ import {
 } from "@/lib/scotus/surpriseCaseTemplates";
 import { generateScotusSurpriseNews } from "@/lib/scotus/scotusNews";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
+import { supremeCourtSeatsCollection } from "@/lib/db/repositories/supremeCourtSeats";
+import { docketCasesCollection } from "@/lib/db/repositories/docketCases";
 
 export interface ScotusSurpriseCaseTurnResult {
   /** A new case was filed to the pending docket this turn. */
@@ -64,10 +66,7 @@ export interface ScotusSurpriseCaseTurnResult {
 const HEADCOUNT_ONLY_PLACEHOLDER_DIRECTION = 1 as const;
 
 async function loadSeatedJustices(database: Db): Promise<SeatedJusticeLean[]> {
-  const seats = await database
-    .collection<SupremeCourtSeat>("supremeCourtSeats")
-    .find({ countryId: "US" })
-    .toArray();
+  const seats = await supremeCourtSeatsCollection(database).find({ countryId: "US" }).toArray();
   return seats
     .filter((s) => s.justiceCharacterId || s.justiceNppId || s.justiceMode === "historical")
     .map((s) => ({ economicLean: s.economicLean ?? 0, socialLean: s.socialLean ?? 0 }));
@@ -119,7 +118,7 @@ async function decidePendingSurpriseCase(
     }));
   }
 
-  await database.collection<DocketCase>("docketCases").updateOne(
+  await docketCasesCollection(database).updateOne(
     { _id: docketCase._id, status: "pending" },
     {
       $set: {
@@ -144,8 +143,7 @@ async function decidePendingSurpriseCase(
 }
 
 async function decideDueSurpriseCases(database: Db, currentTurn: number): Promise<number> {
-  const due = await database
-    .collection<DocketCase>("docketCases")
+  const due = await docketCasesCollection(database)
     .find({ countryId: "US", status: "pending", hearingDueTurn: { $lte: currentTurn } })
     .toArray();
   if (due.length === 0) return 0;
@@ -192,8 +190,7 @@ export async function processScotusSurpriseCaseTurn(
   }
 
   const heardCases = (
-    await database
-      .collection<DocketCase>("docketCases")
+    await docketCasesCollection(database)
       .find({ countryId: "US", isSurprise: true }, { projection: { caseKey: 1, decisionYear: 1 } })
       .toArray()
   ).map((c) => ({ caseKey: c.caseKey, decisionYear: c.decisionYear }));
@@ -218,7 +215,7 @@ export async function processScotusSurpriseCaseTurn(
   );
   const template = available[templateIndex];
 
-  await database.collection<DocketCase>("docketCases").insertOne({
+  await docketCasesCollection(database).insertOne({
     _id: new ObjectId(),
     countryId: "US",
     preset,

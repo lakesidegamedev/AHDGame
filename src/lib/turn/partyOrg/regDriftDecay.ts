@@ -41,6 +41,7 @@ import {
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { stateRegistrationPoolCollection } from "@/lib/db/repositories/stateRegistrationPool";
 
 // Re-exported so existing importers (and tests) keep their entry point while
 // the implementation lives in the DB-free `surplusSourcing` module.
@@ -614,10 +615,7 @@ export async function processRegDriftDecay(
     ledgerRowsWritten: 0,
   };
 
-  const pools = await db
-    .collection<StateRegistrationPool>("stateRegistrationPool")
-    .find({})
-    .toArray();
+  const pools = await stateRegistrationPoolCollection(db).find({}).toArray();
   result.statesScanned = pools.length;
   if (pools.length === 0) return result;
 
@@ -767,7 +765,7 @@ export async function processRegDriftDecay(
     await statePartyOrgCollection(db).bulkWrite(partyOps);
   }
   if (poolOps.length > 0) {
-    await db.collection<StateRegistrationPool>("stateRegistrationPool").bulkWrite(poolOps);
+    await stateRegistrationPoolCollection(db).bulkWrite(poolOps);
   }
   if (ledgerRows.length > 0) {
     await db.collection<OrgRegLedger>("orgRegLedger").insertMany(ledgerRows);

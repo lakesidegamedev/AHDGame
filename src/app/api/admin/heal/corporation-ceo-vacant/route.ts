@@ -3,6 +3,7 @@ import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError } from "@/lib/api/errors";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporationCeoVotesCollection } from "@/lib/db/repositories/corporationCeoVotes";
 
 interface CeoVote {
   corporationId: unknown;
@@ -107,7 +108,7 @@ export async function POST() {
 
       // Upsert a CEO self-vote so they're the elected leader
       if (corp.ceoId) {
-        await db.collection<CeoVote>("corporationCeoVotes").updateOne(
+        await corporationCeoVotesCollection<CeoVote>(db).updateOne(
           { corporationId: corp._id, voterCharacterId: corp.ceoId },
           {
             $set: {

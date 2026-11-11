@@ -15,6 +15,7 @@ import { getTrucesCollection, trucePairId } from "@/lib/military/truce";
 import { opposedBelligerents } from "@/lib/military/occupation";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
+import { militaryUnitsCollection } from "@/lib/db/repositories/militaryUnits";
 
 type WarEntryOrganization = Pick<
   InternationalOrganizationDef,
@@ -182,7 +183,7 @@ export async function assessWarEntryPoliticalPressure(params: {
     federalBudgetCollection<{ countryId: CountryId; debtToGdpRatio?: number }>(db).findOne({
       countryId,
     }),
-    db.collection<MilitaryUnit>("militaryUnits").find({ countryId }).toArray(),
+    militaryUnitsCollection(db).find({ countryId }).toArray(),
   ]);
 
   const customPole = organization?.alignment?.poleId;

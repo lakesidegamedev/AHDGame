@@ -27,6 +27,7 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 import { errorResponse } from "@/lib/api/errors";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
+import { shareListingsCollection } from "@/lib/db/repositories/shareListings";
 
 export const resolveCharName = async (
   db: Db,
@@ -292,10 +293,7 @@ export async function checkTotalSharesAfterFill(db: Db, corporationId: ObjectId)
   try {
     const [postFillCorp, postFillListings, postFillSellOrders] = await Promise.all([
       corporationsCollection(db).findOne({ _id: corporationId }),
-      db
-        .collection<ShareListing>("shareListings")
-        .find({ corporationId, status: "open" })
-        .toArray(),
+      shareListingsCollection(db).find({ corporationId, status: "open" }).toArray(),
       shareOrdersCollection(db)
         .find({
           corporationId,

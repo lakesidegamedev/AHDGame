@@ -8,6 +8,7 @@ import type {
   VerifyResult,
 } from "../types";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { federalBudgetSnapshotsCollection } from "@/lib/db/repositories/federalBudgetSnapshots";
 
 /**
  * Credits UK tax revenue missed while was live. The enactment
@@ -91,9 +92,9 @@ async function detect(db: Db): Promise<DetectResult> {
   if (alreadyHealed(budget)) {
     return { affected: 0, sample: [], notes: ["UK budget already carries the AHD-1102 marker"] };
   }
-  const snapshot = await db
-    .collection<SnapshotDoc>("federalBudgetSnapshots")
-    .findOne({ _id: REFERENCE_SNAPSHOT_ID });
+  const snapshot = await federalBudgetSnapshotsCollection<SnapshotDoc>(db).findOne({
+    _id: REFERENCE_SNAPSHOT_ID,
+  });
   const credit = estimateGapCredit(snapshot, GAP_TURNS);
   if (credit <= 0) {
     return {
@@ -115,9 +116,9 @@ async function detect(db: Db): Promise<DetectResult> {
 
 async function plan(db: Db): Promise<HealPlan> {
   const budget = await loadUkBudget(db);
-  const snapshot = await db
-    .collection<SnapshotDoc>("federalBudgetSnapshots")
-    .findOne({ _id: REFERENCE_SNAPSHOT_ID });
+  const snapshot = await federalBudgetSnapshotsCollection<SnapshotDoc>(db).findOne({
+    _id: REFERENCE_SNAPSHOT_ID,
+  });
   const credit = budget && !alreadyHealed(budget) ? estimateGapCredit(snapshot, GAP_TURNS) : 0;
 
   if (!budget || credit <= 0) {

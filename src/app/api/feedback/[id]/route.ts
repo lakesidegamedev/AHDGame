@@ -4,6 +4,7 @@ import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import type { Feedback, User } from "@/lib/db/types";
 import { usersCollection } from "@/lib/db/repositories/users";
+import { feedbackCollection } from "@/lib/db/repositories/feedback";
 
 // GET /api/feedback/[id] — Get a feedback entry by issue number; users can only view their own.
 // Auth: requireBasicAuth
@@ -26,7 +27,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     const user = auth.user;
 
     const db = await getDb();
-    const feedback = await db.collection<Feedback>("feedback").findOne({ issueNumber: issueNum });
+    const feedback = await feedbackCollection(db).findOne({ issueNumber: issueNum });
 
     if (!feedback) {
       return errorResponse(404, "Issue not found");

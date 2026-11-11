@@ -3,6 +3,7 @@ import type { GovernorAddress } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import type { ActiveModifier } from "@/lib/utils/approvalModifiers";
 import { getNationalStateId } from "@/lib/policy/nationalStateId";
+import { governorAddressesCollection } from "@/lib/db/repositories/governorAddresses";
 
 /**
  * Returns the active (non-expired) governor-address approval bump(s) for a
@@ -19,8 +20,7 @@ export async function getActiveAddressApprovalModifiers(
   stateId: string,
   currentTurn: number
 ): Promise<ActiveModifier[]> {
-  const active = await db
-    .collection<GovernorAddress>("governorAddresses")
+  const active = await governorAddressesCollection(db)
     .find({
       countryId,
       stateId,

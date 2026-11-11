@@ -4,6 +4,7 @@ import { isShippingPreset, tierFor } from "@/lib/world/eraRoster";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalMetricsCollection } from "@/lib/db/repositories/politicalMetrics";
 import type { Document } from "mongodb";
+import { countersCollection } from "@/lib/db/repositories/counters";
 
 /**
  * Country-keyed region collections a preset switch can strand.
@@ -62,9 +63,9 @@ export async function purgeAbsentCountryRegions(
       if (result.deletedCount > 0) deleted[name] = result.deletedCount;
     }
     // Party sequence counters for those countries; a fresh world has none.
-    const counters = await db
-      .collection<{ _id: string }>("counters")
-      .deleteMany({ _id: { $in: countryIds.map((id) => `party_${id}`) } });
+    const counters = await countersCollection<{ _id: string }>(db).deleteMany({
+      _id: { $in: countryIds.map((id) => `party_${id}`) },
+    });
     if (counters.deletedCount > 0) deleted.counters = counters.deletedCount;
   }
 

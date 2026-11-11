@@ -18,6 +18,7 @@ import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficia
 import type { Document } from "mongodb";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { seatsCollection } from "@/lib/db/repositories/seats";
 
 /**
  * True when `stateId` is eligible for US federal seat backfill (House,
@@ -390,8 +391,7 @@ async function backfillChamber(
   // in the largest states to reach 100. Each slot doc counts as its `totalSeats`
   // (multi-member house) or 1 (per-seat senate). Falls back to the config target if
   // no slots are found (defensive — slots are always seeded before backfill runs).
-  const slotDocs = await db
-    .collection<{ totalSeats?: number }>("seats")
+  const slotDocs = await seatsCollection<{ totalSeats?: number }>(db)
     .find({ countryId, electionType: officeType }, { projection: { totalSeats: 1 } })
     .toArray();
   const slotCapacity = slotDocs.reduce(

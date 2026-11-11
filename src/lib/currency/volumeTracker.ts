@@ -24,6 +24,7 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 import { VOLUME_LOOKBACK_TURNS, FOREX_ACTIVE_CURRENCIES } from "@/lib/constants/currencies";
 import type { VolumeInputs } from "./rateCalculation";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { tradeHistoryCollection } from "@/lib/db/repositories/tradeHistory";
 
 /** Volume data keyed by currency code */
 export type CurrencyVolumeMap = Record<CurrencyCode, VolumeInputs>;
@@ -41,8 +42,7 @@ export async function computeCurrencyVolumes(
   const lookbackStart = Math.max(1, currentTurn - VOLUME_LOOKBACK_TURNS);
 
   const [trades, rateByCode] = await Promise.all([
-    db
-      .collection<TradeHistoryEntry>("tradeHistory")
+    tradeHistoryCollection(db)
       .find({ turn: { $gte: lookbackStart } })
       .toArray(),
     knownRates ??

@@ -27,6 +27,7 @@ import { retainsDefaultPartyNameReservation } from "./rules/defaultNameReservati
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { partyChartersCollection } from "@/lib/db/repositories/partyCharters";
 
 /**
  * Names + abbreviations reserved for preset-gated default parties (e.g.
@@ -182,7 +183,7 @@ export async function draftCharter(input: DraftCharterInput, db: Db): Promise<Dr
     }
     return { ok: false, reason: "name-taken" };
   }
-  const liveCharterConflict = await db.collection<PartyCharter>("partyCharters").findOne(
+  const liveCharterConflict = await partyChartersCollection(db).findOne(
     {
       countryId: input.countryId,
       status: { $in: ["draft", "pending-signatures", "founder-replacement"] },
@@ -288,7 +289,7 @@ export async function draftCharter(input: DraftCharterInput, db: Db): Promise<Dr
     updatedAt: now,
   };
 
-  await db.collection<PartyCharter>("partyCharters").insertOne(charter);
+  await partyChartersCollection(db).insertOne(charter);
 
   // Notify each non-proposer founder that they've been invited. The
   // proposer is already auto-signed, so they don't need a nudge.

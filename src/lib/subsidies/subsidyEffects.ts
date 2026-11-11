@@ -4,6 +4,7 @@ import type { Subsidy, SubsidyProvision, EndSubsidyProvision } from "@/lib/db/ty
 import { sectorPolicyTargetMatches, type OperatingSectorType } from "@/lib/constants/corporations";
 import type { CountryId } from "@/lib/constants/countries";
 import { fireSubsidyCreatedPulse, fireSubsidyEndedPulse } from "@/lib/corporations/sentimentEvents";
+import { subsidiesCollection } from "@/lib/db/repositories/subsidies";
 
 /** Fixed margin bonus applied per qualifying subsidy (percentage points). */
 export const SUBSIDY_MARGIN_BONUS = 7.5;
@@ -118,7 +119,7 @@ export async function applySubsidyProvision(
     targetStrategyId: provision.targetStrategyId ?? null,
   };
 
-  await db.collection<Subsidy>("subsidies").updateOne(
+  await subsidiesCollection(db).updateOne(
     filter,
     {
       $set: { domesticOnly: provision.domesticOnly, active: true, sourceBillId, updatedAt: now },
@@ -153,9 +154,9 @@ export async function applyEndSubsidyProvision(
     active: true,
   };
 
-  await db
-    .collection<Subsidy>("subsidies")
-    .updateMany(filter, { $set: { active: false, updatedAt: new Date() } });
+  await subsidiesCollection(db).updateMany(filter, {
+    $set: { active: false, updatedAt: new Date() },
+  });
 
   if (provision.scopeType === "sector" && provision.targetSectorType) {
     await fireSubsidyEndedPulse(db, provision.targetSectorType, countryId);
@@ -164,5 +165,5 @@ export async function applyEndSubsidyProvision(
 
 /** Load all active subsidies for the current turn. */
 export async function getActiveSubsidies(db: Db): Promise<Subsidy[]> {
-  return db.collection<Subsidy>("subsidies").find({ active: true }).toArray();
+  return subsidiesCollection(db).find({ active: true }).toArray();
 }

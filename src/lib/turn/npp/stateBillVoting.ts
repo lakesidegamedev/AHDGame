@@ -11,6 +11,7 @@ import {
 import { ADDRESS_AGENDA_FORCE_BIAS } from "@/lib/constants/governorOffice";
 import { cabinetDisciplineForParty } from "@/lib/resetCabinet/loadDiscipline";
 import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
+import { governorAddressesCollection } from "@/lib/db/repositories/governorAddresses";
 
 const LOCAL_BILL_FORCE_WEIGHTS = {
   ideology: 1,
@@ -62,8 +63,7 @@ export async function processStateBillVoting(ctx: NPPContext): Promise<number> {
   const stateIdsWithBills = [...new Set(activeStateBills.map((b) => b.stateId))];
   const addressesByState = new Map<string, { partyId: string; categories: Set<string> }[]>();
   if (stateIdsWithBills.length > 0) {
-    const activeAddresses = await db
-      .collection<GovernorAddress>("governorAddresses")
+    const activeAddresses = await governorAddressesCollection(db)
       .find({
         stateId: { $in: stateIdsWithBills },
         "agendaEffect.expiresAtTurn": { $gt: currentTurn },

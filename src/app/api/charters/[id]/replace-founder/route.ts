@@ -9,6 +9,7 @@ import { replaceFounderSchema } from "@/lib/api/schemas/charters";
 import { replaceFounder } from "@/lib/charters/replaceFounder";
 import type { PartyCharter } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { partyChartersCollection } from "@/lib/db/repositories/partyCharters";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -49,9 +50,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     // Authorization: caller must own at least one founder character on
     // the charter (surviving founder OR outgoing founder themselves).
-    const charter = await db
-      .collection<PartyCharter>("partyCharters")
-      .findOne({ _id: charterObjectId });
+    const charter = await partyChartersCollection(db).findOne({ _id: charterObjectId });
     if (!charter) {
       return errorResponse(404, "Charter not found");
     }

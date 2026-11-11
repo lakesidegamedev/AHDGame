@@ -24,6 +24,7 @@ import { recordAudit, recordAuditBulk } from "@/lib/audit/recordAudit";
 import type { ActionAuditInput } from "@/lib/db/types/actionAuditLog";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { treasuryTransactionsCollection } from "@/lib/db/repositories/treasuryTransactions";
 
 export interface EmitTreasuryTransactionArgs {
   db: Db;
@@ -167,7 +168,7 @@ export async function emitTreasuryTransaction(
     return null as unknown as TreasuryTransaction;
   }
 
-  await args.db.collection<TreasuryTransaction>("treasuryTransactions").insertOne(doc);
+  await treasuryTransactionsCollection(args.db).insertOne(doc);
   recordAudit(toAuditEntry(doc));
   return doc;
 }
@@ -192,7 +193,7 @@ export async function emitTreasuryTransactionsBulk(
   });
   if (docs.length === 0) return [];
 
-  await db.collection<TreasuryTransaction>("treasuryTransactions").insertMany(docs);
+  await treasuryTransactionsCollection(db).insertMany(docs);
   recordAuditBulk(docs.map(toAuditEntry));
   return docs;
 }

@@ -14,6 +14,7 @@ import {
   westminsterStanceChangeError,
 } from "./rules";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { governorOfficeStateCollection } from "@/lib/db/repositories/governorOfficeState";
 
 export async function changeWestminsterStance(
   db: Db,
@@ -22,7 +23,7 @@ export async function changeWestminsterStance(
     policy: DevolutionPolicy;
   }
 ) {
-  const collection = db.collection<GovernorOfficeState>("governorOfficeState");
+  const collection = governorOfficeStateCollection(db);
   const key = { countryId: "UK" as const, stateId: getNationalStateId("UK") };
   const [office, currentTurn, government, region] = await Promise.all([
     collection.findOne(key),

@@ -12,6 +12,8 @@ import { getDefenseAppropriation } from "@/lib/db/collections/defenseAppropriati
 import { tenders } from "./persistence";
 import type { GovernmentTender } from "./types";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { defenceProcurementAllocationsCollection } from "@/lib/db/repositories/defenceProcurementAllocations";
+import type { Document } from "mongodb";
 
 const marker = (id: string) => `governmentTenderReservations.${id}`;
 const potMarker = (id: string) => `defenseAppropriation.governmentTenderReservations.${id}`;
@@ -24,7 +26,7 @@ export async function reserveDefenceTender(
   const cap = defenceContractLotCaps(defenseLine, 1).procurementNotional;
   const m = marker(t._id),
     p = potMarker(t._id);
-  const quotas = db.collection("defenceProcurementAllocations");
+  const quotas = defenceProcurementAllocationsCollection<Document>(db);
   try {
     await quotas.updateOne(
       { _id: window.id as never },
@@ -90,7 +92,7 @@ export async function reserveDefenceTender(
 export async function fenceDefenceReservation(db: Db, t: GovernmentTender): Promise<boolean> {
   const m = marker(t._id);
   const revision = t.awardLeaseRevision ?? 0;
-  await db.collection("defenceProcurementAllocations").updateOne(
+  await defenceProcurementAllocationsCollection<Document>(db).updateOne(
     {
       _id: t.allocationWindowId as never,
       [`${m}.state`]: "held",
@@ -101,7 +103,7 @@ export async function fenceDefenceReservation(db: Db, t: GovernmentTender): Prom
     },
     { $set: { [`${m}.leaseRevision`]: revision } }
   );
-  return !!(await db.collection("defenceProcurementAllocations").findOne(
+  return !!(await defenceProcurementAllocationsCollection<Document>(db).findOne(
     {
       _id: t.allocationWindowId as never,
       $or: [
@@ -126,7 +128,7 @@ export async function topUpDefenceTenderReservation(
   const m = marker(t._id),
     p = potMarker(t._id);
   const cap = defenceContractLotCaps(defenseLine, 1).procurementNotional;
-  await db.collection("defenceProcurementAllocations").updateOne(
+  await defenceProcurementAllocationsCollection<Document>(db).updateOne(
     {
       _id: t.allocationWindowId as never,
       [`${m}.state`]: "held",
@@ -137,7 +139,7 @@ export async function topUpDefenceTenderReservation(
       $set: { [m]: { state: "held", amount: newReservedAmount } },
     }
   );
-  const quota = await db.collection("defenceProcurementAllocations").findOne(
+  const quota = await defenceProcurementAllocationsCollection<Document>(db).findOne(
     {
       _id: t.allocationWindowId as never,
       [`${m}.state`]: "held",
@@ -186,7 +188,7 @@ export async function convertDefenceReservation(
   const cap =
     defenceContractLotCaps(defenseLine, 1).procurementNotional *
     defenceSupplierCapShare(stateOwned);
-  await db.collection("defenceProcurementAllocations").updateOne(
+  await defenceProcurementAllocationsCollection<Document>(db).updateOne(
     {
       _id: t.allocationWindowId as never,
       [`${m}.state`]: "held",
@@ -210,7 +212,7 @@ export async function convertDefenceReservation(
       $set: { [m]: { state: "converted", amount, corporationId } },
     }
   );
-  const quota = await db.collection("defenceProcurementAllocations").findOne(
+  const quota = await defenceProcurementAllocationsCollection<Document>(db).findOne(
     {
       _id: t.allocationWindowId as never,
       [`${m}.state`]: "converted",
@@ -304,7 +306,7 @@ export async function expireGovernmentTenders(db: Db, turn: number): Promise<voi
         },
       }))
     );
-    await db.collection("defenceProcurementAllocations").bulkWrite(
+    await defenceProcurementAllocationsCollection<Document>(db).bulkWrite(
       defence.map((t) => ({
         updateOne: {
           filter: { _id: t.allocationWindowId as never },

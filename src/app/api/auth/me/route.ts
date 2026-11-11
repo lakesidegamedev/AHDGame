@@ -37,6 +37,7 @@ import { imperialCharactersCollection } from "@/lib/db/repositories/imperialChar
 import { usersCollection } from "@/lib/db/repositories/users";
 import type { Document } from "mongodb";
 import { notificationsCollection } from "@/lib/db/repositories/notifications";
+import { playerMailCollection } from "@/lib/db/repositories/playerMail";
 
 function getPatreonAdPreference(
   user: User | null | undefined
@@ -261,7 +262,7 @@ export const GET = withNoStore(async () => {
           ...notificationTypeFilter(user?.notificationPreferences, new Date()),
           read: false,
         }),
-        db.collection("playerMail").countDocuments({
+        playerMailCollection<Document>(db).countDocuments({
           toUserId: new ObjectId(userId),
           read: false,
           deletedByRecipient: false,
@@ -279,7 +280,7 @@ export const GET = withNoStore(async () => {
           ...notificationTypeFilter(user?.notificationPreferences, new Date()),
           read: false,
         }),
-        db.collection("playerMail").countDocuments({
+        playerMailCollection<Document>(db).countDocuments({
           toUserId: new ObjectId(userId),
           read: false,
           deletedByRecipient: false,

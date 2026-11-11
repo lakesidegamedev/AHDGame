@@ -30,6 +30,7 @@ import {
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { indexFundPositionsCollection } from "@/lib/db/repositories/indexFundPositions";
 
 export interface EnsureDomesticCoverageResult {
   /** Sorted country ids ensured this pass (inserted now, not merely planned). */
@@ -98,7 +99,7 @@ export async function ensureDomesticSovereignBondFunds(
   const now = new Date();
   const ensured: string[] = [];
   const funds = indexFundsCollection(db);
-  const positions = db.collection<IndexFundPosition>("indexFundPositions");
+  const positions = indexFundPositionsCollection(db);
   for (const seed of missing) {
     const fundId = new ObjectId();
     await funds.insertOne({

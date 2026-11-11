@@ -71,6 +71,11 @@ import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
 import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
 import { stateBaselinesCollection } from "@/lib/db/repositories/stateBaselines";
+import { achievementsCollection } from "@/lib/db/repositories/achievements";
+import { characterAchievementsCollection } from "@/lib/db/repositories/characterAchievements";
+import { formulaGrantsCollection } from "@/lib/db/repositories/formulaGrants";
+import { demographicDefaultsCollection } from "@/lib/db/repositories/demographicDefaults";
+import { policiesCollection } from "@/lib/db/repositories/policies";
 
 /**
  * What `runSeed`'s reset branch deletes, and how far.
@@ -258,29 +263,25 @@ export async function runSeed(
   const statePartyOrg = generateStatePartyOrg(preset);
 
   // Seed achievements if empty (runs regardless of main seed status)
-  const achievementCount = await db.collection("achievements").countDocuments();
+  const achievementCount = await achievementsCollection<Document>(db).countDocuments();
   let achievementDocs: Array<Achievement & { _id: ObjectId }>;
   if (achievementCount === 0) {
     achievementDocs = getAchievementDocsForSeed();
-    await db.collection<Achievement>("achievements").insertMany(achievementDocs);
-    await db
-      .collection("achievements")
+    await achievementsCollection(db).insertMany(achievementDocs);
+    await achievementsCollection<Document>(db)
       .createIndex({ slug: 1 }, { unique: true })
       .catch(() => {});
-    await db
-      .collection("characterAchievements")
+    await characterAchievementsCollection<Document>(db)
       .createIndex({ characterId: 1, achievementId: 1 }, { unique: true })
       .catch(() => {});
-    await db
-      .collection("characterAchievements")
+    await characterAchievementsCollection<Document>(db)
       .createIndex({ achievementId: 1 })
       .catch(() => {});
     log(`Seeded ${achievementDocs.length} achievements`);
   } else {
-    achievementDocs = (await db
-      .collection<Achievement>("achievements")
-      .find({})
-      .toArray()) as Array<Achievement & { _id: ObjectId }>;
+    achievementDocs = (await achievementsCollection(db).find({}).toArray()) as Array<
+      Achievement & { _id: ObjectId }
+    >;
   }
 
   // Grant all achievements to admin characters (runs every seed)
@@ -299,7 +300,7 @@ export async function runSeed(
     for (const char of adminCharacters) {
       for (const a of achievementDocs) {
         try {
-          await db.collection("characterAchievements").insertOne({
+          await characterAchievementsCollection<Document>(db).insertOne({
             _id: new ObjectId(),
             characterId: char._id,
             achievementId: a._id,
@@ -323,7 +324,7 @@ export async function runSeed(
     const stateCount = await statesCollection<Document>(db).countDocuments();
     const nationalBudgetCount = await federalBudgetCollection(db).countDocuments();
     const stateBudgetCount = await stateBudgetsCollection<Document>(db).countDocuments();
-    const formulaGrantCount = await db.collection("formulaGrants").countDocuments();
+    const formulaGrantCount = await formulaGrantsCollection<Document>(db).countDocuments();
     const budgetsSeeded = nationalBudgetCount > 0 && stateBudgetCount > 0 && formulaGrantCount > 0;
 
     if (stateCount > 0 && budgetsSeeded) {
@@ -407,9 +408,7 @@ export async function runSeed(
 
   // Policies
   for (const policy of policies) {
-    await db
-      .collection<Policy>("policies")
-      .updateOne({ _id: policy._id }, { $set: policy }, { upsert: true });
+    await policiesCollection(db).updateOne({ _id: policy._id }, { $set: policy }, { upsert: true });
   }
   log(`Seeded ${policies.length} policies`);
 
@@ -462,9 +461,11 @@ export async function runSeed(
       { $set: cachedDemographics },
       { upsert: true }
     );
-    await db
-      .collection<StateDemographics>("demographicDefaults")
-      .updateOne({ _id: sd._id }, { $set: cachedDemographics }, { upsert: true });
+    await demographicDefaultsCollection(db).updateOne(
+      { _id: sd._id },
+      { $set: cachedDemographics },
+      { upsert: true }
+    );
     await statesCollection(db).updateOne(
       { _id: sd._id },
       {

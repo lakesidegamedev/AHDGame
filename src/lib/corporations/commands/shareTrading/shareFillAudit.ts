@@ -31,6 +31,7 @@ import type { ShareTradeParty } from "@/lib/db/types/shareTradeHistory";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
+import { shareListingsCollection } from "@/lib/db/repositories/shareListings";
 
 /**
  * Durable audit for peer order-book fills.
@@ -1111,8 +1112,7 @@ async function recoverLoadedReceipts(
           .toArray()
       : [],
     listingIds.length
-      ? db
-          .collection<ShareListing>("shareListings")
+      ? shareListingsCollection(db)
           .find({ _id: { $in: listingIds } }, { projection })
           .toArray()
       : [],

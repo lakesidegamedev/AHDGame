@@ -69,6 +69,10 @@ import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemograp
 import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
 import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
+import { demographicDefaultsCollection } from "@/lib/db/repositories/demographicDefaults";
+import { supremeCourtSeatsCollection } from "@/lib/db/repositories/supremeCourtSeats";
+import { docketCasesCollection } from "@/lib/db/repositories/docketCases";
+import { strategicSectorDesignationsCollection } from "@/lib/db/repositories/strategicSectorDesignations";
 
 /** Readiness check names that are expected-empty pre-founding / pre-seat. */
 const PRE_FOUNDING_READINESS = new Set(["NPPs", "ElectedOfficials", "GovernmentFormation"]);
@@ -340,9 +344,9 @@ export async function checkSectors(
               )
     );
 
-    const strategicCount = await db
-      .collection("strategicSectorDesignations")
-      .countDocuments({ countryId });
+    const strategicCount = await strategicSectorDesignationsCollection<Document>(db).countDocuments(
+      { countryId }
+    );
     const expectedStrategic = DEFAULT_STRATEGIC_SECTORS[countryId as CountryId]?.length ?? 0;
     checks.push(
       strategicCount >= expectedStrategic
@@ -786,7 +790,9 @@ async function checkDemographics(db: Db, expect: SeedExpectations): Promise<Seed
       );
     }
 
-    const defaultsCount = await db.collection("demographicDefaults").countDocuments({ countryId });
+    const defaultsCount = await demographicDefaultsCollection<Document>(db).countDocuments({
+      countryId,
+    });
     checks.push(
       defaultsCount > 0
         ? ok(
@@ -967,18 +973,19 @@ export async function checkScotusSeed(db: Db, preset: string): Promise<SeedDiagn
   const expectedVacancies = seed.seats.filter(
     (seat) => seat.historicalOccupants.length === 0
   ).length;
-  const persistedSeats = await db
-    .collection("supremeCourtSeats")
-    .countDocuments({ countryId: "US" });
-  const persistedVacancies = await db.collection("supremeCourtSeats").countDocuments({
+  const persistedSeats = await supremeCourtSeatsCollection<Document>(db).countDocuments({
+    countryId: "US",
+  });
+  const persistedVacancies = await supremeCourtSeatsCollection<Document>(db).countDocuments({
     countryId: "US",
     justiceMode: null,
     justiceCharacterId: null,
     justiceNppId: null,
   });
-  const persistedDocket = await db
-    .collection("docketCases")
-    .countDocuments({ countryId: "US", preset });
+  const persistedDocket = await docketCasesCollection<Document>(db).countDocuments({
+    countryId: "US",
+    preset,
+  });
 
   const proceduralFallback =
     seed.provenance?.docket.mode === "procedural-only-fallback"

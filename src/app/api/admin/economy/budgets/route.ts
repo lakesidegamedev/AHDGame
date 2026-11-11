@@ -23,6 +23,7 @@ import { resolveCountryCurrencyCode } from "@/lib/currency/govBudgetFields";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { federalBudgetSnapshotsCollection } from "@/lib/db/repositories/federalBudgetSnapshots";
 
 const querySchema = z.object({
   countryId: countryIdSchema,
@@ -47,17 +48,16 @@ export async function GET(request: Request) {
     const db = await getDb();
 
     // Always fetch available FY snapshots for the dropdown
-    const snapshots = await db
-      .collection<FederalBudgetSnapshot>("federalBudgetSnapshots")
+    const snapshots = await federalBudgetSnapshotsCollection(db)
       .find({ countryId }, { projection: { fiscalYear: 1 } })
       .toArray();
     const availableFiscalYears = snapshots.map((s) => s.fiscalYear).sort((a, b) => b - a);
 
     // Historical snapshot request
     if (fiscalYear) {
-      const snapshot = await db
-        .collection<FederalBudgetSnapshot>("federalBudgetSnapshots")
-        .findOne({ _id: `${countryId}:FY${fiscalYear}` });
+      const snapshot = await federalBudgetSnapshotsCollection(db).findOne({
+        _id: `${countryId}:FY${fiscalYear}`,
+      });
       if (!snapshot) return errorResponse(404, "Snapshot not found");
 
       return NextResponse.json({

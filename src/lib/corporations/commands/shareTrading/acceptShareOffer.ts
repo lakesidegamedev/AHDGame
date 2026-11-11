@@ -49,6 +49,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { notificationsCollection } from "@/lib/db/repositories/notifications";
+import { shareListingsCollection } from "@/lib/db/repositories/shareListings";
 
 interface RouteParams {
   params: Promise<{ id: string; listingId: string; offerId: string }>;
@@ -93,7 +94,7 @@ export async function acceptShareOffer(request: Request, { params }: RouteParams
     }
 
     const [listing, offer] = await Promise.all([
-      db.collection<ShareListing>("shareListings").findOne({ _id: new ObjectId(listingId) }),
+      shareListingsCollection(db).findOne({ _id: new ObjectId(listingId) }),
       db.collection<ShareOffer>("shareOffers").findOne({ _id: new ObjectId(offerId) }),
     ]);
 
@@ -371,7 +372,7 @@ export async function settleListingOffer(
     })
   );
   const listingSharesRemaining = listing.sharesRemaining - sharesToAccept;
-  const listingUpdate = await db.collection<ShareListing>("shareListings").findOneAndUpdate(
+  const listingUpdate = await shareListingsCollection(db).findOneAndUpdate(
     {
       _id: listing._id,
       sharesRemaining: listing.sharesRemaining,

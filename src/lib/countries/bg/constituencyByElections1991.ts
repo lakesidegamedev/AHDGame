@@ -50,6 +50,7 @@ import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 import { notificationsCollection } from "@/lib/db/repositories/notifications";
+import { stateRegistrationPoolCollection } from "@/lib/db/repositories/stateRegistrationPool";
 
 export const BG_GRAND_BY_ELECTIONS_COLLECTION = "bgGrandConstituencyByElections";
 export interface BgGrandByElectionRecord {
@@ -263,8 +264,7 @@ export async function openBgGrandConstituencyByElections(
           { session, projection: { population: 1, votingEligiblePopulation: 1 } }
         )
         .toArray();
-      const pools = await db
-        .collection<StateRegistrationPool>("stateRegistrationPool")
+      const pools = await stateRegistrationPoolCollection(db)
         .find({ countryId: "BG" }, { session, projection: { stateId: 1, unregistered: 1 } })
         .toArray();
       const npcs = await nppsCollection(db)

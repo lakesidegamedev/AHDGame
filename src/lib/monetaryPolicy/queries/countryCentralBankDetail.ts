@@ -81,6 +81,8 @@ import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
+import { moneySupplySnapshotsCollection } from "@/lib/db/repositories/moneySupplySnapshots";
+import { locLedgerCollection } from "@/lib/db/repositories/locLedger";
 
 type ViewerCharacter = Character | null;
 
@@ -411,9 +413,10 @@ export async function loadCountryCentralBankDetail(params: {
   const effectiveRate = computeEffectivePrimeRate(policyBank.primeRate, primeRateHistory);
   const gdp = budgetDoc?.gdp || 27_000_000_000_000;
   const surplusToGdp = (budgetDoc?.surplus ?? 0) / gdp;
-  const moneyForBreakdown = await db
-    .collection<MoneySupplySnapshot>("moneySupplySnapshots")
-    .findOne({ currencyCode: nationalCurrency }, { sort: { turn: -1 } });
+  const moneyForBreakdown = await moneySupplySnapshotsCollection(db).findOne(
+    { currencyCode: nationalCurrency },
+    { sort: { turn: -1 } }
+  );
 
   const { rate: computedInflationRate, breakdown: computedInflationBreakdown } =
     calculateInflationWithBreakdown({
@@ -553,15 +556,13 @@ export async function loadCountryCentralBankDetail(params: {
           { $group: { _id: null, total: { $sum: "$amount" } } },
         ])
         .toArray(),
-      db
-        .collection<LocLedgerEntry>("locLedger")
+      locLedgerCollection(db)
         .aggregate<{ total: number }>([
           { $match: { countryId, type: "interest", currencyCode: homeCurrency } },
           { $group: { _id: null, total: { $sum: "$amount" } } },
         ])
         .toArray(),
-      db
-        .collection<LocLedgerEntry>("locLedger")
+      locLedgerCollection(db)
         .aggregate<{ total: number }>([
           {
             $match: {

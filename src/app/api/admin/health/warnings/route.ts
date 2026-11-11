@@ -4,6 +4,8 @@ import { getDb } from "@/lib/mongodb";
 import type { GameHealthSnapshot, GameState, TurnLog } from "@/lib/db/types";
 import { phaseTimeoutMs } from "@/lib/turn/processingLock";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { gameHealthSnapshotsCollection } from "@/lib/db/repositories/gameHealthSnapshots";
+import { turnLogsCollection } from "@/lib/db/repositories/turnLogs";
 
 // Healthy turns normally finish in well under a minute, but historical spikes
 // have exceeded 90 seconds without actually wedging. Use a wider warning window
@@ -93,8 +95,7 @@ export const GET = withAdminRoute(async (_auth, request: Request) => {
           ],
         };
 
-  const snapshots = await db
-    .collection<GameHealthSnapshot>("gameHealthSnapshots")
+  const snapshots = await gameHealthSnapshotsCollection(db)
     .find(snapshotFilter)
     .sort({ turn: -1 })
     .limit(50)
@@ -223,8 +224,7 @@ export const GET = withAdminRoute(async (_auth, request: Request) => {
     // sort({_id:-1}) uses an IXSCAN and is equally newest-turn-first because
     // ObjectIds are monotonic and turn logs are written once per turn in order.
     // Projection drops bulky fields not used below.
-    const budgetLogs = await db
-      .collection<TurnLog>("turnLogs")
+    const budgetLogs = await turnLogsCollection(db)
       .find(turnFilter, { projection: { turn: 1, realTime: 1, createdAt: 1, phaseStatuses: 1 } })
       .sort({ _id: -1 })
       .limit(PHASE_BUDGET_TURN_SAMPLE)

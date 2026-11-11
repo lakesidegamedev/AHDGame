@@ -27,6 +27,8 @@ import type { ExtractableResource } from "@/lib/constants/commodities";
 import type { OperatingSectorType } from "@/lib/constants/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { stateResourceCapacityCollection } from "@/lib/db/repositories/stateResourceCapacity";
+import { extractionContractsCollection } from "@/lib/db/repositories/extractionContracts";
 
 export async function computeSectorExtractionCapacityContext(
   db: Db,
@@ -62,9 +64,10 @@ export async function computeSectorExtractionCapacityContext(
   const extractionDesiredByResource: Partial<Record<ExtractableResource, number>> = {};
 
   if (sectorType === "extraction") {
-    const capDoc = await db
-      .collection<StateResourceCapacity>("stateResourceCapacity")
-      .findOne({ stateId: sector.stateId }, { projection: { stateId: 1, resources: 1 } });
+    const capDoc = await stateResourceCapacityCollection(db).findOne(
+      { stateId: sector.stateId },
+      { projection: { stateId: 1, resources: 1 } }
+    );
 
     // undefined = no cap doc at all (uncapped); null = cap doc exists but has no
     // resources field; Partial<Record> = cap doc with resource data.
@@ -72,8 +75,7 @@ export async function computeSectorExtractionCapacityContext(
 
     if (capDoc) {
       const [extractionContracts, allStateSectors] = await Promise.all([
-        db
-          .collection<ExtractionContract>("extractionContracts")
+        extractionContractsCollection(db)
           .find({ stateId: sector.stateId, ...activeExtractionContractFilter() })
           .toArray(),
         corporateSectorsCollection(db)

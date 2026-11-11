@@ -13,6 +13,7 @@ import type { GovernorOfficeState } from "@/lib/db/types/governorOfficeState";
 
 import { loadWestminsterGovernment } from "@/lib/governorOffice/devolution/westminsterGovernment";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { governorOfficeStateCollection } from "@/lib/db/repositories/governorOfficeState";
 
 type Context = { params: Promise<{ code: string }> };
 
@@ -32,9 +33,10 @@ export async function GET(_request: Request, { params }: Context) {
     }
     const [regions, office, currentTurn, government] = await Promise.all([
       loadIndependenceDesireSnapshots(db),
-      db
-        .collection<GovernorOfficeState>("governorOfficeState")
-        .findOne({ countryId: "UK", stateId: getNationalStateId("UK") }),
+      governorOfficeStateCollection(db).findOne({
+        countryId: "UK",
+        stateId: getNationalStateId("UK"),
+      }),
       getCurrentTurn(db),
       loadWestminsterGovernment(db),
     ]);

@@ -15,6 +15,9 @@ import { CAUCUS_NPP_RETENTION_MIN_RELATIONSHIP } from "@/lib/constants/partyOrg"
 import { buildWhipDefianceSnapshots } from "@/lib/partyWhips/whipDefiance";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { caucusesCollection } from "@/lib/db/repositories/caucuses";
+import { billWhipsCollection } from "@/lib/db/repositories/billWhips";
+import { caucusChairVotesCollection } from "@/lib/db/repositories/caucusChairVotes";
 
 const CAUCUS_RECENT_WINDOW_TURNS = 12;
 const CAUCUS_WARNING_BUFFER = 10;
@@ -185,10 +188,7 @@ export async function buildPartyCaucusHealthSnapshot(
   partyId: string
 ): Promise<PartyCaucusHealthSnapshot> {
   const caucuses = (
-    await db
-      .collection<Caucus>("caucuses")
-      .find({ countryId, partyId, disbandedAt: null })
-      .toArray()
+    await caucusesCollection(db).find({ countryId, partyId, disbandedAt: null }).toArray()
   ).sort((a, b) => a.name.localeCompare(b.name));
 
   if (caucuses.length === 0) {
@@ -234,8 +234,7 @@ export async function buildPartyCaucusHealthSnapshot(
       : charactersCollection(db)
           .find({ _id: { $in: chairIds } })
           .toArray(),
-    db
-      .collection<BillWhip>("billWhips")
+    billWhipsCollection(db)
       .find({ countryId, partyId, issuedBy: "caucus", caucusId: { $in: caucusIds } })
       .sort({ createdAt: -1 })
       .toArray(),
@@ -282,8 +281,7 @@ export async function buildPartyCaucusHealthSnapshot(
           .toArray(),
     elections.length === 0
       ? Promise.resolve([] as Array<{ electionId: ObjectId; totalVotes: number }>)
-      : db
-          .collection<CaucusChairVote>("caucusChairVotes")
+      : caucusChairVotesCollection(db)
           .aggregate<{ electionId: ObjectId; totalVotes: number }>([
             {
               $match: {

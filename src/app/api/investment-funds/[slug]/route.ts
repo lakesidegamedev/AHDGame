@@ -21,6 +21,7 @@ import { getOpenOrdersEscrowAnchor } from "@/lib/indexFunds/fundValuation";
 import { listFundBondHoldings } from "@/lib/bonds/fundBondHoldings";
 import { corpCapitalToAnchor, loadValuationFxRates } from "@/lib/currency/corporationCapital";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { indexFundCommandsCollection } from "@/lib/db/repositories/indexFundCommands";
 
 type CorpSummary = {
   _id: ObjectId;
@@ -178,8 +179,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
       units: myPosition?.units ?? 0,
     });
     const pendingSubscriptions = characterId
-      ? await db
-          .collection<BankSubscription>("indexFundCommands")
+      ? await indexFundCommandsCollection<BankSubscription>(db)
           .find(
             {
               "subscription.fundId": fund._id,

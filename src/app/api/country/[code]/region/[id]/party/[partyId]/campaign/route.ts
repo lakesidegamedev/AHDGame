@@ -23,6 +23,7 @@ import type {
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { congressionalDistrictsCollection } from "@/lib/db/repositories/congressionalDistricts";
 
 const BodySchema = z.object({ districtIndex: z.number().int().min(1) });
 const CAMPAIGN_BASE_PS_COST = 2;
@@ -76,9 +77,10 @@ export async function POST(
     }
 
     // The target district must actually exist in this state's map.
-    const districtCount = await db
-      .collection<CongressionalDistrict>("congressionalDistricts")
-      .countDocuments({ countryId: countryId as CountryId, stateId });
+    const districtCount = await congressionalDistrictsCollection(db).countDocuments({
+      countryId: countryId as CountryId,
+      stateId,
+    });
     if (districtCount === 0 || districtIndex > districtCount) {
       return errorResponse(400, "District does not exist");
     }

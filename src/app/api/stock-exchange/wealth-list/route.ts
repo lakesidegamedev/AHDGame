@@ -25,6 +25,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 import { usersCollection } from "@/lib/db/repositories/users";
+import { wealthListHistoryCollection } from "@/lib/db/repositories/wealthListHistory";
 
 function resolveCountryId(character: Pick<Character, "countryId">): CountryId {
   return character.countryId as CountryId;
@@ -286,13 +287,11 @@ export async function GET(request: Request) {
 
     // Look up the snapshot from 24 turns ago for change calculations
     const turn24Ago = Math.max(1, snapshot.turn - 24);
-    const oldSnapshot = await db
-      .collection<{
-        exchange: string;
-        turn: number;
-        entries: WealthListSnapshot["entries"];
-      }>("wealthListHistory")
-      .findOne({ exchange, turn: { $lte: turn24Ago } }, { sort: { turn: -1 } });
+    const oldSnapshot = await wealthListHistoryCollection<{
+      exchange: string;
+      turn: number;
+      entries: WealthListSnapshot["entries"];
+    }>(db).findOne({ exchange, turn: { $lte: turn24Ago } }, { sort: { turn: -1 } });
 
     // Build lookup maps from old snapshot
     const oldWealthMap = new Map<string, number>();

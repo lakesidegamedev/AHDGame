@@ -13,6 +13,8 @@ import type { DueSoonContext, DueSoonItem } from "./types";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { cabinetNominationsCollection } from "@/lib/db/repositories/cabinetNominations";
 import { nationalPartyElectionsCollection } from "@/lib/db/repositories/nationalPartyElections";
+import { statePartyElectionsCollection } from "@/lib/db/repositories/statePartyElections";
+import { scotusNominationsCollection } from "@/lib/db/repositories/scotusNominations";
 
 const ROW_LIMIT = 20;
 
@@ -48,8 +50,7 @@ export async function partyBallots(ctx: DueSoonContext): Promise<DueSoonItem[]> 
       .limit(ROW_LIMIT)
       .toArray(),
     homeState
-      ? ctx.db
-          .collection<StatePartyElection>("statePartyElections")
+      ? statePartyElectionsCollection(ctx.db)
           .find(
             { countryId, stateId: homeState, partyId: canonicalId, status: "voting" },
             { projection: { position: 1, endTurn: 1, founding: 1, stateId: 1 } }
@@ -149,8 +150,7 @@ export async function confirmationVotes(ctx: DueSoonContext): Promise<DueSoonIte
       .limit(ROW_LIMIT)
       .toArray(),
     senate
-      ? ctx.db
-          .collection<ScotusNomination>("scotusNominations")
+      ? scotusNominationsCollection(ctx.db)
           .find(
             { countryId, status: "active" },
             {

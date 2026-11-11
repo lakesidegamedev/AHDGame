@@ -27,6 +27,7 @@ import { NUMERIC_BSON_TYPE } from "@/lib/db/queryHelpers";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { stateRegistrationPoolCollection } from "@/lib/db/repositories/stateRegistrationPool";
 
 interface SeedResult {
   presetUsed: string;
@@ -185,7 +186,7 @@ export async function seedRegistrationLanes(
     // Upsert the non-party pool row for this state. The composite `_id`
     // matches the design's documented pattern (`${countryId}_${stateId}`).
     const poolId = `${row.countryId}_${row.stateId}`;
-    await db.collection<StateRegistrationPool>("stateRegistrationPool").updateOne(
+    await stateRegistrationPoolCollection(db).updateOne(
       { _id: poolId },
       {
         $set: {
@@ -222,7 +223,7 @@ export async function seedRegistrationLanes(
     ...bundle.map((row) => `${row.countryId}_${row.stateId}`),
     ...admittedUSStates.map((state) => `US_${state._id}`),
   ];
-  const cleanup = await db.collection<StateRegistrationPool>("stateRegistrationPool").deleteMany({
+  const cleanup = await stateRegistrationPoolCollection(db).deleteMany({
     countryId: { $in: coveredCountries },
     _id: { $nin: validPoolIds },
   });

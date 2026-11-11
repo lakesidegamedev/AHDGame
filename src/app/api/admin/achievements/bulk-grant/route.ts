@@ -6,6 +6,8 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { z } from "zod";
 import { awardAchievement } from "@/lib/achievements";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { achievementsCollection } from "@/lib/db/repositories/achievements";
+import type { Document } from "mongodb";
 
 const bulkGrantSchema = z.object({
   achievementSlug: z.string().min(1),
@@ -27,7 +29,9 @@ export async function POST(request: Request) {
     const { achievementSlug } = parsed.data;
     const db = await getDb();
 
-    const achievement = await db.collection("achievements").findOne({ slug: achievementSlug });
+    const achievement = await achievementsCollection<Document>(db).findOne({
+      slug: achievementSlug,
+    });
     if (!achievement) {
       return errorResponse(404, "Achievement not found");
     }

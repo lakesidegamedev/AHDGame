@@ -44,6 +44,8 @@ import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
 import type { Document } from "mongodb";
 import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
 import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
+import { statePartyCandidatesCollection } from "@/lib/db/repositories/statePartyCandidates";
+import { parliamentaryGovernmentsCollection } from "@/lib/db/repositories/parliamentaryGovernments";
 
 const PARTY_LEADERSHIP_FIELDS = ["chairId", "viceChairId", "treasurerId"] as const;
 type PartyLeadershipField = (typeof PARTY_LEADERSHIP_FIELDS)[number];
@@ -236,10 +238,7 @@ async function discoverPositions(db: Db, character: Character): Promise<Position
       .toArray(),
     congressLeadersCollection(db).find({ characterId }).toArray(),
     getGovernmentFormationsCollection(db).find({ pmCharacterId: characterId }).toArray(),
-    db
-      .collection<ParliamentaryGovernment>("parliamentaryGovernments")
-      .find({ pmCharacterId: characterId })
-      .toArray(),
+    parliamentaryGovernmentsCollection(db).find({ pmCharacterId: characterId }).toArray(),
     centralBanksCollection(db).find({ chairCharacterId: characterId }).toArray(),
   ]);
 
@@ -466,9 +465,10 @@ async function resignPrimeMinister(
     _id: countryId,
     pmCharacterId: character._id,
   });
-  const legacyGovernment = await db
-    .collection<ParliamentaryGovernment>("parliamentaryGovernments")
-    .findOne({ _id: countryId, pmCharacterId: character._id });
+  const legacyGovernment = await parliamentaryGovernmentsCollection(db).findOne({
+    _id: countryId,
+    pmCharacterId: character._id,
+  });
   if (!canonicalGovernment && !legacyGovernment) {
     if (currentOfficeMatchesExecutive(character.currentOffice, countryId)) {
       await clearCurrentOfficeForOffice(db, character._id, character.currentOffice, now);
@@ -481,7 +481,7 @@ async function resignPrimeMinister(
     await unformGovernmentAndVacatePM(db, countryId, now, { reason: "snap" });
   }
   if (legacyGovernment) {
-    await db.collection<ParliamentaryGovernment>("parliamentaryGovernments").updateOne(
+    await parliamentaryGovernmentsCollection(db).updateOne(
       { _id: countryId, pmCharacterId: character._id },
       {
         $set: {
@@ -729,12 +729,10 @@ async function withdrawActiveCandidacies(db: Db, characterId: ObjectId, now: Dat
       { characterId, status: "active" },
       { $set: { status: "withdrawn", withdrawnAt: now } }
     ),
-    db
-      .collection("statePartyCandidates")
-      .updateMany(
-        { characterId, status: "active" },
-        { $set: { status: "withdrawn", withdrawnAt: now } }
-      ),
+    statePartyCandidatesCollection<Document>(db).updateMany(
+      { characterId, status: "active" },
+      { $set: { status: "withdrawn", withdrawnAt: now } }
+    ),
   ]);
   // Withdrawn candidates' campaigns must leave active surfaces (ticket #1313).
   // Re-entry reactivates the campaign with funds/levels intact.

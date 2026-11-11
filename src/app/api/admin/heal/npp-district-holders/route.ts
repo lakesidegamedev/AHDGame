@@ -12,6 +12,7 @@ import { handleRouteError } from "@/lib/api/errors";
 import type { CongressionalDistrict, NPP } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { congressionalDistrictsCollection } from "@/lib/db/repositories/congressionalDistricts";
 
 /**
  * Find districts whose holderCharacterId does not resolve to a `characters`
@@ -22,8 +23,7 @@ import { nppsCollection } from "@/lib/db/repositories/npps";
 async function findMisstampedDistricts(
   db: Awaited<ReturnType<typeof getDb>>
 ): Promise<{ districtId: string; stateId: string; index: number; nppId: string }[]> {
-  const docs = (await db
-    .collection<CongressionalDistrict>("congressionalDistricts")
+  const docs = (await congressionalDistrictsCollection(db)
     .find({ holderCharacterId: { $ne: null } })
     .toArray()) as CongressionalDistrict[];
   if (docs.length === 0) return [];
@@ -86,7 +86,7 @@ export async function POST() {
 
     let healed = 0;
     for (const a of affected) {
-      const res = await db.collection<CongressionalDistrict>("congressionalDistricts").updateOne(
+      const res = await congressionalDistrictsCollection(db).updateOne(
         { _id: a.districtId },
         {
           $set: {

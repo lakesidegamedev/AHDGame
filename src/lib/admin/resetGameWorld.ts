@@ -62,6 +62,11 @@ import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
 import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
 import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
 import { activityLogCollection } from "@/lib/db/repositories/activityLog";
+import { actionLogsCollection } from "@/lib/db/repositories/actionLogs";
+import { characterAchievementsCollection } from "@/lib/db/repositories/characterAchievements";
+import { retiredCharactersCollection } from "@/lib/db/repositories/retiredCharacters";
+import { statePartyElectionsCollection } from "@/lib/db/repositories/statePartyElections";
+import { countersCollection } from "@/lib/db/repositories/counters";
 
 /**
  * Runtime collections that `resetGameWorld` handles with bespoke logic instead
@@ -462,8 +467,8 @@ export async function resetGameWorld(
       { $set: { hasCompletedSetup: false, activeCharacterCount: 0 } }
     );
 
-    await db.collection("retiredCharacters").deleteMany({});
-    await db.collection("characterAchievements").deleteMany({});
+    await retiredCharactersCollection<Document>(db).deleteMany({});
+    await characterAchievementsCollection<Document>(db).deleteMany({});
     log(
       `Deleted ${charactersDeleted} character(s) and ${usersDeleted} player account(s); ` +
         `staff and banned accounts kept`
@@ -509,10 +514,12 @@ export async function resetGameWorld(
   const electionsResult = await electionsCollection<Document>(db).deleteMany({});
   const candidatesResult = await electionCandidatesCollection<Document>(db).deleteMany({});
   const nppsResult = await nppsCollection<Document>(db).deleteMany({});
-  const logsResult = await db.collection("actionLogs").deleteMany({});
+  const logsResult = await actionLogsCollection<Document>(db).deleteMany({});
   const billsResult = await billsCollection<Document>(db).deleteMany({});
   const stateBillsResult = await stateBillsCollection<Document>(db).deleteMany({});
-  const statePartyElectionsResult = await db.collection("statePartyElections").deleteMany({});
+  const statePartyElectionsResult = await statePartyElectionsCollection<Document>(db).deleteMany(
+    {}
+  );
   await activityLogCollection<Document>(db).deleteMany({
     type: { $nin: [...PRESERVED_ACTIVITY_LOG_TYPES] },
   });
@@ -731,8 +738,7 @@ export async function resetGameWorld(
   // resetPartyCounters() after wiping every party, so it's covered too.
   // Untyped collection — the default `_id: ObjectId` inference doesn't fit
   // our string counter ids, so cast the filter through `any`.
-  await db
-    .collection("counters")
+  await countersCollection<Document>(db)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     .deleteMany({ _id: { $not: { $regex: /^party_/ } } } as any);
 
@@ -746,9 +752,11 @@ export async function resetGameWorld(
     .toArray();
   const maxImperialId = imperialCounterRows[0]?.maxSeq;
   if (typeof maxImperialId === "number") {
-    await db
-      .collection<Counter>("counters")
-      .updateOne({ _id: "imperial" }, { $set: { seq: maxImperialId } }, { upsert: true });
+    await countersCollection(db).updateOne(
+      { _id: "imperial" },
+      { $set: { seq: maxImperialId } },
+      { upsert: true }
+    );
   }
 
   // Reference collections that runtime seeders re-populate with $setOnInsert (so

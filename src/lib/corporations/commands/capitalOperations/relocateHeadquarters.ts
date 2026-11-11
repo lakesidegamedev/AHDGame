@@ -57,6 +57,8 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { corporationVotesCollection } from "@/lib/db/repositories/corporationVotes";
+import type { Document } from "mongodb";
 
 const relocateSchema = z.object({
   targetStateId: z.string().min(1, "Target state/region ID required"),
@@ -151,7 +153,7 @@ export async function relocateHeadquarters(request: Request, { params }: RoutePa
     }
 
     if (!corporation.isPrivate && targetState.countryId) {
-      const passedVote = await db.collection("corporationVotes").findOne({
+      const passedVote = await corporationVotesCollection<Document>(db).findOne({
         corporationId: corporation._id,
         type: "relocation",
         status: "passed",

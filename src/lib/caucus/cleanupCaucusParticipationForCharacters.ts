@@ -1,6 +1,9 @@
 import type { Db, ObjectId } from "mongodb";
 import type { CaucusChairCandidate, CaucusMembership } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { caucusesCollection } from "@/lib/db/repositories/caucuses";
+import type { Document } from "mongodb";
+import { caucusChairVotesCollection } from "@/lib/db/repositories/caucusChairVotes";
 
 interface CleanupOptions {
   caucusId?: ObjectId;
@@ -68,7 +71,7 @@ export async function cleanupCaucusParticipationForCharacters(
     : {
         $or: [{ voterId: { $in: characterIds } }, { candidateId: { $in: characterIds } }],
       };
-  const voteRes = await db.collection("caucusChairVotes").deleteMany(voteFilter);
+  const voteRes = await caucusChairVotesCollection<Document>(db).deleteMany(voteFilter);
 
   let membershipsClosed = 0;
   let factionIdsCleared = 0;
@@ -119,7 +122,7 @@ export async function cleanupCaucusParticipationForCharacters(
     }
   }
 
-  const chairRes = await db.collection("caucuses").updateMany(
+  const chairRes = await caucusesCollection<Document>(db).updateMany(
     { chairId: { $in: characterIds }, ...(options.caucusId ? { _id: options.caucusId } : {}) },
     {
       $set: {
@@ -128,7 +131,7 @@ export async function cleanupCaucusParticipationForCharacters(
       },
     }
   );
-  const viceChairRes = await db.collection("caucuses").updateMany(
+  const viceChairRes = await caucusesCollection<Document>(db).updateMany(
     { viceChairId: { $in: characterIds }, ...(options.caucusId ? { _id: options.caucusId } : {}) },
     {
       $set: {

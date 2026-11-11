@@ -20,6 +20,7 @@ import {
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
+import { militaryUnitsCollection } from "@/lib/db/repositories/militaryUnits";
 
 export interface AutonomousWarCommandResult {
   acted: boolean;
@@ -94,14 +95,14 @@ async function deployReserveCommitment(
   commitmentShare = DEFAULT_WAR_COMMITMENT_SHARE,
   priority: WarCommitmentPriority = "lowest"
 ): Promise<number> {
-  const units = await db.collection<MilitaryUnit>("militaryUnits").find({ countryId }).toArray();
+  const units = await militaryUnitsCollection(db).find({ countryId }).toArray();
   const selected = planAutonomousDeployment(
     readyReserveUnits(units, currentTurn),
     commitmentShare,
     priority
   );
   if (selected.length === 0) return 0;
-  const result = await db.collection<MilitaryUnit>("militaryUnits").updateMany(
+  const result = await militaryUnitsCollection(db).updateMany(
     {
       _id: { $in: selected.map((unit) => unit._id) },
       countryId,
@@ -255,7 +256,7 @@ async function conductWar(
   });
   if (pending) return { acted: false, note: "An offensive is already pending in this war." };
 
-  let deployed = await db.collection<MilitaryUnit>("militaryUnits").countDocuments({
+  let deployed = await militaryUnitsCollection(db).countDocuments({
     countryId,
     theaterId: conflict._id,
     personnel: { $gt: 0 },

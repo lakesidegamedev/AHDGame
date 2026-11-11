@@ -6,6 +6,8 @@ import {
   lookupStateResourceCapacity,
 } from "@/lib/seeds/reference/stateResourceCapacity";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { stateResourceCapacityCollection } from "@/lib/db/repositories/stateResourceCapacity";
+import type { Document } from "mongodb";
 
 /**
  * Seed the `stateResourceCapacity` collection.
@@ -29,8 +31,7 @@ export async function seedStateResourceCapacity(
   preset: string
 ) {
   if (reset) {
-    await db
-      .collection("stateResourceCapacity")
+    await stateResourceCapacityCollection<Document>(db)
       .drop()
       .catch(() => {});
   }
@@ -53,12 +54,10 @@ export async function seedStateResourceCapacity(
 
   // Create indexes before the upserts: the writes filter on `stateId`,
   // and building the index after would make each upsert a collection scan.
-  await db
-    .collection("stateResourceCapacity")
+  await stateResourceCapacityCollection<Document>(db)
     .createIndex({ stateId: 1 }, { unique: true })
     .catch(() => {});
-  await db
-    .collection("stateResourceCapacity")
+  await stateResourceCapacityCollection<Document>(db)
     .createIndex({ countryId: 1 })
     .catch(() => {});
 
@@ -92,9 +91,7 @@ export async function seedStateResourceCapacity(
   }
 
   if (ops.length > 0) {
-    await db
-      .collection<StateResourceCapacity>("stateResourceCapacity")
-      .bulkWrite(ops, { ordered: true });
+    await stateResourceCapacityCollection(db).bulkWrite(ops, { ordered: true });
   }
 
   log(

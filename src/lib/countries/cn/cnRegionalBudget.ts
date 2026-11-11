@@ -31,6 +31,7 @@ import { legislationTypesCollection } from "@/lib/db/repositories/legislationTyp
 import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { resolvePrimaryTaxRate } from "./rules/primaryTaxRate";
+import { cabinetSettingsCollection } from "@/lib/db/repositories/cabinetSettings";
 
 // ── Pure calculation ─────────────────────────────────────────────────────────
 
@@ -320,9 +321,9 @@ export async function processOnePartyRegionalBudgets(
   const budgetMap = new Map(existingBudgets.map((b) => [b._id, b]));
 
   // Finance Minister cabinet setting controls central transfer distribution
-  const ministerSetting = await db
-    .collection<CabinetSetting>("cabinetSettings")
-    .findOne({ _id: `${countryId}_minister_of_finance` });
+  const ministerSetting = await cabinetSettingsCollection(db).findOne({
+    _id: `${countryId}_minister_of_finance`,
+  });
   const allocationPercents = ministerSetting?.allocationPercents ?? null;
 
   let regionsProcessed = 0;

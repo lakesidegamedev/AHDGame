@@ -25,6 +25,7 @@ import { isWithinRenationalizeCooldown } from "./privatizationShares";
 import { nationalizeSectorWide } from "./nationalizeSectorWide";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { countryLeaderStatesCollection } from "@/lib/db/repositories/countryLeaderStates";
 
 export async function applyNationalizeProvision(
   db: Db,
@@ -166,8 +167,9 @@ export async function applyNationalizeProvision(
 
 /** Active regime's governing party (most-recently-updated leader-state). */
 async function resolveGoverningPartyId(db: Db, countryId: CountryId): Promise<string | null> {
-  const leader = await db
-    .collection<CountryLeaderState>("countryLeaderStates")
-    .findOne({ countryId }, { sort: { updatedAt: -1 } });
+  const leader = await countryLeaderStatesCollection(db).findOne(
+    { countryId },
+    { sort: { updatedAt: -1 } }
+  );
   return leader?.governingPartyId ?? null;
 }

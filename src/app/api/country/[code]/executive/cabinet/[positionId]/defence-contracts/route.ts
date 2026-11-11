@@ -36,6 +36,8 @@ import { resolveDefenseLineFrom } from "@/lib/turn/defenseEnvelope";
 import { getDefenceContractAvailability } from "@/lib/db/collections/defenceProcurementAllocations";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { defenceContractsCollection } from "@/lib/db/repositories/defenceContracts";
+import type { Document } from "mongodb";
 
 interface RouteParams {
   params: Promise<{ code: string; positionId: string }>;
@@ -106,9 +108,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
 
     // Scoped to the caller's own country: without this a defence minister could cancel
     // another nation's contracts by id.
-    const contract = await db
-      .collection<DefenceContract>("defenceContracts")
-      .findOne({ _id: objectId, countryId });
+    const contract = await defenceContractsCollection(db).findOne({ _id: objectId, countryId });
     if (!contract) {
       return errorResponse(404, "No such contract");
     }
@@ -234,9 +234,10 @@ export async function DELETE(request: Request, { params }: RouteParams) {
         ],
       }).catch(() => null);
       feePaid = move?.status === "applied" || move?.status === "replayed";
-      await db
-        .collection("defenceContracts")
-        .updateOne({ _id: objectId }, { $set: { "termination.feePaid": feePaid } });
+      await defenceContractsCollection<Document>(db).updateOne(
+        { _id: objectId },
+        { $set: { "termination.feePaid": feePaid } }
+      );
     }
 
     // Disclosure and its price, the same answer the game gives to a self-dealt award: not a

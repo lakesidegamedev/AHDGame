@@ -2,6 +2,8 @@ import type { Db } from "mongodb";
 import type { ElectedOfficial } from "@/lib/db/types";
 import { workerConfig } from "@/lib/config/worker";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { parliamentSeatsHistoryCollection } from "@/lib/db/repositories/parliamentSeatsHistory";
+import type { Document } from "mongodb";
 
 /**
  * Turns of seat history retained. 96 (two years at 48 turns/year) is the right
@@ -102,12 +104,12 @@ export async function snapshotParliamentSeats(db: Db, turn: number): Promise<num
     };
   });
 
-  await db
-    .collection<ParliamentSeatsSnapshot>("parliamentSeatsHistory")
-    .bulkWrite(ops, { ordered: false });
+  await parliamentSeatsHistoryCollection<ParliamentSeatsSnapshot>(db).bulkWrite(ops, {
+    ordered: false,
+  });
 
   const minTurn = Math.max(1, turn - HISTORY_CAP + 1);
-  await db.collection("parliamentSeatsHistory").deleteMany({ turn: { $lt: minTurn } });
+  await parliamentSeatsHistoryCollection<Document>(db).deleteMany({ turn: { $lt: minTurn } });
 
   return ops.length;
 }

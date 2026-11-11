@@ -24,6 +24,9 @@ import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParti
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { usersCollection } from "@/lib/db/repositories/users";
+import { achievementsCollection } from "@/lib/db/repositories/achievements";
+import { characterAchievementsCollection } from "@/lib/db/repositories/characterAchievements";
+import { investorRankingSnapshotsCollection } from "@/lib/db/repositories/investorRankingSnapshots";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -162,9 +165,9 @@ async function enrichPublicCharacters(db: Db, characters: Character[]): Promise<
     if (corp.ceoId) ceoCorpMap.set(corp.ceoId.toString(), corp.name);
   }
 
-  const investorSnapshot = await db
-    .collection<{ _id: string }>("investorRankingSnapshots")
-    .findOne<InvestorRankingSnapshot>({ _id: "global" });
+  const investorSnapshot = await investorRankingSnapshotsCollection<{ _id: string }>(
+    db
+  ).findOne<InvestorRankingSnapshot>({ _id: "global" });
 
   const portfolioValues = new Map<string, number>();
   const investorRankMap = new Map<string, number>();
@@ -352,8 +355,7 @@ export async function queryCharacterAchievements(
 
   const highlightedIds = new Set<string>((char.highlightedAchievementIds ?? []).map(String));
 
-  const earned = await db
-    .collection<CharacterAchievement>("characterAchievements")
+  const earned = await characterAchievementsCollection(db)
     .find({ characterId: char._id })
     .toArray();
 
@@ -362,8 +364,7 @@ export async function queryCharacterAchievements(
   }
 
   const achievementIds = earned.map((e) => e.achievementId);
-  const defs = await db
-    .collection<Achievement>("achievements")
+  const defs = await achievementsCollection(db)
     .find({ _id: { $in: achievementIds } })
     .toArray();
 

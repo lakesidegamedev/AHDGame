@@ -2,6 +2,7 @@ import type { Db, ObjectId } from "mongodb";
 import type { PartyCharter } from "@/lib/db/types";
 import { ratifyCharter } from "./ratifyCharter";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { partyChartersCollection } from "@/lib/db/repositories/partyCharters";
 
 /**
  * Record a founder's signature on a charter. Transitions the charter to
@@ -47,7 +48,7 @@ export async function signCharter(
   db: Db,
   now: Date = new Date()
 ): Promise<SignCharterResult> {
-  const charter = await db.collection<PartyCharter>("partyCharters").findOne({ _id: charterId });
+  const charter = await partyChartersCollection(db).findOne({ _id: charterId });
   if (!charter) return { ok: false, reason: "charter-not-found" };
   if (charter.status !== "pending-signatures") {
     return { ok: false, reason: "not-signable" };
@@ -80,7 +81,7 @@ export async function signCharter(
   // afterward. If the guard fails the user sees `not-signable` at the
   // re-read.
   if (!charter.signatures[sigIndex].signedAt) {
-    await db.collection<PartyCharter>("partyCharters").updateOne(
+    await partyChartersCollection(db).updateOne(
       {
         _id: charterId,
         status: "pending-signatures",
@@ -97,7 +98,7 @@ export async function signCharter(
 
   // Re-read so the count reflects all concurrent updates that may have
   // landed since we read the charter for validation.
-  const fresh = await db.collection<PartyCharter>("partyCharters").findOne({ _id: charterId });
+  const fresh = await partyChartersCollection(db).findOne({ _id: charterId });
   // If the charter is no longer signable (race with expire / reject),
   // surface that to the caller rather than silently reporting a stale
   // count from the pre-race read.

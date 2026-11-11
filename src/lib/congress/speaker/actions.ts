@@ -36,6 +36,9 @@ import {
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
+import { influenceHistoryCollection } from "@/lib/db/repositories/influenceHistory";
+import type { Document } from "mongodb";
+import { speakerElectionsCollection } from "@/lib/db/repositories/speakerElections";
 
 const ELECTION_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -84,9 +87,7 @@ export async function handleSpeakerAction(ctx: ActionContext): Promise<ActionRes
     return handleFileVacateMotion({ ...ctx, character, myOfficial });
   if (action === "vote_vacate_motion") return handleVoteVacateMotion({ ...ctx, character });
 
-  const election = await db
-    .collection<SpeakerElection>("speakerElections")
-    .findOne({ _id: "current" });
+  const election = await speakerElectionsCollection(db).findOne({ _id: "current" });
   const gameTimeForVoting = await getGameTime();
   const isVoting =
     election?.status === "voting" &&
@@ -135,9 +136,7 @@ async function handleStartElection(ctx: ActionContext): Promise<ActionResult> {
   const { db, house, authUser } = ctx;
   if (!authUser.isAdmin) return { success: false, error: "Admin only", status: 403 };
 
-  const existing = await db
-    .collection<SpeakerElection>("speakerElections")
-    .findOne({ _id: "current" });
+  const existing = await speakerElectionsCollection(db).findOne({ _id: "current" });
   const gameTimeForStart = await getGameTime();
   if (
     existing?.status === "voting" &&
@@ -161,7 +160,7 @@ async function handleStartElection(ctx: ActionContext): Promise<ActionResult> {
   // correctly determine when the window closes regardless of real-time drift.
   const endsAt = new Date(gameTimeForStart.effectiveNow.getTime() + ELECTION_DURATION_MS);
   const endsOnTurn = gameTimeForStart.currentTurn + ELECTION_DURATION_MS / 3_600_000;
-  await db.collection<SpeakerElection>("speakerElections").updateOne(
+  await speakerElectionsCollection(db).updateOne(
     { _id: "current" },
     {
       $set: {
@@ -233,13 +232,11 @@ async function handleResetElection(ctx: ActionContext): Promise<ActionResult> {
       { status: { $in: ["open", "voting"] } },
       { $set: { status: "failed", updatedAt: now } }
     );
-  await db
-    .collection<SpeakerElection>("speakerElections")
-    .updateOne(
-      { _id: "current" },
-      { $set: { status: "closed", updatedAt: now } },
-      { upsert: true }
-    );
+  await speakerElectionsCollection(db).updateOne(
+    { _id: "current" },
+    { $set: { status: "closed", updatedAt: now } },
+    { upsert: true }
+  );
   return {
     success: true,
     message: "Speaker election reset. You can start a new 24-hour election.",
@@ -392,7 +389,7 @@ async function handleWithdraw(
     { _id: character._id },
     { $inc: { politicalInfluence: -3 } }
   );
-  await db.collection("influenceHistory").insertOne({
+  await influenceHistoryCollection<Document>(db).insertOne({
     characterId: character._id,
     amount: -3,
     reason: "Withdrew from Speaker election",

@@ -43,6 +43,7 @@ import { hostsSovereigntyReferendums } from "@/lib/referendum/rules/sovereigntyR
 import { resolveWestminsterPolicy } from "@/lib/governorOffice/devolution/rules";
 import { billsCollection } from "@/lib/db/repositories/bills";
 import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
+import { governorOfficeStateCollection } from "@/lib/db/repositories/governorOfficeState";
 
 /**
  * Snapshot a region's cohort baseline at campaign open, from the Layer-1
@@ -161,8 +162,7 @@ export async function processReferendumLifecycle(
         getGovernmentFormationsCollection(db)
           .find({ _id: { $in: requestCountries } })
           .toArray(),
-        db
-          .collection<GovernorOfficeState>("governorOfficeState")
+        governorOfficeStateCollection(db)
           .find({
             $or: requestCountries.map((countryId) => ({
               countryId,

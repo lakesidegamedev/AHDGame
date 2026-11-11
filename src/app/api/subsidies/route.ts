@@ -11,6 +11,7 @@ import { getDb } from "@/lib/mongodb";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import type { Subsidy } from "@/lib/db/types";
 import { ALL_COUNTRY_IDS, type CountryId } from "@/lib/constants/countries";
+import { subsidiesCollection } from "@/lib/db/repositories/subsidies";
 
 const COUNTRY_SET = new Set<string>(ALL_COUNTRY_IDS);
 
@@ -40,8 +41,7 @@ export async function GET(request: Request) {
     const countryIds = Array.from(requested) as CountryId[];
 
     const db = await getDb();
-    const subsidies = await db
-      .collection<Subsidy>("subsidies")
+    const subsidies = await subsidiesCollection(db)
       .find({ countryId: { $in: countryIds }, active: true })
       .sort({ scope: 1, scopeType: 1, createdAt: 1 })
       .toArray();

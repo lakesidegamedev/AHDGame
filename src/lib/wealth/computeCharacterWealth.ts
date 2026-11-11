@@ -9,6 +9,7 @@ import { computeLocDebtInternal } from "@/lib/lineOfCredit/netWorth";
 import { corpLiquidCapitalToAnchor, fxRateForCorpFromMap } from "@/lib/currency/corporationCapital";
 import { getPublicShareQuote } from "@/lib/corporations/marketQuote";
 import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { indexFundPositionsCollection } from "@/lib/db/repositories/indexFundPositions";
 
 /**
  * ONE definition of a character's net worth, in ₳.
@@ -243,8 +244,9 @@ export async function loadFundValueByCharacter(
   characterIdSet: ReadonlySet<string>
 ): Promise<Map<string, number>> {
   if (characterIds.length === 0) return new Map();
-  const positions = await db
-    .collection<FundPositionSlice & { holderKind: string }>("indexFundPositions")
+  const positions = await indexFundPositionsCollection<FundPositionSlice & { holderKind: string }>(
+    db
+  )
     .find(
       { holderKind: "character", characterId: { $in: [...characterIds] }, units: { $gt: 0 } },
       { projection: { fundId: 1, characterId: 1, units: 1 } }

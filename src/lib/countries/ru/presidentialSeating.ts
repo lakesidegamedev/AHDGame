@@ -18,6 +18,8 @@ import { electionCandidatesCollection } from "@/lib/db/repositories/electionCand
 import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
+import { pmAppointmentVotesCollection } from "@/lib/db/repositories/pmAppointmentVotes";
+import type { Document } from "mongodb";
 const RUSSIAN_PRESIDENTIAL_ARCHIVES_COLLECTION = "russianPresidentialOfficeArchives";
 interface Archive {
   _id: string;
@@ -288,13 +290,11 @@ export async function materializeRussianPresidentialSeating(input: {
     },
     { session }
   );
-  await db
-    .collection("pmAppointmentVotes")
-    .updateMany(
-      { countryId: "RU", office: "headOfState", status: "active" },
-      { $set: { status: "cancelled", closedAt: now, updatedAt: now } },
-      { session }
-    );
+  await pmAppointmentVotesCollection<Document>(db).updateMany(
+    { countryId: "RU", office: "headOfState", status: "active" },
+    { $set: { status: "cancelled", closedAt: now, updatedAt: now } },
+    { session }
+  );
   const activated = await countries.updateOne(
     {
       _id: "RU",

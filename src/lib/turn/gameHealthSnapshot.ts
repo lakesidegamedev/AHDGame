@@ -42,6 +42,9 @@ import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { usersCollection } from "@/lib/db/repositories/users";
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { seatsCollection } from "@/lib/db/repositories/seats";
+import { gameHealthSnapshotsCollection } from "@/lib/db/repositories/gameHealthSnapshots";
+import { partyMembersCollection } from "@/lib/db/repositories/partyMembers";
 
 type SeatScopedOfficial = ElectedOfficial & { seatId?: string };
 
@@ -173,7 +176,7 @@ export async function processGameHealthSnapshot(
     economy,
   };
 
-  await db.collection("gameHealthSnapshots").insertOne(snapshot as GameHealthSnapshot);
+  await gameHealthSnapshotsCollection<Document>(db).insertOne(snapshot as GameHealthSnapshot);
 
   return { snapshotWritten: true, integrityCheckRan: shouldRunIntegrity, health };
 }
@@ -264,8 +267,7 @@ async function runIntegrityChecks(
       }),
     // Party members referencing deleted parties: project to the join key so full
     // member documents never cross the join; only existence matters.
-    db
-      .collection("partyMembers")
+    partyMembersCollection<Document>(db)
       .aggregate([
         { $project: { partyId: 1 } },
         {
@@ -427,8 +429,7 @@ export async function collectSeatIntegrity(
   db: Db
 ): Promise<{ orphanedOfficialCount: number; seatBackedSeatsWithoutOfficials: number }> {
   const [seats, officials] = await Promise.all([
-    db
-      .collection<Seat>("seats")
+    seatsCollection(db)
       .find({}, { projection: { _id: 1, countryId: 1, electionType: 1, state: 1 } })
       .toArray(),
     electedOfficialsCollection<SeatScopedOfficial>(db)
@@ -547,7 +548,7 @@ async function collectPopulationStats(db: Db): Promise<PopulationStats> {
     usersCollection<Document>(db).countDocuments({ banned: { $ne: true } }),
     charactersCollection<Document>(db).countDocuments(),
     nppsCollection<Document>(db).countDocuments(),
-    db.collection("seats").countDocuments(),
+    seatsCollection<Document>(db).countDocuments(),
     politicalPartiesCollection<Document>(db).countDocuments(),
     electionsCollection<Document>(db).countDocuments({ status: "active" }),
     electedOfficialsCollection<Document>(db).countDocuments(),
@@ -589,8 +590,7 @@ async function collectPopulationStats(db: Db): Promise<PopulationStats> {
         { $group: { _id: "$countryId", count: { $sum: 1 } } },
       ])
       .toArray() as Promise<{ _id: string | null; count: number }[]>,
-    db
-      .collection("seats")
+    seatsCollection<Document>(db)
       .aggregate([
         { $match: { countryId: { $in: activeCountryIds } } },
         { $group: { _id: "$countryId", count: { $sum: 1 } } },

@@ -4,6 +4,8 @@ import { requireBotToken } from "@/lib/api/requireBotToken";
 import { checkRateLimit, rateLimitResponse, BOT_READ_LIMITS } from "@/lib/api/rateLimit";
 import { lookupBotCharacter } from "@/lib/discord/botCharacterLookup";
 import type { Achievement, CharacterAchievement } from "@/lib/db/types";
+import { achievementsCollection } from "@/lib/db/repositories/achievements";
+import { characterAchievementsCollection } from "@/lib/db/repositories/characterAchievements";
 
 // GET /api/discord-bot/achievements — Returns a character's earned achievements, looked up by characterId, discordId, or name.
 // Auth: requireAdminOrApiKey
@@ -29,8 +31,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ found: false, achievements: [] });
     }
 
-    const earned = await db
-      .collection<CharacterAchievement>("characterAchievements")
+    const earned = await characterAchievementsCollection(db)
       .find({ characterId: character._id })
       .sort({ earnedAt: -1 })
       .toArray();
@@ -45,8 +46,7 @@ export async function GET(request: Request) {
     }
 
     const achievementIds = earned.map((e) => e.achievementId);
-    const definitions = await db
-      .collection<Achievement>("achievements")
+    const definitions = await achievementsCollection(db)
       .find({ _id: { $in: achievementIds } })
       .toArray();
 

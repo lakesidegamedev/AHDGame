@@ -72,6 +72,7 @@ import { legislationTypesCollection } from "@/lib/db/repositories/legislationTyp
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
 import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
+import { demographicDefaultsCollection } from "@/lib/db/repositories/demographicDefaults";
 
 /**
  * Lean shift per turn at maximum policy strength (magnitude 1, state scope).
@@ -555,10 +556,7 @@ export async function processAllStateDemographics(
   ]);
 
   // The per-state seeded defaults carry the durable overlays the census reads.
-  const allDefaults = await db
-    .collection<StateDemographics>("demographicDefaults")
-    .find({})
-    .toArray();
+  const allDefaults = await demographicDefaultsCollection(db).find({}).toArray();
   const defaultsByState = new Map(allDefaults.map((d) => [String(d._id), d]));
   // Newsroom slant: two batched reads for every state, only with the media
   // editorial flag on. Flag-off turns issue nothing extra.
@@ -830,7 +828,7 @@ export async function processAllStateDemographics(
     await statesCollection(db).bulkWrite(stateCacheOps);
   }
   if (defaultBulkOps.length > 0) {
-    await db.collection<StateDemographics>("demographicDefaults").bulkWrite(defaultBulkOps);
+    await demographicDefaultsCollection(db).bulkWrite(defaultBulkOps);
   }
 
   return bulkOps.length;

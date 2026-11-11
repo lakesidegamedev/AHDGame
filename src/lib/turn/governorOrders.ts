@@ -3,6 +3,7 @@ import type { GovernorExecutiveOrder, LegislationType, StatePolicy } from "@/lib
 import { buildOrderRevertPolicyFields } from "@/lib/governorOffice/orders/revertPolicy";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
+import { governorExecutiveOrdersCollection } from "@/lib/db/repositories/governorExecutiveOrders";
 
 /**
  * Turn phase: process active executive orders.
@@ -18,10 +19,7 @@ export async function processGovernorExecutiveOrders(
   db: Db,
   currentTurn: number
 ): Promise<{ expired: number; superseded: number }> {
-  const active = await db
-    .collection<GovernorExecutiveOrder>("governorExecutiveOrders")
-    .find({ status: "active" })
-    .toArray();
+  const active = await governorExecutiveOrdersCollection(db).find({ status: "active" }).toArray();
   const now = new Date();
   let expired = 0;
   let superseded = 0;
@@ -39,7 +37,7 @@ export async function processGovernorExecutiveOrders(
     if (!policyMatchesOrder) {
       const supersedingBillId =
         policy?.enactedBy?.kind === "bill" ? policy.enactedBy.id : undefined;
-      await db.collection<GovernorExecutiveOrder>("governorExecutiveOrders").updateOne(
+      await governorExecutiveOrdersCollection(db).updateOne(
         { _id: order._id },
         {
           $set: {
@@ -69,9 +67,10 @@ export async function processGovernorExecutiveOrders(
           },
         }
       );
-      await db
-        .collection<GovernorExecutiveOrder>("governorExecutiveOrders")
-        .updateOne({ _id: order._id }, { $set: { status: "expired", updatedAt: now } });
+      await governorExecutiveOrdersCollection(db).updateOne(
+        { _id: order._id },
+        { $set: { status: "expired", updatedAt: now } }
+      );
       expired++;
     }
   }

@@ -14,6 +14,8 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporationCeoVotesCollection } from "@/lib/db/repositories/corporationCeoVotes";
+import type { Document } from "mongodb";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -70,7 +72,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
     );
 
     // Clear any dangling CEO votes so nothing stale carries into the next seat.
-    await db.collection("corporationCeoVotes").deleteMany({ corporationId: target._id });
+    await corporationCeoVotesCollection<Document>(db).deleteMany({ corporationId: target._id });
 
     return NextResponse.json({ success: true });
   } catch (error) {

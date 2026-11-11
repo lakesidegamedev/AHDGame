@@ -21,6 +21,7 @@ import { getGameState } from "@/lib/gameState";
 import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { isProcurementBlocked } from "@/lib/military/procurementGate";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { defenceContractsCollection } from "@/lib/db/repositories/defenceContracts";
 
 const bodySchema = z.object({ action: z.enum(["accept", "decline"]) });
 
@@ -59,9 +60,10 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     // Scoped to THIS corporation, not just the contract id: without it, any CEO could accept
     // or decline another corporation's offer by pasting its id.
-    const contract = await db
-      .collection<DefenceContract>("defenceContracts")
-      .findOne({ _id: contractObjectId, corporationId: corp._id });
+    const contract = await defenceContractsCollection(db).findOne({
+      _id: contractObjectId,
+      corporationId: corp._id,
+    });
     if (!contract) {
       return errorResponse(404, "No such contract");
     }

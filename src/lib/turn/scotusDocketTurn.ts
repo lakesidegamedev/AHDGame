@@ -36,6 +36,8 @@ import {
   reverseNationalizationTaking,
 } from "@/lib/nationalization/reverseNationalization";
 import { logWireEvent } from "@/lib/wireEvent";
+import { supremeCourtSeatsCollection } from "@/lib/db/repositories/supremeCourtSeats";
+import { docketCasesCollection } from "@/lib/db/repositories/docketCases";
 
 export interface ScotusDocketTurnResult {
   casesFired: number;
@@ -57,8 +59,7 @@ export async function processScotusDocketTurn(
     console.error("[scotusDocketTurn] compensation recovery resume failed:", err)
   );
 
-  const pendingCases = await database
-    .collection<DocketCase>("docketCases")
+  const pendingCases = await docketCasesCollection(database)
     .find({ countryId: "US", status: "pending", hearingDueTurn: { $exists: false } })
     .toArray();
 
@@ -75,10 +76,7 @@ export async function processScotusDocketTurn(
     return { casesFired: 0, casesAffirmed: 0, casesDiverged: 0 };
   }
 
-  const seats = await database
-    .collection<SupremeCourtSeat>("supremeCourtSeats")
-    .find({ countryId: "US" })
-    .toArray();
+  const seats = await supremeCourtSeatsCollection(database).find({ countryId: "US" }).toArray();
   const seatedJustices: SeatedJusticeLean[] = seats
     .filter((s) => s.justiceCharacterId || s.justiceNppId || s.justiceMode === "historical")
     .map((s) => ({ economicLean: s.economicLean ?? 0, socialLean: s.socialLean ?? 0 }));
@@ -161,7 +159,7 @@ export async function processScotusDocketTurn(
     if (decision.outcome === "affirmed") casesAffirmed++;
     else casesDiverged++;
 
-    await database.collection<DocketCase>("docketCases").updateOne(
+    await docketCasesCollection(database).updateOne(
       { _id: docketCase._id },
       {
         $set: {

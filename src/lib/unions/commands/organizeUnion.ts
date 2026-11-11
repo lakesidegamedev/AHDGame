@@ -16,6 +16,7 @@ import {
 } from "@/lib/unions/unionProsecutionBar";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { unionsCollection } from "@/lib/db/repositories/unions";
+import { unionOrganizersCollection } from "@/lib/db/repositories/unionOrganizers";
 
 export type OrganizeUnionResult =
   | {
@@ -100,7 +101,7 @@ export async function organizeUnion(
     return { ok: false, status: 404, error: "Union not found." };
   }
 
-  const organizer = await db.collection<UnionOrganizer>("unionOrganizers").findOneAndUpdate(
+  const organizer = await unionOrganizersCollection(db).findOneAndUpdate(
     { unionId: union._id, characterId: character._id },
     {
       $inc: { organizeCount: 1, strength: ORGANIZE_STRENGTH_GAIN },

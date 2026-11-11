@@ -5,6 +5,7 @@ import { handleRouteError } from "@/lib/api/errors";
 import { publicApiGuard } from "@/lib/publicApi/middleware";
 import type { NewsPost } from "@/lib/db/types";
 import { withPublicNewsVisibility } from "@/lib/news/publicModeration";
+import { newsPostsCollection } from "@/lib/db/repositories/newsPosts";
 
 // GET /api/public/v1/news?limit=N&category=CATEGORY
 // Accuracy fixes vs /discord-bot/news: full content (not truncated), countryId included.
@@ -21,8 +22,7 @@ export async function GET(request: Request) {
     if (category) query.category = category as NewsPost["category"];
 
     const db = await getDb();
-    const posts = await db
-      .collection<NewsPost>("newsPosts")
+    const posts = await newsPostsCollection(db)
       .find(withPublicNewsVisibility(query))
       .sort({ createdAt: -1 })
       .limit(limit)

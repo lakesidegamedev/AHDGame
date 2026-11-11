@@ -9,6 +9,7 @@ import type { RetiredCharacter } from "@/lib/db/types/retiredCharacter";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { usersCollection } from "@/lib/db/repositories/users";
 import type { Document } from "mongodb";
+import { retiredCharactersCollection } from "@/lib/db/repositories/retiredCharacters";
 
 const schema = z.object({ characterId: z.string().nullable() });
 
@@ -34,9 +35,10 @@ export async function PATCH(request: Request) {
       const objectId = new ObjectId(characterId);
       const [ownsActive, ownsRetired] = await Promise.all([
         charactersCollection(db).findOne({ _id: objectId, userId }, { projection: { _id: 1 } }),
-        db
-          .collection<RetiredCharacter>("retiredCharacters")
-          .findOne({ characterId: objectId, userId }, { projection: { _id: 1 } }),
+        retiredCharactersCollection(db).findOne(
+          { characterId: objectId, userId },
+          { projection: { _id: 1 } }
+        ),
       ]);
       if (!ownsActive && !ownsRetired) throw badRequest("That life does not belong to you");
     }

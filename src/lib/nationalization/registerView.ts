@@ -30,6 +30,7 @@ import {
 } from "./constants";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
+import { countryLeaderStatesCollection } from "@/lib/db/repositories/countryLeaderStates";
 
 /** A NPC/unowned taking — no investor it expropriated, so no approval/political movement. */
 function isNpcOrUnowned(triggers: string[]): boolean {
@@ -213,9 +214,10 @@ export async function loadRegisterStanding(
   db: Db,
   countryId: CountryId
 ): Promise<RegisterStanding> {
-  const leader = await db
-    .collection<CountryLeaderState>("countryLeaderStates")
-    .findOne({ countryId }, { sort: { updatedAt: -1 } });
+  const leader = await countryLeaderStatesCollection(db).findOne(
+    { countryId },
+    { sort: { updatedAt: -1 } }
+  );
   const legitimacy =
     typeof leader?.popularLegitimacy === "number" ? Math.round(leader.popularLegitimacy) : null;
 

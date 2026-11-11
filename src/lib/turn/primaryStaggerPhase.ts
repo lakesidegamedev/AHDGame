@@ -85,6 +85,7 @@ import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVot
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
 import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
+import { demographicDefaultsCollection } from "@/lib/db/repositories/demographicDefaults";
 
 const MS_PER_HOUR = 3_600_000;
 
@@ -346,8 +347,7 @@ export async function runPrimaryStaggerWaveIfDue(
   // Seeded snapshots for the granular substrate's legislation lean-drift fold.
   const demographicDefaultsByState = new Map(
     (
-      await db
-        .collection<StateDemographics>("demographicDefaults")
+      await demographicDefaultsCollection(db)
         .find({ _id: { $in: waveStates } })
         .toArray()
     ).map((d) => [d._id as string, d])

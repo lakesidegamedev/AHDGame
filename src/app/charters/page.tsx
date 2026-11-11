@@ -6,6 +6,7 @@ import { getDb } from "@/lib/mongodb";
 import { Badge } from "@/components/ui";
 import type { PartyCharter, PartyCharterStatus } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { partyChartersCollection } from "@/lib/db/repositories/partyCharters";
 
 const STATUS_VARIANT: Record<PartyCharterStatus, "default" | "warning" | "success" | "error"> = {
   draft: "default",
@@ -39,8 +40,7 @@ export default async function ChartersListPage() {
   const ownedCharacterIdStrings = new Set(ownedCharacterIds.map((c) => c.toString()));
 
   const charters = ownedCharacterIds.length
-    ? await db
-        .collection<PartyCharter>("partyCharters")
+    ? await partyChartersCollection(db)
         .find({ foundersCharacterIds: { $in: ownedCharacterIds } })
         .sort({ createdAt: -1 })
         .limit(50)

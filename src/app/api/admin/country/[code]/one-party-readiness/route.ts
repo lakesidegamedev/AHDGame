@@ -23,6 +23,8 @@ import { legislationTypesCollection } from "@/lib/db/repositories/legislationTyp
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
+import { seatsCollection } from "@/lib/db/repositories/seats";
+import { countryLeaderStatesCollection } from "@/lib/db/repositories/countryLeaderStates";
 
 interface ReadinessCheck {
   name: string;
@@ -96,7 +98,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     });
 
     // 5. Seats (lower chamber + governor per region)
-    const seatCount = await db.collection("seats").countDocuments({ countryId });
+    const seatCount = await seatsCollection<Document>(db).countDocuments({ countryId });
     const expectedSeatCount = regionCount * 2; // delegate + governor per region
     checks.push({
       name: "Seats",
@@ -161,9 +163,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     });
 
     // 11. Country leader state (if any leader installed)
-    const leaderStateCount = await db
-      .collection<{ _id: string }>("countryLeaderStates")
-      .countDocuments({ _id: { $regex: `^${countryId}_` } });
+    const leaderStateCount = await countryLeaderStatesCollection<{ _id: string }>(
+      db
+    ).countDocuments({ _id: { $regex: `^${countryId}_` } });
     checks.push({
       name: "CountryLeaderStates",
       status: leaderStateCount > 0 ? "ok" : "warning",

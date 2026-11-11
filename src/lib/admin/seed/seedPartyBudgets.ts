@@ -2,9 +2,10 @@ import { ObjectId, type Db } from "mongodb";
 import type { PartyBudget, PoliticalParty, State } from "@/lib/db/types";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { partyBudgetCollection } from "@/lib/db/repositories/partyBudget";
 
 export async function seedPartyBudgets(db: Db, reset: boolean, log: (msg: string) => void) {
-  const collection = db.collection<PartyBudget>("partyBudget");
+  const collection = partyBudgetCollection(db);
 
   if (reset) {
     await collection.deleteMany({});

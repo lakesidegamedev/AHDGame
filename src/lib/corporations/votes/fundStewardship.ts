@@ -2,6 +2,7 @@ import type { Db, ObjectId } from "mongodb";
 import type { Corporation, IndexFund, IndexFundPosition, Shareholder } from "@/lib/db/types";
 import { shareholderVotingPower } from "@/lib/corporations/superShares";
 import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { indexFundPositionsCollection } from "@/lib/db/repositories/indexFundPositions";
 
 /**
  * Index-fund stewardship: how a fund votes the shares it holds.
@@ -93,8 +94,7 @@ export async function loadFundDirector(
   db: Db,
   fundId: ObjectId
 ): Promise<{ holderId: ObjectId; unitShare: number } | null> {
-  const positions = await db
-    .collection<IndexFundPosition>("indexFundPositions")
+  const positions = await indexFundPositionsCollection(db)
     .find(
       { fundId, units: { $gt: 0 } },
       { projection: { holderKind: 1, characterId: 1, units: 1 } }

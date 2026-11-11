@@ -6,6 +6,8 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import type { GameState } from "@/lib/db/types";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { eventDefinitionsCollection } from "@/lib/db/repositories/eventDefinitions";
+import type { Document } from "mongodb";
 
 const bodySchema = z.object({
   enabled: z.boolean(),
@@ -45,7 +47,7 @@ export async function POST(request: Request) {
     // Surface a config trap: enabling with zero approved templates means the
     // driver will never fire anything — tell the admin instead of going quiet.
     const approvedCount = parsed.data.enabled
-      ? await db.collection("eventDefinitions").countDocuments({ status: "approved" })
+      ? await eventDefinitionsCollection<Document>(db).countDocuments({ status: "approved" })
       : null;
 
     return NextResponse.json({

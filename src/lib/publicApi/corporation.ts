@@ -13,6 +13,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { shareTradeHistoryCollection } from "@/lib/db/repositories/shareTradeHistory";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -221,9 +222,8 @@ export async function queryShareHistory(
 
   const filter = { corporationId: corp._id };
   const [total, entries] = await Promise.all([
-    db.collection<ShareTradeHistory>("shareTradeHistory").countDocuments(filter),
-    db
-      .collection<ShareTradeHistory>("shareTradeHistory")
+    shareTradeHistoryCollection(db).countDocuments(filter),
+    shareTradeHistoryCollection(db)
       .find(filter)
       .sort({ createdAt: -1, _id: -1 })
       .skip((page - 1) * pageSize)

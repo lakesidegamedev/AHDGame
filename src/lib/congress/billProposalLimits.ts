@@ -22,6 +22,7 @@ import {
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
 import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
+import { governorExecutiveOrdersCollection } from "@/lib/db/repositories/governorExecutiveOrders";
 
 export interface PolicyProvisionInput {
   legislationTypeId: string;
@@ -273,8 +274,7 @@ export async function checkCurrentPolicyLevel(
   const orderById = orderIds.length
     ? new Map(
         (
-          await db
-            .collection<GovernorExecutiveOrder>("governorExecutiveOrders")
+          await governorExecutiveOrdersCollection(db)
             .find({ _id: { $in: orderIds } })
             .toArray()
         ).map((o) => [o._id!.toString(), o])

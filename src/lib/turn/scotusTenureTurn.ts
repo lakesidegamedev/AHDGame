@@ -30,6 +30,7 @@ import { awardAchievement } from "@/lib/achievements";
 import { SCOTUS_DIED_IN_OFFICE_SLUG } from "@/lib/scotus/achievementDefinitions";
 import { getCharactersCollection } from "@/lib/db/collections/characters";
 import { getElectedOfficialsCollection } from "@/lib/db/collections/electedOfficials";
+import { supremeCourtSeatsCollection } from "@/lib/db/repositories/supremeCourtSeats";
 
 export interface ScotusTenureTurnResult {
   seatsAdvanced: number;
@@ -73,12 +74,10 @@ async function vacateSeatIfStillOccupied(
   seat: SupremeCourtSeat,
   now: Date
 ): Promise<boolean> {
-  const result = await db
-    .collection<SupremeCourtSeat>("supremeCourtSeats")
-    .updateOne(
-      { _id: seat._id, justiceMode: seat.justiceMode },
-      { $set: vacatedOccupantFields(now) }
-    );
+  const result = await supremeCourtSeatsCollection(db).updateOne(
+    { _id: seat._id, justiceMode: seat.justiceMode },
+    { $set: vacatedOccupantFields(now) }
+  );
   return (result?.modifiedCount ?? 0) > 0;
 }
 
@@ -181,10 +180,7 @@ export async function processScotusTenureTurn(
     preIterationTurns: gameState?.preIterationTurns,
   });
 
-  const seats = await database
-    .collection<SupremeCourtSeat>("supremeCourtSeats")
-    .find({ countryId: "US" })
-    .toArray();
+  const seats = await supremeCourtSeatsCollection(database).find({ countryId: "US" }).toArray();
 
   const seatsAdvanced = 0;
   let seatsVacatedByHistory = 0;

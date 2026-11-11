@@ -29,6 +29,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { supplyAgreementsCollection } from "@/lib/db/repositories/supplyAgreements";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -66,8 +67,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     if (ceoError) return ceoError;
     const corp = resolved.corporation;
     const corpId = corp._id;
-    const agreements = await db
-      .collection<SupplyAgreement>("supplyAgreements")
+    const agreements = await supplyAgreementsCollection(db)
       .find({ $or: [{ supplierCorpId: corpId }, { buyerCorpId: corpId }] })
       .sort({ updatedAt: -1 })
       .toArray();

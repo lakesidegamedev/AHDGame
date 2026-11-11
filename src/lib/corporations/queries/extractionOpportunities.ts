@@ -24,6 +24,7 @@ import { getExtractionOutputScaleEnabled } from "@/lib/market/featureFlag";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { stateResourceCapacityCollection } from "@/lib/db/repositories/stateResourceCapacity";
 
 export interface OpportunityState {
   stateId: string;
@@ -54,8 +55,7 @@ export async function computeResourceOpportunities(
   if (resources.length === 0) return [];
 
   const [capDocs, extractionSectors, states, eraUnitScale, gameConfig] = await Promise.all([
-    db
-      .collection<StateResourceCapacity>("stateResourceCapacity")
+    stateResourceCapacityCollection(db)
       .find({}, { projection: { stateId: 1, resources: 1 } })
       .toArray(),
     corporateSectorsCollection(db)

@@ -3,6 +3,10 @@ import { ObjectId } from "mongodb";
 import type { SupremeCourtSeat, DocketCase } from "@/lib/db/types/scotus";
 import { getStartingYearForPreset } from "@/lib/constants/turnTime";
 import { getScotusPresetSeed } from "./presetData";
+import { supremeCourtSeatsCollection } from "@/lib/db/repositories/supremeCourtSeats";
+import type { Document } from "mongodb";
+import { docketCasesCollection } from "@/lib/db/repositories/docketCases";
+import { scotusNominationsCollection } from "@/lib/db/repositories/scotusNominations";
 
 /**
  * Seeds the SCOTUS Original Roster (9 seats) + Docket for the US. No-ops
@@ -25,9 +29,9 @@ export async function seedScotus(
 
   if (reset) {
     await Promise.all([
-      db.collection("supremeCourtSeats").deleteMany({ countryId }),
-      db.collection("docketCases").deleteMany({ countryId }),
-      db.collection("scotusNominations").deleteMany({ countryId }),
+      supremeCourtSeatsCollection<Document>(db).deleteMany({ countryId }),
+      docketCasesCollection<Document>(db).deleteMany({ countryId }),
+      scotusNominationsCollection<Document>(db).deleteMany({ countryId }),
     ]);
   }
 
@@ -62,13 +66,11 @@ export async function seedScotus(
       createdAt: now,
       updatedAt: now,
     };
-    await db
-      .collection<SupremeCourtSeat>("supremeCourtSeats")
-      .updateOne(
-        { countryId, seatNumber: seatSeed.seatNumber },
-        { $setOnInsert: { _id: new ObjectId(), ...seat } as SupremeCourtSeat },
-        { upsert: true }
-      );
+    await supremeCourtSeatsCollection(db).updateOne(
+      { countryId, seatNumber: seatSeed.seatNumber },
+      { $setOnInsert: { _id: new ObjectId(), ...seat } as SupremeCourtSeat },
+      { upsert: true }
+    );
     seatsSeeded++;
   }
 
@@ -91,13 +93,11 @@ export async function seedScotus(
       createdAt: now,
       updatedAt: now,
     };
-    await db
-      .collection<DocketCase>("docketCases")
-      .updateOne(
-        { countryId, preset, caseKey: caseSeed.caseKey },
-        { $setOnInsert: { _id: new ObjectId(), ...docketCase } as DocketCase },
-        { upsert: true }
-      );
+    await docketCasesCollection(db).updateOne(
+      { countryId, preset, caseKey: caseSeed.caseKey },
+      { $setOnInsert: { _id: new ObjectId(), ...docketCase } as DocketCase },
+      { upsert: true }
+    );
     casesSeeded++;
   }
 

@@ -28,6 +28,7 @@ import {
 } from "./backgroundForeignPolicy";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import type { Document } from "mongodb";
+import { livingConflictsCollection } from "@/lib/db/repositories/livingConflicts";
 
 export interface MacroCountryTurnResult {
   countriesConsidered: number;
@@ -82,8 +83,7 @@ export async function processMacroCountryTurn(
       ? await loadBackgroundForeignContext(db, due.filter(isBackgroundNation), turn)
       : null;
     const foreignPlans: ForeignPolicyPlan[] = [];
-    const crisis = await db
-      .collection<LivingConflictState>("livingConflicts")
+    const crisis = await livingConflictsCollection<LivingConflictState>(db)
       .find(
         {
           defKey: {

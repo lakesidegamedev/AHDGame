@@ -11,6 +11,7 @@ import { handleRouteError, notFound, errorResponse } from "@/lib/api/errors";
 import { createModAuditLog } from "@/lib/modAuditLog";
 import { z } from "zod";
 import type { SuspiciousCharacter, SuppressedFlag } from "@/lib/db/types/activityLog";
+import { suspiciousCharactersCollection } from "@/lib/db/repositories/suspiciousCharacters";
 
 const schema = z.object({
   note: z.string().max(500).optional(),
@@ -41,7 +42,7 @@ export async function POST(
     const isPermanent = parsed.data.permanent === true;
 
     const db = await getDb();
-    const col = db.collection<SuspiciousCharacter>("suspiciousCharacters");
+    const col = suspiciousCharactersCollection(db);
     const charOid = new ObjectId(characterId);
 
     const existing = await col.findOne({ characterId: charOid });

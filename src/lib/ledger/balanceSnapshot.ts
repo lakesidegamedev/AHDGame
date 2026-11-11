@@ -22,6 +22,9 @@ import { nppsCollection } from "@/lib/db/repositories/npps";
 import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { indexFundCommandsCollection } from "@/lib/db/repositories/indexFundCommands";
+import { pensionSchemesCollection } from "@/lib/db/repositories/pensionSchemes";
+import { producerEconomyAccountsCollection } from "@/lib/db/repositories/producerEconomyAccounts";
 
 export const BALANCE_SNAPSHOTS_COLLECTION = "balanceSnapshots";
 export const BALANCE_CHECKPOINTS_COLLECTION = "balanceSnapshotCheckpoints";
@@ -210,9 +213,10 @@ async function collectBalanceState(
     preset?: string;
     worldEpochId?: string;
   }>(db).findOne({ _id: "current" }, { projection: { preset: 1, worldEpochId: 1 } });
-  const producerWalletCursor = db
-    .collection<ProducerEconomyAccount>("producerEconomyAccounts")
-    .find({ worldEpoch: gameState?.worldEpochId ?? "" }, { projection: { currency: 1, cash: 1 } });
+  const producerWalletCursor = producerEconomyAccountsCollection(db).find(
+    { worldEpoch: gameState?.worldEpochId ?? "" },
+    { projection: { currency: 1, cash: 1 } }
+  );
   for await (const wallet of producerWalletCursor) {
     const currency = ZOD_CURRENCY_ENUM.find((code) => code === wallet.currency);
     const rate = currency && rates.get(currency);
@@ -307,10 +311,10 @@ async function collectBalanceState(
   }
 
   // Pending cash belongs to the subscriber and stays outside fund NAV and bank capital.
-  const subscriptions = db.collection<{
+  const subscriptions = indexFundCommandsCollection<{
     _id: string;
     subscription: { amountAnchor: number; currency: CurrencyCode };
-  }>("indexFundCommands");
+  }>(db);
   const subscriptionCursor = subscriptions.find(
     { "subscription.status": "queued" },
     { projection: { "subscription.amountAnchor": 1, "subscription.currency": 1 } }
@@ -328,11 +332,11 @@ async function collectBalanceState(
   // move. `investedValueAnchor` is deliberately excluded: it is a
   // marked-to-market cache of the scheme's fund units that reprices without
   // any flow, so snapshotting it would alarm on valuation drift.
-  const schemes = db.collection<{
+  const schemes = pensionSchemesCollection<{
     _id: ObjectId;
     countryId?: string;
     assetsAnchor?: number;
-  }>("pensionSchemes");
+  }>(db);
   const schemeCursor = schemes.find({}, { projection: { countryId: 1, assetsAnchor: 1 } });
   for await (const scheme of schemeCursor) {
     if (typeof scheme.assetsAnchor !== "number") continue;

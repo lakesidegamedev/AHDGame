@@ -71,6 +71,8 @@ import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVot
 import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
+import { playerEndorsementsCollection } from "@/lib/db/repositories/playerEndorsements";
+import { nppEndorsementsCollection } from "@/lib/db/repositories/nppEndorsements";
 
 export type { PrimaryPartyDetail, PrimaryViewerCampaign };
 
@@ -295,16 +297,14 @@ export async function loadPrimaryPartyData(
     countryId,
   });
 
-  const playerEndorsements = await db
-    .collection<PlayerEndorsement>("playerEndorsements")
+  const playerEndorsements = await playerEndorsementsCollection(db)
     .find({ electionId: election._id, isActive: true })
     .project<Pick<PlayerEndorsement, "candidateId" | "characterId">>({
       candidateId: 1,
       characterId: 1,
     })
     .toArray();
-  const nppEndorsements = await db
-    .collection<NPPEndorsement>("nppEndorsements")
+  const nppEndorsements = await nppEndorsementsCollection(db)
     .find({ electionId: election._id, isActive: true })
     .project<Pick<NPPEndorsement, "candidateId" | "nppName" | "source">>({
       candidateId: 1,

@@ -28,6 +28,7 @@ import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { playerEndorsementsCollection } from "@/lib/db/repositories/playerEndorsements";
 
 async function getCurrentTurn(db: Db): Promise<number> {
   const gameState = await gameStateCollection<{ _id: string; currentTurn?: number }>(db).findOne({
@@ -124,12 +125,10 @@ export async function suspendCampaignAndEndorse(params: {
   // endorsee's endorsement tally and per-turn campaign-action grant, in addition
   // to the one-time strength/org transfer. Mirrors /endorse: deactivate any prior
   // active endorsement by this character, then insert one keyed to the endorsed row.
-  await db
-    .collection<PlayerEndorsement>("playerEndorsements")
-    .updateMany(
-      { characterId: ownCandidate.characterId, electionId: campaign.electionId, isActive: true },
-      { $set: { isActive: false, withdrawnAt: now } }
-    );
+  await playerEndorsementsCollection(db).updateMany(
+    { characterId: ownCandidate.characterId, electionId: campaign.electionId, isActive: true },
+    { $set: { isActive: false, withdrawnAt: now } }
+  );
   const suspendEndorsement: PlayerEndorsement = {
     _id: new ObjectId(),
     characterId: ownCandidate.characterId,
@@ -141,7 +140,7 @@ export async function suspendCampaignAndEndorse(params: {
     createdAt: now,
   };
   try {
-    await db.collection<PlayerEndorsement>("playerEndorsements").insertOne(suspendEndorsement);
+    await playerEndorsementsCollection(db).insertOne(suspendEndorsement);
   } catch (error) {
     // Idempotent: a concurrent write already left an active endorsement in place.
     if (!isActivePlayerEndorsementDuplicateKey(error)) {

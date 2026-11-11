@@ -103,6 +103,7 @@ import { serverEnv } from "@/lib/config/read";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 import type { Document } from "mongodb";
+import { turnLogsCollection } from "@/lib/db/repositories/turnLogs";
 
 /** Read once per process: the deployment does not change under a running server. */
 const turnBuild = currentTurnBuild();
@@ -798,8 +799,7 @@ async function processTurnImpl(
     };
     let turnLogId: TurnLog["_id"] | null = null;
     if (!localSingleplayer) {
-      turnLogId = (await db.collection<TurnLog>("turnLogs").insertOne(turnLog as TurnLog))
-        .insertedId;
+      turnLogId = (await turnLogsCollection(db).insertOne(turnLog as TurnLog)).insertedId;
       turnLogWritten = true;
       // Weekly contests read the committed turn's values; never blocks the turn.
       void runContestsAfterTurn(db, context.newTurn);
@@ -1053,7 +1053,7 @@ async function processTurnImpl(
             : {}),
           createdAt: failureTime,
         };
-        await db.collection<TurnLog>("turnLogs").insertOne(crashTurnLog as TurnLog);
+        await turnLogsCollection(db).insertOne(crashTurnLog as TurnLog);
       }
     } catch (releaseError) {
       // A failed release is reclaimed by the 20-min stale takeover, but

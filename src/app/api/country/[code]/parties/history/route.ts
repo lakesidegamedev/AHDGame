@@ -5,6 +5,7 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import type { PartyHistorySnapshot } from "@/lib/db/types";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { partyHistoryCollection } from "@/lib/db/repositories/partyHistory";
 
 // Per-turn party-history snapshots are immutable once written during turn
 // processing, so the result for a given (country, currentTurn, lookback) window
@@ -19,8 +20,7 @@ async function fetchPartyHistory(
 ): Promise<PartyHistorySnapshot[]> {
   const db = await getDb();
   const minTurn = Math.max(1, currentTurn - lookbackTurns + 1);
-  return db
-    .collection<PartyHistorySnapshot>("partyHistory")
+  return partyHistoryCollection(db)
     .find({ countryId, turn: { $gte: minTurn, $lte: currentTurn } })
     .sort({ partyId: 1, turn: 1 })
     .toArray();

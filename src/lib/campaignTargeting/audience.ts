@@ -12,6 +12,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
 import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
+import { demographicDefaultsCollection } from "@/lib/db/repositories/demographicDefaults";
 
 export async function loadCampaignAudience(
   db: Db,
@@ -23,7 +24,7 @@ export async function loadCampaignAudience(
   const [state, demographics, defaults, gameState, turnoutData] = await Promise.all([
     statesCollection(db).findOne({ _id: stateId, countryId }),
     stateDemographicsCollection(db).findOne({ _id: stateId, countryId }),
-    db.collection<StateDemographics>("demographicDefaults").findOne({ _id: stateId, countryId }),
+    demographicDefaultsCollection(db).findOne({ _id: stateId, countryId }),
     gameStateCollection(db).findOne(
       { _id: "current" },
       {
@@ -74,8 +75,7 @@ export async function loadCampaignProjectionContext(db: Db, regionIds: string[])
     stateDemographicTurnoutCollection(db)
       .find({ _id: { $in: regionIds } })
       .toArray(),
-    db
-      .collection<StateDemographics>("demographicDefaults")
+    demographicDefaultsCollection(db)
       .find({ _id: { $in: regionIds } })
       .toArray(),
     gameStateCollection(db).findOne(

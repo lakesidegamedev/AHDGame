@@ -19,6 +19,7 @@ import { announceReferendumRequested } from "@/lib/referendum/referendumWebhooks
 import { recordWireEvent } from "@/lib/referendum/wire";
 import { sovereigntyRegionIn } from "@/lib/referendum/rules/sovereigntyRegions";
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { governorOfficeStateCollection } from "@/lib/db/repositories/governorOfficeState";
 
 /** Non-terminal statuses that count as "a referendum is in progress". */
 const ACTIVE_STATUSES: ReferendumStatus[] = [
@@ -74,9 +75,10 @@ async function requestReferendumInTransaction(
   const refs = getReferendumCollection(db);
 
   // A shared office write serializes requests even when an admin pays no AP.
-  await db
-    .collection<GovernorOfficeState>("governorOfficeState")
-    .updateOne({ countryId, stateId }, { $inc: { referendumRequestRevision: 1 } });
+  await governorOfficeStateCollection(db).updateOne(
+    { countryId, stateId },
+    { $inc: { referendumRequestRevision: 1 } }
+  );
   const active = await refs.findOne({ regionId: stateId, status: { $in: ACTIVE_STATUSES } });
   const lastTerminal = await refs
     .find({
@@ -101,9 +103,7 @@ async function requestReferendumInTransaction(
   if (active) return { status: 400, body: { error: "A referendum is already in progress." } };
   if (!elig.eligible && !adminOverride) return { status: 400, body: { error: elig.reason } };
 
-  const office = await db
-    .collection<GovernorOfficeState>("governorOfficeState")
-    .findOne({ countryId, stateId });
+  const office = await governorOfficeStateCollection(db).findOne({ countryId, stateId });
   if (!office) return { status: 400, body: { error: "Office state row missing." } };
   if (!adminOverride && (office.gubernatorialActions ?? 0) < REQUEST_AP_COST) {
     return { status: 400, body: { error: "Insufficient office action points." } };
@@ -133,12 +133,10 @@ async function requestReferendumInTransaction(
     updatedAt: now,
   };
   if (!adminOverride) {
-    const debit = await db
-      .collection<GovernorOfficeState>("governorOfficeState")
-      .updateOne(
-        { countryId, stateId, gubernatorialActions: { $gte: REQUEST_AP_COST } },
-        { $inc: { gubernatorialActions: -REQUEST_AP_COST }, $set: { updatedAt: now } }
-      );
+    const debit = await governorOfficeStateCollection(db).updateOne(
+      { countryId, stateId, gubernatorialActions: { $gte: REQUEST_AP_COST } },
+      { $inc: { gubernatorialActions: -REQUEST_AP_COST }, $set: { updatedAt: now } }
+    );
     if (debit.modifiedCount === 0)
       return { status: 400, body: { error: "Insufficient office action points." } };
   }

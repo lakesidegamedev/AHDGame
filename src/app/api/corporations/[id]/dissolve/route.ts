@@ -57,6 +57,8 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { corporationVotesCollection } from "@/lib/db/repositories/corporationVotes";
+import type { Document } from "mongodb";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -132,7 +134,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
       realShareholders[0].characterId?.toString() === corporation.ceoId.toString();
 
     if (!corporation.isPrivate && !ceoIsOnlyRealShareholder) {
-      const passedVote = await db.collection("corporationVotes").findOne({
+      const passedVote = await corporationVotesCollection<Document>(db).findOne({
         corporationId: corporation._id,
         type: "dissolution",
         status: "passed",

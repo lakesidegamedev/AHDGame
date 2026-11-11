@@ -19,6 +19,7 @@ import { getPoliticalPartiesCollection } from "@/lib/db/collections/politicalPar
 import { getCorporationsCollection } from "@/lib/db/collections/corporations";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { parliamentaryGovernmentsCollection } from "@/lib/db/repositories/parliamentaryGovernments";
 
 /** CEOs of the largest listed corporations in a country earn the major tier. */
 export const MAJOR_CEO_RANK = 10;
@@ -68,8 +69,7 @@ export async function loadOppositionRoles(db: Db): Promise<OppositionRoles> {
         }
       )
       .toArray(),
-    db
-      .collection<ParliamentaryGovernment>("parliamentaryGovernments")
+    parliamentaryGovernmentsCollection(db)
       .find({}, { projection: { _id: 1, governingPartyId: 1, coalitionPartyIds: 1 } })
       .toArray(),
   ]);

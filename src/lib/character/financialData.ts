@@ -19,6 +19,8 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { indexFundPositionsCollection } from "@/lib/db/repositories/indexFundPositions";
+import type { Document } from "mongodb";
 
 export async function getFinancialData(characterId: ObjectId) {
   const db = await getDb();
@@ -45,12 +47,10 @@ export async function getFinancialData(characterId: ObjectId) {
       .find({ matured: false, defaulted: false, "holders.characterId": characterId })
       .project({ couponRate: 1, currencyCode: 1, countryId: 1, holders: 1 })
       .toArray(),
-    db
-      .collection("indexFundPositions")
-      .findOne(
-        { holderKind: "character", characterId, units: { $gt: 0 } },
-        { projection: { _id: 1 } }
-      ),
+    indexFundPositionsCollection<Document>(db).findOne(
+      { holderKind: "character", characterId, units: { $gt: 0 } },
+      { projection: { _id: 1 } }
+    ),
   ]);
 
   const latestHistByCorp = await fetchLatestCorpHistoryDividendRows(

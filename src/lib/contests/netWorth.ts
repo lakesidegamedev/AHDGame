@@ -23,6 +23,7 @@ import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { indexFundPositionsCollection } from "@/lib/db/repositories/indexFundPositions";
 
 const add = (m: Map<string, number>, key: string, value: number) =>
   m.set(key, (m.get(key) ?? 0) + value);
@@ -55,8 +56,7 @@ export async function loadCharacterNetWorths(
         { projection: { holders: 1, marketPrice: 1, currencyCode: 1 } }
       )
       .toArray(),
-    db
-      .collection<IndexFundPosition>("indexFundPositions")
+    indexFundPositionsCollection(db)
       .find(
         { holderKind: "character", characterId: { $in: characterIds } },
         { projection: { fundId: 1, characterId: 1, units: 1 } }

@@ -55,6 +55,12 @@ import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
 import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
+import { commodityFlowsCollection } from "@/lib/db/repositories/commodityFlows";
+import { moneySupplySnapshotsCollection } from "@/lib/db/repositories/moneySupplySnapshots";
+import { commoditySourcingFlowsCollection } from "@/lib/db/repositories/commoditySourcingFlows";
+import { stockExchangeSnapshotsCollection } from "@/lib/db/repositories/stockExchangeSnapshots";
+import { shareTradeHistoryCollection } from "@/lib/db/repositories/shareTradeHistory";
+import { ledgerReconciliationsCollection } from "@/lib/db/repositories/ledgerReconciliations";
 export {
   summarizeLedgerTurnover,
   computeEconomicVitalSigns,
@@ -245,9 +251,8 @@ export async function snapshotEconomicVitalSigns(
     demandLiquidity,
     inputReliefWorld,
   ] = await Promise.all([
-    db.collection<CommodityFlow>("commodityFlows").find({ turn }).toArray(),
-    db
-      .collection<CommodityFlow>("commodityFlows")
+    commodityFlowsCollection(db).find({ turn }).toArray(),
+    commodityFlowsCollection(db)
       // Historical fill-rate medians only need these pooled totals. In
       // particular, do not decode each turn's large `byCountry` diagnostic
       // object for the entire 48-turn window.
@@ -265,7 +270,7 @@ export async function snapshotEconomicVitalSigns(
       )
       .toArray(),
     commodityPricesCollection(db).find({}).toArray(),
-    db.collection<CommoditySourcingDoc>("commoditySourcingFlows").find({ turn }).toArray(),
+    commoditySourcingFlowsCollection<CommoditySourcingDoc>(db).find({ turn }).toArray(),
     // This diagnostics pass needs only commodity-flow inputs, production-health
     // readings, and the market-formation identity fields below. An exclusion
     // projection still decoded every other scalar on ~4,500 sectors; this
@@ -305,19 +310,18 @@ export async function snapshotEconomicVitalSigns(
         }
       )
       .toArray(),
-    db.collection<StockExchangeSnapshot>("stockExchangeSnapshots").findOne({ _id: "global" }),
+    stockExchangeSnapshotsCollection(db).findOne({ _id: "global" }),
     corporationHistoryCollection<{ corporationId: { toString(): string }; income: number }>(db)
       .find({ turn }, { projection: { corporationId: 1, income: 1 } })
       .toArray(),
-    db
-      .collection<ShareTradeHistory>("shareTradeHistory")
+    shareTradeHistoryCollection(db)
       .find({ turn: { $gte: windowStart, $lte: turn } })
       .toArray(),
     shareOrdersPromise,
     bondsCollection(db).find({ matured: false }).toArray(),
     db.collection<WealthListSnapshot>("wealthListSnapshots").findOne({ _id: "global" }),
-    db.collection<MoneySupplySnapshot>("moneySupplySnapshots").find({ turn }).toArray(),
-    db.collection<LedgerReconciliation>("ledgerReconciliations").findOne({ turn }),
+    moneySupplySnapshotsCollection(db).find({ turn }).toArray(),
+    ledgerReconciliationsCollection<LedgerReconciliation>(db).findOne({ turn }),
     db.collection<BalanceSnapshot>("balanceSnapshots").findOne({ turn }),
     loadLedgerTurnover(db, windowStart, turn),
     ledgerEntriesCollection(db).countDocuments({ turn: { $gte: windowStart, $lte: turn } }),

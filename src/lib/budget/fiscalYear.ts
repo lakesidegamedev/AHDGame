@@ -84,6 +84,8 @@ import { legislationTypesCollection } from "@/lib/db/repositories/legislationTyp
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
+import { federalBudgetSnapshotsCollection } from "@/lib/db/repositories/federalBudgetSnapshots";
+import { macroCountriesCollection } from "@/lib/db/repositories/macroCountries";
 
 // The current turn engine still processes fiscal-year rollover as one shared phase.
 // Pulling the anchor from country-systems makes the rule source explicit now, while
@@ -717,7 +719,7 @@ export async function processFiscalYear(
     await federalBudgetCollection(db).bulkWrite(stabilizerWrites);
   }
   if (backgroundFiscalWrites.length > 0) {
-    await db.collection<MacroCountryState>("macroCountries").bulkWrite(backgroundFiscalWrites);
+    await macroCountriesCollection<MacroCountryState>(db).bulkWrite(backgroundFiscalWrites);
   }
   for (const { countryId, record, gdp } of consolidationNews) {
     try {
@@ -1097,9 +1099,9 @@ export async function saveFiscalYearSnapshot(
     createdAt: new Date(),
   };
 
-  await db
-    .collection<FederalBudgetSnapshot>("federalBudgetSnapshots")
-    .replaceOne({ _id: snapshot._id }, snapshot, { upsert: true });
+  await federalBudgetSnapshotsCollection(db).replaceOne({ _id: snapshot._id }, snapshot, {
+    upsert: true,
+  });
 
   console.log(`[FiscalYear] Snapshot saved: ${snapshot._id}`);
 }

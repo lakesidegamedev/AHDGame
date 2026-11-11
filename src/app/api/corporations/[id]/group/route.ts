@@ -13,6 +13,7 @@ import { resolveCorporation } from "@/lib/api/corporations/resolveQuery";
 import { loadGroupBalanceSheet } from "@/lib/corporations/groups/groupBalanceSheet";
 import type { SupplyAgreement } from "@/lib/db/types/supplyAgreement";
 import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
+import { supplyAgreementsCollection } from "@/lib/db/repositories/supplyAgreements";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -56,8 +57,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
         .sort({ createdAt: -1 })
         .limit(5)
         .toArray(),
-      db
-        .collection<SupplyAgreement>("supplyAgreements")
+      supplyAgreementsCollection(db)
         .find({
           supplierCorpId: { $in: memberIds },
           buyerCorpId: { $in: memberIds },

@@ -44,6 +44,8 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import type { Document } from "mongodb";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { supplyAgreementsCollection } from "@/lib/db/repositories/supplyAgreements";
+import { defenceContractsCollection } from "@/lib/db/repositories/defenceContracts";
 
 /** A standalone AI company: not player, caretaker, state-owned or a subsidiary. */
 export function isStandaloneAiCompany(corp: Corporation): boolean {
@@ -133,11 +135,10 @@ export async function runOffTypeHandover(
   const corpById = new Map(corps.map((c) => [c._id.toString(), c]));
   const [sectors, contractSectorIds, activeAgreements, priorReceipts] = await Promise.all([
     sectorsCol.find({ corporationId: { $in: corps.map((c) => c._id) } }).toArray(),
-    db
-      .collection("defenceContracts")
-      .distinct("sectorId", { status: { $nin: ["cancelled", "complete", "declined"] } }),
-    db
-      .collection("supplyAgreements")
+    defenceContractsCollection<Document>(db).distinct("sectorId", {
+      status: { $nin: ["cancelled", "complete", "declined"] },
+    }),
+    supplyAgreementsCollection<Document>(db)
       .find(
         { status: { $in: ["active", "pending", "cancelling"] } },
         { projection: { supplierCorpId: 1, commodity: 1 } }

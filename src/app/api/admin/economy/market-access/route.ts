@@ -10,6 +10,8 @@ import type { CommodityType } from "@/lib/constants/commodities";
 import type { CommoditySourcingDoc, SourcingNetworkDoc } from "@/lib/logistics/sourcingLedger";
 import { getDb } from "@/lib/mongodb";
 import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
+import { commoditySourcingFlowsCollection } from "@/lib/db/repositories/commoditySourcingFlows";
+import { sourcingNetworkLoadCollection } from "@/lib/db/repositories/sourcingNetworkLoad";
 
 // The canonical export lives in @/lib/economy/economicVitalSigns, but that
 // module pulls the whole snapshot builder (and its heavy dependency graph)
@@ -31,9 +33,10 @@ async function resolveLatestTurn(db: Awaited<ReturnType<typeof getDb>>): Promise
     .collection<{ turn: number }>(ECONOMIC_VITAL_SIGNS_COLLECTION)
     .findOne({}, { projection: { turn: 1 }, sort: { turn: -1 } });
   if (vitalSigns && typeof vitalSigns.turn === "number") return vitalSigns.turn;
-  const network = await db
-    .collection<{ turn: number }>("sourcingNetworkLoad")
-    .findOne({}, { projection: { turn: 1 }, sort: { turn: -1 } });
+  const network = await sourcingNetworkLoadCollection<{ turn: number }>(db).findOne(
+    {},
+    { projection: { turn: 1 }, sort: { turn: -1 } }
+  );
   return network && typeof network.turn === "number" ? network.turn : null;
 }
 
@@ -60,8 +63,8 @@ export const GET = withAdminRoute(async (_auth, request: Request) => {
   }
 
   const [network, commodityDocs, vitalSigns, prices] = await Promise.all([
-    db.collection<SourcingNetworkDoc>("sourcingNetworkLoad").findOne({ turn }),
-    db.collection<CommoditySourcingDoc>("commoditySourcingFlows").find({ turn }).toArray(),
+    sourcingNetworkLoadCollection<SourcingNetworkDoc>(db).findOne({ turn }),
+    commoditySourcingFlowsCollection<CommoditySourcingDoc>(db).find({ turn }).toArray(),
     db.collection<EconomicVitalSigns>(ECONOMIC_VITAL_SIGNS_COLLECTION).findOne({ turn }),
     commodityPricesCollection(db)
       .find({}, { projection: { commodity: 1, globalPrice: 1, basePrice: 1 } })

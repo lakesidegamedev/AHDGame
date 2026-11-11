@@ -7,6 +7,7 @@ import { buildDistrictSquareViews } from "@/lib/redistricting/districtSquareResp
 import type { CongressionalDistrict, Character, NPP } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { congressionalDistrictsCollection } from "@/lib/db/repositories/congressionalDistricts";
 
 /**
  * Returns the static congressional-district geometry for a single US
@@ -41,8 +42,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ stateId
 
       // Live square overlay.
       const db = await getDb();
-      const docs = (await db
-        .collection<CongressionalDistrict>("congressionalDistricts")
+      const docs = (await congressionalDistrictsCollection(db)
         .find({ countryId: "US", stateId: state })
         .toArray()) as CongressionalDistrict[];
 

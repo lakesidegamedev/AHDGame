@@ -18,6 +18,8 @@ import {
 } from "@/lib/unions/unionLeadershipVote";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { unionsCollection } from "@/lib/db/repositories/unions";
+import { unionLeaderVotesCollection } from "@/lib/db/repositories/unionLeaderVotes";
+import { unionOrganizersCollection } from "@/lib/db/repositories/unionOrganizers";
 
 const DUPLICATE_KEY_ERROR_CODE = 11000;
 
@@ -59,9 +61,10 @@ export async function voteUnionLeader(
     return { ok: false, status: 403, error: UNIONS_BANNED_MESSAGE };
   }
 
-  const organizer = await db
-    .collection<UnionOrganizer>("unionOrganizers")
-    .findOne({ unionId: union._id, characterId: voter._id });
+  const organizer = await unionOrganizersCollection(db).findOne({
+    unionId: union._id,
+    characterId: voter._id,
+  });
   if (!organizer || !(typeof organizer.strength === "number" && organizer.strength > 0)) {
     return {
       ok: false,
@@ -107,7 +110,7 @@ export async function voteUnionLeader(
   const now = new Date();
   const upsertFilter = { unionId: union._id, voterCharacterId: voter._id };
   try {
-    await db.collection<Omit<UnionLeaderVote, "_id">>("unionLeaderVotes").updateOne(
+    await unionLeaderVotesCollection<Omit<UnionLeaderVote, "_id">>(db).updateOne(
       upsertFilter,
       {
         $set: { candidateCharacterId, updatedAt: now },
@@ -122,13 +125,13 @@ export async function voteUnionLeader(
   } catch (error) {
     const code = (error as MongoServerError | undefined)?.code;
     if (code !== DUPLICATE_KEY_ERROR_CODE) throw error;
-    await db.collection<UnionLeaderVote>("unionLeaderVotes").updateOne(upsertFilter, {
+    await unionLeaderVotesCollection(db).updateOne(upsertFilter, {
       $set: { candidateCharacterId, updatedAt: now },
     });
   }
 
   const [allVotes, weights] = await Promise.all([
-    db.collection<UnionLeaderVote>("unionLeaderVotes").find({ unionId: union._id }).toArray(),
+    unionLeaderVotesCollection(db).find({ unionId: union._id }).toArray(),
     loadUnionVoteWeights(db, union._id),
   ]);
   const tally = tallyUnionLeaderVotes(allVotes, weights, incumbentId);

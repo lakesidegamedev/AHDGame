@@ -6,6 +6,8 @@ import type {
   NationalPartyVote,
 } from "@/lib/db/types";
 import { nationalPartyElectionsCollection } from "@/lib/db/repositories/nationalPartyElections";
+import { nationalPartyCandidatesCollection } from "@/lib/db/repositories/nationalPartyCandidates";
+import { nationalPartyVotesCollection } from "@/lib/db/repositories/nationalPartyVotes";
 
 export interface WithdrawFromPartyLeadershipElectionsResult {
   candidatesWithdrawn: number;
@@ -43,14 +45,12 @@ export async function withdrawFromPartyLeadershipElections(
   const electionIds = votingElections.map((e) => e._id);
   const now = new Date();
 
-  const candRes = await db
-    .collection<NationalPartyCandidate>("nationalPartyCandidates")
-    .updateMany(
-      { electionId: { $in: electionIds }, characterId: { $in: characterIds }, status: "active" },
-      { $set: { status: "withdrawn", withdrawnAt: now } }
-    );
+  const candRes = await nationalPartyCandidatesCollection(db).updateMany(
+    { electionId: { $in: electionIds }, characterId: { $in: characterIds }, status: "active" },
+    { $set: { status: "withdrawn", withdrawnAt: now } }
+  );
 
-  const voteRes = await db.collection<NationalPartyVote>("nationalPartyVotes").deleteMany({
+  const voteRes = await nationalPartyVotesCollection(db).deleteMany({
     electionId: { $in: electionIds },
     $or: [{ voterId: { $in: characterIds } }, { candidateId: { $in: characterIds } }],
   });

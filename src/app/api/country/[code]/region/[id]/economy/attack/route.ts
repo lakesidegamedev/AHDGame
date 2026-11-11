@@ -77,6 +77,7 @@ import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSecto
 import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 import { usersCollection } from "@/lib/db/repositories/users";
 import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
+import { tariffsCollection } from "@/lib/db/repositories/tariffs";
 
 const splitSchema = z.object({
   sectorType: z.enum(OPERATING_SECTOR_TYPES),
@@ -290,7 +291,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     // Domestic corps splitting into tariffed sectors get a bonus; foreign corps get a penalty.
     const sectorCountry = countryId;
     const [allTariffs, activeFtaPairs] = await Promise.all([
-      db.collection<Tariff>("tariffs").find({ countryId: sectorCountry }).toArray(),
+      tariffsCollection(db).find({ countryId: sectorCountry }).toArray(),
       loadActiveFtaPairs(db),
     ]);
     const corpCountry = corporation.countryId;

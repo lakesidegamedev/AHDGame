@@ -7,6 +7,7 @@ import type {
   PoliticalParty,
 } from "@/lib/db/types";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { committeeProposalsCollection } from "@/lib/db/repositories/committeeProposals";
 
 /** Shape passed to the UI for one observed membership transition. */
 export interface PartyHistoryEntry {
@@ -115,8 +116,7 @@ export async function fetchPartyNameChanges(
   if (relevantParties.length === 0) return [];
 
   const partyByObjectId = new Map(relevantParties.map((party) => [party._id.toString(), party]));
-  const proposals = await db
-    .collection<CommitteeProposal>("committeeProposals")
+  const proposals = await committeeProposalsCollection(db)
     .find({
       type: "rename",
       status: "passed",

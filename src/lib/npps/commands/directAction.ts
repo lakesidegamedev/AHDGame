@@ -31,6 +31,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { nppEndorsementsCollection } from "@/lib/db/repositories/nppEndorsements";
 
 export class DirectActionBalanceConflictError extends Error {}
 
@@ -320,8 +321,7 @@ export async function applyNppDirectAction(
         });
         if (candidacy) {
           rollbackSnapshot.endorsementElectionId = candidacy.electionId;
-          rollbackSnapshot.endorsements = await db
-            .collection<NPPEndorsement>("nppEndorsements")
+          rollbackSnapshot.endorsements = await nppEndorsementsCollection(db)
             .find({ nppId, electionId: candidacy.electionId })
             .toArray();
         }
@@ -371,14 +371,12 @@ export async function applyNppDirectAction(
           );
         }
         if (rollbackSnapshot.endorsementElectionId) {
-          await db.collection<NPPEndorsement>("nppEndorsements").deleteMany({
+          await nppEndorsementsCollection(db).deleteMany({
             nppId,
             electionId: rollbackSnapshot.endorsementElectionId,
           });
           if ((rollbackSnapshot.endorsements?.length ?? 0) > 0) {
-            await db
-              .collection<NPPEndorsement>("nppEndorsements")
-              .insertMany(rollbackSnapshot.endorsements!);
+            await nppEndorsementsCollection(db).insertMany(rollbackSnapshot.endorsements!);
           }
         }
         throw error;

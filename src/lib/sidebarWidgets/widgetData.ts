@@ -22,6 +22,9 @@ import { loadCommodityBoard } from "./data/commodityBoard";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { usersCollection } from "@/lib/db/repositories/users";
 import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
+import { wikiPagesCollection } from "@/lib/db/repositories/wikiPages";
+import type { Document } from "mongodb";
+import { stockExchangeSnapshotsCollection } from "@/lib/db/repositories/stockExchangeSnapshots";
 
 export interface MyCompanyWidgetData {
   sequentialId: number | null;
@@ -138,12 +141,10 @@ async function loadMyCompany(db: Db, viewer: WidgetViewer): Promise<MyCompanyWid
 
 async function loadTicker(db: Db, exchange: string): Promise<StockTickerWidgetData | null> {
   if (!EXCHANGE_API_KEYS.has(exchange)) return null;
-  const snapshot = await db
-    .collection<StockExchangeSnapshot>("stockExchangeSnapshots")
-    .findOne(
-      { _id: exchange },
-      { projection: { exchangeName: 1, turn: 1, listings: { $slice: TICKER_ROWS } } }
-    );
+  const snapshot = await stockExchangeSnapshotsCollection(db).findOne(
+    { _id: exchange },
+    { projection: { exchangeName: 1, turn: 1, listings: { $slice: TICKER_ROWS } } }
+  );
   if (!snapshot) return null;
   const listings = snapshot.listings ?? [];
   // One read for every row's recent history, bounded by a turn floor.
@@ -191,7 +192,7 @@ async function loadStaffQueues(
 ): Promise<StaffQueuesWidgetData | null> {
   if (!viewer.isAdmin && !viewer.isModerator) return null;
   const [wikiReview, altClusters, playerReports] = await Promise.all([
-    db.collection("wikiPages").countDocuments({ status: "pending_review" }),
+    wikiPagesCollection<Document>(db).countDocuments({ status: "pending_review" }),
     getAltClustersCollection(db).then((clusters) => clusters.countDocuments({ status: "open" })),
     db.collection(PLAYER_CONTENT_REPORTS).countDocuments({ status: "pending" }),
   ]);

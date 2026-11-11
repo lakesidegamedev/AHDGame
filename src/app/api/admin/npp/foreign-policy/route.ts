@@ -14,6 +14,8 @@ import {
   foreignPolicyStageFrom,
 } from "@/lib/nppAutonomy/foreignPolicyRollout";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { tradeFlowSnapshotsCollection } from "@/lib/db/repositories/tradeFlowSnapshots";
+import { conflictsCollection } from "@/lib/db/repositories/conflicts";
 
 const LEDGER_WINDOW_TURNS = 120;
 const LEDGER_DOCUMENT_LIMIT = 5_000;
@@ -38,15 +40,10 @@ export const GET = withAdminRoute(async (_auth) => {
       .limit(LEDGER_DOCUMENT_LIMIT)
       .toArray(),
     db.collection<TradeEmbargo>("tradeEmbargoes").find({}).toArray(),
-    db
-      .collection<TradeFlowSnapshot>("tradeFlowSnapshots")
-      .find({})
-      .sort({ turn: -1 })
-      .limit(2)
-      .toArray(),
-    db
-      .collection<ConflictDoc>("conflicts")
-      .countDocuments({ status: { $in: ["active", "escalating", "winding_down"] } }),
+    tradeFlowSnapshotsCollection(db).find({}).sort({ turn: -1 }).limit(2).toArray(),
+    conflictsCollection(db).countDocuments({
+      status: { $in: ["active", "escalating", "winding_down"] },
+    }),
   ]);
 
   const activeEmbargoes = embargoes.filter(

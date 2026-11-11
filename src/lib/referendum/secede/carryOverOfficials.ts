@@ -14,6 +14,7 @@ import { nppsCollection } from "@/lib/db/repositories/npps";
 import type { Document } from "mongodb";
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
+import { seatsCollection } from "@/lib/db/repositories/seats";
 
 export interface CarryOverOfficialsResult {
   msps: number;
@@ -61,7 +62,7 @@ export async function carryOverOfficials(
     countryId: fromCountryId,
     $or: holders,
   });
-  await db.collection("seats").deleteMany({ countryId: fromCountryId, state: regionId });
+  await seatsCollection<Document>(db).deleteMany({ countryId: fromCountryId, state: regionId });
   await charactersCollection(db).updateMany(
     { _id: { $in: characterIds } },
     { $set: { currentOffice: null, updatedAt: now }, $unset: { cabinetPosition: "" } }

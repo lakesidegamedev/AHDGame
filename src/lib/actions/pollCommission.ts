@@ -48,6 +48,8 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { usersCollection } from "@/lib/db/repositories/users";
 import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
+import { actionLogsCollection } from "@/lib/db/repositories/actionLogs";
+import type { Document } from "mongodb";
 
 // Poll pricing lives in the shared rules module: quotePollAction is the single
 // source of truth the effect, validation and the POST debit all call.
@@ -449,7 +451,7 @@ export async function commissionPoll({ userId, pollType }: { userId: string; pol
     username: userDoc?.username,
     countryId: character.countryId,
   };
-  await db.collection("actionLogs").insertOne(actionLog);
+  await actionLogsCollection<Document>(db).insertOne(actionLog);
 
   try {
     const { checkActionAchievements } = await import("@/lib/achievements/triggers");

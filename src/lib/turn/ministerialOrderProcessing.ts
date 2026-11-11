@@ -67,6 +67,7 @@ import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { militaryUnitsCollection } from "@/lib/db/repositories/militaryUnits";
 
 /**
  * Maximum |modifier| any single metric can receive per turn from the combined
@@ -376,7 +377,7 @@ export async function processMinisterialOrders(currentTurn: number): Promise<{
   // charged for it would be a standing asymmetry between the two sweeps.
   const appropriationPreset = await getGameStatePresetOrDefault(db);
   const defenseUnitsByCountry = new Map<string, MilitaryUnit[]>();
-  for (const unit of await db.collection<MilitaryUnit>("militaryUnits").find({}).toArray()) {
+  for (const unit of await militaryUnitsCollection(db).find({}).toArray()) {
     const units = defenseUnitsByCountry.get(unit.countryId) ?? [];
     units.push(unit);
     defenseUnitsByCountry.set(unit.countryId, units);
@@ -528,7 +529,7 @@ export async function processMinisterialOrders(currentTurn: number): Promise<{
   // still under its own general. Deliberately covers EVERY country, not just those
   // with a defense seat — simulated nations must sustain their forces too.
   const reinforcementUnitsByCountry = new Map<string, MilitaryUnit[]>();
-  for (const unit of await db.collection<MilitaryUnit>("militaryUnits").find({}).toArray()) {
+  for (const unit of await militaryUnitsCollection(db).find({}).toArray()) {
     const units = reinforcementUnitsByCountry.get(unit.countryId) ?? [];
     units.push(unit);
     reinforcementUnitsByCountry.set(unit.countryId, units);

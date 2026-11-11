@@ -13,6 +13,7 @@ import {
 } from "./offerOrdering";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { supplyListingsCollection } from "@/lib/db/repositories/supplyListings";
 
 export type PublisherFields = Pick<
   Corporation,
@@ -176,8 +177,7 @@ export async function loadOpenOffers(
   }
 ): Promise<OpenOffersPage> {
   const page = Math.max(1, args.page ?? 1);
-  const found = await db
-    .collection<SupplyListing>("supplyListings")
+  const found = await supplyListingsCollection(db)
     .aggregate<SupplyListing>(
       openOffersPipeline({ ...args, skip: (page - 1) * args.limit, limit: args.limit + 1 })
     )

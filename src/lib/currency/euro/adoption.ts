@@ -15,6 +15,7 @@ import {
 } from "./rules";
 import { reconcileEuroMonetaryUnion } from "./service";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { organizationMembershipsCollection } from "@/lib/db/repositories/organizationMemberships";
 
 export async function loadEuroAdoptionConditions(
   db: Db,
@@ -35,8 +36,7 @@ export async function loadEuroAdoptionConditions(
         },
       }
     ),
-    db
-      .collection<OrganizationMembership>("organizationMemberships")
+    organizationMembershipsCollection(db)
       .find({ organizationId: "EU" }, { projection: { countryId: 1 } })
       .toArray(),
   ]);

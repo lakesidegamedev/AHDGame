@@ -3,6 +3,7 @@ import type { Counter } from "./types/counter";
 import type { CountryId } from "../constants/countries";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import type { Document } from "mongodb";
+import { countersCollection } from "@/lib/db/repositories/counters";
 
 /**
  * Get the next sequential ID for a given entity type.
@@ -24,13 +25,11 @@ export async function getNextSequentialId(
 ): Promise<number> {
   const counterId = type === "party" || type === "coalition" ? `${type}_${countryId}` : type;
 
-  const counter = await db
-    .collection<Counter>("counters")
-    .findOneAndUpdate(
-      { _id: counterId },
-      { $inc: { seq: 1 } },
-      { upsert: true, returnDocument: "after" }
-    );
+  const counter = await countersCollection(db).findOneAndUpdate(
+    { _id: counterId },
+    { $inc: { seq: 1 } },
+    { upsert: true, returnDocument: "after" }
+  );
 
   if (!counter?.seq) {
     throw new Error(`Failed to get next sequential ID for ${counterId}`);
@@ -74,13 +73,11 @@ export async function reserveSequentialIds(
 
   const counterId = type === "party" || type === "coalition" ? `${type}_${countryId}` : type;
 
-  const counter = await db
-    .collection<Counter>("counters")
-    .findOneAndUpdate(
-      { _id: counterId },
-      { $inc: { seq: count } },
-      { upsert: true, returnDocument: "after" }
-    );
+  const counter = await countersCollection(db).findOneAndUpdate(
+    { _id: counterId },
+    { $inc: { seq: count } },
+    { upsert: true, returnDocument: "after" }
+  );
 
   const end = counter?.seq;
   // `end < count` means the increment did not land (a counter that came back
@@ -108,13 +105,11 @@ export async function resetPartyCounters(db: Db, countryIds?: readonly string[])
   //
   // Omit to wipe them all, which is right only when every party is being
   // deleted too (the `deleteDefaultParties` branch).
-  await db
-    .collection<Counter>("counters")
-    .deleteMany(
-      countryIds
-        ? { _id: { $in: countryIds.map((id) => `party_${id}`) } }
-        : { _id: { $regex: /^party_/ } }
-    );
+  await countersCollection(db).deleteMany(
+    countryIds
+      ? { _id: { $in: countryIds.map((id) => `party_${id}`) } }
+      : { _id: { $regex: /^party_/ } }
+  );
 }
 
 /**
@@ -136,8 +131,10 @@ export async function realignPartyCountersToExisting(db: Db): Promise<void> {
 
   for (const g of groups) {
     if (typeof g.maxSeq !== "number" || g._id == null) continue;
-    await db
-      .collection<Counter>("counters")
-      .updateOne({ _id: `party_${g._id}` }, { $set: { seq: g.maxSeq } }, { upsert: true });
+    await countersCollection(db).updateOne(
+      { _id: `party_${g._id}` },
+      { $set: { seq: g.maxSeq } },
+      { upsert: true }
+    );
   }
 }

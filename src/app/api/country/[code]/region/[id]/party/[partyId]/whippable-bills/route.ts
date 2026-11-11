@@ -23,6 +23,7 @@ import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficia
 import { billsCollection } from "@/lib/db/repositories/bills";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
+import { billWhipsCollection } from "@/lib/db/repositories/billWhips";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; partyId: string }>;
@@ -188,8 +189,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
       ...activeFederalBills.map((bill) => bill._id),
       ...activeLocalBills.map((bill) => bill._id),
     ];
-    const existingWhips = await db
-      .collection<BillWhip>("billWhips")
+    const existingWhips = await billWhipsCollection(db)
       .find({
         targetType: "bill",
         targetId: { $in: billIds },

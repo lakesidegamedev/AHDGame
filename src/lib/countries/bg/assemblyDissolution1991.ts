@@ -23,6 +23,7 @@ import type { Document } from "mongodb";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { billsCollection } from "@/lib/db/repositories/bills";
 import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { countryStateCollection } from "@/lib/db/repositories/countryState";
 
 export const BG_CONTINUED_ASSEMBLY_DISSOLUTION_ID =
   "1991-default:bg-constitutional:dissolution1991";
@@ -47,9 +48,10 @@ async function availability(db: Db, turn: number, session?: ClientSession) {
       }
     );
   const readRuntime = () =>
-    db
-      .collection<CountryState>("countryState")
-      .findOne({ _id: "BG" }, { session, projection: { governmentType: 1 } });
+    countryStateCollection(db).findOne(
+      { _id: "BG" },
+      { session, projection: { governmentType: 1 } }
+    );
   // Parallel operations on a single transaction session are unsupported.
   const [game, country, runtime] = session
     ? ([await readGame(), await readCountry(), await readRuntime()] as const)

@@ -8,6 +8,7 @@ import { resolveLegislatedEmbargoes } from "@/lib/trade/reconcileEmbargoes";
 import { NATIONAL_TERMINAL_STATUSES } from "@/lib/congress/billProposalLimits";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { billsCollection } from "@/lib/db/repositories/bills";
+import { tariffsCollection } from "@/lib/db/repositories/tariffs";
 
 export const PUBLIC_TARIFF_SCOPES = [
   "economy_wide",
@@ -30,8 +31,7 @@ export async function queryTariffs(
   if (params.targetCountry) filter.targetOriginCountryId = params.targetCountry;
   if (params.scope) filter.scopeType = params.scope;
   const limit = Math.min(Math.max(params.limit ?? 100, 1), 200);
-  const tariffs = await db
-    .collection<Tariff>("tariffs")
+  const tariffs = await tariffsCollection(db)
     .find(filter)
     .sort({ countryId: 1, scopeType: 1, createdAt: 1 })
     .limit(limit)

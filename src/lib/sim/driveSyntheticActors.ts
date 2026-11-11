@@ -36,6 +36,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { crisesCollection } from "@/lib/db/repositories/crises";
 import type { Document } from "mongodb";
 import { crisisInteractionsCollection } from "@/lib/db/repositories/crisisInteractions";
+import { stateResourceCapacityCollection } from "@/lib/db/repositories/stateResourceCapacity";
 
 export interface DriveSyntheticActorsOptions {
   seed: string;
@@ -140,8 +141,7 @@ async function driveDdSurvey(
   });
   if (!character?.userId) return;
   if (!COUNTRY_CONFIGS.DD?.financeMinisterCabinetId) return;
-  const caps = await db
-    .collection("stateResourceCapacity")
+  const caps = await stateResourceCapacityCollection<Document>(db)
     .find<{
       stateId: string;
       resources?: Record<string, number>;

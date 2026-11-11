@@ -76,6 +76,7 @@ import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVot
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
 import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
+import { demographicDefaultsCollection } from "@/lib/db/repositories/demographicDefaults";
 
 /**
  * Record a primary standings snapshot for every election currently in primary phase.
@@ -176,8 +177,7 @@ export async function recordPrimarySnapshots(
           .toArray()
       : Promise.resolve([] as StateDemographicTurnout[]),
     snapshotRegionIds.length > 0
-      ? db
-          .collection<StateDemographics>("demographicDefaults")
+      ? demographicDefaultsCollection(db)
           .find({ _id: { $in: snapshotRegionIds } })
           .toArray()
       : Promise.resolve([] as StateDemographics[]),

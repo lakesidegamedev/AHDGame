@@ -68,6 +68,8 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { usersCollection } from "@/lib/db/repositories/users";
+import { corporationCeoVotesCollection } from "@/lib/db/repositories/corporationCeoVotes";
+import type { Document } from "mongodb";
 
 export type FoundCorporationRequest = z.infer<typeof foundCorporationSchema>;
 
@@ -719,7 +721,7 @@ export async function foundCorporation({
     await charactersCollection(db).updateOne({ _id: character._id }, { $set: { updatedAt: now } });
 
     // Auto-vote the founder as CEO so the vote record exists from creation
-    await db.collection("corporationCeoVotes").insertOne({
+    await corporationCeoVotesCollection<Document>(db).insertOne({
       corporationId: result.insertedId,
       voterCharacterId: character._id,
       candidateCharacterId: character._id,
@@ -891,9 +893,9 @@ export async function foundCorporation({
       throw error;
     }
     if (createdCorporationId) {
-      await db
-        .collection("corporationCeoVotes")
-        .deleteMany({ corporationId: createdCorporationId });
+      await corporationCeoVotesCollection<Document>(db).deleteMany({
+        corporationId: createdCorporationId,
+      });
       await corporationsCollection(db).deleteOne({ _id: createdCorporationId });
     }
     await refundCharacterCash(db, character._id, homeCurrency, totalPlayerCost, forexEnabled);

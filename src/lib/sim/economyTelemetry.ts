@@ -26,6 +26,13 @@ import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSecto
 import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
+import { indexFundPositionsCollection } from "@/lib/db/repositories/indexFundPositions";
+import { indexFundTransactionsCollection } from "@/lib/db/repositories/indexFundTransactions";
+import { indexFundRedemptionQueueCollection } from "@/lib/db/repositories/indexFundRedemptionQueue";
+import { commodityPriceHistoryCollection } from "@/lib/db/repositories/commodityPriceHistory";
+import { shareListingsCollection } from "@/lib/db/repositories/shareListings";
+import { ledgerReconciliationsCollection } from "@/lib/db/repositories/ledgerReconciliations";
+import { economicVitalSignsCollection } from "@/lib/db/repositories/economicVitalSigns";
 
 /**
  * Post-run economy telemetry.
@@ -319,8 +326,7 @@ function emptyMarket(note: string): MarketTelemetry {
 }
 
 async function collectReconciliation(db: Db): Promise<ReconciliationTelemetry> {
-  const docs = await db
-    .collection("ledgerReconciliations")
+  const docs = await ledgerReconciliationsCollection<Document>(db)
     .find(
       {},
       {
@@ -407,19 +413,16 @@ const FUND_FLOW_KINDS = [
 
 async function collectFunds(db: Db, currentTurn: number): Promise<FundTelemetry> {
   const [txs, queue, positions, funds, config] = await Promise.all([
-    db
-      .collection("indexFundTransactions")
+    indexFundTransactionsCollection<Document>(db)
       .find({}, { projection: { kind: 1, turn: 1, amountAnchor: 1 } })
       .toArray(),
-    db
-      .collection("indexFundRedemptionQueue")
+    indexFundRedemptionQueueCollection<Document>(db)
       .find(
         {},
         { projection: { status: 1, units: 1, requestedAmountAnchor: 1, paidAmountAnchor: 1 } }
       )
       .toArray(),
-    db
-      .collection("indexFundPositions")
+    indexFundPositionsCollection<Document>(db)
       .find({}, { projection: { fundId: 1, units: 1 } })
       .toArray(),
     indexFundsCollection<Document>(db)
@@ -660,7 +663,7 @@ async function collectCoverage(db: Db): Promise<CoverageTelemetry> {
     commodityPricesCollection<Document>(db)
       .find({}, { projection: { commodity: 1, globalSupply: 1, globalDemand: 1 } })
       .toArray(),
-    db.collection("economicVitalSigns").findOne({}, { sort: { turn: -1 } }),
+    economicVitalSignsCollection<Document>(db).findOne({}, { sort: { turn: -1 } }),
   ]);
   const base = emptyCoverage("corporateSectors is empty.");
   const rawFunnel = (vitalSigns?.marketFormation as Record<string, unknown> | undefined)
@@ -756,8 +759,7 @@ async function collectMarket(db: Db): Promise<MarketTelemetry> {
     commodityPricesCollection<Document>(db)
       .find({}, { projection: { commodity: 1, globalSupply: 1, globalDemand: 1 } })
       .toArray(),
-    db
-      .collection("commodityPriceHistory")
+    commodityPriceHistoryCollection<Document>(db)
       .find({}, { projection: { turn: 1, globalSupply: 1, globalDemand: 1 } })
       .toArray(),
     bondsCollection(db)
@@ -774,8 +776,7 @@ async function collectMarket(db: Db): Promise<MarketTelemetry> {
         }
       )
       .toArray(),
-    db
-      .collection("shareListings")
+    shareListingsCollection<Document>(db)
       .find({}, { projection: { status: 1, sharesListed: 1, sharesRemaining: 1 } })
       .toArray(),
     gameStateCollection<Document>(db).findOne({ _id: "current" as never }),

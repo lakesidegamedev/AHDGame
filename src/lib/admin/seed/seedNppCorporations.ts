@@ -30,6 +30,7 @@ import { scheduledMarketizationLevel, DUAL_TRACK_CEILING } from "@/lib/constants
 import { batchSpawnNppCorporations, NPP_CAPITAL_STATES } from "@/lib/admin/spawnNppCorporation";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { stateResourceCapacityCollection } from "@/lib/db/repositories/stateResourceCapacity";
 
 export interface NppCorpCountryPlan {
   countryId: CountryId;
@@ -138,10 +139,7 @@ export async function seedNppCorporations(
     const extractionSite =
       preset === "1991-default" && ["US", "UK", "JP"].includes(countryId)
         ? chooseSeedExtractionSite(
-            await db
-              .collection<StateResourceCapacity>("stateResourceCapacity")
-              .find({ countryId })
-              .toArray()
+            await stateResourceCapacityCollection(db).find({ countryId }).toArray()
           )
         : null;
     const existing = await corporationsCollection(db)

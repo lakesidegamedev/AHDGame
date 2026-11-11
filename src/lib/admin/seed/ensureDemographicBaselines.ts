@@ -2,6 +2,7 @@ import type { AnyBulkWriteOperation, Db } from "mongodb";
 import type { StateDemographics, StateDemographicTurnout } from "@/lib/db/types";
 import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
 import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
+import { demographicDefaultsCollection } from "@/lib/db/repositories/demographicDefaults";
 
 /** Fill missing policy baselines and neutral turnout rows after every country pack. */
 export async function ensureDemographicBaselines(db: Db, log: (message: string) => void) {
@@ -34,7 +35,7 @@ export async function ensureDemographicBaselines(db: Db, log: (message: string) 
     })
   );
   if (baselineOps.length > 0) {
-    await db.collection<StateDemographics>("demographicDefaults").bulkWrite(baselineOps);
+    await demographicDefaultsCollection(db).bulkWrite(baselineOps);
     await stateDemographicTurnoutCollection(db).bulkWrite(turnoutOps);
   }
   log(`Ensured demographic baselines and turnout rows for ${demographics.length} regions`);

@@ -22,6 +22,7 @@ import { ledgerEntriesCollection } from "@/lib/db/repositories/ledgerEntries";
 import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { playerIncomeTaxAssessmentsCollection } from "@/lib/db/repositories/playerIncomeTaxAssessments";
 
 interface Payer {
   ownerCollection: Assessment["ownerCollection"];
@@ -191,7 +192,7 @@ async function deliver(db: Db, original: Batch): Promise<void> {
     }));
   if (batch.stage === "debited") {
     if (batch.paidIds.length)
-      await db.collection<Assessment>("playerIncomeTaxAssessments").bulkWrite(
+      await playerIncomeTaxAssessmentsCollection<Assessment>(db).bulkWrite(
         assessments.map((assessment) => ({
           updateOne: {
             filter: {
@@ -495,7 +496,7 @@ async function deliver(db: Db, original: Batch): Promise<void> {
       );
     }
     if (batch.paidIds.length)
-      await db.collection<Assessment>("playerIncomeTaxAssessments").updateMany(
+      await playerIncomeTaxAssessmentsCollection<Assessment>(db).updateMany(
         {
           _id: {
             $in: assessments.filter((a) => a.collection?.fullyPaid !== false).map((a) => a._id),
@@ -528,8 +529,7 @@ export async function settlePlayerIncomeTaxAssessments(
   // the active BSON plan indefinitely or starving other taxpayers.
   const scanLimit = 1000;
   const scan = (limit: number, after?: string, through?: string) =>
-    db
-      .collection<Assessment>("playerIncomeTaxAssessments")
+    playerIncomeTaxAssessmentsCollection<Assessment>(db)
       .find({
         worldId,
         status: "unpaid",

@@ -1,6 +1,7 @@
 import type { Db } from "mongodb";
 import type { MarketIndexIntraday } from "@/lib/db/types/marketIndexIntraday";
 import type { MarketCapTick } from "@/lib/db/types/marketCapTick";
+import { marketCapTicksCollection } from "@/lib/db/repositories/marketCapTicks";
 
 const QUARTER_MS = 15 * 60_000;
 
@@ -52,7 +53,7 @@ export async function recordIntradayLevels(
       }),
       { ordered: false }
     ),
-    db.collection<MarketCapTick>("marketCapTicks").bulkWrite(
+    marketCapTicksCollection(db).bulkWrite(
       levels.map(({ exchange, marketCap }) => {
         const cap = Math.round(marketCap);
         return {

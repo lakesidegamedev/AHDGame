@@ -29,6 +29,7 @@ import { shareholderVotingPower, totalVotingPower } from "@/lib/corporations/sup
 import { executeFundOnlyBuyout } from "./fundOnlyBuyout";
 import { unplacedIpoShares } from "@/lib/corporations/rules/dividendShares";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporationPrivatizationVotesCollection } from "@/lib/db/repositories/corporationPrivatizationVotes";
 
 export interface OpenPrivatizationVoteInput {
   db: Db;
@@ -112,9 +113,10 @@ export async function openPrivatizationVote(
     };
   }
 
-  const existingOpen = await db
-    .collection<CorporationPrivatizationVote>("corporationPrivatizationVotes")
-    .findOne({ corporationId: corporation._id, status: "open" });
+  const existingOpen = await corporationPrivatizationVotesCollection(db).findOne({
+    corporationId: corporation._id,
+    status: "open",
+  });
   if (existingOpen) {
     return { ok: false, error: "A privatization vote is already open", status: 400 };
   }
@@ -275,22 +277,20 @@ export async function openPrivatizationVote(
   const now = new Date();
   let insertedId;
   try {
-    const result = await db
-      .collection<CorporationPrivatizationVote>("corporationPrivatizationVotes")
-      .insertOne({
-        corporationId: corporation._id,
-        openedByCharacterId: character._id,
-        openedAtTurn: currentTurn,
-        deadlineAtTurn: currentTurn + PRIVATIZATION_VOTE_DURATION_TURNS,
-        lockedBuyoutPrice,
-        lockedBuyoutCurrency: lockedCurrency,
-        totalReservedCash,
-        reservedCashCurrency: lockedCurrency,
-        votes: [],
-        status: "open",
-        createdAt: now,
-        updatedAt: now,
-      } as unknown as CorporationPrivatizationVote);
+    const result = await corporationPrivatizationVotesCollection(db).insertOne({
+      corporationId: corporation._id,
+      openedByCharacterId: character._id,
+      openedAtTurn: currentTurn,
+      deadlineAtTurn: currentTurn + PRIVATIZATION_VOTE_DURATION_TURNS,
+      lockedBuyoutPrice,
+      lockedBuyoutCurrency: lockedCurrency,
+      totalReservedCash,
+      reservedCashCurrency: lockedCurrency,
+      votes: [],
+      status: "open",
+      createdAt: now,
+      updatedAt: now,
+    } as unknown as CorporationPrivatizationVote);
     insertedId = result.insertedId;
   } catch (err) {
     await refundCharacterCash(db, character._id, lockedCurrency, totalReservedCash, forexEnabled);

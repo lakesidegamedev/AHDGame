@@ -23,6 +23,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { stateRegistrationPoolCollection } from "@/lib/db/repositories/stateRegistrationPool";
 
 export async function bindHu2011Campaigns(db: Db, game: GameState, turn: number, now: Date) {
   if (game.preset !== "1991-default") return false;
@@ -175,8 +176,7 @@ async function materializeHu2011PrimaryCohorts(
   const regions = await statesCollection(db)
     .find({ countryId: "HU" }, { session, projection: STATE_POPULATION_FIELDS })
     .toArray();
-  const pools = await db
-    .collection<StateRegistrationPool>("stateRegistrationPool")
+  const pools = await stateRegistrationPoolCollection(db)
     .find({ countryId: "HU" }, { session, projection: { stateId: 1, unregistered: 1 } })
     .toArray();
   if (new Set(pools.map((row) => row.stateId)).size !== pools.length)

@@ -16,6 +16,7 @@ import { holdsAnyBondsInCorp } from "@/lib/bonds/ceoBondConflict";
 import { shareholderVotingPower } from "@/lib/corporations/superShares";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { corporationCeoVotesCollection } from "@/lib/db/repositories/corporationCeoVotes";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -309,7 +310,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     try {
-      await db.collection<Omit<CeoVote, "_id">>("corporationCeoVotes").updateOne(
+      await corporationCeoVotesCollection<Omit<CeoVote, "_id">>(db).updateOne(
         upsertFilter,
         {
           $set: {
@@ -329,7 +330,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       if (!isCorporationCeoVoteDuplicateKey(error)) {
         throw error;
       }
-      await db.collection<Omit<CeoVote, "_id">>("corporationCeoVotes").updateOne(upsertFilter, {
+      await corporationCeoVotesCollection<Omit<CeoVote, "_id">>(db).updateOne(upsertFilter, {
         $set: {
           candidateCharacterId: candidateOid,
           updatedAt: now,
@@ -338,8 +339,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     // Tally all votes for this corporation, weighted by voting power
-    const allVotesRaw = await db
-      .collection<CeoVote>("corporationCeoVotes")
+    const allVotesRaw = await corporationCeoVotesCollection<CeoVote>(db)
       .find({ corporationId: corporation._id })
       .toArray();
     const allVotes = dedupeCeoVotes(allVotesRaw);
@@ -376,8 +376,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     if (!resolved.ok) return resolved.response;
     const { corporation } = resolved;
 
-    const allVotesRaw = await db
-      .collection<CeoVote>("corporationCeoVotes")
+    const allVotesRaw = await corporationCeoVotesCollection<CeoVote>(db)
       .find({ corporationId: corporation._id })
       .toArray();
     const allVotes = dedupeCeoVotes(allVotesRaw);
@@ -461,7 +460,7 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
         .toArray()
     ).map((mc) => mc._id);
 
-    const deletion = await db.collection<CeoVote>("corporationCeoVotes").deleteMany({
+    const deletion = await corporationCeoVotesCollection<CeoVote>(db).deleteMany({
       corporationId: corporation._id,
       $or: [
         { voterCharacterId: voterCharacter._id, voterCorporationId: { $exists: false } },
@@ -474,8 +473,7 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
     }
 
     const allVotes = dedupeCeoVotes(
-      await db
-        .collection<CeoVote>("corporationCeoVotes")
+      await corporationCeoVotesCollection<CeoVote>(db)
         .find({ corporationId: corporation._id })
         .toArray()
     );

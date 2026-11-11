@@ -59,6 +59,18 @@ import { usersCollection } from "@/lib/db/repositories/users";
 import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
 import { cabinetNominationsCollection } from "@/lib/db/repositories/cabinetNominations";
 import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
+import { actionLogsCollection } from "@/lib/db/repositories/actionLogs";
+import { characterAchievementsCollection } from "@/lib/db/repositories/characterAchievements";
+import { partyChartersCollection } from "@/lib/db/repositories/partyCharters";
+import { retiredCharactersCollection } from "@/lib/db/repositories/retiredCharacters";
+import { statePartyCandidatesCollection } from "@/lib/db/repositories/statePartyCandidates";
+import { nationalPartyCandidatesCollection } from "@/lib/db/repositories/nationalPartyCandidates";
+import { nationalCommitteeCandidatesCollection } from "@/lib/db/repositories/nationalCommitteeCandidates";
+import { playerEndorsementsCollection } from "@/lib/db/repositories/playerEndorsements";
+import { statePartyVotesCollection } from "@/lib/db/repositories/statePartyVotes";
+import { nationalPartyVotesCollection } from "@/lib/db/repositories/nationalPartyVotes";
+import { nationalCommitteeVotesCollection } from "@/lib/db/repositories/nationalCommitteeVotes";
+import { scotusNominationsCollection } from "@/lib/db/repositories/scotusNominations";
 
 /**
  * Core retirement function: snapshots a character, cleans up all gameplay
@@ -86,9 +98,9 @@ export async function retireCharacter(
   const characterId = character._id;
   const now = new Date();
 
-  const achievementCount = await db
-    .collection("characterAchievements")
-    .countDocuments({ characterId });
+  const achievementCount = await characterAchievementsCollection<Document>(db).countDocuments({
+    characterId,
+  });
 
   const highestOffice = deriveHighestOffice(character);
   const [careerLegislation, careerRates, careerLoans] = await Promise.all([
@@ -241,7 +253,7 @@ export async function retireCharacter(
   };
   await closeCharacterSavings(db, characterId);
 
-  await db.collection("retiredCharacters").insertOne(retiredDoc);
+  await retiredCharactersCollection<Document>(db).insertOne(retiredDoc);
 
   const activeElections = await electionsCollection<Document>(db)
     .find({ status: { $nin: ["completed", "resolved"] } })
@@ -435,13 +447,11 @@ export async function retireCharacter(
     { $set: { treasurerId: null, updatedAt: now } }
   );
 
-  await db
-    .collection("nationalCommitteeCandidates")
-    .updateMany(
-      { characterId, status: "active" },
-      { $set: { status: "withdrawn", withdrawnAt: now } }
-    );
-  await db.collection("nationalCommitteeVotes").deleteMany({ voterId: characterId });
+  await nationalCommitteeCandidatesCollection<Document>(db).updateMany(
+    { characterId, status: "active" },
+    { $set: { status: "withdrawn", withdrawnAt: now } }
+  );
+  await nationalCommitteeVotesCollection<Document>(db).deleteMany({ voterId: characterId });
 
   // A nomination still naming a deleted character would confirm a ghost into
   // the cabinet, the court or the central bank board.
@@ -452,15 +462,15 @@ export async function retireCharacter(
   const withdrawNomination = { $set: { status: "withdrawn", updatedAt: now } };
   await Promise.all([
     cabinetNominationsCollection<Document>(db).updateMany(openNomination, withdrawNomination),
-    db.collection<Document>("scotusNominations").updateMany(openNomination, withdrawNomination),
+    scotusNominationsCollection<Document>(db).updateMany(openNomination, withdrawNomination),
     db.collection<Document>("fomcNominations").updateMany(openNomination, withdrawNomination),
   ]);
 
   await congressLeadersCollection<Document>(db).deleteMany({ characterId });
-  await db.collection("statePartyCandidates").deleteMany({ characterId });
-  await db.collection("statePartyVotes").deleteMany({ voterId: characterId });
-  await db.collection("nationalPartyCandidates").deleteMany({ characterId });
-  await db.collection("nationalPartyVotes").deleteMany({ voterId: characterId });
+  await statePartyCandidatesCollection<Document>(db).deleteMany({ characterId });
+  await statePartyVotesCollection<Document>(db).deleteMany({ voterId: characterId });
+  await nationalPartyCandidatesCollection<Document>(db).deleteMany({ characterId });
+  await nationalPartyVotesCollection<Document>(db).deleteMany({ voterId: characterId });
 
   // Phase 6 charter cleanup — if this character is a founder on any
   // in-flight charter, auto-reject their signature and transition the
@@ -472,8 +482,7 @@ export async function retireCharacter(
   // founder-replacement). Ratified / expired / rejected charters are
   // historical records and should not be modified.
   const activeCharterStatuses = ["draft", "pending-signatures", "founder-replacement"];
-  const affectedCharters = await db
-    .collection("partyCharters")
+  const affectedCharters = await partyChartersCollection<Document>(db)
     .find({
       foundersCharacterIds: characterId,
       status: { $in: activeCharterStatuses },
@@ -487,7 +496,7 @@ export async function retireCharacter(
     const charterTurn = await getCurrentTurn(db);
     const replacementDeadlineTurn = computeCharterDeadlineTurn(charterTurn);
     for (const charter of affectedCharters) {
-      await db.collection("partyCharters").updateOne(
+      await partyChartersCollection<Document>(db).updateOne(
         {
           _id: charter._id,
           "signatures.characterId": characterId,
@@ -516,11 +525,11 @@ export async function retireCharacter(
     .find({ characterId }, { projection: { _id: 1 } })
     .toArray();
   const ownCandidateIds = ownCandidates.map((c) => c._id);
-  await db.collection("playerEndorsements").deleteMany({
+  await playerEndorsementsCollection<Document>(db).deleteMany({
     $or: [{ characterId }, { candidateId: { $in: ownCandidateIds } }],
   });
 
-  await db.collection("actionLogs").deleteMany({ characterId });
+  await actionLogsCollection<Document>(db).deleteMany({ characterId });
 
   // Stamp the financial ledger BEFORE deleting the character doc. Pre-Phase-4
   // retirement orphaned the tx history (subjectId pointed at a row that no

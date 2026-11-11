@@ -41,6 +41,8 @@ import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
+import { shareListingsCollection } from "@/lib/db/repositories/shareListings";
+import { shareTradeHistoryCollection } from "@/lib/db/repositories/shareTradeHistory";
 
 export const STOCK_HOLDING_MIGRATION_ID = "2026-10-16-stock-holding-tax-tiers";
 function ownerKey(
@@ -85,11 +87,7 @@ function historyEvents(rows: readonly ShareTradeHistory[], owner: string): Legac
 async function migrate(db: Db, ctx: MigrationContext): Promise<MigrationResult> {
   if (await shareOrdersCollection(db).countDocuments({ activeShareFillKey: { $exists: true } }))
     throw new Error("Recover pending share fills before migrating stock holdings");
-  if (
-    await db
-      .collection<ShareListing>("shareListings")
-      .countDocuments({ activeShareFillKey: { $exists: true } })
-  )
+  if (await shareListingsCollection(db).countDocuments({ activeShareFillKey: { $exists: true } }))
     throw new Error("Recover pending listing fills before migrating stock holdings");
   const [state, corps, orders, listings, history, exchange, national, regional, types, policies] =
     await Promise.all([
@@ -118,15 +116,10 @@ async function migrate(db: Db, ctx: MigrationContext): Promise<MigrationResult> 
           placerFundId: { $exists: false },
         })
         .toArray(),
-      db
-        .collection<ShareListing>("shareListings")
+      shareListingsCollection(db)
         .find({ status: "open", sellerCorporationId: { $exists: false } })
         .toArray(),
-      db
-        .collection<ShareTradeHistory>("shareTradeHistory")
-        .find({})
-        .sort({ turn: 1, createdAt: 1, _id: 1 })
-        .toArray(),
+      shareTradeHistoryCollection(db).find({}).sort({ turn: 1, createdAt: 1, _id: 1 }).toArray(),
       exchangeRatesCollection(db)
         .find({}, { projection: { currencyCode: 1, rate: 1 } })
         .toArray(),

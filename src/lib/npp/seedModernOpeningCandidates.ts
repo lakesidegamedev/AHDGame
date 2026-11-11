@@ -26,6 +26,7 @@ import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { countersCollection } from "@/lib/db/repositories/counters";
 
 /** Called only by fresh historical bootstrap, never by a turn or reference refresh. */
 export async function seedModernOpeningCandidates(
@@ -182,13 +183,11 @@ export async function seedModernOpeningCandidates(
     } as ElectionCandidate);
   }
   if (generated.length > 0) {
-    const counter = await db
-      .collection<Counter>("counters")
-      .findOneAndUpdate(
-        { _id: "npp" },
-        { $inc: { seq: generated.length } },
-        { upsert: true, returnDocument: "after" }
-      );
+    const counter = await countersCollection(db).findOneAndUpdate(
+      { _id: "npp" },
+      { $inc: { seq: generated.length } },
+      { upsert: true, returnDocument: "after" }
+    );
     if (!counter) throw new Error("Failed to reserve opening candidate IDs");
     generated.forEach((actor, index) => {
       actor.sequentialId = counter.seq - generated.length + index + 1;

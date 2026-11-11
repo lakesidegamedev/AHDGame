@@ -7,6 +7,7 @@ import type { CorporationHistory, MarketCapHistory } from "@/lib/db/types";
 import { getExchangeApiKey } from "@/lib/constants/exchangeRegistry";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
+import { marketCapHistoryCollection } from "@/lib/db/repositories/marketCapHistory";
 
 // GET /api/discord-bot/stock-chart — Returns historical share price or aggregate market-cap data for a corporation or exchange.
 // Auth: requireAdminOrApiKey
@@ -92,8 +93,7 @@ export async function GET(request: Request) {
       );
     }
 
-    const history = await db
-      .collection<MarketCapHistory>("marketCapHistory")
+    const history = await marketCapHistoryCollection(db)
       .find({})
       .sort({ turn: -1 })
       .limit(limit)

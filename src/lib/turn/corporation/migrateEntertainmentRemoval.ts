@@ -22,6 +22,7 @@ import { seedPlantLedger } from "@/lib/corporations/plantLedger";
 import type { SectorBuildOrder } from "@/lib/db/types";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { macroCountriesCollection } from "@/lib/db/repositories/macroCountries";
 
 export const REMOVED_COMMODITY = "entertainment_services";
 export const ENTERTAINMENT_REMOVAL_MARKER = "entertainmentCommodityRemovedAtTurn";
@@ -157,12 +158,10 @@ export async function migrateEntertainmentRemoval(
   );
 
   // Macro contributions are recomputed each macro turn; drop the stale key now.
-  await db
-    .collection("macroCountries")
-    .updateMany(
-      { [`contribution.byCommodity.${REMOVED_COMMODITY}`]: { $exists: true } },
-      { $unset: { [`contribution.byCommodity.${REMOVED_COMMODITY}`]: "" } }
-    );
+  await macroCountriesCollection<Document>(db).updateMany(
+    { [`contribution.byCommodity.${REMOVED_COMMODITY}`]: { $exists: true } },
+    { $unset: { [`contribution.byCommodity.${REMOVED_COMMODITY}`]: "" } }
+  );
 
   // 3. Archive, then delete, documents keyed by the commodity.
   const swept = await Promise.all([

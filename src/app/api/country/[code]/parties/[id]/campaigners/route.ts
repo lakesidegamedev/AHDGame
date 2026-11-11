@@ -21,6 +21,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { adminLogsCollection } from "@/lib/db/repositories/adminLogs";
 import type { Document } from "mongodb";
+import { committeeProposalsCollection } from "@/lib/db/repositories/committeeProposals";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -201,8 +202,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     // Cap check counts seats that will remain, plus nominations already in
     // flight, plus the new ones — otherwise a chair could queue five
     // nominations against three slots and let the resolver pick winners.
-    const openNominations = await db
-      .collection<CommitteeProposal>("committeeProposals")
+    const openNominations = await committeeProposalsCollection(db)
       .find({ partyId: party._id, status: "open", type: "campaignerAppointment" })
       .toArray();
     const openTargets = openNominations
@@ -247,9 +247,7 @@ export async function POST(request: Request, { params }: RouteParams) {
         proposingVotes: [],
         campaignerAppointment: { targetCharacterId: targetId },
       };
-      const inserted = await db
-        .collection<CommitteeProposal>("committeeProposals")
-        .insertOne(doc as CommitteeProposal);
+      const inserted = await committeeProposalsCollection(db).insertOne(doc as CommitteeProposal);
       createdNominations.push(inserted.insertedId.toString());
     }
 

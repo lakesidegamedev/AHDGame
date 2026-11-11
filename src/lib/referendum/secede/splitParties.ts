@@ -32,6 +32,9 @@ import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficia
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { partyBudgetCollection } from "@/lib/db/repositories/partyBudget";
+import { countersCollection } from "@/lib/db/repositories/counters";
+import { stateRegistrationPoolCollection } from "@/lib/db/repositories/stateRegistrationPool";
 
 /** Region-party ledger collections dissolved on secession (the new country reseeds). */
 const REGION_PARTY_LEDGERS = [
@@ -195,8 +198,11 @@ export async function splitParties(
 
   const movedOrgs: StatePartyOrg[] = [];
   const refunds = new Map<number, number>();
-  const pools = await db
-    .collection<{ _id: string; stateId: string; independent: number }>("stateRegistrationPool")
+  const pools = await stateRegistrationPoolCollection<{
+    _id: string;
+    stateId: string;
+    independent: number;
+  }>(db)
     .find({ countryId: toCountryId })
     .toArray();
   const removedRegistration = orgs
@@ -276,7 +282,7 @@ export async function splitParties(
   });
   if (refundOps.length) await politicalPartiesCollection(db).bulkWrite(refundOps);
   if (pools.length && removedRegistration > 0)
-    await db.collection<{ _id: string; independent: number }>("stateRegistrationPool").bulkWrite(
+    await stateRegistrationPoolCollection<{ _id: string; independent: number }>(db).bulkWrite(
       pools.map((pool) => ({
         updateOne: {
           filter: { _id: pool._id },
@@ -291,7 +297,7 @@ export async function splitParties(
     (org) => org.stateId !== regionId && wholesaleIds.includes(org.partyId)
   );
   if (outside.length)
-    await db.collection<{ _id: string; independent: number }>("stateRegistrationPool").bulkWrite(
+    await stateRegistrationPoolCollection<{ _id: string; independent: number }>(db).bulkWrite(
       outside.map((org) => ({
         updateOne: {
           filter: { _id: `${fromCountryId}_${org.stateId}` },
@@ -303,12 +309,11 @@ export async function splitParties(
   const independentize = { $set: { party: "independent", updatedAt: now } };
   await charactersCollection<Document>(db).updateMany(outsideMembers, independentize);
   await nppsCollection<Document>(db).updateMany(outsideMembers, independentize);
-  const budgets = await db
-    .collection("partyBudget")
+  const budgets = await partyBudgetCollection<Document>(db)
     .find({ countryId: fromCountryId, scope: "national", partyId: { $in: wholesaleIds } })
     .toArray();
   if (budgets.length)
-    await db.collection("partyBudget").bulkWrite(
+    await partyBudgetCollection<Document>(db).bulkWrite(
       budgets.map((row) => ({
         updateOne: {
           filter: { _id: row._id },
@@ -381,13 +386,11 @@ export async function splitParties(
   // Advance the new country's party counter past the assigned ids.
   const assigned = Object.values(plan.idMap);
   if (assigned.length > 0) {
-    await db
-      .collection<Counter>("counters")
-      .updateOne(
-        { _id: `party_${toCountryId}` },
-        { $set: { seq: Math.max(nextSequentialId - 1, ...assigned) } },
-        { upsert: true }
-      );
+    await countersCollection(db).updateOne(
+      { _id: `party_${toCountryId}` },
+      { $set: { seq: Math.max(nextSequentialId - 1, ...assigned) } },
+      { upsert: true }
+    );
   }
 
   return {

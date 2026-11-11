@@ -6,6 +6,7 @@ import type { PlayerIncomeTaxAssessment } from "@/lib/db/types/incomeTax";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { outstandingTax } from "./rules/taxCollection";
 import { validatePendingStockTaxReceipt } from "./rules/capitalGainsTax";
+import { playerIncomeTaxAssessmentsCollection } from "@/lib/db/repositories/playerIncomeTaxAssessments";
 export interface PlayerTaxStatement {
   initialTier: IncomeTier;
   currentTier: IncomeTier;
@@ -34,8 +35,7 @@ export async function loadPlayerIncomeTaxSummary(
   ownerCollection: "characters" | "imperialCharacters" = "characters",
   rates?: Partial<Record<CurrencyCode, number>>
 ): Promise<PlayerTaxStatement> {
-  const records = await db
-    .collection<PlayerIncomeTaxAssessment>("playerIncomeTaxAssessments")
+  const records = await playerIncomeTaxAssessmentsCollection<PlayerIncomeTaxAssessment>(db)
     .find(
       {
         status: { $in: ["unpaid", "collected", "paid"] },
@@ -145,8 +145,7 @@ export async function loadUnpaidIncomeTaxByCharacter(
   db: Db,
   rates?: Partial<Record<CurrencyCode, number>>
 ): Promise<Map<string, number>> {
-  const rows = await db
-    .collection<PlayerIncomeTaxAssessment>("playerIncomeTaxAssessments")
+  const rows = await playerIncomeTaxAssessmentsCollection<PlayerIncomeTaxAssessment>(db)
     .find(
       { status: "unpaid", withheldAtSource: { $ne: true } },
       {
