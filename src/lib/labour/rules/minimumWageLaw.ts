@@ -89,6 +89,9 @@ export const SAVED_WORLD_MINIMUM_WAGE_LAW_SCALES: Readonly<Record<string, Minimu
     referenceMedianWage: 2200,
     optionRates: [1800, 1500, 1250, 1000, 800, 500, 0],
   },
+  // Monthly floors of CNY 2,700, 2,200, 1,900 and about 1,500 over an urban
+  // median near CNY 5,500. The last three options remove the national floor.
+  cn_minimum_wage: { optionKaitz: [0.49, 0.4, 0.35, 0.27, 0, 0, 0] },
 };
 
 function scaleFor(legislationTypeId: string): MinimumWageLawScale | undefined {
