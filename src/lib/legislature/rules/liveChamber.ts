@@ -1,7 +1,22 @@
-import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
-/** Runtime territory departures shrink the Commons while tolerating its known seed discrepancy. */
+import { SOVEREIGNTY_REGIONS } from "@/lib/referendum/rules/sovereigntyRegions";
+
+/** Seats a region-summed chamber may fall short of its base before it counts as shrunk. */
+const SEED_DISCREPANCY_TOLERANCE = 2;
+
+/** Countries a region can leave, by independence or by joining another country. */
+const DEPARTURE_COUNTRIES: ReadonlySet<string> = new Set(
+  SOVEREIGNTY_REGIONS.filter((entry) => entry.actuates).map((entry) => entry.countryId)
+);
+
+/**
+ * Live size of a chamber apportioned by region. A country that can lose a
+ * region shrinks to its surviving total once the shortfall exceeds the known
+ * seed discrepancy; every other chamber keeps at least its configured base and
+ * grows when a region joins.
+ */
 export function liveSingleTierChamber(countryId: string, sum: number, base: number): number {
-  if (countryId === COUNTRY_CONFIGS.UK.id && sum > 0 && sum < base - 2) return sum;
+  if (DEPARTURE_COUNTRIES.has(countryId) && sum > 0 && sum < base - SEED_DISCREPANCY_TOLERANCE)
+    return sum;
   return Math.max(sum, base);
 }
 

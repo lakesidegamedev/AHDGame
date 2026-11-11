@@ -8,8 +8,8 @@ import { formationChamberSeats, liveSingleTierChamber } from "./rules/liveChambe
  * region transfer — e.g. NI joining Ireland grows the Dáil). Parliamentary
  * majority math reads the live total so the threshold tracks the real chamber.
  *
- * Usually reported as `max(config base, region sum)`. UK territorial departures
- * instead use the surviving regional total. Other chambers retain their
+ * Usually reported as `max(config base, region sum)`. A country a region can
+ * secede from (the UK, Canada) instead uses the surviving regional total. Other chambers retain their
  * config base (so a region's seat-data discrepancy can't shrink an untransferred
  * chamber — e.g. UK regions summing to 648 still report the 650-seat Commons), and
  * grows above the base when a region is added (NI joining → 160 + 71). Bulgaria's
@@ -165,18 +165,16 @@ export function lowerChamberMajorityThreshold(totalSeats: number): number {
 }
 
 /**
- * Countries whose UPPER chamber is apportioned across regions via
- * `state.stateSenateSeats` (so it grows/shrinks with a region transfer — IE's
- * Seanad is split across the NUTS-III regions, summing to its 60 seats; SE's
- * 1953 First Chamber uses the same field across län groups). For everyone else
- * `stateSenateSeats` is a DIFFERENT chamber (UK's is the regional council, not
- * the Lords; SE 1979+ is nominal county-council weight, not the abolished
- * First Chamber), so the upper size stays the static config.
- *
- * SE is listed here but only applied under the 1953-default preset — see
- * {@link getLiveUpperChamberSeats}.
+ * Countries whose upper chamber is apportioned by region `stateSenateSeats`,
+ * so it changes when a region joins or leaves: IE's Seanad, SE's 1953 First
+ * Chamber (that preset only) and Canada's Senate. Elsewhere the field is a
+ * different chamber (UK regional council), so the config size stands.
  */
-const UPPER_CHAMBER_REGION_APPORTIONED: ReadonlySet<CountryId> = new Set<CountryId>(["IE", "SE"]);
+const UPPER_CHAMBER_REGION_APPORTIONED: ReadonlySet<CountryId> = new Set<CountryId>([
+  "IE",
+  "SE",
+  "CA",
+]);
 
 function isUpperChamberRegionApportioned(countryId: CountryId, preset?: string): boolean {
   if (!UPPER_CHAMBER_REGION_APPORTIONED.has(countryId)) return false;
@@ -188,9 +186,8 @@ function isUpperChamberRegionApportioned(countryId: CountryId, preset?: string):
 }
 
 /**
- * Live upper-chamber size. For a region-apportioned upper chamber it's the live
- * `max(config base, Σ region stateSenateSeats)` (NI joining grows the Seanad
- * 60 → 84); otherwise the static config size.
+ * Live upper-chamber size: the region sum for a region-apportioned chamber,
+ * sized like a single-tier lower chamber; otherwise the static config size.
  */
 export async function getLiveUpperChamberSeats(db: Db, countryId: CountryId): Promise<number> {
   const preset = await readActivePreset(db);
@@ -224,5 +221,5 @@ export async function getLiveUpperChamberSeats(db: Db, countryId: CountryId): Pr
     .project<{ stateSenateSeats?: number }>({ stateSenateSeats: 1 })
     .toArray();
   const sum = regions.reduce((acc, r) => acc + (r.stateSenateSeats ?? 0), 0);
-  return Math.max(sum, upper.seats);
+  return liveSingleTierChamber(countryId, sum, upper.seats);
 }
