@@ -32,20 +32,19 @@ import { AdminSnapElectionButton } from "@/components/parliamentary/AdminSnapEle
 import { ProposeLegislationModal } from "./ProposeLegislationModal";
 
 /**
- * Unicameral devolved-parliament legislature page, shared by the seceded
- * nations Scotland (Holyrood) and Wales (Senedd). Both are Additional Member
- * System parliaments led by a First Minister, so a single config-driven page
- * serves both — chamber name + seats come from the country config, and the
- * per-nation copy (member title, presiding officer, hero) from DEVOLVED_META.
- *
- * Mirrors {@link IEOireachtasPage} minus the second chamber. SCO/WAL legislation
- * is not seeded yet (purposefully postponed), so the Bills tab reads empty until
- * those statute books are authored.
+ * Legislature page for a Westminster-style parliament where one elected
+ * chamber votes on player bills: independent Scotland, Wales and Quebec, and
+ * Canada, whose appointed Senate does not vote. Chamber name and key come from
+ * the country config, the live seat count from the members API, and the
+ * per-country copy (member title, presiding officer, hero) from
+ * PARLIAMENT_META.
  */
 
-interface DevolvedMeta {
+interface ParliamentMeta {
   heroSlug: string;
   heroAlt: string;
+  /** Head of government chosen by the chamber. */
+  headTitle: string;
   /** Short post-nominal for a member (MSP / MS). */
   memberAbbr: string;
   /** Plural label used in the propose banner + subtitle. */
@@ -59,10 +58,11 @@ interface DevolvedMeta {
   domesticOnlyLabel: string;
 }
 
-const DEVOLVED_META: Partial<Record<CountryId, DevolvedMeta>> = {
+const PARLIAMENT_META: Partial<Record<CountryId, ParliamentMeta>> = {
   SCO: {
     heroSlug: "holyrood",
     heroAlt: "The Scottish Parliament, Holyrood, Edinburgh",
+    headTitle: "First Minister",
     memberAbbr: "MSP",
     memberPlural: "MSPs",
     presidingOfficer: "Presiding Officer",
@@ -73,12 +73,35 @@ const DEVOLVED_META: Partial<Record<CountryId, DevolvedMeta>> = {
   WAL: {
     heroSlug: "senedd",
     heroAlt: "The Senedd, Cardiff Bay",
+    headTitle: "First Minister",
     memberAbbr: "MS",
     memberPlural: "Members of the Senedd",
     presidingOfficer: "Llywydd",
     electoralSystem: "Additional Member System",
     proposeChamberLabel: "the Senedd",
     domesticOnlyLabel: "Welsh-headquartered corporations only",
+  },
+  QC: {
+    heroSlug: "quebec-parliament",
+    heroAlt: "The Parliament Building, Quebec City",
+    headTitle: "Premier",
+    memberAbbr: "MNA",
+    memberPlural: "MNAs",
+    presidingOfficer: "President of the National Assembly",
+    electoralSystem: "Regional proportional representation",
+    proposeChamberLabel: "National Assembly",
+    domesticOnlyLabel: "Quebec-headquartered corporations only",
+  },
+  CA: {
+    heroSlug: "parliament-hill",
+    heroAlt: "Parliament Hill, Ottawa",
+    headTitle: "Prime Minister",
+    memberAbbr: "MP",
+    memberPlural: "MPs",
+    presidingOfficer: "Speaker",
+    electoralSystem: "Regional proportional representation",
+    proposeChamberLabel: "House of Commons",
+    domesticOnlyLabel: "Canadian-headquartered corporations only",
   },
 };
 
@@ -100,7 +123,7 @@ function BillsTab({
   countryId: CountryId;
   chamberKey: string;
   chamberLabel: string;
-  meta: DevolvedMeta;
+  meta: ParliamentMeta;
   onProposed: () => void;
 }) {
   const [showModal, setShowModal] = useState(false);
@@ -199,7 +222,7 @@ function LeadershipTab({
   loading: boolean;
   countryId: CountryId;
   chamberLabel: string;
-  meta: DevolvedMeta;
+  meta: ParliamentMeta;
   governmentStatus: string | null;
   viewerIsSittingPM: boolean;
   snapElectionsAllowed: boolean;
@@ -230,7 +253,7 @@ function LeadershipTab({
             <div>
               <p className="text-sm font-medium text-foreground">Dissolve {chamberLabel}</p>
               <p className="text-xs text-muted">
-                As First Minister, you may call a snap election. All active legislation will fail.
+                As {meta.headTitle}, you may call a snap election. All active legislation will fail.
               </p>
             </div>
           </div>
@@ -245,7 +268,7 @@ function LeadershipTab({
       )}
       <div className="grid gap-4 sm:grid-cols-2">
         <LeaderCard
-          title="First minister"
+          title={meta.headTitle}
           subtitle="Head of government"
           character={leaders.primeMinister}
         />
@@ -258,7 +281,7 @@ function LeadershipTab({
 
       <div className="rounded-xl border border-card-border/40 bg-card-muted/30 p-4">
         <p className="text-xs text-muted leading-relaxed">
-          The First Minister is nominated by {chamberLabel} and leads the devolved government. The{" "}
+          The {meta.headTitle} is nominated by {chamberLabel} and leads the government. The{" "}
           {meta.presidingOfficer} presides over the chamber. The Opposition Leader heads the largest
           party not in the governing administration.
         </p>
@@ -269,11 +292,11 @@ function LeadershipTab({
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export function DevolvedParliamentPage({ countryId }: { countryId: CountryId }) {
+export function SingleChamberParliamentPage({ countryId }: { countryId: CountryId }) {
   const config = getCountryClientConfig(countryId);
-  const meta = DEVOLVED_META[countryId];
+  const meta = PARLIAMENT_META[countryId];
   const chamberKey = config.legislature.lowerChamber.key;
-  const chamberLabel = config.legislature.name;
+  const chamberLabel = config.legislature.lowerChamber.name;
   const seats = config.legislature.lowerChamber.seats;
 
   const { members, bills, leaders, loading, error, refetch } = useLegislatureData(
@@ -291,7 +314,7 @@ export function DevolvedParliamentPage({ countryId }: { countryId: CountryId }) 
 
   const fetchGovernmentData = () => {
     fetchJson<ExecutiveGovernmentResponse>(`/api/country/${countryId.toLowerCase()}/executive`, {
-      feature: "devolved-parliament-government",
+      feature: "single-chamber-parliament-government",
     })
       .then((data) => {
         if (!data) return;
@@ -329,7 +352,7 @@ export function DevolvedParliamentPage({ countryId }: { countryId: CountryId }) 
     totalSeats: members?.totalSeats ?? seats,
     leader: leaders?.primeMinister
       ? {
-          label: "First minister",
+          label: meta.headTitle,
           name: leaders.primeMinister.characterName,
           id: leaders.primeMinister.characterId,
           sequentialId: leaders.primeMinister.sequentialId,
@@ -362,7 +385,7 @@ export function DevolvedParliamentPage({ countryId }: { countryId: CountryId }) 
         <LegislatureHeader
           countryId={countryId}
           title={chamberLabel}
-          subtitle={`${seats} ${meta.memberPlural} · ${meta.electoralSystem} · ${config.name}`}
+          subtitle={`${members?.totalSeats ?? seats} ${meta.memberPlural} · ${meta.electoralSystem} · ${config.name}`}
           heroImage={`/api/images/hero/${meta.heroSlug}`}
           heroAlt={meta.heroAlt}
           stats={headerStats}
