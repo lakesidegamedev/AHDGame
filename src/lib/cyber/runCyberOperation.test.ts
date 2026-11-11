@@ -37,6 +37,11 @@ vi.mock("@/lib/db/repositories/crises", () => ({
   }),
 }));
 
+const switchState = { on: true };
+vi.mock("@/lib/gameConfig/liveWorldSwitches", () => ({
+  isLiveWorldSwitchOn: vi.fn(async () => switchState.on),
+}));
+
 const logRows: Record<string, unknown>[] = [];
 const debit = vi.fn(async () => true);
 const credit = vi.fn(async () => undefined);
@@ -71,6 +76,25 @@ beforeEach(() => {
   logRows.length = 0;
   debit.mockClear();
   credit.mockClear();
+  switchState.on = true;
+});
+
+describe("cyber operations switch", () => {
+  it("refuses a launch on a world that has not switched cyber operations on", async () => {
+    switchState.on = false;
+    const result = await launchCyberOperation({
+      db,
+      attackerId: "CN",
+      targetId: "US",
+      turn: 100,
+      chargeAppropriation: true,
+      rolls: { success: 0, attribution: 0 },
+    });
+    expect(result.ok).toBe(false);
+    expect(debit).not.toHaveBeenCalled();
+    expect(crises).toHaveLength(0);
+    expect(logRows).toHaveLength(0);
+  });
 });
 
 describe("launchCyberOperation", () => {

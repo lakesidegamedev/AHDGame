@@ -16,7 +16,8 @@ export type LiveWorldSwitch =
   | "byElectionFillEnabled"
   | "scotusNppNominationsEnabled"
   | "scotusPendingDocketEnabled"
-  | "preeGenericFallbackEnabled";
+  | "preeGenericFallbackEnabled"
+  | "cyberOperationsEnabled";
 
 /** True only when the world's gameConfig sets the switch to true. An unreadable config reads off. */
 export async function isLiveWorldSwitchOn(db: Db, key: LiveWorldSwitch): Promise<boolean> {
