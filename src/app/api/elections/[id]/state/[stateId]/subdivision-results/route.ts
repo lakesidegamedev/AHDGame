@@ -18,6 +18,7 @@ import { getPartyHex } from "@/lib/utils/politics";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
 
 // GET /api/elections/[id]/state/[stateId]/subdivision-results — sub-region
 // vote distribution + seat-consistent winners for a region in an election.
@@ -52,6 +53,47 @@ export async function GET(
       return errorResponse(404, "Election not found");
     }
     const election = resolved.election;
+
+    // Completed House races use only their frozen receipt, never today's holders or geometry.
+    if (
+      election.countryId === COUNTRY_CONFIGS.US.id &&
+      election.electionType === "house" &&
+      ["resolved", "completed"].includes(election.status)
+    ) {
+      if (election.state !== regionId) return errorResponse(400, "Election state mismatch");
+      if (atTurn != null)
+        return errorResponse(
+          400,
+          "Turn replay is only available for a concluded presidential race"
+        );
+      const tally = await db
+        .collection<ElectionVoteTally>("electionVoteTallies")
+        .findOne(
+          { electionId: election._id },
+          { projection: { houseDistrictResult: 1, candidateNames: 1, candidateParties: 1 } }
+        );
+      const result = tally?.houseDistrictResult;
+      const supported =
+        result?.version === 1 &&
+        result.electionId === election._id.toString() &&
+        result.countryId === election.countryId &&
+        result.stateId === regionId;
+      return NextResponse.json({
+        viewBox: supported ? result.viewBox : "0 0 1 1",
+        mode: "seatOrdered",
+        resultStatus: supported ? "frozen" : "unsupported",
+        geometryAvailable: supported && result.geometryAvailable,
+        notice: !supported
+          ? "District results unavailable: this election has no recorded district winners."
+          : !result.geometryAvailable
+            ? "District winners are recorded, but map geometry was unavailable for this election."
+            : undefined,
+        subdivisions: supported ? result.districts : [],
+        candidateNames: tally?.candidateNames ?? {},
+        candidateParties: tally?.candidateParties ?? {},
+        partyColors: supported ? result.partyColors : {},
+      });
+    }
 
     const modeEntry = getSubdivisionMode(election.countryId, String(election.electionType));
     if (!modeEntry) {
@@ -155,6 +197,9 @@ export async function GET(
       return NextResponse.json({
         viewBox: data.viewBox,
         mode: modeEntry.mode,
+        resultStatus: "projection",
+        geometryAvailable: true,
+        notice: "Modeled district projection; not final district results.",
         unitLabel: modeEntry.config.unitLabel ?? "Subdivision",
         unitLabelPlural: modeEntry.config.unitLabelPlural ?? "Subdivisions",
         subdivisions: seatResults.map((r) => {
@@ -164,6 +209,11 @@ export async function GET(
             name: src?.name ?? r.id,
             path: src?.path ?? "",
             leanScalar: src?.leanScalar,
+            leanStatus: src?.leanStatus,
+            partyLabel:
+              partyBySeqId.get(r.party)?.abbreviation ??
+              (r.party === "independent" ? "IND" : "Unknown party"),
+            marginAvailable: false,
           };
         }),
         candidateNames: tally.candidateNames,

@@ -22,6 +22,7 @@ interface LegacyCountyFile {
 /** Legacy US CD file shape (src/data/congressional-districts/) — adapted at read time. */
 interface LegacyCdFile {
   viewBox: string;
+  leanBasis?: string;
   districts: { cd: string; path: string; cookPVI: number }[];
 }
 
@@ -85,7 +86,9 @@ export async function loadSubdivisionFile(
           name: d.cd,
           path: d.path,
           electorate: 0,
-          leanScalar: d.cookPVI,
+          ...(parsed.leanBasis === "unavailable-neutral-rendering-fallback"
+            ? { leanStatus: "unavailable" as const }
+            : { leanScalar: d.cookPVI }),
         })),
       };
     }

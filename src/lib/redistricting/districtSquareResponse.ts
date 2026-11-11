@@ -17,7 +17,8 @@ export interface DistrictSquareView {
 export function buildDistrictSquareViews(
   staticCds: string[],
   docs: CongressionalDistrict[],
-  holderNames: Record<string, string>
+  holderNames: Record<string, string>,
+  partyLabels: Record<string, string> = {}
 ): DistrictSquareView[] {
   const byIndex = new Map<number, CongressionalDistrict>();
   for (const d of docs) byIndex.set(d.index, d);
@@ -41,7 +42,10 @@ export function buildDistrictSquareViews(
       squares: d.squares,
       netLean: d.netLean,
       greyShare: d.greyShare,
-      holderParty: d.holderParty,
+      holderParty: d.holderParty
+        ? (partyLabels[d.holderParty] ??
+          (/^\d+$/.test(d.holderParty) ? "Unknown party" : d.holderParty))
+        : null,
       holderName,
     });
   });

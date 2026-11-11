@@ -35,6 +35,11 @@ describe("US 2027 regional calendars", () => {
       })
     ).toMatchObject({ cycle: 1, endTurn: 48, primaryEndTurn: 24 });
   });
+  it("preserves Minnesota's decennial short term through two census cycles", () => {
+    expect(
+      Array.from({ length: 9 }, (_, i) => usRegionalElectionYear2027("MN", "stateSenate", i + 1))
+    ).toEqual([2030, 2032, 2036, 2040, 2042, 2046, 2050, 2052, 2056]);
+  });
   it("isolates overlapping state identifiers in other countries and presets", () => {
     const base = {
       state: "KY",

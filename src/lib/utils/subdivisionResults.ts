@@ -4,6 +4,7 @@
 // reproduces the US Cook-PVI arithmetic exactly (Phase 2 depends on that).
 
 export interface SubdivisionInput {
+  leanStatus?: "unavailable" | "modeled" | "observed";
   id: string;
   name: string;
   electorate: number;
@@ -227,4 +228,13 @@ export function formatLeanLabel(
   }
   const side = leanScalar < 0 ? "Left" : "Right";
   return { label: `${side} +${Math.abs(leanScalar).toFixed(1)}`, neutral: false };
+}
+
+export function formatSubdivisionLean(
+  lean: number | undefined,
+  status?: SubdivisionInput["leanStatus"]
+): string | null {
+  if (status === "unavailable") return "Unavailable (no district PVI source)";
+  if (typeof lean !== "number") return null;
+  return `${status === "modeled" ? "Modeled: " : ""}${formatLeanLabel(lean).label}`;
 }

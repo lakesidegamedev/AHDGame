@@ -195,6 +195,9 @@ export async function applyGeneralElectionAftermath({
     {
       $set: {
         seatsEstimate,
+        ...(districted?.houseDistrictResult
+          ? { houseDistrictResult: districted.houseDistrictResult }
+          : {}),
         finalized: true,
         updatedAt: now,
         resolvedAtTurn: currentTurn,

@@ -26,3 +26,10 @@ areas: [engine]
 - Ships corrected Census CD120 geometry for all 435 voting districts in the
   2027 preset. Historical map assets remain separate. Missing PVI uses a
   labeled modeled fallback rather than claiming observed voting data.
+- Preserves Minnesota's short state-senate term after each census and keeps
+  party abbreviations consistent after House elections.
+- Records district winners, party labels and map geometry with new House
+  results. Historical results use that record; older races without one are
+  clearly labeled unavailable. Current holders have a separate live view.
+- Carries unavailable district PVI through to map tooltips and labels missing
+  district vote margins. Batches holder writes once per state.

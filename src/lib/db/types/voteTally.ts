@@ -50,6 +50,8 @@ export interface ResolvedSeatHolder {
 }
 
 export interface ElectionVoteTally {
+  /** Frozen US House district winners/geometry; removed with this tally on reset. */
+  houseDistrictResult?: import("@/lib/redistricting/rules/houseResult").HouseDistrictResult;
   brazilPresidentialResult?: import("@/lib/countries/br/rules/presidential").BrazilPresidentialDecision;
   _id: ObjectId;
   electionId: ObjectId;

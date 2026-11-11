@@ -1,4 +1,4 @@
-import type { Db } from "mongodb";
+import type { Db, AnyBulkWriteOperation } from "mongodb";
 import { ObjectId } from "mongodb";
 import type { CongressionalDistrict } from "@/lib/db/types/congressionalDistrict";
 import type { PoliticalParty } from "@/lib/db/types";
@@ -13,8 +13,13 @@ import { buildNomineesByParty, buildSeatResult } from "./districtedSeatResult";
 import { getMultiSeatMinShare } from "@/lib/elections/resolution/seatAllocation";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { congressionalDistrictsCollection } from "@/lib/db/repositories/congressionalDistricts";
+import { loadSubdivisionFile } from "@/lib/maps/subdivisionData";
+import { freezeHouseDistrictResult, type HouseDistrictResult } from "./rules/houseResult";
+import { getPartyHex } from "@/lib/utils/politics";
 
 export interface DistrictedArgs {
+  electionId?: string;
+  preset?: string;
   countryId: string;
   stateId: string;
   candidateVotes: Record<string, number>;
@@ -42,6 +47,7 @@ export interface DistrictedArgs {
 }
 
 export interface SeatResult {
+  houseDistrictResult?: HouseDistrictResult;
   isMultiSeat: boolean;
   authoritativeSeats: number;
   seatsEstimate: Record<string, number>;
@@ -183,6 +189,15 @@ export async function districtedHouseResolution(
 
   // Stamp holders onto the district docs. Resolution only — see `persist`.
   const docByIndex = new Map(docs.map((d) => [d.index, d]));
+  const holderUpdates: AnyBulkWriteOperation<CongressionalDistrict>[] = [];
+  const partyLabels = Object.fromEntries([
+    ["independent", "IND"],
+    ...parties.flatMap((p) => [
+      [String(p._id), p.abbreviation],
+      [String(p.sequentialId), p.abbreviation],
+      [p.abbreviation, p.abbreviation],
+    ]),
+  ]);
   for (const [index, candidateId] of args.persist ? projection.assignment : []) {
     const d = docByIndex.get(index);
     if (!d) continue;
@@ -190,18 +205,39 @@ export async function districtedHouseResolution(
     // NPP winners resolve against the `npps` collection, not `characters`, so
     // stamp holderNppId and leave holderCharacterId null (and vice versa).
     const charIdRaw = nppIdRaw ? null : (args.candidateCharacterId[candidateId] ?? null);
-    await congressionalDistrictsCollection(db).updateOne(
-      { _id: d._id },
-      {
-        $set: {
-          holderCharacterId: charIdRaw ? new ObjectId(charIdRaw) : null,
-          holderNppId: nppIdRaw ? new ObjectId(nppIdRaw) : null,
-          holderParty: args.candidateParty[candidateId] ?? null,
-          updatedAt: args.now,
+    holderUpdates.push({
+      updateOne: {
+        filter: { _id: d._id },
+        update: {
+          $set: {
+            holderCharacterId: charIdRaw ? new ObjectId(charIdRaw) : null,
+            holderNppId: nppIdRaw ? new ObjectId(nppIdRaw) : null,
+            holderParty: partyLabels[args.candidateParty[candidateId]] ?? null,
+            updatedAt: args.now,
+          },
         },
-      }
-    );
+      },
+    });
   }
 
+  if (args.persist && args.electionId) {
+    projection.result.houseDistrictResult = freezeHouseDistrictResult({
+      electionId: args.electionId,
+      countryId: args.countryId,
+      stateId: args.stateId,
+      indices: docs.map((d) => d.index),
+      assignment: projection.assignment,
+      candidateParty: args.candidateParty,
+      partyColors: Object.fromEntries(
+        parties.map((p) => [String(p.sequentialId), getPartyHex(String(p.sequentialId), p.color)])
+      ),
+      partyLabels,
+      geometry: await loadSubdivisionFile("congressional-districts", args.stateId, {
+        preset: args.preset,
+      }),
+    });
+  }
+  if (holderUpdates.length)
+    await db.collection<CongressionalDistrict>("congressionalDistricts").bulkWrite(holderUpdates);
   return projection.result;
 }

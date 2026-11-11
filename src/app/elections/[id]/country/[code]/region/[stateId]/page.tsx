@@ -40,12 +40,15 @@ interface CountyResult {
 }
 
 interface CDResult {
+  partyLabel?: string;
+  marginAvailable?: boolean;
   cd: string;
   path: string;
   winner: string;
   party: string;
   margin: number;
-  cookPVI: number;
+  cookPVI?: number;
+  leanStatus?: "unavailable" | "modeled" | "observed";
 }
 
 interface CountyResultsData {
@@ -57,6 +60,8 @@ interface CountyResultsData {
 }
 
 interface CDResultsData {
+  notice?: string;
+  geometryAvailable?: boolean;
   viewBox: string;
   districts: CDResult[];
   candidateNames: Record<string, string>;
@@ -65,6 +70,9 @@ interface CDResultsData {
 }
 
 interface SubdivisionResultEntry {
+  partyLabel?: string;
+  marginAvailable?: boolean;
+  leanStatus?: "unavailable" | "modeled" | "observed";
   id: string;
   name: string;
   path: string;
@@ -78,6 +86,8 @@ interface SubdivisionResultEntry {
 }
 
 interface SubdivisionResultsData {
+  notice?: string;
+  geometryAvailable?: boolean;
   viewBox: string;
   mode: string;
   unitLabel?: string;
@@ -241,6 +251,8 @@ export default function StateElectionResultsPage({
 
   useEffect(() => {
     async function fetchData() {
+      setCDResults(null);
+      setDistrictSquares(null);
       try {
         const electionRes = await fetch(`/api/elections?id=${encodeURIComponent(id)}&view=full`);
         if (!electionRes.ok) {
@@ -314,14 +326,19 @@ export default function StateElectionResultsPage({
             // rendering below consumes (cd/cookPVI naming).
             const sub: SubdivisionResultsData = await cdRes.json();
             setCDResults({
+              notice: sub.notice,
+              geometryAvailable: sub.geometryAvailable,
               viewBox: sub.viewBox,
               districts: sub.subdivisions.map((s) => ({
                 cd: s.id,
                 path: s.path,
                 winner: s.winner,
                 party: s.party ?? "independent",
+                partyLabel: s.partyLabel,
+                marginAvailable: s.marginAvailable,
                 margin: s.margin,
-                cookPVI: s.leanScalar ?? 0,
+                cookPVI: s.leanScalar,
+                leanStatus: s.leanStatus,
               })),
               candidateNames: sub.candidateNames,
               candidateParties: sub.candidateParties,
@@ -333,6 +350,8 @@ export default function StateElectionResultsPage({
           // Live square overlay. Failure is non-fatal: the page falls back to the
           // legacy district map.
           try {
+            setDistrictSquares(null);
+            if (["resolved", "completed"].includes(electionData.status)) return;
             const sqRes = await fetch(`/api/congressional-districts/${stateUpper}`);
             if (sqRes.ok) {
               const sqData = (await sqRes.json()) as {
@@ -499,7 +518,13 @@ export default function StateElectionResultsPage({
                   ? `${unitLabel} Results`
                   : "Congressional district results"}
             </h2>
-            <div className="h-[min(70vh,640px)] min-h-[320px] w-full">
+            <div
+              className={
+                cdResults?.geometryAvailable === false
+                  ? "w-full"
+                  : "h-[min(70vh,640px)] min-h-[320px] w-full"
+              }
+            >
               {subdivisionResults && (
                 <SubdivisionMap
                   viewBox={subdivisionResults.viewBox}
@@ -520,39 +545,55 @@ export default function StateElectionResultsPage({
                   backgroundStateColors={backgroundStateColors}
                 />
               )}
+              {cdResults?.notice && <p className="mb-3 text-sm text-muted">{cdResults.notice}</p>}
               {cdResults &&
-                (districtSquares ? (
-                  <div className="h-full overflow-auto">
-                    <DistrictCardGrid
-                      districts={districtSquares}
-                      redistrictHref={`/country/${code.toLowerCase()}/region/${stateUpper.toLowerCase()}/redistrict`}
-                      campaign={
-                        viewerPartySeqId
-                          ? { countryId: code, stateId: stateUpper, partySeqId: viewerPartySeqId }
-                          : undefined
-                      }
-                    />
-                  </div>
-                ) : (
-                  <SubdivisionMap
-                    viewBox={cdResults.viewBox}
-                    subdivisions={cdResults.districts.map((d) => ({
-                      id: d.cd,
-                      name: d.cd,
-                      path: d.path,
-                      winner: d.winner,
-                      party: d.party,
-                      margin: d.margin,
-                      leanScalar: d.cookPVI,
-                    }))}
-                    candidateNames={cdResults.candidateNames}
-                    candidateParties={cdResults.candidateParties}
-                    partyColors={cdResults.partyColors}
-                    showBackgroundMap={true}
-                    fitToParent={true}
-                  />
-                ))}
+                cdResults.geometryAvailable === false &&
+                cdResults.districts.length > 0 && (
+                  <ul>
+                    {cdResults.districts.map((d) => (
+                      <li key={d.cd}>
+                        {d.cd}: {cdResults.candidateNames[d.winner] ?? "Unknown candidate"}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              {cdResults && cdResults.geometryAvailable !== false && (
+                <SubdivisionMap
+                  viewBox={cdResults.viewBox}
+                  subdivisions={cdResults.districts.map((d) => ({
+                    id: d.cd,
+                    name: d.cd,
+                    path: d.path,
+                    winner: d.winner,
+                    party: d.party,
+                    partyLabel: d.partyLabel,
+                    marginAvailable: d.marginAvailable,
+                    margin: d.margin,
+                    leanScalar: d.cookPVI,
+                    leanStatus: d.leanStatus,
+                  }))}
+                  candidateNames={cdResults.candidateNames}
+                  candidateParties={cdResults.candidateParties}
+                  partyColors={cdResults.partyColors}
+                  showBackgroundMap={true}
+                  fitToParent={true}
+                />
+              )}
             </div>
+            {districtSquares && !["resolved", "completed"].includes(election.status) && (
+              <div className="mt-4">
+                <h3 className="mb-2 font-semibold">Current district holders</h3>
+                <DistrictCardGrid
+                  districts={districtSquares}
+                  redistrictHref={`/country/${code.toLowerCase()}/region/${stateUpper.toLowerCase()}/redistrict`}
+                  campaign={
+                    viewerPartySeqId
+                      ? { countryId: code, stateId: stateUpper, partySeqId: viewerPartySeqId }
+                      : undefined
+                  }
+                />
+              </div>
+            )}
           </div>
 
           {/* Vote Summary with donut */}

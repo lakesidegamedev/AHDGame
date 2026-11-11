@@ -3,11 +3,9 @@ import { readFile } from "fs/promises";
 import { join } from "path";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { getDb } from "@/lib/mongodb";
+import { getGameState } from "@/lib/gameState";
 import { buildDistrictSquareViews } from "@/lib/redistricting/districtSquareResponse";
-import type { CongressionalDistrict, Character, NPP } from "@/lib/db/types";
-import { charactersCollection } from "@/lib/db/repositories/characters";
-import { nppsCollection } from "@/lib/db/repositories/npps";
-import { congressionalDistrictsCollection } from "@/lib/db/repositories/congressionalDistricts";
+import type { CongressionalDistrict, Character, NPP, PoliticalParty } from "@/lib/db/types";
 import { usCongressionalGeometryDirectory } from "@/lib/maps/usCongressionalGeometry";
 
 /**
@@ -51,13 +49,10 @@ export async function GET(_req: Request, { params }: { params: Promise<{ stateId
       }));
 
       // Live square overlay — only when the feature flag is on.
-      let redistricting:
-        { enabled: boolean; districts: ReturnType<typeof buildDistrictSquareViews> } | undefined;
-      if (isRedistrictingEnabled(gs)) {
-        const db = await getDb();
-        const docs = (await congressionalDistrictsCollection(db)
-          .find({ countryId: "US", stateId: state })
-          .toArray()) as CongressionalDistrict[];
+      const db = await getDb();
+      const docs = (await congressionalDistrictsCollection(db)
+        .find({ countryId: "US", stateId: state })
+        .toArray()) as CongressionalDistrict[];
 
       const holderIds = docs
         .map((d) => d.holderCharacterId)
@@ -80,10 +75,21 @@ export async function GET(_req: Request, { params }: { params: Promise<{ stateId
         for (const n of npps) holderNames[String(n._id)] = n.name;
       }
 
+      const parties = await politicalPartiesCollection(db)
+        .find({ countryId: "US" }, { projection: { _id: 1, sequentialId: 1, abbreviation: 1 } })
+        .toArray();
+      const labels = Object.fromEntries(
+        parties.flatMap((p) => [
+          [String(p._id), p.abbreviation],
+          [String(p.sequentialId), p.abbreviation],
+          [p.abbreviation, p.abbreviation],
+        ])
+      );
       const views = buildDistrictSquareViews(
         parsed.districts.map((d) => d.cd),
         docs,
-        holderNames
+        holderNames,
+        labels
       );
       const redistricting = { enabled: true, districts: views };
 
@@ -92,7 +98,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ stateId
         ...(parsed.geometrySource ? { geometrySource: parsed.geometrySource } : {}),
         ...(parsed.leanBasis ? { leanBasis: parsed.leanBasis } : {}),
         districts: baseDistricts,
-        redistricting,
+        ...(redistricting ? { redistricting } : {}),
       });
     } catch {
       return errorResponse(404, `No CD data available for ${state}`);
@@ -101,3 +107,11 @@ export async function GET(_req: Request, { params }: { params: Promise<{ stateId
     return handleRouteError(error);
   }
 }
+
+import { charactersCollection } from "@/lib/db/repositories/characters";
+
+import { nppsCollection } from "@/lib/db/repositories/npps";
+
+import { congressionalDistrictsCollection } from "@/lib/db/repositories/congressionalDistricts";
+
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";

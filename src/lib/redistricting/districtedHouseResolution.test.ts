@@ -13,7 +13,11 @@ function makeFakeDb(seed: Record<string, unknown[]>): {
   const updates: Record<string, ReturnType<typeof vi.fn>> = {};
   const collections: Record<
     string,
-    { find: ReturnType<typeof vi.fn>; updateOne: ReturnType<typeof vi.fn> }
+    {
+      find: ReturnType<typeof vi.fn>;
+      updateOne: ReturnType<typeof vi.fn>;
+      bulkWrite: ReturnType<typeof vi.fn>;
+    }
   > = {};
   const db = {
     collection(name: string) {
@@ -31,7 +35,17 @@ function makeFakeDb(seed: Record<string, unknown[]>): {
       );
       finds[name] = find;
       updates[name] = updateOne;
-      collections[name] = { find, updateOne };
+      const bulkWrite = vi.fn(
+        async (
+          ops: {
+            updateOne: { filter: { _id: string }; update: { $set: Record<string, unknown> } };
+          }[]
+        ) => {
+          for (const op of ops) await updateOne(op.updateOne.filter, op.updateOne.update);
+          return { matchedCount: ops.length };
+        }
+      );
+      collections[name] = { find, updateOne, bulkWrite };
       return collections[name];
     },
   } as unknown as Db;
@@ -40,6 +54,48 @@ function makeFakeDb(seed: Record<string, unknown[]>): {
 }
 
 describe("districtedHouseResolution", () => {
+  it("keeps numeric-string party IDs out of holder labels and freezes election-bound geometry", async () => {
+    const districts = docsFor([
+      { left: 16, right: 0, grey: 0 },
+      { left: 0, right: 16, grey: 0 },
+    ]).map((d) => ({ ...d, stateId: "MT", _id: d._id.replace("TX", "MT") }));
+    const { db, store } = makeFakeDb({
+      politicalParties: PARTIES,
+      congressionalDistricts: districts,
+    });
+    const result = await districtedHouseResolution(db, {
+      countryId: "US",
+      stateId: "MT",
+      electionId: "election-one",
+      preset: "2027-default",
+      candidateVotes: { d: 500, g: 500 },
+      candidateParty: { d: "1", g: "2" },
+      candidateCharacterId: { d: CHAR, g: CHAR },
+      primaryShares: null,
+      now: new Date("2026-11-11"),
+      persist: true,
+    });
+    expect(
+      store.congressionalDistricts.map((d) => (d as { holderParty: string }).holderParty)
+    ).toEqual(["DEM", "GOP"]);
+    const receipt = result!.houseDistrictResult!;
+    expect(receipt).toMatchObject({
+      electionId: "election-one",
+      stateId: "MT",
+      geometryAvailable: true,
+    });
+    expect(receipt.districts.map((d) => [d.id, d.winner, d.party])).toEqual([
+      ["MT-01", "d", "1"],
+      ["MT-02", "g", "2"],
+    ]);
+    const before = JSON.stringify(receipt);
+    expect(receipt.districts.map((d) => d.partyLabel)).toEqual(["DEM", "GOP"]);
+    expect(receipt.districts.every((d) => d.marginAvailable === false)).toBe(true);
+    await db
+      .collection("congressionalDistricts")
+      .updateOne({ _id: districts[0]._id } as never, { $set: { holderParty: "GOP", netLean: 16 } });
+    expect(JSON.stringify(receipt)).toBe(before);
+  });
   it("returns the same result with standalone reads or preloaded districts and parties", async () => {
     const districts = docsFor([
       { left: 16, right: 0, grey: 0 },

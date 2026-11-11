@@ -23,6 +23,15 @@ function doc(partial: Partial<CongressionalDistrict>): CongressionalDistrict {
 }
 
 describe("buildDistrictSquareViews", () => {
+  it("resolves older numeric holder-party IDs for display", () => {
+    expect(
+      buildDistrictSquareViews(["CA-01"], [doc({ holderParty: "1" })], {}, { "1": "DEM" })[0]
+        .holderParty
+    ).toBe("DEM");
+    expect(
+      buildDistrictSquareViews(["CA-01"], [doc({ holderParty: "99" })], {})[0].holderParty
+    ).toBe("Unknown party");
+  });
   it("joins by identity when geometry skips an index and ignores other states", () => {
     const views = buildDistrictSquareViews(
       ["CA-03", "CA-01", "NY-02"],

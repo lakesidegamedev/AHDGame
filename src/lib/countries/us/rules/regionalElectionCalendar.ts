@@ -31,13 +31,17 @@ export function usRegionalElectionYear2027(
   let year = ODD_SENATES.has(state) ? 2027 : SENATE_2030.has(state) ? 2030 : 2028;
   for (let n = 1; n < cycle; n++)
     year +=
-      state === "NJ"
-        ? year % 10 === 1
+      state === "MN"
+        ? year % 10 === 0
           ? 2
           : 4
-        : ODD_SENATES.has(state) || SENATE_2030.has(state) || state === "KS"
-          ? 4
-          : 2;
+        : state === "NJ"
+          ? year % 10 === 1
+            ? 2
+            : 4
+          : ODD_SENATES.has(state) || SENATE_2030.has(state) || state === "KS"
+            ? 4
+            : 2;
   return year;
 }
 
