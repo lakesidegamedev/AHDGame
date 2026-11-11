@@ -20,7 +20,7 @@ function scoresFor(typeId: string): number[] {
 }
 
 describe("calculateShiftImpacts — score-based direction (tax, right→left ordered)", () => {
-  const scores = scoresFor("us_federal_income_tax_rate"); // index 0 = 0% (right) … 10 = 50% (left)
+  const scores = scoresFor("jp_income_tax_rate"); // index 0 = 0% (right) … 10 = 50% (left)
 
   it("proposing a 50% top rate (far-left) is read as a LEFTWARD shift", () => {
     // current 25% (index 5, center) → proposed 50% (index 10, far-left).
@@ -44,8 +44,8 @@ describe("calculateShiftImpacts — score-based direction (tax, right→left ord
 
 describe("calculateShiftImpacts — non-tax left→right sets keep their sign", () => {
   it("minimum wage (index 0 = left) yields the same signs with or without scores", () => {
-    const scores = scoresFor("us_minimum_wage"); // index 0 = $25 living wage (left)
-    // current center (index 3) → proposed $25 (index 0, far-left).
+    const scores = scoresFor("jp_minimum_wage"); // index 0 = living wage guarantee (left)
+    // current center (index 3) → proposed living wage (index 0, far-left).
     const withScores = calculateShiftImpacts("economic", 3, 0, undefined, scores);
     const legacy = calculateShiftImpacts("economic", 3, 0);
     // The fix must never FLIP a left→right-ordered type's sign (magnitude/rounding-to-zero
