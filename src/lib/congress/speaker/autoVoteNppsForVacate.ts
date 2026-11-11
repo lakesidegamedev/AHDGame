@@ -7,6 +7,7 @@ import {
   nppVacateMotionVote,
   type VacateVoteValue,
 } from "./nppVacateVote";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 /**
  * Give every unvoted NPP bloc a graded ballot on the motion to vacate.
@@ -41,8 +42,7 @@ export async function autoVoteNppsForVacateMotion(
   // a plain countryId too, so a row missing it carries no seat weight and its
   // ballot would be discarded. Widening this without widening the tally would
   // just write votes that never count.
-  const officials = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const officials = await electedOfficialsCollection(db)
     .find({ countryId: "US", officeType: "house", isNPP: true })
     .project<Pick<ElectedOfficial, "nppId">>({ nppId: 1 })
     .toArray();

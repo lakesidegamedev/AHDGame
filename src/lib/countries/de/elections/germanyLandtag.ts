@@ -46,6 +46,7 @@ import { captureOfficeTransition } from "@/lib/analytics/officeTransitionAnalyti
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 const LANDTAG_THRESHOLD = 0.05;
 
@@ -403,8 +404,7 @@ async function sweepStaleLandtagOffice(
   now: Date,
   currentTurn: number
 ): Promise<void> {
-  const current = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const current = await electedOfficialsCollection(db)
     .find({ officeType: "landtag", state: landId }, { projection: { characterId: 1, nppId: 1 } })
     .toArray();
 
@@ -480,9 +480,7 @@ export async function resolveDELandtagElection(
     .collection<ElectionVoteTally>("electionVoteTallies")
     .findOne({ electionId: election._id });
   if (!tally) {
-    await db
-      .collection<ElectedOfficial>("electedOfficials")
-      .deleteMany({ officeType: "landtag", state: landId });
+    await electedOfficialsCollection(db).deleteMany({ officeType: "landtag", state: landId });
     await sweepStaleLandtagOffice(db, landId, now, currentTurn);
     logger.warn("Landtag", `No vote tally for ${landId} cycle ${election.cycle}`);
     return { winnersAllocated: 0, seatsAllocated: 0 };
@@ -594,12 +592,10 @@ export async function resolveDELandtagElection(
     }
   }
 
-  await db
-    .collection<ElectedOfficial>("electedOfficials")
-    .deleteMany({ officeType: "landtag", state: landId });
+  await electedOfficialsCollection(db).deleteMany({ officeType: "landtag", state: landId });
 
   if (officialsToInsert.length > 0) {
-    await db.collection<ElectedOfficial>("electedOfficials").insertMany(officialsToInsert);
+    await electedOfficialsCollection(db).insertMany(officialsToInsert);
   }
 
   // Apply NPP/Character currentOffice updates after the officials insert

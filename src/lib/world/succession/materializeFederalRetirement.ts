@@ -17,6 +17,7 @@ import { FEDERATION_ARCHIVED_POLITICAL_ROWS_COLLECTION } from "./materializeRuss
 import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 type HistoricalPoliticalRow = { _id: ObjectId | string; [key: string]: unknown };
 
@@ -86,12 +87,11 @@ export async function materializeFederationFederalRetirement(input: {
       { $set: { status: "withdrawn", updatedAt: now } },
       { session }
     );
-  await charactersCollection(db)
-    .updateMany(
-      { countryId: sourceCountryId, currentOffice: { $ne: null } },
-      { $set: { currentOffice: null, updatedAt: now } },
-      { session }
-    );
+  await charactersCollection(db).updateMany(
+    { countryId: sourceCountryId, currentOffice: { $ne: null } },
+    { $set: { currentOffice: null, updatedAt: now } },
+    { session }
+  );
   await db
     .collection<NPP>("npps")
     .updateMany(
@@ -116,9 +116,10 @@ export async function materializeFederationFederalRetirement(input: {
       { $set: { status: "cancelled", updatedAt: now } },
       { session }
     );
-  const offices = await db
-    .collection<ElectedOfficial>("electedOfficials")
-    .deleteMany({ countryId: sourceCountryId }, { session });
+  const offices = await electedOfficialsCollection(db).deleteMany(
+    { countryId: sourceCountryId },
+    { session }
+  );
   await db.collection<GovernmentFormation>("governmentFormations").updateOne(
     { _id: sourceCountryId },
     {

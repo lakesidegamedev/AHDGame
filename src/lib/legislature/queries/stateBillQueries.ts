@@ -42,6 +42,7 @@ import {
 } from "@/lib/legislature/provisionEnrichment";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export interface StateLegislatureBillsPage {
   blockedProvisions: { legislationTypeId: string; policyOptionId: string }[];
@@ -86,8 +87,7 @@ export async function listStateLegislatureBills(
   // 31-seat chamber). Detail/resolution already scope; only the list card did not.
   const subNationalOffice = getSubNationalLegislatureKey(countryId);
   const chamberOfficials = subNationalOffice
-    ? await db
-        .collection<ElectedOfficial>("electedOfficials")
+    ? await electedOfficialsCollection(db)
         .find({
           state: stateId,
           officeType: subNationalOffice,
@@ -381,7 +381,7 @@ export async function getStateLegislatureBillDetail(
 
   let canVote = false;
   if (myCharacterId) {
-    const official = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+    const official = await electedOfficialsCollection(db).findOne({
       officeType: subNationalOffice,
       state: stateId,
       characterId: new ObjectId(myCharacterId),

@@ -11,6 +11,7 @@ import type { CabinetNomination, ElectedOfficial } from "@/lib/db/types";
 import { getCabinetPositionById } from "@/lib/constants";
 import { computeCabinetNominationTally } from "@/lib/congress/governmentVoteBreakdown";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 // GET /api/congress/cabinet-nominations/[id] — Returns full detail for a single cabinet nomination including vote tallies.
 // Auth: public
@@ -42,7 +43,7 @@ export const GET = withNoStore(async function GET(
       ? await charactersCollection(db).findOne({ userId: new ObjectId(authUser.userId) })
       : null;
     const senatorOfficial = myCharacter
-      ? await db.collection<ElectedOfficial>("electedOfficials").findOne({
+      ? await electedOfficialsCollection(db).findOne({
           characterId: myCharacter._id,
           officeType: "senate",
         })

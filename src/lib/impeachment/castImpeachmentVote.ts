@@ -11,6 +11,7 @@ import { buildEmbeddedVoteTallyUpdate } from "@/lib/votes/embeddedVoteTally";
 import { getGameState } from "@/lib/gameState";
 import { badRequest, forbidden, notFound } from "@/lib/api/errors";
 import { clearWhippedFromVote } from "@/lib/congress/clearWhippedVote";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 /**
  * Cast (or change) a vote on an active impeachment. Only sitting members of the
@@ -55,7 +56,7 @@ export async function castImpeachmentVote(
     officeType: chamberOffice,
   };
   if (isGovernor) voterFilter.state = impeachment.state;
-  const official = await db.collection<ElectedOfficial>("electedOfficials").findOne(voterFilter);
+  const official = await electedOfficialsCollection(db).findOne(voterFilter);
   if (!official) {
     throw forbidden(
       isGovernor

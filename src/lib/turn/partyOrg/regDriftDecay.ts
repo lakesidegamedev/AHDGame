@@ -39,6 +39,7 @@ import {
   type SurplusPartyView,
 } from "@/lib/parties/surplusSourcing";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 // Re-exported so existing importers (and tests) keep their entry point while
 // the implementation lives in the DB-free `surplusSourcing` module.
@@ -664,8 +665,7 @@ export async function processRegDriftDecay(
   // "governor" / "ministerPresident"), keyed by country:STATE:officeType with
   // the most-recently-elected winning ties — mirrors getRegionalExecutive's
   // `sort({ electedAt: -1 })` pick.
-  const execOfficials = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const execOfficials = await electedOfficialsCollection(db)
     .find({
       countryId: { $in: countryIds },
       officeType: { $in: ["governor", "ministerPresident"] },

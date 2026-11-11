@@ -11,6 +11,7 @@ import { getGovernmentFormationsCollection } from "@/lib/db/collections/governme
 import { recordCountryEvent } from "@/lib/turn/history/recordCountryEvent";
 import { ensureInitialEscalationState } from "@/lib/turn/regimeEscalationTurn";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 /**
  * Turn a country into a one-party state.
@@ -202,7 +203,7 @@ async function vacateSeatsOfParties(
 
   if (tokens.size === 0) return;
 
-  const officials = db.collection<ElectedOfficial>("electedOfficials");
+  const officials = electedOfficialsCollection(db);
   const doomed = await officials.find({ countryId, party: { $in: [...tokens] } }).toArray();
   if (doomed.length === 0) return;
 
@@ -283,10 +284,7 @@ async function resolveRulingParty(
     }
   }
 
-  const officials = await db
-    .collection<ElectedOfficial>("electedOfficials")
-    .find({ countryId })
-    .toArray();
+  const officials = await electedOfficialsCollection(db).find({ countryId }).toArray();
 
   const seatsBySeqId = new Map<number, number>();
   for (const official of officials) {

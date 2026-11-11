@@ -20,6 +20,7 @@ import { getGameStatePresetOrDefault, DEFAULT_SEED_PRESET } from "@/lib/db/colle
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 const NG_REGION_IDS = [
   "NORTH_WEST",
@@ -347,16 +348,17 @@ export async function seedNGGovernors(
   preset: string
 ) {
   if (reset) {
-    const officials = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    const officials = await electedOfficialsCollection(db)
       .find({ countryId: "NG", officeType: "governor", isNPP: true })
       .project<{ nppId?: ObjectId }>({ nppId: 1 })
       .toArray();
     const nppIds = officials.map((o) => o.nppId).filter((id): id is ObjectId => id != null);
 
-    await db
-      .collection<ElectedOfficial>("electedOfficials")
-      .deleteMany({ countryId: "NG", officeType: "governor", isNPP: true });
+    await electedOfficialsCollection(db).deleteMany({
+      countryId: "NG",
+      officeType: "governor",
+      isNPP: true,
+    });
 
     if (nppIds.length > 0) {
       await db

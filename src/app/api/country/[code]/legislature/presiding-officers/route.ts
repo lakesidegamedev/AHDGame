@@ -11,13 +11,14 @@ import { handleRouteError } from "@/lib/api/errors";
 import { type CountryId } from "@/lib/constants/countries";
 import type { ElectedOfficial } from "@/lib/db/types";
 import { resolveExecutiveHolder } from "@/lib/elections/resolveExecutiveHolder";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ code: string }> }) {
   try {
     const { code } = await params;
     const countryId = code.toUpperCase() as CountryId;
     const db = await getDb();
-    const officials = db.collection<ElectedOfficial>("electedOfficials");
+    const officials = electedOfficialsCollection(db);
     const [speakerOfficial, senatePresidentOfficial] = await Promise.all([
       officials.findOne({ countryId, officeType: "speaker" }),
       officials.findOne({ countryId, officeType: "senatePresident" }),

@@ -24,6 +24,7 @@ import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import type { FomcNomination } from "@/lib/db/types/centralBank";
 import type { ElectedOfficial } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 const voteSchema = z.object({
   vote: z.enum(["for", "against", "abstain"]),
@@ -94,7 +95,7 @@ export async function POST(
 
     // Senate only. The senator must sit in the nomination's own country — a
     // foreign legislator cannot confirm another nation's central bank.
-    const senator = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+    const senator = await electedOfficialsCollection(db).findOne({
       characterId: myCharacter._id,
       officeType: "senate",
       countryId,

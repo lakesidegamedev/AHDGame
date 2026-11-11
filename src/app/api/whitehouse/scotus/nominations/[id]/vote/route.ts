@@ -20,6 +20,7 @@ import { isVotingDeadlinePassed } from "@/lib/legislature/billVotingWindow";
 import type { ElectedOfficial } from "@/lib/db/types";
 import type { ScotusNomination } from "@/lib/db/types/scotus";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 const voteSchema = z.object({
   vote: z.enum(["for", "against", "abstain"]),
@@ -79,7 +80,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       return errorResponse(400, "No character");
     }
 
-    const senatorOfficial = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+    const senatorOfficial = await electedOfficialsCollection(db).findOne({
       characterId: myCharacter._id,
       officeType: "senate",
     });

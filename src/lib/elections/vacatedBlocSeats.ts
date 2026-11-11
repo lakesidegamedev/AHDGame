@@ -1,4 +1,6 @@
 import type { Db, ObjectId } from "mongodb";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import type { Document } from "mongodb";
 
 /**
  * Office types elected as multi-seat party blocs: one `electedOfficials` row
@@ -18,8 +20,7 @@ export async function heldBlocRowIds(
   db: Db,
   holder: { characterId: ObjectId } | { nppId: ObjectId }
 ): Promise<ObjectId[]> {
-  const rows = await db
-    .collection<{ _id: ObjectId }>("electedOfficials")
+  const rows = await electedOfficialsCollection<{ _id: ObjectId }>(db)
     .find(
       { ...holder, officeType: { $in: [...MULTI_SEAT_BLOC_OFFICE_TYPES] } },
       { projection: { _id: 1 } }
@@ -50,7 +51,7 @@ export async function releaseVacatedBlocSeats(
   const anchoredIds = new Set(anchored.map((doc) => String(doc.officialId)));
   const free = rowIds.filter((id) => !anchoredIds.has(String(id)));
   if (free.length === 0) return 0;
-  const result = await db.collection("electedOfficials").updateMany(
+  const result = await electedOfficialsCollection<Document>(db).updateMany(
     {
       _id: { $in: free },
       officeType: { $in: [...MULTI_SEAT_BLOC_OFFICE_TYPES] },

@@ -8,6 +8,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import type { ElectedOfficial } from "@/lib/db/types";
 import { isSingleplayer } from "@/lib/singleplayer";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export async function hasRequiredPrimeMinisterSeat(
   db: Db,
@@ -29,7 +30,7 @@ export async function hasRequiredPrimeMinisterSeat(
     if (pinned) return true;
   }
   if (!characterId && !nppId) return false;
-  const officials = db.collection<ElectedOfficial>("electedOfficials");
+  const officials = electedOfficialsCollection(db);
   const projection = { projection: { _id: 1 } } as const;
   if (characterId) {
     const seat = await officials.findOne(

@@ -22,6 +22,7 @@ import {
   resolvePrimaryVoteChamberKey,
 } from "@/lib/congress/billVoteChamberScope";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 interface IndividualVote {
   id: string;
@@ -149,8 +150,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     }
     const officials =
       orClauses.length > 0
-        ? await db
-            .collection<ElectedOfficial>("electedOfficials")
+        ? await electedOfficialsCollection(db)
             .find({ $or: orClauses })
             .project<ScopedVoteOfficial>({
               characterId: 1,

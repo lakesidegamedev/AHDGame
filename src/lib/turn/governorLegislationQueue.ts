@@ -8,6 +8,7 @@ import { STATE_TERMINAL_STATUSES } from "@/lib/congress/billProposalLimits";
 import { cancelQueue } from "@/lib/governorOffice/legislation/cancelQueue";
 import { canManageOffice } from "@/lib/governorOffice/access";
 import { snapshotPolicyProvisionsInPlace } from "@/lib/legislature/provisionEnrichment";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 const VOTING_DURATION_HOURS = 24;
 
@@ -104,7 +105,7 @@ export async function processGovernorLegislationQueue(
       cancelled++;
       continue;
     }
-    const seat = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+    const seat = await electedOfficialsCollection(db).findOne({
       nppId: q.targetNppId,
       officeType: getSubNationalLegislatureKey(q.countryId),
       state: q.stateId.toUpperCase(),

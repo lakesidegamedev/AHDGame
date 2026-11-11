@@ -21,6 +21,7 @@ import { planProvisionalRussianCongress } from "./rules/provisionalCongress";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export const FEDERATION_ARCHIVED_POLITICAL_ROWS_COLLECTION = "federationArchivedPoliticalRows";
 const UNION_OFFICES = ["unionCongressDeputy", "chairmanOfCabinet", "sovietPresident"];
@@ -86,8 +87,7 @@ export async function materializeProvisionalRussianCongress(input: {
     .toArray();
   if (states.length !== retainedStateIds.length)
     throw new Error("Retained Russian territory changed during political succession");
-  const officials = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const officials = await electedOfficialsCollection(db)
     .find({ countryId: "RU" }, { session })
     .toArray();
   if (establishedConstitution) {
@@ -207,7 +207,7 @@ export async function materializeProvisionalRussianCongress(input: {
     if (result.matchedCount !== nppUpdates.length)
       throw new Error("A retained NPC deputy is missing");
   }
-  const seats = db.collection<ElectedOfficial>("electedOfficials");
+  const seats = electedOfficialsCollection(db);
   if (plan.retired.length)
     await seats.deleteMany(
       { countryId: "RU", _id: { $in: plan.retired.map((row) => new ObjectId(row.id)) } },
@@ -380,9 +380,10 @@ async function preserveEstablishedRussianConstitution(input: {
         })),
         { session }
       );
-    await db
-      .collection<ElectedOfficial>("electedOfficials")
-      .deleteMany({ countryId: "RU", _id: { $in: retired.map((row) => row._id) } }, { session });
+    await electedOfficialsCollection(db).deleteMany(
+      { countryId: "RU", _id: { $in: retired.map((row) => row._id) } },
+      { session }
+    );
   }
   for (const [collection, ids] of [
     ["characters", retiredPlayers],

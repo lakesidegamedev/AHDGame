@@ -28,6 +28,7 @@ import { GAME_STATE_PRE_ITERATION_FIELDS } from "@/lib/db/collections/gameState"
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 interface BgAssemblyOfficeArchive {
   _id: string;
@@ -241,8 +242,7 @@ async function materializeBgOrdinaryAssembly(input: {
       updatedAt: now,
     });
   }
-  const incumbents = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const incumbents = await electedOfficialsCollection(db)
     .find({ countryId: "BG", officeType: "assemblyDeputy" }, { session })
     .toArray();
   if (incumbents.length)
@@ -272,10 +272,11 @@ async function materializeBgOrdinaryAssembly(input: {
         { $set: { currentOffice: null, updatedAt: now } },
         { session }
       );
-  await db
-    .collection<ElectedOfficial>("electedOfficials")
-    .deleteMany({ countryId: "BG", officeType: "assemblyDeputy" }, { session });
-  await db.collection<ElectedOfficial>("electedOfficials").insertMany(officials, { session });
+  await electedOfficialsCollection(db).deleteMany(
+    { countryId: "BG", officeType: "assemblyDeputy" },
+    { session }
+  );
+  await electedOfficialsCollection(db).insertMany(officials, { session });
   if (officials.some((row) => row.isNPP))
     await db.collection<NPP>("npps").bulkWrite(
       officials

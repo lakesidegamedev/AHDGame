@@ -15,6 +15,7 @@ import { captureBillStatusChanged } from "@/lib/analytics/billStatusAnalytics";
 import type { BillLifecycleRuntimeContext } from "./types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 /**
  * Regional (state) bill-lifecycle walker: the `level: "regional"` counterpart
@@ -48,8 +49,7 @@ async function loadRegionalRoster(
   const key = `${countryId}:${stateId}:${officeType}`;
   const cached = cache.rosters.get(key);
   if (cached) return cached;
-  const officials = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const officials = await electedOfficialsCollection(db)
     .find({ countryId, state: stateId, officeType })
     .project<ScopedVoteOfficial>({
       characterId: 1,
@@ -88,7 +88,7 @@ async function loadRegionalExecutive(
 ): Promise<ElectedOfficial | null> {
   const key = `${countryId}:${stateId}:${officeType}`;
   if (cache.executives.has(key)) return cache.executives.get(key) ?? null;
-  const official = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+  const official = await electedOfficialsCollection(db).findOne({
     countryId,
     officeType,
     state: stateId,

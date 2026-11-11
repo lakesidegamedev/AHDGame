@@ -14,6 +14,7 @@ import { getGameTime } from "@/lib/time/gameTime";
 import type { CabinetNomination, ElectedOfficial, Character } from "@/lib/db/types";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 const VOTING_DURATION_HOURS = 24;
 const VOTING_DURATION_MS = VOTING_DURATION_HOURS * 60 * 60 * 1000;
@@ -47,9 +48,11 @@ export async function POST(request: Request) {
     const now = new Date();
 
     // Must be President (player character only)
-    const presidentOfficial = await db
-      .collection<ElectedOfficial>("electedOfficials")
-      .findOne({ countryId: "US", officeType: "president", characterId: { $ne: null } });
+    const presidentOfficial = await electedOfficialsCollection(db).findOne({
+      countryId: "US",
+      officeType: "president",
+      characterId: { $ne: null },
+    });
     if (!presidentOfficial?.characterId) {
       return errorResponse(400, "No President in office");
     }
@@ -62,9 +65,10 @@ export async function POST(request: Request) {
     }
 
     // VP seat must be vacant
-    const vpOfficial = await db
-      .collection<ElectedOfficial>("electedOfficials")
-      .findOne({ countryId: "US", officeType: "vicePresident" });
+    const vpOfficial = await electedOfficialsCollection(db).findOne({
+      countryId: "US",
+      officeType: "vicePresident",
+    });
     const vpVacant = !vpOfficial || (vpOfficial.characterId === null && !vpOfficial.nppId);
     if (!vpVacant) {
       return errorResponse(400, "Vice President seat is not vacant");
@@ -133,8 +137,7 @@ export async function POST(request: Request) {
       .insertOne(nomination as unknown as CabinetNomination);
 
     // Notify all US senators and representatives (player characters)
-    const legislators = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    const legislators = await electedOfficialsCollection(db)
       .find({
         countryId: "US",
         officeType: { $in: ["senate", "house"] },

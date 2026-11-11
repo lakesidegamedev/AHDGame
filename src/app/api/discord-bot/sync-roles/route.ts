@@ -18,6 +18,7 @@ import { buildSyncRoleTokens } from "./buildSyncRoles";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 // GET /api/discord-bot/sync-roles — Returns the Discord roles a user should hold based on their in-game party, office, and investment status.
 // Auth: requireAdminOrApiKey
@@ -152,8 +153,7 @@ export async function GET(request: Request) {
      * (electedOfficials for presidential, governmentFormations.pmCharacterId
      * for parliamentary/one-party systems).
      */
-    const officeRows = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    const officeRows = await electedOfficialsCollection(db)
       .find({ characterId: character._id })
       .project<{ officeType: string }>({ officeType: 1 })
       .toArray();
@@ -342,8 +342,7 @@ export async function POST(request: Request) {
      * vestigial character.currentOffice. Load every player-held row once and
      * index by characterId so each character's office lookup is O(1).
      */
-    const officeRows = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    const officeRows = await electedOfficialsCollection(db)
       .find({ characterId: { $ne: null } })
       .project<{ characterId: import("mongodb").ObjectId; officeType: string }>({
         characterId: 1,

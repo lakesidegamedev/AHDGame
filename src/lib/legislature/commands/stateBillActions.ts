@@ -21,6 +21,7 @@ import type { LegislatureCommandResult } from "@/lib/legislature/commands/types"
 import { captureBillStatusChanged } from "@/lib/analytics/billStatusAnalytics";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 const OVERRIDE_VOTING_HOURS = 24;
 
@@ -62,7 +63,7 @@ export async function castStateBillVote(
 
   const countryConfig = getCountryConfig(countryId);
   const subNationalOffice = getSubNationalLegislatureKey(countryId);
-  const official = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+  const official = await electedOfficialsCollection(db).findOne({
     officeType: subNationalOffice,
     state: stateId,
     characterId: character._id,
@@ -199,7 +200,7 @@ export async function castStateBillOverrideVote(
   if (invalidBillId) return invalidBillId;
 
   const subNationalOffice = getSubNationalLegislatureKey(countryId);
-  const official = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+  const official = await electedOfficialsCollection(db).findOne({
     officeType: subNationalOffice,
     state: stateId,
     characterId: character._id,

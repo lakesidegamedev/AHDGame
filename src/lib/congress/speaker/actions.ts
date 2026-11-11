@@ -34,6 +34,7 @@ import {
   POLICY_BY_ROLE,
 } from "@/lib/congress/leadership/rolePolicy";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 const ELECTION_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -65,7 +66,7 @@ export async function handleSpeakerAction(ctx: ActionContext): Promise<ActionRes
   });
   if (!character) return { success: false, error: "No character", status: 400 };
 
-  const myOfficial = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+  const myOfficial = await electedOfficialsCollection(db).findOne({
     characterId: character._id,
     officeType: "house",
   });
@@ -185,7 +186,7 @@ async function handleStartElection(ctx: ActionContext): Promise<ActionResult> {
     .collection<CongressLeader>("congressLeaders")
     .findOne({ role: "speaker_of_the_house" });
   if (incumbent?.characterId) {
-    const hasSeat = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+    const hasSeat = await electedOfficialsCollection(db).findOne({
       officeType: "house",
       characterId: incumbent.characterId,
     });

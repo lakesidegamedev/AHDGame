@@ -15,6 +15,7 @@ import {
   type Hu1991ListReplacement,
 } from "./rules/listVacancies1991";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export const HU_1991_LIST_REPLACEMENTS_COLLECTION = "hu1991ListReplacements";
 interface ReplacementReceipt {
@@ -38,8 +39,7 @@ async function readContext(db: Db, turn: number, session?: ClientSession) {
   const parent = await readHuListAssemblyReceipt(db, session);
   if (!parent?.settled || parent.seatedAtTurn == null || turn >= parent.seatedAtTurn + 192)
     return null;
-  const held = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const held = await electedOfficialsCollection(db)
     .find(
       { countryId: "HU", officeType: "assemblyDelegate" },
       {
@@ -232,9 +232,7 @@ export async function designateHu1991ListDeputy(input: {
     if (lock.modifiedCount !== 1) throw new Error("Hungarian replacement parent changed");
     const id = `${context.parent._id}:list:${vacancy.slotPersonId}:${mandate.personId}`;
     const officialId = stableId(`${context.parent._id}:person:${vacancy.slotPersonId}`);
-    const original = await db
-      .collection<ElectedOfficial>("electedOfficials")
-      .findOne({ _id: officialId }, { session });
+    const original = await electedOfficialsCollection(db).findOne({ _id: officialId }, { session });
     if (original?.characterId || original?.nppId)
       throw new Error("Hungarian list vacancy is occupied");
     if (original) {
@@ -250,9 +248,10 @@ export async function designateHu1991ListDeputy(input: {
           { _id: `${id}:departed`, countryId: "HU", receiptId: id, turn, official: original },
           { session }
         );
-      await db
-        .collection<ElectedOfficial>("electedOfficials")
-        .deleteOne({ _id: officialId, characterId: null, nppId: null }, { session });
+      await electedOfficialsCollection(db).deleteOne(
+        { _id: officialId, characterId: null, nppId: null },
+        { session }
+      );
     }
     const official: ElectedOfficial = {
       _id: officialId,
@@ -283,7 +282,7 @@ export async function designateHu1991ListDeputy(input: {
         rootCandidateId: mandate.candidateId,
       },
     };
-    await db.collection<ElectedOfficial>("electedOfficials").insertOne(official, { session });
+    await electedOfficialsCollection(db).insertOne(official, { session });
     const owner = context.owners.get(mandate.ownerId)!;
     const seats =
       context.held.filter(

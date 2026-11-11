@@ -38,6 +38,7 @@ import { loadCabinetDiscipline, type CabinetDiscipline } from "@/lib/resetCabine
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 // ─── Context Types ─────────────────────────────────────────────────────────────
 
@@ -406,8 +407,7 @@ export async function loadNPPContext(now: Date, options?: NPPContextOptions): Pr
       )
       .toArray() as Promise<NPP[]>,
     db.collection<Election>("elections").find(electionFilter).toArray(),
-    db
-      .collection<ElectedOfficial>("electedOfficials")
+    electedOfficialsCollection(db)
       .find({ isNPP: true, nppId: { $exists: true } })
       .toArray(),
     db

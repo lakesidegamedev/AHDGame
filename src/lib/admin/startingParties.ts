@@ -15,6 +15,7 @@ import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export type StartingPartiesMode = "default" | "none";
 
@@ -248,9 +249,9 @@ export async function clearStartingPolitics(db: Db, preset: string): Promise<voi
   for (const collection of STARTING_POLITICAL_COLLECTIONS) {
     await db.collection(collection).deleteMany(artifactFilters[collection]);
   }
-  await db
-    .collection("electedOfficials")
-    .deleteMany({ $and: [countryFilter, STARTING_POLITICAL_OFFICIAL_FILTER] });
+  await electedOfficialsCollection<Document>(db).deleteMany({
+    $and: [countryFilter, STARTING_POLITICAL_OFFICIAL_FILTER],
+  });
   await getCountryStateCollection(db).updateMany(
     countries === null ? {} : { _id: { $in: countries } },
     { $set: { rulingPartyId: null } }

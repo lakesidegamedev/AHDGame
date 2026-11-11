@@ -35,6 +35,7 @@ import { GAME_STATE_PRE_ITERATION_FIELDS } from "@/lib/db/collections/gameState"
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 function currentOfficeType(office: NPP["currentOffice"] | string) {
   return typeof office === "string" ? office : office?.type;
 }
@@ -272,8 +273,7 @@ export async function loadRussianAssemblySeatingInputs(
     ...(npps.length ? [{ nppId: { $in: npps } }] : []),
   ];
   // Actual office and cabinet records are authoritative even if a mirror is stale.
-  const offices = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const offices = await electedOfficialsCollection(db)
     .find({ $or: [{ countryId: "RU" }, ...identities] }, { session, batchSize: 10000 })
     .toArray();
   if (

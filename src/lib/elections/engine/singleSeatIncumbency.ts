@@ -15,6 +15,7 @@ import type {
 import { getElectionSeatKey } from "@/lib/turn/autoReelectionEntry";
 import { getMultiSeatMinShare } from "@/lib/elections/resolution/seatAllocation";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 /**
  * True for single-winner legislative races that use the officeholder-based flat
@@ -180,7 +181,7 @@ export async function resolveSingleSeatLegislativeIncumbent(
   };
   if (election.senateClass) filter.senateClass = election.senateClass;
 
-  const official = await db.collection<ElectedOfficial>("electedOfficials").findOne(filter);
+  const official = await electedOfficialsCollection(db).findOne(filter);
   if (!official || !official.party) return null;
 
   const resolvedElections = await db
@@ -349,8 +350,7 @@ export async function preloadLegislativeIncumbencies(
         status: "resolved",
       })
       .toArray(),
-    db
-      .collection<ElectedOfficial>("electedOfficials")
+    electedOfficialsCollection(db)
       .find(
         { countryId: { $in: countries }, state: { $in: states }, officeType: "senate" },
         {

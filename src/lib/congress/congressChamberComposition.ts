@@ -7,6 +7,7 @@ import type { Db } from "@/lib/mongodb";
 import type { ElectedOfficial, PoliticalParty } from "@/lib/db/types";
 import { getPartyHex } from "@/lib/utils/politics";
 import { computeBlocsForCountry, type Bloc } from "./blocs";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export interface PartySeats {
   party: string;
@@ -40,8 +41,7 @@ export async function getUsChamberComposition(
   // Scope to the US chamber. Without countryId, other countries that also seed
   // `officeType: "house"` or `"senate"` (e.g. NG's 360-seat chamber) leak their
   // officials and parties into the US tally. Blocs/partyMap here are already US-only.
-  const officials = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const officials = await electedOfficialsCollection(db)
     .find({
       countryId: "US",
       officeType,

@@ -16,6 +16,8 @@ import { cleanupCaucusParticipationForCharacters } from "@/lib/caucus/cleanupCau
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import type { Document } from "mongodb";
 
 /**
  * Internal helper called by `signCharter` once the 3-of-3 threshold is hit.
@@ -258,9 +260,10 @@ export async function ratifyCharter(
     );
     // Match the ordinary party-join path: a party switch updates the current
     // affiliation shown for existing seats without vacating those seats.
-    await db
-      .collection("electedOfficials")
-      .updateMany({ characterId: ch._id }, { $set: { party: partyIdStr, updatedAt: now } });
+    await electedOfficialsCollection<Document>(db).updateMany(
+      { characterId: ch._id },
+      { $set: { party: partyIdStr, updatedAt: now } }
+    );
     if (!Number.isNaN(oldPartySeqId)) {
       const departing = departuresByOldParty.get(oldPartySeqId) ?? [];
       departing.push(ch._id);

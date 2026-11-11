@@ -30,6 +30,7 @@ import {
   summarizePlayerWhips,
   type PlayerWhipSummaryEntry,
 } from "@/lib/partyWhips/playerWhipSummary";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; slug: string }>;
@@ -129,8 +130,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
       : null;
     const officeTypes = upperOfficeType ? [upperOfficeType, lowerOfficeType] : [lowerOfficeType];
 
-    const allOfficials = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    const allOfficials = await electedOfficialsCollection(db)
       .find({
         party: partyIdStr,
         officeType: { $in: officeTypes },

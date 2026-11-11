@@ -32,6 +32,7 @@ import type {
   SenateLeadershipNomination,
 } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export const LEADERSHIP_ELECTION_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours = 24 turns
 
@@ -137,7 +138,7 @@ export async function openCongressLeadershipElection(
     .findOne({ role: leaderRole });
   if (!incumbent?.characterId) return true;
 
-  const seat = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+  const seat = await electedOfficialsCollection(db).findOne({
     officeType: chamber,
     characterId: incumbent.characterId,
   });

@@ -23,6 +23,8 @@ import {
 } from "@/lib/world/succession/politicalProposal";
 import type { Bill } from "@/lib/db/types/legislation";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import type { Document } from "mongodb";
 
 const bodySchema = z.object({
   negotiatedCustodians: z.record(z.string(), z.string()).default({}),
@@ -141,7 +143,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
       getOfficeTypeForChamber(sourceCountryId, chamber, "1991-default")
     );
     const official = character
-      ? await db.collection("electedOfficials").findOne({
+      ? await electedOfficialsCollection<Document>(db).findOne({
           characterId: character._id,
           countryId: sourceCountryId,
           officeType: { $in: officeTypes },

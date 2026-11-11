@@ -18,6 +18,7 @@ import { resolveSeedPartyTier } from "@/lib/seeds/defaultPartyTiers";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export async function seedJPRegions(
   db: Db,
@@ -351,16 +352,17 @@ export async function removeLegacyJPCeremonialIdentity(
  */
 export async function seedJPGovernors2020(db: Db, reset: boolean, log: (msg: string) => void) {
   if (reset) {
-    const officials = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    const officials = await electedOfficialsCollection(db)
       .find({ countryId: "JP", officeType: "governor", isNPP: true })
       .project<{ nppId?: ObjectId }>({ nppId: 1 })
       .toArray();
     const nppIds = officials.map((o) => o.nppId).filter((id): id is ObjectId => id != null);
 
-    await db
-      .collection<ElectedOfficial>("electedOfficials")
-      .deleteMany({ countryId: "JP", officeType: "governor", isNPP: true });
+    await electedOfficialsCollection(db).deleteMany({
+      countryId: "JP",
+      officeType: "governor",
+      isNPP: true,
+    });
 
     if (nppIds.length > 0) {
       await db.collection<NPP>("npps").updateMany(
@@ -397,16 +399,17 @@ export async function seedJPGovernors2020(db: Db, reset: boolean, log: (msg: str
  */
 export async function seedJPGovernors1991(db: Db, reset: boolean, log: (msg: string) => void) {
   if (reset) {
-    const officials = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    const officials = await electedOfficialsCollection(db)
       .find({ countryId: "JP", officeType: "governor", isNPP: true })
       .project<{ nppId?: ObjectId }>({ nppId: 1 })
       .toArray();
     const nppIds = officials.map((o) => o.nppId).filter((id): id is ObjectId => id != null);
 
-    await db
-      .collection<ElectedOfficial>("electedOfficials")
-      .deleteMany({ countryId: "JP", officeType: "governor", isNPP: true });
+    await electedOfficialsCollection(db).deleteMany({
+      countryId: "JP",
+      officeType: "governor",
+      isNPP: true,
+    });
 
     if (nppIds.length > 0) {
       await db.collection<NPP>("npps").updateMany(

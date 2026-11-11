@@ -14,6 +14,7 @@ import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { getGameState } from "@/lib/gameState";
 import { validateStateBillProvisions } from "@/lib/legislature/commands/validateStateBillProvisions";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export interface QueueBillInput {
   countryId: CountryId;
@@ -78,7 +79,7 @@ export async function queueBill(
   if (npp.party !== character.party) {
     return { status: 400, body: { error: "NPP is not in your party." } };
   }
-  const seat = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+  const seat = await electedOfficialsCollection(db).findOne({
     nppId: targetNppId,
     officeType: getSubNationalLegislatureKey(countryId),
     state: stateId.toUpperCase(),

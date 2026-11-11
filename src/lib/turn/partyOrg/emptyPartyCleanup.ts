@@ -28,6 +28,7 @@ import type { Coalition } from "@/lib/db/types/coalition";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export interface EmptyPartyCleanupResult {
   deletedParties: string[];
@@ -114,8 +115,7 @@ export async function cleanupEmptyParties(): Promise<EmptyPartyCleanupResult> {
     // Also check for elected officials - don't delete parties with sitting members of Congress/Parliament
     // Note: ElectedOfficial doesn't have countryId, but the party field is specific to a country
     // For now, we count all officials with matching party (sequential ID)
-    db
-      .collection<ElectedOfficial>("electedOfficials")
+    electedOfficialsCollection(db)
       .aggregate<{ _id: string; count: number }>([
         {
           $match: {

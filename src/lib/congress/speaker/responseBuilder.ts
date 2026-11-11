@@ -30,6 +30,7 @@ import {
   POLICY_BY_ROLE,
 } from "@/lib/congress/leadership/rolePolicy";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export interface BuildSpeakerResponseInput {
   db: Db;
@@ -54,7 +55,7 @@ export async function buildSpeakerResponse(
     myCharacterId = char?._id?.toString() ?? null;
     myParty = char?.party ?? null;
     if (myCharacterId) {
-      const official = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+      const official = await electedOfficialsCollection(db).findOne({
         characterId: new ObjectId(myCharacterId),
         officeType: "house",
       });

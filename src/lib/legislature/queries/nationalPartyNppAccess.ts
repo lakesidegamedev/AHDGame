@@ -11,6 +11,7 @@ import { NATIONAL_TERMINAL_STATUSES } from "@/lib/congress/billProposalLimits";
 import { buildActiveNationalBillFilter } from "../nationalBillScope";
 import { hasPartyNppSeats } from "../rules/partyNppProposal";
 import { canDirectNationalPartyNpp, pickNationalPartySponsor } from "../rules/nationalPartyNpp";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export async function resolveNationalPartyNppAccess(
   db: Db,
@@ -49,8 +50,7 @@ export async function resolveNationalPartyNppAccess(
     { projection: { _id: 1 } }
   );
   if (active) return { authorized: true, blocked: true, sponsor: null };
-  const seats = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const seats = await electedOfficialsCollection(db)
     .find(
       {
         ...officialsCountryScope(countryId),

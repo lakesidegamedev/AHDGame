@@ -39,6 +39,7 @@ import type { NPP } from "@/lib/db/types/npp";
 import { officeRemapFor, remapOffice } from "@/lib/country/dissolvingOfficeRemap";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 /**
  * Region-scoped party collections.
@@ -130,7 +131,7 @@ export async function evacuateRegionPolitics(
 
   if (nppIds.length && !dissolving) {
     const held = { countryId: fromCountryId, nppId: { $in: nppIds } };
-    await db.collection("electedOfficials").deleteMany(held);
+    await electedOfficialsCollection<Document>(db).deleteMany(held);
     await db.collection("cabinetMembers").deleteMany(held);
     const departingGovernment = await db
       .collection<ParliamentaryGovernment>("governmentFormations")
@@ -264,9 +265,10 @@ export async function evacuateRegionPolitics(
       now,
     }));
   } else {
-    const officials = await db
-      .collection("electedOfficials")
-      .deleteMany({ countryId: fromCountryId, state: regionId });
+    const officials = await electedOfficialsCollection<Document>(db).deleteMany({
+      countryId: fromCountryId,
+      state: regionId,
+    });
     officialsDissolved = officials?.deletedCount ?? 0;
     const seats = await db
       .collection("seats")
@@ -351,14 +353,14 @@ async function carryOfficials(
   // before this path existed — the same outcome, made deliberate rather than
   // emergent from `remapOffice` returning null for every office in turn.
   if (!officeRemapFor(fromCountryId, toCountryId)) {
-    const dropped = await db
-      .collection("electedOfficials")
-      .deleteMany({ countryId: fromCountryId, state: regionId });
+    const dropped = await electedOfficialsCollection<Document>(db).deleteMany({
+      countryId: fromCountryId,
+      state: regionId,
+    });
     return { officialsRemapped: 0, officialsRetired: dropped?.deletedCount ?? 0 };
   }
 
-  const officials = await db
-    .collection("electedOfficials")
+  const officials = await electedOfficialsCollection<Document>(db)
     .find<CarriedOfficial>({ countryId: fromCountryId, state: regionId })
     .toArray();
 
@@ -370,17 +372,15 @@ async function carryOfficials(
   for (const official of officials) {
     const targetOffice = remapOffice(fromCountryId, toCountryId, official.officeType);
     if (targetOffice === null) {
-      await db.collection("electedOfficials").deleteOne({ _id: official._id });
+      await electedOfficialsCollection<Document>(db).deleteOne({ _id: official._id });
       officialsRetired++;
       continue;
     }
 
-    await db
-      .collection("electedOfficials")
-      .updateOne(
-        { _id: official._id },
-        { $set: { countryId: toCountryId, officeType: targetOffice, updatedAt: now } }
-      );
+    await electedOfficialsCollection<Document>(db).updateOne(
+      { _id: official._id },
+      { $set: { countryId: toCountryId, officeType: targetOffice, updatedAt: now } }
+    );
 
     // `currentOffice` is a STORED denormalisation on the politician, not a
     // derived one, and `actionRefresh` looks the office key up in the country's

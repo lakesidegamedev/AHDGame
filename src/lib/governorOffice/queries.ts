@@ -3,6 +3,7 @@ import { isUKRegionalExecutiveActive } from "@/lib/countries/uk/devolution/servi
 import type { Db, ObjectId } from "mongodb";
 import type { ElectedOfficial, GovernorOfficeState } from "@/lib/db/types";
 import { getRegionalExecutiveOfficeKey, type CountryId } from "@/lib/constants/countries";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 /**
  * Returns the electedOfficials row for the regional chief executive of the
@@ -19,7 +20,7 @@ export async function getOfficeHolderRow(
     !(await isUKRegionalExecutiveActive(db, stateId.toUpperCase()))
   )
     return null;
-  return db.collection<ElectedOfficial>("electedOfficials").findOne({
+  return electedOfficialsCollection(db).findOne({
     officeType: getRegionalExecutiveOfficeKey(countryId),
     state: stateId.toUpperCase(),
     characterId,
@@ -42,7 +43,7 @@ export async function getCurrentOfficeHolder(
     !(await isUKRegionalExecutiveActive(db, stateId.toUpperCase()))
   )
     return null;
-  return db.collection<ElectedOfficial>("electedOfficials").findOne({
+  return electedOfficialsCollection(db).findOne({
     officeType: getRegionalExecutiveOfficeKey(countryId),
     state: stateId.toUpperCase(),
     countryId,

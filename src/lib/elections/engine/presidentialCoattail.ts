@@ -14,6 +14,7 @@ import type { ElectedOfficial } from "@/lib/db/types";
 import type { GovernmentApproval } from "@/lib/db/types/governmentApproval";
 import { BASE_APPROVAL } from "@/lib/utils/governmentApproval";
 import { approvalCoattailMultiplier, coattailMultiplierMapToPct } from "./coattailMagnitude";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 /**
  * The election type that is the head-of-government race per country.
@@ -49,9 +50,10 @@ export async function resolvePresidentApproval(
   const headType = HEAD_OF_GOVERNMENT_TYPE_BY_COUNTRY[countryId];
   if (!headType) return null;
 
-  const official = await db
-    .collection<ElectedOfficial>("electedOfficials")
-    .findOne({ countryId, officeType: headType }, { sort: { electedAt: -1 } });
+  const official = await electedOfficialsCollection(db).findOne(
+    { countryId, officeType: headType },
+    { sort: { electedAt: -1 } }
+  );
   if (!official?.party) return null;
 
   const approvalDoc = await db

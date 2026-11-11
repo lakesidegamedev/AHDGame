@@ -87,6 +87,7 @@ import { getElectionsCollection } from "@/lib/db/collections/elections";
 import { getGameStateCollection } from "@/lib/db/collections/gameState";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export { HOUSE_SEATS, UK_COMMONS_SEATS };
 export { spawnHouseElection, spawnCommonsElection };
@@ -368,8 +369,7 @@ export async function resolveGeneralElections(
           .collection<HuModernByElectionRecord>(HU_2011_BY_ELECTIONS_COLLECTION)
           .findOne({ _id: receiptId }, { projection: { officialIds: 1 } });
         if (job?.officialIds?.length) {
-          const winners = await db
-            .collection<ElectedOfficial>("electedOfficials")
+          const winners = await electedOfficialsCollection(db)
             .find(
               { _id: { $in: job.officialIds } },
               {
@@ -417,8 +417,7 @@ export async function resolveGeneralElections(
           .collection<Hu1991ByElectionRecord>(HU_1991_BY_ELECTIONS_COLLECTION)
           .findOne({ _id: receiptId }, { projection: { officialIds: 1 } });
         if (job?.officialIds?.length) {
-          const winners = await db
-            .collection<ElectedOfficial>("electedOfficials")
+          const winners = await electedOfficialsCollection(db)
             .find(
               { _id: { $in: job.officialIds } },
               { projection: { state: 1, characterName: 1, party: 1, isNPP: 1 } }

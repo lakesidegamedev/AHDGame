@@ -9,6 +9,8 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { adminOfficialsAppointSchema } from "@/lib/api/schemas/admin";
 import type { ElectedOfficial, OfficeType, User } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import type { Document } from "mongodb";
 
 // POST /api/admin/officials/appoint — Appoints or vacates a character in an elected office position, with admin logging.
 // Auth: requireAdmin
@@ -47,7 +49,7 @@ export async function POST(request: Request) {
 
       // If character already holds an office, remove them from it
       if (character.currentOffice) {
-        await db.collection("electedOfficials").updateOne(
+        await electedOfficialsCollection<Document>(db).updateOne(
           { characterId: characterObjectId },
           {
             $set: {
@@ -75,7 +77,7 @@ export async function POST(request: Request) {
         updatedAt: now,
       };
 
-      const result = await db.collection("electedOfficials").insertOne(newOfficial);
+      const result = await electedOfficialsCollection<Document>(db).insertOne(newOfficial);
 
       // Update character's current office
       await charactersCollection(db).updateOne(
@@ -121,7 +123,7 @@ export async function POST(request: Request) {
       return errorResponse(400, "Invalid officialId format");
     }
 
-    const official = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+    const official = await electedOfficialsCollection(db).findOne({
       _id: officialObjectId,
     });
 
@@ -177,7 +179,7 @@ export async function POST(request: Request) {
 
       // If character already holds an office, remove them from it
       if (character.currentOffice) {
-        await db.collection("electedOfficials").updateOne(
+        await electedOfficialsCollection<Document>(db).updateOne(
           { characterId: characterObjectId },
           {
             $set: {
@@ -314,7 +316,7 @@ export async function POST(request: Request) {
       }
 
       // Update the elected official position
-      await db.collection("electedOfficials").updateOne(
+      await electedOfficialsCollection<Document>(db).updateOne(
         { _id: officialObjectId },
         {
           $set: {
@@ -403,7 +405,7 @@ export async function POST(request: Request) {
         });
       }
 
-      await db.collection("electedOfficials").updateOne(
+      await electedOfficialsCollection<Document>(db).updateOne(
         { _id: officialObjectId },
         {
           $set: {

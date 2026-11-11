@@ -17,6 +17,7 @@ import {
   resolvePositionNiBonus,
   type CeoNiTier,
 } from "./positionNiBonus";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export interface CharacterRoleBonusInput {
   character: {
@@ -59,8 +60,7 @@ export async function loadCharacterRoleBonuses(
   const countryId = (character.countryId ?? "US") as CountryId;
   const id = character._id.toString();
   const [presiding, statePartyChair, orgSeats, opposition] = await Promise.all([
-    db
-      .collection<ElectedOfficial>("electedOfficials")
+    electedOfficialsCollection(db)
       .find(
         { characterId: character._id, officeType: { $in: ["speaker", "senatePresident"] } },
         { projection: { officeType: 1 } }

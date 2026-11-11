@@ -19,6 +19,7 @@ import { getScotusComposition } from "@/lib/scotus/queries";
 import type { ScotusNomination, SupremeCourtSeat } from "@/lib/db/types/scotus";
 import type { ElectedOfficial } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 // GET /api/whitehouse/scotus: 9-seat composition, active nominations, and caller's president/senator/justice status. Country-scoped via ?country= (default US); SCOTUS is US-only, other countries return an empty shell.
 // Auth: public
@@ -54,16 +55,18 @@ export async function GET(request: Request) {
         .find({ countryId, status: "active" })
         .sort({ proposedAt: -1 })
         .toArray(),
-      db
-        .collection<ElectedOfficial>("electedOfficials")
-        .findOne({ countryId, officeType: "president", characterId: { $ne: null } }),
+      electedOfficialsCollection(db).findOne({
+        countryId,
+        officeType: "president",
+        characterId: { $ne: null },
+      }),
       authUser
         ? charactersCollection(db).findOne({ userId: new ObjectId(authUser.userId) })
         : Promise.resolve(null),
     ]);
 
     const senatorOfficial = myCharacter
-      ? await db.collection<ElectedOfficial>("electedOfficials").findOne({
+      ? await electedOfficialsCollection(db).findOne({
           characterId: myCharacter._id,
           countryId,
           officeType: "senate",

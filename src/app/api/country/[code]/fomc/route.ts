@@ -36,6 +36,7 @@ import {
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 /** Resolved sessions returned to the panel (newest last in storage). */
 const MEETING_HISTORY_LIMIT = 10;
@@ -102,9 +103,11 @@ export async function GET(_request: Request, context: RouteContext) {
         .find({ countryId, status: "active" })
         .sort({ proposedAt: 1 })
         .toArray(),
-      db
-        .collection<ElectedOfficial>("electedOfficials")
-        .findOne({ characterId: viewerId, officeType: "senate", countryId }),
+      electedOfficialsCollection(db).findOne({
+        characterId: viewerId,
+        officeType: "senate",
+        countryId,
+      }),
     ]);
     const viewerIsSenator = Boolean(viewerSenator);
     const seatLabelById = new Map(board.map((s) => [s.seatId, s.isChair ? "Chair" : s.seatId]));

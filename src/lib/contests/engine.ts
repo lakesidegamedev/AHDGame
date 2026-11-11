@@ -73,6 +73,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 type PlayerCharacter = Pick<
   Character,
@@ -342,8 +343,7 @@ interface StateExecutiveRow {
  * getRegionalExecutive decides.
  */
 async function loadStateExecutives(db: Db): Promise<Map<string, StateExecutiveRow>> {
-  const officials = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const officials = await electedOfficialsCollection(db)
     .find(
       { officeType: { $in: REGIONAL_EXECUTIVE_OFFICES } },
       { projection: { countryId: 1, state: 1, officeType: 1, characterId: 1, electedAt: 1 } }
@@ -443,8 +443,7 @@ async function loadKingmakerCalls(
         { projection: { _id: 1, characterId: 1, isNPP: 1, nppId: 1 } }
       )
       .toArray(),
-    db
-      .collection<ElectedOfficial>("electedOfficials")
+    electedOfficialsCollection(db)
       .find(
         {
           electedAt: { $gt: round.startedAt, $lte: world.now },

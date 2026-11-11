@@ -15,6 +15,7 @@ import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { DE_WAHLKREIS_SEATS } from "@/lib/constants/states";
 import type { ElectedOfficial } from "@/lib/db/types";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 interface LandDiagnostic {
   land: string;
@@ -33,8 +34,7 @@ export async function GET() {
     const db = await getDb();
 
     // Get all DE bundestag officials
-    const officials = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    const officials = await electedOfficialsCollection(db)
       .find({ officeType: "bundestag", countryId: "DE" })
       .toArray();
 

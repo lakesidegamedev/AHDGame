@@ -30,6 +30,8 @@ import { isSameCountry } from "@/lib/api/sameCountry";
 import { emitPartyMembershipEvent, buildPartyEventSnapshots } from "@/lib/parties/membershipEvents";
 import { prunePurgeRejoinBlocks } from "@/lib/parties/antiAbuseGuards";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import type { Document } from "mongodb";
 
 // POST /api/country/[code]/parties/[id]/purge — Chair expels a regular member from the party.
 // Auth: requireAuthWithCharacter (chair only)
@@ -172,12 +174,10 @@ export async function POST(
       );
 
       // Update elected official records for the ejected character
-      await db
-        .collection("electedOfficials")
-        .updateMany(
-          { characterId: target._id },
-          { $set: { party: "independent", updatedAt: now } }
-        );
+      await electedOfficialsCollection<Document>(db).updateMany(
+        { characterId: target._id },
+        { $set: { party: "independent", updatedAt: now } }
+      );
 
       // Update party: decrement count and record purge turn + count
       await db.collection<PoliticalParty>("politicalParties").updateOne(

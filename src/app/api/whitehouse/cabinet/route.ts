@@ -24,6 +24,7 @@ import { actingAppointmentsEnabled } from "@/lib/cabinet/actingEligibility";
 import { ACTING_TENURE_TURNS } from "@/lib/cabinet/actingScope";
 import { getActingChargesCollection } from "@/lib/db/collections/actingAppointmentCharges";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 // GET /api/whitehouse/cabinet — Returns all cabinet positions with current members, pending nominations, and the caller's senator/president status.
 // Country-scoped via ?country= (default US).
@@ -46,9 +47,11 @@ export async function GET(request: Request) {
           .find({ countryId, status: { $in: ["active", "proposed"] } })
           .sort({ proposedAt: -1 })
           .toArray(),
-        db
-          .collection<ElectedOfficial>("electedOfficials")
-          .findOne({ countryId, officeType: "president", characterId: { $ne: null } }),
+        electedOfficialsCollection(db).findOne({
+          countryId,
+          officeType: "president",
+          characterId: { $ne: null },
+        }),
         authUser
           ? charactersCollection(db).findOne({ userId: new ObjectId(authUser.userId) })
           : Promise.resolve(null),
@@ -66,7 +69,7 @@ export async function GET(request: Request) {
     const charMap = await bulkFetchCharacterNames(db, characterIds, { includeAvatar: true });
 
     const senatorOfficial = myCharacter
-      ? await db.collection<ElectedOfficial>("electedOfficials").findOne({
+      ? await electedOfficialsCollection(db).findOne({
           characterId: myCharacter._id,
           countryId,
           officeType: "senate",

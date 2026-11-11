@@ -7,6 +7,7 @@ import { getCountryState } from "@/lib/countryState";
 import { getGovernmentFormationsCollection } from "@/lib/db/collections/governmentFormation";
 import { buildCharacterHref } from "@/lib/utils/profileUrls";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -22,8 +23,7 @@ export async function queryGovernment(db: Db, country: string) {
   const isParliamentary = isParliamentarySystemForGovernmentType(runtime.governmentType);
 
   const [executives, leaders, cabinetMembers] = await Promise.all([
-    db
-      .collection<ElectedOfficial>("electedOfficials")
+    electedOfficialsCollection(db)
       .find({
         countryId: country,
         officeType: {

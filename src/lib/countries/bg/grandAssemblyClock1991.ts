@@ -13,6 +13,7 @@ import {
   bgGrandAssemblyRegularAnchor,
   bgFoundingMandateTermAnchor,
 } from "./rules/assemblyClock1991";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export async function loadBgGrandAssemblyClock(
   db: Db,
@@ -37,7 +38,7 @@ export async function loadBgGrandAssemblyClock(
       if (current.grandTermEndTurn != null)
         return bgGrandAssemblyRegularAnchor({ ...ctx, nativeAnchorTurn: current.grandTermEndTurn });
       const endTurn = bgFoundingMandateTermAnchor(historicalEndTurn, current.seatedAtTurn!);
-      await db.collection<ElectedOfficial>("electedOfficials").updateMany(
+      await electedOfficialsCollection(db).updateMany(
         {
           countryId: "BG",
           officeType: "assemblyDeputy",

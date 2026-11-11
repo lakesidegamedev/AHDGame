@@ -21,6 +21,8 @@ import {
   openBg1991AssemblyDissolution,
 } from "@/lib/countries/bg/assemblyDissolution1991";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import type { Document } from "mongodb";
 
 const bodySchema = z
   .object({
@@ -78,7 +80,7 @@ export async function POST(request: Request, { params }: Context) {
       return errorResponse(409, "No electoral decision in this era");
     const character = await getCharacterByUserId(db, auth.user.userId);
     const official = character
-      ? await db.collection("electedOfficials").findOne(
+      ? await electedOfficialsCollection<Document>(db).findOne(
           {
             characterId: character._id,
             countryId: "BG",

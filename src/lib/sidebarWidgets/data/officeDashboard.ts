@@ -19,6 +19,7 @@ import { populationWeightedAverage } from "@/lib/metrics/populationWeightedAvera
 import { loadViewerCharacter } from "./viewerContext";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export interface OfficeDashboardWidgetData {
   scope: "state" | "nation";
@@ -158,7 +159,7 @@ export async function loadOfficeDashboard(
   if (!character) return null;
   const countryId = character.countryId;
   const [regional, cabinetSeat] = await Promise.all([
-    db.collection<ElectedOfficial>("electedOfficials").findOne(
+    electedOfficialsCollection(db).findOne(
       {
         officeType: getRegionalExecutiveOfficeKey(countryId),
         characterId: character._id,

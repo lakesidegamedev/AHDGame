@@ -20,6 +20,7 @@ import { DEFAULT_CANDIDATE_SUPPORT } from "@/lib/elections/engine/electionFormul
 import { generateNPP, type NPPGenerationContext } from "./generator";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 /** Called only by fresh historical bootstrap, never by a turn or reference refresh. */
 export async function seedModernOpeningCandidates(
@@ -136,8 +137,7 @@ export async function seedModernOpeningCandidates(
       }
     )
     .toArray();
-  const incumbents = await db
-    .collection<{ nppId?: unknown }>("electedOfficials")
+  const incumbents = await electedOfficialsCollection<{ nppId?: unknown }>(db)
     .find({ nppId: { $exists: true } }, { projection: { nppId: 1 } })
     .toArray();
   const claimed = new Set([

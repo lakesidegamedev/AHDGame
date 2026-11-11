@@ -10,6 +10,7 @@ import {
   type SeatControlHistoryRow,
 } from "./competition";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 interface ParliamentSeatHistoryDoc extends SeatControlHistoryRow {
   countryId: string;
@@ -30,8 +31,7 @@ export async function loadDemocraticCompetition(
   }
   const officeType = chamberKeys.length === 1 ? chamberKeys[0] : { $in: chamberKeys };
   const [officials, history, courtSeats] = await Promise.all([
-    db
-      .collection<ElectedOfficial>("electedOfficials")
+    electedOfficialsCollection(db)
       .find({ countryId, officeType })
       .project<Pick<ElectedOfficial, "officeType" | "party" | "seatsHeld">>({
         officeType: 1,

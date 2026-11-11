@@ -9,6 +9,7 @@ import {
 } from "@/lib/db/collections/governmentFormation";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 /**
  * GET /api/admin/heal/confidence-votes
@@ -31,8 +32,7 @@ export async function GET() {
     for (const vote of activeAppointments) {
       const countryConfig = COUNTRY_CONFIGS[vote.countryId as CountryId];
       const lowerChamberKey = countryConfig?.legislature.lowerChamber.key ?? "commons";
-      const allMPs = await db
-        .collection<ElectedOfficial>("electedOfficials")
+      const allMPs = await electedOfficialsCollection(db)
         .find({ officeType: lowerChamberKey, countryId: vote.countryId })
         .toArray();
 
@@ -118,8 +118,7 @@ export async function POST() {
     for (const vote of activeVotes) {
       const countryConfig = COUNTRY_CONFIGS[vote.countryId as CountryId];
       const lowerChamberKey = countryConfig?.legislature.lowerChamber.key ?? "commons";
-      const allMPs = await db
-        .collection<ElectedOfficial>("electedOfficials")
+      const allMPs = await electedOfficialsCollection(db)
         .find({ officeType: lowerChamberKey, countryId: vote.countryId, isNPP: true })
         .toArray();
 

@@ -33,6 +33,7 @@ import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import type { Document } from "mongodb";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 type SeatScopedOfficial = ElectedOfficial & { seatId?: string };
 
@@ -426,8 +427,7 @@ export async function collectSeatIntegrity(
       .collection<Seat>("seats")
       .find({}, { projection: { _id: 1, countryId: 1, electionType: 1, state: 1 } })
       .toArray(),
-    db
-      .collection<SeatScopedOfficial>("electedOfficials")
+    electedOfficialsCollection<SeatScopedOfficial>(db)
       .find(
         {},
         {
@@ -546,7 +546,7 @@ async function collectPopulationStats(db: Db): Promise<PopulationStats> {
     db.collection("seats").countDocuments(),
     db.collection("politicalParties").countDocuments(),
     db.collection("elections").countDocuments({ status: "active" }),
-    db.collection("electedOfficials").countDocuments(),
+    electedOfficialsCollection<Document>(db).countDocuments(),
     // Simulated roster for the per-country breakdown below.
     getSimulatedCountryIds(db),
   ]);
@@ -600,8 +600,7 @@ async function collectPopulationStats(db: Db): Promise<PopulationStats> {
         { $group: { _id: "$countryId", count: { $sum: 1 } } },
       ])
       .toArray() as Promise<{ _id: string | null; count: number }[]>,
-    db
-      .collection("electedOfficials")
+    electedOfficialsCollection<Document>(db)
       .aggregate([
         { $match: { countryId: { $in: activeCountryIds } } },
         { $group: { _id: "$countryId", count: { $sum: 1 } } },

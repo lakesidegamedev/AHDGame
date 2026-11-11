@@ -25,6 +25,7 @@ import {
 import { electionNightStyle, majorityThreshold } from "./electionNightChrome";
 import type { NationalParty, NationalRegion, NationalResults } from "./types";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export {
   CHAMBER_LABELS,
@@ -202,8 +203,7 @@ export async function buildNationalElectionNight(
     ? resolveOfficeKeyForElectionType(election.countryId, electionType)
     : null;
   if (officeType) {
-    const holdovers = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    const holdovers = await electedOfficialsCollection(db)
       .find(
         {
           countryId: election.countryId,

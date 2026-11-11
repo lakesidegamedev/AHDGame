@@ -11,6 +11,7 @@ import { getHeadOfGovernmentCharacterId } from "@/lib/api/headOfGovernment";
 import type { ElectedOfficial } from "@/lib/db/types/officials";
 import { getCabinetMembersCollection } from "@/lib/db/collections/cabinetMembers";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 /** Why a viewer may see a cabinet office. Null when they may not. */
 export type CabinetOfficeViewerRole =
@@ -139,12 +140,10 @@ export async function resolveCabinetOfficeVisibility(
   const config = getCountryConfig(countryId, preset);
   const headOfStateOfficeType = getHeadOfStateOfficeType(config);
   if (viewerId && headOfStateOfficeType) {
-    const hos = await db
-      .collection<ElectedOfficial>("electedOfficials")
-      .findOne(
-        { countryId, officeType: headOfStateOfficeType, characterId: { $ne: null } },
-        { projection: { characterId: 1 } }
-      );
+    const hos = await electedOfficialsCollection(db).findOne(
+      { countryId, officeType: headOfStateOfficeType, characterId: { $ne: null } },
+      { projection: { characterId: 1 } }
+    );
     if (hos?.characterId && hos.characterId.toString() === viewerId) {
       return { canView: true, canAct: false, viewerRole: "headOfState" };
     }

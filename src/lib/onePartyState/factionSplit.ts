@@ -44,6 +44,7 @@ export interface OfficialAlignment {
 export { pickDefectors } from "./rules/factionDefection";
 import { pickDefectors } from "./rules/factionDefection";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export interface FactionSplitResult {
   newPartySequentialId: number;
@@ -82,8 +83,7 @@ export async function fireFactionSplit(
   if (!rulingParty) return null;
 
   // Find all officials affiliated with the ruling party by sequentialId-as-string
-  const officials = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const officials = await electedOfficialsCollection(db)
     .find({ countryId, party: String(rulingParty.sequentialId) })
     .toArray();
   if (officials.length === 0) return null;
@@ -224,12 +224,10 @@ export async function fireFactionSplit(
   );
   // Also update their ElectedOfficials rows so the legislature reflects
   // the new affiliation immediately.
-  await db
-    .collection<ElectedOfficial>("electedOfficials")
-    .updateMany(
-      { countryId, characterId: { $in: defectorIds } },
-      { $set: { party: String(newSeq) } }
-    );
+  await electedOfficialsCollection(db).updateMany(
+    { countryId, characterId: { $in: defectorIds } },
+    { $set: { party: String(newSeq) } }
+  );
 
   await db
     .collection<NPP>("npps")
@@ -237,9 +235,10 @@ export async function fireFactionSplit(
       { _id: { $in: defectorNppIds } },
       { $set: { party: String(newSeq), updatedAt: now } }
     );
-  await db
-    .collection<ElectedOfficial>("electedOfficials")
-    .updateMany({ countryId, nppId: { $in: defectorNppIds } }, { $set: { party: String(newSeq) } });
+  await electedOfficialsCollection(db).updateMany(
+    { countryId, nppId: { $in: defectorNppIds } },
+    { $set: { party: String(newSeq) } }
+  );
 
   // split-cleanup, a defector may have been the ruling party's chair,
   // vice chair, or treasurer. Vacate those slots so the ruling party no

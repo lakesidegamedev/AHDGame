@@ -10,6 +10,8 @@ import { getCountryConfig, type CountryId } from "@/lib/constants/countries";
 import { getExecutiveOfficialFilter } from "@/lib/elections/executiveOfficeFilters";
 import { hasReachedExecutiveTermLimit } from "@/lib/elections/executiveTermLimits";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import type { Document } from "mongodb";
 
 /**
  * For each player presidential nominee without a runningMateId, tentatively
@@ -26,11 +28,12 @@ export async function autoAssignTentativeRunningMates(
   if (needsVp.length === 0) return;
 
   // Incumbent president is disqualified from being a running mate
-  const incumbent = await db
-    .collection("electedOfficials")
-    .findOne(getExecutiveOfficialFilter(countryId, "president"), {
+  const incumbent = await electedOfficialsCollection<Document>(db).findOne(
+    getExecutiveOfficialFilter(countryId, "president"),
+    {
       projection: { characterId: 1 },
-    });
+    }
+  );
   const incumbentId: ObjectId | null = (incumbent?.characterId as ObjectId | null) ?? null;
   const countryConfig = getCountryConfig(countryId);
 

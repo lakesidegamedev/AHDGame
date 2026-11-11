@@ -16,6 +16,7 @@ import type { ElectedOfficial, Character } from "@/lib/db/types";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import type { Document } from "mongodb";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export async function POST() {
   try {
@@ -26,8 +27,7 @@ export async function POST() {
     const now = new Date();
 
     // Find the actual current US president and VP from electedOfficials
-    const executives = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    const executives = await electedOfficialsCollection(db)
       .find({
         countryId: "US",
         officeType: { $in: ["president", "vicePresident"] },
@@ -71,8 +71,10 @@ export async function POST() {
     // Clear fake presidents
     for (const char of fakePresidents) {
       if (!actualPresidentIds.has(char._id.toString())) {
-        await charactersCollection<Document>(db)
-          .updateOne({ _id: char._id }, { $set: { currentOffice: null, updatedAt: now } });
+        await charactersCollection<Document>(db).updateOne(
+          { _id: char._id },
+          { $set: { currentOffice: null, updatedAt: now } }
+        );
         clearedCount++;
         clearedNames.push(`${char.name} (was President)`);
       }
@@ -81,8 +83,10 @@ export async function POST() {
     // Clear fake VPs
     for (const char of fakeVPs) {
       if (!actualVPIds.has(char._id.toString())) {
-        await charactersCollection<Document>(db)
-          .updateOne({ _id: char._id }, { $set: { currentOffice: null, updatedAt: now } });
+        await charactersCollection<Document>(db).updateOne(
+          { _id: char._id },
+          { $set: { currentOffice: null, updatedAt: now } }
+        );
         clearedCount++;
         clearedNames.push(`${char.name} (was VP)`);
       }
@@ -94,8 +98,7 @@ export async function POST() {
     let duplicatesRemoved = 0;
 
     for (const officeType of duplicateTypes) {
-      const records = await db
-        .collection<ElectedOfficial>("electedOfficials")
+      const records = await electedOfficialsCollection(db)
         .find({ countryId: "US", officeType })
         .sort({ updatedAt: -1 })
         .toArray();
@@ -104,9 +107,9 @@ export async function POST() {
         // Keep the first (most recent), delete the rest
         const toDelete = records.slice(1).map((r) => r._id);
         if (toDelete.length > 0) {
-          const result = await db
-            .collection("electedOfficials")
-            .deleteMany({ _id: { $in: toDelete } });
+          const result = await electedOfficialsCollection<Document>(db).deleteMany({
+            _id: { $in: toDelete },
+          });
           duplicatesRemoved += result.deletedCount;
         }
       }
@@ -139,8 +142,7 @@ export async function GET() {
     const db = await getDb();
 
     // Find actual US executives
-    const executives = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    const executives = await electedOfficialsCollection(db)
       .find({
         countryId: "US",
         officeType: { $in: ["president", "vicePresident"] },

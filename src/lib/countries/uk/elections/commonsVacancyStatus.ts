@@ -21,6 +21,7 @@ import {
   commonsByElectionGate,
   type CommonsByElectionGate,
 } from "@/lib/turn/commonsByElections";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export interface CommonsVacancyDto {
   id: string;
@@ -166,7 +167,7 @@ export async function loadCommonsVacancyStatus(
 
   let viewer: CommonsVacancyStatus["viewer"] = { officialId: null, state: null };
   if (options?.viewer) {
-    const held = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+    const held = await electedOfficialsCollection(db).findOne({
       officeType: "commons",
       countryId: "UK",
       characterId: options.viewer._id,

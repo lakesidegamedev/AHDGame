@@ -43,6 +43,7 @@ import {
 import { openSpeakerElection } from "@/lib/congress/speaker/openSpeakerElection";
 import type { CongressLeader, ElectedOfficial, LeadershipRole } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 /**
  * The majority-party-gated roles, per chamber, paired with the per-chamber
@@ -108,8 +109,7 @@ export async function reconcileLeadershipPartyEligibility(
   if (holderIds.length === 0) return [];
 
   const [seats, characters] = await Promise.all([
-    db
-      .collection<ElectedOfficial>("electedOfficials")
+    electedOfficialsCollection(db)
       .find({
         officeType: chamber,
         $or: [{ characterId: { $in: holderIds } }, { nppId: { $in: holderIds } }],

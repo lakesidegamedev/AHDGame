@@ -23,6 +23,7 @@ import { BG_1990_REGION_CAPACITY } from "./data/foundingDistricts1990";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export const BG_FOUNDING_OFFICE_ARCHIVES_COLLECTION = "bgFoundingAssemblyOfficeArchives";
 interface BgFoundingAssemblyArchive {
@@ -209,8 +210,7 @@ async function materializeBgFoundingAssemblySeating(input: {
       rootCandidateId: row.candidateId,
     },
   }));
-  const incumbents = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const incumbents = await electedOfficialsCollection(db)
     .find({ countryId: "BG", officeType: { $in: ["assemblyDeputy"] } }, { session })
     .toArray();
   if (incumbents.length)
@@ -237,11 +237,11 @@ async function materializeBgFoundingAssemblySeating(input: {
       { session }
     );
   }
-  await db
-    .collection<ElectedOfficial>("electedOfficials")
-    .deleteMany({ countryId: "BG", officeType: { $in: ["assemblyDeputy"] } }, { session });
-  if (officials.length)
-    await db.collection<ElectedOfficial>("electedOfficials").insertMany(officials, { session });
+  await electedOfficialsCollection(db).deleteMany(
+    { countryId: "BG", officeType: { $in: ["assemblyDeputy"] } },
+    { session }
+  );
+  if (officials.length) await electedOfficialsCollection(db).insertMany(officials, { session });
   const owners = new Map<
     string,
     { ownerId: string; isNpc: boolean; state: string; party: string; seats: number }

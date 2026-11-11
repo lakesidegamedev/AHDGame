@@ -12,6 +12,7 @@ import { createNotification } from "@/lib/notifications";
 import { getCabinetPositionById } from "@/lib/constants";
 import type { CabinetNomination, ElectedOfficial } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 // POST /api/whitehouse/cabinet/nominations/[id]/withdraw — President withdraws an active cabinet nomination and notifies the nominee.
 // Auth: requireBasicAuth
@@ -46,9 +47,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       return errorResponse(404, "Nomination not found or already resolved");
     }
 
-    const presidentOfficial = await db
-      .collection<ElectedOfficial>("electedOfficials")
-      .findOne({ countryId: "US", officeType: "president", characterId: { $ne: null } });
+    const presidentOfficial = await electedOfficialsCollection(db).findOne({
+      countryId: "US",
+      officeType: "president",
+      characterId: { $ne: null },
+    });
     if (!presidentOfficial?.characterId) {
       return errorResponse(400, "No President in office");
     }

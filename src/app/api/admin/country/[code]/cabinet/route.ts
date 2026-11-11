@@ -41,6 +41,7 @@ import {
 import { reconcileUkSharedPool } from "@/lib/cabinet/ministerialActionPool";
 import { preserveSurvivingCabinetRow } from "@/lib/countries/uk/dualMinistry/survivor";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 const actionSchema = z
   .object({
@@ -106,7 +107,7 @@ async function vacateSeat(
   // character office to restore, so this is skipped for NPP members.
   if (member.characterId) {
     const eligibleOfficeTypes = getCabinetEligibleOfficeTypes(countryId);
-    const seat = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+    const seat = await electedOfficialsCollection(db).findOne({
       characterId: member.characterId,
       officeType: { $in: eligibleOfficeTypes },
       countryId,
@@ -224,7 +225,7 @@ export const POST = withAdminRoute(
     await vacateSeat(db, countryId, positionId);
 
     const now = new Date();
-    const seat = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+    const seat = await electedOfficialsCollection(db).findOne({
       characterId: targetChar._id,
       officeType: { $in: getCabinetEligibleOfficeTypes(countryId) },
       countryId,

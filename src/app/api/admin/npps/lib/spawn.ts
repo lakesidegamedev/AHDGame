@@ -8,6 +8,8 @@ import type { Db } from "@/lib/mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import { errorResponse } from "@/lib/api/errors";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import type { Document } from "mongodb";
 
 export async function handleSpawnNPPs(
   db: Db,
@@ -76,8 +78,7 @@ export async function handleSpawnNPPs(
   const partySoc =
     partyDoc?.socialPosition ?? (party === "democrat" ? -2 : party === "republican" ? 2 : 0);
 
-  const nppMemberAgg = await db
-    .collection("electedOfficials")
+  const nppMemberAgg = await electedOfficialsCollection<Document>(db)
     .aggregate<{ _id: string; count: number }>([
       { $match: { isNPP: true } },
       { $lookup: { from: "npps", localField: "nppId", foreignField: "_id", as: "npp" } },

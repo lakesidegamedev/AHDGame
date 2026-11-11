@@ -18,6 +18,7 @@ import {
   summarizePlayerWhips,
   type PlayerWhipSummaryEntry,
 } from "@/lib/partyWhips/playerWhipSummary";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -170,8 +171,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     // Union of NPP and character officials so bills surface for either audience.
     // Country-scoped because party sequentialIds collide across countries and
     // some office types (e.g. "senate") are shared between countries.
-    const allOfficials = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    const allOfficials = await electedOfficialsCollection(db)
       .find({
         countryId,
         party: partyIdStr,

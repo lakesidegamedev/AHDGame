@@ -24,6 +24,7 @@ import {
   loadRussianDuma1995Decisions,
   openRussianDuma1995Proposal,
 } from "./dumaElectoralProposals1995";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export async function processRussianConstitutionalNpcProposals(
   db: Db,
@@ -50,8 +51,7 @@ export async function processRussianConstitutionalNpcProposals(
   const sponsorParty = typeof leader?.party === "string" ? leader.party : undefined;
   if (!sponsorParty) return 0;
   const offices = await loadRuntimeCountryOffices(db, "RU", "1991-default");
-  const officials = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const officials = await electedOfficialsCollection(db)
     .find(
       { countryId: "RU", officeType: { $in: offices.jointSittingOfficeTypes } },
       { projection: { characterId: 1, nppId: 1, officeType: 1, party: 1 } }

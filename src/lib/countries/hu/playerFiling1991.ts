@@ -10,6 +10,8 @@ import { chooseHu1991PlayerDistrict } from "./rules/playerFiling1991";
 import { isHu1991AssemblyCampaign } from "./rules/assemblyCampaign1991";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import type { Document } from "mongodb";
 export const HU_1991_FILING_LOCKS_COLLECTION = "hu1991AssemblyFilingLocks";
 export type Hu1991FilingFailure =
   | "invalid-ballot"
@@ -119,7 +121,7 @@ export async function materializeHu1991PlayerFiling(input: {
     return reject("incompatible-office");
   if (
     (modern || election.hungarianAssemblyRound!.byElection) &&
-    (await db.collection("electedOfficials").findOne(
+    (await electedOfficialsCollection<Document>(db).findOne(
       {
         countryId: "HU",
         officeType: { $in: ["assemblyDelegate", "assemblyDeputy"] },

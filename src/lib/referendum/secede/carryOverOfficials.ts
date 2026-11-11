@@ -9,6 +9,7 @@ import type { ElectedOfficial } from "@/lib/db/types/officials";
 import type { ParliamentaryGovernment } from "@/lib/db/types/parliamentaryGovernment";
 import { CAPITAL_SUBREGION, type SecedingCountryId } from "./subRegions";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export interface CarryOverOfficialsResult {
   msps: number;
@@ -23,7 +24,7 @@ export async function carryOverOfficials(
   idMap: Record<number, number>
 ): Promise<CarryOverOfficialsResult> {
   const now = new Date();
-  const officials = db.collection<ElectedOfficial>("electedOfficials");
+  const officials = electedOfficialsCollection(db);
   const fm = await officials.findOne({
     countryId: fromCountryId,
     officeType: "governor",

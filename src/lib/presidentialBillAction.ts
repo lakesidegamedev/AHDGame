@@ -17,6 +17,7 @@ import { claimStatusTransition } from "@/lib/turn/atomicClaim";
 import { captureBillStatusChanged } from "@/lib/analytics/billStatusAnalytics";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 const OVERRIDE_WINDOW_HOURS = 24;
 const OVERRIDE_WINDOW_MS = OVERRIDE_WINDOW_HOURS * 60 * 60 * 1000;
@@ -249,8 +250,7 @@ export async function executePresidentialBillAction(
       }
     }
     // Notify the bill country's seated House and Senate members that override voting is open
-    const officials = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    const officials = await electedOfficialsCollection(db)
       .find({
         officeType: { $in: ["house", "senate"] },
         countryId: bill.countryId ?? "US",

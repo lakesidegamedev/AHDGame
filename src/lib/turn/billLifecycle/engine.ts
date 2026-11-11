@@ -54,6 +54,7 @@ import type {
 import { captureBillStatusChanged } from "@/lib/analytics/billStatusAnalytics";
 import { resolveRevisionDelay } from "./rules";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export interface BillLifecycleResult {
   billsProcessed: number;
@@ -150,8 +151,7 @@ async function loadVoteOfficials(
       : [];
   });
   if (filters.length === 0) return [];
-  return db
-    .collection<ElectedOfficial>("electedOfficials")
+  return electedOfficialsCollection(db)
     .find({ $or: filters } as Filter<ElectedOfficial>)
     .project<ScopedVoteOfficial>({
       characterId: 1,
@@ -393,8 +393,7 @@ async function closeOverrideStage(
         officeType: { $in: stage.chambers },
         countryId,
       };
-      const officials = await db
-        .collection<ElectedOfficial>("electedOfficials")
+      const officials = await electedOfficialsCollection(db)
         .find(seatFilter as Filter<ElectedOfficial>)
         .project<ScopedVoteOfficial>({
           characterId: 1,

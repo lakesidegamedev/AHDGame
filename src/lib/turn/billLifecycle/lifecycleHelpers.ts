@@ -11,6 +11,7 @@ import type { Bill, BillStatus, ElectedOfficial } from "@/lib/db/types";
 import { getCountryConfig, type CountryId } from "@/lib/constants/countries";
 import { getChamberKeyForOfficeType } from "@/lib/legislature/chamberOfficeType";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 type LifecycleDb = Awaited<ReturnType<typeof import("@/lib/mongodb").getDb>>;
 
@@ -60,7 +61,7 @@ export async function notifyPresidentBillAwaitingSignature(
   db: LifecycleDb,
   bill: Pick<Bill, "_id" | "title" | "countryId">
 ): Promise<void> {
-  const presidentOfficial = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+  const presidentOfficial = await electedOfficialsCollection(db).findOne({
     countryId: bill.countryId ?? "US",
     officeType: "president",
     characterId: { $ne: null },
@@ -94,8 +95,7 @@ export async function notifyChambersVoteOpen(
   bill: Bill,
   chamberType: string
 ): Promise<void> {
-  const officials = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const officials = await electedOfficialsCollection(db)
     // ⚠️ `countryId` was missing. The US, BR and others all share the house/senate
     // office-type keys (the collision `npp/billVoting.ts` works around per bill), so
     // this notified legislators in EVERY country that used the same key. Pre-existing,
@@ -147,8 +147,7 @@ export async function notifyBillsVoteOpen(
       ])
     ).values(),
   ];
-  const officials = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const officials = await electedOfficialsCollection(db)
     .find(
       {
         $or: chamberFilters,

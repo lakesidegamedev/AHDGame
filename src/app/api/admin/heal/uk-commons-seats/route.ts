@@ -15,6 +15,7 @@ import type {
 import { getUkCommonsSeats } from "@/lib/constants/states";
 import { getGameStatePreset } from "@/lib/db/collections/gameState";
 import { allocateSeats } from "@/lib/elections/resolution/seatAllocation";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 interface RegionDiagnostic {
   region: string;
@@ -65,8 +66,7 @@ export async function GET() {
     }
 
     // Get current electedOfficials for UK Commons
-    const currentOfficials = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    const currentOfficials = await electedOfficialsCollection(db)
       .find({
         officeType: "commons",
         countryId: "UK",
@@ -190,7 +190,7 @@ export async function POST() {
     }
 
     // Delete all existing UK Commons electedOfficials
-    const deleteResult = await db.collection<ElectedOfficial>("electedOfficials").deleteMany({
+    const deleteResult = await electedOfficialsCollection(db).deleteMany({
       officeType: "commons",
       countryId: "UK",
     });
@@ -257,7 +257,7 @@ export async function POST() {
     }
 
     if (toInsert.length > 0) {
-      await db.collection<ElectedOfficial>("electedOfficials").insertMany(toInsert);
+      await electedOfficialsCollection(db).insertMany(toInsert);
     }
 
     return NextResponse.json({

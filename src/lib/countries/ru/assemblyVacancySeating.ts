@@ -20,6 +20,7 @@ import { russianAssemblyOfficialId } from "./assemblyOfficialIdentity";
 import { planRussianAssemblyVacancySeating } from "./rules/assemblyVacancySeating";
 import type { RussianAssemblySeat } from "./rules/assemblySeating";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export async function materializeRussianAssemblyVacancySeating(input: {
   db: Db;
@@ -244,7 +245,7 @@ export async function materializeRussianAssemblyVacancySeating(input: {
   if (!Number.isSafeInteger(revision))
     throw new Error("Assembly seating revision exceeds precision");
   const seatingId = `${rootId}:revision:${revision}`;
-  const officials = db.collection<ElectedOfficial>("electedOfficials");
+  const officials = electedOfficialsCollection(db);
   if (delta.retire.length) {
     const retireIds = delta.retire.map((row) => russianAssemblyOfficialId(rootId, row.candidateId));
     await db

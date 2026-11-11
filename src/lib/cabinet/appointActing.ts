@@ -30,6 +30,7 @@ import {
 import { getCabinetMembersCollection } from "@/lib/db/collections/cabinetMembers";
 import type { CabinetNomination, ElectedOfficial } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 const actingSchema = z.object({
   // Validated against the country's own roster below, not here: a bare id
@@ -91,9 +92,11 @@ export async function appointActingCabinetMember(
       return errorResponse(400, "This cabinet position does not exist in the current era");
     }
 
-    const presidentOfficial = await db
-      .collection<ElectedOfficial>("electedOfficials")
-      .findOne({ countryId, officeType: "president", characterId: { $ne: null } });
+    const presidentOfficial = await electedOfficialsCollection(db).findOne({
+      countryId,
+      officeType: "president",
+      characterId: { $ne: null },
+    });
     if (!presidentOfficial?.characterId) {
       return errorResponse(400, "No President in office");
     }

@@ -11,6 +11,8 @@ import { cycleAnchorContextFromGameState } from "@/lib/elections/cycleAnchorCont
 import { electionToLarpYear } from "@/lib/utils/formatters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import type { Document } from "mongodb";
 
 // POST /api/admin/officials/init — Initializes elected official positions and cycle-1 elections for senate, house, or executive offices.
 // Auth: requireAdmin
@@ -33,12 +35,14 @@ export async function POST(request: Request) {
     // office tree and is initialised by the bootstrap + per-turn sync, not
     // by this admin init route.
     if (officeType === "executive") {
-      const existingPres = await db
-        .collection("electedOfficials")
-        .countDocuments({ countryId: "US", officeType: "president" });
-      const existingVP = await db
-        .collection("electedOfficials")
-        .countDocuments({ countryId: "US", officeType: "vicePresident" });
+      const existingPres = await electedOfficialsCollection<Document>(db).countDocuments({
+        countryId: "US",
+        officeType: "president",
+      });
+      const existingVP = await electedOfficialsCollection<Document>(db).countDocuments({
+        countryId: "US",
+        officeType: "vicePresident",
+      });
       if (existingPres > 0 && existingVP > 0) {
         return errorResponse(409, "President and Vice President positions already exist", {
           extra: { count: 2 },
@@ -66,7 +70,7 @@ export async function POST(request: Request) {
         });
       }
       if (execToInsert.length > 0) {
-        await db.collection("electedOfficials").insertMany(execToInsert);
+        await electedOfficialsCollection<Document>(db).insertMany(execToInsert);
       }
       return NextResponse.json({
         success: true,
@@ -99,7 +103,7 @@ export async function POST(request: Request) {
 
     // Check if officials of this type already exist
     const typeFilter = officeType ? { officeType } : {};
-    const existingCount = await db.collection("electedOfficials").countDocuments(typeFilter);
+    const existingCount = await electedOfficialsCollection<Document>(db).countDocuments(typeFilter);
 
     if (existingCount > 0) {
       const typeLabel = officeType ? `${officeType} positions` : "elected officials";
@@ -172,7 +176,7 @@ export async function POST(request: Request) {
     }
 
     // Insert all officials
-    const result = await db.collection("electedOfficials").insertMany(officialsToInsert);
+    const result = await electedOfficialsCollection<Document>(db).insertMany(officialsToInsert);
 
     // Also create elections for cycle 1
     const electionsToInsert: Omit<Election, "_id">[] = [];
@@ -297,7 +301,7 @@ export async function DELETE() {
     const db = await getDb();
 
     // Delete all vacant House seats (not needed in new system)
-    const result = await db.collection("electedOfficials").deleteMany({
+    const result = await electedOfficialsCollection<Document>(db).deleteMany({
       officeType: "house",
       characterId: null,
     });
@@ -322,8 +326,7 @@ export async function GET() {
 
     const db = await getDb();
 
-    const counts = await db
-      .collection("electedOfficials")
+    const counts = await electedOfficialsCollection<Document>(db)
       .aggregate([
         {
           $group: {

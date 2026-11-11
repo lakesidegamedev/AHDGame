@@ -6,6 +6,7 @@ import type { ElectedOfficial, NPP, PoliticalParty } from "@/lib/db/types";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { getPartyHex } from "@/lib/utils/politics";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export interface MapOfficeholder {
   id: string;
@@ -24,8 +25,7 @@ export async function computeMapOfficeholders(
   regionIds: readonly string[]
 ): Promise<Record<string, MapOfficeholder[]>> {
   const [officials, parties] = await Promise.all([
-    db
-      .collection<ElectedOfficial>("electedOfficials")
+    electedOfficialsCollection(db)
       .find(
         {
           officeType: { $in: ["senate", "house", "governor"] },

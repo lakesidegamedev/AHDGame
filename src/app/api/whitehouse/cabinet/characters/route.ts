@@ -9,6 +9,7 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import type { ElectedOfficial, NPP } from "@/lib/db/types";
 import { resolvePresidentialCountry } from "@/lib/executive/presidentialCountry";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 // GET /api/whitehouse/cabinet/characters — Returns US player characters for the cabinet nomination dropdown (President only).
 // Auth: requireBasicAuth
@@ -26,9 +27,11 @@ export async function GET(request: Request) {
 
     const db = await getDb();
 
-    const presidentOfficial = await db
-      .collection<ElectedOfficial>("electedOfficials")
-      .findOne({ countryId, officeType: "president", characterId: { $ne: null } });
+    const presidentOfficial = await electedOfficialsCollection(db).findOne({
+      countryId,
+      officeType: "president",
+      characterId: { $ne: null },
+    });
     if (!presidentOfficial?.characterId) {
       return errorResponse(400, "No President in office");
     }

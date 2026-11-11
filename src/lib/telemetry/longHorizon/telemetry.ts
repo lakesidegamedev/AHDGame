@@ -45,6 +45,7 @@ import type {
 } from "./rules";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 /** Run manifest row (`simRuns`), read best-effort from the same database. */
 interface SimRunManifest {
@@ -101,8 +102,7 @@ export async function resolveLongHorizonContext(
         { dbName: db.databaseName, status: "running" },
         { sort: { startedAt: -1, _id: -1 } }
       ),
-    db
-      .collection<ElectedOfficial>("electedOfficials")
+    electedOfficialsCollection(db)
       .find(
         {},
         {

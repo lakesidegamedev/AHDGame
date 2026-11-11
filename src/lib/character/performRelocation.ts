@@ -15,6 +15,8 @@ import { severFromChainOfCommand } from "@/lib/military/severFromChainOfCommand"
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import type { Document } from "mongodb";
 
 export interface RelocationOutcome {
   resignedFromOffice: string | null;
@@ -80,7 +82,7 @@ export async function performRelocation(
   ) {
     const officeType = character.currentOffice.type;
     const officeState = "state" in character.currentOffice ? character.currentOffice.state : null;
-    await db.collection("electedOfficials").updateOne(
+    await electedOfficialsCollection<Document>(db).updateOne(
       { characterId },
       {
         $set: {
@@ -283,9 +285,10 @@ export async function performRelocation(
         now,
       });
       // A national office may survive a domestic move, but its party label must not.
-      await db
-        .collection("electedOfficials")
-        .updateMany({ characterId }, { $set: { party: "independent", updatedAt: now } });
+      await electedOfficialsCollection<Document>(db).updateMany(
+        { characterId },
+        { $set: { party: "independent", updatedAt: now } }
+      );
     }
   }
 

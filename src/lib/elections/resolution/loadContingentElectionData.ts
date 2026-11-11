@@ -20,6 +20,7 @@ import {
   type ResolveContingentElectionInput,
 } from "@/lib/elections/resolution/contingentElection";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 function partyKey(countryId: string, partyId: string): string {
   return `${countryId}:${partyId}`;
@@ -163,8 +164,7 @@ export async function loadContingentElectionData(
               (o) => o.state && o.state !== CONTINGENT_EXCLUDED_HOUSE_STATE
             )
           )
-        : db
-            .collection<ElectedOfficial>("electedOfficials")
+        : electedOfficialsCollection(db)
             .find({
               countryId: countryId as CountryId,
               officeType: "house",
@@ -176,8 +176,7 @@ export async function loadContingentElectionData(
       ? Promise.resolve([] as ElectedOfficial[])
       : suppliedChamber
         ? Promise.resolve(suppliedChamber.senate)
-        : db
-            .collection<ElectedOfficial>("electedOfficials")
+        : electedOfficialsCollection(db)
             .find({
               countryId: countryId as CountryId,
               officeType: "senate",

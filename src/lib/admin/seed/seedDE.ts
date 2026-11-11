@@ -18,6 +18,7 @@ import { resolveSeedPartyTier } from "@/lib/seeds/defaultPartyTiers";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 /**
  * The region roster DE actually governs in a given preset.
@@ -404,16 +405,17 @@ export async function seedDEElections(log: (msg: string) => void) {
  */
 export async function seedDEBundestag2021(db: Db, reset: boolean, log: (msg: string) => void) {
   if (reset) {
-    const officials = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    const officials = await electedOfficialsCollection(db)
       .find({ countryId: "DE", officeType: "bundestag", isNPP: true })
       .project<{ nppId?: ObjectId }>({ nppId: 1 })
       .toArray();
     const nppIds = officials.map((o) => o.nppId).filter((id): id is ObjectId => id != null);
 
-    await db
-      .collection<ElectedOfficial>("electedOfficials")
-      .deleteMany({ countryId: "DE", officeType: "bundestag", isNPP: true });
+    await electedOfficialsCollection(db).deleteMany({
+      countryId: "DE",
+      officeType: "bundestag",
+      isNPP: true,
+    });
 
     if (nppIds.length > 0) {
       await db.collection<NPP>("npps").updateMany(
@@ -459,16 +461,17 @@ export async function seedDEMinisterPresidents2020(
   log: (msg: string) => void
 ) {
   if (reset) {
-    const officials = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    const officials = await electedOfficialsCollection(db)
       .find({ countryId: "DE", officeType: "ministerPresident", isNPP: true })
       .project<{ nppId?: ObjectId }>({ nppId: 1 })
       .toArray();
     const nppIds = officials.map((o) => o.nppId).filter((id): id is ObjectId => id != null);
 
-    await db
-      .collection<ElectedOfficial>("electedOfficials")
-      .deleteMany({ countryId: "DE", officeType: "ministerPresident", isNPP: true });
+    await electedOfficialsCollection(db).deleteMany({
+      countryId: "DE",
+      officeType: "ministerPresident",
+      isNPP: true,
+    });
 
     if (nppIds.length > 0) {
       await db.collection<NPP>("npps").updateMany(

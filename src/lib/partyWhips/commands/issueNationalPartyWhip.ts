@@ -55,6 +55,7 @@ import { inferWhipIssuerRole } from "@/lib/partyWhips/issuerRole";
 import { buildPlayerWhipMessage } from "./playerWhipMessage";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export const nationalPartyWhipSchema = z
   .object({
@@ -658,8 +659,7 @@ async function issueNppWhip(
   });
 
   // Fetch party NPPs in this chamber and cast their votes immediately
-  const nppOfficials = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const nppOfficials = await electedOfficialsCollection(db)
     .find({
       isNPP: true,
       // Country-scope officials: party sequentialIds collide across

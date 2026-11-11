@@ -20,6 +20,7 @@ import { COUNTRY_CONFIGS, getCountryConfig, type CountryId } from "@/lib/constan
 import { getExecutiveOfficialFilter } from "@/lib/elections/executiveOfficeFilters";
 import { hasReachedExecutiveTermLimit } from "@/lib/elections/executiveTermLimits";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -82,7 +83,7 @@ export async function GET(request: Request, { params }: RouteParams) {
 
     const electionCountry = (election.countryId ?? COUNTRY_CONFIGS.US.id) as CountryId;
     const countryConfig = getCountryConfig(electionCountry);
-    const currentPresident = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+    const currentPresident = await electedOfficialsCollection(db).findOne({
       ...getExecutiveOfficialFilter(electionCountry, "president"),
       characterId: { $ne: null },
     });

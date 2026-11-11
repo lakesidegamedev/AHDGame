@@ -61,6 +61,7 @@ import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 // GET /api/client-status — Returns status bar enrichment data (funds, corp, election stats, income).
 // Auth: requireBasicAuth
@@ -504,9 +505,10 @@ export async function handleClientStatus(request: Request) {
             }
           )
         : Promise.resolve(null),
-      db
-        .collection<ElectedOfficial>("electedOfficials")
-        .findOne({ characterId: character._id }, { projection: { officeType: 1 } }),
+      electedOfficialsCollection(db).findOne(
+        { characterId: character._id },
+        { projection: { officeType: 1 } }
+      ),
       // Dividend income: corps where character is a shareholder with a dividend rate
       corporationsCollection(db)
         .find({ "shareholders.characterId": character._id })

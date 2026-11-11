@@ -12,6 +12,7 @@ import { NPP_BILL_VOTING_DURATION_HOURS } from "./constants";
 import { RESET_V2_READY } from "@/lib/resetVersions/availability";
 import { resetSystemVersionsForCountry } from "@/lib/resetVersions/rules";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export type NppTradeBillIntent = "raise_tariff" | "lower_tariff";
 
@@ -60,7 +61,7 @@ export async function proposeNppForeignPolicyBill(
   }
 
   const lowerOfficeType = getLowerChamberOfficeType(countryId, gameState?.preset);
-  const official = await db.collection<ElectedOfficial>("electedOfficials").findOne(
+  const official = await electedOfficialsCollection(db).findOne(
     {
       countryId,
       officeType: lowerOfficeType,

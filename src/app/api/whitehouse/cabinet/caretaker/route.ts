@@ -29,6 +29,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import type { ElectedOfficial } from "@/lib/db/types";
 import type { Db } from "mongodb";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 const appointSchema = z.object({
   positionId: z.string().min(1, "positionId required"),
@@ -41,9 +42,11 @@ async function requirePresident(
   countryId: CountryId,
   userId: string
 ): Promise<{ ok: true; characterId: ObjectId } | { ok: false; response: NextResponse }> {
-  const presidentOfficial = await db
-    .collection<ElectedOfficial>("electedOfficials")
-    .findOne({ countryId, officeType: "president", characterId: { $ne: null } });
+  const presidentOfficial = await electedOfficialsCollection(db).findOne({
+    countryId,
+    officeType: "president",
+    characterId: { $ne: null },
+  });
   if (!presidentOfficial?.characterId) {
     return {
       ok: false,

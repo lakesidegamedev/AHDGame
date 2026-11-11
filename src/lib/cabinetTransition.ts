@@ -16,6 +16,7 @@ import type { OfficeType } from "@/lib/db/types/character";
 import { cabinetOfficeTypeForCountry } from "@/lib/actions/officeActionBonus";
 import { getCabinetEligibleOfficeTypes } from "@/lib/legislature/chamberOfficeType";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 /**
  * For the cleared cabinet holders, (1) restore each holder's `currentOffice` so
@@ -50,8 +51,7 @@ export async function notifyAndRestoreClearedHolders(
     charactersCollection(db)
       .find({ _id: { $in: memberIds } }, { projection: { _id: 1, userId: 1, currentOffice: 1 } })
       .toArray(),
-    db
-      .collection<ElectedOfficial>("electedOfficials")
+    electedOfficialsCollection(db)
       .find({
         characterId: { $in: memberIds },
         countryId,

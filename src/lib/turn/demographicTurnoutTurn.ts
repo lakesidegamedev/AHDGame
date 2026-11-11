@@ -77,6 +77,7 @@ import {
 import { getPoliticalPartiesCollection } from "@/lib/db/collections/politicalParties";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 type StoredPartyBudget = PartyBudget & { countryId?: CountryId };
 
@@ -573,8 +574,7 @@ export async function processPartyGOTV(
     if (anyRegistrationBudget) {
       // Reuse the already loaded rosters. One projected officeholder read per
       // phase, not one presence query per party/region. Cached flags can be stale.
-      const officials = await db
-        .collection<ElectedOfficial>("electedOfficials")
+      const officials = await electedOfficialsCollection(db)
         .find({}, { projection: { countryId: 1, party: 1, state: 1 } })
         .toArray();
       registrationPresence = buildRegistrationPresence(

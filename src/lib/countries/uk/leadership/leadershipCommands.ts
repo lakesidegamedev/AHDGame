@@ -37,6 +37,7 @@ import type { ElectedOfficial, PoliticalParty } from "@/lib/db/types";
 import type { Caucus, CaucusMembership } from "@/lib/db/types/caucus";
 import type { CountryId } from "@/lib/constants/countries";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 /**
  * UK party leadership removal shell commands.
@@ -129,7 +130,7 @@ function isCommitteeMember(actor: LeadershipActor, party: PoliticalParty): boole
 
 /** Commons MPs of this party (the parliamentary party — denominator for triggers). */
 async function countPartyMps(db: Db, countryId: CountryId, party: PoliticalParty): Promise<number> {
-  return db.collection<ElectedOfficial>("electedOfficials").countDocuments({
+  return electedOfficialsCollection(db).countDocuments({
     countryId,
     officeType: getLowerChamberOfficeType(countryId),
     party: partySeqIdOf(party),
@@ -142,7 +143,7 @@ async function requirePartyMp(
   party: PoliticalParty,
   actor: LeadershipActor
 ): Promise<ElectedOfficial> {
-  const official = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+  const official = await electedOfficialsCollection(db).findOne({
     characterId: actor._id,
     countryId,
     officeType: getLowerChamberOfficeType(countryId),
@@ -290,7 +291,7 @@ export async function getLeadershipState(
   const isCommittee = viewer != null && isCommitteeMember(viewer, party);
   let isMp = false;
   if (viewer != null && isMember) {
-    const official = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+    const official = await electedOfficialsCollection(db).findOne({
       characterId: viewer._id,
       countryId,
       officeType: getLowerChamberOfficeType(countryId),
@@ -747,7 +748,7 @@ export async function castLeadershipBallotVote(
 
   let weight = 1;
   if (challenge.ballotRuleset.electorate === "mps") {
-    const official = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+    const official = await electedOfficialsCollection(db).findOne({
       characterId: voter._id,
       countryId,
       officeType: getLowerChamberOfficeType(countryId),

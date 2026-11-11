@@ -22,6 +22,7 @@ import {
 import { officePoolTopUpStatus } from "@/lib/actions/officePoolTopUpRules";
 import { getCurrentTurn } from "@/lib/currentTurn";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ code: string }> }) {
   try {
@@ -35,12 +36,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     const authUser = await getAuthUser().catch(() => null);
 
     const [presidentOfficial, vicePresidentOfficial] = await Promise.all([
-      db
-        .collection<ElectedOfficial>("electedOfficials")
-        .findOne({ countryId, officeType: "president" }),
-      db
-        .collection<ElectedOfficial>("electedOfficials")
-        .findOne({ countryId, officeType: "vicePresident" }),
+      electedOfficialsCollection(db).findOne({ countryId, officeType: "president" }),
+      electedOfficialsCollection(db).findOne({ countryId, officeType: "vicePresident" }),
     ]);
 
     const [president, vicePresident] = await Promise.all([

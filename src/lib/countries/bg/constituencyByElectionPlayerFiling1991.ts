@@ -26,6 +26,7 @@ import {
 } from "./rules/constituencyByElection1991";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 interface Lock {
   _id: string;
@@ -135,7 +136,7 @@ export async function materializeBgGrandPartialPlayerFiling(
   if (character.party !== candidate.party) return reject("party-changed");
   if (requestedDistrictId && requestedDistrictId !== job.districtId)
     return reject("outside-region");
-  const held = await db.collection<ElectedOfficial>("electedOfficials").findOne(
+  const held = await electedOfficialsCollection(db).findOne(
     {
       countryId: "BG",
       officeType: "assemblyDeputy",

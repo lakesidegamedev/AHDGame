@@ -11,6 +11,7 @@ import { getRegionOfficialBuckets } from "@/lib/legislature/chamberOfficeType";
 import type { ElectedOfficial, State, User } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -40,8 +41,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     }
 
     // Get all elected officials for this state
-    const officials = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    const officials = await electedOfficialsCollection(db)
       .find({ state: stateId, countryId })
       .sort({ officeType: 1, senateClass: 1, seatsHeld: -1 })
       .toArray();

@@ -71,6 +71,7 @@ import {
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 /**
  * The cabinet's own drag on national approval, as modifiers.
@@ -678,12 +679,10 @@ async function recordedHeadSinceTurn(
   turn: number
 ): Promise<number | null> {
   if (!("kind" in head)) {
-    const president = await db
-      .collection<ElectedOfficial>("electedOfficials")
-      .findOne(
-        { countryId, officeType: "president", characterId: head },
-        { projection: { electedAt: 1 } }
-      );
+    const president = await electedOfficialsCollection(db).findOne(
+      { countryId, officeType: "president", characterId: head },
+      { projection: { electedAt: 1 } }
+    );
     const fromElection = turnForDate(president?.electedAt, turn, new Date(), MS_PER_TURN);
     if (fromElection !== null) return fromElection;
   }

@@ -9,6 +9,7 @@ import { notifyGovernorOfSenateVacancy } from "@/lib/governors/senateVacancy";
 import { resignExecutiveOffice } from "@/lib/elections/resignExecutiveOffice";
 import type { ElectedOfficial } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 // POST /api/officials/[id]/resign — Resigns the authenticated character (or any official for admins) from their elected office.
 // Auth: requireBasicAuth
@@ -29,7 +30,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     const officialId = new ObjectId(id);
 
     const db = await getDb();
-    const officialsCollection = db.collection<ElectedOfficial>("electedOfficials");
+    const officialsCollection = electedOfficialsCollection(db);
     const charactersHandle = charactersCollection(db);
 
     // Find the official

@@ -48,6 +48,7 @@ import { loadExecutiveStatus } from "@/lib/elections/executiveStatus";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 /**
  * Coerce a character id that is typed `ObjectId` but may have been persisted as
@@ -94,12 +95,8 @@ async function handlePresidential(countryId: CountryId) {
   const db = await getDb();
   const authUser = await getAuthUser().catch(() => null);
   const [presidentOfficial, vicePresidentOfficial] = await Promise.all([
-    db
-      .collection<ElectedOfficial>("electedOfficials")
-      .findOne({ countryId, officeType: "president" }),
-    db
-      .collection<ElectedOfficial>("electedOfficials")
-      .findOne({ countryId, officeType: "vicePresident" }),
+    electedOfficialsCollection(db).findOne({ countryId, officeType: "president" }),
+    electedOfficialsCollection(db).findOne({ countryId, officeType: "vicePresident" }),
   ]);
   const [president, vicePresident, executiveStatus] = await Promise.all([
     resolveExecutiveHolder(db, presidentOfficial),
@@ -137,12 +134,8 @@ async function handleUS() {
   const authUser = await getAuthUser().catch(() => null);
 
   const [presidentOfficial, vicePresidentOfficial] = await Promise.all([
-    db
-      .collection<ElectedOfficial>("electedOfficials")
-      .findOne({ countryId: "US", officeType: "president" }),
-    db
-      .collection<ElectedOfficial>("electedOfficials")
-      .findOne({ countryId: "US", officeType: "vicePresident" }),
+    electedOfficialsCollection(db).findOne({ countryId: "US", officeType: "president" }),
+    electedOfficialsCollection(db).findOne({ countryId: "US", officeType: "vicePresident" }),
   ]);
 
   const presCharId = presidentOfficial?.characterId;
@@ -262,10 +255,7 @@ async function handleParliamentary(countryId: CountryId) {
   await processParliamentaryGovernmentVotes(db, countryId, executiveGameTime.effectiveNow);
 
   const [lowerChamberOfficials, govFormation] = await Promise.all([
-    db
-      .collection<ElectedOfficial>("electedOfficials")
-      .find({ officeType: lowerChamberKey, countryId })
-      .toArray(),
+    electedOfficialsCollection(db).find({ officeType: lowerChamberKey, countryId }).toArray(),
     getGovernmentFormationsCollection(db).findOne({ _id: countryId }),
   ]);
 
@@ -335,9 +325,10 @@ async function handleParliamentary(countryId: CountryId) {
   let headOfState: ExecutiveInfo = null;
   const headOfStateOfficeType = getHeadOfStateOfficeType(config);
   if (headOfStateOfficeType) {
-    const hosOfficial = await db
-      .collection<ElectedOfficial>("electedOfficials")
-      .findOne({ officeType: headOfStateOfficeType, countryId });
+    const hosOfficial = await electedOfficialsCollection(db).findOne({
+      officeType: headOfStateOfficeType,
+      countryId,
+    });
     if (hosOfficial?.characterId) {
       const hosChar = await charactersCollection(db).findOne({ _id: hosOfficial.characterId });
       if (hosChar) {
@@ -369,7 +360,7 @@ async function handleParliamentary(countryId: CountryId) {
   const isPrimeMinister = !!pmCharacterId && !!myCharacter && pmCharacterId.equals(myCharacter._id);
 
   const userLowerOfficial = myCharacter
-    ? await db.collection<ElectedOfficial>("electedOfficials").findOne({
+    ? await electedOfficialsCollection(db).findOne({
         characterId: myCharacter._id,
         officeType: lowerChamberKey,
         countryId: countryId,

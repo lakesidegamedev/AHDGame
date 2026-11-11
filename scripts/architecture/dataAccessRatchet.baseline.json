@@ -48,7 +48,6 @@
       "corporateSectors": 1
     },
     "src/app/api/admin/country/[code]/cabinet/route.ts": {
-      "electedOfficials": 2,
       "untyped": 1
     },
     "src/app/api/admin/country/[code]/elections/route.ts": {
@@ -62,10 +61,9 @@
       "untyped": 3
     },
     "src/app/api/admin/country/[code]/one-party-readiness/route.ts": {
-      "electedOfficials": 1,
       "npps": 1,
       "politicalParties": 1,
-      "untyped": 7
+      "untyped": 6
     },
     "src/app/api/admin/country/[code]/parties/[partyId]/appoint/route.ts": {
       "politicalParties": 1
@@ -74,16 +72,10 @@
       "politicalParties": 6
     },
     "src/app/api/admin/country/[code]/region/[id]/assign-seat/route.ts": {
-      "electedOfficials": 11,
-      "npps": 2,
-      "untyped": 11
+      "npps": 2
     },
     "src/app/api/admin/country/[code]/region/[id]/remove-official/route.ts": {
-      "electedOfficials": 2,
       "npps": 1
-    },
-    "src/app/api/admin/country/[code]/region/[id]/vacant-seats/route.ts": {
-      "electedOfficials": 1
     },
     "src/app/api/admin/country/[code]/settings/route.ts": {
       "npps": 1,
@@ -170,7 +162,6 @@
       "untyped": 1
     },
     "src/app/api/admin/elections/recalibrate-timers/route.ts": {
-      "electedOfficials": 1,
       "elections": 9,
       "untyped": 4
     },
@@ -183,7 +174,6 @@
       "elections": 2
     },
     "src/app/api/admin/elections/sync-date/route.ts": {
-      "electedOfficials": 1,
       "elections": 3,
       "untyped": 7
     },
@@ -196,29 +186,17 @@
     "src/app/api/admin/feedback/backfill-github/route.ts": {
       "untyped": 5
     },
-    "src/app/api/admin/heal/confidence-votes/route.ts": {
-      "electedOfficials": 2
-    },
     "src/app/api/admin/heal/corporation-cash/route.ts": {
       "untyped": 1
     },
     "src/app/api/admin/heal/cross-country-party-org/route.ts": {
       "politicalParties": 2
     },
-    "src/app/api/admin/heal/de-bundestag-seats/route.ts": {
-      "electedOfficials": 1
-    },
     "src/app/api/admin/heal/dropped-npp-parties/route.ts": {
-      "electedOfficials": 1,
       "npps": 3,
       "politicalParties": 1
     },
-    "src/app/api/admin/heal/executive-duplicates/route.ts": {
-      "electedOfficials": 4,
-      "untyped": 1
-    },
     "src/app/api/admin/heal/multi-seat-elections/route.ts": {
-      "electedOfficials": 3,
       "elections": 2,
       "npps": 1
     },
@@ -247,9 +225,8 @@
       "untyped": 2
     },
     "src/app/api/admin/heal/stale-admin-appointments/route.ts": {
-      "electedOfficials": 3,
       "npps": 2,
-      "untyped": 2
+      "untyped": 1
     },
     "src/app/api/admin/heal/stale-campaigns/route.ts": {
       "elections": 2,
@@ -259,7 +236,6 @@
       "corporateSectors": 3
     },
     "src/app/api/admin/heal/uk-commons-seats/route.ts": {
-      "electedOfficials": 3,
       "elections": 2
     },
     "src/app/api/admin/health/snapshots/latest/route.ts": {
@@ -318,9 +294,8 @@
       "npps": 2
     },
     "src/app/api/admin/npps/[id]/route.ts": {
-      "electedOfficials": 1,
       "npps": 2,
-      "untyped": 3
+      "untyped": 2
     },
     "src/app/api/admin/npps/clear-cooldowns/route.ts": {
       "npps": 1,
@@ -339,13 +314,10 @@
       "npps": 1
     },
     "src/app/api/admin/npps/lib/spawn.ts": {
-      "electedOfficials": 1,
       "npps": 2,
-      "politicalParties": 2,
-      "untyped": 1
+      "politicalParties": 2
     },
     "src/app/api/admin/npps/route.ts": {
-      "electedOfficials": 5,
       "elections": 1,
       "npps": 11,
       "politicalParties": 1
@@ -354,34 +326,19 @@
       "elections": 1,
       "npps": 1
     },
-    "src/app/api/admin/officials/appoint/route.ts": {
-      "electedOfficials": 6,
-      "untyped": 5
-    },
-    "src/app/api/admin/officials/cleanup/route.ts": {
-      "electedOfficials": 5,
+    "src/app/api/admin/officials/heal-senate/route.ts": {
+      "elections": 3,
       "untyped": 3
     },
-    "src/app/api/admin/officials/heal-senate/route.ts": {
-      "electedOfficials": 3,
-      "elections": 3,
-      "untyped": 6
-    },
     "src/app/api/admin/officials/init/route.ts": {
-      "electedOfficials": 7,
       "elections": 2,
-      "untyped": 9
-    },
-    "src/app/api/admin/officials/list/route.ts": {
-      "electedOfficials": 1
-    },
-    "src/app/api/admin/officials/reset/route.ts": {
-      "electedOfficials": 1,
-      "npps": 1,
       "untyped": 2
     },
+    "src/app/api/admin/officials/reset/route.ts": {
+      "npps": 1,
+      "untyped": 1
+    },
     "src/app/api/admin/parties/[partyId]/delete/route.ts": {
-      "electedOfficials": 2,
       "elections": 1,
       "npps": 2,
       "politicalParties": 2
@@ -416,10 +373,9 @@
       "untyped": 1
     },
     "src/app/api/admin/setup/route.ts": {
-      "electedOfficials": 2,
       "elections": 1,
       "politicalParties": 1,
-      "untyped": 9
+      "untyped": 7
     },
     "src/app/api/admin/state-party/[stateId]/[partyId]/appoint/route.ts": {
       "untyped": 1
@@ -429,9 +385,6 @@
     },
     "src/app/api/admin/suggestions/bulk-delete/route.ts": {
       "untyped": 1
-    },
-    "src/app/api/admin/uk/government/heal/route.ts": {
-      "electedOfficials": 1
     },
     "src/app/api/admin/user-api-keys/[id]/rotate/route.ts": {
       "untyped": 3
@@ -443,8 +396,7 @@
       "untyped": 3
     },
     "src/app/api/admin/users/delete/route.ts": {
-      "electedOfficials": 1,
-      "untyped": 4
+      "untyped": 3
     },
     "src/app/api/admin/users/mod-note/route.ts": {
       "untyped": 3
@@ -471,8 +423,7 @@
       "untyped": 1
     },
     "src/app/api/auth/delete-account/route.ts": {
-      "electedOfficials": 1,
-      "untyped": 5
+      "untyped": 4
     },
     "src/app/api/auth/login/route.ts": {
       "untyped": 2
@@ -512,14 +463,10 @@
     "src/app/api/canvassing/route.ts": {
       "elections": 1
     },
-    "src/app/api/character/constituency/route.ts": {
-      "electedOfficials": 5
-    },
     "src/app/api/characters/[id]/wire/route.ts": {
       "untyped": 5
     },
     "src/app/api/client-nav/route.ts": {
-      "electedOfficials": 1,
       "elections": 2,
       "politicalParties": 2,
       "untyped": 4
@@ -528,37 +475,19 @@
       "untyped": 1
     },
     "src/app/api/congress/bills/[id]/votes/route.ts": {
-      "electedOfficials": 1,
       "npps": 1,
       "politicalParties": 1
     },
     "src/app/api/congress/bills/route.ts": {
-      "electedOfficials": 2,
       "politicalParties": 1
     },
-    "src/app/api/congress/cabinet-nominations/[id]/route.ts": {
-      "electedOfficials": 1
-    },
-    "src/app/api/congress/cabinet-nominations/route.ts": {
-      "electedOfficials": 1
-    },
     "src/app/api/congress/house-leadership/route.ts": {
-      "electedOfficials": 2,
       "untyped": 1
     },
     "src/app/api/congress/leaders/route.ts": {
-      "electedOfficials": 1,
-      "npps": 1,
-      "untyped": 1
-    },
-    "src/app/api/congress/scotus-nominations/[id]/route.ts": {
-      "electedOfficials": 1
-    },
-    "src/app/api/congress/scotus-nominations/route.ts": {
-      "electedOfficials": 1
+      "npps": 1
     },
     "src/app/api/congress/senate-leadership/route.ts": {
-      "electedOfficials": 2,
       "untyped": 1
     },
     "src/app/api/congressional-districts/[stateId]/route.ts": {
@@ -698,17 +627,8 @@
       "untyped": 1
     },
     "src/app/api/country/[code]/congress/members/route.ts": {
-      "electedOfficials": 1,
       "npps": 1,
       "politicalParties": 1
-    },
-    "src/app/api/country/[code]/constitution/proposal/route.ts": {
-      "electedOfficials": 1,
-      "untyped": 1
-    },
-    "src/app/api/country/[code]/constitutional-reform/1991/proposal/route.ts": {
-      "electedOfficials": 1,
-      "untyped": 1
     },
     "src/app/api/country/[code]/corp-sectors/route.ts": {
       "corporateSectors": 1
@@ -719,18 +639,6 @@
     },
     "src/app/api/country/[code]/elections/manifestos/route.ts": {
       "politicalParties": 1
-    },
-    "src/app/api/country/[code]/electoral-reform/1992/proposal/route.ts": {
-      "electedOfficials": 1,
-      "untyped": 1
-    },
-    "src/app/api/country/[code]/electoral-reform/2011/proposal/route.ts": {
-      "electedOfficials": 1,
-      "untyped": 1
-    },
-    "src/app/api/country/[code]/electoral-reform/proposal/route.ts": {
-      "electedOfficials": 1,
-      "untyped": 1
     },
     "src/app/api/country/[code]/executive/acts/route.ts": {
       "untyped": 2
@@ -751,59 +659,28 @@
     "src/app/api/country/[code]/executive/orders/route.ts": {
       "untyped": 2
     },
-    "src/app/api/country/[code]/executive/vice-president/action/route.ts": {
-      "electedOfficials": 1
-    },
-    "src/app/api/country/[code]/executive/vice-president/route.ts": {
-      "electedOfficials": 2
-    },
     "src/app/api/country/[code]/federation/proposal/route.ts": {
-      "electedOfficials": 1,
-      "untyped": 2
+      "untyped": 1
     },
     "src/app/api/country/[code]/fomc/nominate/route.ts": {
       "npps": 1
     },
-    "src/app/api/country/[code]/fomc/nominations/[id]/vote/route.ts": {
-      "electedOfficials": 1
-    },
     "src/app/api/country/[code]/fomc/route.ts": {
-      "electedOfficials": 1,
       "npps": 1
     },
     "src/app/api/country/[code]/government-contracts/access/route.ts": {
       "corporateSectors": 1,
       "untyped": 1
     },
-    "src/app/api/country/[code]/legislature/bills/route.ts": {
-      "electedOfficials": 1,
-      "untyped": 1
-    },
-    "src/app/api/country/[code]/legislature/bundestagspraesident/route.ts": {
-      "electedOfficials": 1
-    },
     "src/app/api/country/[code]/legislature/cabinet-bills/[id]/vote/route.ts": {
       "untyped": 1
-    },
-    "src/app/api/country/[code]/legislature/cppcc-chair/route.ts": {
-      "electedOfficials": 1
     },
     "src/app/api/country/[code]/legislature/leaders/route.ts": {
       "politicalParties": 2
     },
     "src/app/api/country/[code]/legislature/members/route.ts": {
-      "electedOfficials": 1,
       "npps": 1,
       "politicalParties": 1
-    },
-    "src/app/api/country/[code]/legislature/ng-chamber-leadership/route.ts": {
-      "electedOfficials": 2
-    },
-    "src/app/api/country/[code]/legislature/npcsc-chair/route.ts": {
-      "electedOfficials": 1
-    },
-    "src/app/api/country/[code]/legislature/presiding-officers/route.ts": {
-      "electedOfficials": 1
     },
     "src/app/api/country/[code]/map/overview/route.ts": {
       "untyped": 1
@@ -863,9 +740,6 @@
       "politicalParties": 2,
       "untyped": 2
     },
-    "src/app/api/country/[code]/parties/[id]/caucuses/[slug]/whippable-leadership/route.ts": {
-      "electedOfficials": 1
-    },
     "src/app/api/country/[code]/parties/[id]/committee/enter/route.ts": {
       "untyped": 2
     },
@@ -900,21 +774,17 @@
       "politicalParties": 1
     },
     "src/app/api/country/[code]/parties/[id]/leave/route.ts": {
-      "electedOfficials": 1,
       "politicalParties": 1,
-      "untyped": 6
+      "untyped": 5
     },
     "src/app/api/country/[code]/parties/[id]/priority-region/route.ts": {
-      "electedOfficials": 1,
       "politicalParties": 1
     },
     "src/app/api/country/[code]/parties/[id]/ps-investment/route.ts": {
       "politicalParties": 1
     },
     "src/app/api/country/[code]/parties/[id]/purge/route.ts": {
-      "electedOfficials": 1,
-      "politicalParties": 1,
-      "untyped": 1
+      "politicalParties": 1
     },
     "src/app/api/country/[code]/parties/[id]/recruitment/recruit/route.ts": {
       "npps": 5,
@@ -956,9 +826,6 @@
     "src/app/api/country/[code]/parties/[id]/treasury-plan/route.ts": {
       "untyped": 1
     },
-    "src/app/api/country/[code]/parties/[id]/whippable-bills/route.ts": {
-      "electedOfficials": 1
-    },
     "src/app/api/country/[code]/parties/org/route.ts": {
       "politicalParties": 1
     },
@@ -989,7 +856,6 @@
       "corporateSectors": 4
     },
     "src/app/api/country/[code]/region/[id]/legislature/route.ts": {
-      "electedOfficials": 2,
       "npps": 1,
       "politicalParties": 1
     },
@@ -1000,14 +866,10 @@
       "elections": 2
     },
     "src/app/api/country/[code]/region/[id]/office/legislation/queue/route.ts": {
-      "electedOfficials": 1,
       "npps": 1
     },
     "src/app/api/country/[code]/region/[id]/office/orders/route.ts": {
       "untyped": 2
-    },
-    "src/app/api/country/[code]/region/[id]/officials/route.ts": {
-      "electedOfficials": 1
     },
     "src/app/api/country/[code]/region/[id]/party-org/route.ts": {
       "politicalParties": 1
@@ -1065,15 +927,8 @@
       "untyped": 1
     },
     "src/app/api/country/[code]/region/[id]/party/[partyId]/whip/route.ts": {
-      "electedOfficials": 1,
       "npps": 1,
       "untyped": 1
-    },
-    "src/app/api/country/[code]/region/[id]/party/[partyId]/whippable-bills/route.ts": {
-      "electedOfficials": 1
-    },
-    "src/app/api/country/[code]/region/[id]/party/[partyId]/whippable-leadership/route.ts": {
-      "electedOfficials": 2
     },
     "src/app/api/crises/[id]/interaction/route.ts": {
       "untyped": 1
@@ -1085,7 +940,6 @@
       "corporateSectors": 1
     },
     "src/app/api/discord-bot/country/[code]/region/route.ts": {
-      "electedOfficials": 1,
       "politicalParties": 1
     },
     "src/app/api/discord-bot/elections/route.ts": {
@@ -1096,7 +950,6 @@
       "corporateSectors": 1
     },
     "src/app/api/discord-bot/government/route.ts": {
-      "electedOfficials": 1,
       "politicalParties": 2
     },
     "src/app/api/discord-bot/leaderboard/route.ts": {
@@ -1113,7 +966,6 @@
       "politicalParties": 1
     },
     "src/app/api/discord-bot/predict/route.ts": {
-      "electedOfficials": 1,
       "elections": 1,
       "politicalParties": 1
     },
@@ -1129,15 +981,11 @@
       "corporateSectors": 2
     },
     "src/app/api/discord-bot/sync-roles/route.ts": {
-      "electedOfficials": 2,
       "politicalParties": 2
     },
     "src/app/api/elections/[id]/campaigns/route.ts": {
       "npps": 1,
       "politicalParties": 1
-    },
-    "src/app/api/elections/[id]/contingent-vote/route.ts": {
-      "electedOfficials": 1
     },
     "src/app/api/elections/[id]/contingent-vote/whip/route.ts": {
       "politicalParties": 1
@@ -1150,12 +998,10 @@
       "elections": 1
     },
     "src/app/api/elections/[id]/running-mate/characters/route.ts": {
-      "electedOfficials": 1,
       "elections": 2,
       "politicalParties": 1
     },
     "src/app/api/elections/[id]/running-mate/route.ts": {
-      "electedOfficials": 1,
       "elections": 2
     },
     "src/app/api/elections/[id]/seat-history/route.ts": {
@@ -1172,7 +1018,6 @@
       "elections": 1
     },
     "src/app/api/elections/composition/route.ts": {
-      "electedOfficials": 1,
       "elections": 1,
       "politicalParties": 1
     },
@@ -1186,9 +1031,6 @@
       "elections": 2,
       "politicalParties": 1,
       "untyped": 1
-    },
-    "src/app/api/impeachments/route.ts": {
-      "electedOfficials": 1
     },
     "src/app/api/imperial-characters/route.ts": {
       "npps": 1,
@@ -1231,18 +1073,15 @@
       "npps": 2
     },
     "src/app/api/officials/[id]/resign/route.ts": {
-      "electedOfficials": 1,
       "untyped": 1
     },
     "src/app/api/pip/corp/route.ts": {
       "corporateSectors": 2
     },
     "src/app/api/pip/elections/route.ts": {
-      "electedOfficials": 2,
       "elections": 2
     },
     "src/app/api/pip/global/route.ts": {
-      "electedOfficials": 1,
       "elections": 1,
       "politicalParties": 1,
       "untyped": 1
@@ -1341,57 +1180,17 @@
     "src/app/api/v1/transfer/route.ts": {
       "untyped": 1
     },
-    "src/app/api/whitehouse/bills/[id]/action/route.ts": {
-      "electedOfficials": 1
-    },
-    "src/app/api/whitehouse/bills/route.ts": {
-      "electedOfficials": 1
-    },
-    "src/app/api/whitehouse/cabinet/caretaker/route.ts": {
-      "electedOfficials": 1
-    },
     "src/app/api/whitehouse/cabinet/characters/route.ts": {
-      "electedOfficials": 1,
       "npps": 1
     },
-    "src/app/api/whitehouse/cabinet/fire/route.ts": {
-      "electedOfficials": 1
-    },
-    "src/app/api/whitehouse/cabinet/nominations/[id]/vote/route.ts": {
-      "electedOfficials": 1
-    },
-    "src/app/api/whitehouse/cabinet/nominations/[id]/withdraw/route.ts": {
-      "electedOfficials": 1
-    },
     "src/app/api/whitehouse/cabinet/nominations/route.ts": {
-      "electedOfficials": 2,
       "npps": 1
     },
     "src/app/api/whitehouse/cabinet/route.ts": {
-      "electedOfficials": 2,
       "politicalParties": 1
     },
     "src/app/api/whitehouse/route.ts": {
-      "electedOfficials": 3,
       "politicalParties": 2
-    },
-    "src/app/api/whitehouse/scotus/nominate/route.ts": {
-      "electedOfficials": 2
-    },
-    "src/app/api/whitehouse/scotus/nominations/[id]/vote/route.ts": {
-      "electedOfficials": 1
-    },
-    "src/app/api/whitehouse/scotus/route.ts": {
-      "electedOfficials": 2
-    },
-    "src/app/api/whitehouse/vp-nomination/[id]/withdraw/route.ts": {
-      "electedOfficials": 1
-    },
-    "src/app/api/whitehouse/vp-nomination/route.ts": {
-      "electedOfficials": 3
-    },
-    "src/app/api/wiki/country-history/[countryId]/route.ts": {
-      "electedOfficials": 1
     },
     "src/app/api/wiki/elections/[id]/route.ts": {
       "elections": 1,
@@ -1401,7 +1200,6 @@
       "elections": 1
     },
     "src/app/api/wiki/live-stats/route.ts": {
-      "electedOfficials": 2,
       "elections": 1
     },
     "src/app/api/wiki/my/claim/route.ts": {
@@ -1427,9 +1225,6 @@
       "npps": 1,
       "politicalParties": 2
     },
-    "src/app/character/[id]/page.tsx": {
-      "electedOfficials": 1
-    },
     "src/app/charters/[id]/page.tsx": {
       "politicalParties": 1
     },
@@ -1437,15 +1232,12 @@
       "corporateSectors": 2
     },
     "src/app/country/[code]/executive/aras/page.tsx": {
-      "electedOfficials": 1,
       "politicalParties": 1
     },
     "src/app/country/[code]/executive/OnePartyExecutiveHub.tsx": {
-      "electedOfficials": 4,
       "politicalParties": 4
     },
     "src/app/country/[code]/executive/ParliamentaryExecutiveHub.tsx": {
-      "electedOfficials": 2,
       "politicalParties": 3
     },
     "src/app/country/[code]/page.tsx": {
@@ -1462,7 +1254,6 @@
       "politicalParties": 2
     },
     "src/app/country/[code]/region/[id]/office/page.tsx": {
-      "electedOfficials": 2,
       "elections": 2,
       "npps": 1,
       "politicalParties": 2
@@ -1474,7 +1265,6 @@
       "politicalParties": 1
     },
     "src/app/country/[code]/region/[id]/regionData.ts": {
-      "electedOfficials": 1,
       "npps": 2,
       "politicalParties": 4
     },
@@ -1486,9 +1276,6 @@
     },
     "src/app/npp/[id]/page.tsx": {
       "npps": 1
-    },
-    "src/app/officials/page.tsx": {
-      "electedOfficials": 1
     },
     "src/app/political-operations/loaders.ts": {
       "elections": 1
@@ -1510,7 +1297,6 @@
       "politicalParties": 2
     },
     "src/app/profile/page.tsx": {
-      "electedOfficials": 1,
       "politicalParties": 2
     },
     "src/app/wiki/[slug]/edit/page.tsx": {
@@ -1528,16 +1314,12 @@
     "src/app/wiki/random-events/page.tsx": {
       "untyped": 1
     },
-    "src/components/legislation/NationalImpeachmentAction.tsx": {
-      "electedOfficials": 1
-    },
     "src/lib/account/cascadeCharacterDeletion.ts": {
       "untyped": 2
     },
     "src/lib/account/stripPartyMembershipForBannedUser.ts": {
-      "electedOfficials": 1,
       "politicalParties": 1,
-      "untyped": 2
+      "untyped": 1
     },
     "src/lib/account/syncSuspiciousFlagsForBanState.ts": {
       "untyped": 2
@@ -1549,14 +1331,10 @@
       "untyped": 1
     },
     "src/lib/achievements/progress.ts": {
-      "electedOfficials": 1,
-      "untyped": 5
+      "untyped": 4
     },
     "src/lib/achievements/triggers.ts": {
       "untyped": 10
-    },
-    "src/lib/actions/characterRoleBonuses.ts": {
-      "electedOfficials": 1
     },
     "src/lib/actions/commands/executeAction.ts": {
       "untyped": 1
@@ -1570,7 +1348,6 @@
       "politicalParties": 1
     },
     "src/lib/actions/officePoolTopUp.ts": {
-      "electedOfficials": 2,
       "untyped": 1
     },
     "src/lib/actions/pollCommission.ts": {
@@ -1586,15 +1363,13 @@
       "untyped": 2
     },
     "src/lib/admin/bootstrap/initializeOfficials.ts": {
-      "electedOfficials": 2,
       "elections": 2,
-      "untyped": 4
+      "untyped": 2
     },
     "src/lib/admin/bootstrapGameWorld.ts": {
-      "electedOfficials": 5,
       "elections": 3,
       "npps": 2,
-      "untyped": 15
+      "untyped": 10
     },
     "src/lib/admin/countryReadinessReport.ts": {
       "npps": 1,
@@ -1633,10 +1408,9 @@
       "untyped": 3
     },
     "src/lib/admin/resetGameWorld.ts": {
-      "electedOfficials": 1,
       "elections": 1,
       "npps": 1,
-      "untyped": 17
+      "untyped": 16
     },
     "src/lib/admin/seed/applyEraCurrencyTopology.ts": {
       "npps": 2,
@@ -1678,7 +1452,6 @@
       "untyped": 12
     },
     "src/lib/admin/seed/seed1991FederationLegislatures.ts": {
-      "electedOfficials": 1,
       "politicalParties": 1
     },
     "src/lib/admin/seed/seedAchievements.ts": {
@@ -1724,7 +1497,6 @@
       "untyped": 1
     },
     "src/lib/admin/seed/seedDE.ts": {
-      "electedOfficials": 4,
       "npps": 2,
       "politicalParties": 3,
       "untyped": 6
@@ -1782,7 +1554,6 @@
       "untyped": 5
     },
     "src/lib/admin/seed/seedNG.ts": {
-      "electedOfficials": 2,
       "npps": 1,
       "politicalParties": 3,
       "untyped": 5
@@ -1863,9 +1634,8 @@
       "untyped": 4
     },
     "src/lib/admin/startingParties.ts": {
-      "electedOfficials": 1,
       "npps": 4,
-      "untyped": 5
+      "untyped": 4
     },
     "src/lib/admin/suspiciousList.ts": {
       "untyped": 1
@@ -1894,9 +1664,6 @@
     },
     "src/lib/api/botApiAuth.ts": {
       "untyped": 3
-    },
-    "src/lib/api/headOfGovernment.ts": {
-      "electedOfficials": 3
     },
     "src/lib/api/stateTickRates.ts": {
       "corporateSectors": 2
@@ -2042,9 +1809,6 @@
     "src/lib/budget/treasuryReserveTransfer.ts": {
       "untyped": 1
     },
-    "src/lib/cabinet/appointActing.ts": {
-      "electedOfficials": 1
-    },
     "src/lib/cabinet/cabinetBills.ts": {
       "politicalParties": 1,
       "untyped": 4
@@ -2052,15 +1816,10 @@
     "src/lib/cabinet/cabinetBriefing.ts": {
       "politicalParties": 1
     },
-    "src/lib/cabinet/officeVisibility.ts": {
-      "electedOfficials": 1
-    },
     "src/lib/cabinetNominationLifecycle.ts": {
-      "electedOfficials": 7,
       "npps": 2
     },
     "src/lib/cabinetTransition.ts": {
-      "electedOfficials": 1,
       "untyped": 2
     },
     "src/lib/campaigns/commands/campaignCommands.ts": {
@@ -2131,9 +1890,8 @@
       "untyped": 1
     },
     "src/lib/character/performRelocation.ts": {
-      "electedOfficials": 2,
       "politicalParties": 2,
-      "untyped": 6
+      "untyped": 4
     },
     "src/lib/character/relocateWithCorp.ts": {
       "corporateSectors": 1
@@ -2145,17 +1903,14 @@
       "politicalParties": 1
     },
     "src/lib/charters/ratifyCharter.ts": {
-      "electedOfficials": 1,
       "npps": 2,
       "politicalParties": 6,
-      "untyped": 3
+      "untyped": 2
     },
     "src/lib/charts/parliamentChart.ts": {
-      "electedOfficials": 1,
       "politicalParties": 1
     },
     "src/lib/client/clientStatus.ts": {
-      "electedOfficials": 1,
       "elections": 1,
       "politicalParties": 1,
       "untyped": 1
@@ -2178,40 +1933,11 @@
     "src/lib/congress/billProposalLimits.ts": {
       "untyped": 3
     },
-    "src/lib/congress/billWhipPanelData.ts": {
-      "electedOfficials": 1
-    },
-    "src/lib/congress/bundestagComposition.ts": {
-      "electedOfficials": 1
-    },
-    "src/lib/congress/bundestagspraesident/actions.ts": {
-      "electedOfficials": 1
-    },
-    "src/lib/congress/bundestagspraesident/openElection.ts": {
-      "electedOfficials": 1
-    },
-    "src/lib/congress/congressChamberComposition.ts": {
-      "electedOfficials": 1
-    },
-    "src/lib/congress/cppccChair/actions.ts": {
-      "electedOfficials": 1
-    },
-    "src/lib/congress/cppccChair/openElection.ts": {
-      "electedOfficials": 1
-    },
     "src/lib/congress/governmentVoteBreakdown.ts": {
-      "electedOfficials": 1,
       "npps": 1,
       "politicalParties": 2
     },
-    "src/lib/congress/leadership/openElection.ts": {
-      "electedOfficials": 1
-    },
-    "src/lib/congress/leadership/reconcilePartyEligibility.ts": {
-      "electedOfficials": 1
-    },
     "src/lib/congress/leadershipElections.ts": {
-      "electedOfficials": 4,
       "untyped": 2
     },
     "src/lib/congress/leadershipRaceGuard.ts": {
@@ -2221,49 +1947,23 @@
       "npps": 2
     },
     "src/lib/congress/leadershipVoteBallots.ts": {
-      "electedOfficials": 1,
       "untyped": 1
-    },
-    "src/lib/congress/ngChamberLeadership/actions.ts": {
-      "electedOfficials": 1
-    },
-    "src/lib/congress/ngChamberLeadership/composition.ts": {
-      "electedOfficials": 1
-    },
-    "src/lib/congress/ngChamberLeadership/resolveElection.ts": {
-      "electedOfficials": 1
     },
     "src/lib/congress/nominationPeople.ts": {
       "npps": 1,
       "politicalParties": 1
     },
-    "src/lib/congress/npcComposition.ts": {
-      "electedOfficials": 1
-    },
-    "src/lib/congress/npcscChair/actions.ts": {
-      "electedOfficials": 1
-    },
-    "src/lib/congress/npcscChair/openElection.ts": {
-      "electedOfficials": 1
-    },
     "src/lib/congress/speaker/actions.ts": {
-      "electedOfficials": 2,
       "untyped": 1
     },
     "src/lib/congress/speaker/autoVoteNppsForVacate.ts": {
-      "electedOfficials": 1,
       "npps": 1
     },
     "src/lib/congress/speaker/nppVacateVote.ts": {
-      "electedOfficials": 1,
       "politicalParties": 1
     },
     "src/lib/congress/speaker/responseBuilder.ts": {
-      "electedOfficials": 1,
       "npps": 2
-    },
-    "src/lib/congress/speaker/vacateSpeakerIfLostSeat.ts": {
-      "electedOfficials": 1
     },
     "src/lib/constants/countryReadinessExpectations.ts": {
       "untyped": 1
@@ -2272,7 +1972,6 @@
       "untyped": 1
     },
     "src/lib/contests/engine.ts": {
-      "electedOfficials": 2,
       "elections": 1,
       "politicalParties": 1
     },
@@ -2532,35 +2231,25 @@
     "src/lib/corporations/votes/voteService.ts": {
       "untyped": 1
     },
-    "src/lib/countries/bg/assemblyDissolution1991.ts": {
-      "electedOfficials": 1,
-      "untyped": 1
-    },
     "src/lib/countries/bg/constituencyByElectionPlayerFiling1991.ts": {
-      "electedOfficials": 1,
       "elections": 1,
       "politicalParties": 1
     },
     "src/lib/countries/bg/constituencyByElections1991.ts": {
-      "electedOfficials": 5,
       "elections": 5,
       "npps": 3,
       "politicalParties": 1,
       "untyped": 2
     },
     "src/lib/countries/bg/constitutionalInitiative1991.ts": {
-      "electedOfficials": 1,
       "npps": 1
     },
     "src/lib/countries/bg/constitutionalNpcProposals1991.ts": {
-      "electedOfficials": 1,
       "npps": 1
     },
     "src/lib/countries/bg/constitutionalProposals1991.ts": {
-      "electedOfficials": 2,
       "elections": 2,
-      "npps": 1,
-      "untyped": 2
+      "npps": 1
     },
     "src/lib/countries/bg/foundingCampaignBinding1990.ts": {
       "elections": 3,
@@ -2583,27 +2272,18 @@
       "untyped": 1
     },
     "src/lib/countries/bg/foundingSeating1990.ts": {
-      "electedOfficials": 3,
       "elections": 2,
       "npps": 3,
       "untyped": 1
     },
-    "src/lib/countries/bg/grandAssemblyClock1991.ts": {
-      "electedOfficials": 1
-    },
     "src/lib/countries/bg/listVacancies1991.ts": {
-      "electedOfficials": 1,
       "npps": 2,
       "untyped": 1
     },
     "src/lib/countries/bg/ordinaryAssemblySeating.ts": {
-      "electedOfficials": 3,
       "elections": 2,
       "npps": 3,
       "untyped": 1
-    },
-    "src/lib/countries/br/data/brGovernmentFormation.ts": {
-      "electedOfficials": 1
     },
     "src/lib/countries/br/data/brStatePartyOrgCalculations.ts": {
       "politicalParties": 1
@@ -2612,7 +2292,6 @@
       "elections": 1
     },
     "src/lib/countries/br/resolvePresidentialElection.ts": {
-      "electedOfficials": 1,
       "elections": 1,
       "untyped": 2
     },
@@ -2620,15 +2299,12 @@
       "politicalParties": 1
     },
     "src/lib/countries/de/elections/bundestagHolderOffices.ts": {
-      "electedOfficials": 2,
       "npps": 3
     },
     "src/lib/countries/de/elections/germanyAMS.ts": {
-      "electedOfficials": 3,
       "elections": 3
     },
     "src/lib/countries/de/elections/germanyLandtag.ts": {
-      "electedOfficials": 4,
       "elections": 5,
       "npps": 2,
       "untyped": 1
@@ -2651,42 +2327,35 @@
       "untyped": 1
     },
     "src/lib/countries/hu/assemblySeating1991.ts": {
-      "electedOfficials": 3,
       "elections": 2,
       "npps": 3,
       "untyped": 1
     },
     "src/lib/countries/hu/assemblySeating2011.ts": {
-      "electedOfficials": 3,
       "elections": 2,
       "npps": 3,
       "untyped": 1
     },
     "src/lib/countries/hu/constituencyByElections1991.ts": {
-      "electedOfficials": 5,
       "elections": 7,
       "npps": 2,
       "untyped": 3
     },
     "src/lib/countries/hu/constituencyByElections2011.ts": {
-      "electedOfficials": 5,
       "elections": 5,
       "npps": 2,
       "untyped": 2
     },
     "src/lib/countries/hu/electoralNpcProposals1994.ts": {
-      "electedOfficials": 1,
       "npps": 1
     },
     "src/lib/countries/hu/electoralNpcProposals2011.ts": {
-      "electedOfficials": 1,
       "npps": 1
     },
     "src/lib/countries/hu/electoralProposals1994.ts": {
       "elections": 2
     },
     "src/lib/countries/hu/listVacancies1991.ts": {
-      "electedOfficials": 4,
       "npps": 1,
       "politicalParties": 2,
       "untyped": 3
@@ -2695,10 +2364,8 @@
       "elections": 2
     },
     "src/lib/countries/hu/playerFiling1991.ts": {
-      "electedOfficials": 1,
       "elections": 1,
-      "politicalParties": 1,
-      "untyped": 1
+      "politicalParties": 1
     },
     "src/lib/countries/hu/readMixedElectionPlan.ts": {
       "elections": 1
@@ -2707,7 +2374,6 @@
       "politicalParties": 1
     },
     "src/lib/countries/ie/data/seanadComposition.ts": {
-      "electedOfficials": 1,
       "politicalParties": 1,
       "untyped": 1
     },
@@ -2724,7 +2390,6 @@
       "untyped": 2
     },
     "src/lib/countries/jp/seed.ts": {
-      "electedOfficials": 4,
       "npps": 3,
       "politicalParties": 3,
       "untyped": 6
@@ -2737,35 +2402,29 @@
       "politicalParties": 1
     },
     "src/lib/countries/ro/electoralNpcProposals1992.ts": {
-      "electedOfficials": 1,
       "npps": 1
     },
     "src/lib/countries/ro/electoralProposals1992.ts": {
       "elections": 2
     },
     "src/lib/countries/ru/assemblySeating.ts": {
-      "electedOfficials": 2,
       "npps": 2
     },
     "src/lib/countries/ru/assemblySeatingInputs.ts": {
-      "electedOfficials": 1,
       "elections": 1,
       "npps": 1
     },
     "src/lib/countries/ru/assemblyVacancySeating.ts": {
-      "electedOfficials": 1,
       "npps": 1,
       "untyped": 2
     },
     "src/lib/countries/ru/constitutionalNpcProposals.ts": {
-      "electedOfficials": 1,
       "npps": 1
     },
     "src/lib/countries/ru/councilCertificationInputs.ts": {
       "npps": 1
     },
     "src/lib/countries/ru/councilCompositionSeating.ts": {
-      "electedOfficials": 3,
       "npps": 2
     },
     "src/lib/countries/ru/councilElectionOpening.ts": {
@@ -2792,9 +2451,6 @@
     "src/lib/countries/ru/data/2026-08-30-purge-retired-ru-metric-regions.ts": {
       "untyped": 1
     },
-    "src/lib/countries/ru/data/ruGovernmentFormation.ts": {
-      "electedOfficials": 2
-    },
     "src/lib/countries/ru/dumaCertificationInputs.ts": {
       "npps": 1
     },
@@ -2802,7 +2458,6 @@
       "elections": 1
     },
     "src/lib/countries/ru/dumaConvocationSeating.ts": {
-      "electedOfficials": 2,
       "elections": 1,
       "npps": 4,
       "untyped": 1
@@ -2812,10 +2467,6 @@
     },
     "src/lib/countries/ru/dumaElectionResult.ts": {
       "elections": 1
-    },
-    "src/lib/countries/ru/dumaElectoralProposals1995.ts": {
-      "electedOfficials": 1,
-      "untyped": 1
     },
     "src/lib/countries/ru/dumaNpcAdmission.ts": {
       "elections": 1
@@ -2847,7 +2498,6 @@
       "npps": 2
     },
     "src/lib/countries/ru/presidentialSeating.ts": {
-      "electedOfficials": 1,
       "npps": 3,
       "untyped": 1
     },
@@ -2855,12 +2505,10 @@
       "npps": 1
     },
     "src/lib/countries/ru/regionalCouncilAuthorities.ts": {
-      "electedOfficials": 1,
       "npps": 1
     },
     "src/lib/countries/ru/ruConvocation.ts": {
-      "electedOfficials": 1,
-      "untyped": 2
+      "untyped": 1
     },
     "src/lib/countries/ru/seedRU.ts": {
       "politicalParties": 3,
@@ -2878,15 +2526,10 @@
       "untyped": 3
     },
     "src/lib/countries/uk/cabinetApi.ts": {
-      "electedOfficials": 3,
       "politicalParties": 2
     },
     "src/lib/countries/uk/cabinetEligibility.ts": {
-      "electedOfficials": 1,
       "politicalParties": 1
-    },
-    "src/lib/countries/uk/cabinetWhipApi.ts": {
-      "electedOfficials": 6
     },
     "src/lib/countries/uk/conference/conferencePayoff.ts": {
       "politicalParties": 4
@@ -2895,19 +2538,11 @@
       "politicalParties": 1
     },
     "src/lib/countries/uk/devolution/service.ts": {
-      "electedOfficials": 3,
       "elections": 2,
       "npps": 1,
       "untyped": 3
     },
-    "src/lib/countries/uk/elections/commonsSeatCommands.ts": {
-      "electedOfficials": 1
-    },
-    "src/lib/countries/uk/elections/commonsVacancyShell.ts": {
-      "electedOfficials": 2
-    },
     "src/lib/countries/uk/elections/commonsVacancyStatus.ts": {
-      "electedOfficials": 1,
       "elections": 2
     },
     "src/lib/countries/uk/elections/perpetual.ts": {
@@ -2920,21 +2555,16 @@
       "politicalParties": 1
     },
     "src/lib/countries/uk/leadership/leadershipCommands.ts": {
-      "electedOfficials": 4,
       "politicalParties": 2
     },
     "src/lib/countries/uk/northernIreland/service.ts": {
       "elections": 3
     },
-    "src/lib/countries/uk/pmSeatEligibility.ts": {
-      "electedOfficials": 1
-    },
     "src/lib/countries/uk/seed.ts": {
-      "electedOfficials": 6,
       "elections": 4,
       "npps": 7,
       "politicalParties": 9,
-      "untyped": 10
+      "untyped": 9
     },
     "src/lib/countries/uk/seedBudgets.ts": {
       "corporateSectors": 1,
@@ -2943,12 +2573,7 @@
     "src/lib/countries/uk/ukPartyConferenceTurn.ts": {
       "politicalParties": 4
     },
-    "src/lib/country/apportionChamber.ts": {
-      "electedOfficials": 2,
-      "untyped": 2
-    },
     "src/lib/country/executiveOverview.ts": {
-      "electedOfficials": 7,
       "politicalParties": 4
     },
     "src/lib/country/mergeCountry.ts": {
@@ -2968,9 +2593,8 @@
       "untyped": 7
     },
     "src/lib/country/mergeRegion.ts": {
-      "electedOfficials": 1,
       "npps": 1,
-      "untyped": 5
+      "untyped": 4
     },
     "src/lib/country/regionEconomyView.ts": {
       "corporateSectors": 1,
@@ -2990,7 +2614,6 @@
       "untyped": 3
     },
     "src/lib/crises/interactionEngine.ts": {
-      "electedOfficials": 1,
       "politicalParties": 1,
       "untyped": 1
     },
@@ -3063,11 +2686,9 @@
       "elections": 2
     },
     "src/lib/elections/contingentHouseVoteView.ts": {
-      "electedOfficials": 1,
       "politicalParties": 1
     },
     "src/lib/elections/contingentProjection.ts": {
-      "electedOfficials": 2,
       "elections": 1,
       "npps": 2
     },
@@ -3086,11 +2707,7 @@
     "src/lib/elections/engine/incumbentSeatShare.ts": {
       "elections": 2
     },
-    "src/lib/elections/engine/presidentialCoattail.ts": {
-      "electedOfficials": 1
-    },
     "src/lib/elections/engine/singleSeatIncumbency.ts": {
-      "electedOfficials": 2,
       "elections": 3
     },
     "src/lib/elections/engine/tallyCleaner.ts": {
@@ -3103,15 +2720,11 @@
       "npps": 2,
       "politicalParties": 1
     },
-    "src/lib/elections/executiveOffice.ts": {
-      "electedOfficials": 1
-    },
     "src/lib/elections/liveResults/buildResultsPayload.ts": {
       "politicalParties": 1,
       "untyped": 1
     },
     "src/lib/elections/liveResults/electionNight.ts": {
-      "electedOfficials": 1,
       "elections": 1
     },
     "src/lib/elections/loadCountryElections.ts": {
@@ -3147,9 +2760,6 @@
       "elections": 1,
       "npps": 1
     },
-    "src/lib/elections/resignExecutiveOffice.ts": {
-      "electedOfficials": 1
-    },
     "src/lib/elections/resolution/bgOrdinaryEligibility.ts": {
       "elections": 2,
       "npps": 1
@@ -3162,7 +2772,6 @@
       "npps": 1
     },
     "src/lib/elections/resolution/contingentHouseVoteNotices.ts": {
-      "electedOfficials": 1,
       "politicalParties": 1
     },
     "src/lib/elections/resolution/contingentHouseVoteStandings.ts": {
@@ -3172,7 +2781,6 @@
       "politicalParties": 1
     },
     "src/lib/elections/resolution/electionResolution.ts": {
-      "electedOfficials": 2,
       "elections": 2,
       "untyped": 1
     },
@@ -3183,7 +2791,6 @@
       "untyped": 1
     },
     "src/lib/elections/resolution/generalResolution.ts": {
-      "electedOfficials": 7,
       "elections": 6,
       "npps": 4
     },
@@ -3195,33 +2802,24 @@
       "npps": 2
     },
     "src/lib/elections/resolution/generalResolutionHelpers.ts": {
-      "electedOfficials": 10,
       "elections": 3,
       "npps": 4,
       "untyped": 2
     },
-    "src/lib/elections/resolution/generalResolutionWinners.ts": {
-      "electedOfficials": 5
-    },
     "src/lib/elections/resolution/independenceDesireHook.ts": {
-      "electedOfficials": 1,
       "politicalParties": 1
     },
     "src/lib/elections/resolution/loadContingentElectionData.ts": {
-      "electedOfficials": 2,
       "npps": 2,
       "politicalParties": 1
     },
     "src/lib/elections/resolution/ngPresidentResolution.ts": {
-      "electedOfficials": 1,
-      "untyped": 2
+      "untyped": 1
     },
     "src/lib/elections/resolution/presidentExecutiveSeating.ts": {
-      "electedOfficials": 6,
       "npps": 5
     },
     "src/lib/elections/resolution/presidentResolution.ts": {
-      "electedOfficials": 2,
       "npps": 2,
       "untyped": 3
     },
@@ -3251,13 +2849,6 @@
     "src/lib/elections/scheduling/shared.ts": {
       "elections": 14
     },
-    "src/lib/elections/vacatedBlocSeats.ts": {
-      "electedOfficials": 2,
-      "untyped": 1
-    },
-    "src/lib/elections/vacateOfficesForExecutive.ts": {
-      "electedOfficials": 2
-    },
     "src/lib/elections/vacatePartyLeadershipForBannedUser.ts": {
       "politicalParties": 2,
       "untyped": 2
@@ -3269,8 +2860,7 @@
       "corporateSectors": 1
     },
     "src/lib/events/pree/driver.ts": {
-      "electedOfficials": 1,
-      "untyped": 2
+      "untyped": 1
     },
     "src/lib/events/pree/handlers/minorityExtractionObjection.ts": {
       "corporateSectors": 1
@@ -3279,7 +2869,6 @@
       "corporateSectors": 1
     },
     "src/lib/events/substrate/applyEffects.ts": {
-      "electedOfficials": 1,
       "untyped": 4
     },
     "src/lib/extraction/commands/issueContractOffer.ts": {
@@ -3292,17 +2881,12 @@
       "untyped": 2
     },
     "src/lib/fomcNominationLifecycle.ts": {
-      "electedOfficials": 2,
       "npps": 1
     },
     "src/lib/forex/fillRecovery.ts": {
       "untyped": 1
     },
-    "src/lib/governanceStyle/loadCompetition.ts": {
-      "electedOfficials": 1
-    },
     "src/lib/government/accountability.ts": {
-      "electedOfficials": 1,
       "npps": 1
     },
     "src/lib/government/coalitionRefusalState.ts": {
@@ -3310,18 +2894,15 @@
       "politicalParties": 1
     },
     "src/lib/government/commands/appointments.ts": {
-      "electedOfficials": 2,
       "elections": 1,
       "npps": 1,
       "untyped": 3
     },
     "src/lib/government/commands/parliamentaryGovernment.ts": {
-      "electedOfficials": 7,
       "npps": 1,
       "politicalParties": 1
     },
     "src/lib/government/queries/parliamentaryGovernment.ts": {
-      "electedOfficials": 4,
       "npps": 2,
       "politicalParties": 2
     },
@@ -3357,37 +2938,14 @@
       "elections": 1
     },
     "src/lib/governorOffice/legislation/queueBill.ts": {
-      "electedOfficials": 1,
       "npps": 1
     },
-    "src/lib/governorOffice/queries.ts": {
-      "electedOfficials": 2
-    },
-    "src/lib/governorOffice/seedOfficeStates.ts": {
-      "electedOfficials": 1
-    },
-    "src/lib/governors/senateVacancy.ts": {
-      "electedOfficials": 1
-    },
     "src/lib/impeachment/autoVoteNpps.ts": {
-      "electedOfficials": 3,
       "npps": 1,
       "politicalParties": 2
     },
-    "src/lib/impeachment/castImpeachmentVote.ts": {
-      "electedOfficials": 1
-    },
-    "src/lib/impeachment/fileArticles.ts": {
-      "electedOfficials": 1
-    },
     "src/lib/impeachment/filingWindow.ts": {
       "elections": 1
-    },
-    "src/lib/impeachment/impeachmentTally.ts": {
-      "electedOfficials": 2
-    },
-    "src/lib/impeachment/removeImpeachedExecutive.ts": {
-      "electedOfficials": 2
     },
     "src/lib/imperial.ts": {
       "untyped": 1
@@ -3489,7 +3047,6 @@
       "npps": 1
     },
     "src/lib/internationalOrganizations/policyHeadSponsors.ts": {
-      "electedOfficials": 1,
       "npps": 1
     },
     "src/lib/internationalOrganizations/reconcileAutonomousWarEntry.ts": {
@@ -3509,51 +3066,37 @@
       "elections": 1
     },
     "src/lib/legislature/commands/nationalBillActions.ts": {
-      "electedOfficials": 5,
       "politicalParties": 1,
       "untyped": 2
     },
     "src/lib/legislature/commands/proposeNationalBill.ts": {
-      "electedOfficials": 1,
       "politicalParties": 1
     },
     "src/lib/legislature/commands/proposeStateBill.ts": {
-      "electedOfficials": 1,
       "politicalParties": 1
     },
     "src/lib/legislature/commands/stateBillActions.ts": {
-      "electedOfficials": 2,
       "politicalParties": 1
     },
     "src/lib/legislature/discussions/discussionCommands.ts": {
       "politicalParties": 1
     },
-    "src/lib/legislature/discussions/discussionEligibility.ts": {
-      "electedOfficials": 2
-    },
     "src/lib/legislature/queries/nationalBillQueries.ts": {
-      "electedOfficials": 7,
       "npps": 1,
       "politicalParties": 2,
       "untyped": 1
     },
     "src/lib/legislature/queries/nationalPartyNppAccess.ts": {
-      "electedOfficials": 1,
       "npps": 1,
       "politicalParties": 1
     },
     "src/lib/legislature/queries/partyNppProposalAccess.ts": {
-      "electedOfficials": 1,
       "npps": 1,
       "politicalParties": 1
     },
     "src/lib/legislature/queries/stateBillQueries.ts": {
-      "electedOfficials": 2,
       "npps": 1,
       "politicalParties": 2
-    },
-    "src/lib/legislature/stateBillVoteScope.ts": {
-      "electedOfficials": 1
     },
     "src/lib/lineOfCredit/ledger.ts": {
       "untyped": 1
@@ -3565,15 +3108,12 @@
       "untyped": 1
     },
     "src/lib/map/governorService.ts": {
-      "electedOfficials": 1,
       "politicalParties": 1
     },
     "src/lib/map/houseService.ts": {
-      "electedOfficials": 1,
       "politicalParties": 1
     },
     "src/lib/map/officeholderService.ts": {
-      "electedOfficials": 1,
       "npps": 1,
       "politicalParties": 1
     },
@@ -3585,7 +3125,6 @@
       "politicalParties": 1
     },
     "src/lib/map/senateService.ts": {
-      "electedOfficials": 1,
       "politicalParties": 1
     },
     "src/lib/market/producerMarket/liveMode.ts": {
@@ -3699,7 +3238,6 @@
       "untyped": 4
     },
     "src/lib/migrations/entries/2026-10-04-government-accountability.ts": {
-      "electedOfficials": 1,
       "npps": 1,
       "politicalParties": 2
     },
@@ -3893,22 +3431,18 @@
       "npps": 2
     },
     "src/lib/npp/mortality.ts": {
-      "electedOfficials": 2,
       "npps": 5
     },
     "src/lib/npp/performNppRelocation.ts": {
-      "electedOfficials": 1,
       "elections": 1,
       "npps": 1,
       "untyped": 1
     },
     "src/lib/npp/seedHistorical.ts": {
-      "electedOfficials": 2,
       "npps": 3,
       "politicalParties": 2
     },
     "src/lib/npp/seedModernOpeningCandidates.ts": {
-      "electedOfficials": 1,
       "elections": 1,
       "npps": 2,
       "politicalParties": 1
@@ -3928,18 +3462,15 @@
       "npps": 2
     },
     "src/lib/npp/syncDenormalizedName.ts": {
-      "electedOfficials": 1,
-      "untyped": 2
+      "untyped": 1
     },
     "src/lib/nppAutonomy/appointNppChair.ts": {
       "npps": 1
     },
     "src/lib/nppAutonomy/appointNppPresident.ts": {
-      "electedOfficials": 2,
       "npps": 3
     },
     "src/lib/nppAutonomy/appointNppPrimeMinister.ts": {
-      "electedOfficials": 1,
       "npps": 1,
       "politicalParties": 1
     },
@@ -3980,7 +3511,6 @@
       "politicalParties": 1
     },
     "src/lib/nppAutonomy/proposeNppForeignPolicyBill.ts": {
-      "electedOfficials": 1,
       "npps": 1
     },
     "src/lib/nppAutonomy/proposeNppNationalBill.ts": {
@@ -3991,10 +3521,9 @@
       "politicalParties": 1
     },
     "src/lib/nppAutonomy/v1Readiness.ts": {
-      "electedOfficials": 1,
       "npps": 1,
       "politicalParties": 1,
-      "untyped": 3
+      "untyped": 2
     },
     "src/lib/nppAutonomy/v3/finance/nppBonds.ts": {
       "npps": 2
@@ -4032,23 +3561,19 @@
       "untyped": 3
     },
     "src/lib/onePartyState/banFlow.ts": {
-      "electedOfficials": 2,
       "npps": 1,
       "politicalParties": 2,
-      "untyped": 4
+      "untyped": 3
     },
     "src/lib/onePartyState/decisionEvents/stage3RespondToFactionSplit.ts": {
-      "electedOfficials": 2,
       "npps": 1,
       "politicalParties": 3
     },
     "src/lib/onePartyState/factionSplit.ts": {
-      "electedOfficials": 3,
       "npps": 2,
       "politicalParties": 2
     },
     "src/lib/onePartyState/installOnePartyState.ts": {
-      "electedOfficials": 2,
       "npps": 1,
       "politicalParties": 2,
       "untyped": 1
@@ -4068,16 +3593,14 @@
       "politicalParties": 1
     },
     "src/lib/parliament/oppositionLeader.ts": {
-      "electedOfficials": 1,
       "politicalParties": 1
     },
     "src/lib/parliament/shadowCabinetApi.ts": {
       "politicalParties": 2
     },
     "src/lib/parties/applyCharacterPartyJoin.ts": {
-      "electedOfficials": 1,
       "politicalParties": 3,
-      "untyped": 3
+      "untyped": 2
     },
     "src/lib/parties/commands/chargeOrgBuildFunds.ts": {
       "politicalParties": 1
@@ -4095,21 +3618,18 @@
       "politicalParties": 1
     },
     "src/lib/parties/partyFrontier.ts": {
-      "electedOfficials": 2,
       "npps": 2
     },
     "src/lib/parties/partyMatch.ts": {
       "politicalParties": 1
     },
     "src/lib/parties/partyRenewal.ts": {
-      "electedOfficials": 2,
       "elections": 1,
       "npps": 3,
       "politicalParties": 3,
       "untyped": 2
     },
     "src/lib/parties/proposals.ts": {
-      "electedOfficials": 3,
       "npps": 4,
       "politicalParties": 25,
       "untyped": 5
@@ -4152,33 +3672,18 @@
       "elections": 1
     },
     "src/lib/partyWhips/commands/issueCaucusWhip.ts": {
-      "electedOfficials": 2,
       "npps": 1,
       "untyped": 2
     },
     "src/lib/partyWhips/commands/issueNationalPartyWhip.ts": {
-      "electedOfficials": 1,
       "npps": 1,
       "untyped": 3
     },
-    "src/lib/partyWhips/playerWhip.ts": {
-      "electedOfficials": 1
-    },
     "src/lib/partyWhips/whipDefiance.ts": {
-      "electedOfficials": 1,
       "npps": 1
-    },
-    "src/lib/partyWhips/whippableLeadership.ts": {
-      "electedOfficials": 1
     },
     "src/lib/pensions/pensionTurn.ts": {
       "corporateSectors": 1
-    },
-    "src/lib/policy/policyRecordPayload.ts": {
-      "electedOfficials": 1
-    },
-    "src/lib/policy/regionPolicyRecordPayload.ts": {
-      "electedOfficials": 1
     },
     "src/lib/policyShift.ts": {
       "untyped": 1
@@ -4188,9 +3693,6 @@
     },
     "src/lib/politicalOperations/racePresence.ts": {
       "elections": 1
-    },
-    "src/lib/presidentialBillAction.ts": {
-      "electedOfficials": 1
     },
     "src/lib/primaryRegionalBonusLoader.ts": {
       "npps": 1
@@ -4205,8 +3707,7 @@
       "untyped": 1
     },
     "src/lib/propagateNameChange.ts": {
-      "electedOfficials": 1,
-      "untyped": 23
+      "untyped": 22
     },
     "src/lib/publicApi/character.ts": {
       "elections": 1,
@@ -4216,7 +3717,6 @@
       "corporateSectors": 1
     },
     "src/lib/publicApi/economy.ts": {
-      "electedOfficials": 3,
       "politicalParties": 2
     },
     "src/lib/publicApi/election.ts": {
@@ -4225,7 +3725,6 @@
       "politicalParties": 2
     },
     "src/lib/publicApi/government.ts": {
-      "electedOfficials": 1,
       "politicalParties": 2,
       "untyped": 2
     },
@@ -4233,10 +3732,8 @@
       "politicalParties": 1
     },
     "src/lib/publicApi/party.ts": {
-      "electedOfficials": 2,
       "elections": 1,
-      "politicalParties": 2,
-      "untyped": 2
+      "politicalParties": 2
     },
     "src/lib/publicApi/referendums.ts": {
       "politicalParties": 1
@@ -4262,9 +3759,6 @@
     "src/lib/redistricting/seedDistricts.ts": {
       "untyped": 1
     },
-    "src/lib/redistricting/trifecta.ts": {
-      "electedOfficials": 1
-    },
     "src/lib/referendum/pmAccess.ts": {
       "politicalParties": 1
     },
@@ -4273,7 +3767,6 @@
       "untyped": 2
     },
     "src/lib/referendum/secede/carryOverOfficials.ts": {
-      "electedOfficials": 1,
       "npps": 2,
       "untyped": 5
     },
@@ -4289,7 +3782,6 @@
       "untyped": 4
     },
     "src/lib/referendum/secede/splitParties.ts": {
-      "electedOfficials": 1,
       "npps": 1,
       "politicalParties": 5,
       "untyped": 8
@@ -4298,10 +3790,9 @@
       "elections": 1
     },
     "src/lib/referendum/transfer/carryNorthernIrelandMPs.ts": {
-      "electedOfficials": 2,
       "npps": 1,
       "politicalParties": 1,
-      "untyped": 4
+      "untyped": 3
     },
     "src/lib/referendum/transfer/convertPublicCurrency.ts": {
       "untyped": 2
@@ -4311,17 +3802,15 @@
       "untyped": 1
     },
     "src/lib/referendum/transfer/evacuateRegionPolitics.ts": {
-      "electedOfficials": 6,
       "elections": 2,
       "npps": 3,
       "politicalParties": 2,
-      "untyped": 14
+      "untyped": 8
     },
     "src/lib/referendum/transfer/regionScopedCollections.ts": {
       "untyped": 1
     },
     "src/lib/referendum/transfer/transferRegion.ts": {
-      "electedOfficials": 2,
       "untyped": 1
     },
     "src/lib/remediation/adhoc.ts": {
@@ -4389,10 +3878,9 @@
       "untyped": 2
     },
     "src/lib/retireCharacter.ts": {
-      "electedOfficials": 3,
       "elections": 1,
       "politicalParties": 4,
-      "untyped": 25
+      "untyped": 24
     },
     "src/lib/savings/ledger.ts": {
       "untyped": 1
@@ -4410,7 +3898,6 @@
       "untyped": 3
     },
     "src/lib/search/universalSearch.ts": {
-      "electedOfficials": 1,
       "elections": 1,
       "npps": 1
     },
@@ -4418,30 +3905,19 @@
       "politicalParties": 3
     },
     "src/lib/settings/resignations.ts": {
-      "electedOfficials": 3,
       "politicalParties": 3,
       "untyped": 2
     },
     "src/lib/settlement/actuate.ts": {
-      "electedOfficials": 3,
       "npps": 2,
       "politicalParties": 1,
-      "untyped": 8
+      "untyped": 5
     },
     "src/lib/settlement/queries/dossier.ts": {
       "politicalParties": 1
     },
-    "src/lib/sidebarWidgets/data/chamberFloor.ts": {
-      "electedOfficials": 1
-    },
     "src/lib/sidebarWidgets/data/myRace.ts": {
       "elections": 1
-    },
-    "src/lib/sidebarWidgets/data/officeDashboard.ts": {
-      "electedOfficials": 1
-    },
-    "src/lib/sidebarWidgets/dueSoon/index.ts": {
-      "electedOfficials": 1
     },
     "src/lib/sidebarWidgets/dueSoon/politics.ts": {
       "politicalParties": 1
@@ -4450,9 +3926,8 @@
       "untyped": 2
     },
     "src/lib/sim/backfillMissingSeats.ts": {
-      "electedOfficials": 3,
       "politicalParties": 2,
-      "untyped": 5
+      "untyped": 2
     },
     "src/lib/sim/cloneControllers.ts": {
       "npps": 1
@@ -4472,7 +3947,6 @@
       "untyped": 4
     },
     "src/lib/sim/experimentsReport.ts": {
-      "electedOfficials": 1,
       "npps": 2,
       "politicalParties": 1,
       "untyped": 4
@@ -4483,7 +3957,6 @@
     },
     "src/lib/sim/metrics.ts": {
       "corporateSectors": 1,
-      "electedOfficials": 2,
       "elections": 1,
       "npps": 1,
       "untyped": 9
@@ -4506,7 +3979,6 @@
       "untyped": 1
     },
     "src/lib/singleplayerHeadOfState.ts": {
-      "electedOfficials": 2,
       "npps": 1
     },
     "src/lib/singleplayerOwnerAdmin.ts": {
@@ -4517,11 +3989,10 @@
     },
     "src/lib/singleplayerStatistics.ts": {
       "corporateSectors": 1,
-      "electedOfficials": 1,
       "elections": 1,
       "npps": 1,
       "politicalParties": 1,
-      "untyped": 11
+      "untyped": 10
     },
     "src/lib/sovereignDefault/legislative/applyLegislatorImpactsForChamber.ts": {
       "npps": 1
@@ -4549,17 +4020,11 @@
       "elections": 1,
       "politicalParties": 1
     },
-    "src/lib/states/regionalExecutive.ts": {
-      "electedOfficials": 1
-    },
     "src/lib/subsidies/subsidyBudgetCosts.ts": {
       "corporateSectors": 1
     },
     "src/lib/suggestions/reporterDisplay.ts": {
       "politicalParties": 1
-    },
-    "src/lib/telemetry/longHorizon/telemetry.ts": {
-      "electedOfficials": 1
     },
     "src/lib/treasury/executeSendToMember.ts": {
       "politicalParties": 3,
@@ -4573,7 +4038,6 @@
       "untyped": 1
     },
     "src/lib/turn/actionRefresh.ts": {
-      "electedOfficials": 1,
       "npps": 1,
       "untyped": 1
     },
@@ -4597,15 +4061,8 @@
       "corporateSectors": 1,
       "untyped": 1
     },
-    "src/lib/turn/billLifecycle/engine.ts": {
-      "electedOfficials": 2
-    },
     "src/lib/turn/billLifecycle/lifecycleHelpers.ts": {
-      "electedOfficials": 3,
       "untyped": 1
-    },
-    "src/lib/turn/billLifecycle/regionalEngine.ts": {
-      "electedOfficials": 2
     },
     "src/lib/turn/bondTurn.ts": {
       "untyped": 2
@@ -4719,7 +4176,6 @@
       "corporateSectors": 1
     },
     "src/lib/turn/demographicTurnoutTurn.ts": {
-      "electedOfficials": 1,
       "npps": 1,
       "politicalParties": 2
     },
@@ -4738,17 +4194,12 @@
     },
     "src/lib/turn/gameHealthSnapshot.ts": {
       "corporateSectors": 1,
-      "electedOfficials": 3,
       "elections": 2,
       "npps": 2,
       "politicalParties": 4,
-      "untyped": 17
-    },
-    "src/lib/turn/governmentApprovalFavorability.ts": {
-      "electedOfficials": 1
+      "untyped": 15
     },
     "src/lib/turn/governorLegislationQueue.ts": {
-      "electedOfficials": 1,
       "npps": 1
     },
     "src/lib/turn/history/freezeOfficeHistoryIterations.ts": {
@@ -4756,9 +4207,6 @@
     },
     "src/lib/turn/history/recordCountryEvent.ts": {
       "politicalParties": 1
-    },
-    "src/lib/turn/impeachmentLifecycle.ts": {
-      "electedOfficials": 1
     },
     "src/lib/turn/inflationRecalc.ts": {
       "untyped": 2
@@ -4770,7 +4218,6 @@
       "untyped": 1
     },
     "src/lib/turn/npp/billSponsorship.ts": {
-      "electedOfficials": 1,
       "npps": 1,
       "untyped": 1
     },
@@ -4779,14 +4226,12 @@
       "npps": 1
     },
     "src/lib/turn/npp/challengerSupply.ts": {
-      "electedOfficials": 1,
       "elections": 1,
       "npps": 1,
       "politicalParties": 1,
       "untyped": 1
     },
     "src/lib/turn/npp/context.ts": {
-      "electedOfficials": 1,
       "elections": 1,
       "npps": 2,
       "politicalParties": 1
@@ -4844,7 +4289,6 @@
       "untyped": 9
     },
     "src/lib/turn/parliamentSeatsSnapshot.ts": {
-      "electedOfficials": 1,
       "untyped": 1
     },
     "src/lib/turn/partyActionGeneration.ts": {
@@ -4854,21 +4298,16 @@
       "npps": 1
     },
     "src/lib/turn/partyOrg/emptyPartyCleanup.ts": {
-      "electedOfficials": 1,
       "npps": 1,
       "politicalParties": 3
     },
     "src/lib/turn/partyOrg/presence.ts": {
-      "electedOfficials": 1,
       "npps": 1
     },
     "src/lib/turn/partyOrg/reconcileMemberCounts.ts": {
       "npps": 1,
       "politicalParties": 2,
       "untyped": 1
-    },
-    "src/lib/turn/partyOrg/regDriftDecay.ts": {
-      "electedOfficials": 1
     },
     "src/lib/turn/partyTierTurn.ts": {
       "politicalParties": 2
@@ -4889,10 +4328,6 @@
       "politicalParties": 1,
       "untyped": 1
     },
-    "src/lib/turn/primaryRunningMates.ts": {
-      "electedOfficials": 1,
-      "untyped": 1
-    },
     "src/lib/turn/primarySnapshots.ts": {
       "politicalParties": 1
     },
@@ -4907,7 +4342,6 @@
       "untyped": 3
     },
     "src/lib/turn/scotusNominationLifecycle.ts": {
-      "electedOfficials": 2,
       "npps": 2
     },
     "src/lib/turn/state/topSectorsRecompute.ts": {
@@ -4915,7 +4349,6 @@
       "untyped": 1
     },
     "src/lib/turn/statehood.ts": {
-      "electedOfficials": 2,
       "politicalParties": 1
     },
     "src/lib/turn/stockExchangeSnapshot.ts": {
@@ -4969,11 +4402,9 @@
       "untyped": 7
     },
     "src/lib/utils/governmentApproval.ts": {
-      "electedOfficials": 1,
       "untyped": 1
     },
     "src/lib/wiki/autoGeneratedPages.ts": {
-      "electedOfficials": 1,
       "elections": 1,
       "politicalParties": 2
     },
@@ -4982,11 +4413,9 @@
       "politicalParties": 1
     },
     "src/lib/wiki/partyData.ts": {
-      "electedOfficials": 1,
       "politicalParties": 2
     },
     "src/lib/wiki/seatData.ts": {
-      "electedOfficials": 3,
       "npps": 1,
       "politicalParties": 1
     },
@@ -5006,11 +4435,7 @@
       "politicalParties": 1
     },
     "src/lib/world/nationWorldSnapshots.ts": {
-      "electedOfficials": 1,
       "npps": 1
-    },
-    "src/lib/world/playerHandoff.ts": {
-      "electedOfficials": 3
     },
     "src/lib/world/succession/loadLiveInventory.ts": {
       "corporateSectors": 1
@@ -5022,7 +4447,6 @@
       "corporateSectors": 2
     },
     "src/lib/world/succession/materializeFederalRetirement.ts": {
-      "electedOfficials": 1,
       "elections": 2,
       "npps": 1,
       "untyped": 3
@@ -5030,12 +4454,7 @@
     "src/lib/world/succession/materializePublicCorporations.ts": {
       "corporateSectors": 1
     },
-    "src/lib/world/succession/materializeResidents.ts": {
-      "electedOfficials": 1,
-      "untyped": 1
-    },
     "src/lib/world/succession/materializeRussianCongress.ts": {
-      "electedOfficials": 3,
       "elections": 2,
       "npps": 3,
       "untyped": 9

@@ -12,6 +12,7 @@ import {
   type RussianPresidentialResultRecord,
 } from "./presidentialElectionResult";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 const RUSSIAN_PRESIDENTIAL_ARCHIVES_COLLECTION = "russianPresidentialOfficeArchives";
 interface Archive {
   _id: string;
@@ -145,7 +146,7 @@ export async function materializeRussianPresidentialSeating(input: {
     );
     await cabinet.deleteMany({ _id: { $in: winningMinisters.map((row) => row._id) } }, { session });
   }
-  const officials = db.collection<ElectedOfficial>("electedOfficials");
+  const officials = electedOfficialsCollection(db);
   const retiredTypes = ["chairmanOfSupremeSoviet", "president", "vicePresident"];
   const old = await officials
     .find(

@@ -24,6 +24,7 @@ import { ObjectId, type Db } from "mongodb";
 import type { Character, ElectedOfficial, PoliticalParty } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export async function proposePmAppointment(
   db: Db,
@@ -121,7 +122,7 @@ export async function proposePmAppointment(
     }
 
     const lowerChamberKey = offices.lowerOfficeType;
-    const nomineeOfficial = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+    const nomineeOfficial = await electedOfficialsCollection(db).findOne({
       characterId: nomineeId,
       countryId,
       officeType: lowerChamberKey,
@@ -254,7 +255,7 @@ export async function proposeHosAppointment(
     if (!nomineeNpp) {
       throw notFound("Nominee NPP not found");
     }
-    const nomineeOfficial = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+    const nomineeOfficial = await electedOfficialsCollection(db).findOne({
       nppId: nomineeNppOid,
       countryId,
       officeType: { $in: jointOffices },
@@ -277,7 +278,7 @@ export async function proposeHosAppointment(
     }
 
     // Joint sitting: the nominee may sit in either Supreme Soviet chamber.
-    const nomineeOfficial = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+    const nomineeOfficial = await electedOfficialsCollection(db).findOne({
       characterId: nomineeId,
       countryId,
       officeType: { $in: jointOffices },
@@ -368,7 +369,7 @@ export async function castPmAppointmentVote(
   // Head-of-state votes are a JOINT sitting — members of either chamber vote.
   const voterOfficeTypes =
     voteDoc.office === "headOfState" ? offices.jointSittingOfficeTypes : [offices.lowerOfficeType];
-  const voterOfficial = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+  const voterOfficial = await electedOfficialsCollection(db).findOne({
     characterId: character._id,
     countryId,
     officeType: { $in: voterOfficeTypes },
@@ -428,7 +429,7 @@ export async function proposeNoConfidence(
     throw badRequest("A no-confidence vote is already in progress");
   }
 
-  const proposerOfficial = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+  const proposerOfficial = await electedOfficialsCollection(db).findOne({
     characterId: proposer._id,
     countryId,
     officeType: offices.lowerOfficeType,
@@ -555,7 +556,7 @@ export async function castNoConfidenceVote(
     throw badRequest("The voting window has closed");
   }
 
-  const voterOfficial = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+  const voterOfficial = await electedOfficialsCollection(db).findOne({
     characterId: character._id,
     countryId,
     officeType: offices.lowerOfficeType,
@@ -644,8 +645,7 @@ async function notifyNoConfidenceParticipants(
 ): Promise<void> {
   const [pmChar, allLowerMps] = await Promise.all([
     charactersCollection(db).findOne({ _id: pmCharacterId }),
-    db
-      .collection<ElectedOfficial>("electedOfficials")
+    electedOfficialsCollection(db)
       .find({ officeType: lowerChamberKey, countryId, isNPP: { $ne: true } })
       .toArray(),
   ]);

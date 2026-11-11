@@ -4,6 +4,7 @@ import type { ElectedOfficial, User } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { getOfficeTypeForChamber } from "@/lib/legislature/chamberOfficeType";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 /**
  * Returns characterIds of seated, non-NPP, non-banned party members eligible
@@ -23,8 +24,7 @@ export async function getEligibleCharactersForWhip(
   // "npc" vs office type "npcDelegate"), so querying by the raw key would match
   // zero delegates and silently whip nobody.
   const officeType = getOfficeTypeForChamber(countryId, chamber);
-  const officials = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const officials = await electedOfficialsCollection(db)
     .find({
       isNPP: false,
       party: partyId,

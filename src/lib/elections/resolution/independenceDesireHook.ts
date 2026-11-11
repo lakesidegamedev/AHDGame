@@ -20,6 +20,7 @@ import { getRegionalExecutiveOfficeKey } from "@/lib/constants/countries";
 import { isUKDevolutionRegion } from "@/lib/constants/devolution";
 import { applyFirstMinisterHighDesireBonus } from "@/lib/elections/rules/highDesireElectionBonus";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 /** Election types where the hook is applied. */
 const HOOKED_ELECTION_TYPES = new Set(["commons", "snap_commons", "regionalCouncil", "governor"]);
@@ -61,8 +62,7 @@ export async function loadFirstMinisterBonusContexts(
   if (normalizedRegions.length === 0) return new Map();
 
   const [officeHolders, officeStates] = await Promise.all([
-    db
-      .collection<ElectedOfficial>("electedOfficials")
+    electedOfficialsCollection(db)
       .find(
         {
           countryId: "UK",

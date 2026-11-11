@@ -16,6 +16,7 @@ import type { CountryConfig } from "@/lib/constants/countries";
 import type { EligibleSenateAppointeeView } from "@/lib/government/dto/governmentView";
 import { captureOfficeTransition } from "@/lib/analytics/officeTransitionAnalytics";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export async function adminAppointPrimeMinister(
   db: Db,
@@ -92,8 +93,7 @@ export async function adminAppointPrimeMinister(
     const partySeqId = character.party?.toString();
     let partySeats = 0;
     if (partySeqId) {
-      const officials = await db
-        .collection<ElectedOfficial>("electedOfficials")
+      const officials = await electedOfficialsCollection(db)
         .find({
           officeType: lowerChamberKey,
           countryId,
@@ -231,7 +231,7 @@ export async function appointSenator(
   }
   const appointeeId = new ObjectId(appointeeIdRaw);
 
-  const officialsCollection = db.collection<ElectedOfficial>("electedOfficials");
+  const officialsCollection = electedOfficialsCollection(db);
   const charactersHandle = charactersCollection(db);
   const nppsCollection = db.collection<NPP>("npps");
 

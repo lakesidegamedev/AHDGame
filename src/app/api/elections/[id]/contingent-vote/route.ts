@@ -13,6 +13,7 @@ import { getGameTime } from "@/lib/time/gameTime";
 import { buildContingentHouseVoteView } from "@/lib/elections/contingentHouseVoteView";
 import { CONTINGENT_EXCLUDED_HOUSE_STATE } from "@/lib/elections/contingentConstants";
 import type { ElectedOfficial, ElectionVoteTally } from "@/lib/db/types";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -108,7 +109,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(400, "That candidate is not on the House ballot");
     }
 
-    const seat = await db.collection<ElectedOfficial>("electedOfficials").findOne(
+    const seat = await electedOfficialsCollection(db).findOne(
       {
         countryId: election.countryId ?? "US",
         officeType: "house",

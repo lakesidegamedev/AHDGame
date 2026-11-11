@@ -87,6 +87,7 @@ import type { NPP } from "@/lib/db/types";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 /**
  * Conservative catalog of legislation types that are clearly market-liberalizing
@@ -358,8 +359,7 @@ export async function loadConditionsSignal(
  * semi-presidential world has no parliamentary GovernmentFormation row. A
  * player-held presidency never triggers autonomous treaty sponsorship. */
 export async function loadFrenchEuropeanExecutiveParty(db: Db): Promise<string | undefined> {
-  const presidents = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const presidents = await electedOfficialsCollection(db)
     .find(
       { countryId: "FR", officeType: "president" },
       { projection: { characterId: 1, nppId: 1, party: 1 } }

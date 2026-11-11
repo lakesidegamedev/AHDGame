@@ -22,6 +22,7 @@ import { settleHu1991Mandates } from "./rules/mandates1991";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 const HU_1991_OFFICE_ARCHIVES_COLLECTION = "hu1991AssemblyOfficeArchives";
 interface Hu1991AssemblyArchive {
@@ -194,8 +195,7 @@ async function materializeHu1991AssemblySeating(input: {
       rootCandidateId: row.candidateId,
     },
   }));
-  const incumbents = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const incumbents = await electedOfficialsCollection(db)
     .find(
       { countryId: "HU", officeType: { $in: ["assemblyDelegate", "assemblyDeputy"] } },
       { session }
@@ -223,14 +223,11 @@ async function materializeHu1991AssemblySeating(input: {
       { session }
     );
   }
-  await db
-    .collection<ElectedOfficial>("electedOfficials")
-    .deleteMany(
-      { countryId: "HU", officeType: { $in: ["assemblyDelegate", "assemblyDeputy"] } },
-      { session }
-    );
-  if (officials.length)
-    await db.collection<ElectedOfficial>("electedOfficials").insertMany(officials, { session });
+  await electedOfficialsCollection(db).deleteMany(
+    { countryId: "HU", officeType: { $in: ["assemblyDelegate", "assemblyDeputy"] } },
+    { session }
+  );
+  if (officials.length) await electedOfficialsCollection(db).insertMany(officials, { session });
   const owners = new Map<
     string,
     { ownerId: string; isNpc: boolean; state: string; party: string; seats: number }

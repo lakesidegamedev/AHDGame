@@ -6,6 +6,7 @@ import type { ElectedOfficial } from "@/lib/db/types/officials";
 import type { ParliamentaryGovernment } from "@/lib/db/types/parliamentaryGovernment";
 import { getCountryState, primeCountryStates } from "@/lib/countryState";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export interface PolicyHeadSponsor {
   _id: ObjectId;
@@ -33,8 +34,7 @@ export async function loadPolicyHeadSponsors(
       .collection<GovernmentFormation>("governmentFormations")
       .find({ _id: { $in: countryIds }, status: "formed" })
       .toArray(),
-    db
-      .collection<ElectedOfficial>("electedOfficials")
+    electedOfficialsCollection(db)
       .find({
         countryId: { $in: [...presidential] },
         officeType: "president",

@@ -15,6 +15,7 @@ import type { NPP, ElectedOfficial, OfficeType, PoliticalParty, State } from "@/
 import { getPresetSeats, type HistoricalSeat } from "@/lib/constants/historicalSeats";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 /**
  * Slug → party-name lookup used at resolve time. Exported so tests can
@@ -541,8 +542,7 @@ export async function seedFromSeats(
   const seededChambers = new Set<string>();
   if (options.skipAlreadySeatedChambers) {
     if (seatWinners) {
-      const seated = await db
-        .collection<ElectedOfficial>("electedOfficials")
+      const seated = await electedOfficialsCollection(db)
         .aggregate<{ _id: { countryId?: string; officeType?: string } }>([
           { $match: { isNPP: true } },
           { $group: { _id: { countryId: "$countryId", officeType: "$officeType" } } },
@@ -816,7 +816,7 @@ export async function seedFromSeats(
     await db.collection<NPP>("npps").insertMany(nppsToInsert);
   }
   if (officialsToInsert.length > 0) {
-    await db.collection<ElectedOfficial>("electedOfficials").insertMany(officialsToInsert);
+    await electedOfficialsCollection(db).insertMany(officialsToInsert);
   }
 
   return {

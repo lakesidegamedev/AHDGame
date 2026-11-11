@@ -23,6 +23,8 @@ import {
   openRussianDuma1995Proposal,
 } from "@/lib/countries/ru/dumaElectoralProposals1995";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import type { Document } from "mongodb";
 const bodySchema = z
   .object({
     kind: z.enum([
@@ -75,7 +77,7 @@ export async function POST(request: Request, { params }: RouteContext) {
     const offices = await loadRuntimeCountryOffices(db, "RU", game.preset);
     const character = await getCharacterByUserId(db, auth.user.userId);
     const official = character
-      ? await db.collection("electedOfficials").findOne(
+      ? await electedOfficialsCollection<Document>(db).findOne(
           {
             characterId: character._id,
             countryId: "RU",

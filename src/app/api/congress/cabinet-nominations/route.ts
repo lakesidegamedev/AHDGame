@@ -13,6 +13,7 @@ import { isDirectAppointmentSeat } from "@/lib/constants/cabinetMechanics";
 import { computeCabinetNominationTallies } from "@/lib/congress/governmentVoteBreakdown";
 import { loadNominationPeople } from "@/lib/congress/nominationPeople";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 // GET /api/congress/cabinet-nominations — Returns all active cabinet nominations with the current user's vote status.
 // Auth: public
@@ -36,7 +37,7 @@ export const GET = withNoStore(async function GET() {
       : null;
 
     const senatorOfficial = myCharacter
-      ? await db.collection<ElectedOfficial>("electedOfficials").findOne({
+      ? await electedOfficialsCollection(db).findOne({
           characterId: myCharacter._id,
           officeType: "senate",
           countryId: "US",

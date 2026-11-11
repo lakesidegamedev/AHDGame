@@ -17,6 +17,7 @@ import { CONGRESS_LIMITS, checkRateLimit, rateLimitResponse } from "@/lib/api/ra
 import type { ElectedOfficial } from "@/lib/db/types";
 import { createJusticeNomination } from "@/lib/scotus/nominateJustice";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 const nominateSchema = z.object({
   seatNumber: z.number().int().min(1).max(9),
@@ -50,9 +51,11 @@ export async function POST(request: Request) {
 
     const db = await getDb();
 
-    const presidentOfficial = await db
-      .collection<ElectedOfficial>("electedOfficials")
-      .findOne({ countryId: "US", officeType: "president", characterId: { $ne: null } });
+    const presidentOfficial = await electedOfficialsCollection(db).findOne({
+      countryId: "US",
+      officeType: "president",
+      characterId: { $ne: null },
+    });
     if (!presidentOfficial?.characterId) {
       return errorResponse(400, "No President in office");
     }
@@ -78,8 +81,7 @@ export async function POST(request: Request) {
       return errorResponse(400, result.error);
     }
 
-    const senators = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    const senators = await electedOfficialsCollection(db)
       .find({
         countryId: "US",
         officeType: "senate",

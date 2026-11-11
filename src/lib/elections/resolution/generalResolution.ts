@@ -58,6 +58,7 @@ import { loadGeneralElectionCandidates } from "./generalResolutionCandidates";
 import { selectGeneralElectionWinners } from "./generalResolutionWinners";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export type { OneElectionResult } from "./generalResolutionHelpers";
 
@@ -430,9 +431,7 @@ export async function resolveOneGeneralElection(
         incumbentFilter.senateClass = election.senateClass;
       }
 
-      const incumbent = await db
-        .collection<ElectedOfficial>("electedOfficials")
-        .findOne(incumbentFilter);
+      const incumbent = await electedOfficialsCollection(db).findOne(incumbentFilter);
 
       if (incumbent) {
         const incumbentCharId = incumbent.characterId?.toString();
@@ -621,7 +620,7 @@ export async function resolveOneGeneralElection(
           const isSameSeat = sameType && sameState && sameSenateClass && sameChamberClass;
 
           if (!isSameSeat) {
-            await db.collection<ElectedOfficial>("electedOfficials").updateMany(
+            await electedOfficialsCollection(db).updateMany(
               {
                 nppId: candidate.nppId,
                 officeType: { $nin: [...getExecutiveOfficeKeys()] },
@@ -681,7 +680,7 @@ export async function resolveOneGeneralElection(
           const isSameSeat = sameType && sameState && sameSenateClass && sameChamberClass;
 
           if (!isSameSeat) {
-            await db.collection<ElectedOfficial>("electedOfficials").updateMany(
+            await electedOfficialsCollection(db).updateMany(
               {
                 characterId: candidate.characterId,
                 officeType: { $nin: [...getExecutiveOfficeKeys()] },
@@ -785,7 +784,7 @@ export async function resolveOneGeneralElection(
         // The upsert pattern only updated the first matching record, leaving any
         // admin-appointed duplicates in place. deleteMany + insertOne mirrors the
         // multi-seat pattern and prevents stale-admin-appointments accumulation.
-        await db.collection<ElectedOfficial>("electedOfficials").deleteMany(officialFilter);
+        await electedOfficialsCollection(db).deleteMany(officialFilter);
 
         // Seat-class scoping makes the filter above blind to incumbents seeded
         // WITHOUT a class. Bootstrap seats the historical chamber with no
@@ -803,15 +802,15 @@ export async function resolveOneGeneralElection(
             ...(election.countryId ? { countryId: election.countryId } : {}),
             $and: [{ senateClass: { $exists: false } }, { chamberClass: { $exists: false } }],
           };
-          const legacy = await db
-            .collection<ElectedOfficial>("electedOfficials")
-            .findOne(legacyFilter, { sort: { electedAt: 1 } });
+          const legacy = await electedOfficialsCollection(db).findOne(legacyFilter, {
+            sort: { electedAt: 1 },
+          });
           if (legacy) {
-            await db.collection<ElectedOfficial>("electedOfficials").deleteOne({ _id: legacy._id });
+            await electedOfficialsCollection(db).deleteOne({ _id: legacy._id });
           }
         }
       }
-      await db.collection<ElectedOfficial>("electedOfficials").insertOne({
+      await electedOfficialsCollection(db).insertOne({
         _id: new ObjectId(),
         createdAt: now,
         ...officialDoc,

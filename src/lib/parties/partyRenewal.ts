@@ -59,6 +59,7 @@ import {
 } from "./rules/partyRenewal";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 /** Renewal looks for newly resolved cycles this often. */
 export const PARTY_RENEWAL_CHECK_INTERVAL_TURNS = 6;
@@ -211,8 +212,7 @@ export async function processPartyRenewal(
         }
       )
       .toArray(),
-    db
-      .collection<ElectedOfficial>("electedOfficials")
+    electedOfficialsCollection(db)
       .find(
         { countryId: { $in: dueCountries } },
         { projection: { countryId: 1, officeType: 1, party: 1, state: 1, seatsHeld: 1, nppId: 1 } }
@@ -575,9 +575,10 @@ async function applySplinter(
         { $set: { party: partyId, updatedAt: now } }
       ),
     // Seats follow the people who hold them.
-    db
-      .collection<ElectedOfficial>("electedOfficials")
-      .updateMany({ countryId, nppId: { $in: nppIds } }, { $set: { party: partyId } }),
+    electedOfficialsCollection(db).updateMany(
+      { countryId, nppId: { $in: nppIds } },
+      { $set: { party: partyId } }
+    ),
     // NPP candidacies carry the NPP id as characterId; live ones run under the new banner.
     db
       .collection("electionCandidates")

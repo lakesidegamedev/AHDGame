@@ -1,6 +1,7 @@
 import type { Db } from "mongodb";
 import type { ElectedOfficial, StatePartyOrg, PartyBudget, NPP } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 /**
  * Check if a party has presence in a state.
@@ -28,7 +29,7 @@ export async function checkPartyPresence(
   if (playerCount > 0) return true;
 
   // Check for elected officials (players and NPPs)
-  const officialCount = await db.collection<ElectedOfficial>("electedOfficials").countDocuments({
+  const officialCount = await electedOfficialsCollection(db).countDocuments({
     party: partyId,
     state: stateId,
   });

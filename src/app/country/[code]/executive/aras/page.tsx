@@ -12,6 +12,7 @@ import { getCabinetMembersCollection } from "@/lib/db/collections/cabinetMembers
 import type { Character, ElectedOfficial, PoliticalParty } from "@/lib/db/types";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export const dynamic = "force-dynamic";
 
@@ -38,15 +39,14 @@ export default async function ArasPage({ params }: PageProps) {
   const db = await getDb();
 
   // Sitting Uachtarán
-  const uachtaranOfficial = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+  const uachtaranOfficial = await electedOfficialsCollection(db).findOne({
     countryId: "IE",
     officeType: "uachtaran",
   });
   let uachtaran: Character | null = null;
   let uachtaranParty: PoliticalParty | null = null;
   if (uachtaranOfficial?.characterId) {
-    uachtaran = await charactersCollection(db)
-      .findOne({ _id: uachtaranOfficial.characterId });
+    uachtaran = await charactersCollection(db).findOne({ _id: uachtaranOfficial.characterId });
     if (uachtaran?.party) {
       const seq = Number.parseInt(uachtaran.party, 10);
       if (!Number.isNaN(seq)) {

@@ -36,6 +36,7 @@ import { ObjectId } from "mongodb";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import type { Document } from "mongodb";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export type NationalBillActionInput =
   | { action: "vote"; vote: "for" | "against" | "abstain" }
@@ -228,7 +229,7 @@ export async function performNationalBillAction(
       };
     }
     const officeTypeFilter = isConcurrent ? { $in: chamberOfficeTypes } : chamberOfficeType;
-    const official = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+    const official = await electedOfficialsCollection(db).findOne({
       characterId: character._id,
       officeType: officeTypeFilter,
       countryId,
@@ -427,7 +428,7 @@ export async function performNationalBillAction(
       };
     }
 
-    const memberOfEither = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+    const memberOfEither = await electedOfficialsCollection(db).findOne({
       characterId: character._id,
       officeType: { $in: chamberOfficeTypes },
       countryId,
@@ -521,7 +522,7 @@ export async function performNationalBillAction(
         body: { error: "Cannot co-sponsor a bill that is no longer active." },
       };
     }
-    const official = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+    const official = await electedOfficialsCollection(db).findOne({
       characterId: character._id,
       officeType: { $in: chamberOfficeTypes },
       countryId,
@@ -626,7 +627,7 @@ export async function performNationalBillAction(
   }
 
   if (action === "presidential_action") {
-    const presOfficial = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+    const presOfficial = await electedOfficialsCollection(db).findOne({
       characterId: character._id,
       officeType: "president",
       countryId,
@@ -686,7 +687,7 @@ export async function performNationalBillAction(
       };
     }
 
-    const senateOfficial = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+    const senateOfficial = await electedOfficialsCollection(db).findOne({
       characterId: character._id,
       officeType: "senate",
       countryId,
@@ -805,11 +806,10 @@ export async function performNationalBillAction(
     );
 
     if (filibusterResult.modifiedCount === 0) {
-      await charactersCollection<Document>(db)
-        .updateOne(
-          { _id: character._id },
-          { $inc: { actions: filibusterActionCost, politicalInfluence: filibusterNpiCost } }
-        );
+      await charactersCollection<Document>(db).updateOne(
+        { _id: character._id },
+        { $inc: { actions: filibusterActionCost, politicalInfluence: filibusterNpiCost } }
+      );
       return {
         status: 409,
         body: {
@@ -819,8 +819,10 @@ export async function performNationalBillAction(
     }
 
     if (bill.sponsorId) {
-      const sponsorChar = await charactersCollection(db)
-        .findOne({ _id: bill.sponsorId }, { projection: { userId: 1 } });
+      const sponsorChar = await charactersCollection(db).findOne(
+        { _id: bill.sponsorId },
+        { projection: { userId: 1 } }
+      );
       if (sponsorChar) {
         await createNotification({
           userId: sponsorChar.userId,

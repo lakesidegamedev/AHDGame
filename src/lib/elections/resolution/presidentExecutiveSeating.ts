@@ -27,6 +27,7 @@ import {
 } from "@/lib/singleplayerHeadOfState";
 import { captureOfficeTransition } from "@/lib/analytics/officeTransitionAnalytics";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export interface SeatPresidentialExecutiveParams {
   election: Election;
@@ -77,11 +78,10 @@ export async function seatPresidentialExecutive(
   }
 
   const [currentPresident, currentVicePresident] = await Promise.all([
-    db
-      .collection<ElectedOfficial>("electedOfficials")
-      .findOne(getExecutiveOfficialFilter(electionCountry, "president")),
-    db
-      .collection<ElectedOfficial>("electedOfficials")
+    electedOfficialsCollection(db).findOne(
+      getExecutiveOfficialFilter(electionCountry, "president")
+    ),
+    electedOfficialsCollection(db)
       .findOne(getExecutiveOfficialFilter(electionCountry, "vicePresident"))
       .catch(() => null),
   ]);
@@ -132,7 +132,7 @@ export async function seatPresidentialExecutive(
     { $set: { currentOffice: null, updatedAt: now } }
   );
 
-  await db.collection<ElectedOfficial>("electedOfficials").updateMany(
+  await electedOfficialsCollection(db).updateMany(
     { countryId: resolutionCountryId, officeType: { $in: ["president", "vicePresident"] } },
     {
       $set: {
@@ -180,7 +180,7 @@ export async function seatPresidentialExecutive(
     await vacateNonExecutiveOfficesForExecutive(db, { nppId: vpNppId }, now);
   }
 
-  await db.collection<ElectedOfficial>("electedOfficials").updateOne(
+  await electedOfficialsCollection(db).updateOne(
     getExecutiveOfficialFilter(electionCountry, "president"),
     {
       $set: {
@@ -280,7 +280,7 @@ export async function seatPresidentialExecutive(
   if (vpCharId) {
     const vpChar = await charactersCollection(db).findOne({ _id: vpCharId });
     if (vpChar) {
-      await db.collection<ElectedOfficial>("electedOfficials").updateOne(
+      await electedOfficialsCollection(db).updateOne(
         getExecutiveOfficialFilter(electionCountry, "vicePresident"),
         {
           $set: {
@@ -340,7 +340,7 @@ export async function seatPresidentialExecutive(
       .collection<NPP>("npps")
       .findOne({ _id: vpNppId }, { projection: { name: 1, party: 1 } });
     if (vpNpp) {
-      await db.collection<ElectedOfficial>("electedOfficials").updateOne(
+      await electedOfficialsCollection(db).updateOne(
         getExecutiveOfficialFilter(electionCountry, "vicePresident"),
         {
           $set: {

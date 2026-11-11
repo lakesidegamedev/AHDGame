@@ -5,6 +5,7 @@ import { getCountryState } from "@/lib/countryState";
 import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
 import type { ParliamentaryGovernment } from "@/lib/db/types/parliamentaryGovernment";
 import type { ElectedOfficial } from "@/lib/db/types/officials";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 export {
   governmentApprovalFavorabilityDrain,
   MAX_GOVERNMENT_APPROVAL_FAVORABILITY_DRAIN,
@@ -13,8 +14,7 @@ export {
 /** Resolve the actual head-of-government party using runtime regime state. */
 export async function loadRulingExecutiveParties(db: Db): Promise<Map<CountryId, string>> {
   const [presidents, formations, parliamentary] = await Promise.all([
-    db
-      .collection<ElectedOfficial>("electedOfficials")
+    electedOfficialsCollection(db)
       .find(
         { officeType: "president" },
         { projection: { countryId: 1, characterId: 1, nppId: 1, party: 1 } }

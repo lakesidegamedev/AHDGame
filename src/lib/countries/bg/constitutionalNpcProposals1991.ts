@@ -12,6 +12,7 @@ import { bg1991DecisionAvailability } from "./rules/constitutionalDecision1991";
 import { canBg1991NpcGovernmentIntroduce } from "./rules/constitutionalExecutive1991";
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 export async function processBg1991ConstitutionalNpcProposal(
   db: Db,
   game: GameState,
@@ -37,8 +38,7 @@ export async function processBg1991ConstitutionalNpcProposal(
     return false;
   const [leader, officials, regions] = await Promise.all([
     db.collection<NPP>("npps").findOne({ _id: government.pmNppId }, { projection: { party: 1 } }),
-    db
-      .collection<ElectedOfficial>("electedOfficials")
+    electedOfficialsCollection(db)
       .find(
         { countryId: "BG", officeType: "assemblyDeputy" },
         { projection: { characterId: 1, nppId: 1, seatsHeld: 1 } }

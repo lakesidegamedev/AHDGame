@@ -15,13 +15,14 @@ import type { Character, ElectedOfficial, ElectionCandidate } from "@/lib/db/typ
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { vacateCommonsSeat } from "@/lib/countries/uk/elections/commonsVacancyShell";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export type CommonsSeatCommandResult =
   | { ok: true; officialId: ObjectId; vacancyId: ObjectId; label: string }
   | { ok: false; status: 400 | 404 | 409; error: string };
 
 async function findHeldCommonsSeat(db: Db, character: Character): Promise<ElectedOfficial | null> {
-  return await db.collection<ElectedOfficial>("electedOfficials").findOne({
+  return await electedOfficialsCollection(db).findOne({
     officeType: "commons",
     countryId: "UK",
     characterId: character._id,

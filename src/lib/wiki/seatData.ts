@@ -10,6 +10,7 @@ import { SENATE_CLASSES } from "@/lib/constants";
 import { buildCharacterHref, buildNppHref } from "@/lib/utils/profileUrls";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export type SeatSlugType = "governor" | "senate" | "house";
 
@@ -101,18 +102,15 @@ export async function getSeatData(slug: string): Promise<SeatData | null> {
 
   let officials: ElectedOfficial[];
   if (parsed.type === "governor") {
-    officials = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    officials = await electedOfficialsCollection(db)
       .find({ state: parsed.stateId, officeType: "governor" })
       .toArray();
   } else if (parsed.type === "senate" && parsed.senateClass) {
-    officials = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    officials = await electedOfficialsCollection(db)
       .find({ state: parsed.stateId, officeType: "senate", senateClass: parsed.senateClass })
       .toArray();
   } else {
-    officials = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    officials = await electedOfficialsCollection(db)
       .find({ state: parsed.stateId, officeType: "house" })
       .toArray();
   }

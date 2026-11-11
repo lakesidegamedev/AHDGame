@@ -8,6 +8,7 @@ import { confirmationVotes, partyBallots } from "./politics";
 import { corporateVotes } from "./corporate";
 import type { DueSoonContext, DueSoonItem, DueSoonSource, DueSoonWidgetData } from "./types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export const DUE_SOON_LIMIT = 8;
 const HOUR_MS = 3_600_000;
@@ -72,8 +73,7 @@ export async function loadDueSoon(db: Db, userId: string): Promise<DueSoonWidget
       }
     ),
     getGameStateCore(db),
-    db
-      .collection<ElectedOfficial>("electedOfficials")
+    electedOfficialsCollection(db)
       .find(
         { characterId, isNPP: { $ne: true } },
         { projection: { officeType: 1, countryId: 1, state: 1, seatsHeld: 1 } }

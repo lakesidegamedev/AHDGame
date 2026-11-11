@@ -47,6 +47,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 /**
  * Core retirement function: snapshots a character, cleans up all gameplay
@@ -254,13 +255,12 @@ export async function retireCharacter(
   // can fill. `create` dedupes per official row, so concurrent hooks or retries
   // never double the seat.
   const ukCommonsSeats = countryHasFeature("ukLib", character.countryId)
-    ? await db
-        .collection<{
-          _id: ObjectId;
-          state?: string;
-          countryId?: string;
-          seatsHeld?: number;
-        }>("electedOfficials")
+    ? await electedOfficialsCollection<{
+        _id: ObjectId;
+        state?: string;
+        countryId?: string;
+        seatsHeld?: number;
+      }>(db)
         .find({
           characterId,
           officeType: "commons",
@@ -282,8 +282,7 @@ export async function retireCharacter(
       { _id: "current" },
       { projection: { currentTurn: 1, iteration: 1 } }
     ),
-    db
-      .collection<ElectedOfficial>("electedOfficials")
+    electedOfficialsCollection(db)
       .find({ characterId }, { projection: { officeType: 1, countryId: 1, party: 1 } })
       .toArray(),
     db
@@ -296,7 +295,7 @@ export async function retireCharacter(
   ]).catch(() => null);
 
   const blocRowIds = await heldBlocRowIds(db, { characterId });
-  await db.collection("electedOfficials").updateMany(
+  await electedOfficialsCollection<Document>(db).updateMany(
     { characterId },
     {
       $set: { characterId: null, updatedAt: now },

@@ -5,6 +5,7 @@ import { getExecutiveOfficeKeys } from "@/lib/elections/executiveOffice";
 import { notifyGovernorOfSenateVacancy } from "@/lib/governors/senateVacancy";
 import { updatePartyPresence } from "@/lib/turn/partyOrg/presence";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export interface ExecutiveHolderRef {
   characterId?: ObjectId | null;
@@ -46,8 +47,7 @@ export async function vacateNonExecutiveOfficesForExecutive(
   else if (holder.nppId) holderFilter.nppId = holder.nppId;
   else return { vacated: [] };
 
-  const rows = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const rows = await electedOfficialsCollection(db)
     .find(
       {
         ...holderFilter,
@@ -89,7 +89,7 @@ export async function vacateNonExecutiveOfficesForExecutive(
   if (holder.characterId) nullHolderUpdate.characterId = null;
   else nullHolderUpdate.nppId = null;
 
-  await db.collection<ElectedOfficial>("electedOfficials").updateMany(
+  await electedOfficialsCollection(db).updateMany(
     {
       ...holderFilter,
       officeType: { $nin: [...getExecutiveOfficeKeys()] },

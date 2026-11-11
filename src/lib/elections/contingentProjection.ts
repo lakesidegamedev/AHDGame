@@ -55,6 +55,7 @@ import {
 } from "@/lib/elections/resolution/loadContingentElectionData";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 const CHAMBER_TYPES = ["house", "senate"] as const;
 
@@ -281,8 +282,7 @@ async function buildProjectedChamber(
   }
 
   const [sittingHouse, sittingSenate] = await Promise.all([
-    db
-      .collection<ElectedOfficial>("electedOfficials")
+    electedOfficialsCollection(db)
       .find({
         countryId: countryId as CountryId,
         officeType: "house",
@@ -290,8 +290,7 @@ async function buildProjectedChamber(
         ...seatedHolderFilter,
       })
       .toArray(),
-    db
-      .collection<ElectedOfficial>("electedOfficials")
+    electedOfficialsCollection(db)
       .find({ countryId: countryId as CountryId, officeType: "senate", ...seatedHolderFilter })
       .toArray(),
   ]);

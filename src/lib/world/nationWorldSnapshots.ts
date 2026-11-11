@@ -14,6 +14,7 @@ import { getGovernmentFormationsCollection } from "@/lib/db/collections/governme
 import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
 import { tallySeatsByParty, getLargestParty } from "@/lib/turn/parliamentaryGovernment";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export type NationExecutiveSnapshot = {
   name: string;
@@ -44,7 +45,7 @@ async function resolvePresidentExecutive(db: Db): Promise<NationExecutiveSnapsho
   // explicitly so it cannot resolve to CN's ceremonial President row
   // (auto-populated from CCP.chairId) or any other future country's
   // president officeType.
-  const official = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+  const official = await electedOfficialsCollection(db).findOne({
     countryId: "US",
     officeType: "president",
   });

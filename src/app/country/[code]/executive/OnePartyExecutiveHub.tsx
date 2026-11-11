@@ -53,6 +53,7 @@ import {
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 type PartyRowMeta = {
   seqKey: string;
@@ -134,9 +135,7 @@ export async function OnePartyExecutiveHub({ countryId }: { countryId: CountryId
   // the Premier (head of government) above. May be null when unseated.
   const hosOfficeType = getHeadOfStateOfficeType(config);
   const presidentOfficial = hosOfficeType
-    ? await db
-        .collection<ElectedOfficial>("electedOfficials")
-        .findOne({ countryId, officeType: hosOfficeType })
+    ? await electedOfficialsCollection(db).findOne({ countryId, officeType: hosOfficeType })
     : null;
   let president: Character | null = null;
   if (presidentOfficial?.characterId) {
@@ -340,7 +339,7 @@ export async function OnePartyExecutiveHub({ countryId }: { countryId: CountryId
   let viewerIsNpcDelegate = false;
   let viewerIsJointDeputy = false;
   if (user?.character) {
-    const seatRecord = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+    const seatRecord = await electedOfficialsCollection(db).findOne({
       characterId: user.character._id,
       countryId,
       officeType: lowerChamberKey,
@@ -348,7 +347,7 @@ export async function OnePartyExecutiveHub({ countryId }: { countryId: CountryId
     viewerIsNpcDelegate = seatRecord != null;
     // Joint-sitting eligibility (head-of-state votes): a seat in EITHER chamber.
     if (usesHosAppointment) {
-      const jointSeat = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+      const jointSeat = await electedOfficialsCollection(db).findOne({
         characterId: user.character._id,
         countryId,
         officeType: { $in: getJointSittingOfficeTypes(countryId) },
@@ -408,8 +407,7 @@ export async function OnePartyExecutiveHub({ countryId }: { countryId: CountryId
     viewerMayProposeNoConfidence = noConfidenceCooldownTurns === null;
   }
 
-  const allLowerOfficials = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const allLowerOfficials = await electedOfficialsCollection(db)
     .find({ officeType: lowerChamberKey, countryId })
     .toArray();
 

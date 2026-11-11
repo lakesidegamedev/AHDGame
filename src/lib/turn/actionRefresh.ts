@@ -53,6 +53,7 @@ import { getNppsCollection } from "@/lib/db/collections/npps";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 /*
  * Fallback if `gameConfig.chairActionBonus` is missing on legacy configs.
  * The per-country config in `countries.ts` sets each centralBankChair office
@@ -218,10 +219,11 @@ export async function processActionRefresh(
     .map((c) => c._id);
   const electedRows =
     cabinetSeatCharIds.length > 0
-      ? await db
-          .collection<{ characterId: ObjectId; officeType: string; countryId?: CountryId }>(
-            "electedOfficials"
-          )
+      ? await electedOfficialsCollection<{
+          characterId: ObjectId;
+          officeType: string;
+          countryId?: CountryId;
+        }>(db)
           .find(
             { characterId: { $in: cabinetSeatCharIds } },
             { projection: { characterId: 1, officeType: 1, countryId: 1 } }
