@@ -3,10 +3,11 @@ import { ObjectId, type Db } from "mongodb";
 import type { PushDevice, PushProvider } from "./types";
 import { notificationsCollection } from "@/lib/db/repositories/notifications";
 import type { Document } from "mongodb";
+import { nativePushDevicesCollection } from "@/lib/db/repositories/nativePushDevices";
 
 const indexes = new WeakMap<Db, Promise<unknown>>();
 export async function pushDevices(db: Db) {
-  const collection = db.collection<PushDevice>("nativePushDevices");
+  const collection = nativePushDevicesCollection<PushDevice>(db);
   let ready = indexes.get(db);
   if (!ready) {
     ready = collection

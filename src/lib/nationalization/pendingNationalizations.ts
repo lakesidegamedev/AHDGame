@@ -16,12 +16,13 @@ import { allCitedConditionsCleared } from "./noticeWindow";
 import { MONOPOLY_SHARE_THRESHOLD } from "./constants";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { pendingNationalizationsCollection } from "@/lib/db/repositories/pendingNationalizations";
 
 export async function processPendingNationalizations(
   db: Db,
   currentTurn: number
 ): Promise<{ completed: number; cancelled: number }> {
-  const coll = db.collection<PendingNationalization>("pendingNationalizations");
+  const coll = pendingNationalizationsCollection(db);
   const due = await coll
     .find({ status: "pending", noticeDeadlineTurn: { $lte: currentTurn } })
     .toArray();
@@ -54,7 +55,7 @@ async function resolveOne(
   pending: PendingNationalization,
   currentTurn: number
 ): Promise<"completed" | "cancelled"> {
-  const coll = db.collection<PendingNationalization>("pendingNationalizations");
+  const coll = pendingNationalizationsCollection(db);
 
   const cancel = async (notify: boolean, corp?: Corporation | null): Promise<"cancelled"> => {
     await coll.updateOne(

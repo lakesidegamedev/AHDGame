@@ -29,6 +29,7 @@ import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
 import { actionLogsCollection } from "@/lib/db/repositories/actionLogs";
 import { portfolioHistoryCollection } from "@/lib/db/repositories/portfolioHistory";
 import { conflictsCollection } from "@/lib/db/repositories/conflicts";
+import { electionResultSnapshotsCollection } from "@/lib/db/repositories/electionResultSnapshots";
 
 /**
  * I/O for the v2 Wrapped sections. Reads the runtime collections the reset is
@@ -266,8 +267,7 @@ export async function loadStoryData(
           }
         )
         .toArray(),
-      db
-        .collection<SnapshotRow>("electionResultSnapshots")
+      electionResultSnapshotsCollection<SnapshotRow>(db)
         .find(
           { electionId: { $in: oids } },
           {

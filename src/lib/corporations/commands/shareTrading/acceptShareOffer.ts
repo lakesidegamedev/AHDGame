@@ -50,6 +50,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { notificationsCollection } from "@/lib/db/repositories/notifications";
 import { shareListingsCollection } from "@/lib/db/repositories/shareListings";
+import { shareOffersCollection } from "@/lib/db/repositories/shareOffers";
 
 interface RouteParams {
   params: Promise<{ id: string; listingId: string; offerId: string }>;
@@ -95,7 +96,7 @@ export async function acceptShareOffer(request: Request, { params }: RouteParams
 
     const [listing, offer] = await Promise.all([
       shareListingsCollection(db).findOne({ _id: new ObjectId(listingId) }),
-      db.collection<ShareOffer>("shareOffers").findOne({ _id: new ObjectId(offerId) }),
+      shareOffersCollection(db).findOne({ _id: new ObjectId(offerId) }),
     ]);
 
     if (!listing) return errorResponse(404, "Listing not found");
@@ -403,13 +404,11 @@ export async function settleListingOffer(
       error: "Listing changed before this acceptance could be applied",
     };
   }
-  const claimedOffer = await db
-    .collection<ShareOffer>("shareOffers")
-    .findOneAndUpdate(
-      { _id: offer._id, status: "pending" },
-      { $set: { status: "accepted", acceptFillKey: fillKey } },
-      { returnDocument: "before" }
-    );
+  const claimedOffer = await shareOffersCollection(db).findOneAndUpdate(
+    { _id: offer._id, status: "pending" },
+    { $set: { status: "accepted", acceptFillKey: fillKey } },
+    { returnDocument: "before" }
+  );
   if (!claimedOffer) {
     await restoreFailedShareFillClaim(db, fillKey);
     await settleShareFillAttempt(db, fillKey, "failed", "listing:offer-claim-lost");

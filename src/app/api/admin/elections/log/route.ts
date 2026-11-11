@@ -51,6 +51,7 @@ import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParti
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { primarySnapshotsCollection } from "@/lib/db/repositories/primarySnapshots";
 
 // ─── Route handler ────────────────────────────────────────────────────────────
 
@@ -95,8 +96,7 @@ export async function GET(request: Request) {
           .find({ electionId: { $in: electionIds } })
           .toArray(),
         // One document per election — avoid loading every snapshot row (was O(total snapshots))
-        db
-          .collection<PrimarySnapshot>("primarySnapshots")
+        primarySnapshotsCollection(db)
           .aggregate<{ _id: ObjectId; doc: PrimarySnapshot }>([
             { $match: { electionId: { $in: electionIds } } },
             { $sort: { recordedAt: -1 } },

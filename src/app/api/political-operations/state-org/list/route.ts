@@ -17,6 +17,7 @@ import { loadCampaignFxRate } from "@/lib/currency/campaignFxRate";
 import { statePresenceNextCost } from "@/lib/campaigns/statePresenceCost";
 import type { CharacterStateOrg, PoliticalParty } from "@/lib/db/types";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { characterStateOrgCollection } from "@/lib/db/repositories/characterStateOrg";
 
 /**
  * GET /api/political-operations/state-org/list
@@ -67,10 +68,7 @@ async function handleGET(request?: Request) {
     }
 
     const [rows, party, { residentPoliticalIds }, racePresence, fxRate] = await Promise.all([
-      db
-        .collection<CharacterStateOrg>("characterStateOrg")
-        .find({ characterId: character._id })
-        .toArray(),
+      characterStateOrgCollection(db).find({ characterId: character._id }).toArray(),
       // Look up the character's party doc so custom-party hex colors flow
       // through to the map. Falls back to the canonical getPartyHex default
       // (blue / red / grey) when the doc is missing or the party is the

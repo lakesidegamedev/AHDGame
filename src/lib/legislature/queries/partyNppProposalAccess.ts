@@ -23,6 +23,7 @@ import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParti
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
+import { governorLegislationQueueCollection } from "@/lib/db/repositories/governorLegislationQueue";
 
 export async function resolvePartyNppProposalAccess(
   db: Db,
@@ -96,8 +97,7 @@ export async function resolvePartyNppProposalAccess(
           .toArray(),
     skipReservations
       ? Promise.resolve([] as Pick<GovernorQueuedBill, "targetNppId">[])
-      : db
-          .collection<GovernorQueuedBill>("governorLegislationQueue")
+      : governorLegislationQueueCollection(db)
           .find(
             { countryId, status: "pending", targetNppId: { $in: ids } },
             { projection: { targetNppId: 1 } }

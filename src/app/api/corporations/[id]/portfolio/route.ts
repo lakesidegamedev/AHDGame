@@ -27,6 +27,7 @@ import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporationPortfolioHistoryCollection } from "@/lib/db/repositories/corporationPortfolioHistory";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -325,8 +326,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     // Most recent 500 turns; sort descending server-side then reverse for the
     // chart consumer (ascending) so long-lived corps don't see the chart
     // truncate to the oldest 500 snapshots.
-    const historyDescending = await db
-      .collection<CorporationPortfolioHistory>("corporationPortfolioHistory")
+    const historyDescending = await corporationPortfolioHistoryCollection(db)
       .find({ corporationId: corporation._id })
       .sort({ turn: -1 })
       .limit(500)

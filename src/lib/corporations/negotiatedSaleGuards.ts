@@ -21,6 +21,8 @@ import {
   NEW_CHARACTER_TRANSFER_BARRIER_TURNS,
 } from "@/lib/character/newCharacterTransferBarrier";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { altClustersCollection } from "@/lib/db/repositories/altClusters";
+import { altLinksCollection } from "@/lib/db/repositories/altLinks";
 
 export type NegotiatedSaleParty = Pick<
   Character,
@@ -90,7 +92,7 @@ export async function checkNegotiatedSale(
 
   const [userA, userB] = sortedPair(seller.userId, buyer.userId);
   const [link, config] = await Promise.all([
-    db.collection<AltLink>("altLinks").findOne({ userA, userB }, { projection: { confidence: 1 } }),
+    altLinksCollection(db).findOne({ userA, userB }, { projection: { confidence: 1 } }),
     gameConfigCollection<{
       _id: string;
       altScoring?: Parameters<typeof resolveAltScoringConfig>[0];
@@ -98,12 +100,10 @@ export async function checkNegotiatedSale(
   ]);
   const strongLink = resolveAltScoringConfig(config?.altScoring ?? null).thresholds.strongLink;
   if (link && link.confidence >= strongLink) {
-    const dismissed = await db
-      .collection<AltCluster>("altClusters")
-      .findOne(
-        { memberUserIds: { $all: [seller.userId, buyer.userId] }, status: "dismissed" },
-        { projection: { _id: 1 } }
-      );
+    const dismissed = await altClustersCollection(db).findOne(
+      { memberUserIds: { $all: [seller.userId, buyer.userId] }, status: "dismissed" },
+      { projection: { _id: 1 } }
+    );
     if (!dismissed) {
       return {
         ok: false,

@@ -16,6 +16,8 @@ import {
 import type { ResetOpeningCountry } from "@/lib/resetFinance/opening1991";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { resetLawOpeningBoardsCollection } from "@/lib/db/repositories/resetLawOpeningBoards";
+import { resetRegionalOpeningBoardsCollection } from "@/lib/db/repositories/resetRegionalOpeningBoards";
 
 export async function seedOpeningLawBoards1991(
   db: Db,
@@ -81,7 +83,7 @@ export async function seedOpeningLawBoards1991(
       throw new Error(`The seeded UK 1991 regional tax proxy differs for ${board.regionId}`);
     }
   }
-  const collection = db.collection<ResetLawOpeningBoard>("resetLawOpeningBoards");
+  const collection = resetLawOpeningBoardsCollection<ResetLawOpeningBoard>(db);
   await collection.bulkWrite(
     expected.map((board) => ({
       replaceOne: { filter: { _id: board._id }, replacement: board, upsert: true },
@@ -112,7 +114,7 @@ export async function seedOpeningLawBoards1991(
   ) {
     throw new Error("The persisted 1991 v2 current-law crosswalk failed readback verification");
   }
-  const regionalCollection = db.collection<ResetRegionalOpeningBoard>("resetRegionalOpeningBoards");
+  const regionalCollection = resetRegionalOpeningBoardsCollection<ResetRegionalOpeningBoard>(db);
   await regionalCollection.bulkWrite(
     expectedRegional.map((board) => ({
       replaceOne: { filter: { _id: board._id }, replacement: board, upsert: true },

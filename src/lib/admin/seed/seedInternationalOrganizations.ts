@@ -19,6 +19,7 @@ import {
   resolveSeedRoster,
 } from "@/lib/internationalOrganizations/founding";
 import { organizationMembershipsCollection } from "@/lib/db/repositories/organizationMemberships";
+import { organizationLeadershipCollection } from "@/lib/db/repositories/organizationLeadership";
 
 /**
  * Composite key for the membership existence set. NUL-separated because neither
@@ -42,7 +43,7 @@ export async function seedInternationalOrganizations(
   preset: string
 ): Promise<{ membershipsInserted: number; leadershipInserted: number }> {
   const membershipsCol = organizationMembershipsCollection(db);
-  const leadershipCol = db.collection<OrganizationLeadership>("organizationLeadership");
+  const leadershipCol = organizationLeadershipCollection(db);
   const now = new Date();
 
   let membershipsInserted = 0;

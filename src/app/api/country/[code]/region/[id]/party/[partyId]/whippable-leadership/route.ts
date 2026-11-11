@@ -23,6 +23,7 @@ import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficia
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { cabinetNominationsCollection } from "@/lib/db/repositories/cabinetNominations";
 import { billWhipsCollection } from "@/lib/db/repositories/billWhips";
+import { impeachmentsCollection } from "@/lib/db/repositories/impeachments";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; partyId: string }>;
@@ -118,8 +119,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
 
     // ── Governor impeachment tried by this state's legislature ──────────────
     if (stateLegislatureOfficials.length > 0) {
-      const impeachments = await db
-        .collection<Impeachment>("impeachments")
+      const impeachments = await impeachmentsCollection(db)
         .find({
           countryId,
           targetOffice: "governor",

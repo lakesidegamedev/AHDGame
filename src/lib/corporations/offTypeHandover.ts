@@ -46,6 +46,7 @@ import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSecto
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { supplyAgreementsCollection } from "@/lib/db/repositories/supplyAgreements";
 import { defenceContractsCollection } from "@/lib/db/repositories/defenceContracts";
+import { offTypeHandoversCollection } from "@/lib/db/repositories/offTypeHandovers";
 
 /** A standalone AI company: not player, caretaker, state-owned or a subsidiary. */
 export function isStandaloneAiCompany(corp: Corporation): boolean {
@@ -128,7 +129,7 @@ export async function runOffTypeHandover(
     return out;
   const corpsCol = corporationsCollection(db);
   const sectorsCol = corporateSectorsCollection(db);
-  const receipts = db.collection<HandoverReceipt>("offTypeHandovers");
+  const receipts = offTypeHandoversCollection<HandoverReceipt>(db);
 
   const corps = (await corpsCol.find({ ceoType: "npp" }).toArray()).filter(isStandaloneAiCompany);
   if (corps.length === 0) return out;

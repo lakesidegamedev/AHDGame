@@ -2,6 +2,7 @@
 import { createHash } from "node:crypto";
 import { gzipSync, gunzipSync } from "node:zlib";
 import type { Db } from "mongodb";
+import { producerEconomyTurnChunksCollection } from "@/lib/db/repositories/producerEconomyTurnChunks";
 
 interface ReceiptChunk {
   _id: string;
@@ -164,14 +165,13 @@ export async function stageReceiptChunks(
   if (!chunks.length) return;
   checkBudget?.();
   // Content hash is the primary key. Mongo's built-in unique _id index is sufficient.
-  await db.collection<ReceiptChunk>("producerEconomyTurnChunks").bulkWrite(
+  await producerEconomyTurnChunksCollection<ReceiptChunk>(db).bulkWrite(
     chunks.map((chunk) => ({
       updateOne: { filter: { _id: chunk._id }, update: { $setOnInsert: chunk }, upsert: true },
     }))
   );
   const expected = new Map(chunks.map((chunk) => [chunk._id, encodedChunks.get(chunk)]));
-  const stored = db
-    .collection<ReceiptChunk>("producerEconomyTurnChunks")
+  const stored = producerEconomyTurnChunksCollection<ReceiptChunk>(db)
     .find({ _id: { $in: chunks.map((chunk) => chunk._id) } })
     .batchSize(64);
   let count = 0;
@@ -227,8 +227,7 @@ export async function decodeReceipt(
   // content hash once, in bounded cursor batches, including nested references.
   const chunks = new Map<string, unknown[]>();
   if (required.size > 0) {
-    const stored = db
-      .collection<ReceiptChunk>("producerEconomyTurnChunks")
+    const stored = producerEconomyTurnChunksCollection<ReceiptChunk>(db)
       .find({ _id: { $in: [...required] } })
       .batchSize(64);
     for await (const chunk of stored) {

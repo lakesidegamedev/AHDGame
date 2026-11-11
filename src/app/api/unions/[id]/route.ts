@@ -87,6 +87,8 @@ import { billsCollection } from "@/lib/db/repositories/bills";
 import { unionsCollection } from "@/lib/db/repositories/unions";
 import { unionOrganizersCollection } from "@/lib/db/repositories/unionOrganizers";
 import { unionEndorsementsCollection } from "@/lib/db/repositories/unionEndorsements";
+import { bargainingCampaignsCollection } from "@/lib/db/repositories/bargainingCampaigns";
+import { collectiveAgreementsCollection } from "@/lib/db/repositories/collectiveAgreements";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -151,8 +153,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
         .sort({ proposedAt: -1 })
         .toArray(),
       getGameState(db),
-      db
-        .collection<CollectiveAgreement>("collectiveAgreements")
+      collectiveAgreementsCollection(db)
         .find(
           { unionId: union._id, status: "active" },
           {
@@ -167,8 +168,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
           }
         )
         .toArray(),
-      db
-        .collection<BargainingCampaign>("bargainingCampaigns")
+      bargainingCampaignsCollection(db)
         .find({ unionId: union._id })
         .sort({ updatedAt: -1 })
         .limit(50)

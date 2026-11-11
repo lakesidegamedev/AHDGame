@@ -65,6 +65,7 @@ import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
 import { governorExecutiveOrdersCollection } from "@/lib/db/repositories/governorExecutiveOrders";
 import { governorAddressesCollection } from "@/lib/db/repositories/governorAddresses";
 import { governorEndorsementsCollection } from "@/lib/db/repositories/governorEndorsements";
+import { governorLegislationQueueCollection } from "@/lib/db/repositories/governorLegislationQueue";
 
 interface Props {
   params: Promise<{ code: string; id: string }>;
@@ -376,9 +377,11 @@ export default async function GovernorOfficePage({ params }: Props) {
   const electionTitleById = new Map(availableRaces.map((r) => [r.electionId, r.title]));
 
   // Legislation queue: pending entry + eligible NPPs (same-party state-legislators).
-  const pendingQueue = await db
-    .collection<GovernorQueuedBill>("governorLegislationQueue")
-    .findOne({ countryId, stateId, status: "pending" });
+  const pendingQueue = await governorLegislationQueueCollection(db).findOne({
+    countryId,
+    stateId,
+    status: "pending",
+  });
 
   // In-flight governor bill — once the queue fires, the StateBill carries
   // `proposedByGovernor` and we keep the office's "your bill" slot occupied

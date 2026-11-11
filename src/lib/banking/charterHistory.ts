@@ -1,5 +1,6 @@
 import { ObjectId, type Db } from "mongodb";
 import type { BankCharter, BankCharterHistoryEntry } from "@/lib/db/types/bank";
+import { bankCharterHistoryCollection } from "@/lib/db/repositories/bankCharterHistory";
 
 export type CharterArchiveReason = BankCharterHistoryEntry["reason"];
 
@@ -21,6 +22,6 @@ export async function archiveCharter(
     archivedTurn,
     reason,
   };
-  await db.collection<BankCharterHistoryEntry>("bankCharterHistory").insertOne(entry);
+  await bankCharterHistoryCollection(db).insertOne(entry);
   return entry;
 }

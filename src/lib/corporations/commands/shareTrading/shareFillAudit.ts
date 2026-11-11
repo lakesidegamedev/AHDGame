@@ -32,6 +32,7 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
 import { shareListingsCollection } from "@/lib/db/repositories/shareListings";
+import { shareOffersCollection } from "@/lib/db/repositories/shareOffers";
 
 /**
  * Durable audit for peer order-book fills.
@@ -468,12 +469,10 @@ export async function markShareFillMoneyCommitted(
   if (receipt?.shareFillPlan?.claimSnapshot) {
     const plan = receipt.shareFillPlan;
     if (plan.targetKind === "listing" && plan.offerIdHex)
-      await db
-        .collection<ShareOffer>("shareOffers")
-        .updateOne(
-          { _id: new ObjectId(plan.offerIdHex), acceptFillKey: key },
-          { $set: { status: "accepted" } }
-        );
+      await shareOffersCollection(db).updateOne(
+        { _id: new ObjectId(plan.offerIdHex), acceptFillKey: key },
+        { $set: { status: "accepted" } }
+      );
     await db
       .collection<ShareOrder | ShareListing>(
         plan.targetKind === "listing" ? "shareListings" : "shareOrders"
@@ -516,12 +515,10 @@ export async function restoreFailedShareFillClaim(db: Db, key: string): Promise<
       }
     );
   if (plan.targetKind === "listing" && plan.offerIdHex)
-    await db
-      .collection<ShareOffer>("shareOffers")
-      .updateOne(
-        { _id: new ObjectId(plan.offerIdHex), status: "accepted", acceptFillKey: key },
-        { $set: { status: "pending" }, $unset: { acceptFillKey: "" } }
-      );
+    await shareOffersCollection(db).updateOne(
+      { _id: new ObjectId(plan.offerIdHex), status: "accepted", acceptFillKey: key },
+      { $set: { status: "pending" }, $unset: { acceptFillKey: "" } }
+    );
 }
 
 export async function settleShareFillAttempt(
@@ -676,7 +673,7 @@ async function applyShareFillRecovery(
     plan.offerIdHex &&
     order.activeShareFillKey === key
   ) {
-    const offers = db.collection<ShareOffer>("shareOffers");
+    const offers = shareOffersCollection(db);
     // Claim the listing first so cancellation cannot return its inventory
     // while acceptance claims the offer. The pending-offer CAS arbitrates a
     // concurrent buyer cancellation without spending refunded escrow.

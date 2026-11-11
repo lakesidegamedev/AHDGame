@@ -28,6 +28,7 @@ import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { fomcNominationsCollection } from "@/lib/db/repositories/fomcNominations";
 
 /** Resolve a player character's owning userId for notifications. */
 async function nomineeUserId(
@@ -85,7 +86,7 @@ async function castNppFomcVotes(
   const setFields: Record<string, unknown> = { updatedAt: new Date() };
   for (const [k, v] of Object.entries(voteUpdates)) setFields[`votes.${k}`] = v;
 
-  await db.collection<FomcNomination>("fomcNominations").updateOne(
+  await fomcNominationsCollection(db).updateOne(
     { _id: nom._id },
     {
       $set: setFields,
@@ -209,8 +210,7 @@ export async function processFomcNominationLifecycle(
   }
 
   // ── A. Catch-up votes on active nominations ────────────────────────────────
-  const active = await db
-    .collection<FomcNomination>("fomcNominations")
+  const active = await fomcNominationsCollection(db)
     .find({ status: "active", votingEndsOnTurn: { $gt: currentTurn } })
     .toArray();
   for (const nom of active) {
@@ -219,8 +219,7 @@ export async function processFomcNominationLifecycle(
   }
 
   // ── B. Resolve expired nominations ─────────────────────────────────────────
-  const expired = await db
-    .collection<FomcNomination>("fomcNominations")
+  const expired = await fomcNominationsCollection(db)
     .find({ status: "active", votingEndsOnTurn: { $lte: currentTurn } })
     .toArray();
 
@@ -239,12 +238,10 @@ export async function processFomcNominationLifecycle(
     const seatLabel = nom.makeChair ? "Fed Chair" : `FOMC seat ${nom.seatId}`;
 
     if (passed) {
-      await db
-        .collection<FomcNomination>("fomcNominations")
-        .updateOne(
-          { _id: nom._id },
-          { $set: { status: "confirmed", confirmedAt: now, updatedAt: now } }
-        );
+      await fomcNominationsCollection(db).updateOne(
+        { _id: nom._id },
+        { $set: { status: "confirmed", confirmedAt: now, updatedAt: now } }
+      );
       result.confirmed++;
       if (nom.occupantType === "player") {
         const userId = await nomineeUserId(db, nom.nomineeCharacterId);
@@ -258,12 +255,10 @@ export async function processFomcNominationLifecycle(
         }
       }
     } else {
-      await db
-        .collection<FomcNomination>("fomcNominations")
-        .updateOne(
-          { _id: nom._id },
-          { $set: { status: "rejected", rejectedAt: now, updatedAt: now } }
-        );
+      await fomcNominationsCollection(db).updateOne(
+        { _id: nom._id },
+        { $set: { status: "rejected", rejectedAt: now, updatedAt: now } }
+      );
       result.rejected++;
       const rejectedNomineeUserId =
         nom.occupantType === "player" ? await nomineeUserId(db, nom.nomineeCharacterId) : null;

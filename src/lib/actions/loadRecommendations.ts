@@ -26,6 +26,7 @@ import { electionCandidatesCollection } from "@/lib/db/repositories/electionCand
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 import { partyBudgetCollection } from "@/lib/db/repositories/partyBudget";
+import { nationalPartyLeadershipCollection } from "@/lib/db/repositories/nationalPartyLeadership";
 
 interface StateEconomySector {
   type: string;
@@ -486,14 +487,12 @@ export async function loadRecommendationsForUser(
       }
     }
     // Check national-level vacancies
-    const nationalLeadership = await db
-      .collection<{
-        partyId: string;
-        chairId?: ObjectId | null;
-        viceChairId?: ObjectId | null;
-        treasurerId?: ObjectId | null;
-      }>("nationalPartyLeadership")
-      .findOne({ partyId: character.party });
+    const nationalLeadership = await nationalPartyLeadershipCollection<{
+      partyId: string;
+      chairId?: ObjectId | null;
+      viceChairId?: ObjectId | null;
+      treasurerId?: ObjectId | null;
+    }>(db).findOne({ partyId: character.party });
     if (nationalLeadership) {
       if (!nationalLeadership.chairId) {
         vacantPositions.push({

@@ -13,6 +13,7 @@ import {
   type ResetMetricConditionScores,
 } from "./rules/governanceStyle";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { resetLawOpeningBoardsCollection } from "@/lib/db/repositories/resetLawOpeningBoards";
 
 export interface ResetGovernanceProgramChoice {
   familyId: string;
@@ -39,9 +40,10 @@ export async function readResetGovernanceStyle(input: {
       { _id: "current" },
       { projection: { preset: 1, presidentialTenureByCountry: 1 } }
     ),
-    input.db
-      .collection<ResetLawOpeningBoard>("resetLawOpeningBoards")
-      .findOne({ _id: boardId, worldId: input.worldId }, { projection: { references: 1 } }),
+    resetLawOpeningBoardsCollection<ResetLawOpeningBoard>(input.db).findOne(
+      { _id: boardId, worldId: input.worldId },
+      { projection: { references: 1 } }
+    ),
   ]);
   if (!openingBoard) return null;
 

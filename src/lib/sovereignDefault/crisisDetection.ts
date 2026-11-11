@@ -33,6 +33,7 @@ import { npcExecutiveAutoPropose } from "./npc/npcExecutiveAutoPropose";
 import { applyPopulistSurgeOnCrisis } from "./political/applyPopulistSurge";
 import { getCountryAccessFromDb } from "@/lib/countryAccess";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { sovereignCrisisDecisionsCollection } from "@/lib/db/repositories/sovereignCrisisDecisions";
 
 const MS_PER_HOUR = 60 * 60 * 1000;
 
@@ -69,7 +70,7 @@ export async function insertSovereignCrisisDecision(
     resolvedReason: null,
     createdAt: new Date(realtimeMs),
   };
-  await db.collection<SovereignCrisisDecision>("sovereignCrisisDecisions").insertOne(decision);
+  await sovereignCrisisDecisionsCollection(db).insertOne(decision);
   return decision;
 }
 

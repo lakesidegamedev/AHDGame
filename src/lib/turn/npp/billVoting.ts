@@ -81,6 +81,7 @@ import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSecto
 import { billsCollection } from "@/lib/db/repositories/bills";
 import { referendumsCollection } from "@/lib/db/repositories/referendums";
 import { governorAddressesCollection } from "@/lib/db/repositories/governorAddresses";
+import { nppVotePredictionsCollection } from "@/lib/db/repositories/nppVotePredictions";
 
 export async function processBillVoting(ctx: NPPContext): Promise<number> {
   const {
@@ -685,7 +686,7 @@ export async function processBillVoting(ctx: NPPContext): Promise<number> {
     // Persist cross-pressure predictions for the prediction surface (Phase 5)
     // and replayable vote audit. One upsert per NPP per bill, keyed by the pair.
     if (predictionOps.length > 0) {
-      const collection = db.collection<NPPVotePrediction>("nppVotePredictions");
+      const collection = nppVotePredictionsCollection(db);
       await collection.bulkWrite(
         predictionOps.map((op) => ({
           updateOne: {

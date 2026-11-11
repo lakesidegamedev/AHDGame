@@ -28,6 +28,7 @@ import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 import { macroCountriesCollection } from "@/lib/db/repositories/macroCountries";
+import { federationSettlementIntentsCollection } from "@/lib/db/repositories/federationSettlementIntents";
 
 const FEDERATION_LEGACY_SERVICE_TURNS_COLLECTION = "federationLegacyServiceTurns";
 
@@ -107,9 +108,9 @@ export async function materializeLegacyFederationServiceTurn(input: {
     { _id: sourceCountryId },
     { session }
   );
-  const intent = await db
-    .collection<FederationSettlementIntentRecord>("federationSettlementIntents")
-    .findOne({ _id: applicationId }, { session });
+  const intent = await federationSettlementIntentsCollection<FederationSettlementIntentRecord>(
+    db
+  ).findOne({ _id: applicationId }, { session });
   const accounts = await db
     .collection<FederationFiscalAccount>(FEDERATION_FISCAL_ACCOUNTS_COLLECTION)
     .find({ applicationId }, { session })

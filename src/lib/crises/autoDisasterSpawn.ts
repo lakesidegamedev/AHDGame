@@ -34,6 +34,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 import { crisesCollection } from "@/lib/db/repositories/crises";
+import { stateMetricsCollection } from "@/lib/db/repositories/stateMetrics";
 
 interface ResilienceRow {
   _id: string;
@@ -240,8 +241,7 @@ export async function processAutoDisasterSpawn(
   const seed = currentTurn + staggerHash(countryId);
   const resilienceByRegion = new Map<string, number>();
   if (pressure > 0) {
-    const resilienceRows = await db
-      .collection<ResilienceRow>("stateMetrics")
+    const resilienceRows = await stateMetricsCollection<ResilienceRow>(db)
       .find(
         { _id: { $in: regions.map((region) => region._id) } },
         { projection: { _id: 1, "environment.climateResilience.value": 1 } }

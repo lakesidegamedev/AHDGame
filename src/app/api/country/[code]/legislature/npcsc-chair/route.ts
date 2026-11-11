@@ -44,6 +44,8 @@ import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
+import { npcscChairNominationsCollection } from "@/lib/db/repositories/npcscChairNominations";
+import { npcscChairElectionsCollection } from "@/lib/db/repositories/npcscChairElections";
 
 const npcscChairActionSchema = z.object({
   action: z.enum(["declare", "withdraw", "vote", "start_election", "force_end"]),
@@ -87,9 +89,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     }
 
     // Auto-resolve an expired election before responding (parity with US Speaker GET).
-    const electionDoc = await db
-      .collection<NpcscChairElection>("npcscChairElections")
-      .findOne({ _id: "current" });
+    const electionDoc = await npcscChairElectionsCollection(db).findOne({ _id: "current" });
     if (electionDoc?.status === "voting") {
       const gameTime = await getGameTime();
       if (isLeadershipElectionClosed(electionDoc, gameTime.currentTurn, gameTime.effectiveNow)) {
@@ -99,9 +99,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
 
     const [leader, election, nominations] = await Promise.all([
       congressLeadersCollection(db).findOne({ role: "chair_npcsc" }),
-      db.collection<NpcscChairElection>("npcscChairElections").findOne({ _id: "current" }),
-      db
-        .collection<NpcscChairNomination>("npcscChairNominations")
+      npcscChairElectionsCollection(db).findOne({ _id: "current" }),
+      npcscChairNominationsCollection(db)
         .find({ status: { $in: ["open", "voting"] } })
         .sort({ votesFor: -1 })
         .toArray(),

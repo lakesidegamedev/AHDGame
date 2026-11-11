@@ -47,6 +47,7 @@ import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParti
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
+import { regionalBudgetsCollection } from "@/lib/db/repositories/regionalBudgets";
 
 export interface StateLegislatureBillsPage {
   blockedProvisions: { legislationTypeId: string; policyOptionId: string }[];
@@ -144,9 +145,7 @@ export async function listStateLegislatureBills(
   const countryConfig = getCountryConfig(countryId);
   let budget: StateLegislatureBillsPage["budget"] = null;
   if (countryConfig.subNationalChamber?.regionalModel) {
-    const budgetDoc = await db
-      .collection<RegionalBudget>("regionalBudgets")
-      .findOne({ _id: stateId });
+    const budgetDoc = await regionalBudgetsCollection(db).findOne({ _id: stateId });
     if (budgetDoc) {
       budget = {
         totalBudget: budgetDoc.totalBudget,

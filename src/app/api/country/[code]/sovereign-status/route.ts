@@ -19,6 +19,7 @@ import type { GameState } from "@/lib/db/types/gameState";
 import type { SovereignCrisisDecision } from "@/lib/db/types/sovereignCrisisDecision";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { sovereignCrisisDecisionsCollection } from "@/lib/db/repositories/sovereignCrisisDecisions";
 
 interface RouteParams {
   params: Promise<{ code: string }>;
@@ -77,8 +78,7 @@ export async function GET(_req: Request, { params }: RouteParams) {
   // Phase 9b: surface either the open decision (crisisPending) OR the
   // executiveProposed decision (legislative ratification) so the UI panel
   // can render the right view.
-  const surfacedDecisions = await db
-    .collection<SovereignCrisisDecision>("sovereignCrisisDecisions")
+  const surfacedDecisions = await sovereignCrisisDecisionsCollection(db)
     .find({ countryCode: upperCode, state: { $in: ["open", "executiveProposed"] } })
     .sort({ firedAtTurn: -1 })
     .limit(1)

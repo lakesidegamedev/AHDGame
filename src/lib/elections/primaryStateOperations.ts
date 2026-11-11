@@ -53,6 +53,7 @@ import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { characterStateOrgCollection } from "@/lib/db/repositories/characterStateOrg";
 
 export type { StateOperationsView };
 
@@ -106,8 +107,7 @@ export async function buildStateOperations(
     ? await loadCharacterFxRate(db, getHomeCurrency(character))
     : { rate: 1 };
 
-  const orgRows = await db
-    .collection<CharacterStateOrg>("characterStateOrg")
+  const orgRows = await characterStateOrgCollection(db)
     .find({ characterId: character._id })
     .toArray();
   const presence: StatePresenceRow[] = orgRows

@@ -28,6 +28,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { marketCapTicksCollection } from "@/lib/db/repositories/marketCapTicks";
 import { shareTradeHistoryCollection } from "@/lib/db/repositories/shareTradeHistory";
 import { marketCapHistoryCollection } from "@/lib/db/repositories/marketCapHistory";
+import { marketIndexIntradayCollection } from "@/lib/db/repositories/marketIndexIntraday";
 
 // Game-calendar ranges plus older client ranges retained for compatibility.
 const VALID_TURNS = new Set([4, 12, 24, 48, 168, 240, 480, 720, 8760, 0]);
@@ -105,8 +106,7 @@ export async function GET(request: Request) {
         .sort({ turn: 1 })
         .toArray(),
       collection.findOne({ turn: { $lt: firstTurn } }, { sort: { turn: -1 } }),
-      db
-        .collection<MarketIndexIntraday>("marketIndexIntraday")
+      marketIndexIntradayCollection(db)
         .find({
           exchange: sector ? `sector:${sector}` : exchange,
           turn: { $gte: Math.max(1, firstTurn - 1), $lte: lastTurn },

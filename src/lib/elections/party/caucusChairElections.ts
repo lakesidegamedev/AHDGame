@@ -20,6 +20,9 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { nationalPartyElectionsCollection } from "@/lib/db/repositories/nationalPartyElections";
 import { caucusesCollection } from "@/lib/db/repositories/caucuses";
 import { caucusChairVotesCollection } from "@/lib/db/repositories/caucusChairVotes";
+import { caucusMembershipsCollection } from "@/lib/db/repositories/caucusMemberships";
+import { caucusChairElectionsCollection } from "@/lib/db/repositories/caucusChairElections";
+import { caucusChairCandidatesCollection } from "@/lib/db/repositories/caucusChairCandidates";
 
 const CAUCUS_ELECTION_LABEL = "Caucus Chair";
 
@@ -31,8 +34,7 @@ async function listActivePlayerMembers(
   db: Db,
   caucusId: ObjectId
 ): Promise<Array<Pick<Character, "_id" | "userId">>> {
-  const memberships = await db
-    .collection<CaucusMembership>("caucusMemberships")
+  const memberships = await caucusMembershipsCollection(db)
     .find({ caucusId, memberType: "character", status: "active" })
     .toArray();
   const memberIds = memberships.map((entry) => entry.memberId);
@@ -124,7 +126,7 @@ export async function createMissingCaucusChairElections(currentTurn: number): Pr
 
   const [caucuses, activeElections, activeNationalChairElections] = await Promise.all([
     caucusesCollection(db).find({ disbandedAt: null }).toArray(),
-    db.collection<CaucusChairElection>("caucusChairElections").find({ status: "voting" }).toArray(),
+    caucusChairElectionsCollection(db).find({ status: "voting" }).toArray(),
     nationalPartyElectionsCollection(db).find({ status: "voting", position: "chair" }).toArray(),
   ]);
 
@@ -167,7 +169,7 @@ export async function createMissingCaucusChairElections(currentTurn: number): Pr
     };
   });
 
-  await db.collection<CaucusChairElection>("caucusChairElections").insertMany(payloads);
+  await caucusChairElectionsCollection(db).insertMany(payloads);
   await Promise.all(
     toCreate.map((caucus, index) =>
       Promise.all([
@@ -197,8 +199,7 @@ export async function processCompletedCaucusChairElections(currentTurn: number):
   const db = await getDb();
   const now = new Date();
 
-  const endedElections = await db
-    .collection<CaucusChairElection>("caucusChairElections")
+  const endedElections = await caucusChairElectionsCollection(db)
     .find({ status: "voting", endTurn: { $lte: currentTurn } })
     .toArray();
   if (endedElections.length === 0) return 0;
@@ -217,8 +218,7 @@ export async function processCompletedCaucusChairElections(currentTurn: number):
     caucusesCollection(db)
       .find({ _id: { $in: caucusIds } })
       .toArray(),
-    db
-      .collection<CaucusChairCandidate>("caucusChairCandidates")
+    caucusChairCandidatesCollection(db)
       .find({ electionId: { $in: electionIds }, status: "active" })
       .toArray(),
     caucusChairVotesCollection(db)
@@ -334,18 +334,14 @@ export async function processCompletedCaucusChairElections(currentTurn: number):
       }
     );
 
-    await db
-      .collection<CaucusMembership>("caucusMemberships")
-      .updateMany(
-        { caucusId: caucus._id, memberType: "character", role: "chair", status: "active" },
-        { $set: { role: "member", updatedAt: now } }
-      );
-    await db
-      .collection<CaucusMembership>("caucusMemberships")
-      .updateOne(
-        { caucusId: caucus._id, memberType: "character", memberId: winnerId, status: "active" },
-        { $set: { role: "chair", updatedAt: now } }
-      );
+    await caucusMembershipsCollection(db).updateMany(
+      { caucusId: caucus._id, memberType: "character", role: "chair", status: "active" },
+      { $set: { role: "member", updatedAt: now } }
+    );
+    await caucusMembershipsCollection(db).updateOne(
+      { caucusId: caucus._id, memberType: "character", memberId: winnerId, status: "active" },
+      { $set: { role: "chair", updatedAt: now } }
+    );
 
     await notifyElectionWinner(caucus, winnerId, winnerName);
     await notifyElectionLosses(
@@ -359,7 +355,7 @@ export async function processCompletedCaucusChairElections(currentTurn: number):
   }
 
   if (electionBulkOps.length > 0) {
-    await db.collection<CaucusChairElection>("caucusChairElections").bulkWrite(electionBulkOps);
+    await caucusChairElectionsCollection(db).bulkWrite(electionBulkOps);
   }
 
   return endedElections.length;

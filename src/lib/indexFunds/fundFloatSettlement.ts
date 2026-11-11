@@ -17,6 +17,7 @@ import type {
 import { legsNet } from "@/lib/banking/rules/invariants";
 import type { IndexFund, IndexFundHolding } from "@/lib/db/types";
 import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { fundFloatSettlementsCollection } from "@/lib/db/repositories/fundFloatSettlements";
 
 export type FundFloatPlan = {
   key: string;
@@ -107,13 +108,13 @@ export async function claimFundFloatPlan(db: Db, fund: SettlementFund, plan: Fun
   // A multi-sale redemption can then undo its own trades in reverse order.
   const previous = fund.floatSettlementPlan;
   if (previous && previous.state !== "pending")
-    await db
-      .collection<{ _id: string; fundId: ObjectId; plan: FundFloatPlan }>("fundFloatSettlements")
-      .updateOne(
-        { _id: previous.key },
-        { $setOnInsert: { fundId: fund._id, plan: previous } },
-        { upsert: true }
-      );
+    await fundFloatSettlementsCollection<{ _id: string; fundId: ObjectId; plan: FundFloatPlan }>(
+      db
+    ).updateOne(
+      { _id: previous.key },
+      { $setOnInsert: { fundId: fund._id, plan: previous } },
+      { upsert: true }
+    );
   const claimed = await indexFundsCollection<SettlementFund>(db).findOneAndUpdate(
     {
       _id: fund._id,
@@ -305,11 +306,11 @@ export async function reverseCompletedFundFloatPlan(db: Db, fundId: ObjectId, pl
     active.key === plan.key
       ? active
       : (
-          await db
-            .collection<{ _id: string; fundId: ObjectId; plan: FundFloatPlan }>(
-              "fundFloatSettlements"
-            )
-            .findOne({ _id: plan.key, fundId })
+          await fundFloatSettlementsCollection<{
+            _id: string;
+            fundId: ObjectId;
+            plan: FundFloatPlan;
+          }>(db).findOne({ _id: plan.key, fundId })
         )?.plan;
   if (
     !archived ||

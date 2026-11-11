@@ -46,6 +46,7 @@ import { usersCollection } from "@/lib/db/repositories/users";
 import { investorRankingSnapshotsCollection } from "@/lib/db/repositories/investorRankingSnapshots";
 import { wealthListHistoryCollection } from "@/lib/db/repositories/wealthListHistory";
 import type { Document } from "mongodb";
+import { wealthListSnapshotsCollection } from "@/lib/db/repositories/wealthListSnapshots";
 
 /**
  * Generate pre-computed global investor rankings.
@@ -381,7 +382,7 @@ export async function generateWealthListSnapshots(currentTurn: number, db?: Db):
     snapshots.push({ _id: ex.apiKey, turn: currentTurn, entries: exchangeEntries, createdAt: now });
   }
 
-  const collection = database.collection<WealthListSnapshot>("wealthListSnapshots");
+  const collection = wealthListSnapshotsCollection(database);
 
   // Archive current snapshots to history (for 24h lookups), then upsert new ones
   const historyOps: Array<{

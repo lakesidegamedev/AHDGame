@@ -88,6 +88,8 @@ import type { StateMetrics } from "@/lib/db/types";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { crisesCollection } from "@/lib/db/repositories/crises";
 import { politicalMetricsCollection } from "@/lib/db/repositories/politicalMetrics";
+import { resetMetricSnapshotsCollection } from "@/lib/db/repositories/resetMetricSnapshots";
+import { climateFeedbackStateCollection } from "@/lib/db/repositories/climateFeedbackState";
 
 /** Builds extraction capacity utilisation, corporate portfolio values and the remaining per-corporation lookups. */
 export async function buildExtractionAndPortfolioLookups({
@@ -397,9 +399,10 @@ export async function buildExtractionAndPortfolioLookups({
   let energyTransition: CorporationLookups["energyTransition"];
   if (climateProfile.broaderEffects) {
     const [climate, transitionPolicyByCountry] = await Promise.all([
-      db
-        .collection<ClimateFeedbackState>("climateFeedbackState")
-        .findOne({ _id: "world" }, { projection: { pressure: 1 } }),
+      climateFeedbackStateCollection<ClimateFeedbackState>(db).findOne(
+        { _id: "world" },
+        { projection: { pressure: 1 } }
+      ),
       loadTransitionPolicies(db),
     ]);
     // Energy transition (same opt-in): climate laws and the national clean
@@ -453,8 +456,7 @@ export async function buildExtractionAndPortfolioLookups({
   );
   const resetBoards =
     resetCountries.length > 0
-      ? await db
-          .collection<ResetMetricSnapshot>("resetMetricSnapshots")
+      ? await resetMetricSnapshotsCollection<ResetMetricSnapshot>(db)
           .find(
             { worldId: gameState!.resetWorldId, countryId: { $in: resetCountries } },
             {

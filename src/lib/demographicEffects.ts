@@ -73,6 +73,7 @@ import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
 import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
 import { demographicDefaultsCollection } from "@/lib/db/repositories/demographicDefaults";
+import { resetLawProgramsCollection } from "@/lib/db/repositories/resetLawPrograms";
 
 /**
  * Lean shift per turn at maximum policy strength (magnitude 1, state scope).
@@ -577,8 +578,7 @@ export async function processAllStateDemographics(
   // policies do. One bulk read, only in a reset world.
   let regionalFamilyPolicies = new Map<string, ActivePolicy[]>();
   if (gameState?.resetWorldId) {
-    const programs = await db
-      .collection<ResetLawProgramDocument>("resetLawPrograms")
+    const programs = await resetLawProgramsCollection<ResetLawProgramDocument>(db)
       .find(
         { worldId: gameState.resetWorldId, scope: "regional" },
         { projection: { regionId: 1, familyId: 1, choice: 1, scope: 1 } }

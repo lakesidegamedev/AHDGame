@@ -35,6 +35,7 @@ import {
 } from "@/lib/budget/rules/fiscalScale";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
+import { bondMarketPoolsCollection } from "@/lib/db/repositories/bondMarketPools";
 
 export const SOVEREIGN_COUPON_CLAIMS_COLLECTION = "sovereignCouponClaims";
 
@@ -1680,7 +1681,7 @@ export async function loadCouponTargetReadiness(
   ]);
   if (poolCurrencies.size > 0) {
     try {
-      await db.collection<{ _id: string }>("bondMarketPools").bulkWrite(
+      await bondMarketPoolsCollection<{ _id: string }>(db).bulkWrite(
         [...poolCurrencies].map((currencyCode) => ({
           updateOne: {
             filter: { _id: currencyCode },

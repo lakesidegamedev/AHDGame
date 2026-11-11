@@ -47,6 +47,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { caucusMembershipsCollection } from "@/lib/db/repositories/caucusMemberships";
 
 export interface FactionSplitResult {
   newPartySequentialId: number;
@@ -125,8 +126,7 @@ export async function fireFactionSplit(
         { projection: { _id: 1, "policies.economic": 1, "policies.social": 1 } }
       )
       .toArray(),
-    db
-      .collection<CaucusMembership>("caucusMemberships")
+    caucusMembershipsCollection(db)
       .find(
         {
           countryId,

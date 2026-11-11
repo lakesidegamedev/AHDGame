@@ -26,6 +26,10 @@ import {
   activeDepartmentProgramFundingControl,
 } from "@/lib/resetCabinet/rules/programRoster";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { resetLawProgramsCollection } from "@/lib/db/repositories/resetLawPrograms";
+import { resetDepartmentAccountsCollection } from "@/lib/db/repositories/resetDepartmentAccounts";
+import { resetNationalTreasuriesCollection } from "@/lib/db/repositories/resetNationalTreasuries";
+import { resetDepartmentContinuityCollection } from "@/lib/db/repositories/resetDepartmentContinuity";
 
 export async function settleResetTreasuryCashTurn(input: {
   db: Db;
@@ -46,15 +50,12 @@ export async function settleResetTreasuryCashTurn(input: {
   }
   const worldId = gameState.resetWorldId;
   const filter = { worldId, countryId: { $in: countries } };
-  const treasuryCollection =
-    db.collection<ResetNationalTreasurySnapshot>("resetNationalTreasuries");
-  const accountCollection =
-    db.collection<ResetDepartmentAccountSnapshot>("resetDepartmentAccounts");
+  const treasuryCollection = resetNationalTreasuriesCollection<ResetNationalTreasurySnapshot>(db);
+  const accountCollection = resetDepartmentAccountsCollection<ResetDepartmentAccountSnapshot>(db);
   const [treasuries, accounts, continuity, budgets, currentPrograms] = await Promise.all([
     treasuryCollection.find(filter).toArray(),
     accountCollection.find(filter).toArray(),
-    db
-      .collection<ResetDepartmentContinuitySnapshot>("resetDepartmentContinuity")
+    resetDepartmentContinuityCollection<ResetDepartmentContinuitySnapshot>(db)
       .find(filter)
       .toArray(),
     federalBudgetCollection(db)
@@ -65,8 +66,7 @@ export async function settleResetTreasuryCashTurn(input: {
         }
       )
       .toArray(),
-    db
-      .collection<ResetLawProgramDocument>("resetLawPrograms")
+    resetLawProgramsCollection<ResetLawProgramDocument>(db)
       .find(
         { worldId, country: { $in: countries }, scope: "national" },
         {

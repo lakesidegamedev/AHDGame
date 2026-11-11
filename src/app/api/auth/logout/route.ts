@@ -12,6 +12,7 @@ import { createHash } from "crypto";
 import { usersCollection } from "@/lib/db/repositories/users";
 import type { Document } from "mongodb";
 import { activityLogCollection } from "@/lib/db/repositories/activityLog";
+import { unifiedSessionsCollection } from "@/lib/db/repositories/unifiedSessions";
 
 /** Partially redact an IP for display in forensic surfaces — never store the
  * raw address in `actionAuditLog.net` (plan §3.1 "net" doc-comment). */
@@ -59,12 +60,14 @@ export async function POST(request: Request) {
         );
         if (result.acknowledged !== true) throw new Error("Revocation was not acknowledged");
         if (payload.authSource === "unified" && payload.sid) {
-          const sessionResult = await db
-            .collection<{ _id: string; userId: string; revokedAt: Date | null }>("unifiedSessions")
-            .updateOne(
-              { _id: payload.sid, userId: payload.userId, revokedAt: null },
-              { $set: { revokedAt: now } }
-            );
+          const sessionResult = await unifiedSessionsCollection<{
+            _id: string;
+            userId: string;
+            revokedAt: Date | null;
+          }>(db).updateOne(
+            { _id: payload.sid, userId: payload.userId, revokedAt: null },
+            { $set: { revokedAt: now } }
+          );
           if (sessionResult.acknowledged !== true)
             throw new Error("Session revocation was not acknowledged");
         }

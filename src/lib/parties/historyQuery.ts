@@ -8,6 +8,7 @@ import type {
 } from "@/lib/db/types";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { committeeProposalsCollection } from "@/lib/db/repositories/committeeProposals";
+import { partyMembershipEventsCollection } from "@/lib/db/repositories/partyMembershipEvents";
 
 /** Shape passed to the UI for one observed membership transition. */
 export interface PartyHistoryEntry {
@@ -57,8 +58,7 @@ export async function fetchPartyHistory(
   db: Db,
   characterId: ObjectId
 ): Promise<PartyHistoryEntry[]> {
-  const docs = await db
-    .collection<PartyMembershipEvent>("partyMembershipEvents")
+  const docs = await partyMembershipEventsCollection(db)
     .find({
       characterId,
       reason: { $in: UI_REASONS },

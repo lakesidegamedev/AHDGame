@@ -3,6 +3,7 @@ import type { RecruitmentSlate, SlateCandidate } from "@/lib/db/types/recruitmen
 import type { CountryId } from "@/lib/constants/countries";
 import { groupRemappedSlates, groupSlateCandidates } from "./rules/slateRemap";
 import { slateCandidatesCollection } from "@/lib/db/repositories/slateCandidates";
+import { recruitmentSlatesCollection } from "@/lib/db/repositories/recruitmentSlates";
 
 /** Called inside the secession transaction, after geographic fanout.
  * Consolidate the planning surfaces, retain their candidate histories and keep
@@ -15,7 +16,7 @@ export async function remapRecruitmentSlates(
   idMap: Record<number, number>,
   now: Date
 ): Promise<void> {
-  const slates = db.collection<RecruitmentSlate>("recruitmentSlates");
+  const slates = recruitmentSlatesCollection(db);
   const rows = await slates
     .find({
       $or: [

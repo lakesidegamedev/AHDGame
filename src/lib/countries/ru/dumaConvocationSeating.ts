@@ -41,6 +41,7 @@ import { governmentFormationsCollection } from "@/lib/db/repositories/government
 import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
 import { russianCouncilElectionResultsCollection } from "@/lib/db/repositories/russianCouncilElectionResults";
 import type { Document } from "mongodb";
+import { russianCouncilCompositionSeatingsCollection } from "@/lib/db/repositories/russianCouncilCompositionSeatings";
 
 export async function materializeRussianDumaConvocationSeating(input: {
   db: Db;
@@ -203,9 +204,10 @@ export async function materializeRussianDumaConvocationSeating(input: {
   );
   if (!retainedCouncil) throw new Error("Duma handover lacks the retained Council certificate");
   if (country.ruCouncilComposition) {
-    const composition = await db
-      .collection<RussianCouncilCompositionSeating>("russianCouncilCompositionSeatings")
-      .findOne(
+    const composition =
+      await russianCouncilCompositionSeatingsCollection<RussianCouncilCompositionSeating>(
+        db
+      ).findOne(
         {
           _id: country.ruCouncilComposition.receiptId,
           countryId: "RU",

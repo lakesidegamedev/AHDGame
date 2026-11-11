@@ -27,6 +27,7 @@ import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficia
 import type { Document } from "mongodb";
 import { billsCollection } from "@/lib/db/repositories/bills";
 import { federationRatificationsCollection } from "@/lib/db/repositories/federationRatifications";
+import { federationPoliticalProposalsCollection } from "@/lib/db/repositories/federationPoliticalProposals";
 
 const bodySchema = z.object({
   negotiatedCustodians: z.record(z.string(), z.string()).default({}),
@@ -58,8 +59,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
         reason: "This world has no federation decision.",
       });
     const proposal = (
-      await db
-        .collection<FederationPoliticalProposalRecord>("federationPoliticalProposals")
+      await federationPoliticalProposalsCollection<FederationPoliticalProposalRecord>(db)
         .find({ presetId: "1991-default", sourceEntityId: sourceCountryId })
         .sort({ revision: -1 })
         .limit(1)

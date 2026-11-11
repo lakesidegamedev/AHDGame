@@ -15,6 +15,8 @@ import {
 } from "@/lib/turn/politicalStrength/strengthConstants";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { partyStrengthPressureCollection } from "@/lib/db/repositories/partyStrengthPressure";
+import { partyPoliticalStrengthLedgerCollection } from "@/lib/db/repositories/partyPoliticalStrengthLedger";
 
 /**
  * Shared command that debits Political Strength for a party action and
@@ -106,7 +108,7 @@ export async function spendPoliticalStrength(
   const pressureRowId = `${input.countryId}_${input.partyId}_${pressureStateId}`;
 
   // Read current pressure (one extra read; tolerable for action paths).
-  const pressureCol = db.collection<PartyStrengthPressure>("partyStrengthPressure");
+  const pressureCol = partyStrengthPressureCollection(db);
   const existingPressure = await pressureCol.findOne({ _id: pressureRowId });
   const currentPressure = existingPressure?.value ?? 0;
   const cost = effectivePsCost(input.baseCost, currentPressure);
@@ -210,7 +212,7 @@ export async function spendPoliticalStrength(
   );
 
   // Audit ledger row. Geography is the (potentially sentinel) state.
-  await db.collection<PartyPoliticalStrengthLedgerRow>("partyPoliticalStrengthLedger").insertOne({
+  await partyPoliticalStrengthLedgerCollection(db).insertOne({
     _id: new ObjectId(),
     countryId: input.countryId,
     partyId: input.partyId,

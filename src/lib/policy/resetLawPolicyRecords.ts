@@ -14,6 +14,7 @@ import type { PolicyRecordResponse } from "./types";
 import type { PolicyProvenance } from "./policyRecordPayload";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { billsCollection } from "@/lib/db/repositories/bills";
+import { resetLawProgramsCollection } from "@/lib/db/repositories/resetLawPrograms";
 
 /** Enacted reset-era program laws for one country (national) or region, as display rows. */
 export async function loadResetLawProgramRows(
@@ -28,8 +29,7 @@ export async function loadResetLawProgramRows(
   );
   const worldId = gameState?.resetWorldId;
   if (!worldId) return [];
-  const programs = await db
-    .collection<ResetLawProgramDocument>("resetLawPrograms")
+  const programs = await resetLawProgramsCollection<ResetLawProgramDocument>(db)
     .find({
       worldId,
       country: countryId as ResetLawProgramDocument["country"],

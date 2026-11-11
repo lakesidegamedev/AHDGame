@@ -32,6 +32,7 @@ import type { CorporationShareInvite, User } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { usersCollection } from "@/lib/db/repositories/users";
+import { corporationShareInvitesCollection } from "@/lib/db/repositories/corporationShareInvites";
 
 const actionSchema = z.object({
   action: z.enum(["accept", "decline", "cancel"]),
@@ -65,9 +66,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     if (!resolved.ok) return resolved.response;
     const { corporation } = resolved;
 
-    const invite = await db
-      .collection<CorporationShareInvite>("corporationShareInvites")
-      .findOne({ _id: inviteOid, corporationId: corporation._id });
+    const invite = await corporationShareInvitesCollection(db).findOne({
+      _id: inviteOid,
+      corporationId: corporation._id,
+    });
     if (!invite) {
       return errorResponse(404, "Invite not found");
     }
@@ -77,21 +79,20 @@ export async function POST(request: Request, { params }: RouteParams) {
     const now = new Date();
     if (invite.expiresAt <= now) {
       // Lazy-mark expired
-      await db
-        .collection<CorporationShareInvite>("corporationShareInvites")
-        .updateOne({ _id: inviteOid }, { $set: { status: "expired", updatedAt: now } });
+      await corporationShareInvitesCollection(db).updateOne(
+        { _id: inviteOid },
+        { $set: { status: "expired", updatedAt: now } }
+      );
       return errorResponse(410, "Invite has expired");
     }
 
     if (action === "cancel") {
       const ceoCheck = requireCeo(corporation, auth.user.userId);
       if (ceoCheck) return ceoCheck;
-      await db
-        .collection<CorporationShareInvite>("corporationShareInvites")
-        .updateOne(
-          { _id: inviteOid, status: "pending" },
-          { $set: { status: "cancelled", cancelledAt: now, updatedAt: now } }
-        );
+      await corporationShareInvitesCollection(db).updateOne(
+        { _id: inviteOid, status: "pending" },
+        { $set: { status: "cancelled", cancelledAt: now, updatedAt: now } }
+      );
       const invitee = await charactersCollection(db).findOne({ _id: invite.invitedCharacterId });
       if (invitee) {
         createNotification({
@@ -113,12 +114,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     if (action === "decline") {
-      await db
-        .collection<CorporationShareInvite>("corporationShareInvites")
-        .updateOne(
-          { _id: inviteOid, status: "pending" },
-          { $set: { status: "declined", declinedAt: now, updatedAt: now } }
-        );
+      await corporationShareInvitesCollection(db).updateOne(
+        { _id: inviteOid, status: "pending" },
+        { $set: { status: "declined", declinedAt: now, updatedAt: now } }
+      );
       const ceoId = corporation.ceoId;
       if (ceoId) {
         const ceo = await charactersCollection(db).findOne({ _id: ceoId });
@@ -169,12 +168,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     // Claim the invite before any money moves: a double-submit or an
     // accept-vs-cancel race must fail here, not debit twice and miss an
     // unchecked post-facto status write.
-    const inviteClaim = await db
-      .collection<CorporationShareInvite>("corporationShareInvites")
-      .updateOne(
-        { _id: inviteOid, status: "pending" },
-        { $set: { status: "accepted", acceptedAt: now, updatedAt: now } }
-      );
+    const inviteClaim = await corporationShareInvitesCollection(db).updateOne(
+      { _id: inviteOid, status: "pending" },
+      { $set: { status: "accepted", acceptedAt: now, updatedAt: now } }
+    );
     if (inviteClaim.modifiedCount === 0) {
       return errorResponse(409, "Invite is no longer pending");
     }
@@ -188,12 +185,10 @@ export async function POST(request: Request, { params }: RouteParams) {
       forexEnabled
     );
     if (!debitResult.ok) {
-      await db
-        .collection<CorporationShareInvite>("corporationShareInvites")
-        .updateOne(
-          { _id: inviteOid, status: "accepted" },
-          { $set: { status: "pending", updatedAt: now }, $unset: { acceptedAt: "" } }
-        );
+      await corporationShareInvitesCollection(db).updateOne(
+        { _id: inviteOid, status: "accepted" },
+        { $set: { status: "pending", updatedAt: now }, $unset: { acceptedAt: "" } }
+      );
       return errorResponse(
         400,
         `Insufficient funds. Need ${invite.totalCost.toLocaleString()} ${homeCurrency}.`
@@ -221,12 +216,10 @@ export async function POST(request: Request, { params }: RouteParams) {
       );
       if (!credited) {
         await refundCharacterCash(db, invitee._id, homeCurrency, invite.totalCost, forexEnabled);
-        await db
-          .collection<CorporationShareInvite>("corporationShareInvites")
-          .updateOne(
-            { _id: inviteOid, status: "accepted" },
-            { $set: { status: "pending", updatedAt: now }, $unset: { acceptedAt: "" } }
-          );
+        await corporationShareInvitesCollection(db).updateOne(
+          { _id: inviteOid, status: "accepted" },
+          { $set: { status: "pending", updatedAt: now }, $unset: { acceptedAt: "" } }
+        );
         return errorResponse(500, "Failed to credit shares — please retry");
       }
       sharesCredited = true;
@@ -273,12 +266,10 @@ export async function POST(request: Request, { params }: RouteParams) {
         console.error("[private-invite accept] failed after credit", err);
       } else {
         await refundCharacterCash(db, invitee._id, homeCurrency, invite.totalCost, forexEnabled);
-        await db
-          .collection<CorporationShareInvite>("corporationShareInvites")
-          .updateOne(
-            { _id: inviteOid, status: "accepted" },
-            { $set: { status: "pending", updatedAt: now }, $unset: { acceptedAt: "" } }
-          );
+        await corporationShareInvitesCollection(db).updateOne(
+          { _id: inviteOid, status: "accepted" },
+          { $set: { status: "pending", updatedAt: now }, $unset: { acceptedAt: "" } }
+        );
       }
       throw err;
     }

@@ -71,6 +71,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { sourcingNetworkLoadCollection } from "@/lib/db/repositories/sourcingNetworkLoad";
+import { tradeEmbargoesCollection } from "@/lib/db/repositories/tradeEmbargoes";
 
 export async function buildCorporationLookups(
   db: Db,
@@ -133,8 +134,7 @@ export async function buildCorporationLookups(
   const embargoTurn = await getCurrentTurn(db);
   await reconcileSignedEmbargoBills(db, embargoTurn);
   const corporateEmbargoSuppression = new Set<string>();
-  const totalEmbargoes = await db
-    .collection<TradeEmbargo>("tradeEmbargoes")
+  const totalEmbargoes = await tradeEmbargoesCollection(db)
     .find({
       commodity: "all",
       mode: "block",

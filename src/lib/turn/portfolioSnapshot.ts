@@ -47,6 +47,7 @@ import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 import { indexFundPositionsCollection } from "@/lib/db/repositories/indexFundPositions";
 import { portfolioHistoryCollection } from "@/lib/db/repositories/portfolioHistory";
 import type { Document } from "mongodb";
+import { corporationPortfolioHistoryCollection } from "@/lib/db/repositories/corporationPortfolioHistory";
 
 /**
  * Snapshot portfolio values for all characters who hold shares and/or bonds.
@@ -599,8 +600,6 @@ export async function snapshotCorporationPortfolioValues(turn: number): Promise<
     })
   );
 
-  await db
-    .collection<CorporationPortfolioHistory>("corporationPortfolioHistory")
-    .insertMany(docs as CorporationPortfolioHistory[]);
+  await corporationPortfolioHistoryCollection(db).insertMany(docs as CorporationPortfolioHistory[]);
   return docs.length;
 }

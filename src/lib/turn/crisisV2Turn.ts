@@ -76,6 +76,7 @@ import {
 import { crisesCollection } from "@/lib/db/repositories/crises";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { crisisInteractionsCollection } from "@/lib/db/repositories/crisisInteractions";
+import { crisisLeverUsesCollection } from "@/lib/db/repositories/crisisLeverUses";
 
 const COMPONENT = "crisisV2Turn";
 
@@ -544,8 +545,7 @@ export async function processCrisisV2Turn(db: Db, turn: number): Promise<CrisisV
     );
     const [inputs, leverRows, holderMaps] = await Promise.all([
       loadInputs(db, turn, defs, countryIds, world),
-      db
-        .collection<CrisisLeverUse>("crisisLeverUses")
+      crisisLeverUsesCollection(db)
         .find({ crisisId: { $in: ids }, appliedTurn: null, chargeState: { $ne: "pending" } })
         .toArray(),
       needsHolders ? loadHolders(db, turn, countryIds) : Promise.resolve([]),
@@ -765,9 +765,10 @@ export async function processCrisisV2Turn(db: Db, turn: number): Promise<CrisisV
       try {
         await crisesCollection(db).bulkWrite(writes, { ordered: false });
         if (consumedUseIds.length > 0) {
-          await db
-            .collection<CrisisLeverUse>("crisisLeverUses")
-            .updateMany({ _id: { $in: consumedUseIds } }, { $set: { appliedTurn: turn } });
+          await crisisLeverUsesCollection(db).updateMany(
+            { _id: { $in: consumedUseIds } },
+            { $set: { appliedTurn: turn } }
+          );
         }
         for (const run of afterWrite) {
           try {
@@ -836,12 +837,10 @@ async function routeStanceConsequences(
     packages.push({ row, intents });
   }
   if (packages.length === 0) return;
-  await db
-    .collection<CrisisLeverUse>("crisisLeverUses")
-    .updateMany(
-      { _id: { $in: packages.map(({ row }) => row._id) }, appliedTurn: null },
-      { $set: { appliedTurn: args.turn } }
-    );
+  await crisisLeverUsesCollection(db).updateMany(
+    { _id: { $in: packages.map(({ row }) => row._id) }, appliedTurn: null },
+    { $set: { appliedTurn: args.turn } }
+  );
   for (const { row, intents } of packages) {
     const countryId = row.countryId as string;
     await routeEffectIntents(db, intents, {

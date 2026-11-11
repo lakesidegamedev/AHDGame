@@ -5,6 +5,7 @@ import { RESET_V2_COUNTRIES, resetSystemVersionsForCountry } from "@/lib/resetVe
 import type { ResetCabinetActionState } from "./rules/actionState";
 import { combineActiveActionEffects, type TemporaryTargetEffect } from "./rules/actions";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { resetCabinetActionStatesCollection } from "@/lib/db/repositories/resetCabinetActionStates";
 
 /** One projected country batch, including callers that do not already hold gameState. */
 export async function loadCabinetGameplayEffects(
@@ -44,8 +45,7 @@ export async function loadCabinetGameplayEffects(
   if (!Number.isSafeInteger(effectiveTurn) || effectiveTurn < 0) {
     throw new Error("Cabinet gameplay requires a valid turn");
   }
-  const rows = await db
-    .collection<ResetCabinetActionState>("resetCabinetActionStates")
+  const rows = await resetCabinetActionStatesCollection<ResetCabinetActionState>(db)
     .find(
       {
         _id: { $in: [...countries] },

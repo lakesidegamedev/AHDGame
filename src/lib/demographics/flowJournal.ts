@@ -24,6 +24,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 import { countiesCollection } from "@/lib/db/repositories/counties";
+import { regionDemographicsCollection } from "@/lib/db/repositories/regionDemographics";
 
 export const DEMOGRAPHIC_FLOW_RECEIPTS = "demographicFlowReceipts";
 export const DEMOGRAPHIC_FLOW_PROJECTIONS = "demographicFlowProjections";
@@ -453,9 +454,9 @@ async function materializeReceipt(
     }));
 
   if (demographicOps.length)
-    await db
-      .collection<StampedTarget>("regionDemographics")
-      .bulkWrite(demographicOps, { ordered: true });
+    await regionDemographicsCollection<StampedTarget>(db).bulkWrite(demographicOps, {
+      ordered: true,
+    });
   if (stateOps.length)
     await statesCollection<StampedTarget>(db).bulkWrite(stateOps, { ordered: true });
   if (metricOps.length)

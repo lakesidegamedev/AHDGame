@@ -78,6 +78,7 @@ import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentA
 import { demographicDefaultsCollection } from "@/lib/db/repositories/demographicDefaults";
 import { governorAddressesCollection } from "@/lib/db/repositories/governorAddresses";
 import type { Document } from "mongodb";
+import { stateApprovalHistoryCollection } from "@/lib/db/repositories/stateApprovalHistory";
 
 /**
  * The cabinet's own drag on national approval, as modifiers.
@@ -822,8 +823,7 @@ export async function snapshotApprovalHistory(
   // derived target by at most APPROVAL_MAX_STEP_PER_TURN points instead of
   // jumping. Damped values feed both the per-state snapshot and the national
   // aggregate, so all readers see the same smoothed series.
-  const prevDocs = await db
-    .collection<StateApprovalHistory>("stateApprovalHistory")
+  const prevDocs = await stateApprovalHistoryCollection(db)
     .find(
       { _id: { $in: stateApprovals.map((s) => s.stateId) }, countryId },
       { projection: { _id: 1, approvalRating: 1 } }
@@ -1022,9 +1022,9 @@ export async function snapshotApprovalHistory(
     new Date()
   );
   if (stateApprovalOps.length > 0) {
-    await db
-      .collection<StateApprovalHistory>("stateApprovalHistory")
-      .bulkWrite(stateApprovalOps as AnyBulkWriteOperation<StateApprovalHistory>[]);
+    await stateApprovalHistoryCollection(db).bulkWrite(
+      stateApprovalOps as AnyBulkWriteOperation<StateApprovalHistory>[]
+    );
   }
 
   // Durable long-horizon series: the same damped values the pages read, one

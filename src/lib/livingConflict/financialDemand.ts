@@ -8,6 +8,8 @@ import {
 } from "./rules/financialDemand";
 import { livingConflictsCollection } from "@/lib/db/repositories/livingConflicts";
 import type { Document } from "mongodb";
+import { financialCrisisFiscalActionsCollection } from "@/lib/db/repositories/financialCrisisFiscalActions";
+import { financialCrisisCreditHistoryCollection } from "@/lib/db/repositories/financialCrisisCreditHistory";
 
 interface CreditHistory {
   _id: string;
@@ -27,14 +29,13 @@ export async function loadFinancialCrisisDemand(
   );
   if (!crisis) return new Map();
   const [actions, history] = await Promise.all([
-    db
-      .collection<{ countryId: string; amount: number }>("financialCrisisFiscalActions")
+    financialCrisisFiscalActionsCollection<{ countryId: string; amount: number }>(db)
       .find(
         { response: "stimulus", turn: { $gt: turn - FINANCIAL_DEMAND_WINDOW, $lte: turn } },
         { projection: { countryId: 1, amount: 1 } }
       )
       .toArray(),
-    db.collection<CreditHistory>("financialCrisisCreditHistory").find({}).toArray(),
+    financialCrisisCreditHistoryCollection<CreditHistory>(db).find({}).toArray(),
   ]);
   const credit = new Map<string, number>();
   for (const bank of banks)
@@ -77,6 +78,6 @@ export async function loadFinancialCrisisDemand(
     });
   }
   if (historyWrites.length)
-    await db.collection<CreditHistory>("financialCrisisCreditHistory").bulkWrite(historyWrites);
+    await financialCrisisCreditHistoryCollection<CreditHistory>(db).bulkWrite(historyWrites);
   return multipliers;
 }

@@ -16,6 +16,8 @@ import { loadBankingPolicy } from "@/lib/banking/policy";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
+import { bankGuaranteesCollection } from "@/lib/db/repositories/bankGuarantees";
+import { financialCrisisBankActionsCollection } from "@/lib/db/repositories/financialCrisisBankActions";
 
 export type FinancialCrisisBankResponse = "recapitalize" | "guarantee" | "resolve";
 
@@ -113,9 +115,9 @@ export async function applyFinancialCrisisBankResponse(
   response: FinancialCrisisBankResponse
 ): Promise<void> {
   const actionId = [ctx.crisis._id, ctx.interaction._id, ctx.countryId, response].join(":");
-  const prior = await ctx.db
-    .collection<FinancialCrisisBankAction>("financialCrisisBankActions")
-    .findOne({ _id: actionId });
+  const prior = await financialCrisisBankActionsCollection<FinancialCrisisBankAction>(
+    ctx.db
+  ).findOne({ _id: actionId });
   if (prior) return;
   // A durable quote owns all legs and projections. Recover it before considering
   // a new quote from balances or charter statuses the first attempt changed.
@@ -124,7 +126,7 @@ export async function applyFinancialCrisisBankResponse(
   });
   if (pending)
     throw new Error("Rescue settlement is pending recovery; funding will not be duplicated");
-  const guaranteeCollection = ctx.db.collection<PendingFinancialGuarantee>("bankGuarantees");
+  const guaranteeCollection = bankGuaranteesCollection<PendingFinancialGuarantee>(ctx.db);
   // The unfunded shell is written before settlement so a process crash cannot
   // cause a retry to quote a different bank cohort, source balance or amount.
   let pendingGuarantee =

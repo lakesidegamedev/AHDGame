@@ -5,6 +5,7 @@ import type { Db } from "mongodb";
 import type { GameIteration } from "@/lib/db/types/gameState";
 import { gameEventEnvelope } from "./gameEventEnvelope";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { analyticsRecordsCollection } from "@/lib/db/repositories/analyticsRecords";
 
 let client: PostHog | null = null;
 
@@ -154,18 +155,18 @@ export async function flushServerPosthog(): Promise<void> {
     for (const [db, group] of claimGroups) {
       const events = [...group.values()];
       try {
-        const result = await db
-          .collection<{ _id: string; value: number }>("analyticsRecords")
-          .bulkWrite(
-            events.map((event) => ({
-              updateOne: {
-                filter: { _id: event.markerId! },
-                update: { $setOnInsert: { value: event.turn } },
-                upsert: true,
-              },
-            })),
-            { ordered: false }
-          );
+        const result = await analyticsRecordsCollection<{ _id: string; value: number }>(
+          db
+        ).bulkWrite(
+          events.map((event) => ({
+            updateOne: {
+              filter: { _id: event.markerId! },
+              update: { $setOnInsert: { value: event.turn } },
+              upsert: true,
+            },
+          })),
+          { ordered: false }
+        );
         for (const index of Object.keys(result.upsertedIds)) {
           const event = events[Number(index)];
           if (event) claimedEvents.add(event);

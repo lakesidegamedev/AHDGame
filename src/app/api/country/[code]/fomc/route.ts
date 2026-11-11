@@ -40,6 +40,7 @@ import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficia
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { fomcNominationsCollection } from "@/lib/db/repositories/fomcNominations";
 
 /** Resolved sessions returned to the panel (newest last in storage). */
 const MEETING_HISTORY_LIMIT = 10;
@@ -100,8 +101,7 @@ export async function GET(_request: Request, context: RouteContext) {
     // senator who may vote on them. This is the "Senate confirms and it actually
     // works" surface — player senators cast ballots via the vote route.
     const [activeNoms, viewerSenator] = await Promise.all([
-      db
-        .collection<FomcNomination>("fomcNominations")
+      fomcNominationsCollection(db)
         .find({ countryId, status: "active" })
         .sort({ proposedAt: 1 })
         .toArray(),

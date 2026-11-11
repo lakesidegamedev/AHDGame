@@ -23,6 +23,7 @@ import {
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { tradeEmbargoesCollection } from "@/lib/db/repositories/tradeEmbargoes";
 
 /**
  * Gates shared by every way a supply contract can be opened or changed:
@@ -77,8 +78,7 @@ export async function isSupplyLaneClosed(
   const turn = world?.currentTurn ?? 0;
   const supplier = supplierCountry as CountryId;
   const buyer = buyerCountry as CountryId;
-  const embargoes = await db
-    .collection<TradeEmbargo>("tradeEmbargoes")
+  const embargoes = await tradeEmbargoesCollection(db)
     .find({
       $and: [
         { $or: [{ expiresTurn: { $exists: false } }, { expiresTurn: { $gte: turn } }] },

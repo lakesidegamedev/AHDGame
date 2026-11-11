@@ -22,6 +22,7 @@ import { billsCollection } from "@/lib/db/repositories/bills";
 import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 import { countryStateCollection } from "@/lib/db/repositories/countryState";
+import { hu1991AssemblyCountsCollection } from "@/lib/db/repositories/hu1991AssemblyCounts";
 
 export const HU_1994_PROPOSALS_COLLECTION = "hu1994ElectoralProposals";
 const ID = "1991-default:hu-electoral:threshold1994";
@@ -258,8 +259,7 @@ async function rebindHu1994PrimaryCohorts(db: Db, turn: number, now: Date, sessi
       : [];
   });
   if (!candidates.length) return;
-  const receipts = await db
-    .collection<{ _id: string }>("hu1991AssemblyCounts")
+  const receipts = await hu1991AssemblyCountsCollection<{ _id: string }>(db)
     .find(
       {
         _id: { $in: candidates.map((row) => row.hungarianAssemblyRound!.receiptId) },

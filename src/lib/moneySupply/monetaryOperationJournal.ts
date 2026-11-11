@@ -45,6 +45,9 @@ import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { actionAuditLogCollection } from "@/lib/db/repositories/actionAuditLog";
+import { bondMarketPoolsCollection } from "@/lib/db/repositories/bondMarketPools";
+import { bankLiquidityOperationsCollection } from "@/lib/db/repositories/bankLiquidityOperations";
 
 const COLLECTION = "monetaryOperationCommands";
 export class MonetaryOperationRejected extends Error {}
@@ -500,7 +503,7 @@ async function publishAudit(db: Db, receipt: Receipt): Promise<void> {
     },
   };
   try {
-    const audit = db.collection<ActionAuditRecord>("actionAuditLog");
+    const audit = actionAuditLogCollection(db);
     const inserted = await audit.updateOne(
       { _id: record._id },
       { $setOnInsert: record },
@@ -647,13 +650,11 @@ async function finish(
     throw new MonetaryOperationRejected("Bond inventory changed before the monetary exchange");
   }
   if (receipt.command.type === "qe") {
-    await db
-      .collection<{ _id: string }>("bondMarketPools")
-      .updateOne(
-        { _id: receipt.currency },
-        { $setOnInsert: { cashLocal: 0, targetCashLocal: 0, createdAt: receipt.createdAt } },
-        { upsert: true }
-      );
+    await bondMarketPoolsCollection<{ _id: string }>(db).updateOne(
+      { _id: receipt.currency },
+      { $setOnInsert: { cashLocal: 0, targetCashLocal: 0, createdAt: receipt.createdAt } },
+      { upsert: true }
+    );
   }
   if (receipt.command.type !== "qt") await ordinary(db, receipt.cash);
   await terminal(db, receipt);
@@ -667,9 +668,10 @@ export async function executeJournaledMonetaryOperation(
   if (!/^[a-zA-Z0-9_-]{8,128}$/.test(command.operationId))
     throw new MonetaryOperationRejected("Valid operation ID required");
   if (
-    await db
-      .collection<{ _id: string }>("bankLiquidityOperations")
-      .findOne({ _id: command.operationId }, { projection: { _id: 1 } })
+    await bankLiquidityOperationsCollection<{ _id: string }>(db).findOne(
+      { _id: command.operationId },
+      { projection: { _id: 1 } }
+    )
   )
     throw new MonetaryOperationRejected("Operation ID already belongs to a liquidity command");
   const receipts = db.collection<Receipt>(COLLECTION);

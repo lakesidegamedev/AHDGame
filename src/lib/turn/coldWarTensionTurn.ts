@@ -13,6 +13,8 @@ import {
 } from "@/lib/coldwar/rules/blocTension";
 import type { CountryAlignment } from "@/lib/db/types/countryAlignment";
 import type { TradeEmbargo } from "@/lib/db/types/tradeEmbargo";
+import { tradeEmbargoesCollection } from "@/lib/db/repositories/tradeEmbargoes";
+import { countryAlignmentsCollection } from "@/lib/db/repositories/countryAlignments";
 
 /**
  * Turn phase for global cold-war tension: read the world's standing pressure
@@ -50,12 +52,10 @@ export async function loadBlocDyadFloors(
   snapshot: Pick<StandingPressureSnapshot, "wars" | "nuclearCountries">
 ): Promise<Record<BlocPairId, number>> {
   const [alignments, embargoes] = await Promise.all([
-    db
-      .collection<CountryAlignment>("countryAlignments")
+    countryAlignmentsCollection(db)
       .find({}, { projection: { entityId: 1, shares: 1, nonAligned: 1 } })
       .toArray(),
-    db
-      .collection<TradeEmbargo>("tradeEmbargoes")
+    tradeEmbargoesCollection(db)
       .find(
         {
           $or: [

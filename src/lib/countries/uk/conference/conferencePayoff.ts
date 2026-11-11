@@ -32,6 +32,7 @@ import { partySeqIdOf } from "./conferenceShared";
 import { runtimeConfig } from "@/lib/config/runtime";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { partyGroupFavorabilityCollection } from "@/lib/db/repositories/partyGroupFavorability";
 
 export interface ConferencePayoff {
   applied: boolean;
@@ -155,13 +156,11 @@ export async function applyConferencePayoff(
       expiresAtTurn: currentTurn + CONFERENCE_PAYOFF_DURATION_TURNS,
       createdAt: now,
     };
-    await db
-      .collection<PartyGroupFavorability>("partyGroupFavorability")
-      .updateOne(
-        { sourceConferenceId: working._id, groupId },
-        { $setOnInsert: row },
-        { upsert: true }
-      );
+    await partyGroupFavorabilityCollection(db).updateOne(
+      { sourceConferenceId: working._id, groupId },
+      { $setOnInsert: row },
+      { upsert: true }
+    );
   }
 
   if (working.payoffCohesionAppliedTurn == null && intentGrant > 0) {
@@ -187,10 +186,7 @@ export async function applyConferencePayoff(
   // for the next tick instead of being marked done.
   const presentGroups = new Set(
     (
-      await db
-        .collection<PartyGroupFavorability>("partyGroupFavorability")
-        .find({ sourceConferenceId: working._id })
-        .toArray()
+      await partyGroupFavorabilityCollection(db).find({ sourceConferenceId: working._id }).toArray()
     ).map((row) => row.groupId)
   );
   const partyCheck = (await politicalPartiesCollection(db).findOne({ _id: party._id })) ?? party;

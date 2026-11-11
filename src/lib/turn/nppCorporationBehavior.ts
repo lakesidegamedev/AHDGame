@@ -201,6 +201,7 @@ import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
+import { producerMarketOutcomesCollection } from "@/lib/db/repositories/producerMarketOutcomes";
 
 export {
   NPP_GROWTH_MIN_SHORTAGE,
@@ -680,13 +681,12 @@ export async function processNppCorporationDecisions(
     transitionFirstFundedTurn != null &&
     strategyGate?.worldEpochId
       ? (
-          await db
-            .collection<{
-              worldEpoch: string;
-              turn: number;
-              recipePressure?: Record<string, number>;
-              bookPressure?: Record<string, number>;
-            }>("producerMarketOutcomes")
+          await producerMarketOutcomesCollection<{
+            worldEpoch: string;
+            turn: number;
+            recipePressure?: Record<string, number>;
+            bookPressure?: Record<string, number>;
+          }>(db)
             .find(
               { worldEpoch: strategyGate.worldEpochId, turn: { $lte: turn } },
               {

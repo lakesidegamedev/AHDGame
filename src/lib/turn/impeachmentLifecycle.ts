@@ -22,6 +22,7 @@ import { createNotification } from "@/lib/notifications";
 import { autoVoteNppsForImpeachmentStage } from "@/lib/impeachment/autoVoteNpps";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { impeachmentsCollection } from "@/lib/db/repositories/impeachments";
 
 /**
  * Advance every open impeachment whose current-stage voting window has closed.
@@ -38,20 +39,17 @@ export async function processImpeachmentLifecycle(
   currentTurn: number,
   now: Date
 ): Promise<{ resolved: number }> {
-  const open = await db
-    .collection<Impeachment>("impeachments")
+  const open = await impeachmentsCollection(db)
     .find({ stage: { $in: ["house", "senate"] } })
     .toArray();
 
   let resolved = 0;
 
   const claim = async (imp: Impeachment, stage: ImpeachmentStage): Promise<boolean> => {
-    const res = await db
-      .collection<Impeachment>("impeachments")
-      .updateOne(
-        { _id: imp._id, stage: imp.stage },
-        { $set: { stage, resolvedOnTurn: currentTurn, updatedAt: now } }
-      );
+    const res = await impeachmentsCollection(db).updateOne(
+      { _id: imp._id, stage: imp.stage },
+      { $set: { stage, resolvedOnTurn: currentTurn, updatedAt: now } }
+    );
     return res.modifiedCount > 0;
   };
 
@@ -125,7 +123,7 @@ export async function processImpeachmentLifecycle(
         stageVotes
       );
       if (passesHouseImpeachment(tally)) {
-        const advanced = await db.collection<Impeachment>("impeachments").updateOne(
+        const advanced = await impeachmentsCollection(db).updateOne(
           { _id: imp._id, stage: "house" },
           {
             $set: {

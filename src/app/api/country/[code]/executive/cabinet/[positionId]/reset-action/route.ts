@@ -22,6 +22,8 @@ import { resolveGameYear } from "@/lib/era/era";
 import { cabinetActionFunding } from "@/lib/resetCabinet/rules/actionFunding";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { resetDepartmentAccountsCollection } from "@/lib/db/repositories/resetDepartmentAccounts";
+import { resetCabinetActionStatesCollection } from "@/lib/db/repositories/resetCabinetActionStates";
 
 const bodySchema = z.object({ actionId: z.string().min(1).max(120) }).strict();
 interface RouteParams {
@@ -103,15 +105,15 @@ export async function POST(request: Request, { params }: RouteParams) {
           new Set(gameState.manuallyEnabledSeats ?? [])
         )
       );
-      const state = await db
-        .collection<ResetCabinetActionState>("resetCabinetActionStates")
-        .findOne({ _id: country, worldId: gameState.resetWorldId }, { session });
+      const state = await resetCabinetActionStatesCollection<ResetCabinetActionState>(db).findOne(
+        { _id: country, worldId: gameState.resetWorldId },
+        { session }
+      );
       const budget = await federalBudgetCollection(db).findOne(
         { countryId },
         { session, projection: { gdp: 1, defenseAppropriation: 1 } }
       );
-      const accounts = await db
-        .collection<ResetDepartmentAccountSnapshot>("resetDepartmentAccounts")
+      const accounts = await resetDepartmentAccountsCollection<ResetDepartmentAccountSnapshot>(db)
         .find(
           {
             worldId: gameState.resetWorldId,
@@ -193,18 +195,18 @@ export async function POST(request: Request, { params }: RouteParams) {
           const available = Math.max(0, account.balance - account.encumbered);
           const debit = Math.min(available, remainingDebit);
           if (debit > 0) {
-            const written = await db
-              .collection<ResetDepartmentAccountSnapshot>("resetDepartmentAccounts")
-              .updateOne(
-                {
-                  _id: account._id,
-                  worldId: gameState.resetWorldId,
-                  balance: account.balance,
-                  encumbered: account.encumbered,
-                },
-                { $inc: { balance: -debit } },
-                { session }
-              );
+            const written = await resetDepartmentAccountsCollection<ResetDepartmentAccountSnapshot>(
+              db
+            ).updateOne(
+              {
+                _id: account._id,
+                worldId: gameState.resetWorldId,
+                balance: account.balance,
+                encumbered: account.encumbered,
+              },
+              { $inc: { balance: -debit } },
+              { session }
+            );
             if (written.matchedCount !== 1)
               throw new Error("Cabinet action account changed concurrently");
             remainingDebit -= debit;
@@ -212,20 +214,20 @@ export async function POST(request: Request, { params }: RouteParams) {
         }
       }
       if (remainingDebit > 0.01) throw new Error("Cabinet action debit did not reconcile");
-      const written = await db
-        .collection<ResetCabinetActionState>("resetCabinetActionStates")
-        .updateOne(
-          { _id: country, worldId: gameState.resetWorldId, updatedTurn: state.updatedTurn },
-          {
-            $set: {
-              actorStates: { ...state.actorStates, [actorId]: used.actor },
-              active: [...used.active],
-              history: [...used.history],
-              updatedTurn: gameState.currentTurn,
-            },
+      const written = await resetCabinetActionStatesCollection<ResetCabinetActionState>(
+        db
+      ).updateOne(
+        { _id: country, worldId: gameState.resetWorldId, updatedTurn: state.updatedTurn },
+        {
+          $set: {
+            actorStates: { ...state.actorStates, [actorId]: used.actor },
+            active: [...used.active],
+            history: [...used.history],
+            updatedTurn: gameState.currentTurn,
           },
-          { session }
-        );
+        },
+        { session }
+      );
       if (written.matchedCount !== 1) throw new Error("Cabinet action state changed concurrently");
       return {
         status: 200,

@@ -16,6 +16,10 @@ import type { ResetDepartmentAccountSnapshot } from "@/lib/resetFinance/rules/li
 import type { ResetLawEnactmentReceipt, ResetLawProgramDocument } from "./program";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { resetLawProgramsCollection } from "@/lib/db/repositories/resetLawPrograms";
+import { resetDepartmentAccountsCollection } from "@/lib/db/repositories/resetDepartmentAccounts";
+import { resetLawOpeningBoardsCollection } from "@/lib/db/repositories/resetLawOpeningBoards";
+import { resetLawEnactmentReceiptsCollection } from "@/lib/db/repositories/resetLawEnactmentReceipts";
 
 function resetLawProvisions(bill: Pick<Bill | StateBill, "provisions">): ResetLawProvision[] {
   return (bill.provisions ?? []).filter(
@@ -42,9 +46,9 @@ export async function applyResetLawBillEnactment(
   if (!Number.isSafeInteger(turn) || turn < 1) throw new Error("Invalid v2 enactment turn");
   const receiptId = bill._id.toString();
   return runRequiredTransaction(async (session) => {
-    const existingReceipt = await db
-      .collection<ResetLawEnactmentReceipt>("resetLawEnactmentReceipts")
-      .findOne({ _id: receiptId }, { session });
+    const existingReceipt = await resetLawEnactmentReceiptsCollection<ResetLawEnactmentReceipt>(
+      db
+    ).findOne({ _id: receiptId }, { session });
     if (existingReceipt) return { applied: false, programs: existingReceipt.programIds.length };
     const gameState = await gameStateCollection(db).findOne(
       { _id: "current" },
@@ -71,15 +75,14 @@ export async function applyResetLawBillEnactment(
     }
     const worldId = gameState.resetWorldId;
     const [board, existingPrograms, accounts] = await Promise.all([
-      db
-        .collection<ResetLawOpeningBoard>("resetLawOpeningBoards")
-        .findOne({ _id: `${country}:national`, worldId }, { session }),
-      db
-        .collection<ResetLawProgramDocument>("resetLawPrograms")
+      resetLawOpeningBoardsCollection<ResetLawOpeningBoard>(db).findOne(
+        { _id: `${country}:national`, worldId },
+        { session }
+      ),
+      resetLawProgramsCollection<ResetLawProgramDocument>(db)
         .find({ worldId, country: resetCountry, scope: "national" }, { session })
         .toArray(),
-      db
-        .collection<ResetDepartmentAccountSnapshot>("resetDepartmentAccounts")
+      resetDepartmentAccountsCollection<ResetDepartmentAccountSnapshot>(db)
         .find({ worldId, countryId: resetCountry }, { session })
         .toArray(),
     ]);
@@ -156,9 +159,11 @@ export async function applyResetLawBillEnactment(
         balanceBasis: provision.balanceBasis,
         primaryMetricEffects: provision.primaryMetricEffectsSnapshot,
       };
-      await db
-        .collection<ResetLawProgramDocument>("resetLawPrograms")
-        .replaceOne({ _id: program._id, worldId }, program, { upsert: true, session });
+      await resetLawProgramsCollection<ResetLawProgramDocument>(db).replaceOne(
+        { _id: program._id, worldId },
+        program,
+        { upsert: true, session }
+      );
     }
     // The current-law roster only counts a family on its enacted funder, and
     // never on a national account once it is left to the states. Any demand
@@ -205,28 +210,28 @@ export async function applyResetLawBillEnactment(
       ) {
         throw new Error(`V2 department authority does not reconcile ${accountId}`);
       }
-      const written = await db
-        .collection<ResetDepartmentAccountSnapshot>("resetDepartmentAccounts")
-        .updateOne(
-          {
-            _id: accountId,
-            worldId,
-            annualAuthority: account.annualAuthority,
-            familyAnnualDemand: account.familyAnnualDemand,
-          },
-          {
-            $set: {
-              annualAuthority: nextAuthority,
-              grossAnnualClaim: nextGross,
-              familyAnnualDemand: nextFamilies,
-              programAllocationPercents: {
-                ...account.programAllocationPercents,
-                ...Object.fromEntries([...familyDeltas.keys()].map((familyId) => [familyId, 100])),
-              },
+      const written = await resetDepartmentAccountsCollection<ResetDepartmentAccountSnapshot>(
+        db
+      ).updateOne(
+        {
+          _id: accountId,
+          worldId,
+          annualAuthority: account.annualAuthority,
+          familyAnnualDemand: account.familyAnnualDemand,
+        },
+        {
+          $set: {
+            annualAuthority: nextAuthority,
+            grossAnnualClaim: nextGross,
+            familyAnnualDemand: nextFamilies,
+            programAllocationPercents: {
+              ...account.programAllocationPercents,
+              ...Object.fromEntries([...familyDeltas.keys()].map((familyId) => [familyId, 100])),
             },
           },
-          { session }
-        );
+        },
+        { session }
+      );
       if (written.matchedCount !== 1)
         throw new Error("V2 department authority changed concurrently");
       if (account.externallySettled && familyDeltas.has("L48")) defenseAnnualDelta += accountDelta;
@@ -259,7 +264,7 @@ export async function applyResetLawBillEnactment(
       new Map(existingPrograms.map((program) => [program.familyId, program.choice])),
       session
     );
-    await db.collection<ResetLawEnactmentReceipt>("resetLawEnactmentReceipts").insertOne(
+    await resetLawEnactmentReceiptsCollection<ResetLawEnactmentReceipt>(db).insertOne(
       {
         _id: receiptId,
         worldId,
@@ -295,7 +300,7 @@ async function applyRegionalResetLawBillEnactment(
   const resetCountry = country as ResetCountry;
   const receiptId = bill._id.toString();
   return runRequiredTransaction(async (session) => {
-    const receipts = db.collection<ResetLawEnactmentReceipt>("resetLawEnactmentReceipts");
+    const receipts = resetLawEnactmentReceiptsCollection<ResetLawEnactmentReceipt>(db);
     const existingReceipt = await receipts.findOne({ _id: receiptId }, { session });
     if (existingReceipt) return { applied: false, programs: existingReceipt.programIds.length };
     const gameState = await gameStateCollection(db).findOne(
@@ -320,11 +325,11 @@ async function applyRegionalResetLawBillEnactment(
     }
     const worldId = gameState.resetWorldId;
     const [board, existingPrograms] = await Promise.all([
-      db
-        .collection<ResetLawOpeningBoard>("resetLawOpeningBoards")
-        .findOne({ _id: `${country}:${regionId}`, worldId }, { session }),
-      db
-        .collection<ResetLawProgramDocument>("resetLawPrograms")
+      resetLawOpeningBoardsCollection<ResetLawOpeningBoard>(db).findOne(
+        { _id: `${country}:${regionId}`, worldId },
+        { session }
+      ),
+      resetLawProgramsCollection<ResetLawProgramDocument>(db)
         .find({ worldId, country: resetCountry, scope: "regional", regionId }, { session })
         .toArray(),
     ]);
@@ -372,9 +377,11 @@ async function applyRegionalResetLawBillEnactment(
         balanceBasis: provision.balanceBasis,
         primaryMetricEffects: provision.primaryMetricEffectsSnapshot,
       };
-      await db
-        .collection<ResetLawProgramDocument>("resetLawPrograms")
-        .replaceOne({ _id: program._id, worldId }, program, { upsert: true, session });
+      await resetLawProgramsCollection<ResetLawProgramDocument>(db).replaceOne(
+        { _id: program._id, worldId },
+        program,
+        { upsert: true, session }
+      );
       programIds.push(program._id);
     }
     await applyV2VoterReactions(

@@ -22,6 +22,7 @@ import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { newsPostsCollection } from "@/lib/db/repositories/newsPosts";
+import { wireEventsCollection } from "@/lib/db/repositories/wireEvents";
 
 // Re-export for any consumer that still imports types from the route file.
 // New consumers should import from "@/lib/news/types".
@@ -49,8 +50,7 @@ export async function GET() {
 
     // Primary: wireEvents + system news. Fallback collections for bootstrapping.
     const [wireEvents, systemNews, wireEventCount] = await Promise.all([
-      db
-        .collection<WireEvent>("wireEvents")
+      wireEventsCollection<WireEvent>(db)
         .find({ timestamp: { $gte: since } })
         .sort({ timestamp: -1 })
         .limit(50)
@@ -63,7 +63,7 @@ export async function GET() {
         .project({ content: 1, category: 1, createdAt: 1 })
         .toArray(),
 
-      db.collection<WireEvent>("wireEvents").countDocuments({ timestamp: { $gte: since } }),
+      wireEventsCollection<WireEvent>(db).countDocuments({ timestamp: { $gte: since } }),
     ]);
 
     const items: WireItem[] = [];

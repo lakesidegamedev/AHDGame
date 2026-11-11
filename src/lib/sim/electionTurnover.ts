@@ -17,6 +17,7 @@ import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { seedDiagnosticsCollection } from "@/lib/db/repositories/seedDiagnostics";
 import { parliamentSeatsHistoryCollection } from "@/lib/db/repositories/parliamentSeatsHistory";
 import { simRunsCollection } from "@/lib/db/repositories/simRuns";
+import { electionResultSnapshotsCollection } from "@/lib/db/repositories/electionResultSnapshots";
 type ElectionRow = Omit<ElectionRecord, "_id"> & { _id: ObjectId; status: string };
 type CandidateRow = Omit<CandidateRecord, "_id" | "electionId" | "characterId" | "nppId"> & {
   _id: ObjectId;
@@ -98,8 +99,7 @@ export async function collectElectionTurnoverReport(db: Db, window: ElectionTurn
           { projection: { electionId: 1, party: 1, isNPP: 1, characterId: 1, nppId: 1 } }
         )
         .toArray(),
-      db
-        .collection<SnapshotRow>("electionResultSnapshots")
+      electionResultSnapshotsCollection<SnapshotRow>(db)
         .find(
           { electionId: { $in: ids } },
           {

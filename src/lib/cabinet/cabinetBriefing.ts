@@ -153,6 +153,10 @@ import type { Document } from "mongodb";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { regionalBudgetsCollection } from "@/lib/db/repositories/regionalBudgets";
+import { resetLawProgramsCollection } from "@/lib/db/repositories/resetLawPrograms";
+import { resetDepartmentAccountsCollection } from "@/lib/db/repositories/resetDepartmentAccounts";
+import { resetCabinetActionStatesCollection } from "@/lib/db/repositories/resetCabinetActionStates";
 
 /** Assembles the cabinet position briefing payload for the viewing user. */
 export async function buildCabinetBriefing(
@@ -317,8 +321,7 @@ export async function buildCabinetBriefing(
           // NORTHEAST/EAST/… docs alongside the live DB/HB/… ones — are excluded
           // and the funding pool is not inflated. Mirrors federalBudgetDetail and
           // calculateFederalSpending, which the National Budget page reads.
-          db
-            .collection<RegionalBudget>("regionalBudgets")
+          regionalBudgetsCollection(db)
             .find({ _id: { $in: stateIds } })
             .toArray()
         : Promise.resolve([]),
@@ -745,19 +748,18 @@ export async function buildCabinetBriefing(
     : [];
   const [resetAccounts, resetActionState, currentResetLawPrograms] = cabinetV2
     ? await Promise.all([
-        db
-          .collection<ResetDepartmentAccountSnapshot>("resetDepartmentAccounts")
+        resetDepartmentAccountsCollection<ResetDepartmentAccountSnapshot>(db)
           .find({
             worldId: gameState?.resetWorldId,
             countryId: countryId as ResetCountry,
             controllingSeatId: positionId,
           })
           .toArray(),
-        db
-          .collection<ResetCabinetActionState>("resetCabinetActionStates")
-          .findOne({ _id: countryId as ResetCountry, worldId: gameState?.resetWorldId }),
-        db
-          .collection<ResetLawProgramDocument>("resetLawPrograms")
+        resetCabinetActionStatesCollection<ResetCabinetActionState>(db).findOne({
+          _id: countryId as ResetCountry,
+          worldId: gameState?.resetWorldId,
+        }),
+        resetLawProgramsCollection<ResetLawProgramDocument>(db)
           .find({
             worldId: gameState?.resetWorldId,
             country: countryId as ResetCountry,

@@ -21,6 +21,7 @@ import {
   listDealsForCorp,
 } from "@/lib/corporations/commands/acquisitions/acquisitionOffers";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { acquisitionOffersCollection } from "@/lib/db/repositories/acquisitionOffers";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -116,9 +117,9 @@ export async function POST(request: Request, { params }: RouteParams) {
     if (body.action === "accept" || body.action === "reject" || body.action === "withdraw") {
       if (!body.offerId || !ObjectId.isValid(body.offerId))
         return errorResponse(400, "Invalid offer id");
-      const offer = await db
-        .collection<AcquisitionOffer>("acquisitionOffers")
-        .findOne({ _id: new ObjectId(body.offerId) });
+      const offer = await acquisitionOffersCollection(db).findOne({
+        _id: new ObjectId(body.offerId),
+      });
       if (!offer) return errorResponse(404, "Offer not found");
 
       if (body.action === "withdraw") {

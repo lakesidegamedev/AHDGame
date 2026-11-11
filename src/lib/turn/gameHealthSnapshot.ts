@@ -45,6 +45,7 @@ import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 import { seatsCollection } from "@/lib/db/repositories/seats";
 import { gameHealthSnapshotsCollection } from "@/lib/db/repositories/gameHealthSnapshots";
 import { partyMembersCollection } from "@/lib/db/repositories/partyMembers";
+import { systemSettingsCollection } from "@/lib/db/repositories/systemSettings";
 
 type SeatScopedOfficial = ElectedOfficial & { seatId?: string };
 
@@ -141,9 +142,7 @@ export async function processGameHealthSnapshot(
   };
 
   // Check integrity cadence setting
-  const healthConfig = await db
-    .collection<SystemSettings>("systemSettings")
-    .findOne({ _id: "healthConfig" });
+  const healthConfig = await systemSettingsCollection(db).findOne({ _id: "healthConfig" });
   const cadence = healthConfig?.integrityCheckCadenceTurns ?? 1;
   const shouldRunIntegrity = turn % cadence === 0;
 

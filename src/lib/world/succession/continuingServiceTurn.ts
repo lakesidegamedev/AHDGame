@@ -38,6 +38,7 @@ import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 import { macroCountriesCollection } from "@/lib/db/repositories/macroCountries";
+import { federationSettlementIntentsCollection } from "@/lib/db/repositories/federationSettlementIntents";
 
 const FEDERATION_CONTINUING_SERVICE_TURNS_COLLECTION = "federationContinuingServiceTurns";
 export interface FederationContinuingServiceTurn {
@@ -94,9 +95,9 @@ export async function materializeContinuingFederationServiceTurn(input: {
     { _id: sourceCountryId },
     { session, projection: { dissolvedTurn: 1 } }
   );
-  const intent = await db
-    .collection<FederationSettlementIntentRecord>("federationSettlementIntents")
-    .findOne({ _id: applicationId }, { session });
+  const intent = await federationSettlementIntentsCollection<FederationSettlementIntentRecord>(
+    db
+  ).findOne({ _id: applicationId }, { session });
   if (
     !country ||
     country.dissolvedTurn != null ||

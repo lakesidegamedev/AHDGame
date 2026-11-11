@@ -14,6 +14,7 @@ import { getInsuredCap } from "@/lib/banking/insurance";
 import type { DepositInsuranceFund } from "@/lib/db/types/bank";
 import type { GameConfig } from "@/lib/db/types";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { depositInsuranceFundsCollection } from "@/lib/db/repositories/depositInsuranceFunds";
 
 interface RouteParams {
   params: Promise<{ currency: string }>;
@@ -53,7 +54,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
       getInsuredCap(db, currency),
     ]);
 
-    const fund = await db.collection<DepositInsuranceFund>("depositInsuranceFunds").findOne({
+    const fund = await depositInsuranceFundsCollection(db).findOne({
       _id: currency,
     });
 

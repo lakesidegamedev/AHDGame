@@ -60,6 +60,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
 import { politicalMetricsCollection } from "@/lib/db/repositories/politicalMetrics";
+import { politicalMetricsRegionHistoryCollection } from "@/lib/db/repositories/politicalMetricsRegionHistory";
 
 /** First calendar year of the information era for indicator-list selection. */
 const MODERN_INDICATORS_FROM_YEAR = 1990;
@@ -185,9 +186,10 @@ export async function loadRegionPoliticalMetrics(
         },
       }
     ),
-    db
-      .collection<PoliticalMetricsRegionHistoryDoc>("politicalMetricsRegionHistory")
-      .findOne({ _id: regionId }, { projection: { entries: { $slice: -SERVED_HISTORY_ENTRIES } } }),
+    politicalMetricsRegionHistoryCollection(db).findOne(
+      { _id: regionId },
+      { projection: { entries: { $slice: -SERVED_HISTORY_ENTRIES } } }
+    ),
     statePoliciesCollection(db)
       .find(
         { scope: "state", stateId: regionId },

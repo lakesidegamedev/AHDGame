@@ -3,6 +3,7 @@ import type { Bill } from "@/lib/db/types";
 import type { TradeEmbargo } from "@/lib/db/types/tradeEmbargo";
 import type { CountryId } from "@/lib/constants/countries";
 import { billsCollection } from "@/lib/db/repositories/bills";
+import { tradeEmbargoesCollection } from "@/lib/db/repositories/tradeEmbargoes";
 
 type EmbargoBill = Pick<Bill, "_id" | "countryId" | "sponsorId" | "provisions">;
 
@@ -71,7 +72,7 @@ export async function reconcileSignedEmbargoBills(
     (e) => !countryId || e.sourceCountry === countryId
   );
 
-  const embargoCol = db.collection<TradeEmbargo>("tradeEmbargoes");
+  const embargoCol = tradeEmbargoesCollection(db);
   const deleteFilter: Record<string, unknown> = { origin: "legislation" };
   if (countryId) deleteFilter.sourceCountry = countryId;
   await embargoCol.deleteMany(deleteFilter);

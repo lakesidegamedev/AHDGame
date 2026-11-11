@@ -5,6 +5,7 @@ import type { PortfolioHistory, SystemSettings } from "@/lib/db/types";
 import type { ExchangeRate } from "@/lib/db/types/exchangeRate";
 import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { systemSettingsCollection } from "@/lib/db/repositories/systemSettings";
 
 interface ScanConfig {
   windowTurns: number; // default 6 — coarse pair-velocity / round-trip window
@@ -81,9 +82,7 @@ async function ensureFinancialTxTurnIndex(col: Collection<FinancialTxLogEntry>):
 }
 
 async function loadScanConfig(db: Db): Promise<ScanConfig> {
-  const settings = await db
-    .collection<SystemSettings>("systemSettings")
-    .findOne({ _id: "current" });
+  const settings = await systemSettingsCollection(db).findOne({ _id: "current" });
   const cfg = settings?.financialTxLog;
   return {
     windowTurns: cfg?.suspectScanWindowTurns ?? 6,

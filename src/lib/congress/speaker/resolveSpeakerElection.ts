@@ -18,6 +18,7 @@ import type {
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
 import { speakerElectionsCollection } from "@/lib/db/repositories/speakerElections";
+import { speakerNominationsCollection } from "@/lib/db/repositories/speakerNominations";
 
 export async function resolveSpeakerElection(
   db: Db,
@@ -33,8 +34,7 @@ export async function resolveSpeakerElection(
   }
 
   const now = new Date();
-  const candidacies = await db
-    .collection<SpeakerNomination>("speakerNominations")
+  const candidacies = await speakerNominationsCollection(db)
     .find({ status: { $in: ["open", "voting"] } })
     .sort({ votesFor: -1 })
     .toArray();
@@ -61,15 +61,14 @@ export async function resolveSpeakerElection(
     (a, b) => b.count - a.count || a.nom.createdAt.getTime() - b.nom.createdAt.getTime()
   );
   const winner = countedCandidacies[0]!.nom;
-  await db
-    .collection<SpeakerNomination>("speakerNominations")
-    .updateOne({ _id: winner._id }, { $set: { status: "confirmed", updatedAt: now } });
-  await db
-    .collection<SpeakerNomination>("speakerNominations")
-    .updateMany(
-      { _id: { $ne: winner._id }, status: { $in: ["open", "voting"] } },
-      { $set: { status: "failed", updatedAt: now } }
-    );
+  await speakerNominationsCollection(db).updateOne(
+    { _id: winner._id },
+    { $set: { status: "confirmed", updatedAt: now } }
+  );
+  await speakerNominationsCollection(db).updateMany(
+    { _id: { $ne: winner._id }, status: { $in: ["open", "voting"] } },
+    { $set: { status: "failed", updatedAt: now } }
+  );
   await congressLeadersCollection(db).updateOne(
     { role: "speaker_of_the_house" },
     {

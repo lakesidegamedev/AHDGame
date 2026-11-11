@@ -3,6 +3,7 @@ import type { AltCluster, AltClusterStatus, AltSignal } from "@/lib/db/types/alt
 import type { GameConfig } from "@/lib/db/types";
 import { DEFAULT_ALT_SCORING_WEIGHTS, resolveAltScoringConfig } from "./config";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { altClustersCollection } from "@/lib/db/repositories/altClusters";
 
 /**
  * Confidence calibration.
@@ -374,8 +375,7 @@ export function computeCalibration(
  */
 export async function computeCalibrationReport(db: Db): Promise<CalibrationReport> {
   const [clusters, gameConfig] = await Promise.all([
-    db
-      .collection<AltCluster>("altClusters")
+    altClustersCollection(db)
       .find(
         { status: { $in: ["confirmed", "dismissed"] as AltClusterStatus[] } },
         { projection: { status: 1, confidence: 1, signalSummary: 1 } }

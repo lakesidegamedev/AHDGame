@@ -20,6 +20,9 @@ import type {
 import { usersCollection } from "@/lib/db/repositories/users";
 import type { Document } from "mongodb";
 import { caucusChairVotesCollection } from "@/lib/db/repositories/caucusChairVotes";
+import { caucusMembershipsCollection } from "@/lib/db/repositories/caucusMemberships";
+import { caucusChairElectionsCollection } from "@/lib/db/repositories/caucusChairElections";
+import { caucusChairCandidatesCollection } from "@/lib/db/repositories/caucusChairCandidates";
 
 const bodySchema = z
   .object({
@@ -68,7 +71,7 @@ export async function POST(
     }
     const { caucus } = resolved;
 
-    const membership = await db.collection<CaucusMembership>("caucusMemberships").findOne({
+    const membership = await caucusMembershipsCollection(db).findOne({
       caucusId: caucus._id,
       memberType: "character",
       memberId: auth.user.character._id,
@@ -78,7 +81,7 @@ export async function POST(
       return errorResponse(403, "Only active caucus members may vote in this election.");
     }
 
-    const election = await db.collection<CaucusChairElection>("caucusChairElections").findOne({
+    const election = await caucusChairElectionsCollection(db).findOne({
       caucusId: caucus._id,
       status: "voting",
     });
@@ -141,7 +144,7 @@ export async function POST(
     }
 
     const candidateOid = new ObjectId(parsed.data.candidateId!);
-    const candidate = await db.collection<CaucusChairCandidate>("caucusChairCandidates").findOne({
+    const candidate = await caucusChairCandidatesCollection(db).findOne({
       electionId: election._id,
       characterId: candidateOid,
       status: "active",

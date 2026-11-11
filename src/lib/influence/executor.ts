@@ -36,6 +36,8 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { nppRelationshipsCollection } from "@/lib/db/repositories/nppRelationships";
+import { nppInfluenceAttemptsCollection } from "@/lib/db/repositories/nppInfluenceAttempts";
 
 export interface ExecuteInfluenceInput {
   characterId: ObjectId;
@@ -102,9 +104,7 @@ export async function validateInfluenceAttempt(
   const currentTurn = gameState?.currentTurn || 1;
 
   const relationshipKey = `${character._id.toString()}_${npp._id.toString()}`;
-  const relationship = await db
-    .collection<NPPRelationship>("nppRelationships")
-    .findOne({ _id: relationshipKey });
+  const relationship = await nppRelationshipsCollection(db).findOne({ _id: relationshipKey });
 
   if (relationship) {
     const turnsSinceLastAttempt = currentTurn - relationship.lastAttemptTurn;
@@ -117,12 +117,10 @@ export async function validateInfluenceAttempt(
     }
   }
 
-  const attemptsThisTurn = await db
-    .collection<NPPInfluenceAttempt>("nppInfluenceAttempts")
-    .countDocuments({
-      characterId: character._id,
-      turn: currentTurn,
-    });
+  const attemptsThisTurn = await nppInfluenceAttemptsCollection(db).countDocuments({
+    characterId: character._id,
+    turn: currentTurn,
+  });
 
   if (attemptsThisTurn >= INFLUENCE_LIMITS.MAX_ATTEMPTS_PER_TURN) {
     return {
@@ -216,9 +214,7 @@ export async function executeInfluence(
   const currentTurn = gameState?.currentTurn || 1;
 
   const relationshipKey = `${character._id.toString()}_${npp._id.toString()}`;
-  const relationship = await db
-    .collection<NPPRelationship>("nppRelationships")
-    .findOne({ _id: relationshipKey });
+  const relationship = await nppRelationshipsCollection(db).findOne({ _id: relationshipKey });
 
   const calculation = calculateInfluenceChance({
     character,
@@ -283,7 +279,7 @@ export async function executeInfluence(
   }
 
   if (relationship) {
-    await db.collection<NPPRelationship>("nppRelationships").updateOne(
+    await nppRelationshipsCollection(db).updateOne(
       { _id: relationshipKey },
       {
         $set: {
@@ -298,7 +294,7 @@ export async function executeInfluence(
       }
     );
   } else {
-    await db.collection<NPPRelationship>("nppRelationships").insertOne({
+    await nppRelationshipsCollection(db).insertOne({
       _id: relationshipKey,
       characterId: character._id,
       nppId: npp._id,
@@ -340,7 +336,7 @@ export async function executeInfluence(
     createdAt: now,
   };
 
-  await db.collection<NPPInfluenceAttempt>("nppInfluenceAttempts").insertOne(attemptRecord);
+  await nppInfluenceAttemptsCollection(db).insertOne(attemptRecord);
 
   if (outcome === "success") {
     await applyInfluenceEffects(input, npp, character);
@@ -480,9 +476,7 @@ export async function getInfluenceOptions(
     : { rate: 1 };
 
   const relationshipKey = `${characterId.toString()}_${nppId.toString()}`;
-  const relationship = await db
-    .collection<NPPRelationship>("nppRelationships")
-    .findOne({ _id: relationshipKey });
+  const relationship = await nppRelationshipsCollection(db).findOne({ _id: relationshipKey });
 
   const gameState = await gameStateCollection(db).findOne({ _id: "current" });
   const currentTurn = gameState?.currentTurn || 1;
@@ -495,12 +489,10 @@ export async function getInfluenceOptions(
     }
   }
 
-  const attemptsThisTurn = await db
-    .collection<NPPInfluenceAttempt>("nppInfluenceAttempts")
-    .countDocuments({
-      characterId,
-      turn: currentTurn,
-    });
+  const attemptsThisTurn = await nppInfluenceAttemptsCollection(db).countDocuments({
+    characterId,
+    turn: currentTurn,
+  });
 
   const options = Object.values(INFLUENCE_ACTIONS).map((config) => {
     const calculation = calculateInfluenceChance({

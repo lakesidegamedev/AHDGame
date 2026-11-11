@@ -19,6 +19,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { livingConflictsCollection } from "@/lib/db/repositories/livingConflicts";
+import { ukDevolutionCollection } from "@/lib/db/repositories/ukDevolution";
 
 export async function loadNorthernIrelandSignal(db: Db): Promise<NorthernIrelandSignal | null> {
   return livingConflictsCollection<LivingConflictState>(db).findOne(
@@ -89,7 +90,7 @@ export async function reconcileNorthernIrelandGovernance(
     }
   }
   // Persist last. A retry repeats idempotent cleanup after a partial failure.
-  await db.collection<UKDevolutionState>("ukDevolution").updateOne(
+  await ukDevolutionCollection<UKDevolutionState>(db).updateOne(
     { _id: "UK" },
     {
       $set: { regions: next.regions, northernIrelandPeace: next.northernIrelandPeace },
@@ -101,9 +102,10 @@ export async function reconcileNorthernIrelandGovernance(
 
 /** Missing metadata preserves legacy institutions until the peace process owns them. */
 export async function northernIrelandAssemblySuspended(db: Db): Promise<boolean> {
-  const state = await db
-    .collection<UKDevolutionState>("ukDevolution")
-    .findOne({ _id: "UK" }, { projection: { northernIrelandPeace: 1, "regions.NIR.active": 1 } });
+  const state = await ukDevolutionCollection<UKDevolutionState>(db).findOne(
+    { _id: "UK" },
+    { projection: { northernIrelandPeace: 1, "regions.NIR.active": 1 } }
+  );
   return Boolean(state?.northernIrelandPeace && !state.regions.NIR.active);
 }
 

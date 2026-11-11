@@ -41,6 +41,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { primaryStateActionsCollection } from "@/lib/db/repositories/primaryStateActions";
 
 /**
  * What each kind costs and does, so the gate, the debit and the stored row all
@@ -163,7 +164,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(400, "You can only attack a rival in your own primary");
     }
 
-    const already = await db.collection<PrimaryStateAction>("primaryStateActions").findOne({
+    const already = await primaryStateActionsCollection(db).findOne({
       ...liveActionFilter(election._id, currentTurn),
       actorCandidateId: actor._id,
       targetCandidateId: target._id,

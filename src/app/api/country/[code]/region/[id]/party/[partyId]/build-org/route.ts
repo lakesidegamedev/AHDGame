@@ -33,6 +33,8 @@ import { resolveOrgBuildSizeMultiplier } from "@/lib/politicalStrength/orgBuildS
 import { computeBuildOrgPreview } from "@/lib/turn/politicalStrength/computeBuildOrgPreview";
 import { buildOrganizationBucket } from "@/lib/parties/commands/buildOrganizationBucket";
 import { ORG_BUILD_UNITS_PER_CLICK } from "@/lib/constants/partyOrg";
+import { partyStrengthPressureCollection } from "@/lib/db/repositories/partyStrengthPressure";
+import { orgRegLedgerCollection } from "@/lib/db/repositories/orgRegLedger";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; partyId: string }>;
@@ -177,9 +179,9 @@ async function buildOnce(
   const scope = resolveSpenderScope(spenderParty, spenderRow, authUser, preferred);
 
   // Cash gate: price the build before spending PS so an unaffordable click is refused free, with no PS debit or pressure escalation. Read the pressure ladder here so the quote matches what spendPoliticalStrength will charge.
-  const pressureRow = await db
-    .collection<PartyStrengthPressure>("partyStrengthPressure")
-    .findOne({ _id: `${countryId}_${spenderParty.sequentialId}_${upperRegionId}` });
+  const pressureRow = await partyStrengthPressureCollection(db).findOne({
+    _id: `${countryId}_${spenderParty.sequentialId}_${upperRegionId}`,
+  });
   const quotedPsCost = effectivePsCost(BUILD_ORG_BASE_PS_COST, pressureRow?.value ?? 0);
   // Organizing a large state costs more than a small one — see
   // `ORG_BUILD_SIZE_MULTIPLIER_MIN`. Resolved once and reused for the charge
@@ -278,7 +280,7 @@ async function buildOnce(
     (row) => row.id === spenderRow._id || Math.abs(row.delta) >= 0.00005
   );
   if (changedRows.length > 0) {
-    await db.collection<OrgRegLedger>("orgRegLedger").insertMany(
+    await orgRegLedgerCollection(db).insertMany(
       changedRows.map((row) => {
         const stored = rowById.get(row.id);
         const isSpender = row.id === spenderRow._id;

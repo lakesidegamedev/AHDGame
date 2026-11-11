@@ -27,6 +27,7 @@ import type {
 } from "@/lib/db/types/actionAuditLog";
 import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { systemSettingsCollection } from "@/lib/db/repositories/systemSettings";
 
 export type TxInput = Omit<FinancialTxLogEntry, "_id" | "expiresAt" | "flagged">;
 
@@ -64,9 +65,7 @@ function withAnchorAmount(entry: TxInput, ratesByCurrency: Map<string, number>):
 
 // Load thresholds once per call site. Falls back to defaults if not configured in DB.
 export async function loadTxThresholds(db: Db): Promise<TxThresholds> {
-  const settings = await db
-    .collection<SystemSettings>("systemSettings")
-    .findOne({ _id: "current" });
+  const settings = await systemSettingsCollection(db).findOne({ _id: "current" });
   return settings?.financialTxLog?.thresholds ?? DEFAULT_TX_THRESHOLDS;
 }
 

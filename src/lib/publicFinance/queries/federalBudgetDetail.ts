@@ -43,6 +43,7 @@ import { legislationTypesCollection } from "@/lib/db/repositories/legislationTyp
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
 import { federalBudgetSnapshotsCollection } from "@/lib/db/repositories/federalBudgetSnapshots";
+import { regionalBudgetsCollection } from "@/lib/db/repositories/regionalBudgets";
 
 /** One point on the fiscal-year trend series (stat strip compare + debt sparkline). */
 export interface FyHistoryPoint {
@@ -432,8 +433,7 @@ export async function loadFederalBudgetDetail(params: {
       .find({ stateId: { $in: stateIds } })
       .toArray(),
     isParliamentarySystem(COUNTRY_CONFIGS[budgetCountryId])
-      ? db
-          .collection<RegionalBudget>("regionalBudgets")
+      ? regionalBudgetsCollection(db)
           .find({ _id: { $in: stateIds } })
           .toArray()
       : Promise.resolve([] as RegionalBudget[]),

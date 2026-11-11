@@ -4,6 +4,7 @@ import type { BillStatus, NationalizeProvision } from "@/lib/db/types/legislatio
 import { inferCountryIdFromStateId } from "@/lib/congress/resolveBillCountryId";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { billsCollection } from "@/lib/db/repositories/bills";
+import { pendingNationalizationsCollection } from "@/lib/db/repositories/pendingNationalizations";
 
 /**
  * Bill statuses that count as "still in process" — a nationalization bill in one
@@ -123,8 +124,7 @@ export async function buildCorpNationalizationThreat(
   let soonestDeadline: number | null = null;
 
   // ── Pending takings (post-passage notice window) ──
-  const pending = await db
-    .collection<PendingNationalization>("pendingNationalizations")
+  const pending = await pendingNationalizationsCollection(db)
     .find({
       status: "pending",
       $or: [

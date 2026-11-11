@@ -7,6 +7,7 @@ import { getGameState } from "@/lib/gameState";
 import { crisesCollection } from "@/lib/db/repositories/crises";
 import { crisisInteractionsCollection } from "@/lib/db/repositories/crisisInteractions";
 import type { Document } from "mongodb";
+import { sovereignCrisisDecisionsCollection } from "@/lib/db/repositories/sovereignCrisisDecisions";
 
 /**
  * Migration: Convert existing sovereign default crisis records to the new
@@ -273,8 +274,7 @@ export async function migrateSovereignDefaultToCrisisSystem(db: Db): Promise<{
   skipped: number;
   errors: string[];
 }> {
-  const oldDecisions = await db
-    .collection<SovereignCrisisDecision>("sovereignCrisisDecisions")
+  const oldDecisions = await sovereignCrisisDecisionsCollection(db)
     .find({ state: { $in: ["open", "executiveProposed"] } })
     .toArray();
 

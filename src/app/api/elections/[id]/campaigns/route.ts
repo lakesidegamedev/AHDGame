@@ -28,6 +28,7 @@ import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParti
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { campaignFieldOfficesCollection } from "@/lib/db/repositories/campaignFieldOffices";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -152,8 +153,7 @@ export async function GET(request: Request, { params }: RouteParams) {
 
     // Batch fetch all required data in parallel
     const [offices, characters, npps, managers, parties] = await Promise.all([
-      db
-        .collection<CampaignFieldOffice>("campaignFieldOffices")
+      campaignFieldOfficesCollection(db)
         .find(
           { campaignId: { $in: campaigns.map((c) => c._id) }, electionId: electionOid },
           { projection: { campaignId: 1 } }

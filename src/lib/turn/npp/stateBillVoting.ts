@@ -12,6 +12,7 @@ import { ADDRESS_AGENDA_FORCE_BIAS } from "@/lib/constants/governorOffice";
 import { cabinetDisciplineForParty } from "@/lib/resetCabinet/loadDiscipline";
 import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
 import { governorAddressesCollection } from "@/lib/db/repositories/governorAddresses";
+import { nppVotePredictionsCollection } from "@/lib/db/repositories/nppVotePredictions";
 
 const LOCAL_BILL_FORCE_WEIGHTS = {
   ideology: 1,
@@ -221,7 +222,7 @@ export async function processStateBillVoting(ctx: NPPContext): Promise<number> {
     );
 
     if (predictionOps.length > 0) {
-      await db.collection<NPPVotePrediction>("nppVotePredictions").bulkWrite(
+      await nppVotePredictionsCollection(db).bulkWrite(
         predictionOps.map((op) => ({
           updateOne: {
             filter: { nppId: op.nppId, stateBillId: bill._id },

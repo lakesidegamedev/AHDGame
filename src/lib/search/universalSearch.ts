@@ -36,6 +36,7 @@ import { legislationTypesCollection } from "@/lib/db/repositories/legislationTyp
 import { usersCollection } from "@/lib/db/repositories/users";
 import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
 import { wikiPagesCollection } from "@/lib/db/repositories/wikiPages";
+import { legislationCollection } from "@/lib/db/repositories/legislation";
 
 /**
  * Maximum accepted `q` length (after trimming). Longer queries are rejected
@@ -323,7 +324,7 @@ export async function runUniversalSearch({
   if (enabledCountries) {
     billQuery.countryId = { $in: enabledCountries };
   }
-  const bills = await db.collection<Bill>("legislation").find(billQuery).limit(5).toArray();
+  const bills = await legislationCollection(db).find(billQuery).limit(5).toArray();
 
   for (const bill of bills) {
     const statusLabel = bill.status.replace(/_/g, " ");

@@ -14,6 +14,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { nppRelationshipsCollection } from "@/lib/db/repositories/nppRelationships";
 
 interface EndorsementRequestEvaluation {
   relationshipRequirement: number;
@@ -70,7 +71,7 @@ export async function getNppDirectActionView(
         },
       }
     ),
-    db.collection<NPPRelationship>("nppRelationships").findOne({ _id: relationshipKey }),
+    nppRelationshipsCollection(db).findOne({ _id: relationshipKey }),
   ]);
 
   if (!npp) {

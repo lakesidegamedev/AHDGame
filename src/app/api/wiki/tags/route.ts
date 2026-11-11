@@ -4,6 +4,7 @@ import { handleRouteError } from "@/lib/api/errors";
 import { checkWikiDisabled } from "@/lib/api/wikiGuard";
 import type { WikiPage, SystemTag } from "@/lib/db/types";
 import { wikiPagesCollection } from "@/lib/db/repositories/wikiPages";
+import { systemTagsCollection } from "@/lib/db/repositories/systemTags";
 
 // GET /api/wiki/tags — Returns all system tags and player-created tags with page counts for published wiki pages.
 // Auth: public; blocked when wiki is disabled
@@ -15,7 +16,7 @@ export async function GET() {
     const db = await getDb();
 
     // Get system tags
-    const systemTagsCol = db.collection<SystemTag>("systemTags");
+    const systemTagsCol = systemTagsCollection(db);
     const systemTagsRaw = await systemTagsCol.find({}).sort({ order: 1 }).toArray();
 
     // Count pages per system tag

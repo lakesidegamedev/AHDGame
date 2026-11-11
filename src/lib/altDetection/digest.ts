@@ -41,6 +41,7 @@ import { resolveAltScoringConfig } from "./config";
 import { sendDiscordWebhookMultiple, type DiscordEmbed } from "@/lib/discordWebhooks";
 import { readEnv } from "@/lib/config/read";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { altDigestStateCollection } from "@/lib/db/repositories/altDigestState";
 
 /** Env var carrying the mod-facing digest webhook URL. Mirrors the
  * `DISCORD_ALERT_WEBHOOK_URL` pattern in `src/lib/observability/alertOps.ts`
@@ -80,7 +81,7 @@ interface AltDigestStateDoc {
 }
 
 function getDigestStateCollection(db: Db) {
-  return db.collection<AltDigestStateDoc>("altDigestState");
+  return altDigestStateCollection<AltDigestStateDoc>(db);
 }
 
 // ─── Selection (pure, unit-testable) ────────────────────────────────────

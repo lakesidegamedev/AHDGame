@@ -7,6 +7,7 @@ import { getDb } from "@/lib/mongodb";
 import { authConfig } from "@/lib/config/auth";
 import { usersCollection } from "@/lib/db/repositories/users";
 import type { Document } from "mongodb";
+import { unifiedOidcFlowsCollection } from "@/lib/db/repositories/unifiedOidcFlows";
 
 function cohortSourceForSubject(subject: string): string | null {
   try {
@@ -36,15 +37,13 @@ export async function GET(request: Request) {
   if (!code || !state)
     return NextResponse.redirect(new URL("/login?error=unified_state", appOrigin));
   const db = await getDb();
-  const flow = await db
-    .collection<{
-      _id: string;
-      state: string;
-      nonce: string;
-      verifier: string;
-      expiresAt: Date;
-    }>("unifiedOidcFlows")
-    .findOneAndDelete({ state, expiresAt: { $gt: new Date() } });
+  const flow = await unifiedOidcFlowsCollection<{
+    _id: string;
+    state: string;
+    nonce: string;
+    verifier: string;
+    expiresAt: Date;
+  }>(db).findOneAndDelete({ state, expiresAt: { $gt: new Date() } });
   if (!flow) return NextResponse.redirect(new URL("/login?error=unified_state", appOrigin));
   const tokenResponse = await fetch(`${issuer}/protocol/openid-connect/token`, {
     method: "POST",

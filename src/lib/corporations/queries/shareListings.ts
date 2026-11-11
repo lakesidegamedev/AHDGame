@@ -8,6 +8,7 @@ import { resolveCorporation } from "@/lib/api/corporations/resolveQuery";
 import { bulkFetchCharacterNames, getCharacterByUserId } from "@/lib/db/characterLookup";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { shareListingsCollection } from "@/lib/db/repositories/shareListings";
+import { shareOffersCollection } from "@/lib/db/repositories/shareOffers";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -83,8 +84,7 @@ export async function getShareListingsView(_request: Request, { params }: RouteP
     }
 
     const listingIds = listings.map((listing) => listing._id);
-    const offers = await db
-      .collection<ShareOffer>("shareOffers")
+    const offers = await shareOffersCollection(db)
       .find({ listingId: { $in: listingIds }, status: "pending" })
       .sort({ pricePerShare: -1, createdAt: 1 })
       .toArray();

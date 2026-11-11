@@ -66,6 +66,8 @@ import { billWhipsCollection } from "@/lib/db/repositories/billWhips";
 import { scotusNominationsCollection } from "@/lib/db/repositories/scotusNominations";
 import { speakerElectionsCollection } from "@/lib/db/repositories/speakerElections";
 import { leadershipElectionsCollection } from "@/lib/db/repositories/leadershipElections";
+import { impeachmentsCollection } from "@/lib/db/repositories/impeachments";
+import { speakerVacateMotionsCollection } from "@/lib/db/repositories/speakerVacateMotions";
 
 export const nationalPartyWhipSchema = z
   .object({
@@ -344,9 +346,10 @@ async function resolveWhipTarget(
     if (chamber !== confidenceChamber) {
       return fail(400, `Motions to vacate can only be whipped in the ${confidenceChamber}`);
     }
-    const motion = await db
-      .collection<SpeakerVacateMotion>("speakerVacateMotions")
-      .findOne({ _id: "current", status: "voting" });
+    const motion = await speakerVacateMotionsCollection(db).findOne({
+      _id: "current",
+      status: "voting",
+    });
     // Resolution is lazy (on read of the Speaker page), so a motion can sit in
     // "voting" past its deadline. Gate on the clock as well as the status, or
     // a chair could whip a motion that is already over.
@@ -395,9 +398,11 @@ async function resolveWhipTarget(
 
   if (targetType === "impeachmentVote") {
     if (!targetOid) return fail(400, "Invalid target ID");
-    const impeachment = await db
-      .collection<Impeachment>("impeachments")
-      .findOne({ _id: targetOid, countryId, stage: { $in: ["house", "senate"] } });
+    const impeachment = await impeachmentsCollection(db).findOne({
+      _id: targetOid,
+      countryId,
+      stage: { $in: ["house", "senate"] },
+    });
     if (!impeachment) return fail(404, "Impeachment not found or no longer open for voting");
     // A governor is tried by its own state legislature, which is the state
     // party's surface, not the national one.

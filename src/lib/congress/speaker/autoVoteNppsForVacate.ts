@@ -9,6 +9,7 @@ import {
 } from "./nppVacateVote";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { speakerVacateMotionsCollection } from "@/lib/db/repositories/speakerVacateMotions";
 
 /**
  * Give every unvoted NPP bloc a graded ballot on the motion to vacate.
@@ -104,13 +105,14 @@ export async function autoVoteNppsForVacateMotion(
 
   if (ops.length === 0) return votes;
 
-  await db.collection<SpeakerVacateMotion>("speakerVacateMotions").bulkWrite(ops);
+  await speakerVacateMotionsCollection(db).bulkWrite(ops);
 
   // Re-read rather than assuming every op applied: a guard may have rejected
   // one, and the tally that follows must run on what the motion actually holds.
-  const updated = await db
-    .collection<SpeakerVacateMotion>("speakerVacateMotions")
-    .findOne({ _id: "current" }, { projection: { votes: 1 } });
+  const updated = await speakerVacateMotionsCollection(db).findOne(
+    { _id: "current" },
+    { projection: { votes: 1 } }
+  );
 
   return updated?.votes ?? votes;
 }

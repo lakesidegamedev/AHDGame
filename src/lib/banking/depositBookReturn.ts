@@ -95,6 +95,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { interbankLoansCollection } from "@/lib/db/repositories/interbankLoans";
 import { savingsAccountsCollection } from "@/lib/db/repositories/savingsAccounts";
 import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
+import { depositInsuranceFundsCollection } from "@/lib/db/repositories/depositInsuranceFunds";
 
 /** Budget spending line a deposit insurance backstop is booked against. */
 export const DEPOSIT_INSURANCE_SPENDING_KEY = "depositInsurance";
@@ -444,9 +445,7 @@ async function returnDepositBookInner(
 
   // The fund pays what it has; the treasury covers the rest by deficit, which
   // is money entering the world and is booked as such.
-  const fund = await db
-    .collection<DepositInsuranceFund>("depositInsuranceFunds")
-    .findOne({ _id: currency });
+  const fund = await depositInsuranceFundsCollection(db).findOne({ _id: currency });
   const fundBalance = Math.max(0, fund?.balance ?? 0);
   const fromInsuranceFund = Math.min(fundBalance, shortfall);
   const fromTreasury = Math.max(0, shortfall - fromInsuranceFund);

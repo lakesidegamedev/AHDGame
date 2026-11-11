@@ -30,6 +30,8 @@ import {
 } from "@/lib/constants/nationalScope";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { regionalBudgetsCollection } from "@/lib/db/repositories/regionalBudgets";
+import { stateApprovalHistoryCollection } from "@/lib/db/repositories/stateApprovalHistory";
 
 // GET /api/country/[code]/region/[id]/metrics — Return all state metrics including government approval and tick rates
 // Auth: public
@@ -64,7 +66,7 @@ export async function GET(
         ? findMergedRegionMetrics(db, { _id: stateId })
         : findMergedRegionMetrics(db, { _id: stateId, countryId }),
       hasSubNationalChamber
-        ? db.collection<RegionalBudget>("regionalBudgets").findOne({ _id: stateId, countryId })
+        ? regionalBudgetsCollection(db).findOne({ _id: stateId, countryId })
         : Promise.resolve(null),
     ]);
 
@@ -84,7 +86,7 @@ export async function GET(
       await Promise.all([
         nationalDocId ? findMergedRegionMetrics(db, { _id: nationalDocId }) : Promise.resolve(null),
         isNational ? Promise.resolve({}) : computeStateTickRates(db, stateId, resolvedCountryId),
-        db.collection<StateApprovalHistory>("stateApprovalHistory").findOne({ _id: stateId }),
+        stateApprovalHistoryCollection(db).findOne({ _id: stateId }),
         gameStateCollection(db).findOne({ _id: "current" }),
         findMergedRegionMetricsMany(db, { countryId: resolvedCountryId }),
       ]);

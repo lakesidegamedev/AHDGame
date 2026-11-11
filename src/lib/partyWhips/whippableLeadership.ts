@@ -61,6 +61,13 @@ import { cabinetNominationsCollection } from "@/lib/db/repositories/cabinetNomin
 import { billWhipsCollection } from "@/lib/db/repositories/billWhips";
 import { scotusNominationsCollection } from "@/lib/db/repositories/scotusNominations";
 import { speakerElectionsCollection } from "@/lib/db/repositories/speakerElections";
+import { speakerNominationsCollection } from "@/lib/db/repositories/speakerNominations";
+import { impeachmentsCollection } from "@/lib/db/repositories/impeachments";
+import { houseLeadershipNominationsCollection } from "@/lib/db/repositories/houseLeadershipNominations";
+import { speakerVacateMotionsCollection } from "@/lib/db/repositories/speakerVacateMotions";
+import { senateLeadershipNominationsCollection } from "@/lib/db/repositories/senateLeadershipNominations";
+import { houseLeadershipElectionsCollection } from "@/lib/db/repositories/houseLeadershipElections";
+import { senateLeadershipElectionsCollection } from "@/lib/db/repositories/senateLeadershipElections";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -233,9 +240,7 @@ export async function handleWhippableLeadership(request: Request, { params }: Ro
     // filter on the game clock as well as the status: a motion left in "voting"
     // past its deadline is over and must not appear as whippable.
     const vacateMotionDoc = isUS
-      ? await db
-          .collection<SpeakerVacateMotion>("speakerVacateMotions")
-          .findOne({ _id: "current", status: "voting" })
+      ? await speakerVacateMotionsCollection(db).findOne({ _id: "current", status: "voting" })
       : null;
     const vacateMotion =
       vacateMotionDoc && !isLeadershipElectionClosed(vacateMotionDoc, currentTurnForLeadership, now)
@@ -248,18 +253,14 @@ export async function handleWhippableLeadership(request: Request, { params }: Ro
       speakerElection &&
       !isLeadershipElectionClosed(speakerElection, currentTurnForLeadership, now)
     ) {
-      speakerNominations = await db
-        .collection<SpeakerNomination>("speakerNominations")
+      speakerNominations = await speakerNominationsCollection(db)
         .find({ status: { $in: ["open", "voting"] } })
         .toArray();
     }
 
     // Get active House leadership elections (US only)
     const houseLeadershipElections = isUS
-      ? await db
-          .collection<HouseLeadershipElection>("houseLeadershipElections")
-          .find({ status: "voting" })
-          .toArray()
+      ? await houseLeadershipElectionsCollection(db).find({ status: "voting" }).toArray()
       : [];
 
     // Get House leadership nominations
@@ -268,18 +269,14 @@ export async function handleWhippableLeadership(request: Request, { params }: Ro
       .map((e) => e._id);
     let houseNominations: HouseLeadershipNomination[] = [];
     if (activeHouseRoles.length > 0) {
-      houseNominations = await db
-        .collection<HouseLeadershipNomination>("houseLeadershipNominations")
+      houseNominations = await houseLeadershipNominationsCollection(db)
         .find({ role: { $in: activeHouseRoles }, status: { $in: ["open", "voting"] } })
         .toArray();
     }
 
     // Get active Senate leadership elections (US only)
     const senateLeadershipElections = isUS
-      ? await db
-          .collection<SenateLeadershipElection>("senateLeadershipElections")
-          .find({ status: "voting" })
-          .toArray()
+      ? await senateLeadershipElectionsCollection(db).find({ status: "voting" }).toArray()
       : [];
 
     // Get Senate leadership nominations
@@ -288,8 +285,7 @@ export async function handleWhippableLeadership(request: Request, { params }: Ro
       .map((e) => e._id);
     let senateNominations: SenateLeadershipNomination[] = [];
     if (activeSenateRoles.length > 0) {
-      senateNominations = await db
-        .collection<SenateLeadershipNomination>("senateLeadershipNominations")
+      senateNominations = await senateLeadershipNominationsCollection(db)
         .find({ role: { $in: activeSenateRoles }, status: { $in: ["open", "voting"] } })
         .toArray();
     }
@@ -408,8 +404,7 @@ export async function handleWhippableLeadership(request: Request, { params }: Ro
     // Add open presidential impeachments, on whichever chamber is sitting at the
     // case's current stage. Governor cases are tried by a state legislature and
     // belong to the state party's panel, so they are excluded here.
-    const openImpeachments = await db
-      .collection<Impeachment>("impeachments")
+    const openImpeachments = await impeachmentsCollection(db)
       .find({ countryId, stage: { $in: ["house", "senate"] }, targetOffice: { $ne: "governor" } })
       .toArray();
 

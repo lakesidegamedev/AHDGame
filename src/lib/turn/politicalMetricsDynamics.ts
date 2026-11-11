@@ -70,6 +70,8 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
 import { politicalMetricsCollection } from "@/lib/db/repositories/politicalMetrics";
+import { politicalMetricsHistoryCollection } from "@/lib/db/repositories/politicalMetricsHistory";
+import { politicalMetricsRegionHistoryCollection } from "@/lib/db/repositories/politicalMetricsRegionHistory";
 
 // Defined in politicalMetrics/historyCadence so a client component can read the
 // cadence without importing this module (and with it the whole turn engine).
@@ -469,7 +471,7 @@ export async function processPoliticalMetricsDynamics(
         const populationByRegion = new Map(states.map((s) => [s._id, s.population ?? 0]));
         const values = aggregateNationalPoliticalMetrics(docs, populationByRegion);
         const now = new Date();
-        await db.collection<PoliticalMetricsHistoryDoc>("politicalMetricsHistory").updateOne(
+        await politicalMetricsHistoryCollection(db).updateOne(
           { _id: countryId },
           {
             $push: {
@@ -507,9 +509,7 @@ export async function processPoliticalMetricsDynamics(
             },
           }));
         if (regionHistoryOps.length > 0) {
-          await db
-            .collection<PoliticalMetricsRegionHistoryDoc>("politicalMetricsRegionHistory")
-            .bulkWrite(regionHistoryOps);
+          await politicalMetricsRegionHistoryCollection(db).bulkWrite(regionHistoryOps);
         }
       }
     })

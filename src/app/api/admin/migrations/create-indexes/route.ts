@@ -10,6 +10,7 @@ import type { CreateIndexesOptions, IndexSpecification } from "mongodb";
 import { ALL_WRITE_GUARD_INDEXES } from "@/lib/admin/seed/indexes/writeGuardSpecs";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import type { Document } from "mongodb";
+import { migrationsCollection } from "@/lib/db/repositories/migrations";
 
 const MIGRATION_ID = "create-indexes-v3";
 
@@ -117,9 +118,7 @@ export async function POST() {
     const db = await getDb();
 
     // Idempotent guard
-    const existing = await db
-      .collection<MigrationRecord>("migrations")
-      .findOne({ _id: MIGRATION_ID });
+    const existing = await migrationsCollection<MigrationRecord>(db).findOne({ _id: MIGRATION_ID });
 
     if (existing) {
       return errorResponse(400, "Migration already completed", {
@@ -190,7 +189,7 @@ export async function POST() {
       });
     }
 
-    await db.collection<MigrationRecord>("migrations").insertOne({
+    await migrationsCollection<MigrationRecord>(db).insertOne({
       _id: MIGRATION_ID,
       completedAt: new Date(),
       result,

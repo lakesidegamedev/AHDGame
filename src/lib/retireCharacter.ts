@@ -71,6 +71,7 @@ import { statePartyVotesCollection } from "@/lib/db/repositories/statePartyVotes
 import { nationalPartyVotesCollection } from "@/lib/db/repositories/nationalPartyVotes";
 import { nationalCommitteeVotesCollection } from "@/lib/db/repositories/nationalCommitteeVotes";
 import { scotusNominationsCollection } from "@/lib/db/repositories/scotusNominations";
+import { fomcNominationsCollection } from "@/lib/db/repositories/fomcNominations";
 
 /**
  * Core retirement function: snapshots a character, cleans up all gameplay
@@ -463,7 +464,7 @@ export async function retireCharacter(
   await Promise.all([
     cabinetNominationsCollection<Document>(db).updateMany(openNomination, withdrawNomination),
     scotusNominationsCollection<Document>(db).updateMany(openNomination, withdrawNomination),
-    db.collection<Document>("fomcNominations").updateMany(openNomination, withdrawNomination),
+    fomcNominationsCollection<Document>(db).updateMany(openNomination, withdrawNomination),
   ]);
 
   await congressLeadersCollection<Document>(db).deleteMany({ characterId });

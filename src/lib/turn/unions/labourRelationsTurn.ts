@@ -21,6 +21,8 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { unionsCollection } from "@/lib/db/repositories/unions";
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { bargainingCampaignsCollection } from "@/lib/db/repositories/bargainingCampaigns";
+import { collectiveAgreementsCollection } from "@/lib/db/repositories/collectiveAgreements";
 
 export interface LabourRelationsTurnResult {
   campaignsMovedToDispute: number;
@@ -47,7 +49,7 @@ export async function processLabourRelationsTurn(
 ): Promise<LabourRelationsTurnResult> {
   const now = new Date();
   const [campaigns, agreements, mediations] = await Promise.all([
-    db.collection<BargainingCampaign>("bargainingCampaigns").updateMany(
+    bargainingCampaignsCollection(db).updateMany(
       { status: "negotiating", deadlineTurn: { $lte: currentTurn } },
       {
         $set: {
@@ -57,13 +59,11 @@ export async function processLabourRelationsTurn(
         },
       }
     ),
-    db
-      .collection<CollectiveAgreement>("collectiveAgreements")
-      .updateMany(
-        { status: "active", expiresAtTurn: { $lte: currentTurn } },
-        { $set: { status: "expired", updatedAt: now } }
-      ),
-    db.collection<BargainingCampaign>("bargainingCampaigns").updateMany(
+    collectiveAgreementsCollection(db).updateMany(
+      { status: "active", expiresAtTurn: { $lte: currentTurn } },
+      { $set: { status: "expired", updatedAt: now } }
+    ),
+    bargainingCampaignsCollection(db).updateMany(
       {
         status: "dispute",
         "mediation.status": "pending",
@@ -204,7 +204,7 @@ async function lapseStaleDisputes(
   currentTurn: number,
   now: Date
 ): Promise<{ count: number; campaigns: LapsedCampaign[] }> {
-  const collection = db.collection<BargainingCampaign>("bargainingCampaigns");
+  const collection = bargainingCampaignsCollection(db);
   const stale = await collection
     .find(
       { status: "dispute" },
@@ -294,8 +294,7 @@ async function refreshOpenCampaigns(
     overtimeBansEnded: 0,
     endedBans: [],
   };
-  const campaigns = await db
-    .collection<BargainingCampaign>("bargainingCampaigns")
+  const campaigns = await bargainingCampaignsCollection(db)
     .find({ status: { $in: ["negotiating", "dispute"] } })
     .toArray();
   if (campaigns.length === 0) return counters;
@@ -397,9 +396,7 @@ async function refreshOpenCampaigns(
   }
 
   if (campaignOps.length > 0) {
-    const result = await db
-      .collection<BargainingCampaign>("bargainingCampaigns")
-      .bulkWrite(campaignOps);
+    const result = await bargainingCampaignsCollection(db).bulkWrite(campaignOps);
     counters.mandatesRefreshed = result.modifiedCount;
   }
 

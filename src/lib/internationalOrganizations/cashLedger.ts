@@ -23,6 +23,8 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { organizationFundsCollection } from "@/lib/db/repositories/organizationFunds";
+import { customInternationalOrganizationsCollection } from "@/lib/db/repositories/customInternationalOrganizations";
 
 export interface OrganizationCashContext {
   turn: number;
@@ -235,14 +237,10 @@ export async function loadOrganizationCashContext(
       federalBudgetCollection<{ countryId: string; currencyCode?: CurrencyCode }>(db)
         .find({}, { projection: { countryId: 1, currencyCode: 1 } })
         .toArray(),
-      db
-        .collection<{ organizationId: string; currencyCountryId?: CountryId }>("organizationFunds")
+      organizationFundsCollection<{ organizationId: string; currencyCountryId?: CountryId }>(db)
         .find({}, { projection: { organizationId: 1, currencyCountryId: 1 } })
         .toArray(),
-      db
-        .collection<{ id: string; foundingMembers?: CountryId[] }>(
-          "customInternationalOrganizations"
-        )
+      customInternationalOrganizationsCollection<{ id: string; foundingMembers?: CountryId[] }>(db)
         .find({}, { projection: { id: 1, foundingMembers: 1 } })
         .toArray(),
     ]);

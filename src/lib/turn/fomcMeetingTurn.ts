@@ -33,6 +33,7 @@ import { getCharactersCollection } from "@/lib/db/collections/characters";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { fomcNominationsCollection } from "@/lib/db/repositories/fomcNominations";
 
 function finiteOr(value: unknown, fallback: number): number {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
@@ -419,8 +420,7 @@ export async function processFomcMeetings(
     const macro = await loadMacroContext(db, bank, countryId, currentYear);
     let hasActiveNomination = false;
     if (board.some((s) => s.occupantType === "vacant")) {
-      const activeNominations = await db
-        .collection<FomcNomination>("fomcNominations")
+      const activeNominations = await fomcNominationsCollection(db)
         .find({ bankId: bank._id, status: "active" })
         .project<{ _id: ObjectId }>({ _id: 1 })
         .toArray();

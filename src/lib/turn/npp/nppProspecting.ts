@@ -30,6 +30,7 @@ import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSecto
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
+import { prospectingSurveysCollection } from "@/lib/db/repositories/prospectingSurveys";
 
 /** Price ratio at or above this: the resource is short enough to survey. */
 export const NPP_PROSPECT_SHORTAGE_RATIO = 1.15;
@@ -153,10 +154,11 @@ export async function processNppProspecting(db: Db, turn: number, now: Date): Pr
     }
   }
 
-  const surveys = await db
-    .collection<{ stateId: string; resource: ExtractableResource; status: string }>(
-      "prospectingSurveys"
-    )
+  const surveys = await prospectingSurveysCollection<{
+    stateId: string;
+    resource: ExtractableResource;
+    status: string;
+  }>(db)
     .find({ status: "succeeded" }, { projection: { stateId: 1, resource: 1 } })
     .toArray();
   const successCounts = new Map<string, number>();

@@ -44,6 +44,7 @@ import {
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { unionsCollection } from "@/lib/db/repositories/unions";
+import { collectiveAgreementsCollection } from "@/lib/db/repositories/collectiveAgreements";
 
 export { PENSION_SCHEMES };
 
@@ -147,8 +148,7 @@ export async function runPensionTurn(db: Db, currentTurn: number): Promise<Pensi
   // a fallen one off entirely.
   await refreshSchemeInvestedValues(db);
 
-  const agreements = await db
-    .collection<CollectiveAgreement>("collectiveAgreements")
+  const agreements = await collectiveAgreementsCollection(db)
     .find({
       ...activeCollectiveAgreementFilter(currentTurn),
       pensionContributionRate: { $gt: 0 },

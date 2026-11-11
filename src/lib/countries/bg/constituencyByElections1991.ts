@@ -51,6 +51,7 @@ import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameSt
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 import { notificationsCollection } from "@/lib/db/repositories/notifications";
 import { stateRegistrationPoolCollection } from "@/lib/db/repositories/stateRegistrationPool";
+import { bgFoundingAssemblyOfficeArchivesCollection } from "@/lib/db/repositories/bgFoundingAssemblyOfficeArchives";
 
 export const BG_GRAND_BY_ELECTIONS_COLLECTION = "bgGrandConstituencyByElections";
 export interface BgGrandByElectionRecord {
@@ -885,18 +886,18 @@ export async function resolveBgGrandConstituencyByElections(
       await cancelJobs(db, session, cancelledJobs, turn, now);
       const stubs = officials.filter((row) => additions.some((added) => added._id.equals(row._id)));
       if (stubs.length) {
-        await db
-          .collection<{ _id: string; official: ElectedOfficial; turn: number }>(
-            "bgFoundingAssemblyOfficeArchives"
-          )
-          .insertMany(
-            stubs.map((official) => ({
-              _id: `${current.parent!._id}:partial:${turn}:${official._id}:departed`,
-              official,
-              turn,
-            })),
-            { session }
-          );
+        await bgFoundingAssemblyOfficeArchivesCollection<{
+          _id: string;
+          official: ElectedOfficial;
+          turn: number;
+        }>(db).insertMany(
+          stubs.map((official) => ({
+            _id: `${current.parent!._id}:partial:${turn}:${official._id}:departed`,
+            official,
+            turn,
+          })),
+          { session }
+        );
         await electedOfficialsCollection(db).deleteMany(
           { _id: { $in: stubs.map((row) => row._id) } },
           { session }

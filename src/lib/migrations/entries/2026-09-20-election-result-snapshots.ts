@@ -12,6 +12,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 import type { Document } from "mongodb";
+import { electionResultSnapshotsCollection } from "@/lib/db/repositories/electionResultSnapshots";
 
 const ENDED = ["completed", "resolved"] as const;
 
@@ -46,7 +47,7 @@ export const migration: Migration = {
     "Create electionResultSnapshots indexes and backfill a frozen result for every ended race.",
   idempotent: true,
   async execute(db: Db, ctx) {
-    const snapshots = db.collection<ElectionResultSnapshot>("electionResultSnapshots");
+    const snapshots = electionResultSnapshotsCollection(db);
 
     // Indexes FIRST, and before any write. The unique electionId index is what
     // makes the capture at resolution idempotent, and building it ahead of the

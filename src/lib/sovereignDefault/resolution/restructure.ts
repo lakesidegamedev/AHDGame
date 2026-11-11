@@ -34,6 +34,7 @@ import {
 } from "../constants";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { sovereignCrisisDecisionsCollection } from "@/lib/db/repositories/sovereignCrisisDecisions";
 
 export interface RestructureResolutionInput {
   countryCode: CountryId;
@@ -164,9 +165,10 @@ export async function applyRestructureResolution(
       resolvedAt: new Date(realtimeMs),
       resolvedReason: "Sovereign debt restructured (phase 6 auto-ratify)",
     };
-    await db
-      .collection<SovereignCrisisDecision>("sovereignCrisisDecisions")
-      .updateOne({ _id: decisionId }, { $set: decisionUpdate });
+    await sovereignCrisisDecisionsCollection(db).updateOne(
+      { _id: decisionId },
+      { $set: decisionUpdate }
+    );
   }
 
   await emitRestructuredNews(countryCode, currentTurn, RESTRUCTURE_HAIRCUT, bondsAffected);
@@ -174,9 +176,7 @@ export async function applyRestructureResolution(
   await emitMassCascadeAlert(db, countryCode, cascadeResult.totalCorpsInsolvent, currentTurn);
 
   // Phase 11b: executive personal political impact.
-  const decision = await db
-    .collection<SovereignCrisisDecision>("sovereignCrisisDecisions")
-    .findOne({ _id: decisionId });
+  const decision = await sovereignCrisisDecisionsCollection(db).findOne({ _id: decisionId });
   await applyExecutivePoliticalImpact(db, decision?.proposingCharacterId ?? null, "restructure");
 
   // Phase 11b: civil-unrest event (1 for restructure path).

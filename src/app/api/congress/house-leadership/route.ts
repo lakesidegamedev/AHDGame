@@ -58,6 +58,10 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { influenceHistoryCollection } from "@/lib/db/repositories/influenceHistory";
 import type { Document } from "mongodb";
+import { speakerNominationsCollection } from "@/lib/db/repositories/speakerNominations";
+import { houseLeadershipNominationsCollection } from "@/lib/db/repositories/houseLeadershipNominations";
+import { senateLeadershipNominationsCollection } from "@/lib/db/repositories/senateLeadershipNominations";
+import { houseLeadershipElectionsCollection } from "@/lib/db/repositories/houseLeadershipElections";
 
 const ROLE_TO_LABEL: Record<HouseLeadershipElectionRole, string> = {
   majority_leader: "Majority Leader",
@@ -213,16 +217,14 @@ export async function POST(request: Request) {
     if (action === "reset_election") {
       if (!authUser.isAdmin) return errorResponse(403, "Admin only");
       const now = new Date();
-      await db
-        .collection<HouseLeadershipNomination>("houseLeadershipNominations")
-        .updateMany(
-          { role, status: { $in: ["open", "voting"] } },
-          { $set: { status: "failed", updatedAt: now } }
-        );
+      await houseLeadershipNominationsCollection(db).updateMany(
+        { role, status: { $in: ["open", "voting"] } },
+        { $set: { status: "failed", updatedAt: now } }
+      );
       // Drop both window anchors along with the status. A reset doc that kept a
       // stale `endsOnTurn` would make the NEXT election look closed the instant
       // it opened, which is the bug the shared opener exists to prevent.
-      await db.collection<HouseLeadershipElection>("houseLeadershipElections").updateOne(
+      await houseLeadershipElectionsCollection(db).updateOne(
         { _id: role },
         {
           $set: { status: "closed", updatedAt: now },
@@ -262,9 +264,7 @@ export async function POST(request: Request) {
     const myParty = character.party ?? "";
     const isEligibleParty = isPartyEligible(policy, myParty, chamberCtx);
 
-    const election = await db
-      .collection<HouseLeadershipElection>("houseLeadershipElections")
-      .findOne({ _id: role });
+    const election = await houseLeadershipElectionsCollection(db).findOne({ _id: role });
     const gameTimeForVoting = await getGameTime();
     const isVoting =
       election?.status === "voting" &&
@@ -279,18 +279,16 @@ export async function POST(request: Request) {
       if (!isEligibleParty) {
         return errorResponse(403, `Only ${electorateLabel} may run.`);
       }
-      const existing = await db
-        .collection<HouseLeadershipNomination>("houseLeadershipNominations")
-        .findOne({
-          nomineeId: character._id,
-          status: { $in: ["open", "voting"] },
-        });
+      const existing = await houseLeadershipNominationsCollection(db).findOne({
+        nomineeId: character._id,
+        status: { $in: ["open", "voting"] },
+      });
       if (existing)
         return errorResponse(
           409,
           "You already have an active candidacy for a House leadership role."
         );
-      const hasSpeaker = await db.collection<SpeakerNomination>("speakerNominations").findOne({
+      const hasSpeaker = await speakerNominationsCollection(db).findOne({
         nomineeId: character._id,
         status: { $in: ["open", "voting"] },
       });
@@ -299,12 +297,10 @@ export async function POST(request: Request) {
           409,
           "You can only run for one leadership position at a time. Withdraw from Speaker first."
         );
-      const hasSenate = await db
-        .collection<SenateLeadershipNomination>("senateLeadershipNominations")
-        .findOne({
-          nomineeId: character._id,
-          status: { $in: ["open", "voting"] },
-        });
+      const hasSenate = await senateLeadershipNominationsCollection(db).findOne({
+        nomineeId: character._id,
+        status: { $in: ["open", "voting"] },
+      });
       if (hasSenate)
         return errorResponse(
           409,
@@ -313,7 +309,7 @@ export async function POST(request: Request) {
       const now = new Date();
       const nomineeState = myOfficial.state ?? character.homeState ?? undefined;
       const insertedId = new ObjectId();
-      await db.collection<HouseLeadershipNomination>("houseLeadershipNominations").insertOne({
+      await houseLeadershipNominationsCollection(db).insertOne({
         _id: insertedId,
         role,
         nomineeId: character._id,
@@ -348,13 +344,11 @@ export async function POST(request: Request) {
 
     if (action === "withdraw") {
       if (!isVoting) return errorResponse(409, "No active election.");
-      const cand = await db
-        .collection<HouseLeadershipNomination>("houseLeadershipNominations")
-        .findOne({
-          role,
-          nomineeId: character._id,
-          status: { $in: ["open", "voting"] },
-        });
+      const cand = await houseLeadershipNominationsCollection(db).findOne({
+        role,
+        nomineeId: character._id,
+        status: { $in: ["open", "voting"] },
+      });
       if (!cand) return errorResponse(404, "No active candidacy to withdraw.");
 
       // Check if user has enough NPI
@@ -377,9 +371,10 @@ export async function POST(request: Request) {
         createdAt: now,
       });
 
-      await db
-        .collection<HouseLeadershipNomination>("houseLeadershipNominations")
-        .updateOne({ _id: cand._id }, { $set: { status: "failed", updatedAt: now } });
+      await houseLeadershipNominationsCollection(db).updateOne(
+        { _id: cand._id },
+        { $set: { status: "failed", updatedAt: now } }
+      );
       return NextResponse.json({ message: "Candidacy withdrawn. 3 NPI deducted." });
     }
 
@@ -392,13 +387,11 @@ export async function POST(request: Request) {
       if (!nomId) return errorResponse(400, "nominationId required");
       const nominationOid = parseObjectId(nomId);
       if (!nominationOid) return errorResponse(400, "Invalid nomination ID");
-      const nomination = await db
-        .collection<HouseLeadershipNomination>("houseLeadershipNominations")
-        .findOne({
-          _id: nominationOid,
-          role,
-          status: { $in: ["open", "voting"] },
-        });
+      const nomination = await houseLeadershipNominationsCollection(db).findOne({
+        _id: nominationOid,
+        role,
+        status: { $in: ["open", "voting"] },
+      });
       if (!nomination) return errorResponse(404, "Candidacy not found or not active.");
 
       const now = new Date();

@@ -16,6 +16,8 @@ import { opposedBelligerents } from "@/lib/military/occupation";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
 import { militaryUnitsCollection } from "@/lib/db/repositories/militaryUnits";
+import { countryAlignmentsCollection } from "@/lib/db/repositories/countryAlignments";
+import { sphereMembershipsCollection } from "@/lib/db/repositories/sphereMemberships";
 
 type WarEntryOrganization = Pick<
   InternationalOrganizationDef,
@@ -177,8 +179,8 @@ export async function assessWarEntryPoliticalPressure(params: {
 }): Promise<WarEntryPoliticalPressure> {
   const { db, countryId, organizationId, organization, stake, currentTurn } = params;
   const [alignment, sphere, approval, budget, units] = await Promise.all([
-    db.collection<CountryAlignment>("countryAlignments").findOne({ entityId: countryId }),
-    db.collection<PersistedSphereMembership>("sphereMemberships").findOne({ entityId: countryId }),
+    countryAlignmentsCollection(db).findOne({ entityId: countryId }),
+    sphereMembershipsCollection<PersistedSphereMembership>(db).findOne({ entityId: countryId }),
     governmentApprovalsCollection(db).findOne({ _id: countryId }),
     federalBudgetCollection<{ countryId: CountryId; debtToGdpRatio?: number }>(db).findOne({
       countryId,

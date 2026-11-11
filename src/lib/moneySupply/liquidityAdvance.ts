@@ -26,6 +26,7 @@ import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { monetaryOperationCommandsCollection } from "@/lib/db/repositories/monetaryOperationCommands";
 
 const COLLECTION = "bankLiquidityOperations";
 export class LiquidityAdvanceRejected extends Error {}
@@ -84,9 +85,10 @@ export async function executeLiquidityAdvance(
   )
     throw new LiquidityAdvanceRejected("Valid operation ID and positive whole amount required");
   if (
-    await db
-      .collection<{ _id: string }>("monetaryOperationCommands")
-      .findOne({ _id: input.operationId }, { projection: { _id: 1 } })
+    await monetaryOperationCommandsCollection<{ _id: string }>(db).findOne(
+      { _id: input.operationId },
+      { projection: { _id: 1 } }
+    )
   )
     throw new LiquidityAdvanceRejected("Operation ID already belongs to another monetary command");
   const receipts = db.collection<Receipt>(COLLECTION);

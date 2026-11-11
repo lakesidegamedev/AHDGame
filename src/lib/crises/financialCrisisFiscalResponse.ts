@@ -18,6 +18,8 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
+import { sovereignCrisisDecisionsCollection } from "@/lib/db/repositories/sovereignCrisisDecisions";
+import { financialCrisisFiscalActionsCollection } from "@/lib/db/repositories/financialCrisisFiscalActions";
 
 export type FinancialFiscalResponse =
   "stimulus" | "austerity" | "restructure" | "sovereign_support";
@@ -38,9 +40,10 @@ export async function prepareFinancialFiscalResponse(
   )
     return;
   if (response === "restructure") {
-    const decision = await db
-      .collection<SovereignCrisisDecision>("sovereignCrisisDecisions")
-      .findOne({ countryCode: countryId, state: "open" });
+    const decision = await sovereignCrisisDecisionsCollection(db).findOne({
+      countryCode: countryId,
+      state: "open",
+    });
     if (!decision)
       throw badRequest(
         "Restructuring requires an open sovereign funding crisis and parliamentary ratification."
@@ -78,9 +81,7 @@ export async function applyFinancialFiscalResponse(
   response: FinancialFiscalResponse
 ): Promise<void> {
   const key = [ctx.crisis._id, ctx.interaction._id, ctx.countryId, response].join(":");
-  if (
-    await ctx.db.collection<{ _id: string }>("financialCrisisFiscalActions").findOne({ _id: key })
-  )
+  if (await financialCrisisFiscalActionsCollection<{ _id: string }>(ctx.db).findOne({ _id: key }))
     return;
   if (await bankMoneyMovesCollection<{ _id: string }>(ctx.db).findOne({ _id: key }))
     throw new Error("Fiscal intervention is pending settlement recovery");
@@ -96,7 +97,7 @@ export async function applyFinancialFiscalResponse(
     const config = office ? getOfficeTypeConfig(ctx.countryId as CountryId, office) : undefined;
     if (actor?.countryId !== ctx.countryId || !config?.isExecutive || config.isSubNational)
       throw badRequest("Only the national executive can propose sovereign restructuring.");
-    const decisions = ctx.db.collection<SovereignCrisisDecision>("sovereignCrisisDecisions");
+    const decisions = sovereignCrisisDecisionsCollection(ctx.db);
     const now = Date.now();
     const phases = buildInitialLegislativePhases(ctx.countryId as CountryId, now, ctx.currentTurn);
     const existing = await decisions.findOne({ financialCrisisActionId: key });
@@ -122,7 +123,7 @@ export async function applyFinancialFiscalResponse(
       { countryId: ctx.countryId as CountryId, sovereignCrisisState: "crisisPending" },
       { $set: { sovereignCrisisState: "crisisResolving" } }
     );
-    await ctx.db.collection<{ _id: string }>("financialCrisisFiscalActions").insertOne({
+    await financialCrisisFiscalActionsCollection<{ _id: string }>(ctx.db).insertOne({
       _id: key,
       response,
       countryId: ctx.countryId,

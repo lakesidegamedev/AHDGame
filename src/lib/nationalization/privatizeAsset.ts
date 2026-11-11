@@ -45,6 +45,7 @@ import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { nationalizationAuctionsCollection } from "@/lib/db/repositories/nationalizationAuctions";
 
 export interface CarveSelection {
   sectorId: ObjectId;
@@ -418,7 +419,7 @@ export async function privatizeAsset(
   if (isAuction) {
     auctionId = new ObjectId();
     const reservePrice = Math.round(params.reservePrice ?? valuationLocal);
-    await db.collection<NationalizationAuction>("nationalizationAuctions").insertOne({
+    await nationalizationAuctionsCollection(db).insertOne({
       _id: auctionId,
       corporationId: newCorpId,
       countryId: params.countryId,

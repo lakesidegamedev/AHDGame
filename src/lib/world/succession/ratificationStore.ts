@@ -8,6 +8,7 @@ import {
   type SuccessionConsent,
 } from "./rules/decision";
 import { billsCollection } from "@/lib/db/repositories/bills";
+import { federationPoliticalProposalsCollection } from "@/lib/db/repositories/federationPoliticalProposals";
 
 export const FEDERATION_RATIFICATIONS_COLLECTION = "federationRatifications";
 
@@ -44,9 +45,9 @@ export async function loadPersistedFederationApproval(input: {
     !approval.settlementId.trim()
   )
     throw new Error("Federation ratification has invalid settlement terms");
-  const proposal = await db
-    .collection<FederationPoliticalProposalRecord>("federationPoliticalProposals")
-    .findOne({ _id: `1991-default:${approval.settlementId}:${approval.revision}` }, { session });
+  const proposal = await federationPoliticalProposalsCollection<FederationPoliticalProposalRecord>(
+    db
+  ).findOne({ _id: `1991-default:${approval.settlementId}:${approval.revision}` }, { session });
   if (
     !proposal ||
     proposal.status !== "open" ||

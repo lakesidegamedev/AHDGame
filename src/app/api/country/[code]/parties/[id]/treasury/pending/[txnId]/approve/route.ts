@@ -27,6 +27,7 @@ import {
 import type { PendingTreasuryTransaction, State } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { pendingTreasuryTransactionsCollection } from "@/lib/db/repositories/pendingTreasuryTransactions";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; txnId: string }>;
@@ -79,9 +80,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
     await vacateBannedOfficerSeats(db, party);
     if (!party) return errorResponse(404, "Party not found");
 
-    const pending = await db
-      .collection<PendingTreasuryTransaction>("pendingTreasuryTransactions")
-      .findOne({ _id: txnOid });
+    const pending = await pendingTreasuryTransactionsCollection(db).findOne({ _id: txnOid });
     if (!pending) {
       return errorResponse(404, "Pending transaction not found");
     }
@@ -123,25 +122,23 @@ export async function POST(_request: Request, { params }: RouteParams) {
 
     // ─── Fill the matching slot atomically ───────────────────────────────
     const now = new Date();
-    const claim = await db
-      .collection<PendingTreasuryTransaction>("pendingTreasuryTransactions")
-      .updateOne(
-        // Guard: status still open, slot still empty. If another approver
-        // beat us here (or a cancel landed), the update is a no-op.
-        //
-        // Slot "empty" means either the field is missing OR explicitly null.
-        // Legacy rows written before the conditional-spread fix in
-        // createPendingTransaction stored `treasurerApproval: undefined`,
-        // which the mongodb driver serializes as BSON null
-        // (ignoreUndefined defaults to false). Accept both shapes so
-        // those rows remain approvable without a migration.
-        {
-          _id: txnOid,
-          status: "open",
-          $or: [{ [slotField]: { $exists: false } }, { [slotField]: null }],
-        },
-        { $set: { [slotField]: { characterId, approvedAt: now } } }
-      );
+    const claim = await pendingTreasuryTransactionsCollection(db).updateOne(
+      // Guard: status still open, slot still empty. If another approver
+      // beat us here (or a cancel landed), the update is a no-op.
+      //
+      // Slot "empty" means either the field is missing OR explicitly null.
+      // Legacy rows written before the conditional-spread fix in
+      // createPendingTransaction stored `treasurerApproval: undefined`,
+      // which the mongodb driver serializes as BSON null
+      // (ignoreUndefined defaults to false). Accept both shapes so
+      // those rows remain approvable without a migration.
+      {
+        _id: txnOid,
+        status: "open",
+        $or: [{ [slotField]: { $exists: false } }, { [slotField]: null }],
+      },
+      { $set: { [slotField]: { characterId, approvedAt: now } } }
+    );
     if (claim.matchedCount === 0) {
       return errorResponse(409, "Transaction is no longer available to approve.");
     }
@@ -158,7 +155,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
      * corrupted row.
      */
     const releaseClaimedSlot = async (): Promise<void> => {
-      await db.collection<PendingTreasuryTransaction>("pendingTreasuryTransactions").updateOne(
+      await pendingTreasuryTransactionsCollection(db).updateOne(
         // Guarded on "executing", the state this request put the row
         // into. A row that is no longer executing is not ours to
         // reopen.
@@ -173,9 +170,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
 
     // Re-fetch and check completion (mode-aware: request+single may
     // complete on a single slot fill; send/transfer always require both).
-    const ready = await db
-      .collection<PendingTreasuryTransaction>("pendingTreasuryTransactions")
-      .findOne({ _id: txnOid });
+    const ready = await pendingTreasuryTransactionsCollection(db).findOne({ _id: txnOid });
     if (!ready || ready.status !== "open") {
       return errorResponse(409, "Transaction state changed unexpectedly.");
     }
@@ -225,12 +220,10 @@ export async function POST(_request: Request, { params }: RouteParams) {
     // slot guard, and both then re-read a row that is complete — so
     // before this, both went on to execute and the treasury paid twice.
     // The `status: "open"` guard makes exactly one of them the winner.
-    const executionClaim = await db
-      .collection<PendingTreasuryTransaction>("pendingTreasuryTransactions")
-      .updateOne(
-        { _id: txnOid, status: "open" },
-        { $set: { status: "executing", executingAt: now } }
-      );
+    const executionClaim = await pendingTreasuryTransactionsCollection(db).updateOne(
+      { _id: txnOid, status: "open" },
+      { $set: { status: "executing", executingAt: now } }
+    );
     if (executionClaim.matchedCount === 0) {
       // Our signature is a real one either way, so it stays put —
       // releasing here would pull a signature out from under a transfer
@@ -244,9 +237,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
       // the states that mean no payout is coming. Anything else is
       // either the winner at work or a transient read, and the approval
       // was genuinely recorded, so there is nothing to alarm about.
-      const current = await db
-        .collection<PendingTreasuryTransaction>("pendingTreasuryTransactions")
-        .findOne({ _id: txnOid });
+      const current = await pendingTreasuryTransactionsCollection(db).findOne({ _id: txnOid });
       if (current?.status === "cancelled" || current?.status === "expired") {
         return errorResponse(400, `Transaction is ${current.status}, not open.`);
       }
@@ -339,7 +330,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
     // The money has moved. If this stamp fails the row stays
     // "executing" — never back to "open", which would leave a free slot
     // one Approve click away from spending the same funds again.
-    await db.collection<PendingTreasuryTransaction>("pendingTreasuryTransactions").updateOne(
+    await pendingTreasuryTransactionsCollection(db).updateOne(
       { _id: txnOid, status: "executing" },
       {
         $set: { status: "approved", resolvedAt: now, resolvedAtTurn: currentTurn },

@@ -28,6 +28,13 @@ import type { Document } from "mongodb";
 import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
 import { ukCabinetCooldownsCollection } from "@/lib/db/repositories/ukCabinetCooldowns";
 import { speakerElectionsCollection } from "@/lib/db/repositories/speakerElections";
+import { speakerNominationsCollection } from "@/lib/db/repositories/speakerNominations";
+import { houseLeadershipNominationsCollection } from "@/lib/db/repositories/houseLeadershipNominations";
+import { senateLeadershipNominationsCollection } from "@/lib/db/repositories/senateLeadershipNominations";
+import { houseLeadershipElectionsCollection } from "@/lib/db/repositories/houseLeadershipElections";
+import { senateLeadershipElectionsCollection } from "@/lib/db/repositories/senateLeadershipElections";
+import { noConfidenceVotesCollection } from "@/lib/db/repositories/noConfidenceVotes";
+import { confidenceVotesCollection } from "@/lib/db/repositories/confidenceVotes";
 
 const ELECTION_TYPES = [
   "speaker",
@@ -75,10 +82,7 @@ async function getSpeakerElections(db: Awaited<ReturnType<typeof getDb>>) {
   const election = await speakerElectionsCollection(db).findOne({ _id: "current" });
   if (!election) return { elections: [] };
 
-  const nominations = await db
-    .collection<SpeakerNomination>("speakerNominations")
-    .find({})
-    .toArray();
+  const nominations = await speakerNominationsCollection(db).find({}).toArray();
 
   return {
     elections: [
@@ -103,15 +107,9 @@ async function getSpeakerElections(db: Awaited<ReturnType<typeof getDb>>) {
 }
 
 async function getHouseLeadershipElections(db: Awaited<ReturnType<typeof getDb>>) {
-  const elections = await db
-    .collection<HouseLeadershipElection>("houseLeadershipElections")
-    .find({})
-    .toArray();
+  const elections = await houseLeadershipElectionsCollection(db).find({}).toArray();
 
-  const nominations = await db
-    .collection<HouseLeadershipNomination>("houseLeadershipNominations")
-    .find({})
-    .toArray();
+  const nominations = await houseLeadershipNominationsCollection(db).find({}).toArray();
 
   const nomsByRole = new Map<string, HouseLeadershipNomination[]>();
   for (const n of nominations) {
@@ -141,15 +139,9 @@ async function getHouseLeadershipElections(db: Awaited<ReturnType<typeof getDb>>
 }
 
 async function getSenateLeadershipElections(db: Awaited<ReturnType<typeof getDb>>) {
-  const elections = await db
-    .collection<SenateLeadershipElection>("senateLeadershipElections")
-    .find({})
-    .toArray();
+  const elections = await senateLeadershipElectionsCollection(db).find({}).toArray();
 
-  const nominations = await db
-    .collection<SenateLeadershipNomination>("senateLeadershipNominations")
-    .find({})
-    .toArray();
+  const nominations = await senateLeadershipNominationsCollection(db).find({}).toArray();
 
   const nomsByRole = new Map<string, SenateLeadershipNomination[]>();
   for (const n of nominations) {
@@ -179,8 +171,7 @@ async function getSenateLeadershipElections(db: Awaited<ReturnType<typeof getDb>
 }
 
 async function getConfidenceVotes(db: Awaited<ReturnType<typeof getDb>>) {
-  const votes = await db
-    .collection<ConfidenceVote>("confidenceVotes")
+  const votes = await confidenceVotesCollection(db)
     .find({ countryId: "UK" as const })
     .sort({ openedAt: -1 })
     .toArray();
@@ -213,8 +204,7 @@ async function getConfidenceVotes(db: Awaited<ReturnType<typeof getDb>>) {
 }
 
 async function getNoConfidenceVotes(db: Awaited<ReturnType<typeof getDb>>) {
-  const votes = await db
-    .collection<NoConfidenceVote>("noConfidenceVotes")
+  const votes = await noConfidenceVotesCollection<NoConfidenceVote>(db)
     .find({})
     .sort({ openedAt: -1 })
     .toArray();

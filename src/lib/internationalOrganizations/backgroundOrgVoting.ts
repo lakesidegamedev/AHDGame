@@ -45,6 +45,7 @@ import {
   type BackgroundVoterProfile,
 } from "@/lib/internationalOrganizations/rules/backgroundOrgVote";
 import type { OrganizationResolutionType } from "@/lib/db/types/internationalOrganization";
+import { countryAlignmentsCollection } from "@/lib/db/repositories/countryAlignments";
 
 const RESOLUTION_KINDS: OrganizationResolutionType[] = [
   "free_trade_agreement",
@@ -246,8 +247,7 @@ export async function castBackgroundOrgVotes(
         }
       )
       .toArray(),
-    db
-      .collection<CountryAlignment>("countryAlignments")
+    countryAlignmentsCollection(db)
       .find(
         { entityId: { $in: [...related] as CountryAlignment["entityId"][] } },
         { projection: { entityId: 1, shares: 1, nonAligned: 1 } }

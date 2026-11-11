@@ -15,6 +15,7 @@ import { governsAffectedState, leverInActorJurisdiction } from "./jurisdiction";
 import { resolveLeverRoles } from "./roles";
 import { crisesCollection } from "@/lib/db/repositories/crises";
 import { crisisInteractionsCollection } from "@/lib/db/repositories/crisisInteractions";
+import { crisisLeverUsesCollection } from "@/lib/db/repositories/crisisLeverUses";
 
 /** Size bounds for an aid pledge, as shares of the sender's GDP. */
 export interface AidPledgeRange {
@@ -171,8 +172,7 @@ export async function getAvailableLevers(
   const corpCountries = new Set<string>(corps.map((corp) => corp.countryId));
 
   const holder = actor._id.toString();
-  const pulls = await db
-    .collection<CrisisLeverUse>("crisisLeverUses")
+  const pulls = await crisisLeverUsesCollection(db)
     .find(
       { crisisId: { $in: crises.map((c) => c._id) }, holderId: holder },
       { projection: { crisisId: 1, leverId: 1, submittedTurn: 1 } }

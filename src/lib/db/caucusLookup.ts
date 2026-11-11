@@ -2,6 +2,8 @@ import type { Db } from "mongodb";
 import type { Caucus, CaucusMembership, CaucusPolicyPosition } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { caucusesCollection } from "@/lib/db/repositories/caucuses";
+import { caucusMembershipsCollection } from "@/lib/db/repositories/caucusMemberships";
+import { caucusPolicyPositionsCollection } from "@/lib/db/repositories/caucusPolicyPositions";
 
 /**
  * Normalise a chair-authored caucus name into a URL slug. Lowercased, ASCII
@@ -110,8 +112,7 @@ export async function listCaucusPositions(
   db: Db,
   caucusId: import("mongodb").ObjectId
 ): Promise<CaucusPolicyPosition[]> {
-  return db
-    .collection<CaucusPolicyPosition>("caucusPolicyPositions")
+  return caucusPolicyPositionsCollection(db)
     .find({ caucusId })
     .sort({ sortOrder: 1, createdAt: 1 })
     .toArray();
@@ -125,11 +126,7 @@ export async function listCaucusMemberships(
 ): Promise<CaucusMembership[]> {
   const query: Record<string, unknown> = { caucusId, status: "active" };
   if (memberType) query.memberType = memberType;
-  return db
-    .collection<CaucusMembership>("caucusMemberships")
-    .find(query)
-    .sort({ joinedAt: 1 })
-    .toArray();
+  return caucusMembershipsCollection(db).find(query).sort({ joinedAt: 1 }).toArray();
 }
 
 /** Count active memberships for a caucus, split by member type. */
@@ -137,8 +134,7 @@ export async function countCaucusMembers(
   db: Db,
   caucusId: import("mongodb").ObjectId
 ): Promise<{ players: number; npps: number; total: number }> {
-  const rows = await db
-    .collection<CaucusMembership>("caucusMemberships")
+  const rows = await caucusMembershipsCollection(db)
     .aggregate<{ _id: "character" | "npp"; count: number }>([
       { $match: { caucusId, status: "active" } },
       { $group: { _id: "$memberType", count: { $sum: 1 } } },

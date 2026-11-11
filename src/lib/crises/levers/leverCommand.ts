@@ -27,6 +27,7 @@ import { crisisCountryIds, governsAffectedState, leverInActorJurisdiction } from
 import { resolveLeverRoles, type LeverActor } from "./roles";
 import { crisesCollection } from "@/lib/db/repositories/crises";
 import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
+import { crisisLeverUsesCollection } from "@/lib/db/repositories/crisisLeverUses";
 
 const COMPONENT = "crisisLeverCommand";
 
@@ -118,8 +119,7 @@ export async function lastPulledTurn(
   leverId: string,
   holderId: string
 ): Promise<number | undefined> {
-  const row = await db
-    .collection<CrisisLeverUse>("crisisLeverUses")
+  const row = await crisisLeverUsesCollection(db)
     .find({ crisisId, leverId, holderId }, { projection: { submittedTurn: 1 } })
     .sort({ submittedTurn: -1 })
     .limit(1)
@@ -329,7 +329,7 @@ export async function commitLeverUse(
     createdAt: new Date(),
   };
 
-  const uses = db.collection<CrisisLeverUse>("crisisLeverUses");
+  const uses = crisisLeverUsesCollection(db);
   try {
     await uses.insertOne(row);
   } catch (error) {

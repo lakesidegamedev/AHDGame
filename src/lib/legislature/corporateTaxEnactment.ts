@@ -13,6 +13,7 @@ import type { ResetLawEnactmentReceipt } from "@/lib/resetLegislation/program";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { resetLawEnactmentReceiptsCollection } from "@/lib/db/repositories/resetLawEnactmentReceipts";
 
 export interface CorporateTaxVoteInput {
   billId: string;
@@ -33,9 +34,7 @@ export async function applyCorporateTaxBillChange(
 ): Promise<void> {
   const receiptId = `${input.billId}:corporate-tax:${input.legislationTypeId}`;
   await withSessionDb(db, async (transactionDb) => {
-    const receipts = transactionDb.collection<ResetLawEnactmentReceipt>(
-      "resetLawEnactmentReceipts"
-    );
+    const receipts = resetLawEnactmentReceiptsCollection<ResetLawEnactmentReceipt>(transactionDb);
     if (await receipts.findOne({ _id: receiptId })) return;
     const budget =
       input.scope === "federal"

@@ -22,6 +22,7 @@ import { buildInitialLegislativePhases } from "@/lib/sovereignDefault/legislativ
 import { MONETIZE_GATE_INFLATION } from "@/lib/sovereignDefault/constants";
 import type { SovereignCrisisDecision } from "@/lib/db/types/sovereignCrisisDecision";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { sovereignCrisisDecisionsCollection } from "@/lib/db/repositories/sovereignCrisisDecisions";
 
 const VALID_CHOICES = ["bailout", "repudiate", "restructure", "monetize"] as const;
 
@@ -62,8 +63,7 @@ export async function POST(req: Request, { params }: RouteParams) {
   }
 
   const db = await getDb();
-  const decisions = await db
-    .collection<SovereignCrisisDecision>("sovereignCrisisDecisions")
+  const decisions = await sovereignCrisisDecisionsCollection(db)
     .find({ countryCode: upper, state: "open" })
     .sort({ firedAtTurn: -1 })
     .limit(1)
@@ -99,7 +99,7 @@ export async function POST(req: Request, { params }: RouteParams) {
   // already-proposed decision back through the route. The second writer
   // matches no document (state has moved to "executiveProposed") and we
   // return 409 instead of silently overwriting `executiveChoice`.
-  const result = await db.collection<SovereignCrisisDecision>("sovereignCrisisDecisions").updateOne(
+  const result = await sovereignCrisisDecisionsCollection(db).updateOne(
     { _id: decisions[0]._id, state: "open" },
     {
       $set: {

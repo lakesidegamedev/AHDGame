@@ -15,6 +15,8 @@ import { serializeBillDiscussion } from "./dto/discussionView";
 import type { BillDiscussionScope, BillDiscussionView } from "./types";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { billDiscussionsCollection } from "@/lib/db/repositories/billDiscussions";
+import { billDiscussionReactionsCollection } from "@/lib/db/repositories/billDiscussionReactions";
 
 interface CreateInput {
   scope: BillDiscussionScope;
@@ -78,7 +80,7 @@ export async function createBillDiscussion(
     reactions: { agree: 0, disagree: 0 },
     createdAt: new Date(),
   };
-  await db.collection<BillDiscussion>("billDiscussions").insertOne(doc);
+  await billDiscussionsCollection(db).insertOne(doc);
 
   const borders = await fetchBordersByUserIds(db, [doc.authorUserId]);
   const border = borders.get(doc.authorUserId.toString());
@@ -103,8 +105,8 @@ export async function reactToBillDiscussion(
   if (!ObjectId.isValid(discussionId)) throw badRequest("Invalid discussion ID");
   const did = new ObjectId(discussionId);
   const uid = new ObjectId(userId);
-  const posts = db.collection<BillDiscussion>("billDiscussions");
-  const reactions = db.collection<BillDiscussionReaction>("billDiscussionReactions");
+  const posts = billDiscussionsCollection(db);
+  const reactions = billDiscussionReactionsCollection(db);
 
   const post = await posts.findOne({ _id: did });
   if (!post) throw notFound("Discussion not found");
@@ -147,7 +149,7 @@ export async function hideBillDiscussion(
   { discussionId, adminUserId }: HideInput
 ): Promise<{ hidden: true }> {
   if (!ObjectId.isValid(discussionId)) throw badRequest("Invalid discussion ID");
-  const res = await db.collection<BillDiscussion>("billDiscussions").updateOne(
+  const res = await billDiscussionsCollection(db).updateOne(
     { _id: new ObjectId(discussionId) },
     {
       $set: {

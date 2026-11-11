@@ -86,6 +86,7 @@ import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
 import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
 import { demographicDefaultsCollection } from "@/lib/db/repositories/demographicDefaults";
+import { characterStateOrgCollection } from "@/lib/db/repositories/characterStateOrg";
 
 const MS_PER_HOUR = 3_600_000;
 
@@ -416,8 +417,7 @@ export async function runPrimaryStaggerWaveIfDue(
     .filter((c) => !c.isNPP && c.characterId)
     .map((c) => c.characterId);
   const stateOrgRows = characterIdsForStateOrg.length
-    ? await db
-        .collection<CharacterStateOrg>("characterStateOrg")
+    ? await characterStateOrgCollection(db)
         .find({
           characterId: { $in: characterIdsForStateOrg },
           stateId: { $in: waveStates },

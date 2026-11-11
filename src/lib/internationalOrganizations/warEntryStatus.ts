@@ -7,6 +7,7 @@ import type { OrganizationSummary } from "@/lib/internationalOrganizations/servi
 import { classifyWarEntry, hostSideOf, type WarEntryStake } from "@/lib/military/warEntryPolicy";
 import { billsCollection } from "@/lib/db/repositories/bills";
 import { conflictsCollection } from "@/lib/db/repositories/conflicts";
+import { organizationLegislationCollection } from "@/lib/db/repositories/organizationLegislation";
 
 export interface MemberWarEntryStatus {
   countryId: string;
@@ -60,8 +61,7 @@ export async function loadBlocWarEntryStatusByDisplayOrg(
   const displayOrgs = organizations.filter((org) => militaryOrgIdForDisplay(org) !== null);
   if (displayOrgs.length === 0) return new Map();
   const militaryOrgIds = [...new Set(displayOrgs.map((org) => militaryOrgIdForDisplay(org)!))];
-  const resolutions = await db
-    .collection<OrganizationLegislation>("organizationLegislation")
+  const resolutions = await organizationLegislationCollection(db)
     .find({
       organizationId: { $in: militaryOrgIds },
       type: "join_conflict",

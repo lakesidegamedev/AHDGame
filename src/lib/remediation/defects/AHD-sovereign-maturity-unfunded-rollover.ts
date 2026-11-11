@@ -66,6 +66,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { bondMarketPoolsCollection } from "@/lib/db/repositories/bondMarketPools";
 
 export const DEFECT_ID = "AHD-sovereign-maturity-unfunded-rollover";
 const MARKER_PATH = `remediation.${DEFECT_ID}`;
@@ -196,8 +197,7 @@ export async function surveyOverdueSovereignBonds(db: Db): Promise<Payload> {
         { projection: { _id: 1, countryId: 1, treasuryCashLocal: 1, bankSovereignClaims: 1 } }
       )
       .toArray(),
-    db
-      .collection<BondMarketPool>("bondMarketPools")
+    bondMarketPoolsCollection(db)
       .find({ _id: { $in: currencies } } as never, {
         projection: { _id: 1, cashLocal: 1, appetiteByCountry: 1 },
       })

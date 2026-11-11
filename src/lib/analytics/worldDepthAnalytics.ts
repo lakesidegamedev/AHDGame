@@ -24,6 +24,7 @@ import { shareTradeHistoryCollection } from "@/lib/db/repositories/shareTradeHis
 import { partyHistoryCollection } from "@/lib/db/repositories/partyHistory";
 import { battleReportsCollection } from "@/lib/db/repositories/battleReports";
 import { marketCapHistoryCollection } from "@/lib/db/repositories/marketCapHistory";
+import { partyMembershipEventsCollection } from "@/lib/db/repositories/partyMembershipEvents";
 
 type Properties = Record<string, string | number | boolean>;
 const finite = (value: number | undefined) => (Number.isFinite(value) ? value! : 0);
@@ -110,8 +111,7 @@ export async function captureWorldDepthPosthog(input: {
           }
         )
         .toArray(),
-      db
-        .collection<PartyMembershipEvent>("partyMembershipEvents")
+      partyMembershipEventsCollection(db)
         .find(membershipFilter, {
           projection: {
             turn: 1,

@@ -16,6 +16,7 @@ import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { pendingNationalizationsCollection } from "@/lib/db/repositories/pendingNationalizations";
 
 const CURABLE: ReadonlySet<NationalizationTrigger> = new Set(["strategic", "monopoly"]);
 
@@ -43,8 +44,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const treasuryReserve = fb?.treasuryBalance ?? -(fb?.debt?.principal ?? 0);
     const currencyCode = COUNTRY_CURRENCY_MAP[countryId] ?? "USD";
 
-    const rows = await db
-      .collection<PendingNationalization>("pendingNationalizations")
+    const rows = await pendingNationalizationsCollection(db)
       .find({ countryId, status: "pending" })
       .toArray();
 

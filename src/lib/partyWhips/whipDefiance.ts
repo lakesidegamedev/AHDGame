@@ -34,6 +34,9 @@ import { billsCollection } from "@/lib/db/repositories/bills";
 import { cabinetNominationsCollection } from "@/lib/db/repositories/cabinetNominations";
 import { billWhipsCollection } from "@/lib/db/repositories/billWhips";
 import { scotusNominationsCollection } from "@/lib/db/repositories/scotusNominations";
+import { caucusMembershipsCollection } from "@/lib/db/repositories/caucusMemberships";
+import { impeachmentsCollection } from "@/lib/db/repositories/impeachments";
+import { speakerVacateMotionsCollection } from "@/lib/db/repositories/speakerVacateMotions";
 
 export interface WhipDefianceScope {
   countryId: CountryId;
@@ -255,9 +258,10 @@ function loadScotusTarget(
 }
 
 async function loadVacateTarget(db: Db, whip: BillWhip): Promise<TargetContext | null> {
-  const motion = await db
-    .collection<SpeakerVacateMotion>("speakerVacateMotions")
-    .findOne({ _id: "current", status: "voting" });
+  const motion = await speakerVacateMotionsCollection(db).findOne({
+    _id: "current",
+    status: "voting",
+  });
   // Only whips issued during THIS motion describe the ballots on it; the
   // singleton "current" id is reused, so an older whip must not be scored
   // against a fresh motion's votes.
@@ -278,9 +282,10 @@ async function loadVacateTarget(db: Db, whip: BillWhip): Promise<TargetContext |
 
 async function loadImpeachmentTarget(db: Db, whip: BillWhip): Promise<TargetContext | null> {
   if (!(whip.targetId instanceof ObjectId)) return null;
-  const impeachment = await db
-    .collection<Impeachment>("impeachments")
-    .findOne({ _id: whip.targetId, stage: { $in: ["house", "senate"] } });
+  const impeachment = await impeachmentsCollection(db).findOne({
+    _id: whip.targetId,
+    stage: { $in: ["house", "senate"] },
+  });
   if (!impeachment) return null;
 
   // Read the map for the stage the whip was issued against. A whip from the
@@ -596,8 +601,7 @@ async function buildWhipDefianceSnapshotsForScopes(
           caucusIds.some((id) => id.toString() === membership.caucusId.toString())
       )
     : caucusIds.length && membershipClauses.length
-      ? await db
-          .collection<CaucusMembership>("caucusMemberships")
+      ? await caucusMembershipsCollection(db)
           .find({ caucusId: { $in: caucusIds }, status: "active", $or: membershipClauses })
           .toArray()
       : [];

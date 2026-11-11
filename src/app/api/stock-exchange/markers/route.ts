@@ -12,6 +12,7 @@ import { conditionalJson } from "@/lib/api/conditionalJson";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { shareTradeHistoryCollection } from "@/lib/db/repositories/shareTradeHistory";
 import { marketCapHistoryCollection } from "@/lib/db/repositories/marketCapHistory";
+import { wireEventsCollection } from "@/lib/db/repositories/wireEvents";
 
 const SPLIT_KINDS: ShareTradeKind[] = ["stock_split", "reverse_split"];
 const WIRE_TYPES: WireEvent["type"][] = [
@@ -118,8 +119,7 @@ export async function GET(request: Request) {
       if (bounds.length > 0) {
         const minDate = bounds[0].createdAt;
         const maxDate = bounds[bounds.length - 1].createdAt;
-        const wireRows = await db
-          .collection<WireEvent>("wireEvents")
+        const wireRows = await wireEventsCollection<WireEvent>(db)
           .find({ type: { $in: WIRE_TYPES }, timestamp: { $gte: minDate, $lte: maxDate } })
           .sort({ timestamp: 1 })
           .limit(MARKER_LIMIT)

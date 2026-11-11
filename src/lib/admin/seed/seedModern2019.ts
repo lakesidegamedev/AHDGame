@@ -26,6 +26,7 @@ import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemograp
 import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
 import type { Document } from "mongodb";
 import { stateBaselinesCollection } from "@/lib/db/repositories/stateBaselines";
+import { stateMetricsCollection } from "@/lib/db/repositories/stateMetrics";
 
 const COUNTRY_IDS = [
   "RU",
@@ -61,9 +62,7 @@ export async function seedModern2019(
       await stateDemographicTurnoutCollection<Document>(db).deleteMany({ countryId });
       await statePartyOrgCollection(db).deleteMany({ countryId });
       await macroMetricsCollection(db).deleteMany({ _id: { $in: regions.map((r) => r._id) } });
-      await db
-        .collection<StateMetrics>("stateMetrics")
-        .deleteMany({ _id: { $in: regions.map((r) => r._id) } });
+      await stateMetricsCollection(db).deleteMany({ _id: { $in: regions.map((r) => r._id) } });
       await stateBaselinesCollection(db).deleteMany({
         _id: { $in: regions.map((r) => String(r._id)) },
       });

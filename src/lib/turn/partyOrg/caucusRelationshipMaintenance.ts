@@ -7,6 +7,8 @@ import {
 } from "@/lib/constants/partyOrg";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { caucusesCollection } from "@/lib/db/repositories/caucuses";
+import { caucusMembershipsCollection } from "@/lib/db/repositories/caucusMemberships";
+import { nppRelationshipsCollection } from "@/lib/db/repositories/nppRelationships";
 
 interface CaucusRelationshipMaintenanceResult {
   relationshipsDecayed: number;
@@ -38,8 +40,8 @@ export async function processCaucusRelationshipMaintenance(
   gameNow: Date
 ): Promise<CaucusRelationshipMaintenanceResult> {
   const db = await getDb();
-  const relationshipsCol = db.collection<NPPRelationship>("nppRelationships");
-  const membershipsCol = db.collection<CaucusMembership>("caucusMemberships");
+  const relationshipsCol = nppRelationshipsCollection(db);
+  const membershipsCol = caucusMembershipsCollection(db);
   const caucusesCol = caucusesCollection(db);
   const nppsCol = nppsCollection(db);
 

@@ -36,6 +36,8 @@ import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficia
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
+import { russianAssemblySeatingsCollection } from "@/lib/db/repositories/russianAssemblySeatings";
+import { russianAssemblyOfficeArchivesCollection } from "@/lib/db/repositories/russianAssemblyOfficeArchives";
 
 const RUSSIAN_COUNCIL_COMPOSITION_SEATINGS_COLLECTION = "russianCouncilCompositionSeatings";
 export interface RussianCouncilCompositionSeating {
@@ -229,8 +231,7 @@ export async function materializeRussianCouncilCompositionSeating(input: {
     }
   else {
     const first = (
-      await db
-        .collection<RussianAssemblySeatingRecord>("russianAssemblySeatings")
+      await russianAssemblySeatingsCollection<RussianAssemblySeatingRecord>(db)
         .find(
           {
             countryId: "RU",
@@ -277,7 +278,7 @@ export async function materializeRussianCouncilCompositionSeating(input: {
         )
       );
   if (retiring.length) {
-    await db.collection<RussianAssemblyOfficeArchive>("russianAssemblyOfficeArchives").insertMany(
+    await russianAssemblyOfficeArchivesCollection<RussianAssemblyOfficeArchive>(db).insertMany(
       retiring.map((official) => ({
         _id: `${receiptId}:${official._id.toHexString()}`,
         preset: "1991-default",

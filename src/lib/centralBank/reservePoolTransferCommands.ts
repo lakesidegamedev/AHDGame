@@ -22,6 +22,7 @@ import {
 } from "./reservePoolTransfer";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { actionAuditLogCollection } from "@/lib/db/repositories/actionAuditLog";
 
 const COLLECTION = "reservePoolTransferCommands";
 export class ReservePoolTransferRejected extends Error {}
@@ -248,7 +249,7 @@ async function publishAudit(db: Db, receipt: Receipt): Promise<void> {
     ...(receipt.error ? { reason: receipt.error } : {}),
   };
   try {
-    const audits = db.collection<ActionAuditRecord>("actionAuditLog");
+    const audits = actionAuditLogCollection(db);
     const inserted = await audits.updateOne(
       { _id: record._id },
       { $setOnInsert: record },

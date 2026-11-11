@@ -2,6 +2,7 @@ import type { Db } from "mongodb";
 import type { GameState } from "@/lib/db/types";
 import { gameIterationId } from "./gameEventEnvelope";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { analyticsRecordsCollection } from "@/lib/db/repositories/analyticsRecords";
 
 interface ActivationRecord {
   _id: string;
@@ -21,7 +22,7 @@ export async function rememberCharacterActivation(
   try {
     const state = await gameStateCollection(db).findOne({}, { projection: { iteration: 1 } });
     const id = `character-activation:${gameIterationId(state?.iteration)}:${characterId}`;
-    await db.collection<ActivationRecord>("analyticsRecords").updateOne(
+    await analyticsRecordsCollection<ActivationRecord>(db).updateOne(
       { _id: id },
       {
         $setOnInsert: {
@@ -48,13 +49,11 @@ export async function claimCharacterActivation(db: Db, characterId: string) {
       }
     );
     const iterationId = gameIterationId(state?.iteration);
-    const anchor = await db
-      .collection<ActivationRecord>("analyticsRecords")
-      .findOneAndUpdate(
-        { _id: `character-activation:${iterationId}:${characterId}`, claimed: { $ne: true } },
-        { $set: { claimed: true } },
-        { returnDocument: "before" }
-      );
+    const anchor = await analyticsRecordsCollection<ActivationRecord>(db).findOneAndUpdate(
+      { _id: `character-activation:${iterationId}:${characterId}`, claimed: { $ne: true } },
+      { $set: { claimed: true } },
+      { returnDocument: "before" }
+    );
     if (!anchor) return null;
     return {
       iteration_id: iterationId,

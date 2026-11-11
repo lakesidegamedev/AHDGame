@@ -16,6 +16,9 @@ import {
 } from "@/lib/patreon/service";
 import { servicesConfig } from "@/lib/config/services";
 import { usersCollection } from "@/lib/db/repositories/users";
+import { cronLocksCollection } from "@/lib/db/repositories/cronLocks";
+import { patreonReconcileUnmatchedCollection } from "@/lib/db/repositories/patreonReconcileUnmatched";
+import { patreonReconcileRunsCollection } from "@/lib/db/repositories/patreonReconcileRuns";
 
 interface GrantEntry {
   username: string;
@@ -315,7 +318,7 @@ function isDuplicateKeyError(error: unknown): boolean {
 
 async function acquireApplyLock(db: Db, owner: string, now: Date): Promise<void> {
   try {
-    const result = await db.collection<PatreonReconcileCronLock>("cronLocks").updateOne(
+    const result = await cronLocksCollection<PatreonReconcileCronLock>(db).updateOne(
       {
         _id: RECONCILE_LOCK_ID,
         $or: [{ leaseUntil: { $lte: now } }, { owner }],
@@ -334,23 +337,19 @@ async function acquireApplyLock(db: Db, owner: string, now: Date): Promise<void>
 }
 
 async function releaseApplyLock(db: Db, owner: string): Promise<void> {
-  await db
-    .collection<PatreonReconcileCronLock>("cronLocks")
-    .updateOne(
-      { _id: RECONCILE_LOCK_ID, owner },
-      { $set: { leaseUntil: new Date(0) }, $unset: { owner: "" } }
-    );
+  await cronLocksCollection<PatreonReconcileCronLock>(db).updateOne(
+    { _id: RECONCILE_LOCK_ID, owner },
+    { $set: { leaseUntil: new Date(0) }, $unset: { owner: "" } }
+  );
 }
 
 /** Extend the lease only while this run still owns an unexpired lock. */
 async function renewApplyLock(db: Db, owner: string): Promise<void> {
   const now = new Date();
-  const result = await db
-    .collection<PatreonReconcileCronLock>("cronLocks")
-    .updateOne(
-      { _id: RECONCILE_LOCK_ID, owner, leaseUntil: { $gt: now } },
-      { $set: { leaseUntil: new Date(now.getTime() + RECONCILE_LOCK_MS) } }
-    );
+  const result = await cronLocksCollection<PatreonReconcileCronLock>(db).updateOne(
+    { _id: RECONCILE_LOCK_ID, owner, leaseUntil: { $gt: now } },
+    { $set: { leaseUntil: new Date(now.getTime() + RECONCILE_LOCK_MS) } }
+  );
   if (result.matchedCount !== 1) throw new PatreonReconcileLockLostError();
 }
 
@@ -360,7 +359,7 @@ async function persistUnmatchedAudit(
   runId: string,
   now: Date
 ): Promise<void> {
-  const collection = db.collection<UnmatchedAudit>("patreonReconcileUnmatched");
+  const collection = patreonReconcileUnmatchedCollection<UnmatchedAudit>(db);
   for (const kind of ["active_patron", "ahd_supporter"] as const) {
     const currentIds = keys
       .filter((key) => key.kind === kind)
@@ -397,7 +396,7 @@ async function persistUnmatchedAudit(
 export async function runPatreonReconcile(db: Db, apply: boolean): Promise<ReconcileResult> {
   const runId = randomUUID();
   const startedAt = new Date();
-  const audits = db.collection<ReconcileRunAudit>("patreonReconcileRuns");
+  const audits = patreonReconcileRunsCollection<ReconcileRunAudit>(db);
   await audits.insertOne({
     _id: runId,
     startedAt,

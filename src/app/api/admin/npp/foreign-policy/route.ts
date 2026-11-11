@@ -16,6 +16,8 @@ import {
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { tradeFlowSnapshotsCollection } from "@/lib/db/repositories/tradeFlowSnapshots";
 import { conflictsCollection } from "@/lib/db/repositories/conflicts";
+import { tradeEmbargoesCollection } from "@/lib/db/repositories/tradeEmbargoes";
+import { nppForeignPolicyDecisionsCollection } from "@/lib/db/repositories/nppForeignPolicyDecisions";
 
 const LEDGER_WINDOW_TURNS = 120;
 const LEDGER_DOCUMENT_LIMIT = 5_000;
@@ -33,13 +35,12 @@ export const GET = withAdminRoute(async (_auth) => {
   const fromTurn = Math.max(0, currentTurn - LEDGER_WINDOW_TURNS + 1);
 
   const [decisions, embargoes, tradeSnapshots, activeConflictCount] = await Promise.all([
-    db
-      .collection<ForeignPolicyLedgerDecision>("nppForeignPolicyDecisions")
+    nppForeignPolicyDecisionsCollection<ForeignPolicyLedgerDecision>(db)
       .find({ turn: { $gte: fromTurn } })
       .sort({ turn: -1, countryId: 1 })
       .limit(LEDGER_DOCUMENT_LIMIT)
       .toArray(),
-    db.collection<TradeEmbargo>("tradeEmbargoes").find({}).toArray(),
+    tradeEmbargoesCollection(db).find({}).toArray(),
     tradeFlowSnapshotsCollection(db).find({}).sort({ turn: -1 }).limit(2).toArray(),
     conflictsCollection(db).countDocuments({
       status: { $in: ["active", "escalating", "winding_down"] },

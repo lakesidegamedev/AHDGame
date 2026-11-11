@@ -26,6 +26,7 @@ import { nationalizeSectorWide } from "./nationalizeSectorWide";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { countryLeaderStatesCollection } from "@/lib/db/repositories/countryLeaderStates";
+import { pendingNationalizationsCollection } from "@/lib/db/repositories/pendingNationalizations";
 
 export async function applyNationalizeProvision(
   db: Db,
@@ -118,7 +119,7 @@ export async function applyNationalizeProvision(
   if (targetCorp.userId != null) {
     const noticeTurns = computeNoticeTurns(triggers);
     if (noticeTurns > 0) {
-      await db.collection<PendingNationalization>("pendingNationalizations").insertOne({
+      await pendingNationalizationsCollection(db).insertOne({
         _id: new ObjectId(),
         countryId,
         ...(provision.targetSectorId

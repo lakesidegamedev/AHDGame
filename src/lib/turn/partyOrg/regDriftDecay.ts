@@ -42,6 +42,8 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { stateRegistrationPoolCollection } from "@/lib/db/repositories/stateRegistrationPool";
+import { stateApprovalHistoryCollection } from "@/lib/db/repositories/stateApprovalHistory";
+import { orgRegLedgerCollection } from "@/lib/db/repositories/orgRegLedger";
 
 // Re-exported so existing importers (and tests) keep their entry point while
 // the implementation lives in the DB-free `surplusSourcing` module.
@@ -682,8 +684,7 @@ export async function processRegDriftDecay(
     }
   }
 
-  const approvalRows = await db
-    .collection<StateApprovalHistory>("stateApprovalHistory")
+  const approvalRows = await stateApprovalHistoryCollection(db)
     .find(
       { countryId: { $in: countryIds } },
       { projection: { countryId: 1, stateId: 1, approvalRating: 1 } }
@@ -768,7 +769,7 @@ export async function processRegDriftDecay(
     await stateRegistrationPoolCollection(db).bulkWrite(poolOps);
   }
   if (ledgerRows.length > 0) {
-    await db.collection<OrgRegLedger>("orgRegLedger").insertMany(ledgerRows);
+    await orgRegLedgerCollection(db).insertMany(ledgerRows);
     result.ledgerRowsWritten += ledgerRows.length;
   }
 

@@ -22,6 +22,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { notificationsCollection } from "@/lib/db/repositories/notifications";
 import { shareListingsCollection } from "@/lib/db/repositories/shareListings";
+import { shareOffersCollection } from "@/lib/db/repositories/shareOffers";
 
 /**
  * Expire share listings whose expiresAt has passed:
@@ -96,19 +97,16 @@ export async function expireShareListings(db: Db, now: Date, currentTurn: number
 
   // Snapshot candidates, then claim each pending offer individually. An offer
   // accepted or cancelled after the read cannot be overwritten or refunded.
-  const pendingOfferCandidates = await db
-    .collection<ShareOffer>("shareOffers")
+  const pendingOfferCandidates = await shareOffersCollection(db)
     .find({ listingId: { $in: listingIds }, status: "pending" })
     .toArray();
   const pendingOffers: ShareOffer[] = [];
   for (const offer of pendingOfferCandidates) {
-    const claimed = await db
-      .collection<ShareOffer>("shareOffers")
-      .findOneAndUpdate(
-        { _id: offer._id, listingId: offer.listingId, status: "pending" },
-        { $set: { status: "expired" } },
-        { returnDocument: "before" }
-      );
+    const claimed = await shareOffersCollection(db).findOneAndUpdate(
+      { _id: offer._id, listingId: offer.listingId, status: "pending" },
+      { $set: { status: "expired" } },
+      { returnDocument: "before" }
+    );
     if (claimed) pendingOffers.push(claimed);
   }
 

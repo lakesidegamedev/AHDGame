@@ -3,6 +3,7 @@ import { getDb } from "@/lib/mongodb";
 import { handleRouteError } from "@/lib/api/errors";
 import { checkWikiDisabled } from "@/lib/api/wikiGuard";
 import type { WikiTemplate } from "@/lib/db/types";
+import { wikiTemplatesCollection } from "@/lib/db/repositories/wikiTemplates";
 
 // GET /api/wiki/templates — Returns all available wiki page templates.
 // Auth: public; blocked when wiki is disabled
@@ -12,8 +13,7 @@ export async function GET() {
     const blocked = await checkWikiDisabled();
     if (blocked) return blocked;
     const db = await getDb();
-    const templates = await db
-      .collection<WikiTemplate>("wikiTemplates")
+    const templates = await wikiTemplatesCollection(db)
       .find({})
       .sort({ name: 1 })
       .limit(200)

@@ -15,6 +15,7 @@ import type { CongressionalDistrict, DistrictSquares, RedistrictLedgerEntry } fr
 import type { CountryId } from "@/lib/constants/countries";
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
 import { congressionalDistrictsCollection } from "@/lib/db/repositories/congressionalDistricts";
+import { redistrictLedgerCollection } from "@/lib/db/repositories/redistrictLedger";
 
 const BodySchema = z.object({
   districts: z
@@ -134,7 +135,7 @@ export async function POST(
         }
       );
     }
-    await db.collection<RedistrictLedgerEntry>("redistrictLedger").insertOne({
+    await redistrictLedgerCollection(db).insertOne({
       _id: new ObjectId(),
       countryId: countryId as CountryId,
       stateId,

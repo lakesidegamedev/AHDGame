@@ -1,6 +1,7 @@
 import type { Db, ObjectId } from "mongodb";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import type { Document } from "mongodb";
+import { ukCommonsVacanciesCollection } from "@/lib/db/repositories/ukCommonsVacancies";
 
 /**
  * Office types elected as multi-seat party blocs: one `electedOfficials` row
@@ -44,8 +45,7 @@ export async function releaseVacatedBlocSeats(
   now: Date
 ): Promise<number> {
   if (rowIds.length === 0) return 0;
-  const anchored = await db
-    .collection<{ officialId?: ObjectId }>("ukCommonsVacancies")
+  const anchored = await ukCommonsVacanciesCollection<{ officialId?: ObjectId }>(db)
     .find({ officialId: { $in: [...rowIds] } }, { projection: { officialId: 1 } })
     .toArray();
   const anchoredIds = new Set(anchored.map((doc) => String(doc.officialId)));

@@ -8,6 +8,9 @@ import { getWorldEntityPresetManifest } from "@/lib/world/worldEntityManifest";
 import type { FederationLegacyServiceTurn } from "./legacyServiceTurn";
 import type { FederationContinuingServiceTurn } from "./continuingServiceTurn";
 import type { FederationSettlementApplicationRecord } from "./runtimeEntities";
+import { federationSettlementApplicationsCollection } from "@/lib/db/repositories/federationSettlementApplications";
+import { federationLegacyServiceTurnsCollection } from "@/lib/db/repositories/federationLegacyServiceTurns";
+import { federationContinuingServiceTurnsCollection } from "@/lib/db/repositories/federationContinuingServiceTurns";
 
 export interface LegacyServiceSnapshot {
   servicingKind?: "continuing-state";
@@ -26,13 +29,12 @@ export async function loadLegacyServiceSnapshots(
   preset: string
 ): Promise<LegacyServiceSnapshot[]> {
   if (preset !== "1991-default") return [];
-  const applications = await db
-    .collection<FederationSettlementApplicationRecord>("federationSettlementApplications")
-    .find({ presetId: preset, status: "applied" }, { projection: { _id: 1, sourceEntityId: 1 } })
-    .toArray();
+  const applications =
+    await federationSettlementApplicationsCollection<FederationSettlementApplicationRecord>(db)
+      .find({ presetId: preset, status: "applied" }, { projection: { _id: 1, sourceEntityId: 1 } })
+      .toArray();
   if (!applications.length) return [];
-  const latest = await db
-    .collection<FederationLegacyServiceTurn>("federationLegacyServiceTurns")
+  const latest = await federationLegacyServiceTurnsCollection<FederationLegacyServiceTurn>(db)
     .aggregate<{
       _id: string;
       turn: number;
@@ -61,32 +63,32 @@ export async function loadLegacyServiceSnapshots(
     getWorldEntityPresetManifest(preset).entries.map((entry) => [entry.entityId, entry.displayName])
   );
   const sources = new Map(applications.map((row) => [row._id, row.sourceEntityId]));
-  const continuing = await db
-    .collection<FederationContinuingServiceTurn>("federationContinuingServiceTurns")
-    .aggregate<{
-      _id: string;
-      turn: number;
-      creditorDueMinor: number;
-      issuerOwnShareMinor: number;
-      issuerCashAfterContributionsMinor: number;
-      contributions: Record<string, number>;
-      arrears: Record<string, number>;
-    }>([
-      { $match: { applicationId: { $in: applications.map((row) => row._id) } } },
-      { $sort: { applicationId: 1, turn: -1 } },
-      {
-        $group: {
-          _id: "$applicationId",
-          turn: { $first: "$turn" },
-          creditorDueMinor: { $first: "$creditorDueMinor" },
-          issuerOwnShareMinor: { $first: "$issuerOwnShareMinor" },
-          issuerCashAfterContributionsMinor: { $first: "$issuerCashAfterContributionsMinor" },
-          contributions: { $first: "$successorContributionsMinor" },
-          arrears: { $first: "$successorArrearsMinor" },
+  const continuing =
+    await federationContinuingServiceTurnsCollection<FederationContinuingServiceTurn>(db)
+      .aggregate<{
+        _id: string;
+        turn: number;
+        creditorDueMinor: number;
+        issuerOwnShareMinor: number;
+        issuerCashAfterContributionsMinor: number;
+        contributions: Record<string, number>;
+        arrears: Record<string, number>;
+      }>([
+        { $match: { applicationId: { $in: applications.map((row) => row._id) } } },
+        { $sort: { applicationId: 1, turn: -1 } },
+        {
+          $group: {
+            _id: "$applicationId",
+            turn: { $first: "$turn" },
+            creditorDueMinor: { $first: "$creditorDueMinor" },
+            issuerOwnShareMinor: { $first: "$issuerOwnShareMinor" },
+            issuerCashAfterContributionsMinor: { $first: "$issuerCashAfterContributionsMinor" },
+            contributions: { $first: "$successorContributionsMinor" },
+            arrears: { $first: "$successorArrearsMinor" },
+          },
         },
-      },
-    ])
-    .toArray();
+      ])
+      .toArray();
   return [
     ...latest.map((row) => ({ ...row, servicingKind: undefined, issuerOwnShareMinor: undefined })),
     ...continuing.map((row) => ({

@@ -8,6 +8,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { federationSettlementApplicationsCollection } from "@/lib/db/repositories/federationSettlementApplications";
 
 export interface CommandEconomyCountryReport {
   countryId: CountryId;
@@ -87,8 +88,7 @@ export async function verifyCommandEconomySeed(
   // state is seeded without state enterprises.
   const dissolved = new Set(
     (
-      await db
-        .collection<{ _id: string; sourceEntityId: string }>("federationSettlementApplications")
+      await federationSettlementApplicationsCollection<{ _id: string; sourceEntityId: string }>(db)
         .find({ presetId: preset, status: "applied" }, { projection: { sourceEntityId: 1 } })
         .toArray()
     ).map((row) => row.sourceEntityId)

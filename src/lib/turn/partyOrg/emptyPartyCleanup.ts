@@ -48,6 +48,9 @@ import { nationalCommitteeVotesCollection } from "@/lib/db/repositories/national
 import { nationalCommitteeElectionsCollection } from "@/lib/db/repositories/nationalCommitteeElections";
 import { slateCandidatesCollection } from "@/lib/db/repositories/slateCandidates";
 import { treasuryTransactionsCollection } from "@/lib/db/repositories/treasuryTransactions";
+import { caucusMembershipsCollection } from "@/lib/db/repositories/caucusMemberships";
+import { recruitmentSlatesCollection } from "@/lib/db/repositories/recruitmentSlates";
+import { caucusPolicyPositionsCollection } from "@/lib/db/repositories/caucusPolicyPositions";
 
 export interface EmptyPartyCleanupResult {
   deletedParties: string[];
@@ -341,17 +344,11 @@ export async function cleanupEmptyParties(): Promise<EmptyPartyCleanupResult> {
   // cleanup runs automatically during turns, so leaving these docs behind would
   // strand active caucus orders/treasury history with no live party surface.
   if (caucusIds.length > 0) {
-    await db
-      .collection<CaucusMembership>("caucusMemberships")
-      .deleteMany({ caucusId: { $in: caucusIds } });
-    await db
-      .collection<CaucusPolicyPosition>("caucusPolicyPositions")
-      .deleteMany({ caucusId: { $in: caucusIds } });
+    await caucusMembershipsCollection(db).deleteMany({ caucusId: { $in: caucusIds } });
+    await caucusPolicyPositionsCollection(db).deleteMany({ caucusId: { $in: caucusIds } });
   }
   if (partyCountryPairs.length > 0) {
-    await db
-      .collection<RecruitmentSlate>("recruitmentSlates")
-      .deleteMany({ $or: partyCountryPairs });
+    await recruitmentSlatesCollection(db).deleteMany({ $or: partyCountryPairs });
     await slateCandidatesCollection(db).deleteMany({ $or: partyCountryPairs });
     await treasuryTransactionsCollection(db).deleteMany({ $or: partyCountryPairs });
     await caucusesCollection(db).deleteMany({ $or: partyCountryPairs });

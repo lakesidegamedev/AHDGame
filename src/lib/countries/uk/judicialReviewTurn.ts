@@ -20,6 +20,7 @@ import {
 } from "@/lib/countries/uk/judicialReview/surpriseTemplates";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { ukJudicialReviewCasesCollection } from "@/lib/db/repositories/ukJudicialReviewCases";
 
 export interface UkJrSurpriseCaseRecord {
   _id: ObjectId;
@@ -89,8 +90,7 @@ export async function processUkJrSurpriseTurn(
 
   const usedKeys = new Set(
     (
-      await database
-        .collection<UkJrSurpriseCaseRecord>("ukJudicialReviewCases")
+      await ukJudicialReviewCasesCollection<UkJrSurpriseCaseRecord>(database)
         .find({ countryId: "UK" }, { projection: { templateKey: 1 } })
         .toArray()
     ).map((c) => c.templateKey)
@@ -134,7 +134,7 @@ export async function processUkJrSurpriseTurn(
   }
 
   const now = new Date();
-  await database.collection<UkJrSurpriseCaseRecord>("ukJudicialReviewCases").insertOne({
+  await ukJudicialReviewCasesCollection<UkJrSurpriseCaseRecord>(database).insertOne({
     _id: new ObjectId(),
     countryId: "UK",
     templateKey: template.templateKey,

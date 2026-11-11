@@ -20,6 +20,7 @@ import type { CountryModifier } from "@/lib/db/types/events";
 import type { GovernmentApproval } from "@/lib/db/types/governmentApproval";
 import type { StateApprovalHistory } from "@/lib/db/types/stateApproval";
 import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
+import { stateApprovalHistoryCollection } from "@/lib/db/repositories/stateApprovalHistory";
 
 /** Roles whose party carries the electoral credit or blame for how they acted. */
 const ELECTORAL_ROLES: ReadonlySet<CrisisRole> = new Set([
@@ -201,11 +202,7 @@ export async function settleCrisisConsequences(
     });
   }
   await writeReceipted(governmentApprovalsCollection(db), nationalOps, receipts);
-  await writeReceipted(
-    db.collection<StateApprovalHistory>("stateApprovalHistory"),
-    stateOps,
-    receipts
-  );
+  await writeReceipted(stateApprovalHistoryCollection(db), stateOps, receipts);
   result.approvalWrites = nationalOps.length + stateOps.length;
 
   const regionIds =

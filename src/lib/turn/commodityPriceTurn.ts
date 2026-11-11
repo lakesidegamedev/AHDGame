@@ -175,6 +175,8 @@ import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices
 import type { Document } from "mongodb";
 import { organizationMembershipsCollection } from "@/lib/db/repositories/organizationMemberships";
 import { tariffsCollection } from "@/lib/db/repositories/tariffs";
+import { tradeEmbargoesCollection } from "@/lib/db/repositories/tradeEmbargoes";
+import { organizationLegislationCollection } from "@/lib/db/repositories/organizationLegislation";
 
 export interface CommodityPriceTurnResult {
   commoditiesUpdated: number;
@@ -933,12 +935,10 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
       .find({}, { projection: { countryId: 1, organizationId: 1 } })
       .toArray(),
     tariffsCollection(db).find({}).toArray(),
-    db
-      .collection<TradeEmbargo>("tradeEmbargoes")
+    tradeEmbargoesCollection(db)
       .find({ $or: [{ expiresTurn: { $exists: false } }, { expiresTurn: { $gte: turn } }] })
       .toArray(),
-    db
-      .collection<{ directiveKey?: string }>("organizationLegislation")
+    organizationLegislationCollection<{ directiveKey?: string }>(db)
       .find(
         {
           type: "directive",

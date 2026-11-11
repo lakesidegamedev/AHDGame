@@ -16,6 +16,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { slateCandidatesCollection } from "@/lib/db/repositories/slateCandidates";
+import { recruitmentSlatesCollection } from "@/lib/db/repositories/recruitmentSlates";
 
 /**
  * List all slates owned by a (countryId, partyId). Active by default; pass
@@ -29,11 +30,7 @@ export async function listPartySlates(
 ): Promise<RecruitmentSlate[]> {
   const filter: Record<string, unknown> = { countryId, partyId };
   if (!includeArchived) filter.archivedAt = null;
-  return db
-    .collection<RecruitmentSlate>("recruitmentSlates")
-    .find(filter)
-    .sort({ state: 1, createdAt: -1 })
-    .toArray();
+  return recruitmentSlatesCollection(db).find(filter).sort({ state: 1, createdAt: -1 }).toArray();
 }
 
 /**
@@ -46,9 +43,7 @@ export async function findSlateForElection(
   partyId: string,
   electionId: ObjectId
 ): Promise<RecruitmentSlate | null> {
-  return db
-    .collection<RecruitmentSlate>("recruitmentSlates")
-    .findOne({ countryId, partyId, electionId });
+  return recruitmentSlatesCollection(db).findOne({ countryId, partyId, electionId });
 }
 
 /**
@@ -86,7 +81,7 @@ export async function ensureSlate(
     createdAt: args.now,
     updatedAt: args.now,
   };
-  await db.collection<RecruitmentSlate>("recruitmentSlates").insertOne(slate);
+  await recruitmentSlatesCollection(db).insertOne(slate);
   return slate;
 }
 
@@ -156,8 +151,7 @@ export async function listStateAssignedCandidateIds(
   ).map((e) => e._id);
   if (liveElectionIds.length === 0) return [];
 
-  const sameStateSlates = await db
-    .collection<RecruitmentSlate>("recruitmentSlates")
+  const sameStateSlates = await recruitmentSlatesCollection(db)
     .find({
       countryId,
       partyId,
@@ -268,8 +262,7 @@ export async function prefetchSlateTemplates(
   const result = new Map<string, SlateTemplatePrefetch>();
   if (targets.length === 0) return result;
 
-  const slates = await db
-    .collection<RecruitmentSlate>("recruitmentSlates")
+  const slates = await recruitmentSlatesCollection(db)
     .find({
       countryId: { $in: Array.from(new Set(targets.map((t) => t.countryId))) },
       partyId: { $in: Array.from(new Set(targets.map((t) => t.partyId))) },
@@ -491,7 +484,7 @@ export async function materializeSlateAssignmentsFromTemplate({
     } satisfies RecruitmentSlate);
 
   if (!existing) {
-    await db.collection<RecruitmentSlate>("recruitmentSlates").insertOne(slate);
+    await recruitmentSlatesCollection(db).insertOne(slate);
   }
   await slateCandidatesCollection(db).insertMany(
     carriedRows.map((row) => ({
@@ -539,8 +532,7 @@ async function findLatestSlateTemplate(
   partyId: string,
   election: TemplateTarget
 ): Promise<RecruitmentSlate | null> {
-  const candidates = await db
-    .collection<RecruitmentSlate>("recruitmentSlates")
+  const candidates = await recruitmentSlatesCollection(db)
     .find({
       countryId,
       partyId,

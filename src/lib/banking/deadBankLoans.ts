@@ -47,6 +47,7 @@ import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
+import { bankCharterHistoryCollection } from "@/lib/db/repositories/bankCharterHistory";
 
 export type DeadBankLoanSummary = {
   /** Loans belonging to a wound-up bank that were serviced this turn. */
@@ -86,8 +87,7 @@ type DeadBank = {
 
 /** Banks whose charter has ended but whose loan book has not. */
 export async function findDeadBanksWithLoans(db: Db): Promise<DeadBank[]> {
-  const history = await db
-    .collection<BankCharterHistoryEntry>("bankCharterHistory")
+  const history = await bankCharterHistoryCollection(db)
     .find(
       {},
       {

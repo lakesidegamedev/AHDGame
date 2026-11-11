@@ -9,6 +9,7 @@ import { loadMetricLawDelivery } from "./loadLawDelivery";
 import { deliveredMetricEffects, metricLawApplies } from "./rules/lawDelivery";
 import type { ResetMetricSnapshot } from "./rules/snapshot";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { resetCabinetActionStatesCollection } from "@/lib/db/repositories/resetCabinetActionStates";
 
 const MAX_COMBINED_POLICY_PRESSURE = 1.2;
 
@@ -49,8 +50,7 @@ export async function loadResetPolicyPressure(
           .filter((b) => b.scope === "regional")
           .map((b) => ({ _id: b.regionId!, countryId: b.countryId })),
       }),
-    db
-      .collection<ResetCabinetActionState>("resetCabinetActionStates")
+    resetCabinetActionStatesCollection<ResetCabinetActionState>(db)
       .find({ _id: { $in: countryIds }, worldId }, { projection: { _id: 1, active: 1 } })
       .toArray(),
   ]);

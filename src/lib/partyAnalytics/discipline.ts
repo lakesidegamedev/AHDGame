@@ -14,6 +14,8 @@ import type {
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { caucusesCollection } from "@/lib/db/repositories/caucuses";
+import { caucusMembershipsCollection } from "@/lib/db/repositories/caucusMemberships";
+import { nppRelationshipsCollection } from "@/lib/db/repositories/nppRelationships";
 
 const LOW_LOYALTY_THRESHOLD = 40;
 const WHIP_BREAKER_STUBBORNNESS = 70;
@@ -130,8 +132,7 @@ export async function buildPartyDisciplineAnalytics(
   const memberships =
     caucusIds.length === 0
       ? ([] as CaucusMembership[])
-      : await db
-          .collection<CaucusMembership>("caucusMemberships")
+      : await caucusMembershipsCollection(db)
           .find({
             caucusId: { $in: caucusIds },
             memberType: "npp",
@@ -142,8 +143,7 @@ export async function buildPartyDisciplineAnalytics(
   const [relationships, chairs, defianceSnapshot] = await Promise.all([
     activeChairIds.length === 0 || memberships.length === 0
       ? Promise.resolve([] as NPPRelationship[])
-      : db
-          .collection<NPPRelationship>("nppRelationships")
+      : nppRelationshipsCollection(db)
           .find({
             characterId: { $in: activeChairIds },
             nppId: { $in: memberships.map((membership) => membership.memberId) },

@@ -23,6 +23,7 @@ import type { LivingConflictDef, LivingConflictState } from "./types";
 import { vietnamWorldPressure, type ActiveWarSnapshot } from "./worldPressure";
 import { crisesCollection } from "@/lib/db/repositories/crises";
 import { livingConflictsCollection } from "@/lib/db/repositories/livingConflicts";
+import { coldWarTensionCollection } from "@/lib/db/repositories/coldWarTension";
 
 const COMPONENT = "livingConflictCampaign";
 
@@ -60,9 +61,9 @@ export function ensureCampaignCrisisContent(): void {
     input: "worldPressure.vietnam",
     async load(ctx) {
       const [tension, wars] = await Promise.all([
-        ctx.db
-          .collection<{ _id: string; value?: number }>("coldWarTension")
-          .findOne({ _id: "current" }),
+        coldWarTensionCollection<{ _id: string; value?: number }>(ctx.db).findOne({
+          _id: "current",
+        }),
         getConflictsCollection(ctx.db).find({ status: "active" }).toArray(),
       ]);
       const pressure = vietnamWorldPressure(

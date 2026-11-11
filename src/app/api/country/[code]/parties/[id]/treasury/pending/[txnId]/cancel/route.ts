@@ -8,6 +8,7 @@ import { findPartyBySequentialId } from "@/lib/db/partyLookup";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { cancelPendingTransaction } from "@/lib/parties/pendingTreasuryTransactions";
 import type { PendingTreasuryTransaction } from "@/lib/db/types";
+import { pendingTreasuryTransactionsCollection } from "@/lib/db/repositories/pendingTreasuryTransactions";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; txnId: string }>;
@@ -48,9 +49,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
     if (!party) return errorResponse(404, "Party not found");
 
     // Country + party scoping check before the proposer-only update.
-    const pending = await db
-      .collection<PendingTreasuryTransaction>("pendingTreasuryTransactions")
-      .findOne({ _id: txnOid });
+    const pending = await pendingTreasuryTransactionsCollection(db).findOne({ _id: txnOid });
     if (!pending) {
       return errorResponse(404, "Pending transaction not found");
     }

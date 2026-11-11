@@ -18,6 +18,7 @@ import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { politicianOverridesCollection } from "@/lib/db/repositories/politicianOverrides";
 
 export async function updatePoliticianPagesAfterElection(
   db: Db,
@@ -83,18 +84,17 @@ export async function updatePoliticianPagesAfterElection(
       completedAt: election.endTime ?? now,
     };
 
-    const existing = await db
-      .collection<PoliticianOverride>("politicianOverrides")
-      .findOne({ politicianId });
+    const existing = await politicianOverridesCollection(db).findOne({ politicianId });
     const history = existing?.electionHistory ?? [];
     const updated = [entry, ...history.filter((e) => e.electionId !== entry.electionId)];
 
     if (existing) {
-      await db
-        .collection<PoliticianOverride>("politicianOverrides")
-        .updateOne({ politicianId }, { $set: { electionHistory: updated, updatedAt: now } });
+      await politicianOverridesCollection(db).updateOne(
+        { politicianId },
+        { $set: { electionHistory: updated, updatedAt: now } }
+      );
     } else {
-      await db.collection<PoliticianOverride>("politicianOverrides").insertOne({
+      await politicianOverridesCollection(db).insertOne({
         politicianId,
         electionHistory: updated,
         updatedAt: now,

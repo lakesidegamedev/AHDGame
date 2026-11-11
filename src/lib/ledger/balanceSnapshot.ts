@@ -25,6 +25,9 @@ import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { indexFundCommandsCollection } from "@/lib/db/repositories/indexFundCommands";
 import { pensionSchemesCollection } from "@/lib/db/repositories/pensionSchemes";
 import { producerEconomyAccountsCollection } from "@/lib/db/repositories/producerEconomyAccounts";
+import { bondMarketPoolsCollection } from "@/lib/db/repositories/bondMarketPools";
+import { organizationFundsCollection } from "@/lib/db/repositories/organizationFunds";
+import { customInternationalOrganizationsCollection } from "@/lib/db/repositories/customInternationalOrganizations";
 
 export const BALANCE_SNAPSHOTS_COLLECTION = "balanceSnapshots";
 export const BALANCE_CHECKPOINTS_COLLECTION = "balanceSnapshotCheckpoints";
@@ -86,7 +89,7 @@ async function collectBalanceState(
   const balances: Record<string, number> = {};
 
   // Bond pools hold the funded buyer side of sovereign primary placements.
-  const pools = db.collection<{ _id: CurrencyCode; cashLocal?: number }>("bondMarketPools");
+  const pools = bondMarketPoolsCollection<{ _id: CurrencyCode; cashLocal?: number }>(db);
   for await (const pool of pools.find({}, { projection: { cashLocal: 1 } })) {
     add(
       balances,
@@ -139,19 +142,19 @@ async function collectBalanceState(
   // field as M2. balanceUsd remains a legacy UI fallback, never copied/minted here.
   const customFounders = new Map(
     (
-      await db
-        .collection<{ id: string; foundingMembers?: CountryId[] }>(
-          "customInternationalOrganizations"
-        )
+      await customInternationalOrganizationsCollection<{
+        id: string;
+        foundingMembers?: CountryId[];
+      }>(db)
         .find({}, { projection: { id: 1, foundingMembers: 1 } })
         .toArray()
     ).map((row) => [row.id, row.foundingMembers?.[0] ?? "US"])
   );
-  const organizationFunds = db.collection<{
+  const organizationFunds = organizationFundsCollection<{
     organizationId: string;
     currencyCountryId?: CountryId;
     balanceLocal?: number;
-  }>("organizationFunds");
+  }>(db);
   for await (const fund of organizationFunds.find(
     {},
     { projection: { organizationId: 1, currencyCountryId: 1, balanceLocal: 1 } }

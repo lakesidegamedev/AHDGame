@@ -74,6 +74,14 @@ import { organizationMembershipsCollection } from "@/lib/db/repositories/organiz
 import { tariffsCollection } from "@/lib/db/repositories/tariffs";
 import { tradeFlowSnapshotsCollection } from "@/lib/db/repositories/tradeFlowSnapshots";
 import { conflictsCollection } from "@/lib/db/repositories/conflicts";
+import { tradeEmbargoesCollection } from "@/lib/db/repositories/tradeEmbargoes";
+import { countryAlignmentsCollection } from "@/lib/db/repositories/countryAlignments";
+import { organizationLegislationCollection } from "@/lib/db/repositories/organizationLegislation";
+import { battleDeclarationsCollection } from "@/lib/db/repositories/battleDeclarations";
+import { sphereMembershipsCollection } from "@/lib/db/repositories/sphereMemberships";
+import { organizationMembershipProposalsCollection } from "@/lib/db/repositories/organizationMembershipProposals";
+import { organizationLeadershipElectionsCollection } from "@/lib/db/repositories/organizationLeadershipElections";
+import { peaceOffersCollection } from "@/lib/db/repositories/peaceOffers";
 function buildOpinion(context: ForeignPolicyContext, targetCountryId: CountryId): CountryOpinion {
   const factors: OpinionFactor[] = [];
   const sourceAlignment = context.alignments.find(
@@ -349,13 +357,13 @@ async function loadContext(
       nppForeignPolicyMode?: ForeignPolicyMode;
       nppForeignPolicyStage?: NppForeignPolicyStage;
     }>(db).findOne({ _id: "current" }),
-    db.collection<CountryAlignment>("countryAlignments").find({}).toArray(),
-    db.collection<PersistedSphereMembership>("sphereMemberships").find({}).toArray(),
+    countryAlignmentsCollection(db).find({}).toArray(),
+    sphereMembershipsCollection<PersistedSphereMembership>(db).find({}).toArray(),
     organizationMembershipsCollection(db).find({}).toArray(),
     conflictsCollection(db)
       .find({ status: { $in: ["active", "escalating", "winding_down"] } })
       .toArray(),
-    db.collection<TradeEmbargo>("tradeEmbargoes").find({}).toArray(),
+    tradeEmbargoesCollection(db).find({}).toArray(),
     tariffsCollection(db).find({}).toArray(),
     billsCollection(db)
       .find({
@@ -364,22 +372,10 @@ async function loadContext(
         "provisions.scopeType": "origin_country",
       })
       .toArray(),
-    db
-      .collection<OrganizationLegislation>("organizationLegislation")
-      .find({ status: "active" })
-      .toArray(),
-    db
-      .collection<OrganizationMembershipProposal>("organizationMembershipProposals")
-      .find({ status: "pending" })
-      .toArray(),
-    db
-      .collection<OrganizationLegislation>("organizationLegislation")
-      .find({ status: "pending" })
-      .toArray(),
-    db
-      .collection<OrganizationLeadershipElection>("organizationLeadershipElections")
-      .find({ status: "pending" })
-      .toArray(),
+    organizationLegislationCollection(db).find({ status: "active" }).toArray(),
+    organizationMembershipProposalsCollection(db).find({ status: "pending" }).toArray(),
+    organizationLegislationCollection(db).find({ status: "pending" }).toArray(),
+    organizationLeadershipElectionsCollection(db).find({ status: "pending" }).toArray(),
     tradeFlowSnapshotsCollection(db).findOne({}, { sort: { turn: -1 } }),
     federalBudgetCollection<{ countryId: CountryId; debtToGdpRatio?: number }>(db).findOne({
       countryId,
@@ -395,12 +391,10 @@ async function loadContext(
       .toArray(),
     militaryUnitsCollection(db).find({ countryId }).toArray(),
     governmentApprovalsCollection(db).findOne({ _id: countryId }),
-    db
-      .collection<BattleDeclarationDoc>("battleDeclarations")
+    battleDeclarationsCollection(db)
       .find({ declarerCountry: countryId, status: "pending" })
       .toArray(),
-    db
-      .collection<PeaceOfferDoc>("peaceOffers")
+    peaceOffersCollection(db)
       .find({ fromCountry: countryId, status: "pending", expiresTurn: { $gt: currentTurn } })
       .toArray(),
   ]);

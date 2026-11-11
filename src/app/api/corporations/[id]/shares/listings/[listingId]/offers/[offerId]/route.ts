@@ -22,18 +22,17 @@ import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import type { ShareOffer } from "@/lib/db/types";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { shareOffersCollection } from "@/lib/db/repositories/shareOffers";
 
 interface RouteParams {
   params: Promise<{ id: string; listingId: string; offerId: string }>;
 }
 
 async function restoreOfferToPending(db: Awaited<ReturnType<typeof getDb>>, offerId: ObjectId) {
-  await db
-    .collection<ShareOffer>("shareOffers")
-    .updateOne(
-      { _id: offerId, status: "cancelled" },
-      { $set: { status: "pending", updatedAt: new Date() } }
-    );
+  await shareOffersCollection(db).updateOne(
+    { _id: offerId, status: "cancelled" },
+    { $set: { status: "pending", updatedAt: new Date() } }
+  );
 }
 
 /**
@@ -62,9 +61,7 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
       return errorResponse(400, "Invalid offer ID");
     }
 
-    const offer = await db
-      .collection<ShareOffer>("shareOffers")
-      .findOne({ _id: new ObjectId(offerId) });
+    const offer = await shareOffersCollection(db).findOne({ _id: new ObjectId(offerId) });
 
     if (!offer) return errorResponse(404, "Offer not found");
     if (offer.status !== "pending") return errorResponse(400, "Offer is not pending");
@@ -98,12 +95,10 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
         buyerCorp ?? {},
         buyerFxRate
       );
-      const claim = await db
-        .collection<ShareOffer>("shareOffers")
-        .updateOne(
-          { _id: offer._id, status: "pending" },
-          { $set: { status: "cancelled", updatedAt: now } }
-        );
+      const claim = await shareOffersCollection(db).updateOne(
+        { _id: offer._id, status: "pending" },
+        { $set: { status: "cancelled", updatedAt: now } }
+      );
       if (claim.matchedCount === 0) {
         return errorResponse(400, "Offer is not pending");
       }
@@ -158,12 +153,10 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
         charFxRate = fxResult.rate;
       }
       const refundInHome = refundAnchor * charFxRate;
-      const claim = await db
-        .collection<ShareOffer>("shareOffers")
-        .updateOne(
-          { _id: offer._id, status: "pending" },
-          { $set: { status: "cancelled", updatedAt: now } }
-        );
+      const claim = await shareOffersCollection(db).updateOne(
+        { _id: offer._id, status: "pending" },
+        { $set: { status: "cancelled", updatedAt: now } }
+      );
       if (claim.matchedCount === 0) {
         return errorResponse(400, "Offer is not pending");
       }

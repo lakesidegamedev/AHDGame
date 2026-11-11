@@ -4,6 +4,7 @@ import { requireModerator } from "@/lib/api/requireModerator";
 import { handleRouteError } from "@/lib/api/errors";
 import { parseBoundedIntParam } from "@/lib/api/validate";
 import type { PlayerMailReport } from "@/lib/db/types";
+import { playerMailReportsCollection } from "@/lib/db/repositories/playerMailReports";
 
 // GET /api/admin/mail-reports — List reports (paginated, filterable by status)
 // Auth: requireModerator (admins and moderators)
@@ -29,8 +30,7 @@ export async function GET(request: Request) {
       totalCount: { count: number }[];
     }
 
-    const [result] = await db
-      .collection<PlayerMailReport>("playerMailReports")
+    const [result] = await playerMailReportsCollection(db)
       .aggregate<ReportFacet>([
         { $match: matchStage },
         { $sort: { createdAt: -1 } },

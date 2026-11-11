@@ -84,6 +84,7 @@ import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { partyBudgetCollection } from "@/lib/db/repositories/partyBudget";
 import { stateRegistrationPoolCollection } from "@/lib/db/repositories/stateRegistrationPool";
+import { orgRegLedgerCollection } from "@/lib/db/repositories/orgRegLedger";
 
 type StoredPartyBudget = PartyBudget & { countryId?: CountryId };
 
@@ -1231,9 +1232,9 @@ export async function processPartyGOTV(
     );
   }
   if (db && registrationLedgerRows.length > 0) {
-    await db
-      .collection<OrgRegLedger>("orgRegLedger")
-      .insertMany(registrationLedgerRows.map((r) => ({ ...r }) as OrgRegLedger));
+    await orgRegLedgerCollection(db).insertMany(
+      registrationLedgerRows.map((r) => ({ ...r }) as OrgRegLedger)
+    );
   }
 
   // (Legacy passive Org Building application block removed — Org growth

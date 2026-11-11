@@ -29,6 +29,7 @@ import type {
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
+import { governorLegislationQueueCollection } from "@/lib/db/repositories/governorLegislationQueue";
 
 // POST /api/country/[code]/region/[id]/office/legislation/queue — Queue a state bill.
 export async function POST(
@@ -112,7 +113,7 @@ export async function GET(
       return errorResponse(403, "Not authorized for this office");
     }
 
-    const pending = await db.collection<GovernorQueuedBill>("governorLegislationQueue").findOne({
+    const pending = await governorLegislationQueueCollection(db).findOne({
       countryId,
       stateId,
       status: "pending",

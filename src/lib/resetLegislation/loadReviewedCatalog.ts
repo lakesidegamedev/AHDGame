@@ -16,6 +16,9 @@ import {
 } from "@/lib/governmentFinance/departmentCatalog";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { resetLawProgramsCollection } from "@/lib/db/repositories/resetLawPrograms";
+import { resetDepartmentAccountsCollection } from "@/lib/db/repositories/resetDepartmentAccounts";
+import { resetLawOpeningBoardsCollection } from "@/lib/db/repositories/resetLawOpeningBoards";
 
 export interface ReviewedLawFamilyCatalog {
   familyId: string;
@@ -46,10 +49,9 @@ export async function loadReviewedLawCatalog(input: {
   }
   const boardId = scope === "national" ? `${country}:national` : `${country}:${regionId}`;
   const [board, accounts, federalBudget, region, currentPrograms] = await Promise.all([
-    db.collection<ResetLawOpeningBoard>("resetLawOpeningBoards").findOne({ _id: boardId, worldId }),
+    resetLawOpeningBoardsCollection<ResetLawOpeningBoard>(db).findOne({ _id: boardId, worldId }),
     scope === "national"
-      ? db
-          .collection<ResetDepartmentAccountSnapshot>("resetDepartmentAccounts")
+      ? resetDepartmentAccountsCollection<ResetDepartmentAccountSnapshot>(db)
           .find(
             { worldId, countryId: country },
             {
@@ -73,8 +75,7 @@ export async function loadReviewedLawCatalog(input: {
           { projection: { gdp: 1 } }
         )
       : Promise.resolve(null),
-    db
-      .collection<ResetLawProgramDocument>("resetLawPrograms")
+    resetLawProgramsCollection<ResetLawProgramDocument>(db)
       .find(
         {
           worldId,

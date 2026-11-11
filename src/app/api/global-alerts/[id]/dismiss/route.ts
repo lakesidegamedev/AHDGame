@@ -9,6 +9,7 @@ import { requireAuth } from "@/lib/api/requireAuth";
 import { getDb } from "@/lib/mongodb";
 import { isHexObjectIdString } from "@/lib/utils/objectIdHex";
 import type { GlobalAlert } from "@/lib/db/types/globalAlert";
+import { globalAlertsCollection } from "@/lib/db/repositories/globalAlerts";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -25,9 +26,10 @@ export async function POST(_req: Request, { params }: RouteParams) {
 
   const db = await getDb();
   const userId = new ObjectId(auth.user.userId);
-  const result = await db
-    .collection<GlobalAlert>("globalAlerts")
-    .updateOne({ _id: new ObjectId(id) }, { $addToSet: { dismissedByUserIds: userId } });
+  const result = await globalAlertsCollection(db).updateOne(
+    { _id: new ObjectId(id) },
+    { $addToSet: { dismissedByUserIds: userId } }
+  );
   if (result.matchedCount === 0) {
     return errorResponse(404, "Alert not found");
   }

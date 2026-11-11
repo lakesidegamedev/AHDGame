@@ -41,6 +41,7 @@ import { mergeSevereLoads, severeLoadByCountry } from "@/lib/crises/rules/severe
 import { statesCollection } from "@/lib/db/repositories/states";
 import { crisesCollection } from "@/lib/db/repositories/crises";
 import { referendumsCollection } from "@/lib/db/repositories/referendums";
+import { coldWarTensionCollection } from "@/lib/db/repositories/coldWarTension";
 
 function roleMapForEvent(
   def: ReturnType<typeof allLivingConflictDefs>[number],
@@ -193,7 +194,7 @@ export async function processLivingConflictsTurn(
 ): Promise<LivingConflictTurnResult> {
   await migrateLegacyVietnamState(db);
   const [tension, activeWars] = await Promise.all([
-    db.collection<{ _id: string; value?: number }>("coldWarTension").findOne({ _id: "current" }),
+    coldWarTensionCollection<{ _id: string; value?: number }>(db).findOne({ _id: "current" }),
     getConflictsCollection(db).find({ status: "active" }).toArray(),
   ]);
   const [countryRows, macroCountries] = await Promise.all([

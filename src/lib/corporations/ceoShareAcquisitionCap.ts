@@ -7,6 +7,7 @@ import {
 } from "@/lib/constants/corporations";
 import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
 import { shareTradeHistoryCollection } from "@/lib/db/repositories/shareTradeHistory";
+import { shareOffersCollection } from "@/lib/db/repositories/shareOffers";
 
 export type CeoHolderField = "characterId" | "imperialCharacterId";
 
@@ -57,8 +58,7 @@ export async function ceoSelfAcquisitionWindow(
     .toArray();
   const openOrderShares = openOrders.reduce((s, o) => s + (o.sharesRemaining ?? 0), 0);
 
-  const openOffers = await db
-    .collection<ShareOffer>("shareOffers")
+  const openOffers = await shareOffersCollection(db)
     .find({ corporationId: corp._id, buyerCharacterId: ceoId, status: "pending" })
     .toArray();
   const openOfferShares = openOffers.reduce((s, o) => s + (o.shares ?? 0), 0);

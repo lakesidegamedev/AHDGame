@@ -32,6 +32,11 @@ import {
 } from "@/lib/resetCabinet/rules/actionState";
 import type { ResetOpeningCountry } from "./opening1991";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { resetDepartmentAccountsCollection } from "@/lib/db/repositories/resetDepartmentAccounts";
+import { resetCabinetActionStatesCollection } from "@/lib/db/repositories/resetCabinetActionStates";
+import { resetNationalTreasuriesCollection } from "@/lib/db/repositories/resetNationalTreasuries";
+import { resetDepartmentContinuityCollection } from "@/lib/db/repositories/resetDepartmentContinuity";
+import { resetDepartmentOpeningBoardsCollection } from "@/lib/db/repositories/resetDepartmentOpeningBoards";
 
 export async function seedOpeningDepartmentBoards1991(
   db: Db,
@@ -65,7 +70,7 @@ export async function seedOpeningDepartmentBoards1991(
     },
     openingNamedGrantClaims1991()
   );
-  const collection = db.collection<ResetDepartmentOpeningBoard>("resetDepartmentOpeningBoards");
+  const collection = resetDepartmentOpeningBoardsCollection<ResetDepartmentOpeningBoard>(db);
   await collection.bulkWrite(
     expected.map((board) => ({
       replaceOne: { filter: { _id: board._id }, replacement: board, upsert: true },
@@ -80,7 +85,7 @@ export async function seedOpeningDepartmentBoards1991(
   ) {
     throw new Error("The persisted 1991 v2 department opening failed readback verification");
   }
-  const accounts = db.collection<ResetDepartmentAccountSnapshot>("resetDepartmentAccounts");
+  const accounts = resetDepartmentAccountsCollection<ResetDepartmentAccountSnapshot>(db);
   await accounts.bulkWrite(
     partition.accounts.map((account) => ({
       replaceOne: { filter: { _id: account._id }, replacement: account, upsert: true },
@@ -95,7 +100,7 @@ export async function seedOpeningDepartmentBoards1991(
   ) {
     throw new Error("The persisted 1991 v2 spendable accounts failed readback verification");
   }
-  const continuity = db.collection<ResetDepartmentContinuitySnapshot>("resetDepartmentContinuity");
+  const continuity = resetDepartmentContinuityCollection<ResetDepartmentContinuitySnapshot>(db);
   await continuity.bulkWrite(
     partition.continuity.map((row) => ({
       replaceOne: { filter: { _id: row._id }, replacement: row, upsert: true },
@@ -118,7 +123,7 @@ export async function seedOpeningDepartmentBoards1991(
     fiscal,
     partition.accounts
   ).filter((row) => countries.includes(row.countryId as ResetOpeningCountry));
-  const treasuries = db.collection<ResetNationalTreasurySnapshot>("resetNationalTreasuries");
+  const treasuries = resetNationalTreasuriesCollection<ResetNationalTreasurySnapshot>(db);
   await treasuries.bulkWrite(
     openingTreasuries.map((row) => ({
       replaceOne: { filter: { _id: row._id }, replacement: row, upsert: true },
@@ -138,7 +143,7 @@ export async function seedOpeningDepartmentBoards1991(
   const openingActions = openingCabinetActionStates(worldId, sourceTurn).filter((row) =>
     countries.includes(row.countryId as ResetOpeningCountry)
   );
-  const actionStates = db.collection<ResetCabinetActionState>("resetCabinetActionStates");
+  const actionStates = resetCabinetActionStatesCollection<ResetCabinetActionState>(db);
   await actionStates.bulkWrite(
     openingActions.map((row) => ({
       replaceOne: { filter: { _id: row._id }, replacement: row, upsert: true },

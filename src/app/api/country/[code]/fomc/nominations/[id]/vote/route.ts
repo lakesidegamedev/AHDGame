@@ -25,6 +25,7 @@ import type { FomcNomination } from "@/lib/db/types/centralBank";
 import type { ElectedOfficial } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { fomcNominationsCollection } from "@/lib/db/repositories/fomcNominations";
 
 const voteSchema = z.object({
   vote: z.enum(["for", "against", "abstain"]),
@@ -67,7 +68,7 @@ export async function POST(
     // Game-clock deadline so a drifted real clock can't open/close early.
     const gameTime = await getGameTime();
 
-    const nomination = await db.collection<FomcNomination>("fomcNominations").findOne({
+    const nomination = await fomcNominationsCollection(db).findOne({
       _id: nominationOid,
       countryId,
       status: "active",
@@ -104,7 +105,7 @@ export async function POST(
       return errorResponse(403, "Only Senators of this country can vote on Fed nominations");
     }
 
-    const updateResult = await db.collection<FomcNomination>("fomcNominations").updateOne(
+    const updateResult = await fomcNominationsCollection(db).updateOne(
       { _id: nominationOid, status: "active" },
       buildEmbeddedVoteTallyUpdate({
         voteField: "votes",

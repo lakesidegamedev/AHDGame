@@ -5,6 +5,7 @@ import { validateBudget } from "@/lib/countries/uk/budget/budgetValidation";
 import { applyConfidenceEventToGov } from "@/lib/countries/uk/confidence/confidenceGaugeStore";
 import { getNationalDocId } from "@/lib/constants/nationalScope";
 import { billsCollection } from "@/lib/db/repositories/bills";
+import { ukBudgetsCollection } from "@/lib/db/repositories/ukBudgets";
 
 /** Hours a Budget vote runs — mirrors the UK bill voting window. */
 const BUDGET_VOTING_HOURS = 24;
@@ -19,7 +20,7 @@ const BUDGET_VOTING_HOURS = 24;
  */
 
 function getUKBudgetsCollection(db: Db) {
-  return db.collection<UKBudget>("ukBudgets");
+  return ukBudgetsCollection<UKBudget>(db);
 }
 
 export async function getBudgetForFiscalYear(db: Db, fiscalYear: number): Promise<UKBudget | null> {

@@ -74,6 +74,8 @@ import { unionsCollection } from "@/lib/db/repositories/unions";
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 import { politicalMetricsCollection } from "@/lib/db/repositories/politicalMetrics";
 import { docketCasesCollection } from "@/lib/db/repositories/docketCases";
+import { bargainingCampaignsCollection } from "@/lib/db/repositories/bargainingCampaigns";
+import { collectiveAgreementsCollection } from "@/lib/db/repositories/collectiveAgreements";
 
 /** Crisis actions name an operating lane; rows store its identity. */
 function laneFilter(sectorType: string) {
@@ -467,8 +469,7 @@ async function openCrisisDispute(
 
   // Employers already tied up in an open campaign are skipped — reopening
   // against them would collide with the duplicate-campaign guard.
-  const busy = await db
-    .collection<BargainingCampaign>("bargainingCampaigns")
+  const busy = await bargainingCampaignsCollection(db)
     .find(
       { unionId: { $in: unions.map((u) => u._id) }, status: { $in: ["negotiating", "dispute"] } },
       { projection: { employerCorporationId: 1 } }
@@ -513,9 +514,9 @@ async function openCrisisDispute(
       if (!opened.ok || typeof opened.campaignId !== "string") continue;
 
       // The opener returns an API result, not the document, so re-read it.
-      const fresh = await db
-        .collection<BargainingCampaign>("bargainingCampaigns")
-        .findOne({ _id: new ObjectId(opened.campaignId) });
+      const fresh = await bargainingCampaignsCollection(db).findOne({
+        _id: new ObjectId(opened.campaignId),
+      });
       if (!fresh) continue;
 
       const now = new Date();
@@ -535,9 +536,7 @@ async function openCrisisDispute(
       const disputed = moveCampaignToDispute(countered, ctx.currentTurn, now);
       if ("ok" in disputed) continue;
 
-      await db
-        .collection<BargainingCampaign>("bargainingCampaigns")
-        .replaceOne({ _id: disputed._id }, disputed);
+      await bargainingCampaignsCollection(db).replaceOne({ _id: disputed._id }, disputed);
       console.log(
         `[crisis] openBargaining: opened a ${sectorType} dispute in ${ctx.countryId} for the government to broker`
       );
@@ -569,9 +568,10 @@ async function openBargaining(ctx: CrisisActionContext, sectorType: string): Pro
     return;
   }
 
-  const existing = await db
-    .collection<BargainingCampaign>("bargainingCampaigns")
-    .findOne({ unionId: { $in: unions.map((u) => u._id) }, status: "dispute" });
+  const existing = await bargainingCampaignsCollection(db).findOne({
+    unionId: { $in: unions.map((u) => u._id) },
+    status: "dispute",
+  });
   const campaign = existing ?? (await openCrisisDispute(ctx, unions, sectorType));
   if (!campaign) {
     console.warn(
@@ -663,7 +663,7 @@ async function settleWageFloor(ctx: CrisisActionContext, sectorType: string): Pr
     updatedAt: now,
   };
 
-  await db.collection<CollectiveAgreement>("collectiveAgreements").insertOne(agreement);
+  await collectiveAgreementsCollection(db).insertOne(agreement);
   await logWireEvent(
     "crisis_outcome",
     `SETTLEMENT: ${ctx.countryId} concedes a ${label} wage floor, ending the strike`

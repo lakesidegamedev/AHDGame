@@ -51,6 +51,7 @@ import { activityLogCollection } from "@/lib/db/repositories/activityLog";
 import type { Document } from "mongodb";
 import { actionLogsCollection } from "@/lib/db/repositories/actionLogs";
 import { suspiciousCharactersCollection } from "@/lib/db/repositories/suspiciousCharacters";
+import { actionAuditLogCollection } from "@/lib/db/repositories/actionAuditLog";
 
 // ─── Tunables ────────────────────────────────────────────────────────────
 
@@ -720,8 +721,7 @@ async function buildCandidateFacets(
   // write time and can't feed the CF-edge/subnet checks that need a raw IP.
   try {
     if (candidateUserIds.length > 0) {
-      const auditRows = await db
-        .collection<ActionAuditRecord>("actionAuditLog")
+      const auditRows = await actionAuditLogCollection(db)
         .find(
           {
             source: "api",

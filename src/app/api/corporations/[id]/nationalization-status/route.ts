@@ -13,6 +13,7 @@ import { handleRouteError } from "@/lib/api/errors";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { buildCorpNationalizationStatus } from "@/lib/nationalization/corpNationalizationStatus";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { nationalizationAuctionsCollection } from "@/lib/db/repositories/nationalizationAuctions";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -53,9 +54,10 @@ export const GET = withNoStore(async function GET(_request: Request, { params }:
     let canBid = false;
     if (status.auction) {
       const auction = actor
-        ? await db
-            .collection<NationalizationAuction>("nationalizationAuctions")
-            .findOne({ corporationId: resolved.corporation._id, status: "open" })
+        ? await nationalizationAuctionsCollection(db).findOne({
+            corporationId: resolved.corporation._id,
+            status: "open",
+          })
         : null;
       if (
         actor &&

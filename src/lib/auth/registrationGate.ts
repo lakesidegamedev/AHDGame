@@ -7,6 +7,7 @@ import type { BannedDevice, BannedIp, GameConfig, User } from "@/lib/db/types";
 import { usersCollection } from "@/lib/db/repositories/users";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { bannedDevicesCollection } from "@/lib/db/repositories/bannedDevices";
+import { bannedIpsCollection } from "@/lib/db/repositories/bannedIps";
 
 interface RegistrationSignals {
   clientIp: string;
@@ -97,7 +98,7 @@ export async function assertRegistrationAllowed(
   const ip = normalizeIp(clientIp);
   const ipCandidates = ip ? getRegistrationIpMatchCandidates(clientIp) : [];
 
-  const rule = ip ? await db.collection<BannedIp>("bannedIps").findOne({ ip }) : null;
+  const rule = ip ? await bannedIpsCollection(db).findOne({ ip }) : null;
 
   if (rule && rule.allowRegistration !== true) {
     throw forbidden("Registration is not available from this location.");
