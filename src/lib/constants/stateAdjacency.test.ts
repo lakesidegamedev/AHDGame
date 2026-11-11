@@ -193,15 +193,24 @@ describe("STATE_ADJACENCY", () => {
     }
   });
 
-  describe("seed vocabulary", () => {
+  describe("seed and transferred-region vocabulary", () => {
+    // Ireland also supports Ulster after reunification. Runtime callers filter
+    // this graph to the regions currently owned by the country.
+    const transferredRegions: Partial<Record<CountryId, readonly string[]>> = { IE: ["NIR"] };
     for (const country of ALL_COUNTRIES) {
-      it(`covers exactly the seeded IDs for ${country}`, () => {
-        const expected = COUNTRY_REGIONS[country].map((region) => region._id).sort();
+      it(`covers exactly the seeded and supported transferred IDs for ${country}`, () => {
+        const expected = [
+          ...COUNTRY_REGIONS[country].map((region) => region._id),
+          ...(transferredRegions[country] ?? []),
+        ].sort();
         expect(Object.keys(STATE_ADJACENCY[country]).sort()).toEqual(expected);
       });
 
-      it(`references only seeded IDs for ${country}`, () => {
-        const seeded = new Set(COUNTRY_REGIONS[country].map((region) => region._id));
+      it(`references only seeded or supported transferred IDs for ${country}`, () => {
+        const seeded = new Set([
+          ...COUNTRY_REGIONS[country].map((region) => region._id),
+          ...(transferredRegions[country] ?? []),
+        ]);
         for (const [from, neighbors] of Object.entries(STATE_ADJACENCY[country])) {
           expect(seeded.has(from), from).toBe(true);
           for (const to of neighbors) {
