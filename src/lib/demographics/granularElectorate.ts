@@ -171,6 +171,7 @@ import {
   type DemographicsV2Calibration,
 } from "./v2/calibration";
 import { eligibleRegionalDimensions, retainRegionalRepresentation } from "./rules/regionalCoverage";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /**
  * Live-clock context for Layer-1 derivation. `year` null means "the era system
@@ -472,7 +473,7 @@ function deriveCellsForState(
   const year = yearCtx?.year ?? null;
 
   // eslint-disable-next-line local/no-country-literals -- US census path is separate from international models
-  if (countryId === "US") {
+  if (countryHasFeature("usLib", countryId)) {
     // Year-driven substrate when the era clock is live; otherwise the legacy
     // preset lookup, byte-identical. A structural surprise in the year path
     // must never cost this state its electorate, so it degrades to the legacy

@@ -18,6 +18,7 @@ import { getBankId } from "@/lib/centralBank/helpers";
 import { getPresetMonetaryScope } from "@/lib/monetaryPolicy/presetMonetaryScope";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 const BATCH_SIZE = 500;
 
@@ -166,7 +167,7 @@ export async function seedExchangeRates(db: Db, preset: string): Promise<void> {
     const currencyCode = getSeedCurrencyCode(countryId, preset);
     // Euro followers share the anchor's row value, not their legacy rate.
     const rate =
-      currencyCode === "EUR" && countryId !== "DE"
+      currencyCode === "EUR" && !countryHasFeature("deLib", countryId)
         ? (rates.DE ?? rates[countryId]!)
         : rates[countryId]!;
     const hardPeg = getSeedHardPeg(countryId, preset);

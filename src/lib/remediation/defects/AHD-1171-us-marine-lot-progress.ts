@@ -1,5 +1,6 @@
 import { ObjectId, type Db } from "mongodb";
 import type { Defect, DetectResult, HealPlan, HealResult, VerifyResult } from "../types";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export const DEFECT_ID = "AHD-1171-us-marine-lot-progress";
 export const CONTRACT_ID = "6a888f0a7badf9bb53c3971f";
@@ -44,7 +45,7 @@ async function survey(db: Db): Promise<Survey> {
     db.collection<ArsenalEvidence>("nationalArsenal").findOne({ countryId: "US" }),
   ]);
   const contractProvesDelivery =
-    contract?.countryId === "US" &&
+    countryHasFeature("usLib", contract?.countryId) &&
     contract.component === "marine" &&
     contract.status === "complete" &&
     contract.lotsOrdered === 1 &&
@@ -52,7 +53,7 @@ async function survey(db: Db): Promise<Survey> {
     contract.amountPaid === 151_500_000;
   const affected =
     contractProvesDelivery &&
-    unit?.countryId === "US" &&
+    countryHasFeature("usLib", unit?.countryId) &&
     unit.domain === "marine" &&
     unit.type === "Marine Division" &&
     unit.equipment?.firepower === 3 &&

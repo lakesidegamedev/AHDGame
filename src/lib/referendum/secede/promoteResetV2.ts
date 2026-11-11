@@ -44,6 +44,7 @@ import type { SecedingCountryId } from "./subRegions";
 import { buildSuccessorMetricRows, buildSuccessorRegionalRows } from "./rules/resetV2Promotion";
 import { verifyDemographicsV2Opening } from "@/lib/demographics/v2/verifyOpening";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 function rekeyReference(
   reference: OpeningLawReference,
@@ -207,7 +208,8 @@ export async function promoteResetV2ForIndependence(
     nationalReferences = completeSuccessorLawReferences({
       current: nationalReferences,
       fallback: openingLawReferences.filter(
-        (reference) => reference.country === "UK" && reference.scope === "national"
+        (reference) =>
+          countryHasFeature("ukLib", reference.country) && reference.scope === "national"
       ),
       countryId,
       scope: "national",
@@ -230,7 +232,8 @@ export async function promoteResetV2ForIndependence(
           false
         ),
         fallback: openingLawReferences.filter(
-          (reference) => reference.country === "UK" && reference.scope === "national"
+          (reference) =>
+            countryHasFeature("ukLib", reference.country) && reference.scope === "national"
         ),
         countryId: "UK",
         scope: "national",
@@ -251,7 +254,8 @@ export async function promoteResetV2ForIndependence(
         rekeyReference(reference, countryId, "regional")
       ),
       fallback: openingLawReferences.filter(
-        (reference) => reference.country === "UK" && reference.scope === "regional"
+        (reference) =>
+          countryHasFeature("ukLib", reference.country) && reference.scope === "regional"
       ),
       countryId,
       scope: "regional",

@@ -29,6 +29,7 @@ import {
   type GranularDim,
 } from "@/lib/demographics/granularCells";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /** Per-cell candidate vote shares for the granular electorate view. */
 export interface GranularCandidateShare {
@@ -241,7 +242,7 @@ export function buildGranularElectorateForState({
     era ?? (year != null ? eraIdForYear(year) : eraForPreset(preset ?? DEFAULT_SEED_PRESET));
 
   // eslint-disable-next-line local/no-country-literals -- US census path is separate from international models
-  if (countryId === "US") {
+  if (countryHasFeature("usLib", countryId)) {
     // Year-driven when the era clock is live. A poll that reported a different
     // electorate from the one the vote engines are counting would be worse
     // than no poll, it would be a lie the player can act on.

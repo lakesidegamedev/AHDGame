@@ -53,6 +53,7 @@ import {
   INTERNATIONAL_ORGANIZATIONS,
   type InternationalOrganizationId,
 } from "@/lib/constants/internationalOrganizations";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export interface ActuationResult {
   actuated: boolean;
@@ -609,8 +610,11 @@ async function retireNationalRemnants(
     if (!minister.characterId && !minister.nppId) continue;
     await captureOfficeTransition({
       db,
-      officeType:
-        absorbed === "US" ? "usCabinet" : absorbed === "UK" ? "ukCabinet" : "parliamentaryCabinet",
+      officeType: countryHasFeature("usLib", absorbed)
+        ? "usCabinet"
+        : countryHasFeature("ukLib", absorbed)
+          ? "ukCabinet"
+          : "parliamentaryCabinet",
       partyId: minister.party,
       transitionType: "lost",
       selectionMethod: "removal",

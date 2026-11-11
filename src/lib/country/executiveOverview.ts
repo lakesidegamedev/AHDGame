@@ -45,6 +45,7 @@ import { SNAP_ELECTION_LIMIT, SNAP_ELECTION_COOLDOWN_TURNS } from "@/lib/turn/sn
 import { getConfidenceConsequenceLevel } from "@/lib/turn/rulingPartyPriorities";
 import { executiveStatusPayload } from "@/lib/elections/rules/successionFill";
 import { loadExecutiveStatus } from "@/lib/elections/executiveStatus";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /**
  * Coerce a character id that is typed `ObjectId` but may have been persisted as
@@ -233,7 +234,7 @@ async function handleParliamentary(countryId: CountryId) {
   const authUser = await getAuthUser().catch(() => null);
   const [world, countryState] = await Promise.all([
     db.collection<{ _id: string; preset?: string }>("gameState").findOne({ _id: "current" }),
-    countryId === "RU"
+    countryHasFeature("ruLib", countryId)
       ? db
           .collection<{
             _id: string;

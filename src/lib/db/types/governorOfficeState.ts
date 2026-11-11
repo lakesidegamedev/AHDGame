@@ -1,5 +1,6 @@
 import type { ObjectId } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /**
  * Devolution Policy stance, chosen by UK First Ministers (SCO/WAL/NIR).
@@ -36,7 +37,7 @@ export interface GovernorOfficeState {
 
   /**
    * UK FM Devolution Policy — only meaningful when
-   * `(countryId === "UK" && stateId in {SCO, WAL, NIR})`. Drives the
+   * `(countryHasFeature("ukLib", countryId) && stateId in {SCO, WAL, NIR})`. Drives the
    * region's `independenceDesire` drift on `StateMetrics.governance`.
    * Other countries / regions leave this undefined.
    */

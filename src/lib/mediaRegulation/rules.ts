@@ -1,3 +1,4 @@
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 /**
  * Media regulation changes how much advertising a private outlet can deliver.
  * Censorship and ownership laws limit audience access before clearing. The
@@ -171,7 +172,7 @@ export function isMediaOwnershipBillAvailable(outlets: readonly MediaOutletDeliv
   const deliveredByCountry = new Map<string, Map<string, number>>();
   const incompleteCountries = new Set<string>();
   for (const outlet of outlets) {
-    if (outlet.countryId !== "US") continue;
+    if (!countryHasFeature("usLib", outlet.countryId)) continue;
     if (
       outlet.deliveredAdvertisingUnits == null ||
       !Number.isFinite(outlet.deliveredAdvertisingUnits) ||

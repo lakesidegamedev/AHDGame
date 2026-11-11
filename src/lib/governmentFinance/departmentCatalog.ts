@@ -5,6 +5,7 @@
 import { resolveDepartment } from "@/lib/cabinet/rosterEra";
 import { getCabinetMechanics, getCabinetPositions } from "@/lib/constants/cabinetMechanics";
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export type DepartmentCountryId = "US" | "UK" | "JP" | "IE" | "SCO" | "WAL";
 
@@ -51,7 +52,7 @@ const civil = "civil_operating";
 const capital = "civil_capital";
 
 function successorDepartments(countryId: "SCO" | "WAL"): DepartmentDefinition[] {
-  const nation = countryId === "SCO" ? "Scottish" : "Welsh";
+  const nation = countryHasFeature("scoLib", countryId) ? "Scottish" : "Welsh";
   const rows: Array<[string, DepartmentKind, string[], PortfolioId[], string]> = [
     ["executive", "executive_centre", ["deputyFirstMinister"], [], civil],
     ["finance", "finance_ministry", ["financeSecretary"], ["finance"], civil],

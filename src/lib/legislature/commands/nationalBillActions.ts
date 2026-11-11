@@ -33,6 +33,7 @@ import { statMultiplier } from "@/lib/stats/statMultiplier";
 import { NEUTRAL_STAT, USE_GROWTH_INCREMENT } from "@/lib/stats/statsConstants";
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export type NationalBillActionInput =
   | { action: "vote"; vote: "for" | "against" | "abstain" }
@@ -651,7 +652,7 @@ export async function performNationalBillAction(
   }
 
   if (action === "filibuster") {
-    if (countryId !== "US") {
+    if (!countryHasFeature("usLib", countryId)) {
       return {
         status: 400,
         body: { error: "Filibuster is only available in the US Senate." },

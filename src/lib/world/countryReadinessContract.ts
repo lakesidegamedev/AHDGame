@@ -37,6 +37,7 @@ import {
   type CountryRequirementReadinessTarget,
 } from "@/lib/world/countryRequirementLevel";
 import { isShippingPreset, tierFor } from "@/lib/world/eraRoster";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 // ─── Capability catalogue ────────────────────────────────────────────────────
 
@@ -685,7 +686,7 @@ function probeElectionCycle(countryId: CountryId): CapabilityEvidence {
   // US presidential / congressional cycles live in the core turn pipeline, not
   // the per-country election-phase registry.
   // eslint-disable-next-line local/no-country-literals -- the US election cycle is a core-pipeline path, not a registry entry
-  if (countryId === "US") {
+  if (countryHasFeature("usLib", countryId)) {
     return {
       present: true,
       evidence: "US uses the core presidential/congressional election pipeline.",
@@ -715,7 +716,7 @@ function probeCabinet(countryId: CountryId): CapabilityEvidence {
 function probeBillLifecycle(countryId: CountryId): CapabilityEvidence {
   // US national bill lifecycle is the default/core path.
   // eslint-disable-next-line local/no-country-literals -- the US bill lifecycle is the core/default path, not a registry entry
-  if (countryId === "US") {
+  if (countryHasFeature("usLib", countryId)) {
     return {
       present: true,
       evidence: "US uses the core national bill lifecycle pipeline.",

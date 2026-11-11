@@ -11,6 +11,7 @@ import type { Character } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { sharedPoolFromRows } from "@/lib/countries/uk/dualMinistry/rules";
 import { isOfficePoolAccrualTurn } from "@/lib/actions/officePoolAccrual";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export { MINISTERIAL_ACTION_RESET_HINT } from "./ministerialActionHint";
 
@@ -267,7 +268,7 @@ export async function accrueUkSharedPools(
   const holderIds = [
     ...new Set(
       rows
-        .filter((row) => row.countryId === "UK" && row.characterId != null)
+        .filter((row) => countryHasFeature("ukLib", row.countryId) && row.characterId != null)
         .map((row) => (row.characterId as ObjectId).toString())
     ),
   ].map((id) => new ObjectId(id));

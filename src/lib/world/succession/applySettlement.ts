@@ -27,6 +27,7 @@ import {
   type RuntimeWorldEntityState,
   validateAppliedEntityStates,
 } from "./runtimeEntities";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export async function applyPreparedFederationSettlement(input: {
   db: Db;
@@ -139,7 +140,7 @@ export async function applyPreparedFederationSettlement(input: {
       appliedOnTurn,
       now,
     });
-  } else if (sourceCountryId === "RU") {
+  } else if (countryHasFeature("ruLib", sourceCountryId)) {
     await materializeProvisionalRussianCongress({
       db,
       session,

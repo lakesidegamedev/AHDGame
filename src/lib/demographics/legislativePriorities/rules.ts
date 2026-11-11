@@ -7,6 +7,7 @@ import { PRIORITY_COUNTRIES, type PriorityReference } from "./catalog";
 import { YEAR_2000_PRIORITIES } from "./year2000";
 import { eraForPreset } from "@/lib/seeds/presetSelector";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export interface PriorityContext {
   year?: number | null;
@@ -73,10 +74,9 @@ export interface LegislativePrioritySelection {
 export function isPriorityTarget(countryId: string, regionId: string, bucketId: string): boolean {
   const countryKey = countryId.toUpperCase();
   const config = PRIORITY_COUNTRIES[countryKey];
-  const dimensions =
-    countryKey === "US"
-      ? ["race", "age", "education", "wealth"]
-      : ["ethnicity", "age", "education", "income"];
+  const dimensions = countryHasFeature("usLib", countryKey)
+    ? ["race", "age", "education", "wealth"]
+    : ["ethnicity", "age", "education", "income"];
   return Boolean(
     dimensions.includes(bucketId.split(":")[0]) &&
     config?.regions[regionId.toUpperCase()] &&

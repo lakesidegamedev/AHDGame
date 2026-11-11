@@ -33,6 +33,7 @@ import { getGovernmentFormationsCollection } from "@/lib/db/collections/governme
 import { getExecutiveOfficialFilter } from "@/lib/elections/executiveOfficeFilters";
 import { tallySeatsByParty } from "@/lib/turn/parliamentaryGovernment";
 import { nppAutonomyAtLeast } from "./featureFlag";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /**
  * Seat an NPP president for `countryId` when the office is vacant. Returns true
@@ -61,7 +62,7 @@ export async function appointNppPresident(
   // the fallback still supplies a governing brain.
   if (
     COUNTRIES_WITH_PRESIDENTIAL_ELECTION_CYCLES.has(countryId) &&
-    (config.status !== "coming-soon" || countryId === "BR")
+    (config.status !== "coming-soon" || countryHasFeature("brLib", countryId))
   ) {
     return false;
   }

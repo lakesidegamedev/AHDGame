@@ -21,6 +21,7 @@ import {
   ELECTORAL_VOTE_UNITS_1953,
   STATE_ID_SET,
 } from "@/lib/constants/statesTables";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /**
  * Preset-aware CN apportionment selectors. Same shape and same fall-back-to-
@@ -60,7 +61,7 @@ export function subNationalChamberSeats(
   state: { _id: string; stateSenateSeats?: number | null },
   preset?: string
 ): number {
-  if (countryId === "CN") {
+  if (countryHasFeature("cnLib", countryId)) {
     return getCnPeoplesCongressSeats(preset)[state._id] ?? state.stateSenateSeats ?? 0;
   }
   return state.stateSenateSeats ?? 0;
@@ -141,7 +142,7 @@ export function isUsPartyOrganizationJurisdiction(id: string): boolean {
 
 /** True when a US region cannot host a party organization. */
 export function isNonPartyOrganizationUsRegion(country: string, region: string): boolean {
-  return country === "US" && !isUsPartyOrganizationJurisdiction(region);
+  return countryHasFeature("usLib", country) && !isUsPartyOrganizationJurisdiction(region);
 }
 
 /**

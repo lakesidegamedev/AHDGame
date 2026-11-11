@@ -9,6 +9,7 @@ import {
   type DemocraticCompetition,
   type SeatControlHistoryRow,
 } from "./competition";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 interface ParliamentSeatHistoryDoc extends SeatControlHistoryRow {
   countryId: string;
@@ -44,7 +45,7 @@ export async function loadDemocraticCompetition(
       .sort({ turn: 1 })
       .toArray(),
     // eslint-disable-next-line local/no-country-literals -- SCOTUS is US-only per #3581 scope; the find filter below carries the country scope
-    countryId === "US"
+    countryHasFeature("usLib", countryId)
       ? db
           .collection<SupremeCourtSeat>("supremeCourtSeats")
           .find({ countryId: "US" })

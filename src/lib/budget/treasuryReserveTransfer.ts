@@ -33,6 +33,7 @@ import { buildTxDocs, loadTxThresholds } from "@/lib/financialTxLog/emit";
 import { loadTurnLengthMinutes } from "@/lib/financialTxLog/expiresAt";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export class TreasuryReserveTransferRejected extends Error {
   constructor(
@@ -99,7 +100,7 @@ function assertSame(saved: Command, input: Command): void {
     );
 }
 async function prepare(db: Db, command: Command): Promise<void> {
-  const budgetId = command.countryId === "US" ? "federal" : command.countryId;
+  const budgetId = countryHasFeature("usLib", command.countryId) ? "federal" : command.countryId;
   const [budget, config] = await Promise.all([
     federalBudgetCollection(db).findOne({ _id: budgetId }),
     db.collection<GameConfig>("gameConfig").findOne(

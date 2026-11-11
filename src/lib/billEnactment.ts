@@ -107,6 +107,7 @@ import {
 import { applyResetLawBillEnactment } from "@/lib/resetLegislation/enactBill";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 type EnactableBill = Pick<
   Bill | StateBill,
@@ -800,23 +801,22 @@ export async function onBillEnacted(
 
   // Discord notification (fire-and-forget)
   const locationLabel = (() => {
-    if (nationalScopeCountry && resolvedCountry === "UK") return "Westminster";
-    if (nationalScopeCountry && resolvedCountry === "US") return "Federal";
-    if (nationalScopeCountry && resolvedCountry === "DE") return "Bundestag";
-    if (nationalScopeCountry && resolvedCountry === "JP") return "Kokkai";
+    if (nationalScopeCountry && countryHasFeature("ukLib", resolvedCountry)) return "Westminster";
+    if (nationalScopeCountry && countryHasFeature("usLib", resolvedCountry)) return "Federal";
+    if (nationalScopeCountry && countryHasFeature("deLib", resolvedCountry)) return "Bundestag";
+    if (nationalScopeCountry && countryHasFeature("jpLib", resolvedCountry)) return "Kokkai";
     if (nationalScopeCountry) return getCountryConfig(resolvedCountry).name;
     return bill.stateId || "Federal";
   })();
-  const countryLabel =
-    resolvedCountry === "US"
-      ? "USA"
-      : resolvedCountry === "UK"
-        ? "UK"
-        : resolvedCountry === "DE"
-          ? "Germany"
-          : resolvedCountry === "JP"
-            ? "Japan"
-            : getCountryConfig(resolvedCountry).name;
+  const countryLabel = countryHasFeature("usLib", resolvedCountry)
+    ? "USA"
+    : countryHasFeature("ukLib", resolvedCountry)
+      ? "UK"
+      : countryHasFeature("deLib", resolvedCountry)
+        ? "Germany"
+        : countryHasFeature("jpLib", resolvedCountry)
+          ? "Japan"
+          : getCountryConfig(resolvedCountry).name;
 
   // Build policy domain label from the first provision's legislation type
   const firstLegType =

@@ -1,3 +1,4 @@
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 /**
  * Euro adoption conversion rules (portable rules core).
  *
@@ -51,12 +52,14 @@ export const EUROZONE_2027_MEMBERS: readonly EuroMemberCountryId[] = [
  */
 /** Members whose adoption year is 1999 (GR joined in 2001). */
 const EURO_1999_ADOPTERS: ReadonlySet<string> = new Set(
-  EUROZONE_2027_MEMBERS.filter((member) => member !== "GR" && member !== "BG")
+  EUROZONE_2027_MEMBERS.filter(
+    (member) => !countryHasFeature("grLib", member) && !countryHasFeature("bgLib", member)
+  )
 );
 
 export function euroAdoptionYear(countryId: string): number | null {
-  if (countryId === "GR") return 2001;
-  if (countryId === "BG") return 2026;
+  if (countryHasFeature("grLib", countryId)) return 2001;
+  if (countryHasFeature("bgLib", countryId)) return 2026;
   if (EURO_1999_ADOPTERS.has(countryId)) return 1999;
   return null;
 }
