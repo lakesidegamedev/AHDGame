@@ -19,7 +19,9 @@ describe("minimum wage law scales", () => {
     const national = catalog.filter(
       (t) => /^[a-z]{2}_minimum_wage$/.test(t._id) && t.allowedScope !== "state"
     );
-    expect(national.map((t) => t._id).sort()).toEqual([...MINIMUM_WAGE_LAW_TYPE_IDS].sort());
+    expect(national.map((t) => t._id).sort()).toEqual(
+      MINIMUM_WAGE_LAW_TYPE_IDS.filter((id) => !id.includes(".")).sort()
+    );
     for (const type of national) {
       const scale = MINIMUM_WAGE_LAW_SCALES[type._id]!;
       const options = type.policyOptions ?? [];
@@ -35,7 +37,7 @@ describe("minimum wage law scales", () => {
   });
 
   it("puts each country's current statutory option on its real Kaitz ratio", () => {
-    expect(minimumWageLawKaitz("us_minimum_wage", 4)).toBe(0.28);
+    expect(minimumWageLawKaitz("us.economy.workerSecurity.primary", 1)).toBe(0.28);
     expect(minimumWageLawKaitz("de_minimum_wage", 3)).toBe(0.55);
     expect(minimumWageLawKaitz("ie_minimum_wage", 3)).toBe(0.6);
     expect(minimumWageLawKaitz("jp_minimum_wage", 3)).toBe(0.45);
@@ -64,6 +66,7 @@ describe("minimum wage law scales", () => {
   it("reads the option index from the row or from its id", () => {
     expect(policyOptionIndexOf({ policyOptionIndex: 2 })).toBe(2);
     expect(policyOptionIndexOf({ policyOptionId: "minimum_wage_opt_4" })).toBe(4);
+    expect(policyOptionIndexOf({ policyOptionId: "l3" })).toBe(3);
     expect(policyOptionIndexOf({ policyOptionId: "custom" })).toBeNull();
   });
 

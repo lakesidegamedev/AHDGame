@@ -40,12 +40,6 @@ const ANACHRONISM_PATTERNS: Array<[string, RegExp]> = [
  * it should be a deliberate decision, which is the point of the test.
  */
 const TOLERATED: Record<string, string> = {
-  // Media regulation long predates the internet and the 1953 seed authors a
-  // position for it. Only the illustrative examples in the copy are modern.
-  us_media_communications: "type is era-valid; copy cites net neutrality as an example",
-  // National grids are 1920s-era policy. "Broadband" is one clause of a long
-  // infrastructure explanation.
-  uk_energy_grid: "type is era-valid; broadband is one clause of the explanation",
   ie_rural_development: "type is era-valid; broadband appears in a list of modern schemes",
   ng_telecommunications: "telecoms policy is era-valid post-independence; copy is broadband-led",
   // Chinese-language policy copy naming real modern institutions

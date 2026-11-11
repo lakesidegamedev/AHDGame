@@ -274,9 +274,9 @@ export const SCOTUS_2019_DEFAULT_SEED: ScotusPresetSeed = {
       // diverged ruling represents the Court instead permitting rescission —
       // the restrictive/enforcement-heavy end of border enforcement policy.
       effect: {
-        legislationTypeId: "us_border_security_enforcement",
-        policyOptionId: "border_security_enforcement_opt_5",
-        effectDirection: -1,
+        legislationTypeId: "us.sec.immigrationNationality",
+        policyOptionId: "l4",
+        effectDirection: 1,
       },
     },
     {
@@ -302,9 +302,9 @@ export const SCOTUS_2019_DEFAULT_SEED: ScotusPresetSeed = {
       // A diverged ruling represents the Court instead upholding it — a
       // restrictive move on reproductive rights.
       effect: {
-        legislationTypeId: "us_reproductive_rights",
-        policyOptionId: "reproductive_rights_opt_4",
-        effectDirection: -1,
+        legislationTypeId: "us.society.demography.primary",
+        policyOptionId: "l3",
+        effectDirection: 1,
       },
     },
 
@@ -319,9 +319,9 @@ export const SCOTUS_2019_DEFAULT_SEED: ScotusPresetSeed = {
       // ruling represents the Court instead reaffirming a federal
       // reproductive-rights floor.
       effect: {
-        legislationTypeId: "us_reproductive_rights",
-        policyOptionId: "reproductive_rights_opt_2",
-        effectDirection: 1,
+        legislationTypeId: "us.society.demography.primary",
+        policyOptionId: "l1",
+        effectDirection: -1,
       },
     },
     {
@@ -334,8 +334,8 @@ export const SCOTUS_2019_DEFAULT_SEED: ScotusPresetSeed = {
       // A diverged ruling represents the Court instead upholding
       // restrictive carry licensing.
       effect: {
-        legislationTypeId: "us_gun_control",
-        policyOptionId: "gun_control_opt_2",
+        legislationTypeId: "us.order.safety.primary",
+        policyOptionId: "l3",
         effectDirection: 1,
       },
     },
@@ -350,8 +350,8 @@ export const SCOTUS_2019_DEFAULT_SEED: ScotusPresetSeed = {
       // diverged ruling represents the Court instead upholding expansive
       // EPA authority.
       effect: {
-        legislationTypeId: "us_clean_energy",
-        policyOptionId: "clean_energy_opt_1",
+        legislationTypeId: "us.environment.conservation.primary",
+        policyOptionId: "l4",
         effectDirection: 1,
       },
     },

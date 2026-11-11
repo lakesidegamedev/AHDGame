@@ -114,7 +114,7 @@ describe("§4.7 education spending sweep", () => {
     // field explicitly (matching us_federal_education_funding) AND have had
     // their double-counting secondaries trimmed; the widened gate above
     // covers the fallback case regardless for any bill that doesn't.
-    for (const id of ["us_state_education_funding", "cn_provincial_education"]) {
+    for (const id of ["cn_provincial_education"]) {
       const lt = all.find((l) => l._id === id);
       expect(lt, `${id} should exist`).toBeDefined();
       expect(lt!.budgetCategory).toBe("education");

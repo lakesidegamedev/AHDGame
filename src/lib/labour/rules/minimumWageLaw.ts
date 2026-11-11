@@ -19,7 +19,7 @@
  * ratio per option. Real floors sit between about 0.3 and 0.6 of the median;
  * player options may exceed that and are capped by `MIN_WAGE_KAITZ_MAX`.
  *
- * State-scope laws (`us_state_minimum_wage`) are not national floors.
+ * State-scope laws are not national floors.
  */
 
 /** Same ceiling as `MIN_WAGE_KAITZ_MAX` in laborCost.ts (a floor at the median itself). */
@@ -43,10 +43,11 @@ export interface MinimumWageLawScale {
  * build instead of drifting.
  */
 export const MINIMUM_WAGE_LAW_SCALES: Readonly<Record<string, MinimumWageLawScale>> = {
-  // USD/hour. $7.25 is 0.28 of the median (OECD 2023).
-  us_minimum_wage: {
+  // Worker protections level 0 to 4. Level 1 is a $7.25 floor (0.28 of a $26
+  // median, OECD 2023); levels 2 to 4 are $12, $17 and $20.
+  "us.economy.workerSecurity.primary": {
     referenceMedianWage: 26,
-    optionRates: [25, 20, 17, 12, 7.25, 5, 0],
+    optionRates: [0, 7.25, 12, 17, 20],
   },
   // EUR/hour. EUR 12 is 0.55 of the median.
   de_minimum_wage: {
@@ -89,7 +90,7 @@ function clampRatio(value: number): number {
   return Math.min(MINIMUM_WAGE_LAW_KAITZ_MAX, Math.max(0, value));
 }
 
-/** The option index of a national policy row, from its index or its `_opt_<n>` id. */
+/** The option index of a national policy row, from its index or its `_opt_<n>` or `l<n>` id. */
 export function policyOptionIndexOf(row: {
   policyOptionIndex?: number | null;
   policyOptionId?: string | null;
@@ -97,7 +98,7 @@ export function policyOptionIndexOf(row: {
   if (typeof row.policyOptionIndex === "number" && Number.isInteger(row.policyOptionIndex)) {
     return row.policyOptionIndex;
   }
-  const match = /_opt_(\d+)$/.exec(row.policyOptionId ?? "");
+  const match = /(?:_opt_|^l)(\d+)$/.exec(row.policyOptionId ?? "");
   return match ? Number(match[1]) : null;
 }
 

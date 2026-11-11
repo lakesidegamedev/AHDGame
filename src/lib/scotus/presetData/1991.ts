@@ -296,9 +296,9 @@ const docket: ScotusPresetDocketCaseSeed[] = [
     effect: {
       // Divergent (conservative majority) path: an early, sharper rollback of
       // abortion access than history actually produced at this point.
-      legislationTypeId: "us_reproductive_rights",
-      policyOptionId: "reproductive_rights_opt_5",
-      effectDirection: -1,
+      legislationTypeId: "us.society.demography.primary",
+      policyOptionId: "l4",
+      effectDirection: 1,
     },
   },
   {
@@ -311,8 +311,8 @@ const docket: ScotusPresetDocketCaseSeed[] = [
       // Divergent (liberal majority upholds broad federal Commerce Clause
       // reach) closest real-world artifact: the federal gun regulation Lopez
       // itself struck down.
-      legislationTypeId: "us_gun_control",
-      policyOptionId: "gun_control_opt_2",
+      legislationTypeId: "us.order.safety.primary",
+      policyOptionId: "l3",
       effectDirection: 1,
     },
   },
@@ -349,8 +349,8 @@ const docket: ScotusPresetDocketCaseSeed[] = [
     decisionYear: 2008,
     effect: {
       // Divergent (liberal majority) path: DC's handgun ban stands.
-      legislationTypeId: "us_gun_control",
-      policyOptionId: "gun_control_opt_0",
+      legislationTypeId: "us.order.safety.primary",
+      policyOptionId: "l4",
       effectDirection: 1,
     },
   },
@@ -364,8 +364,8 @@ const docket: ScotusPresetDocketCaseSeed[] = [
       // Divergent (liberal majority) path: campaign-finance/lobbying
       // restrictions survive — closest existing analog is the ethics/
       // transparency legislationType.
-      legislationTypeId: "us_government_ethics",
-      policyOptionId: "government_ethics_opt_0",
+      legislationTypeId: "us.governance.integrity.primary",
+      policyOptionId: "l4",
       effectDirection: 1,
     },
   },
@@ -378,8 +378,8 @@ const docket: ScotusPresetDocketCaseSeed[] = [
     effect: {
       // Divergent (conservative majority) path: the ACA (and its Medicaid
       // expansion) is struck down rather than upheld.
-      legislationTypeId: "us_medicaid_expansion",
-      policyOptionId: "medicaid_expansion_opt_6",
+      legislationTypeId: "us.health.universalCare.primary",
+      policyOptionId: "l0",
       effectDirection: -1,
     },
   },
@@ -392,8 +392,8 @@ const docket: ScotusPresetDocketCaseSeed[] = [
     effect: {
       // Divergent (liberal majority) path: full Voting Rights Act
       // preclearance enforcement survives.
-      legislationTypeId: "us_civics_voting_rights",
-      policyOptionId: "civics_voting_rights_opt_1",
+      legislationTypeId: "us.governance.participation.primary",
+      policyOptionId: "l4",
       effectDirection: 1,
     },
   },
@@ -406,9 +406,9 @@ const docket: ScotusPresetDocketCaseSeed[] = [
     effect: {
       // Divergent (liberal majority) path: no religious exemption, full
       // contraceptive-coverage mandate stands.
-      legislationTypeId: "us_reproductive_rights",
-      policyOptionId: "reproductive_rights_opt_2",
-      effectDirection: 1,
+      legislationTypeId: "us.society.demography.primary",
+      policyOptionId: "l1",
+      effectDirection: -1,
     },
   },
   {
@@ -428,8 +428,8 @@ const docket: ScotusPresetDocketCaseSeed[] = [
     effect: {
       // Divergent (liberal majority) path: mandatory agency fees (and
       // union bargaining power) stand.
-      legislationTypeId: "us_state_labor",
-      policyOptionId: "state_labor_opt_0",
+      legislationTypeId: "us.sec.laborManagementRelations",
+      policyOptionId: "l4",
       effectDirection: 1,
     },
   },
@@ -441,9 +441,9 @@ const docket: ScotusPresetDocketCaseSeed[] = [
     decisionYear: 2018,
     effect: {
       // Divergent (liberal majority) path: the travel ban is struck down.
-      legislationTypeId: "us_border_security_enforcement",
-      policyOptionId: "border_security_enforcement_opt_2",
-      effectDirection: 1,
+      legislationTypeId: "us.sec.immigrationNationality",
+      policyOptionId: "l1",
+      effectDirection: -1,
     },
   },
   {
@@ -463,9 +463,9 @@ const docket: ScotusPresetDocketCaseSeed[] = [
     effect: {
       // Divergent (liberal majority) path: Roe/Casey's federal abortion
       // right is preserved rather than overturned.
-      legislationTypeId: "us_reproductive_rights",
-      policyOptionId: "reproductive_rights_opt_1",
-      effectDirection: 1,
+      legislationTypeId: "us.society.demography.primary",
+      policyOptionId: "l0",
+      effectDirection: -1,
     },
   },
   {
@@ -477,8 +477,8 @@ const docket: ScotusPresetDocketCaseSeed[] = [
     effect: {
       // Divergent (liberal majority) path: broad EPA regulatory authority
       // over emissions is upheld.
-      legislationTypeId: "us_clean_energy",
-      policyOptionId: "clean_energy_opt_2",
+      legislationTypeId: "us.environment.conservation.primary",
+      policyOptionId: "l3",
       effectDirection: 1,
     },
   },

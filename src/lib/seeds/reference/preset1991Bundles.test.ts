@@ -372,47 +372,6 @@ describe("basePolicies — preset-aware (Gap #4)", () => {
     expect(out.some((p) => p.legislationTypeId === "cn_common_prosperity")).toBe(false);
   });
 
-  it("getBasePolicies('1991-default') aligns US income-tax rate but keeps corporate tax era-specific", async () => {
-    const { getBasePolicies } = await import("./basePolicies");
-    const policies1991 = await getBasePolicies("1991-default");
-    const policies2019 = await getBasePolicies("2019-default");
-    const findFed = (policies: typeof policies1991, typeId: string) =>
-      policies.find((p) => p.legislationTypeId === typeId && p.scope === "national");
-
-    // Income tax: the flat rate is a revenue-calibration knob, not the statutory
-    // rate. US individual income tax was ~7.4% of GDP in 1991 and ~8% in 2019,
-    // so both eras sit at index 4 (20%); the era difference is carried by the
-    // taxableIncome base ratio, not the rate.
-    expect(findFed(policies1991, "us_federal_income_tax_rate")?.policyOptionIndex).toBe(4);
-    expect(findFed(policies2019, "us_federal_income_tax_rate")?.policyOptionIndex).toBe(4);
-
-    // Corporate tax IS era-specific: 1991 pre-TCJA 34% (index 8) vs 2019 21% (index 5).
-    const corp1991 = findFed(
-      policies1991,
-      "us_federal_domestic_corporate_tax_rate"
-    )?.policyOptionIndex;
-    const corp2019 = findFed(
-      policies2019,
-      "us_federal_domestic_corporate_tax_rate"
-    )?.policyOptionIndex;
-    expect(corp1991).toBe(8);
-    expect(corp2019).toBe(5);
-    expect(corp1991).not.toBe(corp2019);
-  });
-
-  it("getBasePolicies('1991-default') uses era-correct UK tax indexes", async () => {
-    const { getBasePolicies } = await import("./basePolicies");
-    const policies1991 = await getBasePolicies("1991-default");
-    const ukVat = policies1991.find(
-      (p) => p.legislationTypeId === "uk_vat" && p.scope === "national"
-    );
-    const ukIncome = policies1991.find(
-      (p) => p.legislationTypeId === "uk_income_tax_rate" && p.scope === "national"
-    );
-    expect(ukVat?.policyOptionIndex).toBe(4); // 17.5% in 1991 (vs 20% in 2020)
-    expect(ukIncome?.policyOptionIndex).toBe(6); // 25% basic in 1991 (vs 20% in 2020)
-  });
-
   it("getBasePolicies('1991-default') zeroes JP consumption tax to era index", async () => {
     const { getBasePolicies } = await import("./basePolicies");
     const policies1991 = await getBasePolicies("1991-default");

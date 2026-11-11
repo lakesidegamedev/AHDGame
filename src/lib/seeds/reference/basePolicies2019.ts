@@ -38,17 +38,6 @@ export const COUNTRY_POLICY_CONFIGS_2019: Record<string, CountryPolicyConfig> = 
   us: {
     nationalStateId: "federal",
     defaults: {
-      // ── Education ──────────────────────────────────────────────────────────
-      us_federal_education_funding: { economic: 0, social: 0 }, // Jan 2020: DeVos proposed cuts blocked by Congress, actual spending flat
-      us_federal_science_funding: { economic: 0, social: 0 }, // Jan 2020: proposed NIH/NSF cuts blocked by Congress, actual spending flat
-      us_school_standards: { economic: 0, social: 0 },
-      // ── Healthcare ─────────────────────────────────────────────────────────
-      us_federal_healthcare_funding: { economic: 1, social: 0 }, // Jan 2020: ACA repeal attempts, Medicaid work requirements pushed
-      us_drug_pricing_medicare: { economic: 0, social: 0 }, // Jan 2020: no Medicare negotiation (Trump admin)
-      us_public_health: { economic: 0, social: 0 }, // Jan 2020: CDC neutral baseline
-      // ── Environment ────────────────────────────────────────────────────────
-      us_clean_energy: { economic: 1, social: 0 }, // Jan 2020: Trump withdrew from Paris Agreement, fossil fuel deregulation
-      us_conservation: { economic: 0, social: 0 },
       // ── Economy ────────────────────────────────────────────────────────────
       us_federal_income_tax_rate: { economic: 0, social: 0 }, // Jan 2020: TCJA rates in place
       us_federal_domestic_corporate_tax_rate: { economic: 0, social: 0 }, // Jan 2020: 21% corporate rate in place
@@ -56,35 +45,6 @@ export const COUNTRY_POLICY_CONFIGS_2019: Record<string, CountryPolicyConfig> = 
       us_federal_payroll_tax_rate: { economic: 0, social: 0 }, // Jan 2020: standard payroll tax schedule
       us_federal_tariff_rate: { economic: 0, social: 0 }, // Game baseline: tariffs start at 0% until lawmakers change them
       us_federal_sales_tax_rate: { economic: 0, social: 0 }, // Jan 2020: no federal sales tax
-      us_federal_spending_stimulus: { economic: 0, social: 0 },
-      us_transportation: { economic: 0, social: 0 },
-      us_broadband_energy: { economic: 0, social: 0 },
-      us_minimum_wage: { economic: 2, social: 0 }, // Jan 2020: $7.25 frozen since 2009, right-wing position
-      us_workforce_development: { economic: 1, social: 0 }, // Jan 2020: Trump workforce exec orders
-      us_housing: { economic: 0, social: 0 }, // Jan 2020: HUD relatively passive under Carson, no major new programs
-      us_food_nutrition: { economic: 1, social: 0 }, // Jan 2020: SNAP work requirements push
-      // ── Safety Net ─────────────────────────────────────────────────────────
-      us_social_security: { economic: 0, social: 0 }, // Jan 2020: no major changes
-      us_medicaid: { economic: 0, social: 0 }, // Jan 2020: work requirement push mostly blocked by courts, effective status quo
-      us_medicaid_expansion: { economic: 0, social: 0 },
-      // ── Law & Justice ──────────────────────────────────────────────────────
-      us_law_enforcement_criminal_justice: { economic: 0, social: 0 },
-      us_prison_rehabilitation: { economic: 1, social: 1 }, // Jan 2020: First Step Act (bipartisan)
-      // ── Defense & Foreign ──────────────────────────────────────────────────
-      us_defense_spending: { economic: 1, social: 0 }, // Jan 2020: $738B defense budget
-      us_foreign_policy: { economic: 0, social: 0 }, // Jan 2020: America First, mixed
-      // ── Immigration ────────────────────────────────────────────────────────
-      us_border_security_enforcement: { economic: 2, social: 2 }, // Jan 2020: border wall, ICE, strict enforcement
-      us_legal_immigration_visas: { economic: 1, social: 1 }, // Jan 2020: reduced legal immigration, merit-based push
-      // ── Social ─────────────────────────────────────────────────────────────
-      us_reproductive_rights: { economic: 0, social: 1 }, // Jan 2020: Mexico City gag rule reinstated, Title X changes, but Roe still law
-      us_paid_family_leave: { economic: 1, social: 0 }, // Jan 2020: no federal paid leave (OECD outlier) — only unpaid FMLA; market-reliant = mild right
-      us_gun_control: { economic: 0, social: 0 },
-      // ── Governance ─────────────────────────────────────────────────────────
-      us_government_ethics: { economic: 0, social: 0 }, // Jan 2020: neutral baseline
-      us_civics_voting_rights: { economic: 0, social: 1 }, // Jan 2020: restrictive trend
-      us_media_communications: { economic: 1, social: 0 }, // Jan 2020: FCC deregulation
-      us_emergency_services: { economic: 0, social: 0 }, // Jan 2020: status quo state/local funding
     },
     optionIndexes: {
       us_federal_income_tax_rate: 4, // 20% — effective rate (~18% real); game uses flat rate × base, not marginal brackets
@@ -93,7 +53,6 @@ export const COUNTRY_POLICY_CONFIGS_2019: Record<string, CountryPolicyConfig> = 
       us_federal_payroll_tax_rate: 5, // 15% — real Jan 2020: 15.3% combined (12.4% SS + 2.9% Medicare)
       us_federal_tariff_rate: 0, // 0% — game baseline starts all tariffs at zero on reset
       us_federal_sales_tax_rate: 0, // 0% — no federal sales tax (unchanged)
-      us_social_security: 5,
     },
     regions: states,
   },
@@ -107,54 +66,6 @@ export const COUNTRY_POLICY_CONFIGS_2019: Record<string, CountryPolicyConfig> = 
     defaults: {
       // ── Healthcare ─────────────────────────────────────────────────────────────
       uk_nhs_funding: { economic: -1, social: 0 }, // Jan 2020: pledged £34B extra NHS funding
-      uk_social_care: { economic: 0, social: 0 }, // Jan 2020: promised reform but nothing concrete yet
-      uk_mental_health: { economic: 0, social: 0 }, // Jan 2020: modest pledges, no major shift
-      uk_public_health: { economic: 0, social: 0 }, // Jan 2020: pre-COVID status quo
-      // ── Education ──────────────────────────────────────────────────────────────
-      uk_tuition_fees: { economic: 1, social: 0 }, // Jan 2020: £9,250/year maintained (Tory-era regime)
-      uk_education_standards: { economic: 0, social: 0 }, // Jan 2020: academization continuing, no major shift
-      uk_education_funding: { economic: -1, social: 0 }, // Jan 2020: promised extra school funding in 2019 spending round
-      uk_research_science: { economic: -1, social: 0 }, // Jan 2020: pledged 2.4% GDP R&D target, Cummings' ARPA vision
-      // ── Economic ───────────────────────────────────────────────────────────────
-      uk_fiscal_spending: { economic: -1, social: 0 }, // Jan 2020: loosening austerity, spending review promised increases
-      uk_local_government_funding: { economic: 0, social: 0 }, // Jan 2020: austerity legacy slowly easing, ambiguous
-      // ── Infrastructure ─────────────────────────────────────────────────────────
-      uk_transport_rail: { economic: -1, social: 0 }, // Jan 2020: HS2 confirmed Feb 2020, levelling up infrastructure push
-      uk_energy_grid: { economic: 0, social: 0 }, // Jan 2020: mixed signals, green push early stages
-      // ── Environment ────────────────────────────────────────────────────────────
-      uk_climate_net_zero: { economic: -1, social: 0 }, // Jan 2020: net zero by 2050 legislated June 2019, COP26 host
-      uk_north_sea_energy: { economic: 1, social: 0 }, // Jan 2020: continued licensing, pro-extraction alongside green pledges
-      // ── Law & Justice ──────────────────────────────────────────────────────────
-      uk_policing_crime: { economic: -1, social: 1 }, // Jan 2020: 20k new police (investment=left-eco, tough-on-crime=right-soc)
-      uk_prison_rehabilitation: { economic: 0, social: 0 }, // Jan 2020: status quo
-      // ── Defence ────────────────────────────────────────────────────────────────
-      uk_defence_spending: { economic: 1, social: 0 }, // Jan 2020: NATO 2%+, Global Britain ambitions
-      uk_trident_defence: { economic: 0, social: 0 }, // Jan 2020: Trident renewal continuing, bipartisan consensus
-      // ── Foreign Policy ─────────────────────────────────────────────────────────
-      uk_foreign_policy: { economic: 0, social: 0 }, // Jan 2020: Global Britain rhetoric, early stages
-      // ── Welfare ────────────────────────────────────────────────────────────────
-      uk_universal_credit: { economic: 1, social: 0 }, // Jan 2020: continuing Cameron-era reform, below-inflation benefit rises
-      uk_state_pensions: { economic: -1, social: 0 }, // Jan 2020: triple lock maintained, above-inflation pension increases
-      uk_childcare: { economic: 0, social: 0 }, // Jan 2020: 15-30 free hours for working parents — moderate framework
-      // ── Immigration ────────────────────────────────────────────────────────────
-      uk_immigration_asylum: { economic: 1, social: 1 }, // Jan 2020: points-based system replacing EU free movement
-      uk_work_visas: { economic: 1, social: 0 }, // Jan 2020: points-based system, skilled-worker focus
-      // ── Labour ─────────────────────────────────────────────────────────────────
-      uk_workers_rights: { economic: 0, social: 0 }, // Jan 2020: promised high standards post-Brexit, no legislation
-      uk_workforce_development: { economic: 0, social: 0 }, // Jan 2020: apprenticeship levy continuing
-      // ── Housing ────────────────────────────────────────────────────────────────
-      uk_housing_planning: { economic: -1, social: 0 }, // Jan 2020: Help to Buy extended, levelling up housing promises
-      uk_leasehold_reform: { economic: -1, social: 0 }, // Jan 2020: promised leasehold reforms to help homeowners
-      // ── Governance ─────────────────────────────────────────────────────────────
-      uk_devolution_local_powers: { economic: -1, social: 0 }, // Jan 2020: levelling up agenda, promised more devolution deals
-      uk_government_ethics: { economic: 0, social: 0 }, // Jan 2020: status quo
-      uk_electoral_reform: { economic: 0, social: 0 }, // Jan 2020: FPTP status quo, voter ID proposed but not yet law
-      // ── Media ──────────────────────────────────────────────────────────────────
-      uk_bbc_public_media: { economic: 0, social: 0 }, // Jan 2020: licence fee review threatened but not yet actioned
-      uk_digital_broadband: { economic: 0, social: 0 }, // Jan 2020: promised full-fibre, early stages
-      // ── Civil Liberties ────────────────────────────────────────────────────────
-      uk_surveillance_privacy: { economic: 0, social: 1 }, // Jan 2020: Investigatory Powers Act 2016 in full effect
-      uk_drug_policy: { economic: 0, social: 0 }, // Jan 2020: status quo (conservative)
     },
     optionIndexes: {
       uk_income_tax_rate: 5, // 20% — real Jan 2020: 20% basic rate
@@ -164,9 +75,6 @@ export const COUNTRY_POLICY_CONFIGS_2019: Record<string, CountryPolicyConfig> = 
       uk_domestic_corporation_tax: 4, // 20% — real Jan 2020: 19% (closest available option)
       uk_foreign_corporation_tax: 3, // 19% — closest to domestic 20% for day-one parity
       uk_nhs_funding: 3,
-      uk_tuition_fees: 3,
-      uk_state_pensions: 3,
-      uk_fiscal_spending: 3,
     },
     regions: ukRegions,
   },
@@ -1047,6 +955,4 @@ export const COUNTRY_POLICY_CONFIGS_2019: Record<string, CountryPolicyConfig> = 
     },
     regions: trRegions,
   },
-
-  // ── East Germany (1979 GDR — SED planned economy; defaults on the state end) ─
 };

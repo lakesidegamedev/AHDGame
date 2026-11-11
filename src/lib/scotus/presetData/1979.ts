@@ -420,11 +420,11 @@ const SCOTUS_1979_DOCKET: ScotusPresetSeed["docket"] = [
     historicalMajorityDirection: -1,
     decisionYear: 1992,
     effect: {
-      legislationTypeId: "us_reproductive_rights",
+      legislationTypeId: "us.society.demography.primary",
       // Diverged alternative: the Court instead overturns the right
       // outright rather than reaffirming it under the undue-burden standard.
-      policyOptionId: "us_reproductive_rights_opt_6",
-      effectDirection: -1,
+      policyOptionId: "l4",
+      effectDirection: 1,
     },
   },
   {
@@ -443,10 +443,10 @@ const SCOTUS_1979_DOCKET: ScotusPresetSeed["docket"] = [
     historicalMajorityDirection: 1,
     decisionYear: 2000,
     effect: {
-      legislationTypeId: "us_civics_voting_rights",
+      legislationTypeId: "us.governance.participation.primary",
       // Diverged alternative: the recount continues / election-process
       // access expands instead of the Court halting the recount.
-      policyOptionId: "us_civics_voting_rights_opt_1",
+      policyOptionId: "l4",
       effectDirection: 1,
     },
   },
@@ -467,12 +467,12 @@ const SCOTUS_1979_DOCKET: ScotusPresetSeed["docket"] = [
     historicalMajorityDirection: 1,
     decisionYear: 2008,
     effect: {
-      legislationTypeId: "us_gun_control",
+      legislationTypeId: "us.order.safety.primary",
       // Diverged alternative: no individual right recognized, i.e. the
       // District's handgun restrictions (and similar) stand — a real
       // gun-control tightening rather than the historical individual-right
       // holding.
-      policyOptionId: "us_gun_control_opt_1",
+      policyOptionId: "l4",
       effectDirection: 1,
     },
   },
@@ -483,10 +483,10 @@ const SCOTUS_1979_DOCKET: ScotusPresetSeed["docket"] = [
     historicalMajorityDirection: 1,
     decisionYear: 2010,
     effect: {
-      legislationTypeId: "us_government_ethics",
+      legislationTypeId: "us.governance.integrity.primary",
       // Diverged alternative: campaign-finance/corporate-spending
       // restrictions are upheld and strengthened instead of struck down.
-      policyOptionId: "us_government_ethics_opt_1",
+      policyOptionId: "l4",
       effectDirection: 1,
     },
   },
@@ -497,11 +497,11 @@ const SCOTUS_1979_DOCKET: ScotusPresetSeed["docket"] = [
     historicalMajorityDirection: -1,
     decisionYear: 2012,
     effect: {
-      legislationTypeId: "us_medicaid_expansion",
+      legislationTypeId: "us.health.universalCare.primary",
       // Diverged alternative: the ACA/Medicaid-expansion framework this
       // case upheld (mandate as tax; expansion made optional for states)
       // is instead struck down/restructured away from federal expansion.
-      policyOptionId: "us_medicaid_expansion_opt_5",
+      policyOptionId: "l0",
       effectDirection: -1,
     },
   },
@@ -512,10 +512,10 @@ const SCOTUS_1979_DOCKET: ScotusPresetSeed["docket"] = [
     historicalMajorityDirection: 1,
     decisionYear: 2013,
     effect: {
-      legislationTypeId: "us_civics_voting_rights",
+      legislationTypeId: "us.governance.participation.primary",
       // Diverged alternative: the Voting Rights Act preclearance formula
       // is upheld instead of struck down.
-      policyOptionId: "us_civics_voting_rights_opt_2",
+      policyOptionId: "l3",
       effectDirection: 1,
     },
   },
@@ -556,11 +556,11 @@ const SCOTUS_1979_DOCKET: ScotusPresetSeed["docket"] = [
     historicalMajorityDirection: 1,
     decisionYear: 2022,
     effect: {
-      legislationTypeId: "us_clean_energy",
+      legislationTypeId: "us.environment.conservation.primary",
       // Diverged alternative: EPA's broader authority to regulate power-plant
       // emissions (and shift the generation mix) is upheld instead of
       // curbed under the major-questions doctrine.
-      policyOptionId: "us_clean_energy_opt_1",
+      policyOptionId: "l4",
       effectDirection: 1,
     },
   },
@@ -571,11 +571,11 @@ const SCOTUS_1979_DOCKET: ScotusPresetSeed["docket"] = [
     historicalMajorityDirection: 1,
     decisionYear: 2022,
     effect: {
-      legislationTypeId: "us_reproductive_rights",
+      legislationTypeId: "us.society.demography.primary",
       // Diverged alternative: Roe/Casey is instead reaffirmed rather than
       // overturned.
-      policyOptionId: "us_reproductive_rights_opt_1",
-      effectDirection: 1,
+      policyOptionId: "l0",
+      effectDirection: -1,
     },
   },
   {

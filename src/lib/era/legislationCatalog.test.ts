@@ -41,9 +41,9 @@ describe("legislation era resolvers", () => {
   });
 
   it("era-universal types are explicit 'always', not gaps", () => {
-    expect(LEGISLATION_ERA.us_social_security).toBe("always");
-    expect(LEGISLATION_ERA.uk_universal_credit).toBe("always");
-    expect(isLegislationTypeActive("us_social_security", 1900)).toBe(true);
+    expect(LEGISLATION_ERA.jp_pension).toBe("always");
+    expect(LEGISLATION_ERA.de_public_health).toBe("always");
+    expect(isLegislationTypeActive("jp_pension", 1900)).toBe(true);
   });
 });
 

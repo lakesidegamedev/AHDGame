@@ -6,8 +6,7 @@
  *
  * Runs on EVERY preset: law existence and day-one levels resolve by year
  * (catalog.isLawActive / baselineLevelFor), not by the seed preset string.
- * Non-playable countries' old catalogs are untouched; the US/UK/RU/DD old
- * catalogs are excluded in seedLegislationTypes.
+ * Other countries' catalogs are untouched.
  */
 
 import { ObjectId } from "mongodb";

@@ -20,14 +20,6 @@ import { legislationTypes } from "./legislationTypes";
  * contested immigration→unemployment) and must NOT be asserted here.
  */
 const EXPECT_IMPROVES_AT_EXPANSION: { id: string; metric: string }[] = [
-  // UK cluster
-  { id: "uk_regional_economic_development", metric: "unemploymentRate" },
-  { id: "uk_fiscal_spending", metric: "unemploymentRate" },
-  { id: "uk_fiscal_spending", metric: "povertyRate" },
-  { id: "uk_regional_skills", metric: "unemploymentRate" },
-  { id: "uk_workforce_development", metric: "unemploymentRate" },
-  { id: "uk_social_care", metric: "povertyRate" },
-  { id: "uk_tuition_fees", metric: "incomeInequality" },
   // DE cluster
   { id: "de_unemployment_welfare", metric: "povertyRate" },
   { id: "de_unemployment_welfare", metric: "incomeInequality" },

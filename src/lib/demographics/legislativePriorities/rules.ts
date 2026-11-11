@@ -37,6 +37,23 @@ export interface PriorityLaw {
   policyOptions: readonly { id: string; name: string }[];
 }
 
+/**
+ * Option list a priority can name. Program laws list their levels; tax laws
+ * list their slider waypoints as `rate_<n>` options.
+ */
+export function priorityOptionsFor(law: {
+  policyOptions?: readonly { id: string; name: string }[];
+  taxSlider?: { waypoints: readonly { rate: number; label: string }[] };
+}): { id: string; name: string }[] {
+  if (law.taxSlider) {
+    return law.taxSlider.waypoints.map((w) => ({
+      id: `rate_${w.rate}`,
+      name: `${w.rate}% (${w.label})`,
+    }));
+  }
+  return (law.policyOptions ?? []).map(({ id, name }) => ({ id, name }));
+}
+
 export interface LegislativePriority extends PriorityReference {
   lawName: string;
   policyOptionName: string;

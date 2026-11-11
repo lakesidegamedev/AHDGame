@@ -1,30 +1,26 @@
 import { describe, expect, it } from "vitest";
-import {
-  isOldLegislationTypeExcluded,
-  POLITICAL_LEGISLATION_RETAINED_OLD_IDS,
-} from "./pipelinePreset";
+import { POLITICAL_LEGISLATION_RETAINED_OLD_IDS } from "./pipelinePreset";
 import { getAllNewGenerationLawIds } from "@/lib/politicalLegislation/catalog";
 import { legislationTypes } from "@/lib/seeds/reference/legislationTypes";
 
-describe("isOldLegislationTypeExcluded", () => {
-  it("excludes old playable-country catalogs", () => {
-    expect(isOldLegislationTypeExcluded({ _id: "us_federal_income_tax_rate" })).toBe(true);
-    expect(isOldLegislationTypeExcluded({ _id: "uk_nhs", countryScope: "uk" })).toBe(true);
-    expect(isOldLegislationTypeExcluded({ _id: "su_planning", countryScope: "ru" })).toBe(true);
-    expect(isOldLegislationTypeExcluded({ _id: "dd_planning", countryScope: "dd" })).toBe(true);
+describe("old US/UK catalogs", () => {
+  it("no longer exist in the reference catalog beyond the retained mechanical ids", () => {
+    const leftovers = legislationTypes
+      .filter((lt) => ["us", "uk"].includes(lt.countryScope ?? "us"))
+      .map((lt) => lt._id)
+      .filter(
+        (id) => !POLITICAL_LEGISLATION_RETAINED_OLD_IDS.has(id.split(/__(?:income|capital)_/)[0])
+      );
+    expect(leftovers.filter((id) => !id.endsWith("_banking_separation"))).toEqual([]);
   });
 
-  it("keeps non-playable countries' old catalogs", () => {
-    expect(isOldLegislationTypeExcluded({ _id: "jp_pensions", countryScope: "jp" })).toBe(false);
-  });
-
-  it("retains the state redistricting levers the new-generation catalog has no equivalent for", () => {
+  it("retains the state redistricting levers", () => {
     for (const id of [
       "us_state_redistricting_authority",
       "us_state_compactness",
       "us_state_fairness",
     ]) {
-      expect(isOldLegislationTypeExcluded({ _id: id, countryScope: "us" }), id).toBe(false);
+      expect(POLITICAL_LEGISLATION_RETAINED_OLD_IDS.has(id), id).toBe(true);
     }
   });
 });

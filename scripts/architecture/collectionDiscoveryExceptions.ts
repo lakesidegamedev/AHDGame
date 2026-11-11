@@ -131,7 +131,7 @@ export const LEGACY_DYNAMIC_COLLECTION_SITES: readonly LegacyDynamicCollectionSi
     file: "src/lib/admin/seed/runCoreSeed.ts",
     owner: "runSeed",
     argument: "entry.name",
-    scopeHash: "484d9646224882dda3b0f3601be05b1864c298585d48ded2926e24547a168ac1",
+    scopeHash: "b3b59c1ccb74b5995b5c2070103ede2262651c279bf572f339565c5e4386513f",
     count: 1,
     reason:
       "Reviewed county reseed compatibility: only the literal states update now preserves live population, and the US census lean seeding no longer stores group rows. The reset filter no longer special-cases the retired voter-group category collection. The existing reset entry.name selector, registry, filters and dynamic call count are unchanged; no new dynamic collection scope is permitted.",

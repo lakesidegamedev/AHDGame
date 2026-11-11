@@ -3,7 +3,6 @@ import { logWarning } from "@/lib/utils/errorLog";
 import type { LegislationType } from "@/lib/db/types";
 import { legislationTypes } from "@/lib/seeds/reference/legislationTypes";
 import { getProjectedPoliticalLegislationTypes } from "./seedPoliticalLegislation";
-import { isOldLegislationTypeExcluded } from "@/lib/politicalMetrics/pipelinePreset";
 
 export async function seedLegislationTypes(
   db: Db,
@@ -27,11 +26,10 @@ export async function seedLegislationTypes(
 
   const collection = db.collection<LegislationType>("legislationTypes");
 
-  const baseTypes = legislationTypes.filter((t) => !isOldLegislationTypeExcluded(t));
   // Every law is projected, windowed or not: a window gates filing at runtime,
   // so a later-era type must already exist when the world reaches its year.
   const projectedTypes = getProjectedPoliticalLegislationTypes();
-  const seedSet = [...baseTypes, ...projectedTypes];
+  const seedSet = [...legislationTypes, ...projectedTypes];
 
   // Upsert-by-_id instead of drop+insertMany so this is idempotent and
   // safe to run against a live world at any time: new reference entries
@@ -47,8 +45,7 @@ export async function seedLegislationTypes(
   // Never touch admin-authored custom types (source: "admin", created via
   // /api/admin/law-types) — the old drop()+insertMany already silently wiped
   // these on every reseed, which this fix should not carry forward.
-  // The prune set is the CURRENT seed set, so the excluded old US/UK/RU/DD docs
-  // are removed and the projected political-legislation docs survive.
+  // The prune set is the CURRENT seed set, so docs for retired types are removed.
   await collection.deleteMany({
     _id: { $nin: seedSet.map((t) => t._id) },
     source: { $ne: "admin" },

@@ -9,7 +9,6 @@ import {
 } from "@/lib/era/legislationCatalog";
 import { countDomainTypes, getCostClass } from "@/lib/era/legislationCostCatalog";
 import { isMonotoneLadder } from "@/lib/legislature/optionIntensity";
-import { isOldLegislationTypeExcluded } from "@/lib/politicalMetrics/pipelinePreset";
 import { legislationTypes } from "@/lib/seeds/reference/legislationTypes";
 import { tierFor } from "@/lib/world/eraRoster";
 import type { CountryId } from "@/lib/constants/countries";
@@ -84,11 +83,10 @@ describe("2027 to 2050 law types", () => {
     );
   });
 
-  it("every type ships in the seed catalog and survives the old-catalog exclusion", () => {
+  it("every type ships in the seed catalog", () => {
     for (const id of MODERN_ERA_TYPE_IDS) {
       const seeded = seedById.get(id);
       expect(seeded, id).toBeDefined();
-      expect(isOldLegislationTypeExcluded(seeded!), id).toBe(false);
     }
   });
 

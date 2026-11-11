@@ -18,10 +18,7 @@ import { legislationTypes as oldReferenceTypes } from "@/lib/seeds/reference/leg
 import { getCatalog, isLawActive } from "@/lib/politicalLegislation/catalog";
 import { budgetKeyForLaw } from "@/lib/politicalLegislation/budgetKeys";
 import { LAW_COUNTRY_IDS } from "@/lib/politicalLegislation/types";
-import {
-  isOldLegislationTypeExcluded,
-  POLITICAL_LEGISLATION_RETAINED_OLD_IDS,
-} from "@/lib/politicalMetrics/pipelinePreset";
+import { POLITICAL_LEGISLATION_RETAINED_OLD_IDS } from "@/lib/politicalMetrics/pipelinePreset";
 import { seedLegislationTypes } from "./seedLegislationTypes";
 import { seedPoliticalLegislationBaseline } from "./seedPoliticalLegislation";
 
@@ -132,10 +129,7 @@ describe("1953 reset — end-to-end political-legislation verification", () => {
     // Mirrors seedStatePolicies' deleter set via the SAME predicate the seeder
     // uses — spelling the scope list out here let this simulation drift from the
     // real sweep (it would have kept deleting the retained redistricting rows).
-    const valid = [
-      ...oldReferenceTypes.filter((lt) => !isOldLegislationTypeExcluded(lt)).map((lt) => lt._id),
-      ...getAllNewGenerationLawIds(),
-    ];
+    const valid = [...oldReferenceTypes.map((lt) => lt._id), ...getAllNewGenerationLawIds()];
     await db.collectionMocks.statePolicies.deleteMany({ legislationTypeId: { $nin: valid } });
   }
 

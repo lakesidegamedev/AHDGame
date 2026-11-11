@@ -16,6 +16,7 @@ import {
   isPriorityTarget,
   parsePrioritySelection,
   resolvePrioritySelection,
+  priorityOptionsFor,
   priorityWorldContext,
   type PriorityLaw,
 } from "./rules";
@@ -44,18 +45,19 @@ export async function loadPriorityLaws(
           countryScope: 1,
           "policyOptions.id": 1,
           "policyOptions.name": 1,
+          "taxSlider.waypoints": 1,
         },
       }
     )
     .toArray();
   return laws
-    .filter((law) => law.policyOptions?.length)
     .map((law) => ({
       _id: law._id,
       name: law.name,
       countryScope: law.countryScope,
-      policyOptions: (law.policyOptions ?? []).map(({ id, name }) => ({ id, name })),
-    }));
+      policyOptions: priorityOptionsFor(law),
+    }))
+    .filter((law) => law.policyOptions.length);
 }
 
 export async function getPriorityEditorData(db: Db, target: PriorityTarget) {

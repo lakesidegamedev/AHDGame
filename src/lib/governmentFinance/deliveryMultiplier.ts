@@ -5,10 +5,9 @@ import { clampRatio } from "./rules/implementation";
 import { US_HEALTH_DEPARTMENT_ID, US_PUBLIC_HEALTH_PROGRAM_ID } from "./departments";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
-export const US_PUBLIC_HEALTH_LEGISLATION_TYPE_ID = "us_public_health";
-const US_PUBLIC_HEALTH_POLICY_OPTION_INDEX = 1;
-const US_PUBLIC_HEALTH_POLICY_OPTION_ID = "public_health_opt_1";
-export const US_PUBLIC_HEALTH_POLITICAL_LAW_ID = "us.health.prevention.primary";
+export const US_PUBLIC_HEALTH_LEGISLATION_TYPE_ID = "us.health.prevention.primary";
+const US_PUBLIC_HEALTH_POLICY_OPTION_INDEX = 4;
+const US_PUBLIC_HEALTH_POLICY_OPTION_ID = "l4";
 
 export type DeliveryMultiplierReason =
   | "feature_disabled"

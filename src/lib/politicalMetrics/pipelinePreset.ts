@@ -1,6 +1,6 @@
 /**
- * The ONE place the old US/UK/RU/DD legislation catalogs are excluded from
- * seeding, in favour of the political-legislation book.
+ * Which countries run on the political-legislation book, and the mechanical
+ * old-catalog ids that sit beside it.
  */
 import { MECHANICAL_RETAINED_IDS } from "@/lib/mechanicalLaws/legislation";
 import {
@@ -44,18 +44,3 @@ export const POLITICAL_LEGISLATION_RETAINED_OLD_IDS: ReadonlySet<string> = new S
   // code, and with no new-generation counterpart in these four countries.
   ...MECHANICAL_RETAINED_IDS,
 ]);
-
-/**
- * Whether an old-generation legislation type must not seed.
- *
- * The ONE place the exclusion is decided. The three seeders that apply it
- * (`runCoreSeed`, `seedLegislationTypes`, `seedStatePolicies`) previously each
- * tested `EXCLUDED_SCOPES.has(countryScope ?? "us")` inline — the same
- * copy-and-drift shape this module already exists to prevent — so a carve-out
- * added to one would silently miss the others.
- */
-export function isOldLegislationTypeExcluded(lt: { _id: string; countryScope?: string }): boolean {
-  if (POLITICAL_LEGISLATION_RETAINED_OLD_IDS.has(lt._id.split(/__(?:income|capital)_/)[0]))
-    return false;
-  return POLITICAL_LEGISLATION_EXCLUDED_SCOPES.has(lt.countryScope ?? "us");
-}
