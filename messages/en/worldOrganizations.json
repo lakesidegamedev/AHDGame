@@ -73,6 +73,7 @@
       "standDownDone": "A truce is in force until turn {turn}.",
       "refusal": {
         "truce": "A truce is in force with this country.",
+        "crisis_active": "This country is already dealing with a cyber attack. Wait for it to end.",
         "cooldown": "An operation against this country was run recently. Teams need time to rebuild access.",
         "no_resilience_data": "This country has no network data to attack.",
         "self": "You cannot target your own country."

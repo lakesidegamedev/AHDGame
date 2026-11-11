@@ -9,6 +9,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import { applyTensionEvent } from "@/lib/coldwar/tension";
 import { createCrisisFromTemplate } from "@/lib/crises/createCrisisFromTemplate";
 import { CYBER_ATTACK_TEMPLATE } from "@/lib/crises/templates";
+import { crisesCollection } from "@/lib/db/repositories/crises";
 import type { CrisisEffect, CrisisTemplate } from "@/lib/db/types/crisis";
 import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
 import type { IntelligenceOpLog } from "@/lib/db/types/intelligence";
@@ -35,6 +36,7 @@ import {
   type CyberPairHistory,
 } from "./operations";
 
+const CYBER_ATTACK_TEMPLATE_KEY = "cyber_attack";
 export const CYBER_OPERATION_TYPE = "cyber_operation";
 export const CYBER_STAND_DOWN_TYPE = "cyber_stand_down";
 /** The agency tradecraft a scripted attacker brings (the intelligence default). */
@@ -99,6 +101,27 @@ export async function loadCyberPairHistory(
     )
     .toArray()) as CyberLogRow[];
   return foldCyberPairHistory(rows, attackerId);
+}
+
+/** Countries among `countryIds` that have a Cyber Attack crisis running right now. */
+export async function loadCyberCrisisTargets(
+  db: Db,
+  countryIds: readonly string[]
+): Promise<Set<string>> {
+  if (countryIds.length === 0) return new Set();
+  const rows = await crisesCollection(db)
+    .find(
+      {
+        status: "active",
+        scope: "country",
+        countryIds: { $in: [...countryIds] },
+        $or: [{ templateKey: CYBER_ATTACK_TEMPLATE_KEY }, { name: CYBER_ATTACK_TEMPLATE.name }],
+      },
+      { projection: { countryIds: 1 } }
+    )
+    .toArray();
+  const wanted = new Set(countryIds);
+  return new Set(rows.flatMap((row) => row.countryIds).filter((id) => wanted.has(id)));
 }
 
 /** Turns of every cyber launch by `attackerId` at or after `sinceTurn`, against any target. */
@@ -207,12 +230,14 @@ export async function launchCyberOperation(args: LaunchCyberArgs): Promise<Launc
     rows.find((row) => row.countryId === targetId),
   ]);
   const history = await loadCyberPairHistory(db, attackerId, targetId);
+  const targetCrisisActive = (await loadCyberCrisisTargets(db, [targetId])).has(targetId);
   const refusal = cyberOperationRefusal(
     attackerId,
     targetId,
     history,
     target?.resilience ?? null,
-    turn
+    turn,
+    targetCrisisActive
   );
   if (refusal) {
     return {
@@ -295,7 +320,7 @@ export async function launchCyberOperation(args: LaunchCyberArgs): Promise<Launc
   if (resolution.outcome === "success") {
     await createCrisisFromTemplate(db, {
       template: CYBER_ATTACK_TEMPLATE,
-      templateKey: "cyber_attack",
+      templateKey: CYBER_ATTACK_TEMPLATE_KEY,
       scope: "country",
       countryIds: [targetId],
       regionIds: [],

@@ -23,6 +23,15 @@ vi.mock("./resilience", () => ({
   ),
 }));
 
+const activeCrisisCountries: string[] = [];
+vi.mock("@/lib/db/repositories/crises", () => ({
+  crisesCollection: () => ({
+    find: () => ({
+      toArray: async () => activeCrisisCountries.map((id) => ({ countryIds: [id] })),
+    }),
+  }),
+}));
+
 const logRows: Record<string, unknown>[] = [];
 const debit = vi.fn(async () => true);
 const credit = vi.fn(async () => undefined);
@@ -46,10 +55,12 @@ const db = {
   collection: () => ({ findOne: async () => ({ gdp: 1e12 }) }),
 } as unknown as Db;
 
-const { launchCyberOperation, standDownCyber } = await import("./runCyberOperation");
+const { launchCyberOperation, loadCyberCrisisTargets, standDownCyber } =
+  await import("./runCyberOperation");
 
 beforeEach(() => {
   crises.length = 0;
+  activeCrisisCountries.length = 0;
   tensions.length = 0;
   logRows.length = 0;
   debit.mockClear();
@@ -92,6 +103,28 @@ describe("launchCyberOperation", () => {
     expect(tensions).toHaveLength(0);
     expect(debit).not.toHaveBeenCalled();
     expect(logRows).toHaveLength(1);
+  });
+
+  it("refuses a target that already has a cyber crisis, without charging or logging", async () => {
+    activeCrisisCountries.push("US");
+    const result = await launchCyberOperation({
+      db,
+      attackerId: "CN",
+      targetId: "US",
+      turn: 10,
+      chargeAppropriation: true,
+      rolls: { success: 0, attribution: 0 },
+    });
+    expect(result).toMatchObject({ ok: false, status: 409 });
+    expect(debit).not.toHaveBeenCalled();
+    expect(logRows).toHaveLength(0);
+    expect(crises).toHaveLength(0);
+  });
+
+  it("reports only the requested countries that are under a cyber crisis", async () => {
+    activeCrisisCountries.push("US", "FR");
+    expect([...(await loadCyberCrisisTargets(db, ["US", "CN"]))]).toEqual(["US"]);
+    expect((await loadCyberCrisisTargets(db, [])).size).toBe(0);
   });
 
   it("refuses within the cooldown without charging", async () => {

@@ -6,7 +6,7 @@ import { getCountryDisplayName } from "@/lib/constants/countryClientConfig";
 import { apiErrorText } from "@/lib/errors/catalog";
 import { fmtMoneyAbs } from "./energy/energyUi";
 
-type Refusal = "self" | "truce" | "cooldown" | "no_resilience_data";
+type Refusal = "self" | "truce" | "crisis_active" | "cooldown" | "no_resilience_data";
 
 interface TargetView {
   countryId: string;
