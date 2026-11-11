@@ -307,7 +307,7 @@ function oldCatalogueFindings(input: PreflightInput): PreflightFinding[] {
         : {
             severity: "warn",
             check: "old-catalogue",
-            detail: `${collection} holds ${ids.length} document(s) naming retired law types; the reset replaces them: ${sample(ids)}`,
+            detail: `${collection} holds ${ids.length} document(s) naming retired law types; a world reset replaces them and the economy reset refuses to run until then: ${sample(ids)}`,
           }
     );
   }

@@ -181,6 +181,7 @@ describe("evaluatePreflight", () => {
     ]);
     const fresh = failures(input({ mode: "fresh", oldCatalogue }));
     expect(fresh).toHaveLength(2);
+    expect(before[0].detail).toContain("economy reset refuses");
     expect(fresh[0].detail).toContain("enactedLaws holds 1 document(s) naming retired law types");
   });
 });
