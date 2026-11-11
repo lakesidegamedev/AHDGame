@@ -59,11 +59,11 @@ describe("Commons by-election chambers", () => {
   it("reads seats per region from house districts, skipping regions with none", () => {
     expect(
       seatMapFromHouseDistricts([
-        { id: "CA_ON", houseDistricts: 122 },
-        { id: "CA_YT", houseDistricts: 1 },
-        { id: "CA_X", houseDistricts: 0 },
-        { id: "CA_Y", houseDistricts: null },
-        { id: "CA_Z" },
+        { _id: "CA_ON", houseDistricts: 122 },
+        { _id: "CA_YT", houseDistricts: 1 },
+        { _id: "CA_X", houseDistricts: 0 },
+        { _id: "CA_Y", houseDistricts: null },
+        { _id: "CA_Z" },
       ])
     ).toEqual({ CA_ON: 122, CA_YT: 1 });
   });

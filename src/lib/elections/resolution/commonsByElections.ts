@@ -235,8 +235,8 @@ async function loadSeatMap(
   preset: string | undefined
 ): Promise<Record<string, number>> {
   if (chamber.seatSource === "presetCommonsTable") return getUkCommonsSeats(preset);
-  const regions = await statesCollection<{ id: string; houseDistricts?: number | null }>(db)
-    .find({ countryId: chamber.countryId }, { projection: { _id: 0, id: 1, houseDistricts: 1 } })
+  const regions = await statesCollection(db)
+    .find({ countryId: chamber.countryId }, { projection: { _id: 1, houseDistricts: 1 } })
     .toArray();
   return seatMapFromHouseDistricts(regions);
 }

@@ -85,12 +85,12 @@ export function commonsChamberForCountry(countryId: CountryId): CommonsByElectio
 
 /** Seats per region from region documents, skipping rows with no seat count. */
 export function seatMapFromHouseDistricts(
-  regions: ReadonlyArray<{ id: string; houseDistricts?: number | null }>
+  regions: ReadonlyArray<{ _id: string; houseDistricts?: number | null }>
 ): Record<string, number> {
   const map: Record<string, number> = {};
   for (const r of regions) {
     if (typeof r.houseDistricts === "number" && r.houseDistricts > 0) {
-      map[r.id] = r.houseDistricts;
+      map[r._id] = r.houseDistricts;
     }
   }
   return map;
