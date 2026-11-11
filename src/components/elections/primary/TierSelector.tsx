@@ -8,11 +8,12 @@
  *  - Presidential → `/president/primary/[partyId]`
  *  - Senate / Governor / House → `/elections/primary/[tier]/[partyId]`
  *
- * Only rendered when `countryId === "US"`; non-US surfaces have no
+ * Only rendered when `countryHasFeature("usUi", countryId)`; non-US surfaces have no
  * nationally-aggregated tier system. Pure presentational; routing is delegated
  * to `onTierChange` so the caller can navigate or update local state.
  */
 import { useTranslations } from "next-intl";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export type RaceTier = "president" | "senate" | "stateSenate" | "governor" | "house";
 
@@ -51,7 +52,7 @@ export function TierSelector({
 }) {
   const t = useTranslations("elections");
   // Hide entirely outside the US.
-  if (countryId.toUpperCase() !== "US") return null;
+  if (!countryHasFeature("usUi", countryId.toUpperCase())) return null;
 
   return (
     <div className="flex flex-wrap items-center gap-2 px-1 py-2">

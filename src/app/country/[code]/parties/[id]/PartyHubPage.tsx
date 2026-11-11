@@ -55,6 +55,7 @@ import type { MainTab as StateMainTab } from "../../region/[id]/party/[partyId]/
 import type { StatePartyAnalyticsPayload } from "@/lib/partyAnalytics";
 import { apiErrorText } from "@/lib/errors/catalog";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export type PartyHubScope =
   | { kind: "national"; countryCode: string; partyId: string }
@@ -552,7 +553,7 @@ function NationalPartyHub({ scope }: { scope: Extract<PartyHubScope, { kind: "na
   useEffect(() => {
     if (
       !party ||
-      party.countryId !== "US" ||
+      !countryHasFeature("usUi", party.countryId) ||
       !user?.character?.id ||
       user.isAdmin ||
       isChairEarly ||
@@ -616,10 +617,9 @@ function NationalPartyHub({ scope }: { scope: Extract<PartyHubScope, { kind: "na
       : new Set<NationalMainTab>(["overview", "members"]);
     if (canViewExtendedTabsEarly && canManageNppsEarly) allowed.add("actions");
     if (canViewExtendedTabsEarly && canActAsChairEarly) allowed.add("chair-office");
-    // UK party-leadership removal (#861): national hub only, UK parties only.
-    if (canViewExtendedTabsEarly && party?.countryId === "UK") allowed.add("leadership");
-    // UK party conferences (#862): national hub only, UK parties only.
-    if (canViewExtendedTabsEarly && party?.countryId === "UK") allowed.add("conference");
+    // UK party leadership removal and conferences: national hub, UK parties only.
+    if (canViewExtendedTabsEarly && countryHasFeature("ukUi", party?.countryId))
+      allowed.add("leadership").add("conference");
     if (canViewExtendedTabsEarly && user?.isAdmin) allowed.add("admin");
     if (allowed.has(tabParam as NationalMainTab)) {
       setActiveTab(tabParam as NationalMainTab);
@@ -822,10 +822,10 @@ function NationalPartyHub({ scope }: { scope: Extract<PartyHubScope, { kind: "na
               },
             ]
           : []),
-        ...(party.countryId === "UK"
+        ...(countryHasFeature("ukUi", party.countryId)
           ? [{ id: "leadership" as NationalMainTab, label: "Leadership" }]
           : []),
-        ...(party.countryId === "UK"
+        ...(countryHasFeature("ukUi", party.countryId)
           ? [{ id: "conference" as NationalMainTab, label: "Conference" }]
           : []),
         ...(user?.isAdmin ? [{ id: "admin" as NationalMainTab, label: "Admin" }] : []),
@@ -1317,11 +1317,11 @@ function NationalPartyHub({ scope }: { scope: Extract<PartyHubScope, { kind: "na
         </>
       )}
 
-      {activeTab === "leadership" && party.countryId === "UK" && (
+      {activeTab === "leadership" && countryHasFeature("ukUi", party.countryId) && (
         <LeadershipPanel countryCode={backCountry} partyId={id} />
       )}
 
-      {activeTab === "conference" && party.countryId === "UK" && (
+      {activeTab === "conference" && countryHasFeature("ukUi", party.countryId) && (
         <ConferencePanel countryCode={backCountry} partyId={id} />
       )}
 
@@ -1549,7 +1549,7 @@ function StatePartyHub({ scope }: { scope: Extract<PartyHubScope, { kind: "state
   const canViewExtendedTabs = user?.isAdmin || isMember || isNatChair || isNatViceChair;
 
   const regionAdjective = (() => {
-    if (countryCode !== "UK") return stateParty.stateName;
+    if (!countryHasFeature("ukUi", countryCode)) return stateParty.stateName;
     const region = UK_REGIONS.find((r) => r.id === stateId);
     return region?.adjective ?? stateParty.stateName;
   })();

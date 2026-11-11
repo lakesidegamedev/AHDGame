@@ -11,6 +11,7 @@ import type {
 } from "@/lib/countries/uk/elections/commonsVacancyStatus";
 import { apiErrorText } from "@/lib/errors/catalog";
 import { campaignManagerHref } from "@/lib/campaignManager/links";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 const VACANCY_REASON_LABELS: Record<string, string> = {
   death: "Death",
@@ -261,11 +262,11 @@ export function CommonsVacancyPanel({ countryId }: { countryId: CountryId }) {
   }, []);
 
   useEffect(() => {
-    if (countryId !== "UK") return;
+    if (!countryHasFeature("ukUi", countryId)) return;
     void load();
   }, [countryId, load]);
 
-  if (countryId !== "UK") return null;
+  if (!countryHasFeature("ukUi", countryId)) return null;
 
   async function refreshAfter(message: string) {
     setFeedback(message);

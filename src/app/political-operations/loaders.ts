@@ -2,6 +2,7 @@ import { getDb } from "@/lib/mongodb";
 import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
 import { ensureCampaignForCandidate } from "@/lib/campaigns/createInitialCampaign";
 import type { ElectionCandidate, Election } from "@/lib/db/types";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export interface PoliticalOperationsPageData {
   character: {
@@ -32,7 +33,7 @@ export async function loadPoliticalOperationsData(): Promise<PoliticalOperations
   const auth = await requireAuthWithCharacter();
   if (!auth.ok) return null;
   const char = auth.user.character;
-  if (char.countryId !== "US") return null;
+  if (!countryHasFeature("usUi", char.countryId)) return null;
 
   const db = await getDb();
   const candidacies = await db

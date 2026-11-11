@@ -14,6 +14,7 @@ import RussianConstitutionalDecisionPanel from "./RussianConstitutionalDecisionP
 import BulgarianConstitutionalDecisionPanel from "./BulgarianConstitutionalDecisionPanel";
 import RomanianElectoralDecisionPanel from "./RomanianElectoralDecisionPanel";
 import HungarianElectoralDecisionPanel from "./HungarianElectoralDecisionPanel";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 const LegislatureFallback = (_props: { name?: string }) => <LegislatureSkeleton />;
 
@@ -101,7 +102,7 @@ export default function LegislatureClient({
     );
   }
 
-  if (countryId === "RU" && generic) {
+  if (countryHasFeature("ruUi", countryId) && generic) {
     return (
       <main className="min-h-screen bg-background px-4 py-6 text-foreground sm:px-6 lg:px-8">
         <div className="mx-auto max-w-3xl space-y-6">
@@ -118,17 +119,18 @@ export default function LegislatureClient({
     );
   }
 
-  if (countryId === "CS" || countryId === "YU") {
+  if (countryHasFeature("csUi", countryId) || countryHasFeature("yuUi", countryId)) {
     return <FederationDecisionPanel countryId={countryId} legislatureName={displayedName} />;
   }
 
-  if (countryId === "BG" && bulgarianConstitutionalDecision)
+  if (countryHasFeature("bgUi", countryId) && bulgarianConstitutionalDecision)
     return <BulgarianConstitutionalDecisionPanel />;
 
-  if (countryId === "RO" && romanianElectoralDecision) return <RomanianElectoralDecisionPanel />;
+  if (countryHasFeature("roUi", countryId) && romanianElectoralDecision)
+    return <RomanianElectoralDecisionPanel />;
 
   // Countries without a dedicated legislature component
-  if (countryId === "HU" && hungarianElectoralDecisions)
+  if (countryHasFeature("huUi", countryId) && hungarianElectoralDecisions)
     return (
       <div className="space-y-6">
         <HungarianElectoralDecisionPanel />

@@ -40,6 +40,7 @@ import type {
 import { viewerIsSingleplayerOwner, visibleStaffNavItems } from "./staffNavItems";
 import type { NavbarAction, NavbarState } from "./useNavbarState";
 import { campaignManagerHref } from "@/lib/campaignManager/links";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 // Same on-demand loading as the desktop panels: the switcher only mounts once
 // the profile section is expanded.
@@ -494,7 +495,7 @@ export function NavbarMobileMenu({
                   </Link>
                 )}
 
-                {userCountry === "US" && (
+                {countryHasFeature("usUi", userCountry) && (
                   <Link
                     href="/political-operations"
                     onClick={onClose}

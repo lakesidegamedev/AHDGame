@@ -9,6 +9,7 @@ import WhiteHouseClient from "@/app/whitehouse/WhiteHouseClient";
 import { LeaderLegacyPanel } from "@/components/government/LeaderLegacyPanel";
 import { ParliamentaryExecutiveHub } from "./ParliamentaryExecutiveHub";
 import { OnePartyExecutiveHub } from "./OnePartyExecutiveHub";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export const dynamic = "force-dynamic";
 
@@ -90,7 +91,7 @@ export default async function ExecutivePage({ params }: PageProps) {
           governmentType: config.governmentType,
           executiveIdentity: getExecutiveIdentity(countryId),
           executiveTermLimit: getExecutiveTermLimit(countryId),
-          isUs: config.id === "US",
+          isUs: countryHasFeature("usUi", config.id),
           legislatureName: config.legislature.name,
           legislaturePath: config.legislature.path,
           upperChamberShort: config.legislature.upperChamber?.shortName ?? "Senate",

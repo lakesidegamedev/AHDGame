@@ -57,6 +57,7 @@ import type {
   NavLinkRef,
 } from "./experimentalNavTypes";
 import { campaignManagerHref } from "@/lib/campaignManager/links";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export interface ExperimentalMobileMenuProps {
   navigationVariant?: "a" | "b";
@@ -595,7 +596,7 @@ export function ExperimentalMobileMenu({
                             {t("menus.nation.myParty")} · {currentParty.name}
                           </Link>
                         )}
-                        {userCountry === "US" && (
+                        {countryHasFeature("usUi", userCountry) && (
                           <Link
                             href="/political-operations"
                             onClick={onClose}

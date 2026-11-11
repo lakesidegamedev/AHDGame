@@ -2,6 +2,7 @@ import type { ElectionDisplay } from "@/lib/db/types";
 import { isPresidentialElectionType } from "@/lib/elections/nationwideExecutive";
 import { getMappableRegions, type RegionMapData } from "@/components/CountryMapPaths";
 import { isCompetitiveElection, leaderColor } from "../electionsHelpers";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export interface MapRegionGroup {
   stateId: string;
@@ -81,7 +82,9 @@ export function buildRegionGroups(
   return regionIds
     .map((stateId) => ({ stateId, elections: elections.filter((e) => e.state === stateId) }))
     .filter((g) => g.elections.length > 0)
-    .sort((a, b) => (a.stateId === "US" ? -1 : b.stateId === "US" ? 1 : 0));
+    .sort((a, b) =>
+      countryHasFeature("usUi", a.stateId) ? -1 : countryHasFeature("usUi", b.stateId) ? 1 : 0
+    );
 }
 
 export interface ElectionSelection {
