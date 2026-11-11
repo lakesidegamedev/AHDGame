@@ -13,6 +13,7 @@
 import { successorTaxInstrumentIds } from "@/lib/resetLegislation/successorTaxTypes";
 import { BANKING_SEPARATION_ERA_ENTRIES } from "@/lib/seeds/shared/bankingSeparationLegislation";
 import { MECHANICAL_LEGISLATION_ERA_ENTRIES } from "@/lib/mechanicalLaws/legislation";
+import { SAVED_WORLD_LEGISLATION_ERA } from "./savedWorldLegislationEra";
 import {
   MODERN_ERA_LEGISLATION_ERA_ENTRIES,
   MODERN_ERA_LEGISLATION_UNTIL_ENTRIES,
@@ -462,7 +463,7 @@ const NEW_BADGE_YEARS = 2;
 export function isLegislationTypeActive(typeId: string, year: number | null): boolean {
   typeId = typeId.split(/__(?:income|capital)_/)[0];
   if (year == null || !Number.isFinite(year)) return true;
-  const from = LEGISLATION_ERA[typeId];
+  const from = LEGISLATION_ERA[typeId] ?? SAVED_WORLD_LEGISLATION_ERA[typeId];
   if (from === undefined) return isNewGenerationLawActive(typeId, year) ?? true;
   if (from === "always") return true;
   return year >= from;
@@ -490,7 +491,10 @@ export function isLegislationTypeFileable(typeId: string, year: number | null): 
 /** True while `from <= year <= from + NEW_BADGE_YEARS`. Null year / "always" ⇒ false. */
 export function isNewThisEra(typeId: string, year: number | null): boolean {
   if (year == null || !Number.isFinite(year)) return false;
-  const from = LEGISLATION_ERA[typeId] ?? newGenerationLawWindowFrom(typeId);
+  const from =
+    LEGISLATION_ERA[typeId] ??
+    SAVED_WORLD_LEGISLATION_ERA[typeId] ??
+    newGenerationLawWindowFrom(typeId);
   if (from === undefined || from === "always") return false;
   return year >= from && year - from <= NEW_BADGE_YEARS;
 }
