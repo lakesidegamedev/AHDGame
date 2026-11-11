@@ -6,18 +6,20 @@ import { accountId } from "@/lib/ledger/accounts";
 import { emitLedgerEntries } from "@/lib/ledger/emit";
 import type { LedgerEntryInput } from "@/lib/ledger/types";
 import { splitProducerWallets, remapProducerPayables } from "./rules/producerWallets";
+import { secessionSource, type SecedingCountryId } from "./subRegions";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 /** Called inside the enclosing independence transaction, before the old region is removed. */
 export async function migrateProducerWallets(
   db: Db,
-  countryId: string,
+  countryId: SecedingCountryId,
   regions: readonly { _id: string; population: number }[],
   turn: number
 ): Promise<void> {
+  const { fromCountryId, regionId } = secessionSource(countryId);
   const accounts = db.collection<ProducerEconomyAccount>("producerEconomyAccounts");
-  const source = await accounts.find({ countryId: "UK", stateId: countryId }).toArray();
+  const source = await accounts.find({ countryId: fromCountryId, stateId: regionId }).toArray();
   if (!source.length) return;
   const { map, wallets } = splitProducerWallets(source, countryId, regions);
   const oldIds = source.map((row) => row._id);
