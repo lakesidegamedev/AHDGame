@@ -28,6 +28,7 @@ import {
   NATIONAL_SCOPE_IDS,
   getNationalDocId,
 } from "@/lib/constants/nationalScope";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 // GET /api/country/[code]/region/[id]/metrics — Return all state metrics including government approval and tick rates
 // Auth: public
@@ -83,7 +84,7 @@ export async function GET(
         nationalDocId ? findMergedRegionMetrics(db, { _id: nationalDocId }) : Promise.resolve(null),
         isNational ? Promise.resolve({}) : computeStateTickRates(db, stateId, resolvedCountryId),
         db.collection<StateApprovalHistory>("stateApprovalHistory").findOne({ _id: stateId }),
-        db.collection<GameState>("gameState").findOne({ _id: "current" }),
+        gameStateCollection(db).findOne({ _id: "current" }),
         findMergedRegionMetricsMany(db, { countryId: resolvedCountryId }),
       ]);
 

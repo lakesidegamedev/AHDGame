@@ -20,6 +20,7 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import type { FinancialSubjectType } from "@/lib/db/types/financialTxLog";
 import type { PortfolioHistory, GameState, ExchangeRate } from "@/lib/db/types";
 import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const DEFAULT_TURNS = 24;
 const MAX_TURNS = 168; // matches retention window
@@ -55,9 +56,7 @@ export async function GET(request: Request) {
     const subjectId = new ObjectId(subjectIdParam);
 
     const [gameState, exchangeRates] = await Promise.all([
-      db
-        .collection<GameState>("gameState")
-        .findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
+      gameStateCollection(db).findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
       db.collection<ExchangeRate>("exchangeRates").find({}).toArray(),
     ]);
     const currentTurn = gameState?.currentTurn ?? 0;

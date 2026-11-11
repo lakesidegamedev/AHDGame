@@ -52,6 +52,7 @@ import { buildPartyIdResolver } from "@/lib/parties/partyMatch";
 import { officePoolTopUpStatus } from "@/lib/actions/officePoolTopUpRules";
 import { resolveRegionOfficeBannerImage } from "@/lib/constants/regionBanner";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 interface Props {
   params: Promise<{ code: string; id: string }>;
@@ -194,7 +195,7 @@ export default async function GovernorOfficePage({ params }: Props) {
       .sort({ issuedAtTurn: -1 })
       .limit(10)
       .toArray(),
-    db.collection<GameState>("gameState").findOne({ _id: "current" }),
+    gameStateCollection(db).findOne({ _id: "current" }),
     db
       .collection<LegislationType>("legislationTypes")
       .find({

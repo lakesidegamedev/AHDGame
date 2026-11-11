@@ -16,6 +16,7 @@ import {
 import { incomeTaxRate } from "./rules/incomeTaxTiers";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export type StockSeller = { id: ObjectId; collection: "characters" | "imperialCharacters" };
 export const stockSellerKey = (seller: StockSeller) =>
@@ -29,7 +30,7 @@ export async function loadStockWithholdingContexts(
   options?: { income?: boolean; session?: ClientSession }
 ) {
   if (!sellers.length) return new Map<string, StockWithholdingContext>();
-  const state = await db.collection<GameState>("gameState").findOne(
+  const state = await gameStateCollection(db).findOne(
     { _id: "current" },
     {
       session: options?.session,

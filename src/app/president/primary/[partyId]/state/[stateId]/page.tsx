@@ -37,6 +37,7 @@ import { loadRegionalBonusMaps } from "@/lib/primaryRegionalBonusLoader";
 import { StateOrganizationPanel } from "./StateOrganizationPanel";
 import { NppAbbr } from "@/components/elections/NppAbbr";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 // This page is a live view over turn-processed delegate awards and per-state
 // projections. It must render from current DB state every request so its
@@ -198,8 +199,7 @@ export default async function PartyPrimaryStatePage({ params }: PageProps) {
       .find({ _id: { $in: ALL_STATE_IDS } })
       .toArray(),
     enrichedPromise,
-    db
-      .collection<{ _id: string; preset?: string }>("gameState")
+    gameStateCollection<{ _id: string; preset?: string }>(db)
       .findOne({ _id: "current" })
       .then((gs) => gs?.preset),
   ]);

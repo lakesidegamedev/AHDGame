@@ -34,6 +34,7 @@ type FilingCharacter = Pick<
 >;
 import { russianDumaBoundRoot } from "./dumaConvocationAuthority";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 export async function validateRussianCouncilPlayerFiling(input: {
   db: Db;
   election: Election;
@@ -49,9 +50,10 @@ export async function validateRussianCouncilPlayerFiling(input: {
   });
   const binding = election.russianCouncilRound;
   if (!binding) return reject("unbound-mandate");
-  const game = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { session, projection: { preset: 1 } });
+  const game = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { session, projection: { preset: 1 } }
+  );
   const country = await db.collection<CountryGameState>("countryGameStates").findOne(
     { _id: "RU" },
     {

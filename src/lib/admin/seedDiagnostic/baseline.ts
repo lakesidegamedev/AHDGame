@@ -17,6 +17,7 @@ import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const BASELINE_COLLECTION = "seedDiagnosticBaselines";
 export const BASELINE_ID = "current" as const;
@@ -212,13 +213,11 @@ export async function captureSeedBaseline(
   opts?: CaptureSeedBaselineOptions
 ): Promise<SeedDiagnosticBaseline> {
   const now = opts?.now ?? new Date();
-  const gs = await db
-    .collection<{
-      preset?: string;
-      currentTurn?: number;
-      preIterationTurns?: number;
-    }>("gameState")
-    .findOne({ _id: "current" as never });
+  const gs = await gameStateCollection<{
+    preset?: string;
+    currentTurn?: number;
+    preIterationTurns?: number;
+  }>(db).findOne({ _id: "current" as never });
 
   const preset =
     opts?.preset ?? (typeof gs?.preset === "string" ? gs.preset : null) ?? DEFAULT_SEED_PRESET;

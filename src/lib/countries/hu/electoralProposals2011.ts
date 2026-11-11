@@ -10,6 +10,7 @@ import { calendarTurn } from "@/lib/utils/gameDate";
 import { passesHuElectoralAmendment } from "./rules/electoralLaw";
 import { hu2011DecisionAvailability } from "./rules/electoralTransition2011";
 import type { CountryState } from "@/lib/db/types/countryState";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export const HU_2011_PROPOSALS_COLLECTION = "hu2011ElectoralProposals";
 const ID = "1991-default:hu-electoral:system2011";
@@ -30,12 +31,10 @@ export interface Hu2011ElectoralProposal {
 export class Hu2011ElectoralConflict extends Error {}
 
 async function availability(db: Db, game: Calendar, turn: number, session?: ClientSession) {
-  const current = await db
-    .collection<GameState>("gameState")
-    .findOne(
-      { _id: "current" },
-      { session, projection: { preset: 1, huAssemblyReformedAtYear: 1 } }
-    );
+  const current = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { session, projection: { preset: 1, huAssemblyReformedAtYear: 1 } }
+  );
   const runtime = await db
     .collection<CountryState>("countryState")
     .findOne({ _id: "HU" }, { session, projection: { governmentType: 1 } });

@@ -21,6 +21,8 @@ import { normalizeStateSpending, SECTOR_SUBSIDIES_SPENDING_KEY } from "@/lib/bud
 import { computeRegionalSpendingByCategory } from "@/lib/budget/regionalSpending";
 import { buildRegionalRevenueShape } from "@/lib/budget/regionalRevenueShape";
 import { calculateFiscalYear } from "@/lib/budget/fiscalYear";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import type { Document } from "mongodb";
 
 export async function GET(
   request: Request,
@@ -66,11 +68,12 @@ async function serveRegionalBudget(
   countryId: CountryId,
   grantLabel: string
 ) {
-  const gameState = await db
-    .collection("gameState")
-    .findOne({ _id: "current" } as Record<string, unknown>, {
+  const gameState = await gameStateCollection<Document>(db).findOne(
+    { _id: "current" } as Record<string, unknown>,
+    {
       projection: { currentTurn: 1, currentYear: 1 },
-    });
+    }
+  );
   const liveFiscalYear = calculateFiscalYear(
     (gameState as { currentYear?: number } | null)?.currentYear ?? 2020,
     (gameState as { currentTurn?: number } | null)?.currentTurn ?? 1

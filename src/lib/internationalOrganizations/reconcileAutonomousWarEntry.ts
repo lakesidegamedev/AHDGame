@@ -23,6 +23,7 @@ import {
   enactImmediateWarEntry,
   warEntryIsImmediate,
 } from "@/lib/military/warEntryPolicy";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 type ActiveJoinResolution = OrganizationLegislation & {
   type: "join_conflict";
@@ -41,9 +42,10 @@ function billKey(resolutionId: string, countryId: string): string {
  * path already creates their bills.
  */
 export async function reconcileAutonomousWarEntryBills(db: Db): Promise<number> {
-  const rollout = await db
-    .collection<{ _id: string; nppForeignPolicyMode?: NppForeignPolicyMode }>("gameState")
-    .findOne({ _id: "current" }, { projection: { nppForeignPolicyMode: 1 } });
+  const rollout = await gameStateCollection<{
+    _id: string;
+    nppForeignPolicyMode?: NppForeignPolicyMode;
+  }>(db).findOne({ _id: "current" }, { projection: { nppForeignPolicyMode: 1 } });
   const autonomousPolicyActive = foreignPolicyModeFrom(rollout?.nppForeignPolicyMode) === "active";
 
   const resolutions = (await (

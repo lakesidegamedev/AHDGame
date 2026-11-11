@@ -20,6 +20,8 @@ import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFla
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
 import { plantSizeMongoExpr } from "@/lib/constants/facilityQuantum";
 import { getStatesCollection } from "@/lib/db/collections/states";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import type { Document } from "mongodb";
 
 // Max per-year revenue boost applied to the most distressed sector type (linearly
 // scaled down the distress ranking). Raised 0.02 → 0.06 (audit t786): at 0.02 the
@@ -310,9 +312,10 @@ export async function processAutoSectorSeed(
     }
   }
 
-  await db
-    .collection("gameState")
-    .updateOne({}, { $set: { lastAutoSeedTurn: currentTurn, updatedAt: now } });
+  await gameStateCollection<Document>(db).updateOne(
+    {},
+    { $set: { lastAutoSeedTurn: currentTurn, updatedAt: now } }
+  );
 
   return { seeded: true, sectorsUpdated };
 }

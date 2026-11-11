@@ -132,6 +132,7 @@ import {
 } from "./producerMarketPhase";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /** Owner decision 2026-10-18: households open with about 3 turns of wages. */
 export const HOUSEHOLD_OPENING_APPROVAL = "owner 2026-10-18: household opening cash about 3 turns";
@@ -222,9 +223,9 @@ export async function readProducerOpeningTurn(
  * funded records, the previous turn is only right when no opening exists.
  */
 async function readStoredOpeningTurn(db: Db, worldEpoch: string, turn: number): Promise<number> {
-  const state = await db
-    .collection<{ _id: string; producerOpening?: ProducerOpeningMarker }>("gameState")
-    .findOne({ _id: "current" }, { projection: { producerOpening: 1 } });
+  const state = await gameStateCollection<{ _id: string; producerOpening?: ProducerOpeningMarker }>(
+    db
+  ).findOne({ _id: "current" }, { projection: { producerOpening: 1 } });
   const opening = state?.producerOpening;
   if (!opening || opening.worldEpoch !== worldEpoch) return turn - 1;
   if (turn - 1 - opening.turn > PRODUCER_CATCH_UP_TURNS)

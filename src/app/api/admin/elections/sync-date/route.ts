@@ -45,6 +45,7 @@ import { getSeatIdFromElection } from "@/lib/seats/seatId";
 import { invalidateGameTimeCache } from "@/lib/time/gameTime";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 // Sync-date bootstrap anchors are now derived from the active preset's
 // `getCycleAnchors(ctx)` inside the POST handler (see ctx-build below).
@@ -78,9 +79,9 @@ export const POST = withAdminRoute(async (_auth) => {
   // active preset's startingYear + cycle-anchor context. Without this,
   // the reset would clobber a 1991 game back to the global STARTING_YEAR
   // (2019) and seed elections with 2019-era cycle anchors.
-  const existingGameState = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" } as Filter<GameState>);
+  const existingGameState = await gameStateCollection(db).findOne({
+    _id: "current",
+  } as Filter<GameState>);
   const startingYear = existingGameState?.startingYear ?? STARTING_YEAR;
   const preset = existingGameState?.preset ?? DEFAULT_SEED_PRESET;
   const ctx = cycleAnchorContextFromGameState(existingGameState);
@@ -90,9 +91,9 @@ export const POST = withAdminRoute(async (_auth) => {
   // We MUST verify the update matched so that election timestamps (anchored to lastTurnProcessed)
   // and the year-label calculation (which uses lastTurnProcessed as reference) stay in sync.
   // If the document is missing, throw — a missing gameState is a fundamental DB error.
-  const updateResult = await db
-    .collection<GameState>("gameState")
-    .updateOne({ _id: "current" } as Filter<GameState>, {
+  const updateResult = await gameStateCollection(db).updateOne(
+    { _id: "current" } as Filter<GameState>,
+    {
       $set: {
         currentTurn: 1,
         currentYear: startingYear,
@@ -101,7 +102,8 @@ export const POST = withAdminRoute(async (_auth) => {
         nextScheduledTurn: null, // clear stale scheduler state
         updatedAt: now,
       },
-    });
+    }
+  );
   if (updateResult.matchedCount === 0) {
     return errorResponse(
       500,

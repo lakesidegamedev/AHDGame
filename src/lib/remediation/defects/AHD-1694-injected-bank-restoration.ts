@@ -14,6 +14,7 @@ import type {
 } from "../types";
 import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * Restores banks charged margin interest on central bank liquidity injections
@@ -275,9 +276,10 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
   if (credited.length > 0) {
     const turn =
       (
-        await db
-          .collection<{ _id: string; currentTurn?: number }>("gameState")
-          .findOne({ _id: "current" }, { projection: { currentTurn: 1 } })
+        await gameStateCollection<{ _id: string; currentTurn?: number }>(db).findOne(
+          { _id: "current" },
+          { projection: { currentTurn: 1 } }
+        )
       )?.currentTurn ?? 0;
     const entries: Omit<FinancialTxLogEntry, "_id" | "expiresAt" | "flagged">[] = credited.map(
       (row) => ({

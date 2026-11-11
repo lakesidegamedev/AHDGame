@@ -20,6 +20,7 @@ import {
   type UKExecutiveRegion,
 } from "./rules";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export async function readUKDevolutionState(
   db: Db,
@@ -98,9 +99,10 @@ export async function reconcileUKDevolution(
 /** Reconcile immediately after enactment, using the same rules as the turn. */
 export async function reconcileEnactedUKDevolution(db: Db, now: Date): Promise<void> {
   const [gameState, completed] = await Promise.all([
-    db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: { startingYear: 1, preset: 1 } }),
+    gameStateCollection(db).findOne(
+      { _id: "current" },
+      { projection: { startingYear: 1, preset: 1 } }
+    ),
     db
       .collection<Election>("elections")
       .find(
@@ -121,9 +123,10 @@ export async function isUKRegionalExecutiveActive(db: Db, stateId: string): Prom
   if (!UK_EXECUTIVE_REGIONS.includes(stateId as UKExecutiveRegion)) return false;
   const stored = await db.collection<UKDevolutionState>("ukDevolution").findOne({ _id: "UK" });
   if (stored) return stored.regions[stateId as UKExecutiveRegion].active;
-  const gameState = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { startingYear: 1, preset: 1 } });
+  const gameState = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { startingYear: 1, preset: 1 } }
+  );
   const initial = await initialStatePreservingLeaders(
     db,
     gameState?.startingYear ?? getStartingYearForPreset(gameState?.preset ?? DEFAULT_SEED_PRESET)
@@ -150,8 +153,7 @@ export async function vacateUKRegionalExecutives(
       })
       .toArray();
     const telemetryState = officials.some((official) => official.characterId)
-      ? await db
-          .collection<GameState>("gameState")
+      ? await gameStateCollection(db)
           .findOne({ _id: "current" }, { projection: { currentTurn: 1, iteration: 1 } })
           .catch(() => null)
       : null;

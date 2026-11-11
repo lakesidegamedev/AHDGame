@@ -19,6 +19,7 @@ import {
 } from "./storyData";
 import type { CharacterRecap, RecapCorporation, RecapRaces, RecapWorld } from "./types";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * I/O for the v2 Wrapped sections. Reads the runtime collections the reset is
@@ -159,7 +160,7 @@ export async function loadStoryData(
 
   // ── Clock ────────────────────────────────────────────────────────────────
   const gs = await section("clock", warn, null, () =>
-    db.collection<GameState>("gameState").findOne(
+    gameStateCollection(db).findOne(
       { _id: "current" },
       {
         projection: {

@@ -9,6 +9,7 @@ import {
   bankingWorldYear,
   legalCharterTypesForPolicy,
 } from "./rules/charterAccess";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * Banking charter separation is a per-country law, not a world switch. Any
@@ -54,12 +55,10 @@ export async function getBankingSeparationPolicy(
   if (law?.separation) {
     return law.separation;
   }
-  const state = await db
-    .collection<GameState>("gameState")
-    .findOne(
-      { _id: "current" },
-      { projection: { preset: 1, currentYear: 1, startingYear: 1, currentTurn: 1 } }
-    );
+  const state = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { preset: 1, currentYear: 1, startingYear: 1, currentTurn: 1 } }
+  );
   return bankingSeparationDefault({
     countryId,
     year: bankingWorldYear(state),
@@ -76,8 +75,7 @@ export async function getLegalCharterTypes(
   countryId: CountryId
 ): Promise<BankCharterType[]> {
   const [gameState, config] = await Promise.all([
-    db
-      .collection<GameState>("gameState")
+    gameStateCollection(db)
       // gameState is keyed by _id "current"; do not filter on isActive.
       .findOne({ _id: "current" }, { projection: { currentYear: 1 } }),
     db
@@ -104,7 +102,7 @@ export async function loadLegalCharterTypesForCountries(
   countries: readonly CountryId[]
 ): Promise<Map<CountryId, BankCharterType[]>> {
   const [state, config, laws] = await Promise.all([
-    db.collection<GameState>("gameState").findOne(
+    gameStateCollection(db).findOne(
       { _id: "current" },
       {
         projection: { currentYear: 1, currentTurn: 1, startingYear: 1, preset: 1 },

@@ -27,6 +27,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export async function checkNationalBudgets(
   db: Db,
@@ -386,11 +387,11 @@ export async function checkForex(db: Db, expect: SeedExpectations): Promise<Seed
   const year = getStartingYearForPreset(expect.preset);
 
   if (expect.preset === "2027-default") {
-    const gameState = await db
-      .collection<{ _id: string; eurozoneEnabled?: boolean; euroAdoptedCountries?: string[] }>(
-        "gameState"
-      )
-      .findOne({ _id: "current" });
+    const gameState = await gameStateCollection<{
+      _id: string;
+      eurozoneEnabled?: boolean;
+      euroAdoptedCountries?: string[];
+    }>(db).findOne({ _id: "current" });
     const expected = [...EUROZONE_2027_MEMBERS].sort();
     const actual = gameState?.euroAdoptedCountries;
     const valid =

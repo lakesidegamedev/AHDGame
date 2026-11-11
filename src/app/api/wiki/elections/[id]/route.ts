@@ -17,6 +17,7 @@ import type {
   PoliticalParty,
   GameState,
 } from "@/lib/db/types";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const ELECTION_TYPE_LABELS: Record<string, string> = {
   president: "President",
@@ -83,7 +84,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
 
     const gameStatePromise =
       election.electionYear == null
-        ? db.collection<GameState>("gameState").findOne(
+        ? gameStateCollection(db).findOne(
             { _id: "current" },
             {
               projection: {

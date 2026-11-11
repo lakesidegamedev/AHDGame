@@ -34,6 +34,7 @@ import {
 } from "./rules/mortality";
 import { NPP_TURNOVER_CONFIG as CONFIG, NPP_TURNOVER_EXEMPT_COUNTRIES } from "./turnoverData";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export {
   annualDeathProbability,
@@ -188,9 +189,10 @@ export async function processNppMortality(
   const mint =
     opts.mintReplacement ?? ((dead: NPP, y: number) => mintRandomSuccessor(db, dead, y, rng));
 
-  const flags = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { nppTurnoverEnabled: 1 } });
+  const flags = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { nppTurnoverEnabled: 1 } }
+  );
   const turnover = flags?.nppTurnoverEnabled;
   if (turnover === false)
     return {

@@ -8,6 +8,7 @@ import { runGrowthHalfStep } from "./growthHalfStep";
 import { runInflationHalfStep } from "./inflationHalfStep";
 import { runForexHalfStep } from "./forexHalfStep";
 import { runMarketTick, type MarketTickResult } from "./marketTick";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export interface HalfHourTickResult {
   turn: number;
@@ -35,12 +36,10 @@ export async function runHalfHourTick(
 ): Promise<HalfHourTickResult | null> {
   const database = db ?? (await getDb());
   const started = Date.now();
-  const state = await database
-    .collection<GameState>("gameState")
-    .findOne(
-      { _id: "current" },
-      { projection: { currentTurn: 1, isActive: 1, isProcessing: 1, fastMode: 1 } }
-    );
+  const state = await gameStateCollection(database).findOne(
+    { _id: "current" },
+    { projection: { currentTurn: 1, isActive: 1, isProcessing: 1, fastMode: 1 } }
+  );
   if (!state?.isActive || state.isProcessing || state.fastMode) return null;
   const turn = state.currentTurn + 1;
 

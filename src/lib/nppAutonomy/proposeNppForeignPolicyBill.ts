@@ -11,6 +11,7 @@ import { buildActiveNationalBillFilter } from "@/lib/legislature/nationalBillSco
 import { NPP_BILL_VOTING_DURATION_HOURS } from "./constants";
 import { RESET_V2_READY } from "@/lib/resetVersions/availability";
 import { resetSystemVersionsForCountry } from "@/lib/resetVersions/rules";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export type NppTradeBillIntent = "raise_tariff" | "lower_tariff";
 
@@ -37,7 +38,7 @@ export async function proposeNppForeignPolicyBill(
   }
 
   const [gameState, government] = await Promise.all([
-    db.collection<GameState>("gameState").findOne(
+    gameStateCollection(db).findOne(
       { _id: "current" },
       {
         projection: {

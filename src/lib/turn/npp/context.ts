@@ -36,6 +36,7 @@ import { isVotingDeadlinePassed } from "@/lib/legislature/billVotingWindow";
 import { isBillWhipInCurrentPhase } from "@/lib/congress/billWhipPhase";
 import { loadCabinetDiscipline, type CabinetDiscipline } from "@/lib/resetCabinet/loadDiscipline";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 // ─── Context Types ─────────────────────────────────────────────────────────────
 
@@ -452,7 +453,7 @@ export async function loadNPPContext(now: Date, options?: NPPContextOptions): Pr
 
   // Read the current turn for vote-prediction snapshots. Tests that don't seed
   // gameState fall through to 0 — the field is purely informational.
-  const gameStateDoc = await db.collection<GameState>("gameState").findOne(
+  const gameStateDoc = await gameStateCollection(db).findOne(
     { _id: "current" },
     {
       projection: {

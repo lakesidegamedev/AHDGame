@@ -15,6 +15,7 @@ import { enactReviewedBill } from "./rules/billEnactment";
 import type { ResetDepartmentAccountSnapshot } from "@/lib/resetFinance/rules/liveDepartmentAccount";
 import type { ResetLawEnactmentReceipt, ResetLawProgramDocument } from "./program";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 function resetLawProvisions(bill: Pick<Bill | StateBill, "provisions">): ResetLawProvision[] {
   return (bill.provisions ?? []).filter(
@@ -45,7 +46,7 @@ export async function applyResetLawBillEnactment(
       .collection<ResetLawEnactmentReceipt>("resetLawEnactmentReceipts")
       .findOne({ _id: receiptId }, { session });
     if (existingReceipt) return { applied: false, programs: existingReceipt.programIds.length };
-    const gameState = await db.collection<GameState>("gameState").findOne(
+    const gameState = await gameStateCollection(db).findOne(
       { _id: "current" },
       {
         session,
@@ -297,7 +298,7 @@ async function applyRegionalResetLawBillEnactment(
     const receipts = db.collection<ResetLawEnactmentReceipt>("resetLawEnactmentReceipts");
     const existingReceipt = await receipts.findOne({ _id: receiptId }, { session });
     if (existingReceipt) return { applied: false, programs: existingReceipt.programIds.length };
-    const gameState = await db.collection<GameState>("gameState").findOne(
+    const gameState = await gameStateCollection(db).findOne(
       { _id: "current" },
       {
         session,

@@ -79,6 +79,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 export { refreshSovereignDebtTerms } from "./sovereignFunding";
 
 export const SOVEREIGN_ISSUANCE_INTERVAL_TURNS = 12;
@@ -115,7 +116,7 @@ export const SOVEREIGN_RECONCILE_DISTRIBUTION: Partial<Record<BondMaturityTurns,
 };
 
 export async function loadDemocraticSovereignSpread(db: Db, countryId: CountryId): Promise<number> {
-  const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+  const gameState = await gameStateCollection(db).findOne({ _id: "current" });
   const health = await loadDemocraticHealth(db, countryId, gameState);
   return health == null ? 0 : democraticHealthSovereignSpread(health);
 }

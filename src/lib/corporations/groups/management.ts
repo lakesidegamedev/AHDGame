@@ -22,6 +22,7 @@ import { scheduleGroupReceiving, effectiveGroupReceiving } from "./rules/partici
 import type { GroupManagementCommand } from "./managementSchema";
 import type { GroupManagement } from "./managementTypes";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export const defaultGroupManagement = (root: Corporation): GroupManagement => ({
   name: root.name,
@@ -67,9 +68,7 @@ export async function loadGroupManagement(db: Db, corporation: Corporation, user
         }
       )
       .toArray(),
-    db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
+    gameStateCollection(db).findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
     db.collection<GameConfig>("gameConfig").findOne(
       { _id: "default" },
       {

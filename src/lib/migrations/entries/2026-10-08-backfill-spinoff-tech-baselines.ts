@@ -5,6 +5,7 @@ import { STARTING_YEAR } from "@/lib/constants/turnTime";
 import { resolveGameYear } from "@/lib/era/era";
 import type { Migration, MigrationContext, MigrationResult } from "../types";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 type SpinOffTechRow = Pick<Corporation, "_id" | "type" | "unlockedTechNodeIds">;
 
@@ -17,7 +18,7 @@ async function backfillSpinOffTechBaselines(
   db: Db,
   ctx: MigrationContext
 ): Promise<MigrationResult> {
-  const gameState = await db.collection<GameState>("gameState").findOne(
+  const gameState = await gameStateCollection(db).findOne(
     { _id: "current" },
     {
       projection: { currentYear: 1, currentTurn: 1, startingYear: 1 },

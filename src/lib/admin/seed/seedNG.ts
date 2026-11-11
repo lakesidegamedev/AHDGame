@@ -17,6 +17,7 @@ import type { PartySeed } from "@/lib/seeds/reference/politicalParties";
 import { getNextSequentialId } from "@/lib/db/sequentialId";
 import { resolveSeedPartyTier } from "@/lib/seeds/defaultPartyTiers";
 import { getGameStatePresetOrDefault, DEFAULT_SEED_PRESET } from "@/lib/db/collections/gameState";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const NG_REGION_IDS = [
   "NORTH_WEST",
@@ -55,9 +56,9 @@ export async function seedNGParties(db: Db, log: (msg: string) => void, preset?:
 
   let activePreset = preset;
   if (!activePreset) {
-    const gameState = await db
-      .collection<{ preset?: string }>("gameState")
-      .findOne({ _id: "current" as unknown as undefined });
+    const gameState = await gameStateCollection<{ preset?: string }>(db).findOne({
+      _id: "current" as unknown as undefined,
+    });
     activePreset = gameState?.preset ?? DEFAULT_SEED_PRESET;
   }
 

@@ -77,6 +77,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export interface ExecuteAgreedAcquisitionParams {
   db: Db;
@@ -160,9 +161,10 @@ async function runAgreedAcquisition(
   const [acquirer, target, stockTaxState] = await Promise.all([
     corps.findOne({ _id: offer.acquirerCorporationId }),
     corps.findOne({ _id: offer.targetCorporationId }),
-    db
-      .collection<{ _id: string; stockHoldingTaxStartTurn?: number }>("gameState")
-      .findOne({ _id: "current" }, { projection: { stockHoldingTaxStartTurn: 1 } }),
+    gameStateCollection<{ _id: string; stockHoldingTaxStartTurn?: number }>(db).findOne(
+      { _id: "current" },
+      { projection: { stockHoldingTaxStartTurn: 1 } }
+    ),
   ]);
   if (!acquirer || !target) {
     return handleMissingParty(db, offer, currentTurn, acquirer, target);

@@ -45,6 +45,7 @@ import { buildSuccessorMetricRows, buildSuccessorRegionalRows } from "./rules/re
 import { verifyDemographicsV2Opening } from "@/lib/demographics/v2/verifyOpening";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 function rekeyReference(
   reference: OpeningLawReference,
@@ -66,7 +67,7 @@ export async function promoteResetV2ForIndependence(
   countryId: SecedingCountryId,
   conversionTurn?: number
 ): Promise<{ promoted: boolean }> {
-  const gameState = await db.collection<GameState>("gameState").findOne(
+  const gameState = await gameStateCollection(db).findOne(
     { _id: "current" },
     {
       projection: {
@@ -479,9 +480,10 @@ export async function promoteResetV2ForIndependence(
       countries: mergeResetReceiptCountries(existing.countries, [countryId]),
     };
   }
-  await db
-    .collection<GameState>("gameState")
-    .updateOne({ _id: "current", resetWorldId: worldId }, { $set: additions });
+  await gameStateCollection(db).updateOne(
+    { _id: "current", resetWorldId: worldId },
+    { $set: additions }
+  );
   if (versions.metrics === "v2") {
     sourcesToDelete.push(metricCollection.deleteOne({ _id: `UK:${countryId}`, worldId }));
   }

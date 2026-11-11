@@ -64,6 +64,7 @@ export type {
 } from "./foreignPolicyShared";
 import { voteCandidates, bilateralCandidates, warCandidates } from "./foreignPolicyCandidates";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 function buildOpinion(context: ForeignPolicyContext, targetCountryId: CountryId): CountryOpinion {
   const factors: OpinionFactor[] = [];
   const sourceAlignment = context.alignments.find(
@@ -336,13 +337,11 @@ async function loadContext(
     pendingBattleDeclarations,
     pendingPeaceOffers,
   ] = await Promise.all([
-    db
-      .collection<{
-        _id: string;
-        nppForeignPolicyMode?: ForeignPolicyMode;
-        nppForeignPolicyStage?: NppForeignPolicyStage;
-      }>("gameState")
-      .findOne({ _id: "current" }),
+    gameStateCollection<{
+      _id: string;
+      nppForeignPolicyMode?: ForeignPolicyMode;
+      nppForeignPolicyStage?: NppForeignPolicyStage;
+    }>(db).findOne({ _id: "current" }),
     db.collection<CountryAlignment>("countryAlignments").find({}).toArray(),
     db.collection<PersistedSphereMembership>("sphereMemberships").find({}).toArray(),
     db.collection<OrganizationMembership>("organizationMemberships").find({}).toArray(),

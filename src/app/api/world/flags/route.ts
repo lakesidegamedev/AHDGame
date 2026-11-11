@@ -20,6 +20,7 @@ import {
   resetSystemVersionsFrom,
 } from "@/lib/resetVersions/rules";
 import { FOUNDING_GENERAL_HOURS, FOUNDING_PRIMARY_HOURS } from "@/lib/elections/canonicalCycle";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * Turns the founding round's races close on, while it runs. Every founding race
@@ -35,7 +36,7 @@ function foundingRound(gs: Pick<GameState, "preIteration"> | null) {
 
 export async function GET() {
   const db = await getDb();
-  const gs = await db.collection<GameState>("gameState").findOne(
+  const gs = await gameStateCollection(db).findOne(
     { _id: "current" },
     {
       projection: {

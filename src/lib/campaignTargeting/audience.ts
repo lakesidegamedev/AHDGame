@@ -8,6 +8,7 @@ import type { GameState, State, StateDemographics, StateDemographicTurnout } fro
 import { buildGranularElectorateSubstrate } from "@/lib/demographics/granularElectorate";
 import { eraYearContextFromGameState } from "@/lib/era/context";
 import { CAMPAIGN_RULES_VERSION, turnoutForElection } from "./rules";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export async function loadCampaignAudience(
   db: Db,
@@ -20,7 +21,7 @@ export async function loadCampaignAudience(
     db.collection<State>("states").findOne({ _id: stateId, countryId }),
     db.collection<StateDemographics>("stateDemographics").findOne({ _id: stateId, countryId }),
     db.collection<StateDemographics>("demographicDefaults").findOne({ _id: stateId, countryId }),
-    db.collection<GameState>("gameState").findOne(
+    gameStateCollection(db).findOne(
       { _id: "current" },
       {
         projection: {
@@ -77,7 +78,7 @@ export async function loadCampaignProjectionContext(db: Db, regionIds: string[])
       .collection<StateDemographics>("demographicDefaults")
       .find({ _id: { $in: regionIds } })
       .toArray(),
-    db.collection<GameState>("gameState").findOne(
+    gameStateCollection(db).findOne(
       { _id: "current" },
       {
         projection: {

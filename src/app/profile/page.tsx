@@ -119,6 +119,7 @@ import { resolveMemberSince } from "@/lib/character/memberSince";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const MIN_BASE_ACTIONS_PER_TURN = 4;
 
@@ -203,7 +204,7 @@ async function getCharacterData() {
       }
     ),
     isForexEnabled(),
-    db.collection<GameState>("gameState").findOne({ _id: "current" }),
+    gameStateCollection(db).findOne({ _id: "current" }),
     fetchPartyHistory(db, character._id),
   ]);
 

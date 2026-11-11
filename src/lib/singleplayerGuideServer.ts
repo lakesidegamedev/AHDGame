@@ -8,6 +8,7 @@ import {
   type SingleplayerGuideCharacter,
 } from "@/lib/singleplayerGuide";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * Load the first-game guide for the local world. Cheap for the common case: a
@@ -15,9 +16,10 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
  * gameState read and no further queries.
  */
 export async function loadSingleplayerGuide(db: Db): Promise<SingleplayerGuide> {
-  const state = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { currentTurn: 1, singleplayerConfig: 1 } });
+  const state = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { currentTurn: 1, singleplayerConfig: 1 } }
+  );
   const config = state?.singleplayerConfig ?? null;
   if (config?.mode !== "normal" || !config.guide || config.guide.dismissedAt) {
     return deriveSingleplayerGuide({

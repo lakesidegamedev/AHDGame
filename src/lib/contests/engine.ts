@@ -71,6 +71,7 @@ import { getContestRoundsCollection } from "./collection";
 import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 type PlayerCharacter = Pick<
   Character,
@@ -1239,9 +1240,9 @@ async function runIterationReferrals(
  */
 export async function awardIterationReferralsNow(db: Db, awardedBy: string, now = new Date()) {
   const [gameState, players] = await Promise.all([
-    db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" } as never, { projection: { iteration: 1, currentTurn: 1 } }),
+    gameStateCollection(db).findOne({ _id: "current" } as never, {
+      projection: { iteration: 1, currentTurn: 1 },
+    }),
     loadPlayers(db),
   ]);
   const world: ContestWorld = {
@@ -1299,7 +1300,7 @@ export async function runContests(
 ): Promise<ContestRunSummary> {
   const summary: ContestRunSummary = { settled: 0, voided: 0, refreshed: 0, opened: 0 };
   const [gameState, players] = await Promise.all([
-    db.collection<GameState>("gameState").findOne({ _id: "current" } as never, {
+    gameStateCollection(db).findOne({ _id: "current" } as never, {
       projection: { preset: 1, iteration: 1, worldEpochStartedAt: 1 },
     }),
     loadPlayers(db),
@@ -1425,9 +1426,9 @@ export async function ensureContestsOpen(db: Db, now: Date = new Date()): Promis
       kind: { $in: [...CONTEST_KINDS] },
     });
     if (active >= CONTEST_KINDS.length) return;
-    const gameState = await db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" } as never, { projection: { currentTurn: 1 } });
+    const gameState = await gameStateCollection(db).findOne({ _id: "current" } as never, {
+      projection: { currentTurn: 1 },
+    });
     await runContests(db, gameState?.currentTurn ?? 0, now);
   } catch (err) {
     Sentry.captureException(err, { tags: { area: "contests", step: "ensureOpen" } });

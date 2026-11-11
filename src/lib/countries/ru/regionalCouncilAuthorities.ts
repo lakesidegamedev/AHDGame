@@ -25,6 +25,7 @@ import {
   type RussianRegionalNpcProfile,
 } from "./rules/regionalCouncilAppointments";
 import { GAME_STATE_PRE_ITERATION_FIELDS } from "@/lib/db/collections/gameState";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export const RUSSIAN_REGIONAL_AUTHORITIES_COLLECTION = "russianRegionalAuthorities";
 export interface RussianRegionalAuthorityRecord extends RussianCouncilRegionalAuthority {
@@ -114,9 +115,10 @@ export async function materializeRussianRegionalAuthorities(input: {
     !Number.isFinite(now.getTime())
   )
     throw new Error("Regional Council authority needs a transaction, turn and time");
-  const game = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { session, projection: GAME_STATE_PRE_ITERATION_FIELDS });
+  const game = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { session, projection: GAME_STATE_PRE_ITERATION_FIELDS }
+  );
   if (game?.preset !== "1991-default") return { kind: "wait" as const, reason: "other-era" };
   const country = await db.collection<CountryGameState>("countryGameStates").findOne(
     { _id: "RU" },

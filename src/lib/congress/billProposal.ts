@@ -64,6 +64,7 @@ import { marketAtLeast } from "@/lib/market/featureFlag";
 import { isMediaOwnershipBillAvailable } from "@/lib/mediaRegulation/rules";
 import { loadUSMediaOutletDelivery } from "@/lib/mediaRegulation/turnData";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 // snapshotBillPolicyProvisions now lives in the shared provision-enrichment core
 // so the regional bill paths can call it too. Re-exported for existing importers.
@@ -127,7 +128,7 @@ export async function validateBillProvisions(
   const { year: eraYear, currentTurn, mediaRegulation } = await getEraContext(db);
   const resetState =
     sourceCountry && isResetV2Country(sourceCountry)
-      ? await db.collection<GameState>("gameState").findOne(
+      ? await gameStateCollection(db).findOne(
           { _id: "current" },
           {
             projection: {
@@ -450,9 +451,10 @@ export async function validateBillProvisions(
       const rawElectoralLaw = rawP as { japanShugiinReform?: unknown };
       const reformContext =
         rawElectoralLaw.japanShugiinReform === true
-          ? await db
-              .collection<GameState>("gameState")
-              .findOne({ _id: "current" }, { projection: { preset: 1, currentYear: 1 } })
+          ? await gameStateCollection(db).findOne(
+              { _id: "current" },
+              { projection: { preset: 1, currentYear: 1 } }
+            )
           : null;
       const res = validateElectoralLawProvision(rawP, category, {
         countryId: sourceCountry,

@@ -47,6 +47,7 @@ import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
 import type { Notification, ShareListing, ShareOffer } from "@/lib/db/types";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 interface RouteParams {
   params: Promise<{ id: string; listingId: string; offerId: string }>;
@@ -245,9 +246,10 @@ export async function settleListingOffer(
     offer.buyerCorporationId
       ? corporationsCollection(db).findOne({ _id: offer.buyerCorporationId })
       : null,
-    db
-      .collection<{ _id: string; stockHoldingTaxStartTurn?: number }>("gameState")
-      .findOne({ _id: "current" }, { projection: { stockHoldingTaxStartTurn: 1 } }),
+    gameStateCollection<{ _id: string; stockHoldingTaxStartTurn?: number }>(db).findOne(
+      { _id: "current" },
+      { projection: { stockHoldingTaxStartTurn: 1 } }
+    ),
   ]);
   if (listing.sellerCorporationId ? !sellerCorp : !sellerChar)
     return { ok: false, status: 404, error: "Seller not found" };

@@ -27,6 +27,7 @@ import { isSameCountry } from "@/lib/api/sameCountry";
 import { statMultiplier } from "@/lib/stats/statMultiplier";
 import { NEUTRAL_STAT } from "@/lib/stats/statsConstants";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export class DirectActionBalanceConflictError extends Error {}
 
@@ -77,9 +78,7 @@ export async function applyNppDirectAction(
       }
     ),
     db.collection<NPPRelationship>("nppRelationships").findOne({ _id: relationshipKey }),
-    db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
+    gameStateCollection(db).findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
   ]);
 
   if (!npp) return { error: "NPP not found", status: 404 } as const;

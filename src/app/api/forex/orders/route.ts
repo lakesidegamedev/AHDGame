@@ -24,6 +24,7 @@ import { newCharacterTransferBarrierResponse } from "@/lib/api/newCharacterTrans
 import type { CurrencyOrder, CurrencyOrderStatus, GameConfig, GameState } from "@/lib/db/types";
 import { recordAudit } from "@/lib/audit/recordAudit";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const limitOrderSchema = z
   .object({
@@ -118,7 +119,7 @@ export async function POST(request: Request) {
     if (barrier) return barrier;
 
     const db = await getDb();
-    const gs = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+    const gs = await gameStateCollection(db).findOne({ _id: "current" });
     const currentTurn = gs?.currentTurn ?? 0;
     if (euroLedgerCrossRate(gs?.euroMonetaryUnion, fromCurrency, toCurrency) != null) {
       throw badRequest(

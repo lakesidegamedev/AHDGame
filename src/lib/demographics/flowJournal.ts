@@ -20,6 +20,7 @@ import {
   type MortalityBasis,
 } from "@/lib/resetMetrics/rules/demographicMeasurement";
 import { demographicFlowBatchId, type DemographicFlowReceiptStatus } from "./rules/flowReceipt";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export const DEMOGRAPHIC_FLOW_RECEIPTS = "demographicFlowReceipts";
 export const DEMOGRAPHIC_FLOW_PROJECTIONS = "demographicFlowProjections";
@@ -200,9 +201,10 @@ function assertStats(stats: DemographicFlowStats): void {
 }
 
 async function assertCurrentEpoch(db: Db, worldEpochId: string): Promise<void> {
-  const gameState = await db
-    .collection<{ _id: string; worldEpochId?: string }>("gameState")
-    .findOne({ _id: "current" }, { projection: { worldEpochId: 1 } });
+  const gameState = await gameStateCollection<{ _id: string; worldEpochId?: string }>(db).findOne(
+    { _id: "current" },
+    { projection: { worldEpochId: 1 } }
+  );
   if (gameState?.worldEpochId !== worldEpochId) {
     throw new Error("Demographic flow receipt belongs to a different or missing world epoch");
   }

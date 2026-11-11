@@ -4,6 +4,7 @@ import type { State } from "@/lib/db/types/state";
 import { getHouseSeats } from "@/lib/constants/states";
 import { admittedStateIdsAsOf, TERRITORY_ADMISSIONS } from "@/lib/elections/statehoodAdmission";
 import { NUMERIC_BSON_TYPE } from "@/lib/db/queryHelpers";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * Load the set of US state ids that currently host full state politics
@@ -17,9 +18,10 @@ export async function loadUsPoliticalStateIds(db: Db): Promise<{
   /** Full states, DC, and playable US territories with resident party politics. */
   residentPoliticalIds: Set<string>;
 }> {
-  const gameState = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { preset: 1, currentYear: 1 } });
+  const gameState = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { preset: 1, currentYear: 1 } }
+  );
   const preset = gameState?.preset;
   const currentYear = gameState?.currentYear ?? Number.POSITIVE_INFINITY;
   const admissionBearing = await db

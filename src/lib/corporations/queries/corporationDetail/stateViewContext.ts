@@ -16,6 +16,7 @@ import { ownedPoliticalModifiers } from "@/lib/resetMetrics/rules/ownedInputs";
 import { buildPoliticalBaseModifiers } from "@/lib/politicalLegislation/marginAdapter";
 import type { MacroEconomicValues, StateMetricValues } from "@/lib/constants/corporations";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export interface StateViewContext {
   states: TurnStateProjection[];
@@ -72,7 +73,7 @@ export async function loadStateViewContext(
               { projection: { stateId: 1, resources: 1 } }
             )
             .toArray(),
-          db.collection<GameState>("gameState").findOne(
+          gameStateCollection(db).findOne(
             { _id: "current" },
             {
               projection: {
@@ -90,12 +91,10 @@ export async function loadStateViewContext(
       : [
           [],
           [],
-          await db
-            .collection<GameState>("gameState")
-            .findOne(
-              { _id: "current" },
-              { projection: { stockHoldingTaxStartTurn: 1, passThroughOwnerTaxStartTurn: 1 } }
-            ),
+          await gameStateCollection(db).findOne(
+            { _id: "current" },
+            { projection: { stockHoldingTaxStartTurn: 1, passThroughOwnerTaxStartTurn: 1 } }
+          ),
         ];
   const states = allStates.filter((s) => uniqueStateIdSet.has(s._id));
   // SP4 §4a: political margin overlays for playable regions among this corp's states.

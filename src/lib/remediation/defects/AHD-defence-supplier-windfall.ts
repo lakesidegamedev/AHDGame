@@ -13,6 +13,7 @@ import type {
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export const DEFECT_ID = "AHD-defence-supplier-windfall";
 
@@ -157,7 +158,7 @@ async function survey(db: Db): Promise<Survey> {
       .collection<ContractEvidence>("defenceContracts")
       .find({ _id: { $in: SOURCE_CONTRACT_IDS.map((id) => new ObjectId(id)) } })
       .toArray(),
-    db.collection<{ currentTurn?: number }>("gameState").findOne({}),
+    gameStateCollection<{ currentTurn?: number }>(db).findOne({}),
   ]);
   return {
     corporation,

@@ -20,6 +20,7 @@ import type { Corporation } from "@/lib/db/types/corporation";
 import type { User } from "@/lib/db/types/user";
 import type { CountryId } from "@/lib/constants/countries";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const IMPERIAL_STARTING_CAPITAL = 50_000_000;
 const IMPERIAL_INITIAL_SHARES = 10_000_000;
@@ -77,9 +78,10 @@ export async function POST(request: Request) {
       return errorResponse(400, "Imperial configuration not found for this country");
     }
 
-    const world = await db
-      .collection<{ _id: string; currentTurn?: number }>("gameState")
-      .findOne({ _id: "current" }, { projection: { currentTurn: 1 } });
+    const world = await gameStateCollection<{ _id: string; currentTurn?: number }>(db).findOne(
+      { _id: "current" },
+      { projection: { currentTurn: 1 } }
+    );
     const now = new Date();
     const adminUserId = new ObjectId(auth.admin.userId);
     const imperialId = new ObjectId();

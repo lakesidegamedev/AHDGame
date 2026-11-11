@@ -31,6 +31,7 @@ import type {
   State,
 } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -186,7 +187,7 @@ export async function GET(request: Request) {
         .collection<Campaign>("campaigns")
         .find({ electionId: electionOid }, { projection: { _id: 1, candidateId: 1, funds: 1 } })
         .toArray(),
-      db.collection<GameState>("gameState").findOne({ _id: "current" }),
+      gameStateCollection(db).findOne({ _id: "current" }),
       db
         .collection<State>("states")
         .findOne({ _id: election.state, countryId: election.countryId }),

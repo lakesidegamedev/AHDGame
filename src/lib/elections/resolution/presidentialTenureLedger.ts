@@ -13,6 +13,7 @@
 import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { GameState } from "@/lib/db/types/gameState";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 type TenureEntry = { party: string; consecutiveTerms: number };
 
@@ -46,7 +47,7 @@ export async function recordPresidentialTenure(
   electionId: string
 ): Promise<void> {
   if (!winnerParty) return;
-  const collection = db.collection<GameState>("gameState");
+  const collection = gameStateCollection(db);
   const path = `presidentialTenureByCountry.${countryId}`;
   for (let attempt = 0; attempt < 8; attempt++) {
     const gs = await collection.findOne(

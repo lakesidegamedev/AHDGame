@@ -69,6 +69,7 @@ import {
   methodTransitionStartTurn,
 } from "@/lib/corporations/rules/methodAdoption";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const STRATEGY_LOCK_MESSAGE: Record<
   "era" | "tech" | "research" | "prerequisite" | "sunset" | "diffusion",
@@ -189,7 +190,7 @@ export async function setSectorStrategy(request: Request, { params }: RouteParam
     }
 
     // Get current turn
-    const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+    const gameState = await gameStateCollection(db).findOne({ _id: "current" });
     const currentTurn = gameState?.currentTurn ?? 0;
 
     // Funded market: a turn freezes each plant's physical image and rejects a

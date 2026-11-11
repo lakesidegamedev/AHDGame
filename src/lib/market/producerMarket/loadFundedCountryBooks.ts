@@ -18,6 +18,7 @@ import {
   type FundedBooksForTurn,
   type WithNationalBalanceSource,
 } from "./fundedCountryViewRules";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export async function loadFundedCountryBooks(
   db: Db,
@@ -27,11 +28,8 @@ export async function loadFundedCountryBooks(
   if (typeof turn !== "number" || !Number.isFinite(turn)) return null;
   const epoch =
     worldEpochId ??
-    (
-      await db
-        .collection<GameState>("gameState")
-        .findOne({ _id: "current" }, { projection: { worldEpochId: 1 } })
-    )?.worldEpochId;
+    (await gameStateCollection(db).findOne({ _id: "current" }, { projection: { worldEpochId: 1 } }))
+      ?.worldEpochId;
   if (!epoch) return null;
   const doc = await db
     .collection<{ _id: string; books?: FundedCountryBookRow[] }>(PRODUCER_MARKET_OUTCOMES)

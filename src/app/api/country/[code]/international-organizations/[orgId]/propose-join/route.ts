@@ -33,6 +33,7 @@ import {
 } from "@/lib/internationalOrganizations/diplomaticActions";
 import { buildMembershipBill } from "@/lib/internationalOrganizations/commands/buildMembershipBill";
 import { loadAlignmentTopology } from "@/lib/alignment/topology";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export async function POST(
   request: Request,
@@ -88,9 +89,10 @@ export async function POST(
     // — the UN, non-Bloc custom orgs and the pre-1991 EU have no pole, so alignment has
     // nothing to say about them and `standingFor` returns null. Checked BEFORE
     // the diplomatic action below, so a refused application costs nothing.
-    const gs = await db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: { currentYear: 1, startingYear: 1 } });
+    const gs = await gameStateCollection(db).findOne(
+      { _id: "current" },
+      { projection: { currentYear: 1, startingYear: 1 } }
+    );
     const year = (gs ? resolveGameYear(gs) : null) ?? new Date().getFullYear();
     const topology = orgDef.alignment ? await loadAlignmentTopology(db, year) : null;
     const alignments = await getCountryAlignmentsCollection(db);

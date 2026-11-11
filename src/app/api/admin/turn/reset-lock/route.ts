@@ -7,6 +7,7 @@ import type { GameState } from "@/lib/db/types";
 import { createAdminLog } from "@/lib/adminLog";
 import { getProcessingLockState } from "@/lib/turn/processingLock";
 import { hasAppliedNextTurnEvidence } from "@/simulation/engine/turnResumeBootstrap";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 function formatRetryDelay(retryAfterMs: number): string {
   const totalSeconds = Math.max(1, Math.ceil(retryAfterMs / 1000));
@@ -23,7 +24,7 @@ function formatRetryDelay(retryAfterMs: number): string {
 // Errors: 403, 404, 409
 export const POST = withAdminRoute(async (auth) => {
   const db = await getDb();
-  const gameState = await db.collection<GameState>("gameState").findOne(
+  const gameState = await gameStateCollection(db).findOne(
     { _id: "current" },
     {
       projection: {
@@ -95,7 +96,7 @@ export const POST = withAdminRoute(async (auth) => {
     });
   }
 
-  const result = await db.collection<GameState>("gameState").updateOne(
+  const result = await gameStateCollection(db).updateOne(
     {
       _id: "current",
       isProcessing: true,

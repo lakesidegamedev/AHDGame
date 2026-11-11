@@ -56,6 +56,7 @@ import { getCharactersCollection } from "@/lib/db/collections/characters";
 import { getElectedOfficialsCollection } from "@/lib/db/collections/electedOfficials";
 import { getNppsCollection } from "@/lib/db/collections/npps";
 import { getElectionsCollection } from "@/lib/db/collections/elections";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export const SNAP_ELECTION_LIMIT = 2;
 export const SNAP_ELECTION_COOLDOWN_TURNS = 336;
@@ -186,7 +187,7 @@ export async function triggerSnapElection(
     throw new SnapElectionError(`No government formation record for ${countryId}`);
   }
 
-  const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+  const gameState = await gameStateCollection(db).findOne({ _id: "current" });
   const currentTurn = gameState?.currentTurn ?? 0;
   const ctx = cycleAnchorContextFromGameState(gameState);
   const snapUsed = gov.snapElectionsUsed ?? 0;

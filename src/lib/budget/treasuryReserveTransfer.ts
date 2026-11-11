@@ -34,6 +34,7 @@ import { loadTurnLengthMinutes } from "@/lib/financialTxLog/expiresAt";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export class TreasuryReserveTransferRejected extends Error {
   constructor(
@@ -172,9 +173,10 @@ async function prepare(db: Db, command: Command): Promise<void> {
     db
       .collection<{ currencyCode: string; rate: number }>("exchangeRates")
       .findOne({ currencyCode: currency }, { projection: { rate: 1 } }),
-    db
-      .collection<{ _id: string; preset?: string }>("gameState")
-      .findOne({ _id: "current" }, { projection: { preset: 1 } }),
+    gameStateCollection<{ _id: string; preset?: string }>(db).findOne(
+      { _id: "current" },
+      { projection: { preset: 1 } }
+    ),
     loadTxThresholds(db),
     loadTurnLengthMinutes(db),
   ]);

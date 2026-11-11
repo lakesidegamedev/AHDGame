@@ -18,6 +18,7 @@ import {
   getTravelActionCost,
 } from "@/lib/constants/states";
 import type { StateTravelOption } from "@/lib/elections/dto/campaignStatePresence";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export type { StateTravelOption };
 
@@ -54,7 +55,7 @@ export interface StateTravelOptions {
 export async function loadStateTravelOptions(db: Db, preset?: string): Promise<StateTravelOptions> {
   const resolvedPreset =
     preset ??
-    (await db.collection<{ _id: string; preset?: string }>("gameState").findOne({ _id: "current" }))
+    (await gameStateCollection<{ _id: string; preset?: string }>(db).findOne({ _id: "current" }))
       ?.preset;
 
   const states = await db

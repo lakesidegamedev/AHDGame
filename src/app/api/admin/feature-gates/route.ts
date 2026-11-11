@@ -26,6 +26,7 @@ import {
   type ResetSystem,
   type ResetSystemVersion,
 } from "@/lib/resetVersions/rules";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * Unified admin control surface for the game's feature gates. Reads/writes the
@@ -113,7 +114,7 @@ interface FeatureGatesState {
 
 async function readState(): Promise<FeatureGatesState> {
   const db = await getDb();
-  const doc = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+  const doc = await gameStateCollection(db).findOne({ _id: "current" });
 
   const booleans = Object.fromEntries(
     FEATURE_GATE_BOOLEAN_KEYS.map((k) => {
@@ -177,7 +178,7 @@ export const POST = withAdminRoute(async (auth, request: Request) => {
   const resetChange = parsed.data.kind === "reset-system-version" ? parsed.data : null;
   let resetFilter: Record<string, unknown> = { _id: "current" };
   if (resetChange) {
-    const gameState = await db.collection<GameState>("gameState").findOne(
+    const gameState = await gameStateCollection(db).findOne(
       { _id: "current" },
       {
         projection: {
@@ -272,7 +273,7 @@ export const POST = withAdminRoute(async (auth, request: Request) => {
   const update: Record<string, unknown> = { $set: set };
   if (Object.keys(unset).length > 0) update.$unset = unset;
 
-  const result = await db.collection<GameState>("gameState").updateOne(resetFilter, update);
+  const result = await gameStateCollection(db).updateOne(resetFilter, update);
   if (resetChange && result.matchedCount === 0) {
     return errorResponse(
       409,

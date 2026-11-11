@@ -47,6 +47,7 @@ import {
   FOUNDING_CHAIR_ELECTION_DURATION_TURNS,
 } from "./nationalPartyElectionConstants";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export {
   NATIONAL_ELECTION_DURATION_TURNS,
@@ -293,9 +294,10 @@ export async function createMissingNationalElections(
 }
 
 async function isFoundingPhaseActive(db: Db): Promise<boolean> {
-  const gameState = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { preIteration: 1 } });
+  const gameState = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { preIteration: 1 } }
+  );
   return gameState?.preIteration?.active === true;
 }
 

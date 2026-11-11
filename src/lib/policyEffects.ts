@@ -58,6 +58,7 @@ import {
 import { clampRatio } from "@/lib/governmentFinance/rules/implementation";
 import { RESET_V2_COUNTRIES } from "@/lib/resetVersions/rules";
 import { incomeTaxEffectOptionId } from "@/lib/budget/rules/incomeTaxPolicy";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * Map of legislation type IDs to their documents
@@ -495,12 +496,11 @@ export async function processStatePolicyEffects(
   db: Db,
   knownLegislationTypes?: readonly LegislationType[]
 ): Promise<void> {
-  const gameStateCollection = db.collection<GameState>("gameState");
+  const gameStates = gameStateCollection(db);
 
   // Get game state for current turn (needed for time-based effect decay)
   const gameState =
-    (await gameStateCollection.findOne({ _id: "current" })) ??
-    (await gameStateCollection.findOne({ _id: "main" }));
+    (await gameStates.findOne({ _id: "current" })) ?? (await gameStates.findOne({ _id: "main" }));
   const currentTurn = gameState?.currentTurn ?? 0;
   // Era gate year (reuses the already-fetched gameState — no extra read). Null
   // when the flag is off, so every isMetricActive check below returns true.

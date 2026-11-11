@@ -10,6 +10,7 @@ import {
   type CountryId,
 } from "@/lib/constants/countries";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export const migration: Migration = {
   id: "2026-10-04-government-accountability",
@@ -35,9 +36,9 @@ export const migration: Migration = {
         )
         .find({})
         .toArray(),
-      db
-        .collection<{ _id: string; currentTurn?: number; preset?: string }>("gameState")
-        .findOne({ _id: "current" }),
+      gameStateCollection<{ _id: string; currentTurn?: number; preset?: string }>(db).findOne({
+        _id: "current",
+      }),
       db
         .collection<PoliticalParty>("politicalParties")
         .find({

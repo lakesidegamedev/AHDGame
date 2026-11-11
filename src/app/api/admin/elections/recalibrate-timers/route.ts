@@ -66,6 +66,7 @@ import { electionToLarpYear } from "@/lib/utils/formatters";
 import { getLandtagAnchor } from "@/lib/seeds/de/deLandtag";
 import { getUKRegionalCouncilCycle1EndTurn } from "@/lib/elections/ukRegionalCouncilStagger";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * Derive the canonical LARP end-turn, primary-end-turn, and start-turn for
@@ -203,7 +204,7 @@ export const POST = withAdminRoute(async (_auth) => {
   // Persist the floored ref as lastTurnProcessed so all future turn processing
   // and election timestamps stay aligned to hour boundaries.
   if (ref.getTime() !== rawRef.getTime()) {
-    await db.collection<GameState>("gameState").updateOne({ _id: "current" } as Filter<GameState>, {
+    await gameStateCollection(db).updateOne({ _id: "current" } as Filter<GameState>, {
       $set: { lastTurnProcessed: ref, updatedAt: now },
     });
     invalidateGameTimeCache();

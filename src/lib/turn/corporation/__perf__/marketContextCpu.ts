@@ -26,6 +26,7 @@ import {
   type ProductionTurnWorld,
 } from "../__fixtures__/productionTurnWorld";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 interface ProfileNode {
   id: number;
@@ -213,9 +214,9 @@ async function databaseWorld(
   lookups: CorporationLookups,
   config: GameConfig | null
 ): Promise<PrePassWorld> {
-  const gameState = (await db
-    .collection<{ _id: string }>("gameState")
-    .findOne({ _id: "current" })) as {
+  const gameState = (await gameStateCollection<{ _id: string }>(db).findOne({
+    _id: "current",
+  })) as {
     currentTurn?: number;
     currentYear?: number;
   } | null;

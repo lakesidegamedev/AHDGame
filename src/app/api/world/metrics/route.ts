@@ -9,6 +9,7 @@ import { resolveGameYear } from "@/lib/era/era";
 import { isMetricActive } from "@/lib/era/metricCatalog";
 import { scoreMetric } from "@/lib/utils/metricScoring";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /** Maps CountryId → ISO 3166-1 numeric code used by the world map */
 const COUNTRY_TO_ISO: Record<string, string> = {
@@ -44,17 +45,15 @@ export async function GET(request: Request) {
 
     // Preset drives the era-scaled median-income band (global game setting);
     // the era fields drive era-aware score-band drift when the flag is on.
-    const gameStateDoc = await db
-      .collection<{
-        _id: string;
-        preset?: string;
-        currentYear?: number;
-        currentTurn?: number;
-        startingYear?: number;
-        incomeBandIndexByCountry?: Partial<Record<string, number>>;
-        incomeStartVintages?: Partial<Record<string, string>>;
-      }>("gameState")
-      .findOne({ _id: "current" });
+    const gameStateDoc = await gameStateCollection<{
+      _id: string;
+      preset?: string;
+      currentYear?: number;
+      currentTurn?: number;
+      startingYear?: number;
+      incomeBandIndexByCountry?: Partial<Record<string, number>>;
+      incomeStartVintages?: Partial<Record<string, string>>;
+    }>(db).findOne({ _id: "current" });
     const preset = gameStateDoc?.preset ?? DEFAULT_SEED_PRESET;
     // Live year for era-aware score bands.
     const year = gameStateDoc ? resolveGameYear(gameStateDoc) : null;

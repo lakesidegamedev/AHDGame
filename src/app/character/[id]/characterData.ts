@@ -35,6 +35,7 @@ import { resolveMemberSince } from "@/lib/character/memberSince";
 import { loadCharacterByUrlId } from "./characterLoaders";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 interface CandidateElection {
   election: Election;
@@ -240,7 +241,7 @@ export async function getCharacterById(characterId: string) {
       statePartyKey
         ? db.collection<StatePartyOrg>("statePartyOrg").findOne({ _id: statePartyKey })
         : Promise.resolve(null),
-      db.collection<GameState>("gameState").findOne({ _id: "current" }),
+      gameStateCollection(db).findOne({ _id: "current" }),
       fetchPartyHistory(db, character._id),
     ]);
 

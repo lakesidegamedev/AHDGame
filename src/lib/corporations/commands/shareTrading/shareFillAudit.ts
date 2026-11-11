@@ -29,6 +29,7 @@ import type { ShareOrder } from "@/lib/db/types/corporation";
 import type { ShareListing, ShareOffer } from "@/lib/db/types/shareListings";
 import type { ShareTradeParty } from "@/lib/db/types/shareTradeHistory";
 import type { CurrencyCode } from "@/lib/constants/currencies";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * Durable audit for peer order-book fills.
@@ -416,9 +417,9 @@ export async function beginShareFillAttempt(
   plan: ShareFillAuditPlan,
   fingerprint: string
 ): Promise<string> {
-  const activation = await db
-    .collection<{ _id: string; stockHoldingTaxStartTurn?: number }>("gameState")
-    .findOne({ _id: "current" }, { projection: { stockHoldingTaxStartTurn: 1 } });
+  const activation = await gameStateCollection<{ _id: string; stockHoldingTaxStartTurn?: number }>(
+    db
+  ).findOne({ _id: "current" }, { projection: { stockHoldingTaxStartTurn: 1 } });
   if (
     activation?.stockHoldingTaxStartTurn === undefined ||
     plan.turn < activation.stockHoldingTaxStartTurn

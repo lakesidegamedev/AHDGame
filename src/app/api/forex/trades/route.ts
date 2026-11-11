@@ -7,6 +7,7 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import type { TradeHistoryEntry } from "@/lib/db/types/tradeHistory";
 import type { GameState } from "@/lib/db/types";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export async function GET() {
   try {
@@ -17,7 +18,7 @@ export async function GET() {
 
     const db = await getDb();
 
-    const gs = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+    const gs = await gameStateCollection(db).findOne({ _id: "current" });
     const currentTurn = gs?.currentTurn ?? 0;
     const oldestTurn = Math.max(0, currentTurn - 48);
 

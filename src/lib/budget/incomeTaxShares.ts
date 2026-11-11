@@ -19,6 +19,7 @@ import {
 } from "./rules/incomeTaxTiers";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 function regionIncomePopulation(
   state: Pick<State, "_id" | "countryId">,
@@ -44,18 +45,16 @@ function regionIncomePopulation(
 /** Four batched reads and two batched writes, independent of population size. */
 export async function refreshIncomeTaxShares(db: Db): Promise<void> {
   const [gameState, states, national, regional] = await Promise.all([
-    db
-      .collection<{
-        _id: string;
-        preset?: string;
-        currentYear?: number;
-        currentTurn?: number;
-        startingYear?: number;
-      }>("gameState")
-      .findOne(
-        { _id: "current" },
-        { projection: { preset: 1, currentYear: 1, currentTurn: 1, startingYear: 1 } }
-      ),
+    gameStateCollection<{
+      _id: string;
+      preset?: string;
+      currentYear?: number;
+      currentTurn?: number;
+      startingYear?: number;
+    }>(db).findOne(
+      { _id: "current" },
+      { projection: { preset: 1, currentYear: 1, currentTurn: 1, startingYear: 1 } }
+    ),
     db
       .collection<State>("states")
       .find({}, { projection: { countryId: 1, population: 1, parentRegionId: 1 } })

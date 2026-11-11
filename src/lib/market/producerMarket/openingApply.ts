@@ -17,6 +17,7 @@ import { ObjectId, type Db } from "mongodb";
 import type { ProducerOpeningPlan } from "./migrationRules";
 import type { ProducerOpeningMarker } from "./liveMode";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export const PRODUCER_OPENINGS = "producerOpenings";
 
@@ -46,11 +47,11 @@ export async function applyProducerOpening(
     turn: plan.completedTurn,
     digest: input.planDigest,
   };
-  const state = await db
-    .collection<{ _id: string; producerOpening?: ProducerOpeningMarker; worldEpochId?: string }>(
-      "gameState"
-    )
-    .findOne({ _id: "current" }, { projection: { producerOpening: 1, worldEpochId: 1 } });
+  const state = await gameStateCollection<{
+    _id: string;
+    producerOpening?: ProducerOpeningMarker;
+    worldEpochId?: string;
+  }>(db).findOne({ _id: "current" }, { projection: { producerOpening: 1, worldEpochId: 1 } });
   if (state?.worldEpochId !== plan.worldEpoch)
     throw new Error("Opening plan is for a different world");
   const existing = state?.producerOpening;
@@ -162,12 +163,10 @@ export async function applyProducerOpening(
   if (opened !== plan.sectors.length)
     throw new Error(`Opening verified ${opened} of ${plan.sectors.length} sectors`);
 
-  const stamped = await db
-    .collection<{ _id: string }>("gameState")
-    .updateOne(
-      { _id: "current", worldEpochId: plan.worldEpoch, producerOpening: { $exists: false } },
-      { $set: { producerOpening: marker } }
-    );
+  const stamped = await gameStateCollection<{ _id: string }>(db).updateOne(
+    { _id: "current", worldEpochId: plan.worldEpoch, producerOpening: { $exists: false } },
+    { $set: { producerOpening: marker } }
+  );
   if (stamped.matchedCount !== 1) throw new Error("Opening marker could not be stamped");
   await db
     .collection(PRODUCER_OPENINGS)

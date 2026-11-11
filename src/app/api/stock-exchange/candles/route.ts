@@ -24,6 +24,7 @@ import {
   type CandleInput,
 } from "@/lib/stockExchange/candles";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 // Game-calendar ranges plus older client ranges retained for compatibility.
 const VALID_TURNS = new Set([4, 12, 24, 48, 168, 240, 480, 720, 8760, 0]);
@@ -68,7 +69,7 @@ export async function GET(request: Request) {
     const collection = db.collection<MarketCapHistory>("marketCapHistory");
     const [latest, gameState] = await Promise.all([
       collection.findOne({}, { sort: { turn: -1 }, projection: { turn: 1 } }),
-      db.collection<GameState>("gameState").findOne(
+      gameStateCollection(db).findOne(
         { _id: "current" },
         {
           projection: {

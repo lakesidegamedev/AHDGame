@@ -9,6 +9,7 @@ import { resolvePresetIdFromGameState } from "@/lib/world/countryReadinessContra
 import type { State, GameState } from "@/lib/db/types";
 import { filterCountryResults } from "./countryResults";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 // GET /api/discord-bot/autocomplete — Returns name/ID matches for Discord slash command option prefills. Supports type=characters, type=states, and type=countries.
 // Auth: requireAdminOrApiKey
@@ -48,7 +49,7 @@ export async function GET(request: Request) {
     if (type === "countries") {
       const [enabled, gameState] = await Promise.all([
         getEnabledCountryIdsFromDb(db),
-        db.collection<GameState>("gameState").findOne({ _id: "current" }),
+        gameStateCollection(db).findOne({ _id: "current" }),
       ]);
       const preset = resolvePresetIdFromGameState(gameState);
       return NextResponse.json({ results: filterCountryResults(enabled, query, preset, limit) });

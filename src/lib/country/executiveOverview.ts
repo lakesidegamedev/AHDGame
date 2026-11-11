@@ -47,6 +47,7 @@ import { executiveStatusPayload } from "@/lib/elections/rules/successionFill";
 import { loadExecutiveStatus } from "@/lib/elections/executiveStatus";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * Coerce a character id that is typed `ObjectId` but may have been persisted as
@@ -107,8 +108,7 @@ async function handlePresidential(countryId: CountryId) {
   ]);
 
   const myCharacter = authUser
-    ? await charactersCollection(db)
-        .findOne({ userId: new ObjectId(authUser.userId) })
+    ? await charactersCollection(db).findOne({ userId: new ObjectId(authUser.userId) })
     : null;
   const isPresident =
     !!presidentOfficial?.characterId &&
@@ -209,8 +209,7 @@ async function handleUS() {
   }
 
   const myCharacter = authUser
-    ? await charactersCollection(db)
-        .findOne({ userId: new ObjectId(authUser.userId) })
+    ? await charactersCollection(db).findOne({ userId: new ObjectId(authUser.userId) })
     : null;
   const isPresident =
     !!presidentOfficial?.characterId &&
@@ -232,7 +231,7 @@ async function handleParliamentary(countryId: CountryId) {
   const db = await getDb();
   const authUser = await getAuthUser().catch(() => null);
   const [world, countryState] = await Promise.all([
-    db.collection<{ _id: string; preset?: string }>("gameState").findOne({ _id: "current" }),
+    gameStateCollection<{ _id: string; preset?: string }>(db).findOne({ _id: "current" }),
     countryHasFeature("ruLib", countryId)
       ? db
           .collection<{
@@ -340,8 +339,7 @@ async function handleParliamentary(countryId: CountryId) {
       .collection<ElectedOfficial>("electedOfficials")
       .findOne({ officeType: headOfStateOfficeType, countryId });
     if (hosOfficial?.characterId) {
-      const hosChar = await charactersCollection(db)
-        .findOne({ _id: hosOfficial.characterId });
+      const hosChar = await charactersCollection(db).findOne({ _id: hosOfficial.characterId });
       if (hosChar) {
         const hosCountry: CountryId = hosChar.countryId ?? countryId;
         const hosParty = hosChar.party
@@ -366,8 +364,7 @@ async function handleParliamentary(countryId: CountryId) {
   }
 
   const myCharacter = authUser
-    ? await charactersCollection(db)
-        .findOne({ userId: new ObjectId(authUser.userId) })
+    ? await charactersCollection(db).findOne({ userId: new ObjectId(authUser.userId) })
     : null;
   const isPrimeMinister = !!pmCharacterId && !!myCharacter && pmCharacterId.equals(myCharacter._id);
 
@@ -540,9 +537,9 @@ async function handleParliamentary(countryId: CountryId) {
   ) {
     if (!govFormation.activeVoteId) {
       // Check 48-turn cooldown on no-confidence votes
-      const gameState = await db
-        .collection<{ _id: string; currentTurn: number }>("gameState")
-        .findOne({ _id: "current" });
+      const gameState = await gameStateCollection<{ _id: string; currentTurn: number }>(db).findOne(
+        { _id: "current" }
+      );
       const currentTurn = gameState?.currentTurn ?? 0;
 
       const lastVote = await getNoConfidenceVotesCollection(db)
@@ -568,9 +565,9 @@ async function handleParliamentary(countryId: CountryId) {
   let snapCooldownTurnsRemaining = 0;
   const lastSnapTurn = govFormation?.lastSnapElectionTurn ?? 0;
   if (lastSnapTurn > 0) {
-    const gameState = await db
-      .collection<{ _id: string; currentTurn: number }>("gameState")
-      .findOne({ _id: "current" });
+    const gameState = await gameStateCollection<{ _id: string; currentTurn: number }>(db).findOne({
+      _id: "current",
+    });
     const currentTurn = gameState?.currentTurn ?? 0;
     snapCooldownTurnsRemaining = Math.max(
       0,

@@ -18,6 +18,7 @@ import {
   historicalWarheads,
   seedNuclearPrograms,
 } from "@/lib/admin/seed/seedNuclearPrograms";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const NUCLEAR_DELIVERY_DOCTRINE_KEY = keyOf("strat", 5);
 
@@ -233,7 +234,7 @@ export async function seedColdWarFoundations(
     );
   }
 
-  await db.collection<GameState>("gameState").updateOne(
+  await gameStateCollection(db).updateOne(
     { _id: "current" },
     {
       $set: {

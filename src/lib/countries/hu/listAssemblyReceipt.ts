@@ -8,6 +8,7 @@ import type { GameState } from "@/lib/db/types";
 import { HU_1991_COUNTS_COLLECTION, type Hu1991AssemblyRecord } from "./assemblyCount1991";
 import { HU_2011_COUNTS_COLLECTION } from "./assemblyCount2011";
 import type { HuListNominations } from "./rules/listVacancies1991";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 export type HuListAssemblyReceipt = Pick<
   Hu1991AssemblyRecord,
   | "_id"
@@ -30,7 +31,7 @@ export function huListParentCollection(
   throw new Error("Unknown Hungarian list parent receipt");
 }
 export async function readHuListAssemblyReceipt(db: Db, session?: ClientSession) {
-  const game = await db.collection<GameState>("gameState").findOne(
+  const game = await gameStateCollection(db).findOne(
     { _id: "current" },
     {
       session,

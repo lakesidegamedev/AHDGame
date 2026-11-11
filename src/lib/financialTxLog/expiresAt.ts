@@ -6,6 +6,7 @@ import {
   DEFAULT_TURN_LENGTH_MINUTES,
   TX_TTL_DEFAULT_MS,
 } from "@/lib/db/types/financialTxLog";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * Wall-clock minutes between turns while `gameState.fastMode` is on. The turn
@@ -61,9 +62,7 @@ export async function loadTurnLengthMinutes(db: Db): Promise<number> {
     db
       .collection<GameConfig>("gameConfig")
       .findOne({ _id: "default" }, { projection: { turnLengthMinutes: 1 } }),
-    db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: { fastMode: 1 } }),
+    gameStateCollection(db).findOne({ _id: "current" }, { projection: { fastMode: 1 } }),
   ]);
   return effectiveTurnLengthMinutes(cfg?.turnLengthMinutes, state?.fastMode);
 }

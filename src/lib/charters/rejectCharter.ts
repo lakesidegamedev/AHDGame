@@ -2,6 +2,7 @@ import type { Db, ObjectId } from "mongodb";
 import type { PartyCharter } from "@/lib/db/types";
 import { computeCharterDeadline, computeCharterDeadlineTurn } from "./charterDeadlines";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * Records a founder's rejection on a charter and transitions it to
@@ -58,9 +59,9 @@ export async function rejectCharter(
   const replacementDeadline = computeCharterDeadline(now);
   const currentTurn =
     (
-      await db
-        .collection<{ _id: string; currentTurn?: number }>("gameState")
-        .findOne({ _id: "current" })
+      await gameStateCollection<{ _id: string; currentTurn?: number }>(db).findOne({
+        _id: "current",
+      })
     )?.currentTurn ?? null;
   const replacementDeadlineTurn =
     currentTurn != null ? computeCharterDeadlineTurn(currentTurn) : null;

@@ -46,6 +46,7 @@ import { isMacroMetricPath } from "@/lib/macroMetrics/paths";
 import { boardDeltaForLegacyEffect } from "@/lib/politicalLegislation/legacyEffectBridge";
 import { applyBoardDelta } from "@/lib/politicalLegislation/boardWrite";
 import type { PoliticalMetricsDoc } from "@/lib/db/types/politicalMetrics";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /** National pseudo-state ids (federal, uk_national, …) vs real sub-national regions (XB, TX, …). */
 function getNonPolicyProvisionScope(stateId: string | undefined): "national" | "state" {
@@ -123,12 +124,10 @@ function getBillCountryId(bill: Pick<Bill, "countryId">): CountryId | null {
  * parent seat picks up its post-split name (e.g. HEW -> HHS). Idempotent.
  */
 async function applyCreateDepartmentProvision(db: Db, p: CreateDepartmentProvision): Promise<void> {
-  await db
-    .collection<GameState>("gameState")
-    .updateOne(
-      { _id: "current" as unknown as GameState["_id"] },
-      { $addToSet: { manuallyEnabledSeats: p.positionId }, $set: { updatedAt: new Date() } }
-    );
+  await gameStateCollection(db).updateOne(
+    { _id: "current" as unknown as GameState["_id"] },
+    { $addToSet: { manuallyEnabledSeats: p.positionId }, $set: { updatedAt: new Date() } }
+  );
 }
 
 export async function applyLegislationEffect(

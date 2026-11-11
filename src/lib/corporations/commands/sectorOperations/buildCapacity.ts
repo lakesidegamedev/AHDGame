@@ -93,6 +93,7 @@ import {
 } from "@/lib/market/retailDemandTransition";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * Sector capacity commands (plants tier, P3a of the buildable-sectors plan).
@@ -537,7 +538,7 @@ async function loadCapacityContext(
   corporation: Corporation,
   sector: CorporateSector
 ): Promise<CapacityContext> {
-  const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+  const gameState = await gameStateCollection(db).findOne({ _id: "current" });
   const currentTurn = gameState?.currentTurn ?? 0;
   const currentYear =
     gameState?.currentYear ??

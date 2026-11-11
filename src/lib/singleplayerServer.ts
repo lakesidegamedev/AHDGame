@@ -24,6 +24,7 @@ import {
 } from "@/lib/migrations/singleplayerMigrations";
 import { serverEnv } from "@/lib/config/read";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * Node-only singleplayer helpers. `@/lib/singleplayer` must stay importable
@@ -148,12 +149,10 @@ export async function singleplayerStatus(db: Db): Promise<SingleplayerStatus> {
   await clearSingleplayerMaintenance(db);
   const userId = new ObjectId(SINGLEPLAYER_USER_ID);
   const [gameState, character, characterCount] = await Promise.all([
-    db
-      .collection<GameState>("gameState")
-      .findOne(
-        { _id: "current" },
-        { projection: { currentTurn: 1, preset: 1, isProcessing: 1, singleplayerConfig: 1 } }
-      ),
+    gameStateCollection(db).findOne(
+      { _id: "current" },
+      { projection: { currentTurn: 1, preset: 1, isProcessing: 1, singleplayerConfig: 1 } }
+    ),
     charactersCollection(db).findOne(
       { userId, retiredAt: { $exists: false } },
       { projection: { _id: 1, name: 1 } }
@@ -213,7 +212,7 @@ export async function setSingleplayerConfig(
   // undefined as null, and a legacy world would start looking like one that
   // offers the guide.
   if (persisted.guide === undefined) delete persisted.guide;
-  await db.collection<GameState>("gameState").updateOne(
+  await gameStateCollection(db).updateOne(
     { _id: "current" },
     {
       $set: {
@@ -238,9 +237,10 @@ export async function setSingleplayerConfig(
 }
 
 export async function getSingleplayerConfig(db: Db): Promise<SingleplayerConfig | null> {
-  const state = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { singleplayerConfig: 1 } });
+  const state = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { singleplayerConfig: 1 } }
+  );
   return state?.singleplayerConfig ?? null;
 }
 

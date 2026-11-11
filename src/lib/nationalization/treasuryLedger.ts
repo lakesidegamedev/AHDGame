@@ -20,6 +20,7 @@ import { ledgerTurnFromClock } from "@/lib/ledger/ledgerTurn";
 import type { LedgerEntryInput } from "@/lib/ledger/types";
 import type { FinancialTxType } from "@/lib/db/types/financialTxLog";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * Each flow's transaction type and settlement reason. Event-driven flows reuse
@@ -131,9 +132,10 @@ export async function loadTreasuryCashContext(
     const treasuryCashLedgerEnabled = config?.treasuryCashLedgerEnabled === true;
     if (!ledgerShadowEnabled && !treasuryCashLedgerEnabled) return null;
     const [state, rates, budgets] = await Promise.all([
-      db
-        .collection<{ _id: string; currentTurn: number; preset?: string }>("gameState")
-        .findOne({ _id: "current" }, { projection: { currentTurn: 1, preset: 1 } }),
+      gameStateCollection<{ _id: string; currentTurn: number; preset?: string }>(db).findOne(
+        { _id: "current" },
+        { projection: { currentTurn: 1, preset: 1 } }
+      ),
       db
         .collection<{ currencyCode: string; rate: number }>("exchangeRates")
         .find({}, { projection: { currencyCode: 1, rate: 1 } })

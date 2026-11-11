@@ -26,6 +26,7 @@ import {
   type CommodityPriceRatioFn,
   type PlacementSignals,
 } from "@/lib/turn/npp/marketSignals";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export async function loadNppPlacementSignals(
   db: Db,
@@ -50,12 +51,10 @@ export async function loadNppPlacementSignals(
         },
       }
     ),
-    db
-      .collection<GameState>("gameState")
-      .findOne(
-        { _id: "current" },
-        { projection: { currentYear: 1, startingYear: 1, currentTurn: 1 } }
-      ),
+    gameStateCollection(db).findOne(
+      { _id: "current" },
+      { projection: { currentYear: 1, startingYear: 1, currentTurn: 1 } }
+    ),
   ]);
   const extractionOutputScaleEnabled = await getExtractionOutputScaleEnabled(config);
   const extractionSectors = sectors.filter((sector) => sector.sectorType === "extraction");

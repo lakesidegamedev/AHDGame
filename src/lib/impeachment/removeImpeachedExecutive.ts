@@ -10,6 +10,7 @@ import { getOfficeLabel } from "@/lib/utils/officeTitle";
 import { governorOfficialFilter } from "@/lib/db/electedOfficialScope";
 import { captureOfficeTransition } from "@/lib/analytics/officeTransitionAnalytics";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /** Record the "removed" career event and clear the character's office. Shared by
  *  the executive and governor removal paths. */
@@ -40,8 +41,7 @@ async function recordRemovalOnCharacter(
       $push: { careerHistory: careerEvent },
     }
   );
-  const gameState = await db
-    .collection<GameState>("gameState")
+  const gameState = await gameStateCollection(db)
     .findOne({ _id: "current" }, { projection: { currentTurn: 1, iteration: 1 } })
     .catch(() => null);
   await captureOfficeTransition({

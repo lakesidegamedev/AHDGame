@@ -16,6 +16,7 @@ import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export type { OverviewCounts } from "@/lib/country/overviewCounts";
 
@@ -82,9 +83,7 @@ async function resolveCommandEconomyActive(db: Db, countryId: CountryId): Promis
     db
       .collection<GameConfig>("gameConfig")
       .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } }),
-    db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: { currentYear: 1 } }),
+    gameStateCollection(db).findOne({ _id: "current" }, { projection: { currentYear: 1 } }),
     federalBudgetCollection(db).findOne(
       { _id: getNationalBudgetId(countryId) } as { _id: "federal" },
       {

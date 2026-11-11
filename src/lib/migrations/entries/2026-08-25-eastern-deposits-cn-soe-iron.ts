@@ -6,6 +6,7 @@ import { retoolRescaleFields } from "@/lib/corporations/retoolRescale";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import type { Migration, MigrationResult } from "../types";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * Markets repair plan P2a: author the eastern-bloc deposits and point the
@@ -78,9 +79,11 @@ async function backfillEasternDeposits(db: Db, dryRun: boolean): Promise<Migrati
   const notes: string[] = [];
   const now = new Date();
 
-  const gameState = await db
-    .collection<{ _id: string; preset?: string; currentTurn?: number }>("gameState")
-    .findOne({ _id: "current" }, { projection: { preset: 1, currentTurn: 1 } });
+  const gameState = await gameStateCollection<{
+    _id: string;
+    preset?: string;
+    currentTurn?: number;
+  }>(db).findOne({ _id: "current" }, { projection: { preset: 1, currentTurn: 1 } });
   const preset = gameState?.preset ?? DEFAULT_SEED_PRESET;
   const currentTurn = gameState?.currentTurn ?? 0;
   // Post-headroom, era-gated values, byte-identical to what a fresh seed

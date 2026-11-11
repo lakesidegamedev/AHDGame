@@ -8,6 +8,7 @@ import {
   getDefenseAppropriation,
   uncommittedFrom,
 } from "@/lib/db/collections/defenseAppropriation";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export interface NuclearProductionResult {
   warheadsBuilt: number;
@@ -40,9 +41,10 @@ export async function applyNuclearProduction(
 ): Promise<NuclearProductionResult> {
   const gs =
     preloadedGameState ??
-    (await db
-      .collection<{ _id: string; defenceProcurementPaused?: boolean }>("gameState")
-      .findOne({ _id: "current" }, { projection: { defenceProcurementPaused: 1 } })) ??
+    (await gameStateCollection<{ _id: string; defenceProcurementPaused?: boolean }>(db).findOne(
+      { _id: "current" },
+      { projection: { defenceProcurementPaused: 1 } }
+    )) ??
     {};
   if (gs.defenceProcurementPaused === true) return NOTHING;
 

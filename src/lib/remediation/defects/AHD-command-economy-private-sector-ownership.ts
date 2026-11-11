@@ -25,6 +25,7 @@ import type {
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export const DEFECT_ID = "AHD-command-economy-private-sector-ownership";
 
@@ -312,7 +313,7 @@ async function survey(db: Db): Promise<Survey> {
     federalBudgetCollection(db)
       .find({ countryId: { $in: ["RU", "UKR"] } })
       .toArray(),
-    db.collection<{ _id: string; currentTurn?: number }>("gameState").findOne({ _id: "current" }),
+    gameStateCollection<{ _id: string; currentTurn?: number }>(db).findOne({ _id: "current" }),
     db
       .collection<NationalizationAuction>("nationalizationAuctions")
       .find({ corporationId: new ObjectId(DD_SOURCE_CORPORATION_ID), status: "open" })

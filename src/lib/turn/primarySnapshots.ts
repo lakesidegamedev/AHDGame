@@ -68,6 +68,7 @@ import { scopeFilter, type ElectionSweepScope } from "./electionSweepScope";
 import { planTurnSlice, type TurnSlicePart } from "@/lib/elections/rules/turnSlice";
 import { getElectionsCollection } from "@/lib/db/collections/elections";
 import { getStatesCollection } from "@/lib/db/collections/states";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * Record a primary standings snapshot for every election currently in primary phase.
@@ -185,14 +186,15 @@ export async function recordPrimarySnapshots(
         primaryVotes: 1,
       })
       .toArray(),
-    db
-      .collection<{
-        _id: string;
-        preset?: string;
-        currentYear?: number;
-        startingYear?: number;
-      }>("gameState")
-      .findOne({ _id: "current" }, { projection: { preset: 1, currentYear: 1, startingYear: 1 } }),
+    gameStateCollection<{
+      _id: string;
+      preset?: string;
+      currentYear?: number;
+      startingYear?: number;
+    }>(db).findOne(
+      { _id: "current" },
+      { projection: { preset: 1, currentYear: 1, startingYear: 1 } }
+    ),
   ]);
 
   // Use composite keys to avoid cross-country sequential ID collisions

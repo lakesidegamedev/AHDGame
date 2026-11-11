@@ -36,6 +36,7 @@ import type { SeedPreviewRow, SeedPreviewResponse } from "@/lib/api/types/sector
 import { unownedPoolBoostSet } from "@/lib/market/unownedHeadroom";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const LEGACY_BOOST_MULTIPLIER = 1.2;
 const MAX_BOOST_CAP = 3.0;
@@ -54,7 +55,7 @@ export async function GET(request: Request) {
     const db = await getDb();
 
     const [gameState, ranking, rateDocs] = await Promise.all([
-      db.collection<GameState>("gameState").findOne({ _id: "current" }),
+      gameStateCollection(db).findOne({ _id: "current" }),
       computeSectorDistressRanking(db),
       db.collection<ExchangeRate>("exchangeRates").find({}).toArray(),
     ]);

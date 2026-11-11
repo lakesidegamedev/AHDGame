@@ -4,6 +4,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import type { GameState, NppAutonomyLevel } from "@/lib/db/types/gameState";
 import { isCountryEnabledForPlayers } from "@/lib/countryAccess";
 import { NPP_AUTONOMY_LEVEL_RANK } from "./levels";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export type { NppAutonomyLevel };
 
@@ -37,12 +38,10 @@ export async function getNppAutonomyLevel(db: Db): Promise<NppAutonomyLevel> {
 export async function getNppAutonomyWorldContext(
   db: Db
 ): Promise<{ level: NppAutonomyLevel; preset?: string }> {
-  const doc = await db
-    .collection<GameState>("gameState")
-    .findOne(
-      { _id: "current" },
-      { projection: { nppAutonomyLevel: 1, nppAutonomyEnabled: 1, preset: 1 } }
-    );
+  const doc = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { nppAutonomyLevel: 1, nppAutonomyEnabled: 1, preset: 1 } }
+  );
   return {
     level: doc?.nppAutonomyLevel ?? (doc?.nppAutonomyEnabled === true ? "v0" : "off"),
     preset: doc?.preset,

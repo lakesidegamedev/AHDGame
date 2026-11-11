@@ -11,13 +11,15 @@ import {
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /** Current enacted euro membership and actual sovereign-bank positions. */
 export async function loadFinancialExposure(db: Db, availableCountries: Set<string>) {
   const [gameState, budgets, banks, bonds, rates] = await Promise.all([
-    db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: { eurozoneEnabled: 1, euroAdoptedCountries: 1 } }),
+    gameStateCollection(db).findOne(
+      { _id: "current" },
+      { projection: { eurozoneEnabled: 1, euroAdoptedCountries: 1 } }
+    ),
     federalBudgetCollection(db)
       .find(
         {},

@@ -20,6 +20,7 @@ import {
   supplyAgreementReachProblem,
   supplyReachMessage,
 } from "./rules/deliveryReach";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * Gates shared by every way a supply contract can be opened or changed:
@@ -61,9 +62,10 @@ export async function isSupplyLaneClosed(
   const { supplierCountry, buyerCountry, commodity } = args;
   if (!supplierCountry || !buyerCountry || supplierCountry === buyerCountry) return false;
   const [world, config] = await Promise.all([
-    db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: { currentTurn: 1, currentYear: 1 } }),
+    gameStateCollection(db).findOne(
+      { _id: "current" },
+      { projection: { currentTurn: 1, currentYear: 1 } }
+    ),
     db
       .collection<GameConfig>("gameConfig")
       .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } }),
@@ -167,9 +169,7 @@ export async function checkSupplyAgreementReach(
       .collection<CorporateSector>("corporateSectors")
       .find({ corporationId: args.buyer._id }, { projection: REACH_SECTOR_PROJECTION })
       .toArray(),
-    db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
+    gameStateCollection(db).findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
   ]);
   const problem = supplyAgreementReachProblem({
     commodity: args.commodity,

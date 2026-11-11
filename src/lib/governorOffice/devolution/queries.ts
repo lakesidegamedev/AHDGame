@@ -26,6 +26,7 @@ import { getNationalStateId } from "@/lib/policy/nationalStateId";
 import { resolveWestminsterPolicy } from "@/lib/governorOffice/devolution/rules";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 // Pure surface (driver types + snapshot compute) lives in the domain layer;
 // re-exported here so existing importers keep working.
@@ -122,7 +123,7 @@ export async function loadIndependenceDesireSnapshots(
   // P6d: electorate-weighted regional approval (same value the snapshot stores).
   const [groupsByState, gameStateDoc] = await Promise.all([
     loadElectorateGroups(db, { countryId: "UK" }),
-    db.collection<GameState>("gameState").findOne({ _id: "current" }),
+    gameStateCollection(db).findOne({ _id: "current" }),
   ]);
   const preset = gameStateDoc?.preset ?? DEFAULT_SEED_PRESET;
   // Live year for era-aware scoring; null while the flag is off (legacy path).

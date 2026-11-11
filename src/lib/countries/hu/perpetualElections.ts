@@ -14,11 +14,12 @@ import { hu2014RegionSeats } from "@/lib/turn/huAssemblyReform";
 import { bindHu2011Campaigns } from "./assemblyCampaignBinding2011";
 import { huAssemblyElectionSystem } from "./rules/electoralTransition2011";
 import { calendarTurn } from "@/lib/utils/gameDate";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /** Hungary National Assembly. */
 export async function ensureHUElections(now: Date, inFlightTurn?: number): Promise<void> {
   const db = await getDb();
-  const game = await db.collection<GameState>("gameState").findOne(
+  const game = await gameStateCollection(db).findOne(
     { _id: "current" },
     {
       projection: {

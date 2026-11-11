@@ -23,6 +23,7 @@ import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import { recordAudit, recordAuditBulk } from "@/lib/audit/recordAudit";
 import type { ActionAuditInput } from "@/lib/db/types/actionAuditLog";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export interface EmitTreasuryTransactionArgs {
   db: Db;
@@ -57,11 +58,8 @@ async function resolveFallbackTurn(
 ): Promise<number> {
   if (entries.every((entry) => entry.turn != null)) return 0;
   return (
-    (
-      await db
-        .collection<GameState>("gameState")
-        .findOne({ _id: "current" }, { projection: { currentTurn: 1 } })
-    )?.currentTurn ?? 0
+    (await gameStateCollection(db).findOne({ _id: "current" }, { projection: { currentTurn: 1 } }))
+      ?.currentTurn ?? 0
   );
 }
 

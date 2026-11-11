@@ -4,6 +4,7 @@ import { BOND_MARKET_POOLS_COLLECTION } from "@/lib/db/types/bondMarketPool";
 import { sovereignFaceMaturingSoon } from "@/lib/bonds/marketPoolTurn";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { Migration, MigrationContext, MigrationResult } from "../types";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * Top up each bond market pool to its rollover working balance.
@@ -17,9 +18,10 @@ import type { Migration, MigrationContext, MigrationResult } from "../types";
  * underwriting cap.
  */
 async function topUpWorkingBalance(db: Db, ctx: MigrationContext): Promise<MigrationResult> {
-  const turnDoc = await db
-    .collection<{ _id: string; currentTurn?: number }>("gameState")
-    .findOne({ _id: "current" }, { projection: { currentTurn: 1 } });
+  const turnDoc = await gameStateCollection<{ _id: string; currentTurn?: number }>(db).findOne(
+    { _id: "current" },
+    { projection: { currentTurn: 1 } }
+  );
   const turn = turnDoc?.currentTurn ?? 0;
   const pools = await db
     .collection<BondMarketPool>(BOND_MARKET_POOLS_COLLECTION)

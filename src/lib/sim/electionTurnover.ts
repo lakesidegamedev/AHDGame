@@ -8,6 +8,8 @@ import {
   type TallyRecord,
   type SnapshotRecord,
 } from "./rules/electionTurnoverRecords";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import type { Document } from "mongodb";
 type ElectionRow = Omit<ElectionRecord, "_id"> & { _id: ObjectId; status: string };
 type CandidateRow = Omit<CandidateRecord, "_id" | "electionId" | "characterId" | "nppId"> & {
   _id: ObjectId;
@@ -125,7 +127,7 @@ export async function collectElectionTurnoverReport(db: Db, window: ElectionTurn
           { $sort: { "_id.countryId": 1, "_id.officeType": 1 } },
         ])
         .toArray(),
-      db.collection("gameState").findOne(
+      gameStateCollection<Document>(db).findOne(
         { _id: "current" as never },
         {
           projection: {

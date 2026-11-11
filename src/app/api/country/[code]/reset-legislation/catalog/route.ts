@@ -12,6 +12,7 @@ import { resetTaxesFor } from "@/lib/resetLegislation/taxCatalog";
 import { eraYearContextFromGameState } from "@/lib/era/context";
 import { primaryMetrics } from "@/lib/resetMetrics/catalog";
 import { playerMetricDescription } from "@/lib/resetMetrics/presentation";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const querySchema = z
   .object({
@@ -38,7 +39,7 @@ export async function GET(request: Request, context: { params: Promise<{ code: s
       return errorResponse(400, parsed.error.issues[0]?.message);
     }
     const db = await getDb();
-    const gameState = await db.collection<GameState>("gameState").findOne(
+    const gameState = await gameStateCollection(db).findOne(
       { _id: "current" },
       {
         projection: {

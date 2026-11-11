@@ -4,6 +4,7 @@ import type { DefenceContract } from "@/lib/db/types/defenceContract";
 import type { ExtractionContract } from "@/lib/db/types/extractionContract";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /** Withdraw only unanswered legacy offers; active and historical signed contracts retain their terms. */
 export const migration: Migration = {
@@ -32,9 +33,10 @@ export const migration: Migration = {
         ],
       };
     await ensureGovernmentContractIndexes(db);
-    const state = await db
-      .collection<{ _id: string; currentTurn: number }>("gameState")
-      .findOne({ _id: "current" }, { projection: { currentTurn: 1 } });
+    const state = await gameStateCollection<{ _id: string; currentTurn: number }>(db).findOne(
+      { _id: "current" },
+      { projection: { currentTurn: 1 } }
+    );
     const turn = state?.currentTurn ?? 1;
     await defence.updateMany({ status: "pending", tenderId: { $exists: false } }, [
       {

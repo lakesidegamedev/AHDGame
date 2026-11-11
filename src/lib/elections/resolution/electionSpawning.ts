@@ -11,6 +11,7 @@ import {
 } from "@/lib/elections/cycleAnchorContext";
 import { electionToLarpYear } from "@/lib/utils/formatters";
 import { planNextLowerChamberCycle } from "@/lib/elections/snapShift";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * Convert a prior endTime to a LARP turn number, anchored on `nowRef`'s
@@ -27,7 +28,7 @@ type Db = Awaited<ReturnType<typeof import("@/lib/mongodb").getDb>>;
 async function getCurrentTurnAndCtx(
   db: Db
 ): Promise<{ currentTurn: number; currentYear: number | undefined; ctx: CycleAnchorContext }> {
-  const gs = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+  const gs = await gameStateCollection(db).findOne({ _id: "current" });
   return {
     currentTurn: gs?.currentTurn ?? 1,
     // Needed by `loadApportionment` so a state admitted mid-game stays in the

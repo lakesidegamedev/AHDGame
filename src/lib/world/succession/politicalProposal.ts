@@ -19,6 +19,7 @@ import {
   federationPoliticalTermsFromActivation,
   type FederationPoliticalTerms,
 } from "./settlementIntent";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export const FEDERATION_POLITICAL_PROPOSALS_COLLECTION = "federationPoliticalProposals";
 const VOTING_DURATION_TURNS = 24;
@@ -61,9 +62,10 @@ export async function openFederationPoliticalProposal(input: {
   sponsorParty?: string;
 }): Promise<FederationPoliticalProposalRecord> {
   const { db, sourceCountryId, activation, now, sponsorParty } = input;
-  const state = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { preset: 1, currentYear: 1, currentTurn: 1 } });
+  const state = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { preset: 1, currentYear: 1, currentTurn: 1 } }
+  );
   const availableYear = earliestFederationDecisionYear(state?.preset ?? "", sourceCountryId);
   if (
     state?.preset !== "1991-default" ||

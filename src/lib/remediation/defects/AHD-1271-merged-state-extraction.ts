@@ -42,6 +42,7 @@ import type {
   VerifyResult,
 } from "../types";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export const DEFECT_ID = "AHD-1271-merged-state-extraction";
 
@@ -91,9 +92,10 @@ async function survey(db: Db): Promise<Survey> {
     db
       .collection<GameConfig>("gameConfig")
       .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } }),
-    db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" as never }, { projection: { currentYear: 1, currentTurn: 1 } }),
+    gameStateCollection(db).findOne(
+      { _id: "current" as never },
+      { projection: { currentYear: 1, currentTurn: 1 } }
+    ),
     loadWorldPreset(db),
     getMarketSystemModeForDb(db),
   ]);

@@ -14,6 +14,8 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, notFound, errorResponse } from "@/lib/api/errors";
 import { logWireEvent } from "@/lib/wireEvent";
 import type { Crisis } from "@/lib/db/types/crisis";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import type { Document } from "mongodb";
 
 const PatchSchema = z.object({
   action: z.literal("resolve"),
@@ -34,9 +36,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     const crisis = await db.collection<Crisis>("crises").findOne({ _id: new ObjectId(id) });
     if (!crisis) throw notFound("Crisis not found");
 
-    const gameState = await db
-      .collection("gameState")
-      .findOne({ _id: "current" as unknown as ObjectId });
+    const gameState = await gameStateCollection<Document>(db).findOne({
+      _id: "current" as unknown as ObjectId,
+    });
     const currentTurn: number = (gameState as { currentTurn?: number } | null)?.currentTurn ?? 0;
 
     await db

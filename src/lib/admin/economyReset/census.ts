@@ -31,6 +31,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export const ECONOMY_RESET_PROCESSING_KIND = "economyReset";
 
@@ -575,9 +576,10 @@ export async function captureEconomyResetPlan(
   options: EconomyResetCensusOptions
 ): Promise<EconomyResetCensus> {
   const readFence = () =>
-    db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: FENCE_PROJECTION }) as Promise<Fence | null>;
+    gameStateCollection(db).findOne(
+      { _id: "current" },
+      { projection: FENCE_PROJECTION }
+    ) as Promise<Fence | null>;
   const before = await readFence();
   if (!fenceOk(before, options))
     throw new Error("The expected world is not at an idle turn fence for the economy reset");

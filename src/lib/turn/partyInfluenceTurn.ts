@@ -9,6 +9,7 @@ import { STAT_MIN } from "@/lib/stats/statsConstants";
 import { appendActionGrantLog } from "./actionGrantLog";
 import { getPoliticalPartiesCollection } from "@/lib/db/collections/politicalParties";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /*
  * Reference infamy level at which the infamy penalty reaches its configured
@@ -136,9 +137,10 @@ export async function processPartyInfluenceTurn(
   const db = await getDb();
   const currentTurn =
     (
-      await db
-        .collection<{ _id: string; currentTurn?: number }>("gameState")
-        .findOne({ _id: "current" }, { projection: { currentTurn: 1 } })
+      await gameStateCollection<{ _id: string; currentTurn?: number }>(db).findOne(
+        { _id: "current" },
+        { projection: { currentTurn: 1 } }
+      )
     )?.currentTurn ?? 0;
 
   /*

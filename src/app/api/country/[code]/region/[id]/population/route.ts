@@ -4,6 +4,7 @@ import { getDb } from "@/lib/mongodb";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import type { State, StateMetrics, GameState } from "@/lib/db/types";
 import type { RegionDemographics } from "@/lib/db/types/regionDemographics";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -33,7 +34,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const [demo, metrics, gameState] = await Promise.all([
       db.collection<RegionDemographics>("regionDemographics").findOne({ _id: stateId }),
       db.collection<StateMetrics>("macroMetrics").findOne({ _id: stateId }),
-      db.collection<GameState>("gameState").findOne({ _id: "current" }),
+      gameStateCollection(db).findOne({ _id: "current" }),
     ]);
 
     const pop = metrics?.population as Record<string, { value?: number } | undefined> | undefined;

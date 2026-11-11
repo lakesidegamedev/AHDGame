@@ -9,6 +9,7 @@ import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { chooseHu1991PlayerDistrict } from "./rules/playerFiling1991";
 import { isHu1991AssemblyCampaign } from "./rules/assemblyCampaign1991";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 export const HU_1991_FILING_LOCKS_COLLECTION = "hu1991AssemblyFilingLocks";
 export type Hu1991FilingFailure =
   | "invalid-ballot"
@@ -68,12 +69,10 @@ export async function materializeHu1991PlayerFiling(input: {
   const election = await db
     .collection<Election>("elections")
     .findOne({ _id: electionId }, { session });
-  const game = await db
-    .collection<GameState>("gameState")
-    .findOne(
-      { _id: "current" },
-      { session, projection: { preset: 1, currentTurn: 1, huAssemblyReformedAtYear: 1 } }
-    );
+  const game = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { session, projection: { preset: 1, currentTurn: 1, huAssemblyReformedAtYear: 1 } }
+  );
   const modern = election?.hungarianModernByElection;
   if (
     !election ||

@@ -12,6 +12,7 @@ import {
   scoreResetGovernanceStyle,
   type ResetMetricConditionScores,
 } from "./rules/governanceStyle";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export interface ResetGovernanceProgramChoice {
   familyId: string;
@@ -34,9 +35,10 @@ export async function readResetGovernanceStyle(input: {
 }): Promise<GovernanceStyleScore | null> {
   const boardId = `${input.countryId}:${input.regionId ?? "national"}`;
   const [gameState, openingBoard] = await Promise.all([
-    input.db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: { preset: 1, presidentialTenureByCountry: 1 } }),
+    gameStateCollection(input.db).findOne(
+      { _id: "current" },
+      { projection: { preset: 1, presidentialTenureByCountry: 1 } }
+    ),
     input.db
       .collection<ResetLawOpeningBoard>("resetLawOpeningBoards")
       .findOne({ _id: boardId, worldId: input.worldId }, { projection: { references: 1 } }),

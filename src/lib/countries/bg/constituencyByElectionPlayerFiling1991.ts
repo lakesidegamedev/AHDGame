@@ -25,6 +25,7 @@ import {
   bgGrandPartialOwnerEligible,
 } from "./rules/constituencyByElection1991";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 interface Lock {
   _id: string;
@@ -54,12 +55,10 @@ export async function materializeBgGrandPartialPlayerFiling(
     !candidate.electionId.equals(electionId)
   )
     return reject("invalid-ballot");
-  const game = await db
-    .collection<GameState>("gameState")
-    .findOne(
-      { _id: "current" },
-      { session, projection: { preset: 1, currentTurn: 1, preIteration: 1 } }
-    );
+  const game = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { session, projection: { preset: 1, currentTurn: 1, preIteration: 1 } }
+  );
   if (game?.preset !== "1991-default" || game.preIteration?.active) return reject("invalid-ballot");
   const job = await db
     .collection<BgGrandByElectionRecord & { filingGeneration?: number }>(

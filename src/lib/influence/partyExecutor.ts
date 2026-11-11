@@ -37,6 +37,7 @@ import {
 import { resolvePartyTier } from "@/lib/parties/partyTier";
 import { getOfficeLabel } from "@/lib/utils/officeTitle";
 import { formatElectionTypeLabel } from "@/lib/utils/electionLabels";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export type { PartyInfluenceCalculation } from "./partyExecutorCalculations";
 export type { ExecutePartyInfluenceInput } from "./partyExecutorTypes";
@@ -183,7 +184,7 @@ async function executeStatePartyInfluenceCore(
     };
   }
 
-  const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+  const gameState = await gameStateCollection(db).findOne({ _id: "current" });
   const currentTurn = gameState?.currentTurn || 1;
   const stateLeadershipBonus =
     qualifiesForStateLeadershipBonus(input.influenceType) &&
@@ -413,7 +414,7 @@ async function executeNationalPartyInfluenceCore(
     };
   }
 
-  const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+  const gameState = await gameStateCollection(db).findOne({ _id: "current" });
   const currentTurn = gameState?.currentTurn || 1;
   const statePartyKey = `${npp.homeState}_${input.partyId}`;
   const statePartyOrg = await db

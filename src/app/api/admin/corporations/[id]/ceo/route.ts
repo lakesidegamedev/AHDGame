@@ -15,6 +15,7 @@ import { openCeoTenure, closeCeoTenure } from "@/lib/corporations/ceoHistory";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const appointSchema = z.object({ characterId: z.string().length(24) });
 
@@ -85,9 +86,10 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
     const db = await getDb();
 
     // Record the turn when the vacancy began
-    const gameState = await db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: { currentTurn: 1 } });
+    const gameState = await gameStateCollection(db).findOne(
+      { _id: "current" },
+      { projection: { currentTurn: 1 } }
+    );
     const currentTurn = gameState?.currentTurn ?? 0;
 
     // Capture the outgoing CEO before vacating so we can close their tenure.

@@ -62,6 +62,7 @@ import type {
 } from "@/lib/elections/dto/primaryPartyDetail";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export type { PrimaryPartyDetail, PrimaryViewerCampaign };
 
@@ -248,15 +249,13 @@ export async function loadPrimaryPartyData(
   // Read before the projection rather than after it: the turnout resolution
   // below needs the preset and the era clock, and the viewer campaign further
   // down needs the preset too.
-  const gameStateDoc = await db
-    .collection<{
-      _id: string;
-      preset?: string;
-      currentYear?: number;
-      currentTurn?: number;
-      startingYear?: number;
-    }>("gameState")
-    .findOne({ _id: "current" });
+  const gameStateDoc = await gameStateCollection<{
+    _id: string;
+    preset?: string;
+    currentYear?: number;
+    currentTurn?: number;
+    startingYear?: number;
+  }>(db).findOne({ _id: "current" });
   const apportionmentPreset = gameStateDoc?.preset;
 
   const gameTime = await getGameTime();

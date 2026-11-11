@@ -21,6 +21,7 @@ import { applyFanout, buildFanoutContext } from "./fanoutDriver";
 import { planSectorFanout } from "./planSectorFanout";
 import { migrateProducerWallets } from "./migrateProducerWallets";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export interface ExpandToSubRegionsResult {
   inserted: number;
@@ -49,9 +50,10 @@ export async function expandToSubRegions(
 
   // Fan the aggregate's dynamic per-region data out across the sub-regions.
   // The reset preset selects the era demographic pattern (1991 vs 2019).
-  const gameState = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { preset: 1, currentTurn: 1 } });
+  const gameState = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { preset: 1, currentTurn: 1 } }
+  );
   const ctx = buildFanoutContext(countryId, seeds, gameState?.preset);
   await planSectorFanout(db, ctx, gameState?.currentTurn ?? 0);
   await migrateProducerWallets(db, countryId, liveRegions, gameState?.currentTurn ?? 0);

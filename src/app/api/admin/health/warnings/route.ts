@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import type { GameHealthSnapshot, GameState, TurnLog } from "@/lib/db/types";
 import { phaseTimeoutMs } from "@/lib/turn/processingLock";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 // Healthy turns normally finish in well under a minute, but historical spikes
 // have exceeded 90 seconds without actually wedging. Use a wider warning window
@@ -99,7 +100,7 @@ export const GET = withAdminRoute(async (_auth, request: Request) => {
     .limit(50)
     .toArray();
 
-  const gameState = await db.collection<GameState>("gameState").findOne(
+  const gameState = await gameStateCollection(db).findOne(
     { _id: "current" },
     {
       projection: {

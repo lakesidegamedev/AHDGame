@@ -12,6 +12,7 @@ import {
 } from "./rules/resetLawRecords";
 import type { PolicyRecordResponse } from "./types";
 import type { PolicyProvenance } from "./policyRecordPayload";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /** Enacted reset-era program laws for one country (national) or region, as display rows. */
 export async function loadResetLawProgramRows(
@@ -20,12 +21,10 @@ export async function loadResetLawProgramRows(
   scope: "national" | "regional",
   regionId?: string
 ): Promise<ResetLawProgramRow[]> {
-  const gameState = await db
-    .collection<GameState>("gameState")
-    .findOne(
-      { _id: "current" },
-      { projection: { resetWorldId: 1, startingYear: 1, preIteration: 1, preIterationTurns: 1 } }
-    );
+  const gameState = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { resetWorldId: 1, startingYear: 1, preIteration: 1, preIterationTurns: 1 } }
+  );
   const worldId = gameState?.resetWorldId;
   if (!worldId) return [];
   const programs = await db

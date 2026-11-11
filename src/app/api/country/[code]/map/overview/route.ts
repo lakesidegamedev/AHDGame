@@ -27,6 +27,7 @@ import {
   loadPoliticalApprovalBases,
 } from "@/lib/politicalLegislation/politicalApprovalProvider";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export interface MapRegionLean {
   regionId: string;
@@ -85,7 +86,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     const [allMetrics, presetDoc] = await Promise.all([
       // SP5: merged two-store view.
       findMergedRegionMetricsMany(db, { _id: { $in: stateIds } }),
-      db.collection<GameState>("gameState").findOne(
+      gameStateCollection(db).findOne(
         { _id: "current" },
         {
           projection: {

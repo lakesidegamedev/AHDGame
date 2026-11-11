@@ -10,6 +10,7 @@ import {
 import { getHeadOfGovernmentCharacterId } from "@/lib/api/headOfGovernment";
 import type { ElectedOfficial } from "@/lib/db/types/officials";
 import { getCabinetMembersCollection } from "@/lib/db/collections/cabinetMembers";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /** Why a viewer may see a cabinet office. Null when they may not. */
 export type CabinetOfficeViewerRole =
@@ -38,9 +39,10 @@ const HIDDEN: CabinetOfficeVisibility = { canView: false, canAct: false, viewerR
 
 /** The world's active seed preset, which decides what a country's offices are. */
 async function readActivePreset(db: Db): Promise<string | undefined> {
-  const gameState = await db
-    .collection<{ _id: string; preset?: string }>("gameState")
-    .findOne({ _id: "current" }, { projection: { preset: 1 } });
+  const gameState = await gameStateCollection<{ _id: string; preset?: string }>(db).findOne(
+    { _id: "current" },
+    { projection: { preset: 1 } }
+  );
   return gameState?.preset;
 }
 

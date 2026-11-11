@@ -72,6 +72,7 @@ import {
 } from "@/lib/market/retailDemandTransition";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /** HTTP status for each entry refusal. */
 const MARKET_ENTRY_STATUS: Record<MarketEntryBlockReason, number> = {
@@ -173,7 +174,7 @@ export async function expandSector(request: Request, { params }: RouteParams) {
           }
         : { corporationId: corporation._id, stateId }
     );
-    const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+    const gameState = await gameStateCollection(db).findOne({ _id: "current" });
     let retailPauseTurnsRemaining: number | null = null;
     if (plantsEnabled && sectorType === "retail") {
       const currentTurn = gameState?.currentTurn ?? 0;

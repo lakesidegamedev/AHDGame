@@ -32,6 +32,7 @@ import { calendarTurnFromGameState } from "./types";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /** Default annual population growth percent when seed configs omit an explicit rate. */
 export const DEFAULT_POP_GROWTH_PCT = 1;
@@ -260,15 +261,13 @@ async function checkClockDrift(
   expect: SeedExpectations,
   calendarTurn: number
 ): Promise<SeedDiagnosticCheck[]> {
-  const gs = await db
-    .collection<{
-      currentTurn?: number;
-      currentYear?: number;
-      startingYear?: number;
-      preIteration?: { active?: boolean };
-      preIterationTurns?: number;
-    }>("gameState")
-    .findOne({ _id: "current" as never });
+  const gs = await gameStateCollection<{
+    currentTurn?: number;
+    currentYear?: number;
+    startingYear?: number;
+    preIteration?: { active?: boolean };
+    preIterationTurns?: number;
+  }>(db).findOne({ _id: "current" as never });
 
   if (!gs) {
     return [
@@ -403,15 +402,13 @@ export async function runDriftChecks(
   db: Db,
   opts?: { preset?: string; calendarTurn?: number }
 ): Promise<RunDriftChecksResult> {
-  const gs = await db
-    .collection<{
-      preset?: string;
-      currentTurn?: number;
-      currentYear?: number;
-      startingYear?: number;
-      preIterationTurns?: number;
-    }>("gameState")
-    .findOne({ _id: "current" as never });
+  const gs = await gameStateCollection<{
+    preset?: string;
+    currentTurn?: number;
+    currentYear?: number;
+    startingYear?: number;
+    preIterationTurns?: number;
+  }>(db).findOne({ _id: "current" as never });
 
   const preset =
     opts?.preset ?? (typeof gs?.preset === "string" ? gs.preset : null) ?? DEFAULT_SEED_PRESET;

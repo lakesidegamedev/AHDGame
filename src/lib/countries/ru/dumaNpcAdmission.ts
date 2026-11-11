@@ -15,6 +15,7 @@ import {
   russianDumaRootFilter,
 } from "./dumaConvocationAuthority";
 import { hasAuthorizedPostSovietTransition } from "./rules/postSovietTransition";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 export async function materializeRussianDumaNpcAdmission(input: {
   db: Db;
   session: ClientSession;
@@ -31,9 +32,10 @@ export async function materializeRussianDumaNpcAdmission(input: {
     now.getTime() < 0
   )
     throw new Error("Duma NPC admission requires a transaction, turn and time");
-  const game = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { session, projection: { preset: 1 } });
+  const game = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { session, projection: { preset: 1 } }
+  );
   if (game?.preset !== "1991-default") return null;
   const countries = db.collection<CountryGameState>("countryGameStates");
   const country = await countries.findOne(
@@ -159,9 +161,10 @@ export async function admitRussianDumaNpcNominees(input: {
     input.now.getTime() < 0
   )
     throw new Error("Duma NPC admission requires a turn and time");
-  const game = await input.db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { preset: 1 } });
+  const game = await gameStateCollection(input.db).findOne(
+    { _id: "current" },
+    { projection: { preset: 1 } }
+  );
   if (game?.preset !== "1991-default") return null;
   const country = await input.db.collection<CountryGameState>("countryGameStates").findOne(
     { _id: "RU" },

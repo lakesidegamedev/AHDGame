@@ -10,6 +10,8 @@ import {
   type SingleplayerTurnOutcome,
 } from "@/lib/singleplayerTurn";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import type { Document } from "mongodb";
 
 /**
  * Multi-turn advance for a normal singleplayer world.
@@ -496,9 +498,9 @@ export function createDbBatchPorts(db: Db): BatchPorts {
 
     async snapshot() {
       const [state, character, elections] = await Promise.all([
-        db
-          .collection("gameState")
-          .findOne({ _id: "current" } as never, { projection: { currentTurn: 1 } }),
+        gameStateCollection<Document>(db).findOne({ _id: "current" } as never, {
+          projection: { currentTurn: 1 },
+        }),
         charactersCollection(db).findOne(
           { userId, retiredAt: { $exists: false } },
           {

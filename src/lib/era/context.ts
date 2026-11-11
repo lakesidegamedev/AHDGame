@@ -3,6 +3,7 @@ import type { GameState } from "@/lib/db/types/gameState";
 import { resolveGameYear } from "./era";
 import { getStartingYearForPreset } from "@/lib/constants/turnTime";
 import type { MarketSystemMode } from "@/lib/market/modes";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export interface EraContext {
   /** Live in-game year — non-null ONLY when the era system is enabled. */
@@ -55,7 +56,7 @@ export function eraYearContextFromGameState(
  * into scoreMetric/evaluateModifiers. Year is null only when no world exists.
  */
 export async function getEraContext(db: Db): Promise<EraContext> {
-  const gs = await db.collection<GameState>("gameState").findOne(
+  const gs = await gameStateCollection(db).findOne(
     { _id: "current" },
     {
       projection: {
@@ -116,11 +117,9 @@ export async function getEraContext(db: Db): Promise<EraContext> {
  * and a null year there would mean "no baselines".
  */
 export async function resolveWorldSeedYear(db: Db, preset: string): Promise<number> {
-  const gs = await db
-    .collection<GameState>("gameState")
-    .findOne(
-      { _id: "current" },
-      { projection: { currentYear: 1, currentTurn: 1, startingYear: 1 } }
-    );
+  const gs = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { currentYear: 1, currentTurn: 1, startingYear: 1 } }
+  );
   return (gs ? resolveGameYear(gs) : null) ?? getStartingYearForPreset(preset);
 }

@@ -20,6 +20,7 @@ import { isVotingDeadlinePassed } from "@/lib/legislature/billVotingWindow";
 import type { LegislatureCommandResult } from "@/lib/legislature/commands/types";
 import { captureBillStatusChanged } from "@/lib/analytics/billStatusAnalytics";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const OVERRIDE_VOTING_HOURS = 24;
 
@@ -106,9 +107,7 @@ export async function castStateBillVote(
     return { status: 400, body: { error: "Voting is not open for this bill" } };
   }
 
-  const voteAcceptGameState = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" });
+  const voteAcceptGameState = await gameStateCollection(db).findOne({ _id: "current" });
   const voteAcceptTurn = voteAcceptGameState?.currentTurn ?? 0;
   if (isVotingDeadlinePassed(bill.votingEndsAt, now, bill.votingEndsOnTurn, voteAcceptTurn)) {
     return { status: 400, body: { error: "Voting has ended" } };
@@ -228,9 +227,7 @@ export async function castStateBillOverrideVote(
   if (bill.status !== "veto_override") {
     return { status: 400, body: { error: "Override voting is not open for this bill" } };
   }
-  const overrideAcceptGameState = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" });
+  const overrideAcceptGameState = await gameStateCollection(db).findOne({ _id: "current" });
   const overrideAcceptTurn = overrideAcceptGameState?.currentTurn ?? 0;
   if (
     isVotingDeadlinePassed(
@@ -398,7 +395,7 @@ export async function takeStateBillGovernorAction(
       return { status: 409, body: { error: "This bill already received a governor decision." } };
     }
 
-    const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+    const gameState = await gameStateCollection(db).findOne({ _id: "current" });
     const currentTurn = gameState?.currentTurn ?? 1;
     await captureBillStatusChanged({
       db,
@@ -465,7 +462,7 @@ export async function takeStateBillGovernorAction(
   }
 
   const overrideVotingEndsAt = new Date(now.getTime() + OVERRIDE_VOTING_HOURS * 3_600_000);
-  const vetoGameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+  const vetoGameState = await gameStateCollection(db).findOne({ _id: "current" });
   const vetoTurn = vetoGameState?.currentTurn ?? 1;
   const overrideVotingEndsOnTurn = vetoTurn + OVERRIDE_VOTING_HOURS;
   const trimmedVetoMessage = vetoMessage?.trim();

@@ -11,6 +11,7 @@ import { loadNationalGdpGrowth } from "@/lib/country/nationalGdpGrowth";
 import { federalSurplus } from "@/lib/budget/federalSurplus";
 import { resolveRatioGdp } from "@/lib/budget/gdpDenominator";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 function demandBand(ratio: number): "subscribed" | "undersubscribed" | "failed" {
   return ratio >= 1 ? "subscribed" : ratio >= 0.7 ? "undersubscribed" : "failed";
@@ -18,9 +19,10 @@ function demandBand(ratio: number): "subscribed" | "undersubscribed" | "failed" 
 
 export async function querySovereignWatch(db: Db) {
   const currentTurn = await getCurrentTurn(db);
-  const gameState = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { currentYear: 1 } });
+  const gameState = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { currentYear: 1 } }
+  );
 
   // Registered, not the raw static list: a country dissolved by a merge keeps
   // its budget doc as a stamped husk, and a public watchlist that kept quoting

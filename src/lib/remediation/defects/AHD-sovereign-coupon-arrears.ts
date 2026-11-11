@@ -33,6 +33,7 @@ import type {
   HealResult,
   VerifyResult,
 } from "../types";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export const DEFECT_ID = "AHD-sovereign-coupon-arrears";
 
@@ -79,9 +80,9 @@ const claims = (db: Db) =>
   db.collection<SovereignCouponClaimRecord>(SOVEREIGN_COUPON_CLAIMS_COLLECTION);
 
 async function currentTurn(db: Db): Promise<number> {
-  const state = await db
-    .collection<{ _id: string; currentTurn?: number; turn?: number }>("gameState")
-    .findOne({ _id: "current" }, { projection: { currentTurn: 1, turn: 1 } });
+  const state = await gameStateCollection<{ _id: string; currentTurn?: number; turn?: number }>(
+    db
+  ).findOne({ _id: "current" }, { projection: { currentTurn: 1, turn: 1 } });
   return state?.currentTurn ?? state?.turn ?? 0;
 }
 

@@ -3,13 +3,14 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { errorResponse } from "@/lib/api/errors";
 import type { GameState } from "@/lib/db/types";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 // GET /api/admin/conflicts/cold-war/toggle - Read the Cold War subsystem flag.
 // Auth: requireAdmin
 // Errors: 403
 export const GET = withAdminRoute(async (_auth) => {
   const db = await getDb();
-  const gameState = await db.collection<GameState>("gameState").findOne(
+  const gameState = await gameStateCollection(db).findOne(
     { _id: "current" },
     {
       projection: {

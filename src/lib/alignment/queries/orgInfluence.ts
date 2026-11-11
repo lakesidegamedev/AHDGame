@@ -51,6 +51,7 @@ import {
 } from "./nationStanding";
 import { computeWorldBalance, type WorldBalance } from "./worldBalance";
 import { loadAlignmentTopology } from "../topology";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export interface InfluenceChannelView {
   poleId: AlignmentPoleId;
@@ -243,12 +244,10 @@ export async function loadOrgInfluence(
   db: Db,
   organizationId: InternationalOrganizationId
 ): Promise<OrgInfluenceView> {
-  const gs = await db
-    .collection<GameState>("gameState")
-    .findOne(
-      { _id: "current" },
-      { projection: { currentYear: 1, currentTurn: 1, startingYear: 1 } }
-    );
+  const gs = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { currentYear: 1, currentTurn: 1, startingYear: 1 } }
+  );
   const currentTurn = gs?.currentTurn ?? 0;
 
   const year = (gs ? resolveGameYear(gs) : null) ?? new Date().getFullYear();

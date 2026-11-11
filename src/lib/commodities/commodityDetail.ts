@@ -71,6 +71,7 @@ import {
 } from "@/lib/market/inputDemandRealPhase";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /** Sector-type flow rows for the Production Flow panel: base tables plus strategies that add commodities not present in the base map. */
 function buildSectorFlowRows(
@@ -382,17 +383,15 @@ export async function getCommodityDetailData(
               { _id: "default" },
               { projection: { commandEconomyEnabled: 1, inputDemandRealPhaseStartTurn: 1 } }
             ),
-          db
-            .collection<{
-              _id: string;
-              currentYear?: number;
-              preset?: string;
-              hardwareInputReliefStartTurn?: number;
-            }>("gameState")
-            .findOne(
-              { _id: "current" },
-              { projection: { currentYear: 1, preset: 1, hardwareInputReliefStartTurn: 1 } }
-            ),
+          gameStateCollection<{
+            _id: string;
+            currentYear?: number;
+            preset?: string;
+            hardwareInputReliefStartTurn?: number;
+          }>(db).findOne(
+            { _id: "current" },
+            { projection: { currentYear: 1, preset: 1, hardwareInputReliefStartTurn: 1 } }
+          ),
           (await getStateResourceCapacityCollection(db))
             .find({}, { projection: { stateId: 1, resources: 1 } })
             .toArray(),

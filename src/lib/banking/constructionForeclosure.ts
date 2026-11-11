@@ -8,6 +8,7 @@ import {
 } from "@/lib/currency/corporationCapital";
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /** Expose defaulted security to funded buyers. A book mark never pays a creditor. */
 export async function listDefaultedConstructionCollateral(db: Db, turn: number): Promise<number> {
@@ -39,7 +40,7 @@ export async function listDefaultedConstructionCollateral(db: Db, turn: number):
       .toArray(),
     loadFxRatesByCurrency(db),
     loadWorldEraUnitScale(db),
-    db.collection<{ _id: string; currentYear?: number }>("gameState").findOne({ _id: "current" }),
+    gameStateCollection<{ _id: string; currentYear?: number }>(db).findOne({ _id: "current" }),
   ]);
   const loanMap = new Map(loans.map((loan) => [String(loan._id), loan]));
   const ownerMap = new Map(owners.map((owner) => [String(owner._id), owner]));

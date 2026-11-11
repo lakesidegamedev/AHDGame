@@ -67,6 +67,7 @@ import {
   type OrgFoundingContext,
 } from "./founding";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * Read-side aggregates used by the world page and per-org views.
@@ -148,9 +149,10 @@ async function loadCustomOrganizations(db: Db): Promise<CustomInternationalOrgan
  * allowed to do — the classic way a gated UI drifts from its API.
  */
 async function loadCategoryContext(db: Db): Promise<{ preset?: string; coldWarEnded: boolean }> {
-  const gs = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { preset: 1, coldWarEndedTurn: 1 } });
+  const gs = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { preset: 1, coldWarEndedTurn: 1 } }
+  );
   return { preset: gs?.preset, coldWarEnded: gs?.coldWarEndedTurn != null };
 }
 

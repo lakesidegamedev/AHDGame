@@ -50,6 +50,7 @@ import type { SavingsLedgerEntry } from "@/lib/db/types/savingsLedger";
 import type { StateMetrics } from "@/lib/db/types/stateMetrics";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const SAVINGS_FLOW_WINDOW_TURNS = 12;
 
@@ -148,9 +149,10 @@ export async function loadInflationDiagnostics(
         },
       ])
       .toArray(),
-    db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: { currentYear: 1, startingYear: 1 } }),
+    gameStateCollection(db).findOne(
+      { _id: "current" },
+      { projection: { currentYear: 1, startingYear: 1 } }
+    ),
     loadTurnTariffInflationExposure(db, currentTurn),
   ]);
 

@@ -22,6 +22,7 @@ import { adjustElectionDurations } from "@/lib/elections/rules/timerAdjustment";
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
 import { cycleAnchorContextFromGameState } from "@/lib/elections/cycleAnchorContext";
 import { electionToLarpYear } from "@/lib/utils/formatters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 // GET - List all elections
 export async function GET(request: Request, { params }: { params: Promise<{ code: string }> }) {
@@ -56,7 +57,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
         .find(query)
         .sort({ state: 1, electionType: 1, senateClass: 1, chamberClass: 1 })
         .toArray(),
-      db.collection<GameState>("gameState").findOne({ _id: "current" }),
+      gameStateCollection(db).findOne({ _id: "current" }),
     ]);
 
     // Get candidate counts for each election
@@ -130,7 +131,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
 
     // Read the active preset so each spawned doc's electionYear anchors to
     // the right calendar regardless of preset (1991-default vs 2019-default).
-    const gameStateForCtx = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+    const gameStateForCtx = await gameStateCollection(db).findOne({ _id: "current" });
     const ctx = cycleAnchorContextFromGameState(gameStateForCtx);
 
     const electionsToInsert: Omit<Election, "_id">[] = [];
@@ -279,7 +280,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ co
 
     // Use game time (lastTurnProcessed) instead of real wall-clock time
     // so election timers advance with turn processing
-    const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+    const gameState = await gameStateCollection(db).findOne({ _id: "current" });
     const now = gameState?.lastTurnProcessed ? new Date(gameState.lastTurnProcessed) : new Date();
     // `now` == lastTurnProcessed, which corresponds to currentTurn — used to
     // stamp the turn-first deadline fields alongside the recalculated Dates.

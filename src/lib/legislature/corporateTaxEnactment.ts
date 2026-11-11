@@ -11,6 +11,7 @@ import {
 } from "@/lib/resetLegislation/voterReactions";
 import type { ResetLawEnactmentReceipt } from "@/lib/resetLegislation/program";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export interface CorporateTaxVoteInput {
   billId: string;
@@ -70,9 +71,10 @@ export async function applyCorporateTaxBillChange(
       impacts,
       session
     );
-    const state = await transactionDb
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: { resetWorldId: 1, iteration: 1 } });
+    const state = await gameStateCollection(transactionDb).findOne(
+      { _id: "current" },
+      { projection: { resetWorldId: 1, iteration: 1 } }
+    );
     // Existing world-scoped receipts are also used for tax-only bills. A distinct
     // key cannot collide with a mixed bill's law-program receipt.
     await receipts.insertOne({

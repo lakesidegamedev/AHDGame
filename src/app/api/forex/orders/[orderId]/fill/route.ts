@@ -29,6 +29,7 @@ import { newCharacterTransferBarrierResponse } from "@/lib/api/newCharacterTrans
 import type { CurrencyOrder, GameConfig, GameState, TradeHistoryEntry } from "@/lib/db/types";
 import { recordAudit } from "@/lib/audit/recordAudit";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 interface RouteParams {
   params: Promise<{ orderId: string }>;
@@ -101,7 +102,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       throw forbidden("Cannot fill your own order");
     }
 
-    const gs = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+    const gs = await gameStateCollection(db).findOne({ _id: "current" });
     const gameConfig = await db
       .collection<GameConfig>("gameConfig")
       .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } });

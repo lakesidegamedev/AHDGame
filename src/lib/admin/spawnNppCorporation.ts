@@ -93,6 +93,7 @@ import { UKR_NPP_CAPITAL_STATE } from "@/lib/countries/ukr/geographyFacts";
 import { BAL_NPP_CAPITAL_STATE } from "@/lib/countries/bal/geographyFacts";
 import { CA_NPP_CAPITAL_STATE } from "@/lib/countries/ca/geographyFacts";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * Default founding book for an admin/NPP-spawned corporation, in ₳ at MODERN
@@ -342,7 +343,7 @@ export async function createNppCorporationShell(
   //     regional sector markets combined. Deflating by the era's nominal scale
   //     keeps the founding book the same share of the economy as in 2019. No-op
   //     for every modern preset.
-  const techGameState = await db.collection<GameState>("gameState").findOne(
+  const techGameState = await gameStateCollection(db).findOne(
     { _id: "current" },
     {
       projection: {

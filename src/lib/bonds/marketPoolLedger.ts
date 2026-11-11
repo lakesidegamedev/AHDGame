@@ -13,6 +13,7 @@ import { accountId, mintSinkAccount } from "@/lib/ledger/accounts";
 import type { LedgerEntryInput } from "@/lib/ledger/types";
 import { emitLedgerEntries } from "@/lib/ledger/emit";
 import { ledgerTurnFromClock } from "@/lib/ledger/ledgerTurn";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export interface BondPoolLedgerContext {
   turn: number;
@@ -37,9 +38,10 @@ export async function loadBondPoolLedgerContext(
         .find({}, { projection: { currencyCode: 1, rate: 1 } })
         .toArray(),
       turn === undefined
-        ? db
-            .collection<{ _id: string; currentTurn: number }>("gameState")
-            .findOne({ _id: "current" }, { projection: { currentTurn: 1 } })
+        ? gameStateCollection<{ _id: string; currentTurn: number }>(db).findOne(
+            { _id: "current" },
+            { projection: { currentTurn: 1 } }
+          )
         : Promise.resolve(null),
     ]);
     const resolvedTurn =

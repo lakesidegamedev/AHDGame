@@ -52,6 +52,7 @@ import { getPoliticalPartiesCollection } from "@/lib/db/collections/politicalPar
 import { getNppsCollection } from "@/lib/db/collections/npps";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 /*
  * Fallback if `gameConfig.chairActionBonus` is missing on legacy configs.
  * The per-country config in `countries.ts` sets each centralBankChair office
@@ -87,9 +88,10 @@ export async function processActionRefresh(
   const accountability = await observeGovernmentAccountability(db, executives);
   const currentTurn =
     (
-      await db
-        .collection<{ _id: string; currentTurn?: number }>("gameState")
-        .findOne({ _id: "current" }, { projection: { currentTurn: 1 } })
+      await gameStateCollection<{ _id: string; currentTurn?: number }>(db).findOne(
+        { _id: "current" },
+        { projection: { currentTurn: 1 } }
+      )
     )?.currentTurn ?? 0;
   /** Political-influence decay multiplier for a member of `party` in `countryId`. */
   const influenceDecayMultiplier = (countryId: string | undefined, party: string | undefined) => {

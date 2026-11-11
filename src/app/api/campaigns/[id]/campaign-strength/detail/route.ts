@@ -9,6 +9,7 @@ import {
 } from "@/lib/campaigns/campaignStrength";
 import type { GameState } from "@/lib/db/types/gameState";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -155,10 +156,8 @@ export async function GET(request: Request, { params }: RouteParams) {
 
     // Compute change vs last turn from activityLog
     const gameStateDoc =
-      (await db
-        .collection<GameState>("gameState")
-        .findOne({ _id: "current" as GameState["_id"] })) ??
-      (await db.collection<GameState>("gameState").findOne({ _id: "main" as GameState["_id"] }));
+      (await gameStateCollection(db).findOne({ _id: "current" as GameState["_id"] })) ??
+      (await gameStateCollection(db).findOne({ _id: "main" as GameState["_id"] }));
     const currentTurn = (gameStateDoc?.currentTurn as number) ?? 0;
 
     // Sum contributions this turn

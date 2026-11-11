@@ -21,6 +21,7 @@ import { HU_2011_COUNTS_COLLECTION, type Hu2011AssemblyRecord } from "./assembly
 import { settleHuModernAssembly } from "./rules/modernAssembly2011";
 import { calendarTurn, turnToGameMonth } from "@/lib/utils/gameDate";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const HU_2011_OFFICE_ARCHIVES_COLLECTION = "hu2011AssemblyOfficeArchives";
 interface Hu2011AssemblyArchive {
@@ -54,7 +55,7 @@ async function materializeHu2011AssemblySeating(input: {
   const journal = db.collection<Hu2011AssemblyRecord>(HU_2011_COUNTS_COLLECTION);
   const receipt = await journal.findOne({ _id: `HU:mixed2011:${cycle}` }, { session });
   if (!receipt || receipt.seatedAtTurn != null || receipt.count.kind !== "counted") return false;
-  const game = await db.collection<GameState>("gameState").findOne(
+  const game = await gameStateCollection(db).findOne(
     { _id: "current" },
     {
       session,
@@ -391,7 +392,7 @@ async function materializeHu2011AssemblySeating(input: {
     }),
     1991
   ).year;
-  await db.collection<GameState>("gameState").updateOne(
+  await gameStateCollection(db).updateOne(
     { _id: "current" },
     {
       $set: {

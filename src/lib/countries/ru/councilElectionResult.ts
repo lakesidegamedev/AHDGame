@@ -23,6 +23,7 @@ import {
 } from "./rules/councilCohort";
 import { planRussianCouncilDistricts } from "./rules/councilDistricts";
 import { hasAuthorizedPostSovietTransition } from "./rules/postSovietTransition";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 export const RUSSIAN_COUNCIL_RESULTS_COLLECTION = "russianCouncilElectionResults";
 export interface RussianCouncilResultRecord {
   _id: string;
@@ -72,9 +73,10 @@ export async function materializeRussianCouncilElectionResult(input: {
       throw new Error("Council result identity changed");
     return previous;
   }
-  const game = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { session, projection: { preset: 1 } });
+  const game = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { session, projection: { preset: 1 } }
+  );
   const countries = db.collection<CountryGameState>("countryGameStates");
   const country = await countries.findOne(
     { _id: "RU" },

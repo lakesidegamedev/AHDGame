@@ -31,6 +31,7 @@ import {
   type ResetCabinetActionState,
 } from "@/lib/resetCabinet/rules/actionState";
 import type { ResetOpeningCountry } from "./opening1991";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export async function seedOpeningDepartmentBoards1991(
   db: Db,
@@ -38,12 +39,10 @@ export async function seedOpeningDepartmentBoards1991(
   sourceTurn: number,
   countries: readonly ResetOpeningCountry[] = RESET_V2_OPENING_COUNTRIES
 ): Promise<ResetSystemSeedReceipt> {
-  const state = await db
-    .collection<GameState>("gameState")
-    .findOne(
-      { _id: "current" },
-      { projection: { resetWorldId: 1, currentTurn: 1, manuallyEnabledSeats: 1 } }
-    );
+  const state = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { resetWorldId: 1, currentTurn: 1, manuallyEnabledSeats: 1 } }
+  );
   if (
     state?.resetWorldId !== worldId ||
     state.currentTurn !== sourceTurn ||

@@ -24,6 +24,7 @@ import {
   canLegislateEconomicSystem,
 } from "./economicSystemReformRules";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /** Leader-confidence and popular-legitimacy deltas, by direction and size. */
 const REFORM_REGIME_EFFECTS = {
@@ -79,9 +80,10 @@ export async function applyEconomicSystemReformProvision(
     { _id: budgetId },
     { projection: { economicFactors: 1 } }
   );
-  const gameState = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { currentYear: 1 } });
+  const gameState = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { currentYear: 1 } }
+  );
   const persisted = budget?.economicFactors?.marketizationLevel;
   const fromLevel =
     typeof persisted === "number" && Number.isFinite(persisted)

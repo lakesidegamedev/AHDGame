@@ -32,6 +32,7 @@ import {
   upsertNppEndorsement,
 } from "@/lib/nppEndorsements";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export interface ExecuteInfluenceInput {
   characterId: ObjectId;
@@ -94,7 +95,7 @@ export async function validateInfluenceAttempt(
     return { valid: false, error: "This NPP has retired from politics." };
   }
 
-  const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+  const gameState = await gameStateCollection(db).findOne({ _id: "current" });
   const currentTurn = gameState?.currentTurn || 1;
 
   const relationshipKey = `${character._id.toString()}_${npp._id.toString()}`;
@@ -208,7 +209,7 @@ export async function executeInfluence(
     };
   }
 
-  const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+  const gameState = await gameStateCollection(db).findOne({ _id: "current" });
   const currentTurn = gameState?.currentTurn || 1;
 
   const relationshipKey = `${character._id.toString()}_${npp._id.toString()}`;
@@ -380,9 +381,9 @@ async function applyInfluenceEffects(
           !isSelfEndorsementCandidate(npp, candidate) &&
           nppCanPlausiblyEndorseElection(npp, election)
         ) {
-          const gameState = await db
-            .collection<{ _id: string; currentTurn?: number }>("gameState")
-            .findOne({ _id: "current" }, { projection: { currentTurn: 1 } });
+          const gameState = await gameStateCollection<{ _id: string; currentTurn?: number }>(
+            db
+          ).findOne({ _id: "current" }, { projection: { currentTurn: 1 } });
           await upsertNppEndorsement(db, {
             npp,
             candidate,
@@ -481,7 +482,7 @@ export async function getInfluenceOptions(
     .collection<NPPRelationship>("nppRelationships")
     .findOne({ _id: relationshipKey });
 
-  const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+  const gameState = await gameStateCollection(db).findOne({ _id: "current" });
   const currentTurn = gameState?.currentTurn || 1;
 
   let cooldownTurnsRemaining = 0;

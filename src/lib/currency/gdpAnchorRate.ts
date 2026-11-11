@@ -23,6 +23,7 @@ import { getCountryConfig, type CountryId } from "@/lib/constants/countries";
 import { resolvePresetIdFromGameState } from "@/lib/world/countryReadinessContract";
 import type { GameState } from "@/lib/db/types";
 import { getEraUnitScale } from "@/lib/constants/sectorSeedEra";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * ₳ per one unit of `countryId`'s stored GDP under `preset`.
@@ -62,9 +63,10 @@ const phasePresets = new WeakMap<Db, Map<string, Promise<string>>>();
 const PHASE_PRESET_ENTRIES = 8;
 
 async function readWorldPreset(db: Db): Promise<string> {
-  const gameState = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { preset: 1 } });
+  const gameState = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { preset: 1 } }
+  );
   return resolvePresetIdFromGameState(gameState);
 }
 

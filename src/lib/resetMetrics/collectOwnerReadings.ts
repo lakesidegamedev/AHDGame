@@ -54,6 +54,7 @@ import { resolveRegionalBudgetCadence } from "@/simulation/phases/regionalBudget
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 let openingCalibrationCache: {
   gross: ReturnType<typeof openingGrossPurchasingInputs1991>;
@@ -187,9 +188,7 @@ export async function collectResetMetricOwnerReadings(
         }
       )
       .toArray(),
-    db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: { preset: 1 } }),
+    gameStateCollection(db).findOne({ _id: "current" }, { projection: { preset: 1 } }),
   ]);
   const turnout = await loadTurnoutReadings(db, {
     turn,

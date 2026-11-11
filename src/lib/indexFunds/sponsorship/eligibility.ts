@@ -11,6 +11,7 @@ import {
   resolveCorpLiquidCurrencyCode,
 } from "@/lib/currency/corporationCapital";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export async function fundCreationEligibility(
   db: Db,
@@ -22,9 +23,10 @@ export async function fundCreationEligibility(
     db
       .collection("corporateSectors")
       .findOne({ corporationId: sponsor._id, sectorType: "financial" }, { projection: { _id: 1 } }),
-    db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: { corporationActionsPaused: 1 } }),
+    gameStateCollection(db).findOne(
+      { _id: "current" },
+      { projection: { corporationActionsPaused: 1 } }
+    ),
     db
       .collection<GameConfig>("gameConfig")
       .findOne({ _id: "default" }, { projection: { indexFundsMode: 1, indexFundsEnabled: 1 } }),

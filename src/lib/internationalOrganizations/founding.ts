@@ -9,6 +9,7 @@ import type { GameState } from "@/lib/db/types/gameState";
 import { resolveGameYear } from "@/lib/era/era";
 import { getOrganizationMembershipsCollection } from "@/lib/db/collections";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * Founding-year existence for international organizations. An org founded
@@ -29,7 +30,7 @@ export interface OrgFoundingContext {
 }
 
 export async function loadOrgFoundingContext(db: Db): Promise<OrgFoundingContext> {
-  const gs = await db.collection<GameState>("gameState").findOne(
+  const gs = await gameStateCollection(db).findOne(
     { _id: "current" },
     {
       projection: {

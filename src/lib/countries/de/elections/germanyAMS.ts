@@ -33,6 +33,7 @@ import { getLiveLowerChamberSeats } from "@/lib/legislature/lowerChamberSeats";
 import { captureElectionWon } from "@/lib/analytics/electionAnalytics";
 import { reconcileBundestagHolderOffices } from "./bundestagHolderOffices";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const VOTE_THRESHOLD = BUNDESTAG_VOTE_THRESHOLD;
 
@@ -261,9 +262,10 @@ export async function computeZweitstimmen(db: Db, cycle: number): Promise<Zweits
   // world does not have is dropped rather than inventing votes.
   const [slugToPartyId, gameState] = await Promise.all([
     buildDEPartySlugToSeqId(db),
-    db
-      .collection<{ _id: string; preset?: string }>("gameState")
-      .findOne({ _id: "current" }, { projection: { preset: 1 } }),
+    gameStateCollection<{ _id: string; preset?: string }>(db).findOne(
+      { _id: "current" },
+      { projection: { preset: 1 } }
+    ),
   ]);
   const rates = crossoverRatesForPreset(gameState?.preset);
 
@@ -517,7 +519,7 @@ export async function maybeReconcileBundestag(
   });
   if (pending > 0) return null;
 
-  const gs = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+  const gs = await gameStateCollection(db).findOne({ _id: "current" });
   const lastReconciled = gs?.lastBundestagReconciledCycle ?? -1;
   if (lastReconciled >= cycle) return null;
 
@@ -570,12 +572,10 @@ export async function maybeReconcileBundestag(
         };
       })
     );
-  await db
-    .collection<GameState>("gameState")
-    .updateOne(
-      { _id: "current" },
-      { $set: { lastBundestagReconciledCycle: cycle, updatedAt: now } }
-    );
+  await gameStateCollection(db).updateOne(
+    { _id: "current" },
+    { $set: { lastBundestagReconciledCycle: cycle, updatedAt: now } }
+  );
   await captureBundestagElectionWinners(db, elections, holders, telemetryActors, gs);
   return result;
 }

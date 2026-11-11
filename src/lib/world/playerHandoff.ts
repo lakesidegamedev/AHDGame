@@ -39,6 +39,7 @@ import {
   type CountryReadinessReport,
 } from "@/lib/world/countryReadinessContract";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 // ─── Role taxonomy ───────────────────────────────────────────────────────────
 
@@ -236,16 +237,18 @@ export interface PlayerHandoffExitResult {
 
 async function resolvePresetId(db: Db, explicit?: string): Promise<string> {
   if (explicit?.trim()) return explicit.trim();
-  const gameState = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { preset: 1 } });
+  const gameState = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { preset: 1 } }
+  );
   return resolvePresetIdFromGameState(gameState);
 }
 
 async function currentTurn(db: Db): Promise<number> {
-  const gs = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { currentTurn: 1 } });
+  const gs = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { currentTurn: 1 } }
+  );
   return gs?.currentTurn ?? 1;
 }
 
@@ -430,8 +433,7 @@ export async function exitCountryForPlayers(
 
   if (transitions.length > 0) {
     // One context read for the whole handoff, never a query for each holder.
-    const context = await db
-      .collection<GameState>("gameState")
+    const context = await gameStateCollection(db)
       .findOne({ _id: "current" }, { projection: { currentTurn: 1, iteration: 1 } })
       .catch(() => null);
     for (const [index, transition] of transitions.entries()) {

@@ -85,6 +85,7 @@ import { buildFlatMetrics } from "@/lib/utils/governmentApproval";
 import { computeRegionalConditionMargin } from "@/lib/states/conditions/marginEffects";
 import type { WithId } from "mongodb";
 import type { StateMetrics } from "@/lib/db/types";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /** Builds extraction capacity utilisation, corporate portfolio values and the remaining per-corporation lookups. */
 export async function buildExtractionAndPortfolioLookups({
@@ -361,7 +362,7 @@ export async function buildExtractionAndPortfolioLookups({
     ]);
   }
 
-  const gameState = await db.collection<GameState>("gameState").findOne(
+  const gameState = await gameStateCollection(db).findOne(
     { _id: "current" },
     {
       projection: {

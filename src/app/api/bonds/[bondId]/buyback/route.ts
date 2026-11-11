@@ -28,6 +28,7 @@ import { COUNTRY_CURRENCY_MAP, CURRENCY_SYMBOLS } from "@/lib/constants/currenci
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 interface RouteParams {
   params: Promise<{ bondId: string }>;
@@ -200,9 +201,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     await creditBondPool(db, bondCurrency, costLocal, "retiredIn", now);
 
     // Recorded only once the float claim landed, so a refunded race leaves no row.
-    const turnDoc = await db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: { currentTurn: 1 } });
+    const turnDoc = await gameStateCollection(db).findOne(
+      { _id: "current" },
+      { projection: { currentTurn: 1 } }
+    );
     await emitTx(db, {
       type: "bond_buyback",
       turn: turnDoc?.currentTurn ?? 0,

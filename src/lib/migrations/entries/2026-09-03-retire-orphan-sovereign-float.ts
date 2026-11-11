@@ -6,6 +6,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import type { Migration, MigrationContext, MigrationResult } from "../types";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * Retire sovereign paper that no debt stands behind.
@@ -22,9 +23,10 @@ import { bondsCollection } from "@/lib/db/repositories/bonds";
  * Idempotent: a second run finds no excess and does nothing.
  */
 async function retireOrphanSovereignFloat(db: Db, ctx: MigrationContext): Promise<MigrationResult> {
-  const turnDoc = await db
-    .collection<{ _id: string; currentTurn?: number }>("gameState")
-    .findOne({ _id: "current" }, { projection: { currentTurn: 1 } });
+  const turnDoc = await gameStateCollection<{ _id: string; currentTurn?: number }>(db).findOne(
+    { _id: "current" },
+    { projection: { currentTurn: 1 } }
+  );
   const turn = turnDoc?.currentTurn ?? 0;
 
   const bonds = await bondsCollection(db)

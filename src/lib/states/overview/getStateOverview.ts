@@ -35,6 +35,7 @@ import type {
   StateOverviewResult,
 } from "./types";
 import { raceHref } from "@/lib/campaignManager/links";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const NEUTRAL_PARTY_COLOR = "#6b6b7a";
 
@@ -107,7 +108,7 @@ export async function getStateOverview(
     db.collection<StateRegistrationPool>("stateRegistrationPool").findOne({ countryId, stateId }),
     // SP5: merged two-store view.
     findMergedRegionMetrics(db, { _id: stateId, countryId }),
-    db.collection<{ _id: string; currentTurn?: number }>("gameState").findOne({ _id: "current" }),
+    gameStateCollection<{ _id: string; currentTurn?: number }>(db).findOne({ _id: "current" }),
   ]);
 
   const currentTurn = gameStateDoc?.currentTurn ?? null;

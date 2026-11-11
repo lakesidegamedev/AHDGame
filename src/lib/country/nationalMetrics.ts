@@ -25,6 +25,7 @@ import { computeAllNationalMetricTickRates } from "@/lib/api/stateTickRates";
 import { IS_HIGHER_BETTER } from "@/lib/utils/metricScoring";
 import { marginEffectForModifier } from "@/lib/states/conditions/marginEffects";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 interface MetricSummary {
   average: number;
@@ -131,7 +132,7 @@ export async function loadNationalMetrics(
   // electorate-weighted value the snapshot stores.
   const [groupsByState, gameStateDoc] = await Promise.all([
     loadElectorateGroups(db, { _id: { $in: stateIds }, countryId }),
-    db.collection<GameState>("gameState").findOne({ _id: "current" }),
+    gameStateCollection(db).findOne({ _id: "current" }),
   ]);
   const preset = gameStateDoc?.preset ?? DEFAULT_SEED_PRESET;
   // Live year for era-aware scoring; null while the flag is off (legacy path).

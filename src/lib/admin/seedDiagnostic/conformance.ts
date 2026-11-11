@@ -57,6 +57,8 @@ import type { ScotusPresetSeed } from "@/lib/scotus/presetData/types";
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { isBackgroundInPreset } from "@/lib/world/eraRoster";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import type { Document } from "mongodb";
 
 /** Readiness check names that are expected-empty pre-founding / pre-seat. */
 const PRE_FOUNDING_READINESS = new Set(["NPPs", "ElectedOfficials", "GovernmentFormation"]);
@@ -151,7 +153,7 @@ async function checkGameStateClock(
   expect: SeedExpectations,
   worldsimBootstrap: boolean
 ): Promise<SeedDiagnosticCheck[]> {
-  const gs = await db.collection("gameState").findOne({ _id: "current" as never });
+  const gs = await gameStateCollection<Document>(db).findOne({ _id: "current" as never });
   const checks: SeedDiagnosticCheck[] = [];
   if (!gs) {
     return [
@@ -1065,7 +1067,7 @@ export async function runConformanceChecks(
   db: Db,
   opts?: { preset?: string; trigger?: string }
 ): Promise<{ checks: SeedDiagnosticCheck[]; expect: SeedExpectations }> {
-  const gs = await db.collection("gameState").findOne({ _id: "current" as never });
+  const gs = await gameStateCollection<Document>(db).findOne({ _id: "current" as never });
   const preset =
     opts?.preset ?? (typeof gs?.preset === "string" ? gs.preset : null) ?? DEFAULT_SEED_PRESET;
   const expect = buildSeedExpectations(preset);

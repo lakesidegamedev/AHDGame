@@ -16,6 +16,7 @@ import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { calendarTurn } from "@/lib/utils/gameDate";
 import { hu1994DecisionAvailability, passesHuElectoralAmendment } from "./rules/electoralLaw";
 import type { CountryState } from "@/lib/db/types/countryState";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export const HU_1994_PROPOSALS_COLLECTION = "hu1994ElectoralProposals";
 const ID = "1991-default:hu-electoral:threshold1994";
@@ -36,12 +37,10 @@ export interface Hu1994ElectoralProposal {
 export class Hu1994ElectoralConflict extends Error {}
 
 async function availability(db: Db, game: Calendar, turn: number, session?: ClientSession) {
-  const current = await db
-    .collection<GameState>("gameState")
-    .findOne(
-      { _id: "current" },
-      { session, projection: { preset: 1, huAssemblyReformedAtYear: 1 } }
-    );
+  const current = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { session, projection: { preset: 1, huAssemblyReformedAtYear: 1 } }
+  );
   const runtime = await db
     .collection<CountryState>("countryState")
     .findOne({ _id: "HU" }, { session, projection: { governmentType: 1 } });

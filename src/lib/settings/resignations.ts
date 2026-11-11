@@ -35,6 +35,7 @@ import type {
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const PARTY_LEADERSHIP_FIELDS = ["chairId", "viceChairId", "treasurerId"] as const;
 type PartyLeadershipField = (typeof PARTY_LEADERSHIP_FIELDS)[number];
@@ -201,8 +202,9 @@ async function clearCurrentOfficeForOffice(
     filter["currentOffice.positionId"] = officeRecord.positionId;
   }
 
-  const result = await charactersCollection(db)
-    .updateOne(filter, { $set: { currentOffice: null, updatedAt: now } });
+  const result = await charactersCollection(db).updateOne(filter, {
+    $set: { currentOffice: null, updatedAt: now },
+  });
   return result.modifiedCount > 0;
 }
 
@@ -707,8 +709,7 @@ export async function resignPosition(
     }
   }
 
-  const telemetryState = await db
-    .collection<GameState>("gameState")
+  const telemetryState = await gameStateCollection(db)
     .findOne({ _id: "current" }, { projection: { currentTurn: 1, iteration: 1 } })
     .catch(() => null);
   const resigned = await applyPosition(db, freshCharacter, position, new Date(), {
@@ -761,8 +762,7 @@ export async function resignAllPositions(db: Db, character: Character): Promise<
   const positions = await discoverPositions(db, freshCharacter);
   const now = new Date();
   const resigned: string[] = [];
-  const telemetryState = await db
-    .collection<GameState>("gameState")
+  const telemetryState = await gameStateCollection(db)
     .findOne({ _id: "current" }, { projection: { currentTurn: 1, iteration: 1 } })
     .catch(() => null);
 
@@ -862,8 +862,10 @@ export async function resignAllPositions(db: Db, character: Character): Promise<
     resigned.push(`State party candidacies withdrawn: ${candidacies.stateParty.modifiedCount}`);
   }
 
-  await charactersCollection(db)
-    .updateOne({ _id: freshCharacter._id }, { $set: { currentOffice: null, updatedAt: now } });
+  await charactersCollection(db).updateOne(
+    { _id: freshCharacter._id },
+    { $set: { currentOffice: null, updatedAt: now } }
+  );
 
   if (resigned.length === 0) {
     return {

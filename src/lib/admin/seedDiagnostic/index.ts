@@ -11,6 +11,7 @@ import { runDriftChecks } from "./drift";
 import type { RunSeedDiagnosticOptions, SeedDiagnosticCheck, SeedDiagnosticReport } from "./types";
 import { calendarTurnFromGameState } from "./types";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export type {
   RunSeedDiagnosticOptions,
@@ -69,13 +70,11 @@ export async function runSeedDiagnostic(
 ): Promise<SeedDiagnosticReport> {
   const now = opts.now ?? new Date();
   const trigger = opts.trigger ?? "manual";
-  const gs = await db
-    .collection<{
-      preset?: string;
-      currentTurn?: number;
-      preIterationTurns?: number;
-    }>("gameState")
-    .findOne({ _id: "current" as never });
+  const gs = await gameStateCollection<{
+    preset?: string;
+    currentTurn?: number;
+    preIterationTurns?: number;
+  }>(db).findOne({ _id: "current" as never });
   const preset =
     opts.preset ?? (typeof gs?.preset === "string" ? gs.preset : null) ?? DEFAULT_SEED_PRESET;
   const turn = typeof gs?.currentTurn === "number" ? gs.currentTurn : 1;

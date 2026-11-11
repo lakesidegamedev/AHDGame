@@ -31,6 +31,7 @@ import { syncWorldHeadline } from "./marketAdjustment/worldHeadline";
 import { createSpawnDirector, directorScopeFor } from "./spawnDirector";
 import { legacyDefinitionId } from "./v2/legacyConvert";
 import { SPAWN_PRIORITY } from "./v2/spawnBudget";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /** Serializable description of an auto-spawnable template, for the admin tab. */
 export interface AutoCrisisCatalogEntry {
@@ -126,7 +127,7 @@ export async function processAutoCrisisSpawn(
   );
   if (autoTemplates.length === 0) return { spawned: 0 };
 
-  const gs = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+  const gs = await gameStateCollection(db).findOne({ _id: "current" });
   // The era gate resolves against the LIVE year, not the seed preset — a
   // preset never changes, so a preset-keyed gate is permanent.
   const currentYear = gs?.currentYear;

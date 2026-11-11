@@ -19,6 +19,7 @@ import {
   type RussianPresidentialResultRecord,
 } from "./presidentialElectionResult";
 import { GAME_STATE_PRE_ITERATION_FIELDS } from "@/lib/db/collections/gameState";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export async function materializeRussianPresidentialFollowup(input: {
   db: Db;
@@ -58,14 +59,12 @@ export async function materializeRussianPresidentialFollowup(input: {
     { session, projection: { cycle: 1, electionYear: 1 } }
   );
   if (!predecessor) throw new Error("Russian followup predecessor is unresolved");
-  const game = await db
-    .collection<{
-      _id: string;
-      preset?: string;
-      preIterationTurns?: number;
-      preIteration?: { active?: boolean };
-    }>("gameState")
-    .findOne({ _id: "current" }, { session, projection: GAME_STATE_PRE_ITERATION_FIELDS });
+  const game = await gameStateCollection<{
+    _id: string;
+    preset?: string;
+    preIterationTurns?: number;
+    preIteration?: { active?: boolean };
+  }>(db).findOne({ _id: "current" }, { session, projection: GAME_STATE_PRE_ITERATION_FIELDS });
   if (game?.preset !== "1991-default")
     throw new Error("Russian followup belongs to a different world");
   const kind = result.decision.outcome === "runoff" ? "runoff" : "repeat";

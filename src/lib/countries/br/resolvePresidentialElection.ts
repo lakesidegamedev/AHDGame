@@ -12,6 +12,7 @@ import { captureElectionResultSnapshot } from "@/lib/elections/liveResults/captu
 import { initElectionVoteTally } from "@/lib/elections/engine/tallyManagement";
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
 import { brazilPresidentialRules, decideBrazilPresidency } from "./rules/presidential";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const followupId = (source: string) =>
   new ObjectId(
@@ -30,9 +31,10 @@ export async function resolveBrazilPresidentialElection(
     await captureElectionResultSnapshot(db, election, now);
     return true;
   }
-  const game = await db
-    .collection<{ _id: string; preset: string }>("gameState")
-    .findOne({ _id: "current" }, { projection: { preset: 1 } });
+  const game = await gameStateCollection<{ _id: string; preset: string }>(db).findOne(
+    { _id: "current" },
+    { projection: { preset: 1 } }
+  );
   if (!game?.preset) throw new Error("Brazil presidency requires the active preset");
   const mode = election.brazilPresidentialMode ?? brazilPresidentialRules(game.preset).mode;
   const candidates = await db

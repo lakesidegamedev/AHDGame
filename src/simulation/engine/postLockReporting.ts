@@ -2,6 +2,7 @@ import type { Db } from "mongodb";
 import type { GameState, TurnLog, TurnPhaseTelemetryMap } from "@/lib/db/types";
 import { createTurnPhaseRuntime } from "@/simulation/engine/turnPhaseRuntime";
 import type { TurnExecutionContext, TurnPhaseRuntime } from "@/simulation/engine/types";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * Reporting phases that run after the turn commits and releases its lock.
@@ -55,9 +56,10 @@ export const NEWER_TURN_STARTED_MESSAGE =
  * snapshot taken now would describe that turn instead.
  */
 export async function isWorldStillOnTurn(db: Pick<Db, "collection">, turn: number) {
-  const state = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { currentTurn: 1, isProcessing: 1 } });
+  const state = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { currentTurn: 1, isProcessing: 1 } }
+  );
   return state != null && state.currentTurn === turn && state.isProcessing !== true;
 }
 

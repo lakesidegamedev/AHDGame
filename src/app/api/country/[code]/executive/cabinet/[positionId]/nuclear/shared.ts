@@ -16,6 +16,7 @@ import { isAdoptedByName } from "@/lib/military/doctrineTree";
 import { NUCLEAR_CAPABLE, NUCLEAR_ENTRY_DOCTRINE_NODE } from "@/lib/military/nuclearProgram";
 import { resolveGameYear } from "@/lib/era/era";
 import { errorResponse } from "@/lib/api/errors";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export interface NuclearRouteParams {
   params: Promise<{ code: string; positionId: string }>;
@@ -92,12 +93,10 @@ interface GameStateSlice {
 }
 
 export async function loadGameStateSlice(db: Db): Promise<GameStateSlice | null> {
-  return db
-    .collection<GameStateSlice & { _id: string }>("gameState")
-    .findOne(
-      { _id: "current" },
-      { projection: { currentYear: 1, currentTurn: 1, startingYear: 1 } }
-    );
+  return gameStateCollection<GameStateSlice & { _id: string }>(db).findOne(
+    { _id: "current" },
+    { projection: { currentYear: 1, currentTurn: 1, startingYear: 1 } }
+  );
 }
 
 export interface NuclearEligibility {

@@ -3,6 +3,7 @@ import { ObjectId, type Db } from "mongodb";
 import type { Election, State, Seat, GameState } from "@/lib/db/types";
 import { buildStandupElections } from "./rules/standupElections";
 import type { SecedingCountryId } from "./subRegions";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export async function standupElections(
   db: Db,
@@ -10,9 +11,10 @@ export async function standupElections(
   currentTurn: number,
   now: Date
 ): Promise<void> {
-  const gameState = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { startingYear: 1, preset: 1 } });
+  const gameState = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { startingYear: 1, preset: 1 } }
+  );
   const regions = await db.collection<State>("states").find({ countryId }).toArray();
   const { rows, councils } = buildStandupElections({
     countryId,

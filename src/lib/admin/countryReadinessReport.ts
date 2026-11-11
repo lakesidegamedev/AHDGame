@@ -5,12 +5,13 @@ import {
   type ReadinessCheck,
 } from "@/lib/constants/countryReadinessExpectations";
 import { getReadinessExpectations } from "@/lib/constants/readinessExpectations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /** Best-effort preset lookup; null when the world has no gameState yet. */
 async function readPreset(db: Db): Promise<string | null> {
-  const gs = await db
-    .collection<{ preset?: string }>("gameState")
-    .findOne({ _id: "current" as never });
+  const gs = await gameStateCollection<{ preset?: string }>(db).findOne({
+    _id: "current" as never,
+  });
   return typeof gs?.preset === "string" ? gs.preset : null;
 }
 

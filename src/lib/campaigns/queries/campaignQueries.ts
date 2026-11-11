@@ -61,6 +61,7 @@ import type {
 import { ObjectId, type Db } from "mongodb";
 import { loadOppositionTargets } from "@/lib/campaigns/oppositionTargets";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export interface CampaignListItem {
   id: string;
@@ -675,9 +676,11 @@ async function buildBriefing(args: {
         coalitionWeakness
       );
 
-      const gameState = await db
-        .collection<{ _id: string; preset?: string; currentYear?: number }>("gameState")
-        .findOne({ _id: "current" }, { projection: { preset: 1, currentYear: 1 } });
+      const gameState = await gameStateCollection<{
+        _id: string;
+        preset?: string;
+        currentYear?: number;
+      }>(db).findOne({ _id: "current" }, { projection: { preset: 1, currentYear: 1 } });
       const preset = gameState?.preset;
 
       if (isGeneralPhase) {

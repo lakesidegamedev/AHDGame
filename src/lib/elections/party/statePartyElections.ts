@@ -27,6 +27,7 @@ import { buildMajorPartyOrgsForState } from "@/lib/seeds/reference/statePartyOrg
 import { insertManyIgnoringDuplicateKey } from "@/lib/elections/duplicateKey";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export const ELECTION_DURATION_TURNS = 72; // 72 turns = 72 hours
 
@@ -114,9 +115,10 @@ async function ensureResidentTerritorialPartyOrgs(
 }
 
 async function isFoundingPhaseActive(db: Db): Promise<boolean> {
-  const gameState = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { preIteration: 1 } });
+  const gameState = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { preIteration: 1 } }
+  );
   return gameState?.preIteration?.active === true;
 }
 

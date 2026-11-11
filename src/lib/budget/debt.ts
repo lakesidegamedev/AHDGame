@@ -27,6 +27,7 @@ import {
   sovereignStockAnnualService,
   type SovereignCouponBook,
 } from "@/lib/budget/rules/sovereignDebtService";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * Debt/GDP ratio at which a sovereign degrades from the B band to CCC.
@@ -221,7 +222,7 @@ export async function processAnnualDebt(
 }
 
 export async function triggerDebtCeilingCrisis(db: Db, fiscalYear: number): Promise<void> {
-  await db.collection<DebtCeilingCrisis>("gameState").updateOne(
+  await gameStateCollection<DebtCeilingCrisis>(db).updateOne(
     { _id: "debt_ceiling_crisis" },
     {
       $set: {
@@ -237,7 +238,7 @@ export async function triggerDebtCeilingCrisis(db: Db, fiscalYear: number): Prom
 }
 
 export async function resolveDebtCeilingCrisis(db: Db): Promise<void> {
-  await db.collection<DebtCeilingCrisis>("gameState").updateOne(
+  await gameStateCollection<DebtCeilingCrisis>(db).updateOne(
     { _id: "debt_ceiling_crisis" },
     {
       $set: {
@@ -250,18 +251,17 @@ export async function resolveDebtCeilingCrisis(db: Db): Promise<void> {
 }
 
 export async function checkDebtCeilingCrisis(db: Db): Promise<DebtCeilingCrisis | null> {
-  return db
-    .collection<DebtCeilingCrisis>("gameState")
-    .findOne({ _id: "debt_ceiling_crisis", active: true });
+  return gameStateCollection<DebtCeilingCrisis>(db).findOne({
+    _id: "debt_ceiling_crisis",
+    active: true,
+  });
 }
 
 export async function incrementCrisisTurns(db: Db): Promise<number> {
-  const result = await db
-    .collection<DebtCeilingCrisis>("gameState")
-    .findOneAndUpdate(
-      { _id: "debt_ceiling_crisis", active: true },
-      { $inc: { turnsElapsed: 1 } },
-      { returnDocument: "after" }
-    );
+  const result = await gameStateCollection<DebtCeilingCrisis>(db).findOneAndUpdate(
+    { _id: "debt_ceiling_crisis", active: true },
+    { $inc: { turnsElapsed: 1 } },
+    { returnDocument: "after" }
+  );
   return result?.turnsElapsed || 0;
 }

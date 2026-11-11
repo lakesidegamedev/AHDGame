@@ -13,6 +13,7 @@ import {
 } from "@/lib/parties/partyTier";
 import { resolveSeedPartyTier } from "@/lib/seeds/defaultPartyTiers";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * Recomputes each party's Major/Minor tier, earned-region set, demotion-warning
@@ -58,9 +59,10 @@ export async function processPartyTierTurn(
   const [parties, orgRows, gameState] = await Promise.all([
     db.collection<PoliticalParty>("politicalParties").find({}).toArray(),
     db.collection<StatePartyOrg>("statePartyOrg").find({}).toArray(),
-    db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: { preset: 1, startingYear: 1 } }),
+    gameStateCollection(db).findOne(
+      { _id: "current" },
+      { projection: { preset: 1, startingYear: 1 } }
+    ),
   ]);
   // Preset drives the per-era seed tier for parties whose `tier` is still unset
   // (e.g. right after a deploy, before the heal runs) — so a regional default

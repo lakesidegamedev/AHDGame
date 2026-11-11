@@ -19,6 +19,7 @@ import { hasReachedExecutiveTermLimit } from "@/lib/elections/executiveTermLimit
 import { isSameCountry } from "@/lib/api/sameCountry";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -98,9 +99,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     if (countryHasFeature("ruApi", election.countryId) && election.russianPresidentialRound) {
-      const game = await db
-        .collection<{ _id: string; currentTurn: number }>("gameState")
-        .findOne({ _id: "current" }, { projection: { currentTurn: 1 } });
+      const game = await gameStateCollection<{ _id: string; currentTurn: number }>(db).findOne(
+        { _id: "current" },
+        { projection: { currentTurn: 1 } }
+      );
       if (
         myCandidate.russianTicketLocked ||
         election.russianPresidentialRound.round === 2 ||
@@ -148,8 +150,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(400, "The current President cannot be a running mate");
     }
 
-    const runningMateChar = await charactersCollection(db)
-      .findOne({ _id: runningMateObjectId });
+    const runningMateChar = await charactersCollection(db).findOne({ _id: runningMateObjectId });
     if (!runningMateChar) {
       return errorResponse(404, "Running mate character not found");
     }

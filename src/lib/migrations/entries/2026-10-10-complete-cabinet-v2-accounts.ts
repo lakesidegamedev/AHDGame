@@ -11,6 +11,7 @@ import { RESET_V2_COUNTRIES, resetSystemVersionsForCountry } from "@/lib/resetVe
 import { RESET_V2_READY } from "@/lib/resetVersions/availability";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import type { Migration } from "../types";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export const migration: Migration = {
   id: "2026-10-10-complete-cabinet-v2-accounts",
@@ -20,7 +21,7 @@ export const migration: Migration = {
   async execute(db, ctx) {
     return runRequiredTransaction(
       async (session) => {
-        const states = db.collection<GameState>("gameState");
+        const states = gameStateCollection(db);
         const state = await states.findOne({ _id: "current" }, { session });
         const countries = RESET_V2_COUNTRIES.filter(
           (country) =>

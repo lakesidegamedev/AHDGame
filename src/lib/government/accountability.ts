@@ -18,6 +18,7 @@ import {
   continuingPartySinceTurn,
 } from "./rules/accountability";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /** The party holding a country's national executive, with that government's approval. */
 export interface NationalExecutiveParty {
@@ -37,9 +38,10 @@ export async function observeGovernmentAccountability(
 ): Promise<Map<string, number>> {
   const [game, officials, formations, approvals, regionalApprovals, previous, states, runtimes] =
     await Promise.all([
-      db
-        .collection<{ _id: string; currentTurn?: number; preset?: string }>("gameState")
-        .findOne({ _id: "current" }, { projection: { currentTurn: 1, preset: 1 } }),
+      gameStateCollection<{ _id: string; currentTurn?: number; preset?: string }>(db).findOne(
+        { _id: "current" },
+        { projection: { currentTurn: 1, preset: 1 } }
+      ),
       db
         .collection<ElectedOfficial>("electedOfficials")
         .find(

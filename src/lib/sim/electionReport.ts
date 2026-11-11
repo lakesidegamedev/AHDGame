@@ -14,6 +14,7 @@ import type { Db } from "mongodb";
 import type { Election } from "@/lib/db/types/election";
 import type { ElectionVoteTally, VoteTurnSnapshot } from "@/lib/db/types/voteTally";
 import type { GameState } from "@/lib/db/types/gameState";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export interface ElectionTrajectoryPoint {
   turn: number;
@@ -112,9 +113,10 @@ export async function collectElectionReport(
 ): Promise<ElectionBalanceReport> {
   const maxTrajectoryPoints = opts.maxTrajectoryPoints ?? 60;
 
-  const gameState = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { currentTurn: 1 } });
+  const gameState = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { currentTurn: 1 } }
+  );
   const turn = gameState?.currentTurn ?? 0;
 
   // Prefer the scope recorded on the run doc; fall back to the caller's opt.

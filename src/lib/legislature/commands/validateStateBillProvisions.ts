@@ -28,6 +28,7 @@ import type { ResetCountry } from "@/lib/resetLegislation/fundingOwner";
 import type { LawChoice } from "@/lib/resetLegislation/rules/eligibility";
 import { resetTaxesFor } from "@/lib/resetLegislation/taxCatalog";
 import { resolveResetTaxProvisionFields } from "@/lib/resetLegislation/resolveTaxProvision";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export type ValidateStateBillProvisionsResult =
   | {
@@ -131,7 +132,7 @@ export async function validateStateBillProvisions(
         choice: selection.choice as LawChoice,
       });
     }
-    const gameState = await db.collection<GameState>("gameState").findOne(
+    const gameState = await gameStateCollection(db).findOne(
       { _id: "current" },
       {
         projection: {

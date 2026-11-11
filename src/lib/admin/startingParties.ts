@@ -14,6 +14,7 @@ import type { StateRegistrationPool } from "@/lib/db/types/stateRegistrationPool
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export type StartingPartiesMode = "default" | "none";
 
@@ -283,9 +284,10 @@ export async function loadStartingPartiesMode(
   explicit?: StartingPartiesMode
 ): Promise<StartingPartiesMode> {
   if (explicit !== undefined) return resolveStartingPartiesMode(preset, explicit);
-  const state = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { preset: 1, startingPartiesMode: 1 } });
+  const state = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { preset: 1, startingPartiesMode: 1 } }
+  );
   return resolveStartingPartiesMode(
     preset,
     state?.preset === preset ? state.startingPartiesMode : "default"

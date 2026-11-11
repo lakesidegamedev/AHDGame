@@ -17,6 +17,7 @@ import type {
   NationalElectionIssue,
   StateElectionIssue,
 } from "@/lib/admin/partyElectionIssues";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * GET /api/admin/heal/party-elections
@@ -117,7 +118,7 @@ export async function GET() {
 
     const allIssues: ElectionIssue[] = [...stateIssues, ...nationalIssues, ...committeeIssues];
 
-    const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+    const gameState = await gameStateCollection(db).findOne({ _id: "current" });
 
     return NextResponse.json({
       status: allIssues.length === 0 ? "ok" : "needs_fix",
@@ -147,7 +148,7 @@ export async function POST() {
     if (!auth.ok) return auth.response;
 
     const db = await getDb();
-    const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+    const gameState = await gameStateCollection(db).findOne({ _id: "current" });
     const currentTurn = gameState?.currentTurn ?? 0;
 
     const defaultDuration = 96;

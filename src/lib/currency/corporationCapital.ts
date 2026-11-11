@@ -24,6 +24,7 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 import { COUNTRY_CURRENCY_MAP, eraRateForCurrency } from "@/lib/constants/currencies";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import type { ExchangeRate } from "@/lib/db/types";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 // Re-exported so server-side callers keep importing them from here. The
 // definitions live in the client-safe module because two client components need
 // them, and this file reaches `mongodb` — see corpWalletSpend.ts.
@@ -307,9 +308,10 @@ export function shareTradeAnchorValue(
  */
 async function presetFromDb(db: Db): Promise<string | undefined> {
   try {
-    const gs = await db
-      .collection<{ _id: string; preset?: string }>("gameState")
-      .findOne({ _id: "current" }, { projection: { preset: 1 } });
+    const gs = await gameStateCollection<{ _id: string; preset?: string }>(db).findOne(
+      { _id: "current" },
+      { projection: { preset: 1 } }
+    );
     return gs?.preset ?? DEFAULT_SEED_PRESET;
   } catch {
     return undefined;

@@ -3,6 +3,7 @@ import { GOVERNMENT_CONTRACTS_DISABLED_MESSAGE } from "@/lib/governmentContracts
 import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import { activeProcurementRestriction } from "@/lib/db/collections/procurementRestrictions";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * Temporary freeze on NEW defence procurement.
@@ -18,9 +19,9 @@ import { activeProcurementRestriction } from "@/lib/db/collections/procurementRe
  * teardown of the subsystem; flip it back to resume.
  */
 export async function isDefenceProcurementPaused(db: Db): Promise<boolean> {
-  const gs = await db
-    .collection<{ _id: string; defenceProcurementPaused?: boolean }>("gameState")
-    .findOne({ _id: "current" }, { projection: { defenceProcurementPaused: 1 } });
+  const gs = await gameStateCollection<{ _id: string; defenceProcurementPaused?: boolean }>(
+    db
+  ).findOne({ _id: "current" }, { projection: { defenceProcurementPaused: 1 } });
   return gs?.defenceProcurementPaused === true;
 }
 

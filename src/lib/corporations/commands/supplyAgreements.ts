@@ -39,6 +39,7 @@ import {
 } from "@/lib/corporations/supplyExchange/guards";
 import { notifySupplyAgreementEvent } from "@/lib/corporations/supplyExchange/notifications";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * Private supply agreement lifecycle (bilateral, both-consent). Either CEO can
@@ -91,9 +92,10 @@ export async function validateCapacity(
   supplier: Corporation,
   terms: Pick<AgreementTerms, "commodity" | "stateId" | "volumeCap">
 ): Promise<{ volumeCapValidated: boolean; currentTurn: number; currentYear?: number }> {
-  const world = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { currentTurn: 1, currentYear: 1 } });
+  const world = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { currentTurn: 1, currentYear: 1 } }
+  );
   const currentTurn = world?.currentTurn ?? 0;
   if (!marketAtLeast(await getMarketSystemModeForDb(db), "plants")) {
     return { volumeCapValidated: false, currentTurn, currentYear: world?.currentYear };
@@ -452,9 +454,10 @@ export async function updateSupplyAgreement(request: Request, corpId: string, ag
         readerIsBuyer: isBuyer,
       });
       if (reachError) return errorResponse(409, reachError);
-      const gameState = await db
-        .collection<GameState>("gameState")
-        .findOne({ _id: "current" }, { projection: { currentTurn: 1 } });
+      const gameState = await gameStateCollection(db).findOne(
+        { _id: "current" },
+        { projection: { currentTurn: 1 } }
+      );
       const currentTurn = gameState?.currentTurn ?? 0;
       const durationTurns = currentOffer.durationTurns ?? agreement.durationTurns;
       const now = new Date();
@@ -651,9 +654,10 @@ export async function updateSupplyAgreement(request: Request, corpId: string, ag
       // free option — the supplier can see its own production before settlement
       // runs, so it could cancel on exactly the turns it was going to be short
       // and the shortfall penalty only ever hit players who forgot to click.
-      const gameState = await db
-        .collection<GameState>("gameState")
-        .findOne({ _id: "current" }, { projection: { currentTurn: 1 } });
+      const gameState = await gameStateCollection(db).findOne(
+        { _id: "current" },
+        { projection: { currentTurn: 1 } }
+      );
       const currentTurn = gameState?.currentTurn ?? 0;
       const immediate = agreement.status === "pending";
       const nextStatus: SupplyAgreement["status"] = immediate ? "cancelled" : "cancelling";

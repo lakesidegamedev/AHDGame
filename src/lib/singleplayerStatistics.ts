@@ -4,6 +4,7 @@ import type { EconomicVitalSigns } from "@/lib/db/types/economicVitalSigns";
 import { ALLOWED_FEATURE_FLAGS, METRIC_DEFINITION_VERSION } from "@/lib/clientStatistics";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const ELECTION_STATUS_FIELDS = {
   upcoming: "electionCountUpcoming",
@@ -82,7 +83,7 @@ export async function collectLocalStatistics(db: Db): Promise<LocalStatisticsPay
     seats,
     leaders,
   ] = await Promise.all([
-    db.collection<GameState>("gameState").findOne(
+    gameStateCollection(db).findOne(
       { _id: "current" },
       {
         projection: {

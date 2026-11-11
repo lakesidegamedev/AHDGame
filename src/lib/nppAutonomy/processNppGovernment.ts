@@ -83,6 +83,7 @@ import {
   shouldRecomputeGoverningAgenda,
 } from "./rules/agendaReview";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * Routine agenda review interval, measured in game-calendar years (48 turns).
@@ -511,9 +512,10 @@ export async function runNppGovernmentPhases(gameNow: Date, currentTurn: number)
 
   // Command-economy regime context — same load pattern as centralBankChairTurn.
   // Flag default OFF: omitted/false → isPlannedEconomy is false everywhere.
-  const gameState = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { currentYear: 1, preset: 1 } });
+  const gameState = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { currentYear: 1, preset: 1 } }
+  );
   const currentYear = gameState?.currentYear;
   const gameConfig = await db
     .collection<GameConfig>("gameConfig")

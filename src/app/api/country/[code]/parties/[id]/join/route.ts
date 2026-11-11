@@ -19,6 +19,7 @@ import { canCharacterJoinParty } from "@/lib/parties/partyFrontier";
 import { getActingChairId } from "@/lib/parties/actingChair";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 // POST /api/country/[code]/parties/[id]/join — Join a political party
 // Auth: requireAuthWithCharacter
@@ -52,9 +53,10 @@ export async function POST(
         .collection<GameConfig>("gameConfig")
         .findOne({ _id: "default" }, { projection: { firstJoinerBecomesPartyChair: 1 } }),
       getCurrentTurn(db),
-      db
-        .collection<GameState>("gameState")
-        .findOne({ _id: "current" }, { projection: { freePartyMovesOpen: 1 } }),
+      gameStateCollection(db).findOne(
+        { _id: "current" },
+        { projection: { freePartyMovesOpen: 1 } }
+      ),
     ]);
 
     if (!party) {

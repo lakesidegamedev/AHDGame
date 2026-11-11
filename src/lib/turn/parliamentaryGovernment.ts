@@ -75,6 +75,7 @@ import { getNppsCollection } from "@/lib/db/collections/npps";
 import { getPoliticalPartiesCollection } from "@/lib/db/collections/politicalParties";
 import { openCaretaker } from "@/lib/elections/rules/caretaker";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export { resolveGoverningPartyIdsFromDocuments };
 
@@ -330,9 +331,9 @@ export async function updateParliamentaryGovernmentSeats(
     ).findOne({ _id: existing.pmCharacterId }, { projection: { _id: 1 } });
     if (!pmStillExists) {
       const governingPartyId = getLargestParty(seatsByParty);
-      const gs = await db
-        .collection<{ _id: string; currentTurn: number }>("gameState")
-        .findOne({ _id: "current" });
+      const gs = await gameStateCollection<{ _id: string; currentTurn: number }>(db).findOne({
+        _id: "current",
+      });
       const currentTurn = gs?.currentTurn ?? 0;
       await govCol.updateOne(
         { _id: countryId },
@@ -437,7 +438,7 @@ export async function resetParliamentaryGovernmentAfterElection(
   const [existing, seatsByParty, gameStateDoc] = await Promise.all([
     govCol.findOne({ _id: countryId }),
     tallySeatsByParty(db, countryId),
-    db.collection<{ _id: string; currentTurn: number }>("gameState").findOne({ _id: "current" }),
+    gameStateCollection<{ _id: string; currentTurn: number }>(db).findOne({ _id: "current" }),
   ]);
   const totalSeats = await getFormationChamberSeats(db, countryId, seatsByParty);
   const majorityThreshold = lowerChamberMajorityThreshold(totalSeats);
@@ -643,9 +644,9 @@ export async function appointPrimeMinister(
     // this strictly supersedes the old read rather than narrowing it.
     const leaderConfidenceRuntime = await getCountryState(db, countryId);
     if (leaderConfidenceRuntime.hasLeaderConfidenceModel) {
-      const gs = await db
-        .collection<{ _id: string; currentTurn: number }>("gameState")
-        .findOne({ _id: "current" });
+      const gs = await gameStateCollection<{ _id: string; currentTurn: number }>(db).findOne({
+        _id: "current",
+      });
       const currentTurn = gs?.currentTurn ?? 0;
       const gov = await getGovernmentFormationsCollection(db).findOne({ _id: countryId });
       const existingPmId = gov?.pmCharacterId;
@@ -1496,9 +1497,9 @@ export async function processParliamentaryGovernmentVotes(
 ): Promise<void> {
   let currentTurn = currentTurnOverride;
   if (currentTurn == null) {
-    const gsForTurn = await db
-      .collection<{ _id: string; currentTurn: number }>("gameState")
-      .findOne({ _id: "current" });
+    const gsForTurn = await gameStateCollection<{ _id: string; currentTurn: number }>(db).findOne({
+      _id: "current",
+    });
     currentTurn = gsForTurn?.currentTurn ?? 0;
   }
 
@@ -1750,9 +1751,9 @@ export async function unformGovernmentAndVacatePM(
   const execKeyVacate = offices.headOfGovernmentOfficeKey;
   if (!execKeyVacate) throw new Error("The active constitution has no head-of-government office");
 
-  const gs = await db
-    .collection<{ _id: string; currentTurn: number }>("gameState")
-    .findOne({ _id: "current" });
+  const gs = await gameStateCollection<{ _id: string; currentTurn: number }>(db).findOne({
+    _id: "current",
+  });
   const currentTurn = gs?.currentTurn ?? 0;
 
   const reason = opts?.reason ?? "snap";
@@ -1925,9 +1926,9 @@ export async function openConfidenceMotionForIncumbent(
   }
 
   const closesAt = new Date(now.getTime() + PM_VOTE_DURATION_HOURS * 3_600_000);
-  const gsForTurn = await db
-    .collection<{ _id: string; currentTurn: number }>("gameState")
-    .findOne({ _id: "current" });
+  const gsForTurn = await gameStateCollection<{ _id: string; currentTurn: number }>(db).findOne({
+    _id: "current",
+  });
   const closesOnTurn = (gsForTurn?.currentTurn ?? 0) + PM_VOTE_DURATION_HOURS;
   const voteId = new ObjectId();
 
@@ -2063,8 +2064,7 @@ export async function failInProgressBills(
         )
         .toArray()
         .catch(() => []),
-      db
-        .collection<{ _id: string; currentTurn?: number }>("gameState")
+      gameStateCollection<{ _id: string; currentTurn?: number }>(db)
         .findOne({ _id: "current" }, { projection: { currentTurn: 1 } })
         .catch(() => null),
     ]);

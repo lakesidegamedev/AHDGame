@@ -41,6 +41,7 @@ import {
   type ResumeResultOutcome,
 } from "./turnPhaseResumeResults";
 import { TurnMustStopError } from "@/lib/turn/turnMustStop";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * Phases that only READ state to produce a derivative/historical record
@@ -277,9 +278,10 @@ export function createTurnPhaseRuntime(input: {
       setFields[`processingPhaseResults.${phase}`] = options.result;
     }
 
-    const persisted = await db
-      .collection<GameState>("gameState")
-      .updateOne({ _id: "current", isProcessing: true }, { $set: setFields });
+    const persisted = await gameStateCollection(db).updateOne(
+      { _id: "current", isProcessing: true },
+      { $set: setFields }
+    );
     if (status === "running" && persisted.matchedCount === 0) {
       throw new Error(`Cannot start phase "${phase}": processing lock no longer matches`);
     }
@@ -397,8 +399,7 @@ export function createTurnPhaseRuntime(input: {
         setFields[`processingPhaseStatuses.${name}.substeps`] = substeps;
         setFields[`processingPhaseStatuses.${name}.updatedAt`] = now;
       }
-      void db
-        .collection<GameState>("gameState")
+      void gameStateCollection(db)
         .updateOne({ _id: "current", isProcessing: true }, { $set: setFields })
         .catch((err) => {
           console.warn(`[Turn] Failed to refresh heartbeat for phase "${name}"`, err);
@@ -430,8 +431,7 @@ export function createTurnPhaseRuntime(input: {
           setFields[`processingPhaseStatuses.${name}.substeps`] = substeps;
           setFields[`processingPhaseStatuses.${name}.updatedAt`] = now;
         }
-        void db
-          .collection<GameState>("gameState")
+        void gameStateCollection(db)
           .updateOne({ _id: "current", isProcessing: true }, { $set: setFields })
           .catch((err) => {
             console.warn(`[Turn] Failed to refresh heartbeat for draining phase "${name}"`, err);

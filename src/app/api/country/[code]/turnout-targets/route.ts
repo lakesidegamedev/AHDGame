@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { getTurnoutTargetsForCountry } from "@/lib/demographics/turnoutTargets";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export const dynamic = "force-dynamic";
 
@@ -18,9 +19,10 @@ export const dynamic = "force-dynamic";
 export async function GET(_request: Request, { params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
   const db = await getDb();
-  const gs = await db
-    .collection<{ _id: string; preset?: string }>("gameState")
-    .findOne({ _id: "current" }, { projection: { preset: 1 } });
+  const gs = await gameStateCollection<{ _id: string; preset?: string }>(db).findOne(
+    { _id: "current" },
+    { projection: { preset: 1 } }
+  );
 
   const sections = getTurnoutTargetsForCountry(code.toUpperCase(), gs?.preset ?? null);
   return NextResponse.json({ sections }, { headers: { "Cache-Control": "no-store" } });

@@ -16,6 +16,7 @@ import { MS_PER_TURN, SENATE_STAGGER_TURNS } from "@/lib/constants/turnTime";
 import { cycleAnchorContextFromGameState } from "@/lib/elections/cycleAnchorContext";
 import { admittedStateIdsAsOf } from "@/lib/elections/statehoodAdmission";
 import { electionToLarpYear } from "@/lib/utils/formatters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export async function initializeOfficials(db: Db): Promise<{
   message: string;
@@ -34,7 +35,7 @@ export async function initializeOfficials(db: Db): Promise<{
   // Active preset drives House apportionment (1950 vs 1990 vs 2020 census), the
   // era statehood roster, and the cycle-1 LARP-year anchoring below. Must be read
   // BEFORE the state filter — the apportionment map is what defines statehood.
-  const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+  const gameState = await gameStateCollection(db).findOne({ _id: "current" });
   const houseSeatsByState = getHouseSeats(gameState?.preset);
 
   // Only full electoral states get Senate/House officials + cycle-1 elections.

@@ -20,6 +20,7 @@ import { MS_PER_TURN } from "@/lib/constants/turnTime";
 import { HU_1991_COUNTS_COLLECTION, type Hu1991AssemblyRecord } from "./assemblyCount1991";
 import { settleHu1991Mandates } from "./rules/mandates1991";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const HU_1991_OFFICE_ARCHIVES_COLLECTION = "hu1991AssemblyOfficeArchives";
 interface Hu1991AssemblyArchive {
@@ -53,9 +54,10 @@ async function materializeHu1991AssemblySeating(input: {
   const journal = db.collection<Hu1991AssemblyRecord>(HU_1991_COUNTS_COLLECTION);
   const receipt = await journal.findOne({ _id: `HU:mixed1989:${cycle}` }, { session });
   if (!receipt || receipt.seatedAtTurn != null || receipt.count.kind !== "counted") return false;
-  const game = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { session, projection: { preset: 1 } });
+  const game = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { session, projection: { preset: 1 } }
+  );
   if (game?.preset !== "1991-default") throw new Error("No native Hungarian mandate in this world");
   const ids = [...receipt.electionIds, ...(receipt.runoffElectionIds ?? [])].map(
     (id) => new ObjectId(id)

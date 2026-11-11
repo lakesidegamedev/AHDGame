@@ -42,6 +42,7 @@ import {
   type EraCheckpoint,
   type DocketCaseLookupEntry,
 } from "@/lib/demographics/eraCheckpoints";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export interface EraCheckpointTurnResult {
   checkpointsActive: number;
@@ -113,17 +114,15 @@ export async function processEraCheckpointsTurn(
   // Each checkpoint names the world start it was authored against (the
   // 1950s-60s history for 1953, the modern realignments for 2027); its start
   // turns are absolute from that year, so it must not run in any other world.
-  const gameStateDoc = await db
-    .collection<{
-      _id: string;
-      startingYear?: number;
-      preIterationTurns?: number;
-      preIteration?: { active?: boolean };
-    }>("gameState")
-    .findOne(
-      { _id: "current" },
-      { projection: { startingYear: 1, preIterationTurns: 1, preIteration: 1 } }
-    );
+  const gameStateDoc = await gameStateCollection<{
+    _id: string;
+    startingYear?: number;
+    preIterationTurns?: number;
+    preIteration?: { active?: boolean };
+  }>(db).findOne(
+    { _id: "current" },
+    { projection: { startingYear: 1, preIterationTurns: 1, preIteration: 1 } }
+  );
   const worldStartingYear = gameStateDoc?.startingYear ?? 2019;
 
   const clock: CalendarClock = {

@@ -16,6 +16,7 @@ import type { BalanceSnapshot } from "@/lib/ledger/types";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export const BALANCE_SNAPSHOTS_COLLECTION = "balanceSnapshots";
 export const BALANCE_CHECKPOINTS_COLLECTION = "balanceSnapshotCheckpoints";
@@ -198,9 +199,11 @@ async function collectBalanceState(
   }
 
   // --- Governments: federalBudget treasuryBalance ----------------------------
-  const gameState = await db
-    .collection<{ _id: string; preset?: string; worldEpochId?: string }>("gameState")
-    .findOne({ _id: "current" }, { projection: { preset: 1, worldEpochId: 1 } });
+  const gameState = await gameStateCollection<{
+    _id: string;
+    preset?: string;
+    worldEpochId?: string;
+  }>(db).findOne({ _id: "current" }, { projection: { preset: 1, worldEpochId: 1 } });
   const producerWalletCursor = db
     .collection<ProducerEconomyAccount>("producerEconomyAccounts")
     .find({ worldEpoch: gameState?.worldEpochId ?? "" }, { projection: { currency: 1, cash: 1 } });

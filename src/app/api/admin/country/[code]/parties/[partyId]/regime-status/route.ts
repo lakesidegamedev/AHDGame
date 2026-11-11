@@ -20,6 +20,7 @@ import { handleRouteError, isDuplicateKeyError, conflict, errorResponse } from "
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import type { PoliticalParty } from "@/lib/db/types";
 import { processBanPartyEffects, processUnbanPartyEffects } from "@/lib/onePartyState/banFlow";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const BODY_SCHEMA = z.object({
   newStatus: z.union([z.literal("ruling"), z.literal("approved"), z.literal("banned"), z.null()]),
@@ -60,9 +61,9 @@ export async function POST(
       return errorResponse(404, "Party not found");
     }
 
-    const gameState = await db
-      .collection<{ _id: string; currentTurn: number }>("gameState")
-      .findOne({ _id: "current" });
+    const gameState = await gameStateCollection<{ _id: string; currentTurn: number }>(db).findOne({
+      _id: "current",
+    });
     const currentTurn = gameState?.currentTurn ?? 0;
 
     const impact: {

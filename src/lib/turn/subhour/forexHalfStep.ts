@@ -31,6 +31,7 @@ import { extractMacroInputs } from "@/lib/turn/forexTurn";
 import { yearOfTurn } from "@/lib/utils/gameDate";
 import { HALF_TICK_FRACTION, hasSubhourStep, subhourStepStamp } from "./stepFraction";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * :30 half step for forex, under the stepFraction.ts contract: each floating
@@ -343,7 +344,7 @@ export async function runForexHalfStep(
   now: Date
 ): Promise<Record<string, unknown>> {
   const started = Date.now();
-  const state = await db.collection<GameState>("gameState").findOne(
+  const state = await gameStateCollection(db).findOne(
     { _id: "current" },
     {
       projection: {

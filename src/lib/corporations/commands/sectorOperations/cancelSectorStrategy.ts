@@ -33,6 +33,7 @@ import { insufficientCapitalMessage } from "@/lib/currency/insufficientCapitalMe
 import { emitSectorRetoolTx } from "@/lib/corporations/sectorRetoolTxLog";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 interface RouteParams {
   params: Promise<{ id: string; sectorId: string }>;
@@ -97,7 +98,7 @@ export async function cancelSectorStrategy(request: Request, { params }: RoutePa
       );
     }
 
-    const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+    const gameState = await gameStateCollection(db).findOne({ _id: "current" });
     const currentTurn = gameState?.currentTurn ?? 0;
 
     const elapsed = currentTurn - sector.transitionStartTurn;

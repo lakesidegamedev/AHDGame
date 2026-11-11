@@ -34,6 +34,7 @@ import {
 } from "@/lib/world/countryRequirementLevel";
 import { enterCountryForPlayers, exitCountryForPlayers } from "@/lib/world/playerHandoff";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 interface RouteContext {
   params: Promise<{ code: string }>;
@@ -144,7 +145,7 @@ export const GET = withAdminRoute(async (_auth, request: Request, { params }: Ro
 
   const [access, gameState, activePlayers, activeNpps, politicalParties] = await Promise.all([
     getCountryAccess(countryId),
-    db.collection<GameState>("gameState").findOne({ _id: "current" }),
+    gameStateCollection(db).findOne({ _id: "current" }),
     charactersCollection(db).countDocuments({ countryId }),
     db.collection("npps").countDocuments({ countryId }),
     db.collection("politicalParties").countDocuments({ countryId }),
@@ -240,7 +241,7 @@ export const PATCH = withAdminRoute(async (_auth, request: Request, { params }: 
         `Cannot enable economy preview for ${countryId} while it is enabled for players. Disable player access in the same request first.`
       );
     }
-    const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+    const gameState = await gameStateCollection(db).findOne({ _id: "current" });
     const presetId = resolvePresetIdFromGameState(gameState);
     if (isShippingPreset(presetId) && tierFor(presetId, countryId) === "absent") {
       return errorResponse(

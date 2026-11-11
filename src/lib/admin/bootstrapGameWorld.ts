@@ -225,14 +225,17 @@ import { isEasternBlocEra } from "@/lib/seeds/presetSelector";
 import { isBackgroundInPreset } from "@/lib/world/eraRoster";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import type { Document } from "mongodb";
 
 async function seedInitialBudgetSnapshots(db: Db, log: (msg: string) => void): Promise<void> {
   const budgets = await federalBudgetCollection(db).find({}).toArray();
   // The budget docs are already in hand and the turn is one shared singleton,
   // so both are handed down rather than re-read once per country.
-  const gameState = await db
-    .collection("gameState")
-    .findOne({ _id: "current" } as Record<string, unknown>, { projection: { currentTurn: 1 } });
+  const gameState = await gameStateCollection<Document>(db).findOne(
+    { _id: "current" } as Record<string, unknown>,
+    { projection: { currentTurn: 1 } }
+  );
   const currentTurn = (gameState as { currentTurn?: number } | null)?.currentTurn ?? 0;
   for (const budget of budgets) {
     const countryId = budget.countryId ?? COUNTRY_CONFIGS.US.id;
@@ -899,7 +902,7 @@ export async function bootstrapGameWorld(options: BootstrapOptions) {
     log("Cleared starting politics; economic NPP ownership retained with independent affiliation");
   }
 
-  await db.collection<GameState>("gameState").updateOne(
+  await gameStateCollection(db).updateOne(
     { _id: "current" },
     {
       $set: { startingPartiesMode: startingParties },
@@ -914,9 +917,10 @@ export async function bootstrapGameWorld(options: BootstrapOptions) {
 
   const gameState = await initializeGameState();
   if (gameState.startingPartiesMode !== startingParties) {
-    await db
-      .collection<GameState>("gameState")
-      .updateOne({ _id: "current" }, { $set: { startingPartiesMode: startingParties } });
+    await gameStateCollection(db).updateOne(
+      { _id: "current" },
+      { $set: { startingPartiesMode: startingParties } }
+    );
   }
   // On an empty database the metric seed writers ran before this doc existed,
   // so their income vintage stamps were dropped. seedAllCountryData above wrote
@@ -1473,10 +1477,8 @@ export async function bootstrapGameWorld(options: BootstrapOptions) {
  */
 export async function stampInitialGameClock(db: Db, preset: string): Promise<void> {
   const startingYear = getStartingYearForPreset(preset);
-  await db
-    .collection<GameState>("gameState")
-    .updateOne(
-      { _id: "current" },
-      { $set: { currentYear: startingYear, startingYear, preset, updatedAt: new Date() } }
-    );
+  await gameStateCollection(db).updateOne(
+    { _id: "current" },
+    { $set: { currentYear: startingYear, startingYear, preset, updatedAt: new Date() } }
+  );
 }

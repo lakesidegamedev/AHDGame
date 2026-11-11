@@ -10,6 +10,7 @@ import { ObjectId } from "mongodb";
 import type { RetiredCharacter } from "@/lib/db/types/retiredCharacter";
 import type { GameState } from "@/lib/db/types";
 import { gameDateAnchorFromState } from "@/lib/utils/gameDate";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 async function handleGET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -25,7 +26,7 @@ async function handleGET(_request: Request, { params }: { params: Promise<{ id: 
     const db = await getDb();
     const [retired, gameState] = await Promise.all([
       db.collection<RetiredCharacter>("retiredCharacters").findOne({ _id: new ObjectId(id) }),
-      db.collection<GameState>("gameState").findOne({ _id: "current" }),
+      gameStateCollection(db).findOne({ _id: "current" }),
     ]);
 
     if (!retired) {

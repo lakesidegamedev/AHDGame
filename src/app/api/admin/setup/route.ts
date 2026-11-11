@@ -53,6 +53,7 @@ import {
 } from "@/lib/admin/seed";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export async function GET() {
   try {
@@ -79,7 +80,7 @@ export async function GET() {
       db.collection("states").countDocuments({ countryId: "UK" }),
       db.collection("policies").countDocuments(),
       db.collection<{ _id: string }>("gameConfig").findOne({ _id: "default" }),
-      db.collection<GameState>("gameState").findOne({ _id: "current" }),
+      gameStateCollection(db).findOne({ _id: "current" }),
       db.collection("electedOfficials").countDocuments(),
       db.collection("elections").countDocuments(),
       db.collection("politicalParties").countDocuments(),
@@ -150,9 +151,10 @@ export async function POST(request: Request) {
     // wrote 2019 policy catalogues, budgets and sector weights into whatever era
     // the world actually is — latent state corruption that only shows up later
     // as anachronistic content. Read it once and thread it everywhere.
-    const gsPreset = await db
-      .collection<{ _id: string; preset?: string }>("gameState")
-      .findOne({ _id: "current" }, { projection: { preset: 1 } });
+    const gsPreset = await gameStateCollection<{ _id: string; preset?: string }>(db).findOne(
+      { _id: "current" },
+      { projection: { preset: 1 } }
+    );
     const preset = gsPreset?.preset ?? DEFAULT_SEED_PRESET;
     const logs: string[] = [];
     const log = (msg: string) => logs.push(msg);

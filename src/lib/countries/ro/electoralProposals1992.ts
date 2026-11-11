@@ -22,6 +22,7 @@ import {
 
 import { RO_1992_DEPUTIES_BY_REGION, RO_1992_SENATORS_BY_REGION } from "./rules/parliament1992";
 import type { CountryState } from "@/lib/db/types/countryState";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export const RO_1992_PROPOSALS_COLLECTION = "ro1992ElectoralProposals";
 const ID = "1991-default:ro-electoral:parliament1992";
@@ -40,9 +41,10 @@ export interface Ro1992ElectoralProposal {
 export class Ro1992ElectoralConflict extends Error {}
 
 async function availability(db: Db, game: Calendar, turn: number, session?: ClientSession) {
-  const current = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { session, projection: { preset: 1 } });
+  const current = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { session, projection: { preset: 1 } }
+  );
   const runtime = await db
     .collection<CountryState>("countryState")
     .findOne({ _id: "RO" }, { session, projection: { governmentType: 1 } });

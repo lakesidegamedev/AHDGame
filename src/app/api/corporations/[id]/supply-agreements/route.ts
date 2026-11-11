@@ -25,6 +25,7 @@ import { supportsCorporationWideSupplyAgreement } from "@/lib/market/commodityMa
 import { buyerCommodityUse } from "@/lib/corporations/supplyExchange/rules/deliveryReach";
 import type { State } from "@/lib/db/types/state";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -69,9 +70,10 @@ export async function GET(_request: Request, { params }: RouteParams) {
       .toArray();
     const noticeTurn = agreements.some((agreement) => agreement.status === "active")
       ? ((
-          await db
-            .collection<GameState>("gameState")
-            .findOne({ _id: "current" }, { projection: { currentTurn: 1 } })
+          await gameStateCollection(db).findOne(
+            { _id: "current" },
+            { projection: { currentTurn: 1 } }
+          )
         )?.currentTurn ?? 0)
       : 0;
     const counterpartyIds = [
@@ -140,9 +142,10 @@ export async function GET(_request: Request, { params }: RouteParams) {
             }
           )
           .toArray(),
-        db
-          .collection<GameState>("gameState")
-          .findOne({ _id: "current" }, { projection: { currentTurn: 1, currentYear: 1 } }),
+        gameStateCollection(db).findOne(
+          { _id: "current" },
+          { projection: { currentTurn: 1, currentYear: 1 } }
+        ),
         db
           .collection<GameConfig>("gameConfig")
           .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } }),

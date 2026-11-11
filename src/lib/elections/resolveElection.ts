@@ -56,6 +56,7 @@ import {
 } from "./electionSummaryProjections";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export type {
   PollingData,
@@ -152,10 +153,11 @@ export async function resolveElection(
   // project the read; full view keeps the whole document.
   const [gameState, gameTime, deps] = await Promise.all([
     isFull
-      ? db.collection<GameState>("gameState").findOne({ _id: "current" })
-      : db
-          .collection<GameState>("gameState")
-          .findOne({ _id: "current" }, { projection: ELECTION_SUMMARY_GAME_STATE_PROJECTION }),
+      ? gameStateCollection(db).findOne({ _id: "current" })
+      : gameStateCollection(db).findOne(
+          { _id: "current" },
+          { projection: ELECTION_SUMMARY_GAME_STATE_PROJECTION }
+        ),
     getGameTime(),
     fetchDepsForElection(db, election, options.view),
   ]);
@@ -283,10 +285,11 @@ export async function resolveElections(
     incumbentNPPsRaw,
   ] = await Promise.all([
     isFull
-      ? db.collection<GameState>("gameState").findOne({ _id: "current" })
-      : db
-          .collection<GameState>("gameState")
-          .findOne({ _id: "current" }, { projection: ELECTION_SUMMARY_GAME_STATE_PROJECTION }),
+      ? gameStateCollection(db).findOne({ _id: "current" })
+      : gameStateCollection(db).findOne(
+          { _id: "current" },
+          { projection: ELECTION_SUMMARY_GAME_STATE_PROJECTION }
+        ),
     getGameTime(),
     allCharIds.length > 0
       ? charactersCollection(db)

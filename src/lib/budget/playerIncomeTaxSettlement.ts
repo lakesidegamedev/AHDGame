@@ -112,7 +112,7 @@ async function deliver(db: Db, original: Batch): Promise<void> {
         });
     const regularOps = operations("characters"),
       imperialOps = operations("imperialCharacters");
-    if (regularOps.length) await charactersCollection(db).bulkWrite(regularOps);
+    if (regularOps.length) await charactersCollection<Document>(db).bulkWrite(regularOps);
     if (imperialOps.length) await db.collection("imperialCharacters").bulkWrite(imperialOps);
     const [regularProof, imperialProof] = await Promise.all([
       charactersCollection<{ _id: ObjectId; incomeTaxBatchReceipt?: IncomeTaxBatchReceipt }>(db)

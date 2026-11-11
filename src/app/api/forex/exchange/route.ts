@@ -30,6 +30,7 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 import { rankReserveCurrencies } from "@/lib/centralBank/reserveCurrencyRanking";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const marketOrderSchema = z
   .object({
@@ -74,7 +75,7 @@ export async function GET() {
     }));
 
     // Public order book: open limit orders only (no direct requests), excluding expired
-    const gs = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+    const gs = await gameStateCollection(db).findOne({ _id: "current" });
     const currentTurn = gs?.currentTurn ?? 0;
     const openOrders = await db
       .collection<CurrencyOrder>("currencyOrders")
@@ -159,7 +160,7 @@ export async function POST(request: Request) {
 
     const { fromCurrency, toCurrency, amount } = parsed.data;
     const db = await getDb();
-    const gs = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+    const gs = await gameStateCollection(db).findOne({ _id: "current" });
     const currentTurn = gs?.currentTurn ?? 0;
 
     // Non-convertible command currencies cannot be market-traded. Gated here

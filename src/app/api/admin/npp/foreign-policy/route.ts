@@ -13,6 +13,7 @@ import {
   foreignPolicyModeFrom,
   foreignPolicyStageFrom,
 } from "@/lib/nppAutonomy/foreignPolicyRollout";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const LEDGER_WINDOW_TURNS = 120;
 const LEDGER_DOCUMENT_LIMIT = 5_000;
@@ -25,7 +26,7 @@ function percentChange(current: number, previous: number): number | null {
 /** GET /api/admin/npp/foreign-policy returns a bounded operational ledger. */
 export const GET = withAdminRoute(async (_auth) => {
   const db = await getDb();
-  const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+  const gameState = await gameStateCollection(db).findOne({ _id: "current" });
   const currentTurn = gameState?.currentTurn ?? 0;
   const fromTurn = Math.max(0, currentTurn - LEDGER_WINDOW_TURNS + 1);
 

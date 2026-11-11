@@ -27,6 +27,7 @@ import { scalePoolToRegistered } from "@/lib/elections/rules/registration";
 import { apportionSeats } from "@/lib/seeds/reference/rules/apportionSeats";
 import { HU_2011_COUNTS_COLLECTION, type Hu2011AssemblyRecord } from "./assemblyCount2011";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export const HU_2011_BY_ELECTIONS_COLLECTION = "hu2011ConstituencyByElections";
 export interface HuModernByElectionRecord {
@@ -97,7 +98,7 @@ async function materializeHuModernByElectionOpening(input: {
 }): Promise<string[]> {
   const { db, session, turn, now } = input;
   assertTransaction(session, turn, now);
-  const game = await db.collection<GameState>("gameState").findOne(
+  const game = await gameStateCollection(db).findOne(
     { _id: "current" },
     {
       session,
@@ -388,7 +389,7 @@ async function materializeHuModernByElectionResolution(input: {
       { seatedAtTurn: { $exists: true } },
       { session, sort: { seatedAtTurn: -1 }, projection: { _id: 1 } }
     );
-  const game = await db.collection<GameState>("gameState").findOne(
+  const game = await gameStateCollection(db).findOne(
     { _id: "current" },
     {
       session,

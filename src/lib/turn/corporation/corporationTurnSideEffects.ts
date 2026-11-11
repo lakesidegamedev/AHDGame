@@ -65,6 +65,7 @@ import type { MarketContext } from "@/lib/market/marketContext";
 import type { CorpLoyaltyUpdate } from "@/lib/turn/corporation/brandLoyaltyTurn";
 import type { VentureDomain } from "@/lib/products/venture/types";
 import type { PoliticalMediaSettlementPlan } from "@/lib/politicalMedia/journal";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /** Runs the side effects that follow sector processing and the bulk writes; returns the NPP sectors founded this turn. */
 export async function runCorporationTurnSideEffects({
@@ -312,9 +313,10 @@ export async function runCorporationTurnSideEffects({
   // After the sector writes, which carry each sector's own stamp: a sector
   // founded before the next run catches its builds up from this turn.
   if (typeof turn === "number") {
-    await db
-      .collection<GameState>("gameState")
-      .updateOne({ _id: "current" }, { $set: { buildDeliverySettledTurn: turn } });
+    await gameStateCollection(db).updateOne(
+      { _id: "current" },
+      { $set: { buildDeliverySettledTurn: turn } }
+    );
   }
   mark("sectorBulkWrite");
   if (corpOps.length > 0 || manufacturingDevelopmentCashOps.length > 0) {

@@ -23,6 +23,7 @@ import { withCorporationSettlementLock } from "@/lib/corporations/settlementLock
 import { archiveCampaignsForCandidates } from "@/lib/campaigns/archiveWithdrawnCampaigns";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export interface CascadeResult {
   sharesReleased: number;
@@ -134,9 +135,10 @@ export async function cascadeCharacterDeletion(
 
   const releasedCharacterShares = await releaseCharacterHeldSharesToFloat(db, [characterId], now);
 
-  const gameState = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { currentTurn: 1 } });
+  const gameState = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { currentTurn: 1 } }
+  );
   const currentTurn = gameState?.currentTurn ?? 0;
 
   // Force-dissolve abandoned corps that still owe bondholders. Each runs under

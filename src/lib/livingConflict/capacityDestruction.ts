@@ -20,6 +20,7 @@ import {
   planCapacityDestruction,
   type CapacityRegionInput,
 } from "./rules/capacityDestruction";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const CONFLICT_CAPACITY_OBLIGATIONS = "conflictCapacityObligations";
 
@@ -108,12 +109,10 @@ export async function applyCapacityDestructionSpec(
   const existing = await obligations.find({ resolutionId, conflictKey }).toArray();
   if (existing.length > 0 && existing.length >= spec.regions.length) return summarize(existing);
 
-  const world = await db
-    .collection<GameState>("gameState")
-    .findOne(
-      { _id: "current" },
-      { projection: { currentTurn: 1, isProcessing: 1, processingTargetTurn: 1 } }
-    );
+  const world = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { currentTurn: 1, isProcessing: 1, processingTargetTurn: 1 } }
+  );
   if (!world) return undefined;
   const turn = clockTurn(world);
   const regionIds = spec.regions.map((region) => region.regionId);
@@ -234,12 +233,10 @@ export async function loadCapacityRepairSpending(db: Db): Promise<Record<string,
     )
     .toArray();
   if (rows.length === 0) return {};
-  const world = await db
-    .collection<GameState>("gameState")
-    .findOne(
-      { _id: "current" },
-      { projection: { currentTurn: 1, isProcessing: 1, processingTargetTurn: 1 } }
-    );
+  const world = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { currentTurn: 1, isProcessing: 1, processingTargetTurn: 1 } }
+  );
   if (!world) return {};
   const turn = clockTurn(world);
   const owners = await db

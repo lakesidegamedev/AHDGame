@@ -65,6 +65,7 @@ import type {
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export const DEFECT_ID = "AHD-sovereign-maturity-unfunded-rollover";
 const MARKER_PATH = `remediation.${DEFECT_ID}`;
@@ -123,9 +124,9 @@ type OverdueBond = Pick<
 >;
 
 async function currentTurn(db: Db): Promise<number> {
-  const state = await db
-    .collection<{ _id: string; currentTurn?: number; turn?: number }>("gameState")
-    .findOne({ _id: "current" }, { projection: { currentTurn: 1, turn: 1 } });
+  const state = await gameStateCollection<{ _id: string; currentTurn?: number; turn?: number }>(
+    db
+  ).findOne({ _id: "current" }, { projection: { currentTurn: 1, turn: 1 } });
   return state?.currentTurn ?? state?.turn ?? 0;
 }
 

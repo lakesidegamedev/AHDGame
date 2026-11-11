@@ -12,6 +12,7 @@ import {
   isUsElectoralState,
 } from "@/lib/constants/states";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * True when `stateId` is eligible for US federal seat backfill (House,
@@ -166,9 +167,7 @@ export async function backfillMissingSeats(
   const houseSeatsByState =
     // eslint-disable-next-line local/no-country-literals -- DC/AK/HI federal apportionment quirks are a US-only structural concept, not config-driven
     countryHasFeature("usTurn", countryId)
-      ? getHouseSeats(
-          (await db.collection<GameState>("gameState").findOne({ _id: "current" }))?.preset
-        )
+      ? getHouseSeats((await gameStateCollection(db).findOne({ _id: "current" }))?.preset)
       : null;
 
   const lower = legislature.lowerChamber

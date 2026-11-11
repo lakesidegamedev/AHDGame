@@ -16,6 +16,7 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { unlockTechNode } from "@/lib/corporations/commands/techTree/unlockTechNode";
 import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import type { GameState } from "@/lib/db/types";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const unlockSchema = z.object({
   nodeId: z.string().min(1).max(64),
@@ -44,7 +45,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     const db = await getDb();
-    const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+    const gameState = await gameStateCollection(db).findOne({ _id: "current" });
 
     const resolved = await resolveCorporation(db, id);
     if (!resolved.ok) return resolved.response;

@@ -18,6 +18,7 @@ import { getGameState } from "@/lib/gameState";
 import type { Bill, LegislationType, GameState } from "@/lib/db/types";
 import { isPolicyProvision } from "@/lib/db/types/legislation";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const PRESIDENT_ACTION_MS = 10 * 60 * 60 * 1000;
 const VOTING_DURATION_HOURS = 24;
@@ -139,7 +140,7 @@ export const POST = withAdminRoute(
       }
 
       // Get current turn and record bill enactment
-      const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+      const gameState = await gameStateCollection(db).findOne({ _id: "current" });
       const legislationTypes = await applyLegislationEffect(db, bill, gameState?.currentTurn).catch(
         (err) => {
           console.error("Legislation effect apply failed (admin force-sign):", err);
