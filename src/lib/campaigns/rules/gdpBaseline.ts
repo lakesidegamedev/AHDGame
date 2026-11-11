@@ -63,7 +63,8 @@ export type GdpBaselineUnit = "local" | "usd";
  * Playable countries with an explicit baseline. Matches the `status: "active"`
  * country configs (US/UK/DE/JP/IE/CN), plus coming-soon NG so its calibration
  * lands before activation, plus DD and RU, which a 1953 world seeds and plays
- * regardless of their `status` marker. Other coming-soon countries (BR, …) are
+ * regardless of their `status` marker, plus SCO and WAL, whose sub-regions exist
+ * once Scotland or Wales secedes. Other coming-soon countries (BR, …) are
  * intentionally absent: resolving one throws (see below) instead of silently
  * pricing in USD.
  *
@@ -72,9 +73,10 @@ export type GdpBaselineUnit = "local" | "usd";
  * existed in its era, not the ones marked active for the modern world. Whether
  * a country needs a row is decided by whether a world can seed regions for it —
  * pinned in `gdpBaselineCoverage.guard.test.ts`, which reads the seed bundles
- * off disk. SCO and WAL are still missing and listed there as pending.
+ * off disk.
  */
-export type GdpBaselineCountry = "US" | "UK" | "DE" | "JP" | "IE" | "NG" | "CN" | "DD" | "RU";
+export type GdpBaselineCountry =
+  "US" | "UK" | "DE" | "JP" | "IE" | "NG" | "CN" | "DD" | "RU" | "SCO" | "WAL";
 
 export interface GdpBaselineResolution {
   /** National GDP per capita in the same unit as the era's `State.gdp`. */
@@ -232,6 +234,34 @@ const GDP_BASELINE_TABLE: Record<GdpBaselineCountry, Record<EraId, number>> = {
     "2023": 1_813,
     "2027": 1_813,
   },
+  SCO: {
+    // Scotland has ONE latent bundle (`scoRegions`, 163,000M / 5,440,000
+    // people): `expandToSubRegions` inserts it on secession, apportioning the
+    // live SCO nation-region's aggregates, so no preset seeds it directly and
+    // there is no authored national GDP to reconcile against. Every era
+    // therefore repeats the 2019 cell, the bundle's own per-capita value, so a
+    // lookup in any era resolves a literal instead of throwing on the turn.
+    "1953": 29_963,
+    "1979": 29_963,
+    "1991": 29_963,
+    "1999": 29_963,
+    "2007": 29_963,
+    "2019": 29_963,
+    "2023": 29_963,
+    "2027": 29_963,
+  },
+  WAL: {
+    // Wales: same single latent bundle (`walRegions`, 74,000M / 3,170,000
+    // people) and the same reasoning as SCO. Every era repeats the 2019 cell.
+    "1953": 23_344,
+    "1979": 23_344,
+    "1991": 23_344,
+    "1999": 23_344,
+    "2007": 23_344,
+    "2019": 23_344,
+    "2023": 23_344,
+    "2027": 23_344,
+  },
 };
 
 /**
@@ -257,6 +287,25 @@ const BUNDLE_PRESET_OVERRIDES: Partial<Record<GdpBaselineCountry, Partial<Record
       "2023": "1979-default",
       "2027": "1979-default",
     },
+    // SCO and WAL have one latent bundle, so every era repeats the 2019 cell.
+    SCO: {
+      "1953": "2019-default",
+      "1979": "2019-default",
+      "1991": "2019-default",
+      "1999": "2019-default",
+      "2007": "2019-default",
+      "2023": "2019-default",
+      "2027": "2019-default",
+    },
+    WAL: {
+      "1953": "2019-default",
+      "1979": "2019-default",
+      "1991": "2019-default",
+      "1999": "2019-default",
+      "2007": "2019-default",
+      "2023": "2019-default",
+      "2027": "2019-default",
+    },
     // RU authors two bundles; everything outside 1953/1979 takes the
     // `2019-default` fallback.
     RU: {
@@ -276,7 +325,7 @@ function bundlePresetFor(country: GdpBaselineCountry, era: EraId): string {
 /**
  * Resolve the campaign GDP-per-capita baseline for a country in a world's era.
  *
- * @param countryId playable country id (US/UK/DE/JP/IE/NG/CN/DD/RU).
+ * @param countryId playable country id (US/UK/DE/JP/IE/NG/CN/DD/RU/SCO/WAL).
  * @param preset world reset preset (e.g. "1953-default"); defaults to
  *   `DEFAULT_SEED_PRESET` ("2019-default"). Callers without a world to ask
  *   (client previews, unit tests) get modern-era behavior — the same scale
