@@ -10,6 +10,7 @@ import { ngOverviewContent } from "../content/ngOverview";
 import { ruOverviewContent } from "../content/ruOverview";
 import { ddOverviewContent } from "../content/ddOverview";
 import { backgroundCountriesContent } from "../content/backgroundCountries";
+import { caOverviewContent } from "@/lib/countries/ca/wiki/caOverview";
 
 export const countriesPages: readonly WikiSeedPage[] = [
   {
@@ -40,6 +41,20 @@ export const countriesPages: readonly WikiSeedPage[] = [
     difficulty: "beginner",
     contentType: "reference",
     estimatedReadTime: 8,
+  },
+  {
+    slug: "ca-overview",
+    title: "Canada",
+    description:
+      "Federal parliamentary monarchy with 13 provinces and territories, a 343-seat House of Commons, an appointed Senate, and Quebec's sovereignty question.",
+    content: caOverviewContent,
+    category: "countries",
+    extraTags: ["ca", "westminster"],
+    countryId: "CA",
+    featured: false,
+    difficulty: "beginner",
+    contentType: "reference",
+    estimatedReadTime: 6,
   },
   {
     slug: "de-overview",
