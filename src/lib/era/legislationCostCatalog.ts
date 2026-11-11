@@ -20,6 +20,7 @@ import { CN_ECONOMY } from "@/lib/countries/cn/economy";
 import { IE_ECONOMY } from "@/lib/countries/ie/economy";
 import { NG_ECONOMY } from "@/lib/countries/ng/economy";
 import { CA_ECONOMY } from "@/lib/countries/ca/economy";
+import { SAVED_WORLD_COST_CLASS } from "./savedWorldCostClasses";
 
 export type CostClass = "gdpFraction" | "perCapita" | "none";
 
@@ -480,10 +481,13 @@ export const LEGISLATION_COST_CLASS: Record<string, CostClass> = {
 /** typeId → rationale for deviating from the domain default. */
 export const COST_CLASS_OVERRIDES: Record<string, string> = {};
 
-/** Unknown typeId ⇒ "none" (fail-safe: never invent a phantom cost line). */
+/**
+ * Unknown typeId ⇒ "none" (fail-safe: never invent a phantom cost line). Laws
+ * only saved worlds still hold keep the class they were seeded with.
+ */
 export function getCostClass(typeId: string): CostClass {
   typeId = typeId.split(/__(?:income|capital)_/)[0];
-  return LEGISLATION_COST_CLASS[typeId] ?? "none";
+  return LEGISLATION_COST_CLASS[typeId] ?? SAVED_WORLD_COST_CLASS[typeId] ?? "none";
 }
 
 export interface EraCostContext {
