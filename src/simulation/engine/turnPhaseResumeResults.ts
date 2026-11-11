@@ -13,6 +13,7 @@ import type { BondTurnResult } from "@/lib/turn/bondTurn";
 import type { TurnPhaseTelemetryMap } from "@/lib/db/types";
 import type { CorporationTurnResult } from "@/lib/turn/corporation/corporationTurnRuntime";
 import { ZOD_CURRENCY_ENUM, type CurrencyCode } from "@/lib/constants/currencies";
+import { LEGACY_PHASE_GROUPS, type LegacyPhaseGroup } from "./legacyPhaseNames";
 
 /** Country-keyed maps stay far below this; anything larger is not a bond flow. */
 const MAX_FLOW_KEYS = 256;
@@ -255,6 +256,25 @@ export function phaseBlocksResumeWhenInterrupted(name: string): boolean {
 export const INTERRUPTED_PHASE_NOT_RERUN_MESSAGE =
   "interrupted by a crash before it finished; not rerun, so its work for this turn may be missing or partial";
 
+/**
+ * How a turn recorded by an older build left a renamed or merged phase. Only
+ * that build's record lacks the current name, since this build records every
+ * phase from the start. Any applied member means the work already ran at least
+ * in part, so the phase is never rerun: completed when every applied member
+ * finished, interrupted otherwise. Members not yet reached wait a turn rather
+ * than risk running twice.
+ */
+export function legacyGroupState(
+  group: LegacyPhaseGroup,
+  statuses: TurnPhaseTelemetryMap | null | undefined,
+  completed: ReadonlySet<string>,
+  interrupted: ReadonlySet<string>
+): "completed" | "interrupted" | null {
+  if (!statuses || Object.hasOwn(statuses, group.current)) return null;
+  if (group.legacy.some((name) => interrupted.has(name))) return "interrupted";
+  return group.legacy.some((name) => completed.has(name)) ? "completed" : null;
+}
+
 export interface CrashedTurnPhaseState {
   completed: Set<string>;
   interrupted: Set<string>;
@@ -271,6 +291,11 @@ export function readCrashedTurnPhaseState(
     const state = appliedState(telemetry);
     if (state === "completed") completed.add(phase);
     else if (state === "interrupted") interrupted.add(phase);
+  }
+  for (const group of LEGACY_PHASE_GROUPS) {
+    const state = legacyGroupState(group, statuses, completed, interrupted);
+    if (state === "completed") completed.add(group.current);
+    else if (state === "interrupted") interrupted.add(group.current);
   }
   const results: Record<string, unknown> = {};
   const stored = isRecord(rawResults) ? rawResults : {};
