@@ -7,6 +7,8 @@ import type { PoliticalParty } from "@/lib/db/types/party";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import type { Document } from "mongodb";
 
 // GET /api/coalitions/[id]?country=us — Returns full coalition details
 export async function GET(
@@ -80,8 +82,7 @@ export async function GET(
             .toArray()
         : Promise.resolve([]),
       memberSeqIds.length > 0
-        ? db
-            .collection("npps")
+        ? nppsCollection<Document>(db)
             .aggregate<{ _id: string; count: number }>([
               { $match: { party: { $in: memberSeqIds }, retiredAt: null, countryId } },
               { $group: { _id: "$party", count: { $sum: 1 } } },

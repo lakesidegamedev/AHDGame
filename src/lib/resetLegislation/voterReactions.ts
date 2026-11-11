@@ -4,6 +4,7 @@ import type { Character, NPP } from "@/lib/db/types";
 import type { ResetLawProvision } from "@/lib/db/types/legislation";
 import { finalV2Voters, v2EnactmentApproval, type VoterChoice } from "./rules/voterReactions";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export interface V2BillBallots {
   votes?: Record<string, VoterChoice>;
@@ -81,5 +82,5 @@ export async function applyVoterApprovalImpacts(
     else characters.push(operation);
   }
   if (characters.length) await charactersCollection(db).bulkWrite(characters, { session });
-  if (npps.length) await db.collection<NPP>("npps").bulkWrite(npps, { session });
+  if (npps.length) await nppsCollection(db).bulkWrite(npps, { session });
 }

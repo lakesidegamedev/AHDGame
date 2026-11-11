@@ -17,6 +17,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import type { Document } from "mongodb";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 interface ReadinessCheck {
   name: string;
@@ -98,7 +99,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     });
 
     // 6. NPPs (≥3 per region by Phase 07 convention)
-    const nppCount = await db.collection("npps").countDocuments({ countryId });
+    const nppCount = await nppsCollection<Document>(db).countDocuments({ countryId });
     const expectedNppCount = regionCount * 3;
     checks.push({
       name: "NPPs",

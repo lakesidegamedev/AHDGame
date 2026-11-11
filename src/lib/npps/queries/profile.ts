@@ -3,9 +3,10 @@ import type { NPP, PoliticalParty, State } from "@/lib/db/types";
 import { getOfficeLabel } from "@/lib/utils/officeTitle";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export async function getNppProfile(db: Db, nppId: ObjectId) {
-  const npp = await db.collection<NPP>("npps").findOne({ _id: nppId });
+  const npp = await nppsCollection(db).findOne({ _id: nppId });
   if (!npp) return null;
 
   const [state, party] = await Promise.all([

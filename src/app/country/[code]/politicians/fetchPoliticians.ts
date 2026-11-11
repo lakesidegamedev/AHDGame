@@ -6,6 +6,7 @@ import type { PoliticianData } from "@/lib/politicians/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export interface PoliticiansResult {
   politicians: PoliticianData[];
@@ -77,8 +78,7 @@ export async function fetchPoliticians(countryId: CountryId): Promise<Politician
         },
       ])
       .toArray(),
-    db
-      .collection<NPP>("npps")
+    nppsCollection(db)
       .find({ retiredAt: null, ...countryFilter })
       .project({
         _id: 1,

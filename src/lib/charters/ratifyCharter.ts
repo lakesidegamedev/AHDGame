@@ -19,6 +19,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import type { Document } from "mongodb";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /**
  * Internal helper called by `signCharter` once the 3-of-3 threshold is hit.
@@ -410,8 +411,7 @@ export async function ratifyCharter(
       const { selectPoliticianImage, weightedRandomEthnicity } =
         await import("@/lib/npp/generator");
       const { getNextSequentialId } = await import("@/lib/db/sequentialId");
-      const existingNPPs = await db
-        .collection("npps")
+      const existingNPPs = await nppsCollection<Document>(db)
         .find({ retiredAt: null })
         .project<{ name: string }>({ name: 1 })
         .toArray();
@@ -485,7 +485,7 @@ export async function ratifyCharter(
           updatedAt: now,
         });
       }
-      await db.collection("npps").insertMany(npcDocs);
+      await nppsCollection<Document>(db).insertMany(npcDocs);
       // Bump the party's memberCount to reflect the cohort.
       await politicalPartiesCollection(db).updateOne(
         { _id: newParty._id },

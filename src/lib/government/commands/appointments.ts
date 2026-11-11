@@ -17,6 +17,7 @@ import type { EligibleSenateAppointeeView } from "@/lib/government/dto/governmen
 import { captureOfficeTransition } from "@/lib/analytics/officeTransitionAnalytics";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export async function adminAppointPrimeMinister(
   db: Db,
@@ -233,7 +234,7 @@ export async function appointSenator(
 
   const officialsCollection = electedOfficialsCollection(db);
   const charactersHandle = charactersCollection(db);
-  const nppsCollection = db.collection<NPP>("npps");
+  const nppDocs = nppsCollection(db);
 
   const governorCharacter = await charactersHandle.findOne({
     userId: new ObjectId(governorUserId),
@@ -279,7 +280,7 @@ export async function appointSenator(
   let appointeeUserId: ObjectId | undefined;
 
   if (input.appointeeType === "npp") {
-    const npp = await nppsCollection.findOne({ _id: appointeeId });
+    const npp = await nppDocs.findOne({ _id: appointeeId });
     if (!npp) {
       throw notFound("NPP not found");
     }
@@ -364,7 +365,7 @@ export async function appointSenator(
   }
 
   if (input.appointeeType === "npp") {
-    await nppsCollection.updateOne(
+    await nppDocs.updateOne(
       { _id: appointeeId },
       { $set: { currentOffice: officeType, party: appointeeParty, updatedAt: now } }
     );

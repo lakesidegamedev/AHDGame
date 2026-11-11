@@ -33,6 +33,7 @@ import { GAME_STATE_PRE_ITERATION_FIELDS } from "@/lib/db/collections/gameState"
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 const RUSSIAN_COUNCIL_COMPOSITION_SEATINGS_COLLECTION = "russianCouncilCompositionSeatings";
 export interface RussianCouncilCompositionSeating {
@@ -348,7 +349,7 @@ export async function materializeRussianCouncilCompositionSeating(input: {
         $set: { currentOffice: null, updatedAt: now },
         ...(isNpc ? { $unset: { seatsHeld: "" as const } } : {}),
       };
-      if (isNpc) await db.collection<NPP>("npps").updateMany(filter, update, { session });
+      if (isNpc) await nppsCollection(db).updateMany(filter, update, { session });
       else await charactersCollection(db).updateMany(filter, update, { session });
     }
     if (owners.size) {
@@ -390,7 +391,7 @@ export async function materializeRussianCouncilCompositionSeating(input: {
         },
       }));
       const updated = isNpc
-        ? await db.collection<NPP>("npps").bulkWrite(operations, { session })
+        ? await nppsCollection(db).bulkWrite(operations, { session })
         : await charactersCollection(db).bulkWrite(operations, { session });
       if (updated.matchedCount !== owners.size)
         throw new Error("Regional Council owner changed during handover");

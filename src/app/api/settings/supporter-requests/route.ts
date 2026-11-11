@@ -13,6 +13,7 @@ import { isPatreonActive } from "@/lib/db/types";
 import { nameCollidesWithUser, validateProposedName } from "@/lib/supporter/requestValidation";
 import { notifyModeratorsOfSupporterRequest } from "@/lib/supporter/reviewNotifications";
 import { escapeRegex } from "@/lib/utils/escapeRegex";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 const bodySchema = z.discriminatedUnion("kind", [
   z.object({
@@ -182,7 +183,7 @@ export async function POST(request: Request) {
       return errorResponse(400, validated.error);
     }
 
-    const npp = await db.collection<NPP>("npps").findOne({ _id: new ObjectId(parsed.data.nppId) });
+    const npp = await nppsCollection(db).findOne({ _id: new ObjectId(parsed.data.nppId) });
     if (!npp) {
       return errorResponse(404, "Politician not found.");
     }
@@ -191,7 +192,7 @@ export async function POST(request: Request) {
     }
 
     const exact = new RegExp(`^${escapeRegex(validated.name)}$`, "i");
-    const nameTaken = await db.collection<NPP>("npps").findOne(
+    const nameTaken = await nppsCollection(db).findOne(
       {
         _id: { $ne: npp._id },
         countryId: npp.countryId,

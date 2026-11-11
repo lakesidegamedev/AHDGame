@@ -42,6 +42,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export const BG_1991_PROPOSALS_COLLECTION = "bg1991ConstitutionalProposals";
 const ID = "1991-default:bg-constitutional:constitution1991";
@@ -204,9 +205,10 @@ export async function materializeBg1991ConstitutionalProposal(input: {
       throw new Bg1991ConstitutionalConflict(
         "The current NPC government must introduce this draft"
       );
-    const leader = await db
-      .collection<{ _id: ObjectId; party?: string }>("npps")
-      .findOne({ _id: government.pmNppId }, { session, projection: { party: 1 } });
+    const leader = await nppsCollection<{ _id: ObjectId; party?: string }>(db).findOne(
+      { _id: government.pmNppId },
+      { session, projection: { party: 1 } }
+    );
     if (!leader?.party || sponsorParty !== leader.party)
       throw new Bg1991ConstitutionalConflict("The government sponsor changed before introduction");
     sponsorParty = leader.party;

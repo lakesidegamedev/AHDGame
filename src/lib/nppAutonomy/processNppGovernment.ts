@@ -84,6 +84,7 @@ import {
 } from "./rules/agendaReview";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /**
  * Routine agenda review interval, measured in game-calendar years (48 turns).
@@ -360,12 +361,10 @@ async function computeAndPersistGoverningAgenda(
         })
       : null;
 
-  const headNpp = await db
-    .collection<NPP>("npps")
-    .findOne(
-      { _id: headNppId },
-      { projection: { personality: 1, "policies.economic": 1, "policies.social": 1 } }
-    );
+  const headNpp = await nppsCollection(db).findOne(
+    { _id: headNppId },
+    { projection: { personality: 1, "policies.economic": 1, "policies.social": 1 } }
+  );
   if (!headNpp) return false;
 
   // Fetched before the agenda (not just for the V1.6 fiscal posture below) so

@@ -21,6 +21,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import type { Document } from "mongodb";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export interface BanPartyInput {
   countryId: CountryId;
@@ -80,9 +81,10 @@ export async function processBanPartyEffects(
       });
     }
     if (official.nppId) {
-      await db
-        .collection("npps")
-        .updateOne({ _id: official.nppId }, { $set: { currentOffice: null, updatedAt: now } });
+      await nppsCollection<Document>(db).updateOne(
+        { _id: official.nppId },
+        { $set: { currentOffice: null, updatedAt: now } }
+      );
     }
   }
 

@@ -25,6 +25,7 @@ import { isCampaignUpgradeGeneralPhase } from "@/lib/elections/phases";
 import { getGameTime } from "@/lib/time/gameTime";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -164,8 +165,7 @@ export async function GET(request: Request, { params }: RouteParams) {
             .toArray()
         : Promise.resolve([]),
       nppIds.length > 0
-        ? db
-            .collection<NPP>("npps")
+        ? nppsCollection(db)
             .find({ _id: { $in: nppIds } })
             .toArray()
         : Promise.resolve([]),

@@ -36,6 +36,7 @@ import fs from "fs";
 import path from "path";
 import { JP_ETHNICITY_WEIGHTS } from "@/lib/countries/jp/data/jpNppEthnicity";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 // ── Politician image pool (country/gender/ethnicity-gated) ───────────────────
 
@@ -519,9 +520,9 @@ export async function generateNPP(
   // for the operation, avoiding one full NPP scan for every generated row.
   const existingNames = context
     ? [...context.existingNames]
-    : (
-        await db.collection<NPP>("npps").find({ retiredAt: null }).project({ name: 1 }).toArray()
-      ).map((n) => n.name);
+    : (await nppsCollection(db).find({ retiredAt: null }).project({ name: 1 }).toArray()).map(
+        (n) => n.name
+      );
 
   const quality = config.quality ?? 0;
   const now = new Date();
@@ -609,7 +610,7 @@ export async function createNPP(
     const sequentialId = await getNextSequentialId(db, "npp");
     const nppWithId: NPP = { ...npp, sequentialId };
 
-    await db.collection<NPP>("npps").insertOne(nppWithId);
+    await nppsCollection(db).insertOne(nppWithId);
 
     return nppWithId;
   });
@@ -711,7 +712,7 @@ export function openNppCreationBatch(
       );
       const sequentialId = await getNextSequentialId(db, "npp");
       const nppWithId: NPP = { ...npp, sequentialId };
-      await db.collection<NPP>("npps").insertOne(nppWithId);
+      await nppsCollection(db).insertOne(nppWithId);
       // The new NPP is presence for its party, exactly as a re-read would see it.
       heldPresence?.add(config.state);
       return nppWithId;
@@ -792,6 +793,6 @@ export async function spawnTechnocratNpp(db: Db, countryId: CountryId, role: str
     funds: 0,
     actionPoints: 0,
   };
-  await db.collection<NPP>("npps").insertOne(doc);
+  await nppsCollection(db).insertOne(doc);
   return doc;
 }

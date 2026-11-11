@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NPP, Election, ElectionCandidate } from "@/lib/db/types";
 import type { Db } from "@/lib/mongodb";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export async function handleRemoveNPPs(
   db: Db,
@@ -34,12 +35,10 @@ export async function handleRemoveNPPs(
   const nppIds = nppCandidates.filter((c) => c.nppId).map((c) => c.nppId!);
 
   if (nppIds.length > 0) {
-    await db
-      .collection<NPP>("npps")
-      .updateMany(
-        { _id: { $in: nppIds } },
-        { $set: { retiredAt: new Date(), currentOffice: null, updatedAt: new Date() } }
-      );
+    await nppsCollection(db).updateMany(
+      { _id: { $in: nppIds } },
+      { $set: { retiredAt: new Date(), currentOffice: null, updatedAt: new Date() } }
+    );
   }
 
   const stateDesc =

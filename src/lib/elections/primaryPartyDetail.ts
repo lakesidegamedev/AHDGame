@@ -65,6 +65,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export type { PrimaryPartyDetail, PrimaryViewerCampaign };
 
@@ -180,8 +181,7 @@ export async function loadPrimaryPartyData(
           .toArray()
       : [],
     nppIds.length > 0
-      ? db
-          .collection<NPP>("npps")
+      ? nppsCollection(db)
           .find({ _id: { $in: nppIds } }, { projection: { homeState: 1, favorability: 1 } })
           .toArray()
       : [],

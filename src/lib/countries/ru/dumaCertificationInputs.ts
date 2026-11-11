@@ -10,6 +10,7 @@ import { loadPendingRussianCouncilOwners } from "./pendingCouncilMandates";
 import type { RussianDumaResultRecord } from "./dumaElectionResult";
 import type { RussianDumaCohortBallot } from "./rules/assemblyCohort";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export async function loadRussianDumaCertificationInputs(input: {
   db: Db;
@@ -68,8 +69,7 @@ export async function loadRussianDumaCertificationInputs(input: {
   const npcIds = candidates.filter((row) => row.isNPP && row.nppId).map((row) => row.nppId!);
   const playerIds = candidates.filter((row) => !row.isNPP).map((row) => row.characterId);
   const npcs = npcIds.length
-    ? await db
-        .collection<NPP>("npps")
+    ? await nppsCollection(db)
         .find(
           {
             _id: { $in: npcIds },

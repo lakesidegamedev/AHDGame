@@ -21,6 +21,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /** The party holding a country's national executive, with that government's approval. */
 export interface NationalExecutiveParty {
@@ -110,8 +111,7 @@ export async function observeGovernmentAccountability(
     charactersCollection<Actor>(db)
       .find({ _id: { $in: charIds } }, { projection: { party: 1 } })
       .toArray(),
-    db
-      .collection<Actor>("npps")
+    nppsCollection<Actor>(db)
       .find({ _id: { $in: nppIds } }, { projection: { party: 1 } })
       .toArray(),
     db

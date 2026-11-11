@@ -23,6 +23,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 const HU_1991_OFFICE_ARCHIVES_COLLECTION = "hu1991AssemblyOfficeArchives";
 interface Hu1991AssemblyArchive {
@@ -117,8 +118,7 @@ async function materializeHu1991AssemblySeating(input: {
     .filter((row) => !row.isNpc)
     .map((row) => new ObjectId(row.ownerId));
   const npcs = npcIds.length
-    ? await db
-        .collection<NPP>("npps")
+    ? await nppsCollection(db)
         .find(
           { _id: { $in: npcIds }, countryId: "HU", retiredAt: null, isTechnocrat: { $ne: true } },
           {
@@ -213,7 +213,7 @@ async function materializeHu1991AssemblySeating(input: {
       { session }
     );
   for (const isNpc of [false, true]) {
-    const collection = isNpc ? db.collection<NPP>("npps") : charactersCollection(db);
+    const collection = isNpc ? nppsCollection(db) : charactersCollection(db);
     await collection.updateMany(
       { countryId: "HU", "currentOffice.type": { $in: ["assemblyDelegate", "assemblyDeputy"] } },
       {
@@ -246,7 +246,7 @@ async function materializeHu1991AssemblySeating(input: {
   for (const isNpc of [false, true]) {
     const selected = [...owners.values()].filter((row) => row.isNpc === isNpc);
     if (!selected.length) continue;
-    const collection = isNpc ? db.collection<NPP>("npps") : charactersCollection(db);
+    const collection = isNpc ? nppsCollection(db) : charactersCollection(db);
     await collection.bulkWrite(
       selected.map((row) => {
         const originalOffice = (isNpc ? npcMap : playerMap).get(row.ownerId)?.currentOffice;

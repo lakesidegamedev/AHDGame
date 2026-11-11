@@ -17,6 +17,7 @@ import { nppStanceTarget } from "@/lib/npp/stanceTarget";
 import { getNppsCollection } from "@/lib/db/collections/npps";
 import { getStatesCollection } from "@/lib/db/collections/states";
 import { getPoliticalPartiesCollection } from "@/lib/db/collections/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /**
  * Max updates per bulkWrite. Sized well under MongoDB's 16MB per-command BSON
@@ -174,7 +175,7 @@ export async function processNppStanceDrift(
   // throw is downgraded to a warning so drift silently stops. Chunking keeps
   // command size bounded as NPP count grows.
   for (let i = 0; i < ops.length; i += STANCE_DRIFT_BULK_CHUNK) {
-    await db.collection<NPP>("npps").bulkWrite(ops.slice(i, i + STANCE_DRIFT_BULK_CHUNK));
+    await nppsCollection(db).bulkWrite(ops.slice(i, i + STANCE_DRIFT_BULK_CHUNK));
   }
   return { drifted: ops.length };
 }

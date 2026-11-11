@@ -36,6 +36,7 @@ import {
   recruitmentCooldownUntilIso,
 } from "@/lib/npp/recruitmentCooldown";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 // GET /api/country/[code]/region/[id]/party/[partyId]/recruitment — Return NPP recruitment status and slot info for state leadership
 // Auth: requireAuthWithCharacter
@@ -92,13 +93,13 @@ export async function GET(
     }
 
     // Count party NPPs
-    const partyNPPCount = await db
-      .collection<NPP>("npps")
-      .countDocuments(activePartyNppFilter(countryId, partyIdStr));
+    const partyNPPCount = await nppsCollection(db).countDocuments(
+      activePartyNppFilter(countryId, partyIdStr)
+    );
 
-    const stateNPPCount = await db
-      .collection<NPP>("npps")
-      .countDocuments(activePartyNppFilter(countryId, partyIdStr, stateId));
+    const stateNPPCount = await nppsCollection(db).countDocuments(
+      activePartyNppFilter(countryId, partyIdStr, stateId)
+    );
 
     const now = new Date();
     // Recruitment cooldown is measured in turns, so compare against the game
@@ -267,12 +268,12 @@ export async function POST(
 
       // Calculate slots
       const stateOrg = statePartyOrg?.organization ?? 0;
-      const stateNPPCount = await db
-        .collection<NPP>("npps")
-        .countDocuments(activePartyNppFilter(countryId, partyIdStr, stateId));
-      const partyNPPCount = await db
-        .collection<NPP>("npps")
-        .countDocuments(activePartyNppFilter(countryId, partyIdStr));
+      const stateNPPCount = await nppsCollection(db).countDocuments(
+        activePartyNppFilter(countryId, partyIdStr, stateId)
+      );
+      const partyNPPCount = await nppsCollection(db).countDocuments(
+        activePartyNppFilter(countryId, partyIdStr)
+      );
       const partyNppCapacity = await getPartyNppCapacity(db, countryId, partyIdStr, now);
       const capacityError = partyNppCapacityError(partyNppCapacity, partyNPPCount);
       if (capacityError) {
@@ -319,8 +320,7 @@ export async function POST(
       }
 
       // Generate NPP
-      const existingNPPs = await db
-        .collection<NPP>("npps")
+      const existingNPPs = await nppsCollection(db)
         .find({ retiredAt: null }, { projection: { name: 1 } })
         .toArray();
       const usedNames = new Set(existingNPPs.map((n) => n.name));
@@ -416,7 +416,7 @@ export async function POST(
             throw new Error("STATE_RECRUITMENT_CHANGED");
           }
 
-          await db.collection<NPP>("npps").insertOne(npp, { session });
+          await nppsCollection(db).insertOne(npp, { session });
         },
         async () => {
           const deductResult = await db.collection<StatePartyOrg>("statePartyOrg").updateOne(
@@ -438,7 +438,7 @@ export async function POST(
           }
 
           try {
-            await db.collection<NPP>("npps").insertOne(npp);
+            await nppsCollection(db).insertOne(npp);
           } catch (error) {
             const rollbackUpdate: {
               $inc: { nppActionPoints: number; treasury: number };

@@ -47,6 +47,8 @@ import type { MarketContext } from "@/lib/market/marketContext";
 import { workerConfig } from "@/lib/config/worker";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import type { Document } from "mongodb";
 
 // Optional sim-run salt, same convention as nppActionProcessing.ts's RNG.
 export const CORP_TURN_RNG_SALT = workerConfig.simRngSalt() ? `:${workerConfig.simRngSalt()}` : "";
@@ -573,7 +575,7 @@ export async function settleCorporationTurnPayouts({
       }
     }
     if (nppOps.length > 0) {
-      await db.collection("npps").bulkWrite(nppOps);
+      await nppsCollection<Document>(db).bulkWrite(nppOps);
     }
   }
   mark("imperial+nppPayments");

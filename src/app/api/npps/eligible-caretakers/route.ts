@@ -16,6 +16,7 @@ import type { NPP } from "@/lib/db/types";
 import type { UnifiedCabinetMember } from "@/lib/db/types/unifiedCabinetMember";
 import { nppAutonomyAtLeast } from "@/lib/nppAutonomy/featureFlag";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export async function GET(request: Request) {
   try {
@@ -52,8 +53,7 @@ export async function GET(request: Request) {
       ...ceoCorps.map((c) => c.ceoId?.toString()).filter((x): x is string => !!x),
     ]);
 
-    const npps = await db
-      .collection<NPP>("npps")
+    const npps = await nppsCollection(db)
       .find({ countryId, retiredAt: null })
       .project<{ _id: NPP["_id"]; name: string; party: string; politicalInfluence?: number }>({
         _id: 1,

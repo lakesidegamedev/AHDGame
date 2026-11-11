@@ -6,6 +6,7 @@ import type { NPP, ElectedOfficial, PoliticalParty } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /**
  * Policy signature to party slug mapping.
@@ -109,8 +110,7 @@ export async function GET() {
 
     // Find ALL independent NPPs that are not retired
     // We don't require generatedAt since older NPPs may not have this field
-    const independentNpps = await db
-      .collection<NPP>("npps")
+    const independentNpps = await nppsCollection(db)
       .find({
         party: "independent",
         retiredAt: null,
@@ -178,8 +178,7 @@ export async function POST() {
     const now = new Date();
 
     // Find ALL independent NPPs (not just ones with generatedAt)
-    const independentNpps = await db
-      .collection<NPP>("npps")
+    const independentNpps = await nppsCollection(db)
       .find({
         party: "independent",
         retiredAt: null,
@@ -225,7 +224,7 @@ export async function POST() {
       }
 
       // Update NPP party
-      await db.collection<NPP>("npps").updateOne(
+      await nppsCollection(db).updateOne(
         { _id: npp._id },
         {
           $set: {

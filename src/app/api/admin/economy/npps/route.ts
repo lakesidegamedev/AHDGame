@@ -10,6 +10,7 @@ import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError } from "@/lib/api/errors";
 import type { NPP, PoliticalParty } from "@/lib/db/types";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export async function GET() {
   try {
@@ -19,8 +20,7 @@ export async function GET() {
     const db = await getDb();
 
     const [npps, parties] = await Promise.all([
-      db
-        .collection<NPP>("npps")
+      nppsCollection(db)
         .find(
           { retiredAt: null },
           {

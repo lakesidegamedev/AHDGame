@@ -27,6 +27,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /**
  * Coerce a Mongo timestamp field to an ISO string for client serialization.
@@ -332,8 +333,7 @@ export async function getRegionPlayers(stateId: string) {
 export async function getRegionNPPs(stateId: string, countryId: CountryId) {
   try {
     const db = await getDb();
-    const npps = await db
-      .collection<NPP>("npps")
+    const npps = await nppsCollection(db)
       .find({ homeState: stateId, retiredAt: null })
       .sort({ name: 1 })
       .toArray();
@@ -380,8 +380,7 @@ export async function getRegionOfficials(stateId: string, countryId: CountryId) 
       charactersCollection(db)
         .find({ _id: { $in: characterIds } })
         .toArray(),
-      db
-        .collection<NPP>("npps")
+      nppsCollection(db)
         .find({ _id: { $in: nppIds } })
         .toArray(),
       partySeqIds.length

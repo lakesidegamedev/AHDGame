@@ -11,6 +11,7 @@ import {
   type RequestedEndorsementLikelihood,
 } from "@/lib/nppEndorsements";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 interface EndorsementRequestEvaluation {
   relationshipRequirement: number;
@@ -53,7 +54,7 @@ export async function getNppDirectActionView(
   const forexEnabled = await isForexEnabled();
   const relationshipKey = `${characterId.toString()}_${nppId.toString()}`;
   const [npp, characterDoc, relationship] = await Promise.all([
-    db.collection<NPP>("npps").findOne({ _id: nppId }),
+    nppsCollection(db).findOne({ _id: nppId }),
     charactersCollection(db).findOne(
       { _id: characterId },
       {

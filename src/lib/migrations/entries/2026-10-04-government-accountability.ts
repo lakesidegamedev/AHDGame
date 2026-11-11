@@ -13,6 +13,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export const migration: Migration = {
   id: "2026-10-04-government-accountability",
@@ -64,8 +65,7 @@ export const migration: Migration = {
           { projection: { party: 1 } }
         )
         .toArray(),
-      db
-        .collection<Actor>("npps")
+      nppsCollection<Actor>(db)
         .find(
           {
             _id: {

@@ -11,6 +11,7 @@ import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
 import { frozenPoolCashPerFace } from "@/lib/budget/rules/fiscalScale";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export interface SovereignMaturityCashLeg {
   collection: string;
@@ -170,7 +171,7 @@ export async function resolveSovereignMaturityPayoutLegs(
       liveIds("imperialCharacters", db.collection<{ _id: unknown }>("imperialCharacters")),
       liveIds("corporations", corporationsCollection<{ _id: unknown }>(db)),
       liveIds("indexFunds", db.collection<{ _id: unknown }>("indexFunds")),
-      liveIds("npps", db.collection<{ _id: unknown }>("npps")),
+      liveIds("npps", nppsCollection<{ _id: unknown }>(db)),
     ])
   ).flat())
     live.add(id);

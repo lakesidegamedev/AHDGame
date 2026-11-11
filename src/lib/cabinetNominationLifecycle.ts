@@ -40,6 +40,7 @@ import { cabinetOfficeTypeForCountry } from "@/lib/actions/officeActionBonus";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /**
  * NPP vote based on party lines: same party as nominee -> for; opposite -> against.
@@ -107,8 +108,7 @@ async function castNPPCabinetVotes(
       const nppIds = nppOfficials
         .map((o) => o.nppId)
         .filter((id): id is ObjectId => id instanceof ObjectId);
-      return db
-        .collection<NPP>("npps")
+      return nppsCollection(db)
         .find({ _id: { $in: nppIds } }, { projection: { party: 1 } })
         .toArray()
         .then((npps) => new Map(npps.map((n) => [n._id.toString(), n])));
@@ -327,8 +327,7 @@ export async function processCabinetNominationLifecycle(
     .filter((id): id is ObjectId => id instanceof ObjectId);
   const npps =
     nppIds.length > 0
-      ? await db
-          .collection<NPP>("npps")
+      ? await nppsCollection(db)
           .find({ _id: { $in: nppIds } }, { projection: { party: 1 } })
           .toArray()
       : [];

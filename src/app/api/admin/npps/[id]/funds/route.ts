@@ -13,6 +13,7 @@ import { z } from "zod";
 import type { NPP } from "@/lib/db/types";
 import { loadCharacterFxRate } from "@/lib/currency/characterFunds";
 import { COUNTRY_CURRENCY_MAP, type CurrencyCode } from "@/lib/constants/currencies";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 const schema = z.object({ amount: z.number().positive() });
 
@@ -31,9 +32,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     // amount is in ANCHOR (₳) units (admin tool contract). npp.funds is in
     // LOCAL home currency (cf-inconsistency-fix Phase 8 for NPPs). Convert at
     // the boundary using the NPP's home country rate.
-    const npp = await db
-      .collection<NPP>("npps")
-      .findOne({ _id: new ObjectId(id) }, { projection: { countryId: 1 } });
+    const npp = await nppsCollection(db).findOne(
+      { _id: new ObjectId(id) },
+      { projection: { countryId: 1 } }
+    );
     if (!npp) throw notFound("NPP not found");
 
     const homeCurrency = (COUNTRY_CURRENCY_MAP[
@@ -42,9 +44,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const { rate } = await loadCharacterFxRate(db, homeCurrency);
     const amountLocal = parsed.data.amount * rate;
 
-    const result = await db
-      .collection<NPP>("npps")
-      .updateOne({ _id: new ObjectId(id) }, { $inc: { funds: amountLocal } });
+    const result = await nppsCollection(db).updateOne(
+      { _id: new ObjectId(id) },
+      { $inc: { funds: amountLocal } }
+    );
 
     if (result.matchedCount === 0) throw notFound("NPP not found");
 

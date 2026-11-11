@@ -29,6 +29,7 @@ import type { Impeachment } from "@/lib/db/types/impeachment";
 import { isBillWhipInCurrentPhase } from "@/lib/congress/billWhipPhase";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export interface WhipDefianceScope {
   countryId: CountryId;
@@ -575,8 +576,7 @@ async function buildWhipDefianceSnapshotsForScopes(
           .toArray()
       : Promise.resolve([] as Character[]),
     missingNppIds.length
-      ? db
-          .collection<NPP>("npps")
+      ? nppsCollection(db)
           .find({ _id: { $in: missingNppIds } })
           .project<Pick<NPP, "_id" | "name" | "party">>({ _id: 1, name: 1, party: 1 })
           .toArray()

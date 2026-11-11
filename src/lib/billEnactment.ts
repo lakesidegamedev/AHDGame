@@ -110,6 +110,7 @@ import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 type EnactableBill = Pick<
   Bill | StateBill,
@@ -1138,9 +1139,7 @@ async function applyBucketImpactsToVoters(
   await charactersCollection(db).updateMany({ _id: { $in: validObjectIds } }, { $inc: incUpdates });
 
   // Update NPPs (some voter IDs might be NPPs)
-  await db
-    .collection<NPP>("npps")
-    .updateMany({ _id: { $in: validObjectIds } }, { $inc: incUpdates });
+  await nppsCollection(db).updateMany({ _id: { $in: validObjectIds } }, { $inc: incUpdates });
 
   // Clamp values for characters
   const characters = await charactersCollection(db)
@@ -1173,8 +1172,7 @@ async function applyBucketImpactsToVoters(
   }
 
   // Clamp values for NPPs
-  const npps = await db
-    .collection<NPP>("npps")
+  const npps = await nppsCollection(db)
     .find({ _id: { $in: validObjectIds }, bucketApprovals: { $exists: true } })
     .toArray();
 
@@ -1200,6 +1198,6 @@ async function applyBucketImpactsToVoters(
     }
   }
   if (nppBulkOps.length > 0) {
-    await db.collection<NPP>("npps").bulkWrite(nppBulkOps);
+    await nppsCollection(db).bulkWrite(nppBulkOps);
   }
 }

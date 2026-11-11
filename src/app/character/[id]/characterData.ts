@@ -38,6 +38,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 interface CandidateElection {
   election: Election;
@@ -144,7 +145,7 @@ export async function getCharacterById(characterId: string) {
       // Check if it's an NPP (only for ObjectId lookups)
       if (parsed.type === "objectId" && ObjectId.isValid(parsed.value)) {
         const db = await getDb();
-        const npp = await db.collection<NPP>("npps").findOne({ _id: new ObjectId(parsed.value) });
+        const npp = await nppsCollection(db).findOne({ _id: new ObjectId(parsed.value) });
         if (npp?.sequentialId) redirect(`/politicians/npp/${npp.sequentialId}`);
         if (npp) redirect(`/politicians/npp/${parsed.value}`);
       }

@@ -50,6 +50,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import type { Document } from "mongodb";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /**
  * Runtime collections that `resetGameWorld` handles with bespoke logic instead
@@ -495,7 +496,7 @@ export async function resetGameWorld(
   const officialsResult = await electedOfficialsCollection<Document>(db).deleteMany({});
   const electionsResult = await db.collection("elections").deleteMany({});
   const candidatesResult = await db.collection("electionCandidates").deleteMany({});
-  const nppsResult = await db.collection("npps").deleteMany({});
+  const nppsResult = await nppsCollection<Document>(db).deleteMany({});
   const logsResult = await db.collection("actionLogs").deleteMany({});
   const billsResult = await db.collection("bills").deleteMany({});
   const stateBillsResult = await db.collection("stateBills").deleteMany({});

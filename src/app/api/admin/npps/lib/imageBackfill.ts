@@ -4,6 +4,7 @@ import type { NPP } from "@/lib/db/types";
 import type { Db } from "@/lib/mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import { selectPoliticianImage, weightedRandomEthnicity } from "@/lib/npp/generator";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /**
  * Give every active NPP without an avatar a generic portrait.
@@ -14,8 +15,7 @@ import { selectPoliticianImage, weightedRandomEthnicity } from "@/lib/npp/genera
  */
 export async function handleBackfillImages(db: Db): Promise<NextResponse> {
   try {
-    const nppsWithoutAvatar = await db
-      .collection<NPP>("npps")
+    const nppsWithoutAvatar = await nppsCollection(db)
       .find({ retiredAt: null, avatarUrl: { $exists: false } })
       .project<Pick<NPP, "_id" | "name" | "countryId" | "gender" | "ethnicity">>({
         name: 1,
@@ -51,7 +51,7 @@ export async function handleBackfillImages(db: Db): Promise<NextResponse> {
         : [];
     });
 
-    if (ops.length > 0) await db.collection<NPP>("npps").bulkWrite(ops);
+    if (ops.length > 0) await nppsCollection(db).bulkWrite(ops);
 
     return NextResponse.json({
       message: `Successfully backfilled avatars for ${ops.length} NPPs.`,

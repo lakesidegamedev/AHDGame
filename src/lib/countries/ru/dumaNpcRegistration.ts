@@ -11,6 +11,7 @@ import { loadPendingRussianCouncilOwners } from "./pendingCouncilMandates";
 import { russianDumaConvocationOfficeCompatible } from "./rules/dumaConvocation";
 import { planRussianDumaNpcSlates } from "./rules/assemblyNpcSlates";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export async function registerRussianDumaNpcSlates(input: {
   db: Db;
@@ -34,8 +35,7 @@ export async function registerRussianDumaNpcSlates(input: {
   const partyIds = parties.map((party) => String(party.sequentialId));
   if (parties.some((party) => !Number.isSafeInteger(party.sequentialId) || party.sequentialId < 1))
     throw new Error("Duma NPC admission needs registered party identities");
-  const profiles = await db
-    .collection<NPP>("npps")
+  const profiles = await nppsCollection(db)
     .find(
       {
         countryId: "RU",

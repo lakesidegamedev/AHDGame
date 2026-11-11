@@ -26,6 +26,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 // Static sim-harness parameters — the "conditions we specified" for a run.
 // Source-of-truth lives in scripts/sim/runWorld.ts (country allowlist,
@@ -315,8 +316,7 @@ function deriveGovernmentTimeline(seats: SeatsTimelinePoint[]): GovernmentContro
 
 async function collectWealthLeaders(db: Db, parties: PartyInfo[]): Promise<WealthLeader[]> {
   void parties; // name-join happens in the front-end via the `parties` directory.
-  const npps = await db
-    .collection<NPP>("npps")
+  const npps = await nppsCollection(db)
     .find(
       { retiredAt: null },
       {
@@ -435,8 +435,7 @@ async function collectTopCorporations(db: Db): Promise<TopCorporation[]> {
   const ceoIds = ranked.map((r) => r.corp.ceoId).filter((id): id is NonNullable<typeof id> => !!id);
   const ceoNpps =
     ceoIds.length > 0
-      ? await db
-          .collection<NPP>("npps")
+      ? await nppsCollection(db)
           .find({ _id: { $in: ceoIds } }, { projection: { name: 1 } })
           .toArray()
       : [];

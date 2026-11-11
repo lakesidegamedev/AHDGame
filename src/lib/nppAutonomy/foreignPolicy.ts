@@ -65,6 +65,7 @@ export type {
 import { voteCandidates, bilateralCandidates, warCandidates } from "./foreignPolicyCandidates";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 function buildOpinion(context: ForeignPolicyContext, targetCountryId: CountryId): CountryOpinion {
   const factors: OpinionFactor[] = [];
   const sourceAlignment = context.alignments.find(
@@ -302,7 +303,7 @@ async function loadContext(
   if (!government || government.status !== "formed") return null;
   const headNppId = government.presidentNppId ?? government.pmNppId ?? null;
   if (!headNppId) return null;
-  const head = await db.collection<NPP>("npps").findOne(
+  const head = await nppsCollection(db).findOne(
     { _id: headNppId },
     {
       projection: {

@@ -11,6 +11,7 @@ import type { UpgradeCategory } from "@/lib/campaigns/upgradeCosts";
 import type { Election, PrimaryStateActionKind } from "@/lib/db/types";
 import { campaignPageHref } from "@/lib/campaignManager/links";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /**
  * Emitters for the per-race wire.
@@ -67,9 +68,10 @@ async function candidateName(db: Db, candidateId: ObjectId): Promise<string | nu
   );
   if (character?.name) return character.name;
 
-  const npp = await db
-    .collection<{ name?: string }>("npps")
-    .findOne({ _id: candidateId }, { projection: { name: 1 } });
+  const npp = await nppsCollection<{ name?: string }>(db).findOne(
+    { _id: candidateId },
+    { projection: { name: 1 } }
+  );
   return npp?.name ?? null;
 }
 

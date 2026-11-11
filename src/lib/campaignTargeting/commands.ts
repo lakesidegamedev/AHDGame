@@ -32,6 +32,7 @@ import {
   type CampaignTarget,
 } from "./rules";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 type Actor = AuthUserWithCharacter & { hasCharacter: true; character: Character };
 
@@ -99,12 +100,10 @@ export async function quoteTargetedAds(
     throw forbidden("That region is outside this election");
   const owner =
     candidate.isNPP && candidate.nppId
-      ? await db
-          .collection<NPP>("npps")
-          .findOne(
-            { _id: candidate.nppId },
-            { projection: { "policies.economic": 1, "policies.social": 1, homeState: 1 } }
-          )
+      ? await nppsCollection(db).findOne(
+          { _id: candidate.nppId },
+          { projection: { "policies.economic": 1, "policies.social": 1, homeState: 1 } }
+        )
       : await charactersCollection(db).findOne(
           { _id: candidate.characterId },
           { projection: { policies: 1, homeState: 1 } }

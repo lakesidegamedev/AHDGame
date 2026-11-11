@@ -21,6 +21,7 @@ import type { CongressLeader } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /**
  * Move an Independent player's live governmental candidacies onto the party
@@ -616,8 +617,7 @@ export async function sweepPartyMismatchedCandidates(): Promise<number> {
 
   const nppPartyMap = new Map<string, string>();
   if (nppIds.length > 0) {
-    const npps = await db
-      .collection<NPP>("npps")
+    const npps = await nppsCollection(db)
       .find({ _id: { $in: nppIds } })
       .project({ _id: 1, party: 1 })
       .toArray();

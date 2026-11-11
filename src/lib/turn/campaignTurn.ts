@@ -43,6 +43,7 @@ import { logger } from "../observability/logger";
 import { fundPoliticalMediaOrder } from "@/lib/politicalMedia/journal";
 import type { PoliticalMediaPayer } from "@/lib/politicalMedia/journal";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export interface CampaignTurnResults {
   campaignsProcessed: number;
@@ -303,8 +304,7 @@ export async function processCampaignTurn(turnNumber: number): Promise<CampaignT
                 .toArray()
             : Promise.resolve([]),
           nppIds.length > 0
-            ? db
-                .collection("npps")
+            ? nppsCollection<Document>(db)
                 // `policies` is ~94% of an NPP document and is not read here.
                 .find({ _id: { $in: nppIds } }, { projection: { policies: 0 } })
                 .toArray()
@@ -1039,6 +1039,6 @@ async function applyPassiveEffectsBulk(
         update: buildClampedFavorabilityUpdate(amount),
       },
     }));
-    await db.collection("npps").bulkWrite(nppOps);
+    await nppsCollection<Document>(db).bulkWrite(nppOps);
   }
 }

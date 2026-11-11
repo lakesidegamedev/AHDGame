@@ -27,6 +27,7 @@ import { isSeatActive } from "@/lib/cabinet/rosterEra";
 import { getLiveGameYear } from "@/lib/cabinet/liveGameYear";
 import { resetCabinetSettingCooldowns } from "@/lib/db/collections/cabinetSettings";
 import { initialMinisterialActionFields } from "@/lib/cabinet/ministerialActionPool";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export type CaretakerMinisterError =
   | "invalid-position"
@@ -87,7 +88,7 @@ export async function appointCaretakerMinister(
     return { ok: false, error: "invalid-position" };
   }
 
-  const npp = await db.collection<NPP>("npps").findOne({ _id: nppId });
+  const npp = await nppsCollection(db).findOne({ _id: nppId });
   if (!npp) return { ok: false, error: "npp-not-found" };
   if (npp.countryId !== countryId) return { ok: false, error: "npp-wrong-country" };
   if (npp.retiredAt != null) return { ok: false, error: "npp-retired" };

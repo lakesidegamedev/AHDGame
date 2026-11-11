@@ -12,6 +12,7 @@ import { resolvePartyTier } from "@/lib/parties/partyTier";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /**
  * Per-axis stance distance (on the shared -5..+5 economic/social axes) within
@@ -212,8 +213,7 @@ export async function autoVoteNppsForImpeachmentStage(
     .filter((id): id is ObjectId => id instanceof ObjectId);
   const [nppDocs, targetChar] = await Promise.all([
     nppIdList.length > 0
-      ? db
-          .collection<NPP>("npps")
+      ? nppsCollection(db)
           .find({ _id: { $in: nppIdList } })
           .project<Pick<NPP, "_id" | "policies">>({ _id: 1, policies: 1 })
           .toArray()

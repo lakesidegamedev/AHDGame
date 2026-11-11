@@ -14,6 +14,7 @@ import {
 } from "@/lib/campaignTargeting/commands";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -35,9 +36,10 @@ export async function GET(request: NextRequest, { params }: Params) {
     const ownerHome =
       context.candidate.isNPP && context.candidate.nppId
         ? (
-            await db
-              .collection<NPP>("npps")
-              .findOne({ _id: context.candidate.nppId }, { projection: { homeState: 1 } })
+            await nppsCollection(db).findOne(
+              { _id: context.candidate.nppId },
+              { projection: { homeState: 1 } }
+            )
           )?.homeState
         : (
             await charactersCollection(db).findOne(

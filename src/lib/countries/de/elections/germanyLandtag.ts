@@ -47,6 +47,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 const LANDTAG_THRESHOLD = 0.05;
 
@@ -437,7 +438,7 @@ async function sweepStaleLandtagOffice(
     )
   );
 
-  await db.collection<NPP>("npps").updateMany(
+  await nppsCollection(db).updateMany(
     {
       ...officeMatch,
       ...(currentNppIds.length > 0 ? { _id: { $nin: currentNppIds } } : {}),
@@ -562,12 +563,10 @@ export async function resolveDELandtagElection(
     if (candidate.isNPP && candidate.nppId) {
       const nppId = candidate.nppId;
       winnerActions.push(async () => {
-        await db
-          .collection<NPP>("npps")
-          .updateOne(
-            { _id: nppId },
-            { $set: { currentOffice: office, party: partyId, updatedAt: now } }
-          );
+        await nppsCollection(db).updateOne(
+          { _id: nppId },
+          { $set: { currentOffice: office, party: partyId, updatedAt: now } }
+        );
       });
     } else if (!candidate.isNPP && candidate.characterId) {
       const charId = candidate.characterId;

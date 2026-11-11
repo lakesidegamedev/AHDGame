@@ -61,6 +61,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import type { Document } from "mongodb";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /** Readiness check names that are expected-empty pre-founding / pre-seat. */
 const PRE_FOUNDING_READINESS = new Set(["NPPs", "ElectedOfficials", "GovernmentFormation"]);
@@ -1119,8 +1120,7 @@ async function checkEmptyPoliticalStart(
 ): Promise<SeedDiagnosticCheck[]> {
   const checks: SeedDiagnosticCheck[] = [];
   const countryFilter = startingCountryFilter(countries, true);
-  const npps = await db
-    .collection("npps")
+  const npps = await nppsCollection<Document>(db)
     .find(countryFilter)
     .project<{ _id: ObjectId }>({ _id: 1 })
     .toArray();

@@ -4,6 +4,7 @@ import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError } from "@/lib/api/errors";
 import { archiveCampaignsForCandidates } from "@/lib/campaigns/archiveWithdrawnCampaigns";
 import type { Election, ElectionCandidate, NPP } from "@/lib/db/types";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 // POST /api/admin/npps/vacate-primaries — Withdraws all NPP candidates from every active election
 // Auth: requireAdmin
@@ -17,7 +18,7 @@ export async function POST() {
     const now = new Date();
 
     // Get all NPP IDs (the authoritative source)
-    const allNPPs = await db.collection<NPP>("npps").find({}).project({ _id: 1 }).toArray();
+    const allNPPs = await nppsCollection(db).find({}).project({ _id: 1 }).toArray();
     const nppIds = allNPPs.map((n) => n._id);
 
     // Find all active elections

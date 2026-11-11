@@ -39,6 +39,7 @@ import { emitRallyWire } from "@/lib/elections/raceWireEmit";
 import { CAMPAIGN_ACTIVITY_HISTORY_CAP } from "@/lib/campaigns/constants/activityHistory";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export async function appointCampaignManager(params: {
   db: Db;
@@ -428,9 +429,7 @@ export async function retargetOppositionResearch(params: {
 
   const targetOid = new ObjectId(targetId);
   const targetChar = await charactersCollection(db).findOne({ _id: targetOid });
-  const targetNpp = !targetChar
-    ? await db.collection<NPP>("npps").findOne({ _id: targetOid })
-    : null;
+  const targetNpp = !targetChar ? await nppsCollection(db).findOne({ _id: targetOid }) : null;
   const target = targetChar || targetNpp;
   if (!target) {
     throw notFound("Target not found");

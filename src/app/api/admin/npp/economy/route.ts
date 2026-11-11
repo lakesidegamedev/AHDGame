@@ -6,6 +6,7 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { z } from "zod";
 import type { NPP, GameConfig, GameState } from "@/lib/db/types";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /** GET — return NPP economy enabled status and aggregate stats */
 export async function GET() {
@@ -20,8 +21,7 @@ export async function GET() {
         .collection<GameConfig>("gameConfig")
         .findOne({ _id: "default" }, { projection: { nppEconomyEnabled: 1 } }),
       gameStateCollection(db).findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
-      db
-        .collection<NPP>("npps")
+      nppsCollection(db)
         .aggregate([
           { $match: { retiredAt: null } },
           {

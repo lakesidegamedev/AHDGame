@@ -26,6 +26,7 @@ import type { ElectionNewsOutcome } from "./electionNotifications";
 import { voidDebateSessionsForElection } from "@/lib/debate/debateSessionLifecycle";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export interface OneElectionResult {
   resolved: boolean;
@@ -200,7 +201,7 @@ export async function sweepStaleOffice(
       )
     );
 
-  await db.collection<NPP>("npps").updateMany(
+  await nppsCollection(db).updateMany(
     {
       ...officeMatch,
       ...(currentNppIds.length > 0 ? { _id: { $nin: currentNppIds } } : {}),
@@ -263,12 +264,10 @@ export async function resolveElectionWithNoTally(
         );
       }
       if (incumbent.nppId) {
-        await db
-          .collection<NPP>("npps")
-          .updateOne(
-            { _id: incumbent.nppId, ...officeFilter },
-            { $set: { currentOffice: null, updatedAt: now } }
-          );
+        await nppsCollection(db).updateOne(
+          { _id: incumbent.nppId, ...officeFilter },
+          { $set: { currentOffice: null, updatedAt: now } }
+        );
       }
       await electedOfficialsCollection(db).deleteOne({ _id: incumbent._id });
       if (incumbent.characterId && !incumbent.isNPP)
@@ -385,12 +384,10 @@ export async function resolveElectionWithZeroVotes(
         );
       }
       if (incumbent.nppId) {
-        await db
-          .collection<NPP>("npps")
-          .updateOne(
-            { _id: incumbent.nppId, ...officeFilter },
-            { $set: { currentOffice: null, updatedAt: now } }
-          );
+        await nppsCollection(db).updateOne(
+          { _id: incumbent.nppId, ...officeFilter },
+          { $set: { currentOffice: null, updatedAt: now } }
+        );
       }
       await electedOfficialsCollection(db).deleteOne({ _id: incumbent._id });
       if (incumbent.characterId && !incumbent.isNPP)
@@ -503,12 +500,10 @@ export async function resolveElectionWithNoRankedCandidates(
         );
       }
       if (incumbent.nppId) {
-        await db
-          .collection<NPP>("npps")
-          .updateOne(
-            { _id: incumbent.nppId, ...officeFilter },
-            { $set: { currentOffice: null, updatedAt: now } }
-          );
+        await nppsCollection(db).updateOne(
+          { _id: incumbent.nppId, ...officeFilter },
+          { $set: { currentOffice: null, updatedAt: now } }
+        );
       }
       await electedOfficialsCollection(db).deleteOne({ _id: incumbent._id });
       if (incumbent.characterId && !incumbent.isNPP)

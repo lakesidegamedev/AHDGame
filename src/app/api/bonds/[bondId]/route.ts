@@ -30,6 +30,7 @@ import { isBankPropTradingEnabled } from "@/lib/banking/featureFlag";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 interface RouteParams {
   params: Promise<{ bondId: string }>;
@@ -292,8 +293,7 @@ export const GET = withNoStore(async function GET(_request: Request, { params }:
             .toArray()
         : [],
       nppIds.length > 0
-        ? db
-            .collection<NPP>("npps")
+        ? nppsCollection(db)
             .find({ _id: { $in: nppIds } })
             .project<Pick<NPP, "_id" | "name" | "avatarUrl" | "sequentialId">>({
               _id: 1,

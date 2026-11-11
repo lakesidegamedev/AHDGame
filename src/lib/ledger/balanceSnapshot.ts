@@ -18,6 +18,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export const BALANCE_SNAPSHOTS_COLLECTION = "balanceSnapshots";
 export const BALANCE_CHECKPOINTS_COLLECTION = "balanceSnapshotCheckpoints";
@@ -267,11 +268,11 @@ async function collectBalanceState(
   // matches financialTxLog subject rows; the stored balance is already in ₳.
   // NPP is included in REAL_ACCOUNT_KINDS so uncovered investment writers
   // surface as amber stock-vs-flow findings instead of being hidden.
-  const npps = db.collection<{
+  const npps = nppsCollection<{
     _id: ObjectId;
     countryId?: string;
     nppInvestmentCashAnchor?: number;
-  }>("npps");
+  }>(db);
   const nppCursor = npps.find({}, { projection: { countryId: 1, nppInvestmentCashAnchor: 1 } });
   for await (const npp of nppCursor) {
     if (typeof npp.nppInvestmentCashAnchor !== "number") continue;

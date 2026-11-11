@@ -8,6 +8,7 @@ import { getNextSequentialId } from "@/lib/db/sequentialId";
 import { getEraContext } from "@/lib/era/context";
 import { DEFAULT_CANDIDATE_SUPPORT } from "@/lib/elections/engine/electionFormulaFactors";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 type PartyData = { countryId: string; partyId: string };
 
@@ -251,7 +252,7 @@ export async function handleGenerateNPPs(
         const sequentialId = await getNextSequentialId(db, "npp");
         const nppWithId: NPP = { ...npp, sequentialId };
 
-        await db.collection<NPP>("npps").insertOne(nppWithId);
+        await nppsCollection(db).insertOne(nppWithId);
 
         const candidateEntry: ElectionCandidate = {
           _id: new ObjectId(),

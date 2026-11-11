@@ -29,6 +29,7 @@ import {
 import type { ObjectId } from "mongodb";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 interface CaucusTaxResult {
   caucusesProcessed: number;
@@ -114,8 +115,7 @@ export async function processCaucusTax(
               .toArray()
           : Promise.resolve([] as Character[]),
         nppIds.length
-          ? db
-              .collection<NPP>("npps")
+          ? nppsCollection(db)
               // `policies` is ~94% of an NPP document and is not read here.
               .find({ _id: { $in: nppIds } }, { projection: { policies: 0 } })
               .toArray()
@@ -247,7 +247,7 @@ export async function processCaucusTax(
           const results = await Promise.all(
             nppDebits.map((d) =>
               landedOrNull(
-                db.collection<NPP>("npps").updateOne(
+                nppsCollection(db).updateOne(
                   { _id: d.npp._id, funds: { $gte: d.tax } },
                   {
                     $inc: { funds: -d.tax },

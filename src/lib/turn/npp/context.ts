@@ -40,6 +40,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 // ─── Context Types ─────────────────────────────────────────────────────────────
 
@@ -208,8 +209,7 @@ async function hydrateDomainPositions(
   }
   if (legislationTypeIds.size === 0 || voterIds.length === 0) return;
 
-  const rows = await db
-    .collection<NPP>("npps")
+  const rows = await nppsCollection(db)
     .aggregate<{ _id: ObjectId; domainPositions: Record<string, number> | null }>([
       { $match: { _id: { $in: voterIds } } },
       {
@@ -369,8 +369,7 @@ export async function loadNPPContext(now: Date, options?: NPPContextOptions): Pr
     allStateDemographics,
     allStates,
   ] = await Promise.all([
-    db
-      .collection<NPP>("npps")
+    nppsCollection(db)
       .find(
         // Technocrat NPPs (e.g. autonomous central-bank chairs) are hard-excluded
         // from the shared NPP context so they never enter political loops

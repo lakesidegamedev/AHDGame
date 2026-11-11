@@ -26,6 +26,7 @@ import {
   recoverQueuedPayouts,
   settleQueuedPayout,
 } from "./queuedPayoutSettlement";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /**
  * Queue claims one redemption pass may make, shared by every fund in the pass.
@@ -89,8 +90,7 @@ export async function prepareQueuedRedemptionPass(
   const nppCurrencyById = new Map<string, CurrencyCode>();
   const nppIds = pending.flatMap((entry) => (entry.nppId ? [entry.nppId] : []));
   if (nppIds.length > 0) {
-    const nppDocs = await db
-      .collection<{ _id: ObjectId; countryId?: string }>("npps")
+    const nppDocs = await nppsCollection<{ _id: ObjectId; countryId?: string }>(db)
       .find({ _id: { $in: nppIds } })
       .project({ countryId: 1, name: 1 })
       .toArray();

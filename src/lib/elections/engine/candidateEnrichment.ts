@@ -23,6 +23,7 @@ import { buildPartyChairMaps, resolvePartyChairPrimaryRole } from "@/lib/primary
 import type { StatePartyOrg } from "@/lib/db/types/statePartyOrg";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 // ─── Fetch & enrich candidate stats ──────────────────────────────────────────
 
@@ -117,8 +118,7 @@ export async function loadCandidateEnrichmentPreload(
           .toArray()
       : Promise.resolve([]),
     nppIds.length
-      ? db
-          .collection<NPP>("npps")
+      ? nppsCollection(db)
           .find({ _id: { $in: nppIds } }, { projection: { "policies.domainPositions": 0 } })
           .toArray()
       : Promise.resolve([]),
@@ -280,8 +280,7 @@ export async function fetchEnrichedCandidates(
           })
         )
       : nppIds.length > 0
-        ? db
-            .collection<NPP>("npps")
+        ? nppsCollection(db)
             // Enrichment reads the ideology pair, never the 30KB stance map.
             .find({ _id: { $in: nppIds } }, { projection: { "policies.domainPositions": 0 } })
             .toArray()

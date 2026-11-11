@@ -4,6 +4,7 @@ import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError } from "@/lib/api/errors";
 import { archiveCampaignsForCandidates } from "@/lib/campaigns/archiveWithdrawnCampaigns";
 import type { NPP, Election, ElectionCandidate } from "@/lib/db/types";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /**
  * GET /api/admin/candidates/heal-cross-country
@@ -17,8 +18,7 @@ export async function GET() {
     const db = await getDb();
 
     // Get all NPPs with their country
-    const allNPPs = await db
-      .collection<NPP>("npps")
+    const allNPPs = await nppsCollection(db)
       .find({})
       .project({ _id: 1, name: 1, countryId: 1 })
       .toArray();
@@ -89,11 +89,7 @@ export async function POST() {
     const now = new Date();
 
     // Get all NPPs with their country
-    const allNPPs = await db
-      .collection<NPP>("npps")
-      .find({})
-      .project({ _id: 1, countryId: 1 })
-      .toArray();
+    const allNPPs = await nppsCollection(db).find({}).project({ _id: 1, countryId: 1 }).toArray();
     const nppCountryMap = new Map(allNPPs.map((n) => [n._id.toString(), n.countryId]));
 
     // Get all active elections with their country

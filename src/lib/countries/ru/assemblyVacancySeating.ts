@@ -21,6 +21,7 @@ import { planRussianAssemblyVacancySeating } from "./rules/assemblyVacancySeatin
 import type { RussianAssemblySeat } from "./rules/assemblySeating";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export async function materializeRussianAssemblyVacancySeating(input: {
   db: Db;
@@ -372,7 +373,7 @@ export async function materializeRussianAssemblyVacancySeating(input: {
       },
     }));
     const updated = isNpc
-      ? await db.collection<NPP>("npps").bulkWrite(operations, { session })
+      ? await nppsCollection(db).bulkWrite(operations, { session })
       : await charactersCollection(db).bulkWrite(operations, { session });
     if (updated.matchedCount !== selected.length)
       throw new Error("Assembly vacancy owner changed during seating");

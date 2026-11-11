@@ -30,6 +30,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export interface EmptyPartyCleanupResult {
   deletedParties: string[];
@@ -100,8 +101,7 @@ export async function cleanupEmptyParties(): Promise<EmptyPartyCleanupResult> {
         },
       ])
       .toArray(),
-    db
-      .collection<NPP>("npps")
+    nppsCollection(db)
       .aggregate<CompositeCount>([
         { $match: { party: { $in: partyStringIds }, retiredAt: null } },
         {

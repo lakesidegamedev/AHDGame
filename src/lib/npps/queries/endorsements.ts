@@ -1,9 +1,10 @@
 import { ObjectId, type Db } from "mongodb";
 import type { Election, NPPEndorsement, NPP } from "@/lib/db/types";
 import { buildActiveVisibleNppEndorsementFilter } from "@/lib/nppEndorsements";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export async function getNppEndorsements(db: Db, nppId: ObjectId) {
-  const npp = await db.collection<NPP>("npps").findOne({ _id: nppId });
+  const npp = await nppsCollection(db).findOne({ _id: nppId });
   if (!npp) return null;
 
   const endorsements = await db

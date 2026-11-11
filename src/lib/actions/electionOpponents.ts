@@ -21,6 +21,7 @@ import {
 } from "@/lib/elections/engine/singleSeatIncumbency";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /** A rival candidate as the poll and the opponent summary see them. */
 export interface OpponentForShare {
@@ -188,8 +189,7 @@ export async function getElectionOpponents(
 
       const [nppDocs, charDocs] = await Promise.all([
         nppIds.length > 0
-          ? db
-              .collection<NPP>("npps")
+          ? nppsCollection(db)
               .find({ _id: { $in: nppIds.map((id) => new ObjectId(id)) } })
               .toArray()
           : Promise.resolve([]),

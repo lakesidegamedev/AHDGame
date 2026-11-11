@@ -12,6 +12,7 @@ import { requireAdmin } from "@/lib/api/requireAdmin";
 import { schemas } from "@/lib/api/validate";
 import { handleRouteError, notFound, errorResponse } from "@/lib/api/errors";
 import type { NPP } from "@/lib/db/types";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export async function POST(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -21,9 +22,10 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     const { id } = await params;
     if (!schemas.objectId.safeParse(id).success) return errorResponse(400, "Invalid NPP ID");
     const db = await getDb();
-    const result = await db
-      .collection<NPP>("npps")
-      .updateOne({ _id: new ObjectId(id) }, { $set: { funds: 0 } });
+    const result = await nppsCollection(db).updateOne(
+      { _id: new ObjectId(id) },
+      { $set: { funds: 0 } }
+    );
 
     if (result.matchedCount === 0) throw notFound("NPP not found");
 

@@ -25,6 +25,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import type { Document } from "mongodb";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /** Seat total for a multi-seat group, read from the resolved State field. */
 function totalForSpec(
@@ -63,7 +64,7 @@ async function setCurrentOffice(
   currentOffice: { type: string; state: string; seatsHeld?: number }
 ): Promise<void> {
   if (actor.isNPP && actor.nppId) {
-    await db.collection<NPP>("npps").updateOne({ _id: actor.nppId }, { $set: { currentOffice } });
+    await nppsCollection(db).updateOne({ _id: actor.nppId }, { $set: { currentOffice } });
   } else if (actor.characterId) {
     await charactersCollection(db).updateOne(
       { _id: actor.characterId },
@@ -124,7 +125,7 @@ export const POST = withAdminRoute(
       party = character.party;
       characterId = character._id;
     } else {
-      const npp = await db.collection<NPP>("npps").findOne({
+      const npp = await nppsCollection(db).findOne({
         _id: entityOid,
       });
       if (!npp) {

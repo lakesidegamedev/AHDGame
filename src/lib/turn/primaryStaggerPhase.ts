@@ -78,6 +78,8 @@ import { getNppsCollection } from "@/lib/db/collections/npps";
 import { getElectionsCollection } from "@/lib/db/collections/elections";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import type { Document } from "mongodb";
 
 const MS_PER_HOUR = 3_600_000;
 
@@ -921,7 +923,7 @@ export async function runPrimaryStaggerWaveIfDue(
         update: buildClampedFavorabilityUpdate(amount),
       },
     }));
-    await db.collection("npps").bulkWrite(ops);
+    await nppsCollection<Document>(db).bulkWrite(ops);
   }
 
   // ── Vote-share momentum accumulation (stretched races only) ────────────────

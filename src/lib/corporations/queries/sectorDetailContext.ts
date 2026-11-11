@@ -44,6 +44,8 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import type { Document } from "mongodb";
 
 /** Reads the state, country, tariff, sibling and market context for one sector. */
 export async function loadSectorDetailContext({
@@ -196,12 +198,10 @@ export async function loadSectorDetailContext({
               { projection: { name: 1, sequentialId: 1, avatarUrl: 1 } }
             )
         : corporation.ceoType === "npp"
-          ? db
-              .collection("npps")
-              .findOne(
-                { _id: corporation.ceoId },
-                { projection: { name: 1, sequentialId: 1, avatarUrl: 1 } }
-              )
+          ? nppsCollection<Document>(db).findOne(
+              { _id: corporation.ceoId },
+              { projection: { name: 1, sequentialId: 1, avatarUrl: 1 } }
+            )
           : charactersCollection(db).findOne(
               { _id: corporation.ceoId },
               {

@@ -3,6 +3,7 @@ import type { ElectedOfficial, NPP, PoliticalParty } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export interface ExecutiveHolder {
   /** Character _id or NPP _id (whichever backs the seat), as a string. */
@@ -66,7 +67,7 @@ export async function resolveExecutiveHolder(
   }
 
   if (official.nppId) {
-    const npp = await db.collection<NPP>("npps").findOne({ _id: official.nppId });
+    const npp = await nppsCollection(db).findOne({ _id: official.nppId });
     if (!npp) return null;
     const { name, color } = await lookupParty(npp.party);
     return {

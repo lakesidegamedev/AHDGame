@@ -32,6 +32,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import type { Document } from "mongodb";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export { PERSONS_PER_HOUSEHOLD, HOUSEHOLD_LIQUID_RATIO, HOUSEHOLD_SAVINGS_RATIO };
 
@@ -104,8 +105,7 @@ export async function snapshotMoneySupply(db: Db, turn: number): Promise<number>
         }
       )
       .toArray(),
-    db
-      .collection("npps")
+    nppsCollection<Document>(db)
       .find(
         {},
         { projection: { countryId: 1, funds: 1, currencyBalances: 1, nppInvestmentCashAnchor: 1 } }

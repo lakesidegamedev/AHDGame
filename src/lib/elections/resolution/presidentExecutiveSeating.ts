@@ -28,6 +28,7 @@ import {
 import { captureOfficeTransition } from "@/lib/analytics/officeTransitionAnalytics";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export interface SeatPresidentialExecutiveParams {
   election: Election;
@@ -124,7 +125,7 @@ export async function seatPresidentialExecutive(
     { $set: { currentOffice: null, updatedAt: now } }
   );
 
-  await db.collection<NPP>("npps").updateMany(
+  await nppsCollection(db).updateMany(
     {
       countryId: resolutionCountryId,
       "currentOffice.type": { $in: ["president", "vicePresident"] },
@@ -199,7 +200,7 @@ export async function seatPresidentialExecutive(
   );
 
   if (winnerCandidate.isNPP && winnerCandidate.nppId) {
-    await db.collection<NPP>("npps").updateOne(
+    await nppsCollection(db).updateOne(
       { _id: winnerCandidate.nppId },
       {
         $set: {
@@ -214,7 +215,7 @@ export async function seatPresidentialExecutive(
     // seating from counting the same win twice.
     if (!acting && election.cycle !== 0) {
       const electionId = election._id.toString();
-      await db.collection<NPP>("npps").updateOne(
+      await nppsCollection(db).updateOne(
         { _id: winnerCandidate.nppId, lastExecutiveTermElectionId: { $ne: electionId } },
         {
           $inc: { [`executiveTermsServed.${electionCountry}`]: 1 },
@@ -336,9 +337,10 @@ export async function seatPresidentialExecutive(
   }
 
   if (vpNppId) {
-    const vpNpp = await db
-      .collection<NPP>("npps")
-      .findOne({ _id: vpNppId }, { projection: { name: 1, party: 1 } });
+    const vpNpp = await nppsCollection(db).findOne(
+      { _id: vpNppId },
+      { projection: { name: 1, party: 1 } }
+    );
     if (vpNpp) {
       await electedOfficialsCollection(db).updateOne(
         getExecutiveOfficialFilter(electionCountry, "vicePresident"),
@@ -358,12 +360,10 @@ export async function seatPresidentialExecutive(
         },
         { upsert: true }
       );
-      await db
-        .collection<NPP>("npps")
-        .updateOne(
-          { _id: vpNppId },
-          { $set: { currentOffice: { type: "vicePresident" }, updatedAt: now } }
-        );
+      await nppsCollection(db).updateOne(
+        { _id: vpNppId },
+        { $set: { currentOffice: { type: "vicePresident" }, updatedAt: now } }
+      );
     }
   }
 

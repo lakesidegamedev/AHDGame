@@ -31,6 +31,7 @@ import {
 } from "@/lib/congress/leadership/rolePolicy";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export interface BuildSpeakerResponseInput {
   db: Db;
@@ -87,12 +88,10 @@ export async function buildSpeakerResponse(
     );
     const npp = char
       ? null
-      : await db
-          .collection<NPP>("npps")
-          .findOne(
-            { _id: leaderDoc.characterId },
-            { projection: { homeState: 1, avatarUrl: 1, sequentialId: 1 } }
-          );
+      : await nppsCollection(db).findOne(
+          { _id: leaderDoc.characterId },
+          { projection: { homeState: 1, avatarUrl: 1, sequentialId: 1 } }
+        );
     const speakerBorder = char?.userId
       ? (await fetchBordersByUserIds(db, [char.userId])).get(char.userId.toString())
       : undefined;
@@ -139,8 +138,7 @@ export async function buildSpeakerResponse(
   const foundCharIds = new Set(nomineeChars.map((c) => c._id.toString()));
   const nppNomineeIds = nomineeIds.filter((id) => !foundCharIds.has(id.toString()));
   if (nppNomineeIds.length > 0) {
-    const nppDocs = await db
-      .collection<NPP>("npps")
+    const nppDocs = await nppsCollection(db)
       .find(
         { _id: { $in: nppNomineeIds } },
         { projection: { _id: 1, avatarUrl: 1, sequentialId: 1 } }

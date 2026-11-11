@@ -40,6 +40,8 @@ import {
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import type { Document } from "mongodb";
 
 /**
  * ₳ → fund-currency rate for a holder payout, matching what redeem applies.
@@ -184,8 +186,7 @@ export async function processIndexFundDividend(
           .toArray()
       : Promise.resolve([] as Pick<ImperialCharacter, "_id" | "name">[]),
     nppIds.length
-      ? db
-          .collection<{ _id: ObjectId; countryId: CountryId }>("npps")
+      ? nppsCollection<{ _id: ObjectId; countryId: CountryId }>(db)
           .find({ _id: { $in: nppIds } }, { projection: { _id: 1, countryId: 1 } })
           .toArray()
       : Promise.resolve([]),
@@ -365,7 +366,7 @@ export async function processIndexFundDividend(
   );
   if (nppOps.length > 0) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await db.collection("npps").bulkWrite(nppOps as any);
+    await nppsCollection<Document>(db).bulkWrite(nppOps as any);
   }
 
   const undistributedPassThrough =
@@ -533,8 +534,7 @@ export async function processIndexFundDividendsBatch(
           .toArray()
       : Promise.resolve([] as Pick<ImperialCharacter, "_id" | "name">[]),
     nppIds.length
-      ? db
-          .collection<{ _id: ObjectId; countryId: CountryId }>("npps")
+      ? nppsCollection<{ _id: ObjectId; countryId: CountryId }>(db)
           .find({ _id: { $in: nppIds } }, { projection: { _id: 1, countryId: 1 } })
           .toArray()
       : Promise.resolve([]),
@@ -797,7 +797,7 @@ export async function processIndexFundDividendsBatch(
   await Promise.all([
     corporateOps.length ? corporationsCollection(db).bulkWrite(corporateOps) : Promise.resolve(),
     fundOps.length ? db.collection("indexFunds").bulkWrite(fundOps as any[]) : Promise.resolve(),
-    nppOps.length ? db.collection("npps").bulkWrite(nppOps as any[]) : Promise.resolve(),
+    nppOps.length ? nppsCollection<Document>(db).bulkWrite(nppOps as any[]) : Promise.resolve(),
   ]);
   /* eslint-enable @typescript-eslint/no-explicit-any */
   await logIndexFundDividendBulk(db, holderTxEntries);

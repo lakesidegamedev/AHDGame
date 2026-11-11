@@ -24,6 +24,7 @@ import { ObjectId, type Db } from "mongodb";
 import { CAMPAIGN_ACTIVITY_HISTORY_CAP } from "@/lib/campaigns/constants/activityHistory";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 async function getCurrentTurn(db: Db): Promise<number> {
   const gameState = await gameStateCollection<{ _id: string; currentTurn?: number }>(db).findOne({
@@ -267,9 +268,10 @@ async function resolveAffinityCandidate(
   input: { isNPP: boolean; positionId: ObjectId; party: string }
 ): Promise<AffinityCandidate | null> {
   if (input.isNPP) {
-    const npp = await db
-      .collection<NPP>("npps")
-      .findOne({ _id: input.positionId }, { projection: { policies: 1 } });
+    const npp = await nppsCollection(db).findOne(
+      { _id: input.positionId },
+      { projection: { policies: 1 } }
+    );
     if (!npp) return null;
     return { charEP: npp.policies.economic, charSP: npp.policies.social, party: input.party };
   }

@@ -25,6 +25,7 @@ import { upsertPendingOrganizationVote } from "@/lib/internationalOrganizations/
 import { isNppAutonomyActive } from "./featureFlag";
 import { foreignPolicyModeFrom } from "./foreignPolicyRollout";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /** Per-turn caches so we don't re-query autonomy state, members, or voter
  *  identity for the same country/org across multiple pending items. */
@@ -77,12 +78,10 @@ async function getVoterIdentityCached(
   const cached = caches.voterByCountry.get(key);
   if (cached) return cached;
 
-  const npp = await db
-    .collection<NPP>("npps")
-    .findOne(
-      { countryId, retiredAt: null, isTechnocrat: { $ne: true } },
-      { projection: { _id: 1, name: 1 } }
-    );
+  const npp = await nppsCollection(db).findOne(
+    { countryId, retiredAt: null, isTechnocrat: { $ne: true } },
+    { projection: { _id: 1, name: 1 } }
+  );
   const identity = npp
     ? { characterId: npp._id, characterName: npp.name }
     : {

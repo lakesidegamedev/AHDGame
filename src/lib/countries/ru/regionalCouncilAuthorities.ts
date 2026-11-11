@@ -27,6 +27,7 @@ import {
 import { GAME_STATE_PRE_ITERATION_FIELDS } from "@/lib/db/collections/gameState";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export const RUSSIAN_REGIONAL_AUTHORITIES_COLLECTION = "russianRegionalAuthorities";
 export interface RussianRegionalAuthorityRecord extends RussianCouncilRegionalAuthority {
@@ -51,8 +52,7 @@ export interface RussianRegionalCouncilSeatingInputs {
 
 /** Project existing groups and both physical and mirrored incompatible offices in batches. */
 export async function loadRussianRegionalNpcProfiles(db: Db, session: ClientSession) {
-  const profiles = await db
-    .collection<NPP>("npps")
+  const profiles = await nppsCollection(db)
     .find(
       { countryId: "RU", retiredAt: null, isTechnocrat: { $ne: true } },
       { session, batchSize: 1000, projection: { name: 1, party: 1, currentOffice: 1 } }

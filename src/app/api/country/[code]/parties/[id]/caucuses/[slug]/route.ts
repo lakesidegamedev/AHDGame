@@ -18,6 +18,8 @@ import type { Caucus, CaucusMembership } from "@/lib/db/types";
 import type { Character } from "@/lib/db/types";
 import { normalizeDiscordInviteUrl } from "@/lib/discord/invite";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import type { Document } from "mongodb";
 
 // GET /api/country/[code]/parties/[id]/caucuses/[slug] — Detail view of a single caucus including policy positions
 // Auth: requireAuth
@@ -312,12 +314,10 @@ export async function DELETE(
         );
       }
       if (nppIds.length > 0) {
-        await db
-          .collection("npps")
-          .updateMany(
-            { _id: { $in: nppIds }, factionId: caucus._id },
-            { $set: { factionId: null, updatedAt: now } }
-          );
+        await nppsCollection<Document>(db).updateMany(
+          { _id: { $in: nppIds }, factionId: caucus._id },
+          { $set: { factionId: null, updatedAt: now } }
+        );
       }
     }
 

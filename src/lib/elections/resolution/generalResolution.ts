@@ -59,6 +59,7 @@ import { selectGeneralElectionWinners } from "./generalResolutionWinners";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export type { OneElectionResult } from "./generalResolutionHelpers";
 
@@ -470,12 +471,10 @@ export async function resolveOneGeneralElection(
             );
           }
           if (incumbent.nppId) {
-            await db
-              .collection<NPP>("npps")
-              .updateOne(
-                { _id: incumbent.nppId, ...officeFilter },
-                { $set: { currentOffice: null, updatedAt: now } }
-              );
+            await nppsCollection(db).updateOne(
+              { _id: incumbent.nppId, ...officeFilter },
+              { $set: { currentOffice: null, updatedAt: now } }
+            );
             console.log(
               `[Turn] Cleared currentOffice for NPP ${incumbent.characterName} ` +
                 `(${election.electionType}/${election.state}${election.senateClass ? ` Class ${election.senateClass}` : ""}) — did not win re-election`
@@ -504,8 +503,7 @@ export async function resolveOneGeneralElection(
             .toArray()
         : Promise.resolve([]),
       allCandidateNppIds.length > 0
-        ? db
-            .collection<NPP>("npps")
+        ? nppsCollection(db)
             // Seat resolution reads the office, never the 30KB stance map.
             .find(
               { _id: { $in: allCandidateNppIds }, retiredAt: null },
@@ -653,12 +651,10 @@ export async function resolveOneGeneralElection(
           }
         }
         const nppFinalOfficeType = preserveExecutiveOffice(officeType, npp?.currentOffice ?? null);
-        await db
-          .collection<NPP>("npps")
-          .updateOne(
-            { _id: candidate.nppId },
-            { $set: { currentOffice: nppFinalOfficeType, party: candidate.party, updatedAt: now } }
-          );
+        await nppsCollection(db).updateOne(
+          { _id: candidate.nppId },
+          { $set: { currentOffice: nppFinalOfficeType, party: candidate.party, updatedAt: now } }
+        );
       } else {
         // Clear previous position from electedOfficials if held a different office
         const char = charLookup.get(candidate.characterId?.toString() ?? "");
@@ -909,12 +905,10 @@ export async function resolveOneGeneralElection(
       if (!candidate) continue;
 
       if (candidate.isNPP && candidate.nppId) {
-        await db
-          .collection<NPP>("npps")
-          .updateOne(
-            { _id: candidate.nppId, ...loserOfficeMatch },
-            { $set: { currentOffice: null, updatedAt: now } }
-          );
+        await nppsCollection(db).updateOne(
+          { _id: candidate.nppId, ...loserOfficeMatch },
+          { $set: { currentOffice: null, updatedAt: now } }
+        );
       } else {
         // Vacate office if the loser currently holds this seat
         await charactersCollection(db).updateOne(

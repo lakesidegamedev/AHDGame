@@ -21,6 +21,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import type { SovereignResolutionChoice } from "@/lib/db/types/budget";
 import type { SovereignCrisisDecision } from "@/lib/db/types/sovereignCrisisDecision";
 import type { NPP } from "@/lib/db/types/npp";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 interface NpcLegislatorAutoVoteInput {
   decision: SovereignCrisisDecision;
@@ -106,8 +107,7 @@ export async function runNpcLegislatorAutoVote(
   // Find NPPs holding seats in the active chamber for this country, who
   // have NOT already voted on this phase.
   const alreadyVotedIds = Object.keys(phase.votes ?? {});
-  const npps = await db
-    .collection<NPP>("npps")
+  const npps = await nppsCollection(db)
     .find({
       countryId: input.countryCode,
       "currentOffice.type": phase.chamberKey,

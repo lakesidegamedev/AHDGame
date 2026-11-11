@@ -8,6 +8,7 @@ import { getPartyHex } from "@/lib/utils/politics";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export interface MapOfficeholder {
   id: string;
@@ -63,8 +64,7 @@ export async function computeMapOfficeholders(
           .toArray()
       : [],
     nppIds.length
-      ? db
-          .collection<NPP>("npps")
+      ? nppsCollection(db)
           .find({ _id: { $in: nppIds } }, { projection: { _id: 1, avatarUrl: 1 } })
           .toArray()
       : [],

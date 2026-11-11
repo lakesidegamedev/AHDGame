@@ -20,6 +20,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export type { OverviewCounts } from "@/lib/country/overviewCounts";
 
@@ -70,7 +71,7 @@ async function countPoliticians(db: Db, countryId: CountryId): Promise<number> {
         { $count: "count" },
       ])
       .toArray(),
-    db.collection("npps").countDocuments({ retiredAt: null, countryId }),
+    nppsCollection<Document>(db).countDocuments({ retiredAt: null, countryId }),
   ]);
   return (playerRows[0]?.count ?? 0) + nppCount;
 }

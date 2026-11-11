@@ -16,6 +16,8 @@ import { getCountryState } from "@/lib/countryState";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import type { Document } from "mongodb";
 
 const createCoalitionSchema = z.object({
   name: z.string().min(3).max(60).trim(),
@@ -246,8 +248,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
           { $group: { _id: "$party", count: { $sum: 1 } } },
         ])
         .toArray(),
-      db
-        .collection("npps")
+      nppsCollection<Document>(db)
         .aggregate<{ _id: string; count: number }>([
           { $match: { party: { $in: partySeqIds }, retiredAt: null, countryId } },
           { $group: { _id: "$party", count: { $sum: 1 } } },

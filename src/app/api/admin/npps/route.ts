@@ -19,6 +19,7 @@ import { handleRemoveNPPs } from "./lib/remove";
 import { handleSpawnNPPs } from "./lib/spawn";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 // GET /api/admin/npps — Returns NPP statistics including totals, counts by state and party, and recent NPPs
 // Auth: requireAdmin
@@ -30,9 +31,8 @@ export async function GET() {
 
     const db = await getDb();
 
-    const totalNPPs = await db.collection<NPP>("npps").countDocuments({ retiredAt: null });
-    const nppsByState = await db
-      .collection<NPP>("npps")
+    const totalNPPs = await nppsCollection(db).countDocuments({ retiredAt: null });
+    const nppsByState = await nppsCollection(db)
       .aggregate([
         { $match: { retiredAt: null } },
         { $group: { _id: "$homeState", count: { $sum: 1 } } },
@@ -52,8 +52,7 @@ export async function GET() {
     }
 
     // Group NPPs by country and party
-    const nppsByCountryAndParty = await db
-      .collection<NPP>("npps")
+    const nppsByCountryAndParty = await nppsCollection(db)
       .aggregate([
         { $match: { retiredAt: null } },
         { $group: { _id: { countryId: "$countryId", party: "$party" }, count: { $sum: 1 } } },
@@ -98,8 +97,7 @@ export async function GET() {
         status: "active",
       });
 
-    const recentNPPs = await db
-      .collection<NPP>("npps")
+    const recentNPPs = await nppsCollection(db)
       .find({ retiredAt: null })
       .sort({ createdAt: -1 })
       .limit(50)
@@ -179,7 +177,7 @@ export async function DELETE(request: Request) {
       }
 
       // Get all retired NPPs
-      const retiredNpps = await db.collection<NPP>("npps").find(retiredNppQuery).toArray();
+      const retiredNpps = await nppsCollection(db).find(retiredNppQuery).toArray();
       const retiredNppIds = retiredNpps.map((n) => n._id);
 
       let seatsVacated = 0;
@@ -195,12 +193,10 @@ export async function DELETE(request: Request) {
         seatsVacated = seatsResult.modifiedCount;
 
         // Clear currentOffice on those NPPs
-        await db
-          .collection<NPP>("npps")
-          .updateMany(
-            { _id: { $in: retiredNppIds }, currentOffice: { $ne: null } },
-            { $set: { currentOffice: null, updatedAt: now } }
-          );
+        await nppsCollection(db).updateMany(
+          { _id: { $in: retiredNppIds }, currentOffice: { $ne: null } },
+          { $set: { currentOffice: null, updatedAt: now } }
+        );
       }
 
       const stateDesc = states && states.length > 0 ? `in ${states.join(", ")}` : "in all states";
@@ -223,7 +219,7 @@ export async function DELETE(request: Request) {
         independentNppQuery.homeState = { $in: states };
       }
 
-      const independentNpps = await db.collection<NPP>("npps").find(independentNppQuery).toArray();
+      const independentNpps = await nppsCollection(db).find(independentNppQuery).toArray();
       const independentNppIds = independentNpps.map((n) => n._id);
 
       if (independentNppIds.length === 0) {
@@ -277,12 +273,10 @@ export async function DELETE(request: Request) {
       }
 
       // Retire the Independent NPPs
-      const retireResult = await db
-        .collection<NPP>("npps")
-        .updateMany(
-          { _id: { $in: independentNppIds } },
-          { $set: { retiredAt: now, currentOffice: null, updatedAt: now } }
-        );
+      const retireResult = await nppsCollection(db).updateMany(
+        { _id: { $in: independentNppIds } },
+        { $set: { retiredAt: now, currentOffice: null, updatedAt: now } }
+      );
       const nppsRetired = retireResult.modifiedCount;
 
       // Vacate any seats held by these NPPs
@@ -336,11 +330,11 @@ export async function DELETE(request: Request) {
     let seatsVacated = 0;
     if (!candidatesOnly) {
       // Get NPPs that will be retired so we can find their seats
-      const nppsToRetire = await db.collection<NPP>("npps").find(nppQuery).toArray();
+      const nppsToRetire = await nppsCollection(db).find(nppQuery).toArray();
       const nppIdsToRetire = nppsToRetire.map((n) => n._id);
 
       // Retire the NPPs
-      const result = await db.collection<NPP>("npps").updateMany(nppQuery, {
+      const result = await nppsCollection(db).updateMany(nppQuery, {
         $set: { retiredAt: now, currentOffice: null, updatedAt: now },
       });
       nppsRetired = result.modifiedCount;
@@ -364,8 +358,7 @@ export async function DELETE(request: Request) {
 
       if (retiredNppsWithSeats.length > 0) {
         const retiredNppIds = retiredNppsWithSeats.map((o) => o.nppId).filter(Boolean);
-        const actuallyRetired = await db
-          .collection<NPP>("npps")
+        const actuallyRetired = await nppsCollection(db)
           .find({ _id: { $in: retiredNppIds as ObjectId[] }, retiredAt: { $ne: null } })
           .toArray();
 

@@ -9,6 +9,7 @@ import { getStateLean } from "@/lib/utils/demographics";
 import { buildStatePartyRows } from "@/lib/states/buildStatePartyRows";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 // GET /api/country/[code]/parties/[id]/state-parties — Aggregate per-region party data
 //   (org%, PS, treasury, registration%, lean, chair, NPP count, priority target) for the
@@ -51,8 +52,7 @@ export async function GET(
       .find({ partyId: partyIdStr, countryId })
       .toArray();
 
-    const nppAgg = await db
-      .collection<NPP>("npps")
+    const nppAgg = await nppsCollection(db)
       .aggregate<{ _id: string; count: number }>([
         { $match: { party: partyIdStr, retiredAt: null } },
         { $group: { _id: "$homeState", count: { $sum: 1 } } },

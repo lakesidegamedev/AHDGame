@@ -9,6 +9,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import type { Document } from "mongodb";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export async function carryNorthernIrelandMPs(
   db: Db,
@@ -107,5 +108,5 @@ export async function mirrorNorthernIrelandMPs(
       : []
   );
   if (playerOps.length) await charactersCollection<Document>(db).bulkWrite(playerOps);
-  if (nppOps.length) await db.collection("npps").bulkWrite(nppOps);
+  if (nppOps.length) await nppsCollection<Document>(db).bulkWrite(nppOps);
 }

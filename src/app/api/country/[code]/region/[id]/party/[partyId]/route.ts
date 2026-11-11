@@ -51,6 +51,7 @@ import { countDistinctOfficers } from "@/lib/treasury/payoutCapValues";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; partyId: string }>;
@@ -188,8 +189,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     );
 
     // Fetch NPPs in this state party (for tax calculation and members list)
-    const npps = await db
-      .collection<NPP>("npps")
+    const npps = await nppsCollection(db)
       .find({ homeState: stateId, party: partyKey, retiredAt: null })
       .toArray();
 

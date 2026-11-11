@@ -34,6 +34,7 @@ import type { RussianCouncilCompositionSeating } from "./councilCompositionSeati
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export async function materializeRussianDumaConvocationSeating(input: {
   db: Db;
@@ -243,8 +244,7 @@ export async function materializeRussianDumaConvocationSeating(input: {
         .toArray()
     : [];
   const profiles = npcIds.length
-    ? await db
-        .collection<NPP>("npps")
+    ? await nppsCollection(db)
         .find(
           { _id: { $in: npcIds } },
           {
@@ -466,20 +466,16 @@ export async function materializeRussianDumaConvocationSeating(input: {
       );
     const oldNpcIds = retired.filter((row) => row.isNPP && row.nppId).map((row) => row.nppId!);
     if (!latest && oldNpcIds.length) {
-      await db
-        .collection<NPP>("npps")
-        .updateMany(
-          { _id: { $in: oldNpcIds }, "currentOffice.type": "dumaDeputy" },
-          { $set: { currentOffice: null, updatedAt: now } },
-          { session }
-        );
-      await db
-        .collection<NPP>("npps")
-        .updateMany(
-          { _id: { $in: oldNpcIds } },
-          { $set: { seatsHeld: 0, updatedAt: now } },
-          { session }
-        );
+      await nppsCollection(db).updateMany(
+        { _id: { $in: oldNpcIds }, "currentOffice.type": "dumaDeputy" },
+        { $set: { currentOffice: null, updatedAt: now } },
+        { session }
+      );
+      await nppsCollection(db).updateMany(
+        { _id: { $in: oldNpcIds } },
+        { $set: { seatsHeld: 0, updatedAt: now } },
+        { session }
+      );
     }
   }
   if (delta.update.length) {
@@ -561,7 +557,7 @@ export async function materializeRussianDumaConvocationSeating(input: {
       },
     }));
     const result = isNpc
-      ? await db.collection<NPP>("npps").bulkWrite(operations, { session })
+      ? await nppsCollection(db).bulkWrite(operations, { session })
       : await charactersCollection(db).bulkWrite(operations, { session });
     if (result.matchedCount !== selected.length)
       throw new Error("Duma owner changed during seating");

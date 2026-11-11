@@ -10,6 +10,7 @@ import { loadHu1994ElectoralDecision, openHu1994ElectoralProposal } from "./elec
 import { hu1994DecisionAvailability, supportsHu1994NpcAmendment } from "./rules/electoralLaw";
 import { calendarTurn } from "@/lib/utils/gameDate";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export async function processHu1994ElectoralNpcProposal(
   db: Db,
@@ -37,7 +38,7 @@ export async function processHu1994ElectoralNpcProposal(
   if (government?.status !== "formed" || government.pmCharacterId || !government.pmNppId)
     return false;
   const [leader, officials] = await Promise.all([
-    db.collection<NPP>("npps").findOne({ _id: government.pmNppId }, { projection: { party: 1 } }),
+    nppsCollection(db).findOne({ _id: government.pmNppId }, { projection: { party: 1 } }),
     electedOfficialsCollection(db)
       .find(
         { countryId: "HU", officeType: "assemblyDelegate" },

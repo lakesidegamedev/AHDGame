@@ -13,6 +13,7 @@ import { BG_FOUNDING_OFFICE_ARCHIVES_COLLECTION } from "./foundingSeating1990";
 import { planBg1991ListReplacements, type Bg1991ListReplacement } from "./rules/listVacancies1991";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export const BG_1991_LIST_REPLACEMENTS_COLLECTION = "bg1991ListReplacements";
 interface ReplacementReceipt {
@@ -114,8 +115,7 @@ export async function advanceBg1991ListVacancies(
       ...new Set(parent.nominations.people.filter((row) => !row.isNpc).map((row) => row.ownerId)),
     ].map((id) => new ObjectId(id));
     const npcs = npcIds.length
-      ? await db
-          .collection<NPP>("npps")
+      ? await nppsCollection(db)
           .find(
             { _id: { $in: npcIds }, countryId: "BG", retiredAt: null, isTechnocrat: { $ne: true } },
             { session, projection: { party: 1, currentOffice: 1 } }
@@ -249,7 +249,7 @@ export async function advanceBg1991ListVacancies(
         (row) => row.isNpc === isNpc && owners.has(row.id)
       );
       if (!selected.length) continue;
-      const collection = isNpc ? db.collection<NPP>("npps") : charactersCollection(db);
+      const collection = isNpc ? nppsCollection(db) : charactersCollection(db);
       await collection.bulkWrite(
         selected.map(({ id }) => {
           const owner = owners.get(id)!,

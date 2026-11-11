@@ -13,6 +13,7 @@ import type { SovereignResolutionChoice } from "@/lib/db/types/budget";
 import { deriveIdeology } from "@/lib/sovereignDefault/npc/getExecutiveLeaderProfile";
 import { applyLegislatorImpacts } from "@/lib/sovereignDefault/political/legislatorPoliticalImpact";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export async function applyLegislatorImpactsForChamber(
   db: Db,
@@ -27,8 +28,7 @@ export async function applyLegislatorImpactsForChamber(
   const ids = voterIds.filter((s) => /^[0-9a-fA-F]{24}$/.test(s)).map((s) => new ObjectId(s));
 
   const [nppsList, charsList] = await Promise.all([
-    db
-      .collection<NPP>("npps")
+    nppsCollection(db)
       .find({ _id: { $in: ids } })
       .project<{ _id: ObjectId; policies: NPP["policies"] }>({ policies: 1 })
       .toArray(),

@@ -10,6 +10,7 @@ import { NPP_ECONOMY_DEFAULTS } from "./economyDefaults";
 import { generateDefaultPersonality } from "./seedHistorical";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /** Marker used only to make this bootstrap-created independent pool idempotent. */
 export const PARTYLESS_FOUNDING_PRIOR_MARKER = "foundingIndependent";
@@ -86,8 +87,7 @@ export async function seedPartylessFoundingCandidates(
     return { nppsCreated: 0, byCountry: {} };
   }
 
-  const existing = await db
-    .collection<NPP>("npps")
+  const existing = await nppsCollection(db)
     .find({
       countryId: { $in: enabled },
       party: "independent",
@@ -161,7 +161,7 @@ export async function seedPartylessFoundingCandidates(
     };
   });
 
-  await db.collection<NPP>("npps").insertMany(npps);
+  await nppsCollection(db).insertMany(npps);
   log(
     `Seeded ${npps.length} independent founding candidate NPPs across ${
       Object.keys(byCountry).length

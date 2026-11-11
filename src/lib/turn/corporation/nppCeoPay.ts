@@ -28,6 +28,7 @@ import {
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import { recordNppCeoTrackRecords } from "./nppCeoTrackRecord";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 type NppCareer = Pick<NPP, "_id" | "ceoTrackRecord" | "personality">;
 
@@ -108,8 +109,7 @@ export async function processNppCeoPay(
     const nppIds = [...new Set([...involved, ...newlySeen].map((c) => c.ceoId!.toString()))]
       .filter((id) => ObjectId.isValid(id))
       .map((id) => new ObjectId(id));
-    const npps = await db
-      .collection<NPP>("npps")
+    const npps = await nppsCollection(db)
       .find({ _id: { $in: nppIds } })
       .project<NppCareer>({ ceoTrackRecord: 1, personality: 1 })
       .toArray();

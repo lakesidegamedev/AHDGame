@@ -54,6 +54,8 @@ import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import type { Document } from "mongodb";
 /*
  * Fallback if `gameConfig.chairActionBonus` is missing on legacy configs.
  * The per-country config in `countries.ts` sets each centralBankChair office
@@ -526,6 +528,6 @@ export async function processActionRefresh(
   }
 
   if (nppOps.length > 0) {
-    await db.collection("npps").bulkWrite(nppOps);
+    await nppsCollection<Document>(db).bulkWrite(nppOps);
   }
 }

@@ -20,6 +20,7 @@ import { STATE_TERMINAL_STATUSES } from "@/lib/congress/billProposalLimits";
 import { canDirectRegionalPartyNpp, hasPartyNppSeats } from "../rules/partyNppProposal";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export async function resolvePartyNppProposalAccess(
   db: Db,
@@ -72,8 +73,7 @@ export async function resolvePartyNppProposalAccess(
   if (!ids.length) return { authorized: true, npp: null };
   const skipReservations = options.ignoreBillReservations === true;
   const [npps, busy, queued] = await Promise.all([
-    db
-      .collection<NPP>("npps")
+    nppsCollection(db)
       .find(
         { _id: { $in: ids }, party: character.party, retiredAt: null },
         { projection: { name: 1, party: 1, countryId: 1 } }

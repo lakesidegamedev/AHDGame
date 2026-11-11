@@ -21,6 +21,8 @@ import type { User } from "@/lib/db/types/user";
 import type { CountryId } from "@/lib/constants/countries";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import type { Document } from "mongodb";
 
 const IMPERIAL_STARTING_CAPITAL = 50_000_000;
 const IMPERIAL_INITIAL_SHARES = 10_000_000;
@@ -148,7 +150,7 @@ export async function POST(request: Request) {
     );
 
     // Soft-delete existing ceremonial NPP for this country
-    await db.collection("npps").updateMany(
+    await nppsCollection<Document>(db).updateMany(
       {
         countryId: countryId as CountryId,
         retiredAt: { $ne: null },

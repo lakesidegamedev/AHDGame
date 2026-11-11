@@ -229,6 +229,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import type { Document } from "mongodb";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 async function seedInitialBudgetSnapshots(db: Db, log: (msg: string) => void): Promise<void> {
   const budgets = await federalBudgetCollection(db).find({}).toArray();
@@ -705,7 +706,7 @@ export async function bootstrapGameWorld(options: BootstrapOptions) {
   // preset's chambers) stopped being seeded. See historicalSeedGate.ts.
   const [preExistingOfficialsCount, preExistingNppsCount] = await Promise.all([
     electedOfficialsCollection<Document>(db).countDocuments(),
-    db.collection("npps").countDocuments({ retiredAt: null }),
+    nppsCollection<Document>(db).countDocuments({ retiredAt: null }),
   ]);
 
   await seedAllCountryData(db, resetReference, log, preset, options.run);
@@ -984,7 +985,7 @@ export async function bootstrapGameWorld(options: BootstrapOptions) {
 
   const [officialsCount, nppsCount] = await Promise.all([
     electedOfficialsCollection<Document>(db).countDocuments(),
-    db.collection("npps").countDocuments({ retiredAt: null }),
+    nppsCollection<Document>(db).countDocuments({ retiredAt: null }),
   ]);
 
   if (mode === "vacant" || globallyVacant) {

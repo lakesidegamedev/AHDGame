@@ -5,6 +5,7 @@ import { getAuthUser } from "@/lib/auth";
 import { getEnabledCountryIds } from "@/lib/countryAccess";
 import type { NPP, NPPDisplay } from "@/lib/db/types";
 import { getOfficeLabel } from "@/lib/utils/officeTitle";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /**
  * Convert NPP to display format
@@ -59,11 +60,10 @@ export async function GET(request: Request) {
     }
 
     // Get total count for pagination
-    const total = await db.collection<NPP>("npps").countDocuments(query);
+    const total = await nppsCollection(db).countDocuments(query);
 
     // Fetch NPPs
-    const npps = await db
-      .collection<NPP>("npps")
+    const npps = await nppsCollection(db)
       .find(query)
       .sort({ politicalInfluence: -1, name: 1 })
       .skip(offset)

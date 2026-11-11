@@ -27,6 +27,7 @@ import { FOMC_TERM_TURNS, type FomcNomination } from "@/lib/db/types/centralBank
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /** Resolve a player character's owning userId for notifications. */
 async function nomineeUserId(
@@ -189,8 +190,7 @@ export async function processFomcNominationLifecycle(
       .map((o) => o.nppId)
       .filter((id): id is ObjectId => id instanceof ObjectId);
     const rows = ids.length
-      ? await db
-          .collection<NPP>("npps")
+      ? await nppsCollection(db)
           .find({ _id: { $in: ids } })
           .toArray()
       : [];

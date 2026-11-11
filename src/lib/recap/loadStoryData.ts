@@ -20,6 +20,7 @@ import {
 import type { CharacterRecap, RecapCorporation, RecapRaces, RecapWorld } from "./types";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /**
  * I/O for the v2 Wrapped sections. Reads the runtime collections the reset is
@@ -376,8 +377,7 @@ export async function loadStoryData(
     const [bills, stateBills, npps] = await Promise.all([
       db.collection<BillRow>("bills").find({}, { projection }).toArray(),
       db.collection<BillRow>("stateBills").find({}, { projection }).toArray(),
-      db
-        .collection<Document>("npps")
+      nppsCollection<Document>(db)
         .find({}, { projection: { party: 1, countryId: 1 } })
         .toArray(),
     ]);

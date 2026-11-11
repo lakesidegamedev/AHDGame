@@ -37,6 +37,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 export const HU_1991_BY_ELECTIONS_COLLECTION = "hu1991ConstituencyByElections";
 export interface Hu1991ByElectionRecord {
   _id: string;
@@ -245,8 +246,7 @@ async function materializeHu1991ByElectionOpening(input: {
         .map((row) => row.ownerId)
     ),
   ];
-  const npcs = await db
-    .collection<NPP>("npps")
+  const npcs = await nppsCollection(db)
     .find(
       {
         _id: { $in: npcOwners.map((id) => new ObjectId(id)) },
@@ -668,8 +668,7 @@ async function materializeHu1991ByElectionResolution(input: {
   const winnerPeople = Object.entries(count.winners).flatMap(([districtId, id]) =>
     id ? [{ districtId, person: nominations.people.find((row) => row.id === id)! }] : []
   );
-  const npcs = await db
-    .collection<NPP>("npps")
+  const npcs = await nppsCollection(db)
     .find(
       {
         _id: {

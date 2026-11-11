@@ -24,6 +24,7 @@ import {
   warEntryIsImmediate,
 } from "@/lib/military/warEntryPolicy";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 type ActiveJoinResolution = OrganizationLegislation & {
   type: "join_conflict";
@@ -197,9 +198,10 @@ export async function reconcileAutonomousWarEntryBills(db: Db): Promise<number> 
         .findOne({ _id: countryId, status: "formed" });
       const headId = formation?.presidentNppId ?? formation?.pmNppId ?? null;
       if (!headId) continue;
-      const head = await db
-        .collection<NPP>("npps")
-        .findOne({ _id: headId }, { projection: { _id: 1, name: 1, party: 1 } });
+      const head = await nppsCollection(db).findOne(
+        { _id: headId },
+        { projection: { _id: 1, name: 1, party: 1 } }
+      );
       if (!head) continue;
 
       const billId = await buildJoinConflictBill({

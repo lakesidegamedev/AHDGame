@@ -23,6 +23,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export async function getPmAppointmentCandidates(
   db: Db,
@@ -196,8 +197,7 @@ export async function getHosAppointmentCandidates(
   const charMap = new Map(characters.map((char) => [char._id.toString(), char]));
 
   const nppIds = deputies.map((mp) => mp.nppId).filter((id): id is ObjectId => id != null);
-  const npps = await db
-    .collection<{ _id: ObjectId; name: string; party?: string }>("npps")
+  const npps = await nppsCollection<{ _id: ObjectId; name: string; party?: string }>(db)
     .find({ _id: { $in: nppIds } })
     .toArray();
   const nppMap = new Map(npps.map((npp) => [npp._id.toString(), npp]));
@@ -342,7 +342,7 @@ export async function getEligibleSenateAppointees(
 ): Promise<{ candidates: EligibleSenateAppointeeView[] }> {
   const officialsCollection = electedOfficialsCollection(db);
   const charactersHandle = charactersCollection(db);
-  const nppsCollection = db.collection<NPP>("npps");
+  const nppDocs = nppsCollection(db);
 
   const governorCharacter = await charactersHandle.findOne({
     userId: new ObjectId(governorUserId),
@@ -380,7 +380,7 @@ export async function getEligibleSenateAppointees(
     charactersHandle
       .find({ homeState: governorOfficial.state, userId: { $exists: true } })
       .toArray(),
-    nppsCollection.find({ homeState: governorOfficial.state, retiredAt: null }).toArray(),
+    nppDocs.find({ homeState: governorOfficial.state, retiredAt: null }).toArray(),
     officialsCollection
       .find({ $or: [{ characterId: { $ne: null } }, { nppId: { $exists: true } }] })
       .toArray(),

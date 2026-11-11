@@ -12,6 +12,7 @@ import {
 } from "@/lib/countries/bg/rules/assemblyTransition";
 import { bgNationwideEligibleParties } from "@/lib/countries/bg/rules/ordinaryElection";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /** Read the full 1991 slate once before any regional race is seated. */
 export async function readBgOrdinaryEligibleParties(db: Db): Promise<ReadonlySet<string> | null> {
@@ -139,8 +140,7 @@ export async function readBgOrdinaryElectionPlan(
   const playerIds = candidates.filter((row) => !row.isNPP).map((row) => row.characterId);
   const [npcs, players] = await Promise.all([
     npcIds.length
-      ? db
-          .collection<NPP>("npps")
+      ? nppsCollection(db)
           .find(
             { _id: { $in: npcIds }, countryId: "BG", retiredAt: null, isTechnocrat: { $ne: true } },
             { projection: { _id: 1 } }

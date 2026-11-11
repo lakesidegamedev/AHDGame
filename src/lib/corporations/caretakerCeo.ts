@@ -40,6 +40,7 @@ import { characterCeoResidencyFailure } from "@/lib/corporations/ceoEligibilityR
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /** Reason a caretaker appointment was rejected (pure, before any I/O). */
 export type CaretakerAppointmentError =
@@ -160,9 +161,7 @@ export async function appointCaretakerCeo(
   if (!nppId) return { ok: false, error: forcedNppId ? "npp-not-eligible" : "no-eligible-npp" };
 
   const nppOid = new ObjectId(nppId);
-  const npp = await db
-    .collection<NPP>("npps")
-    .findOne({ _id: nppOid }, { projection: { name: 1 } });
+  const npp = await nppsCollection(db).findOne({ _id: nppOid }, { projection: { name: 1 } });
   if (!npp) return { ok: false, error: "npp-not-eligible" };
 
   await corporationsCollection(db).updateOne(

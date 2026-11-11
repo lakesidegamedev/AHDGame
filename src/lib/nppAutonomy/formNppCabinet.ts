@@ -38,6 +38,7 @@ import { METRIC_TO_DOMAIN } from "./selectNppBill";
 import { governingArchetypeModifiers } from "./governingArchetype";
 import { nppAutonomyAtLeast } from "./featureFlag";
 import { tallySeatsByParty } from "@/lib/turn/parliamentaryGovernment";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /** Economic/social ideology axis half-range (~-5..+5), matching governingAgenda. */
 const POLICY_SCALE = 5;
@@ -242,12 +243,10 @@ export async function formNppCabinet(
   const vacant = positions.filter((p) => !filledPositionIds.has(p.id));
   if (vacant.length === 0) return { ran: true, filled: 0, filledPositionIds: [] };
 
-  const headNpp = await db
-    .collection<NPP>("npps")
-    .findOne(
-      { _id: headNppId },
-      { projection: { party: 1, personality: 1, "policies.economic": 1, "policies.social": 1 } }
-    );
+  const headNpp = await nppsCollection(db).findOne(
+    { _id: headNppId },
+    { projection: { party: 1, personality: 1, "policies.economic": 1, "policies.social": 1 } }
+  );
   if (!headNpp) return INACTIVE;
   const governingPartyId = gov.governingPartyId ?? headNpp.party;
 
@@ -269,8 +268,7 @@ export async function formNppCabinet(
 
   // Candidate pool: active bloc NPPs who are neither the head nor an
   // already-seated cabinet member.
-  const poolDocs = await db
-    .collection<NPP>("npps")
+  const poolDocs = await nppsCollection(db)
     .find(
       { countryId, party: { $in: [...blocParties] }, retiredAt: null },
       {

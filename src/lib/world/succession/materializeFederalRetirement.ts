@@ -18,6 +18,7 @@ import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 type HistoricalPoliticalRow = { _id: ObjectId | string; [key: string]: unknown };
 
@@ -92,13 +93,11 @@ export async function materializeFederationFederalRetirement(input: {
     { $set: { currentOffice: null, updatedAt: now } },
     { session }
   );
-  await db
-    .collection<NPP>("npps")
-    .updateMany(
-      { countryId: sourceCountryId, currentOffice: { $ne: null } },
-      { $set: { currentOffice: null, updatedAt: now } },
-      { session }
-    );
+  await nppsCollection(db).updateMany(
+    { countryId: sourceCountryId, currentOffice: { $ne: null } },
+    { $set: { currentOffice: null, updatedAt: now } },
+    { session }
+  );
   for (const collectionName of ["pmAppointmentVotes", "noConfidenceVotes"])
     await db
       .collection(collectionName)

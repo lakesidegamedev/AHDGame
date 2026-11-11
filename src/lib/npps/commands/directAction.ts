@@ -28,6 +28,7 @@ import { statMultiplier } from "@/lib/stats/statMultiplier";
 import { NEUTRAL_STAT } from "@/lib/stats/statsConstants";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export class DirectActionBalanceConflictError extends Error {}
 
@@ -62,7 +63,7 @@ export async function applyNppDirectAction(
   const forexEnabled = await isForexEnabled();
   const relationshipKey = `${characterId.toString()}_${nppId.toString()}`;
   const [npp, characterDoc, relationshipDoc, gameStateDoc] = await Promise.all([
-    db.collection<NPP>("npps").findOne({ _id: nppId }),
+    nppsCollection(db).findOne({ _id: nppId }),
     charactersCollection(db).findOne(
       { _id: characterId },
       {
@@ -272,7 +273,7 @@ export async function applyNppDirectAction(
       plan.sideEffects.favorabilityDelta !== undefined ||
       plan.sideEffects.politicalInfluenceDelta !== undefined
     ) {
-      await db.collection<NPP>("npps").updateOne(
+      await nppsCollection(db).updateOne(
         { _id: nppId },
         {
           $set: {
@@ -358,7 +359,7 @@ export async function applyNppDirectAction(
           plan.sideEffects.favorabilityDelta !== undefined ||
           plan.sideEffects.politicalInfluenceDelta !== undefined
         ) {
-          await db.collection<NPP>("npps").updateOne(
+          await nppsCollection(db).updateOne(
             { _id: nppId },
             {
               $set: {

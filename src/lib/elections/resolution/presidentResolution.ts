@@ -47,6 +47,7 @@ import { captureElectionWon } from "@/lib/analytics/electionAnalytics";
 import { loadSurvivingPartyResolver } from "@/lib/parties/survivingParty";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 function recoverUnitVotesFromSnapshots(
   unitTurnSnapshots: ElectionVoteTally["unitTurnSnapshots"],
@@ -127,7 +128,7 @@ async function vacatePresidency(
     },
     { $set: { currentOffice: null, updatedAt: now } }
   );
-  await db.collection<NPP>("npps").updateMany(
+  await nppsCollection(db).updateMany(
     {
       countryId: vacateCountryId,
       "currentOffice.type": { $in: ["president", "vicePresident"] },
@@ -185,8 +186,7 @@ async function resolveVpIds(
   }
 
   if (winnerCandidate.isNPP && winnerCandidate.nppId && !vpCharId && !vpNppId) {
-    const vpNppCandidates = await db
-      .collection<NPP>("npps")
+    const vpNppCandidates = await nppsCollection(db)
       .find(
         {
           party: winnerCandidate.party,

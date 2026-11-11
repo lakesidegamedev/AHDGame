@@ -40,6 +40,7 @@ import { generateNppCorpName, spawnNppCorporation } from "@/lib/admin/spawnNppCo
 import { nppHomeFxRate, localToAnchor } from "./nppEconomicAccount";
 import { isPrivateEnterpriseBlocked } from "@/lib/economy/queries/privateEnterpriseGate";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export type NppFoundCorporationResult =
   | {
@@ -103,7 +104,7 @@ export async function nppFoundCorporation(
   const rate = homeRate ?? (await nppHomeFxRate(db, npp.countryId, undefined, preset));
   const foundingFeeAnchor = localToAnchor(foundingFeeLocal, rate);
   const now = new Date();
-  const deducted = await db.collection<NPP>("npps").findOneAndUpdate(
+  const deducted = await nppsCollection(db).findOneAndUpdate(
     { _id: npp._id, nppInvestmentCashAnchor: { $gte: foundingFeeAnchor } },
     { $inc: { nppInvestmentCashAnchor: -foundingFeeAnchor }, $set: { updatedAt: now } },
     // Only the balance is read back; an NPP document is ~28 KB.
@@ -130,12 +131,10 @@ export async function nppFoundCorporation(
     });
   } catch (error) {
     // Refund the founding fee — no corp was created, no partial state.
-    await db
-      .collection<NPP>("npps")
-      .updateOne(
-        { _id: npp._id },
-        { $inc: { nppInvestmentCashAnchor: foundingFeeAnchor }, $set: { updatedAt: new Date() } }
-      );
+    await nppsCollection(db).updateOne(
+      { _id: npp._id },
+      { $inc: { nppInvestmentCashAnchor: foundingFeeAnchor }, $set: { updatedAt: new Date() } }
+    );
     return {
       ok: false,
       reason: `Corporation founding failed: ${error instanceof Error ? error.message : String(error)}`,

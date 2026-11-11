@@ -16,6 +16,7 @@ import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export type StartingPartiesMode = "default" | "none";
 
@@ -173,8 +174,7 @@ export async function startingArtifactFilters(
 export async function clearStartingPolitics(db: Db, preset: string): Promise<void> {
   const countries = await startingPoliticalCountries(db, preset);
   const countryFilter = startingCountryFilter(countries, true);
-  const targetNpps = await db
-    .collection<NPP>("npps")
+  const targetNpps = await nppsCollection(db)
     .find(countryFilter)
     .project<Pick<NPP, "_id">>({ _id: 1 })
     .toArray();
@@ -225,8 +225,7 @@ export async function clearStartingPolitics(db: Db, preset: string): Promise<voi
   for (const account of accounts) keep(account.ownerId);
   // Keep outstanding credit liabilities, but not unreferenced seeded politician wallets.
   // The no-party baseline is captured after cleanup, not during intermediate seeding.
-  const borrowers = await db
-    .collection<NPP>("npps")
+  const borrowers = await nppsCollection(db)
     .find({})
     .project<Pick<NPP, "_id" | "lineOfCredit">>({ lineOfCredit: 1 })
     .toArray();
@@ -238,8 +237,8 @@ export async function clearStartingPolitics(db: Db, preset: string): Promise<voi
     if (amounts.some((amount) => typeof amount === "number" && amount !== 0)) keep(borrower._id);
   }
   const retained = [...owners.values()];
-  await db.collection<NPP>("npps").deleteMany({ _id: { $in: targetIds, $nin: retained } });
-  await db.collection<NPP>("npps").updateMany(
+  await nppsCollection(db).deleteMany({ _id: { $in: targetIds, $nin: retained } });
+  await nppsCollection(db).updateMany(
     { _id: { $in: targetIds } },
     {
       $set: { party: "independent", currentOffice: null },

@@ -50,6 +50,7 @@ import type {
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export const caucusWhipSchema = z
   .object({
@@ -655,8 +656,7 @@ export async function issueCaucusWhip({
     .filter((id): id is ObjectId => !!id);
   const npps =
     nppIds.length > 0
-      ? await db
-          .collection<NPP>("npps")
+      ? await nppsCollection(db)
           .find({ _id: { $in: nppIds } })
           .toArray()
       : [];

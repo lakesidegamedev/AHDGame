@@ -9,6 +9,7 @@ import {
   parseNppId,
 } from "@/lib/utils/profileUrls";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -41,9 +42,7 @@ export default async function PoliticianRedirectPage({ params }: PageProps) {
         ? { _id: new ObjectId(parsedNppId.value) }
         : null;
   const npp = nppQuery
-    ? await db
-        .collection<NPP>("npps")
-        .findOne(nppQuery, { projection: { _id: 1, sequentialId: 1 } })
+    ? await nppsCollection(db).findOne(nppQuery, { projection: { _id: 1, sequentialId: 1 } })
     : null;
   if (npp) {
     redirect(buildNppHref(npp));

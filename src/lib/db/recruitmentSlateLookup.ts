@@ -13,6 +13,7 @@ import { computeSlateAssignmentScore, isNppSlateCompliant } from "@/lib/slateAss
 import { SLATE_ASSIGNMENT_CAP } from "@/lib/slateAssignmentCap";
 import { getSlateAcceptanceStatBonus } from "@/lib/slateAuthority";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /**
  * List all slates owned by a (countryId, partyId). Active by default; pass
@@ -330,8 +331,7 @@ export async function prefetchSlateTemplates(
   const [npps, characters] = await Promise.all([
     nppIds.length === 0
       ? Promise.resolve([] as NPP[])
-      : db
-          .collection<NPP>("npps")
+      : nppsCollection(db)
           .find({ _id: { $in: nppIds } })
           .toArray(),
     characterIds.length === 0
@@ -516,8 +516,7 @@ async function loadTemplateRoster(
   templateRows: SlateCandidate[]
 ): Promise<Pick<SlateTemplatePrefetch, "nppById" | "characterById">> {
   const [npps, characters] = await Promise.all([
-    db
-      .collection<NPP>("npps")
+    nppsCollection(db)
       .find({
         _id: {
           $in: templateRows

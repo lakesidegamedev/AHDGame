@@ -16,6 +16,7 @@ import type { CongressMember, CongressMembersResponse } from "@/lib/congress/typ
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 // Re-export for any consumer that still imports types from the route file.
 // New consumers should import from "@/lib/congress/types" directly.
@@ -68,8 +69,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
             .toArray()
         : Promise.resolve([]),
       nppIds.length > 0
-        ? db
-            .collection<NPP>("npps")
+        ? nppsCollection(db)
             .find(
               { _id: { $in: nppIds } },
               { projection: { _id: 1, avatarUrl: 1, sequentialId: 1 } }

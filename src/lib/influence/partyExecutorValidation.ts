@@ -12,6 +12,7 @@ import { getPartyFrontier, isInFrontier } from "@/lib/parties/partyFrontier";
 import { getRelocationTerritory, PARTY_TERRITORY_WARNING } from "@/lib/parties/relocationTerritory";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 function getNPPCountry(npp: NPP): CountryId {
   return npp.countryId as CountryId;
@@ -259,13 +260,13 @@ async function validateNppStateRelocationRequest(
     .findOne({ _id: `${targetStateId}_${npp.party}` });
   const targetOrgLevel = targetStatePartyOrg?.organization ?? 0;
   const [targetStateNppCount, regionCount, partyNppCount] = await Promise.all([
-    db.collection<NPP>("npps").countDocuments({
+    nppsCollection(db).countDocuments({
       party: npp.party,
       homeState: targetStateId,
       retiredAt: null,
     }),
     statesCollection(db).countDocuments({ countryId }),
-    db.collection<NPP>("npps").countDocuments({ party: npp.party, retiredAt: null }),
+    nppsCollection(db).countDocuments({ party: npp.party, retiredAt: null }),
   ]);
   // Relocation is net-zero nationally, so it is capped by the roster-aware
   // relocation capacity, not the recruitment growth cap. See

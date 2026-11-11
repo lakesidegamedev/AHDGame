@@ -25,6 +25,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import type { Document } from "mongodb";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /**
  * Read-only balance-metric aggregations over a (sandbox) world DB, for the
@@ -571,8 +572,7 @@ export async function computeNppWarChestAnchorMap(
 }
 
 async function collectWealthMetrics(db: Db): Promise<WealthMetrics> {
-  const npps = await db
-    .collection<NPP>("npps")
+  const npps = await nppsCollection(db)
     .find(
       { retiredAt: null },
       {

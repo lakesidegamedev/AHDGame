@@ -21,6 +21,7 @@ import { getLiveGameYear, getManuallyEnabledSeats } from "@/lib/cabinet/liveGame
 import { resolvePresidentialCountry } from "@/lib/executive/presidentialCountry";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 const VOTING_DURATION_HOURS = 24;
 const VOTING_DURATION_MS = VOTING_DURATION_HOURS * 60 * 60 * 1000;
@@ -137,7 +138,7 @@ export async function POST(request: Request) {
       } catch {
         return errorResponse(400, "Invalid nomineeNppId");
       }
-      const npp = await db.collection<NPP>("npps").findOne({ _id: nomineeNppOid });
+      const npp = await nppsCollection(db).findOne({ _id: nomineeNppOid });
       if (!npp) {
         return errorResponse(404, "Nominee NPP not found");
       }

@@ -21,6 +21,7 @@ import type { RussianAssemblyVacancyReason } from "./rules/assemblyOwnerEligibil
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 export const RUSSIAN_ASSEMBLY_SEATINGS_COLLECTION = "russianAssemblySeatings";
 export const RUSSIAN_ASSEMBLY_ARCHIVES_COLLECTION = "russianAssemblyOfficeArchives";
 export interface RussianAssemblySeatingRecord {
@@ -143,13 +144,11 @@ export async function materializeRussianAssemblySeating(input: {
     { $set: { currentOffice: null, updatedAt: now } },
     { session }
   );
-  await db
-    .collection<NPP>("npps")
-    .updateMany(
-      { countryId: "RU", "currentOffice.type": "congressDeputy" },
-      { $set: { currentOffice: null, updatedAt: now }, $unset: { seatsHeld: "" } },
-      { session }
-    );
+  await nppsCollection(db).updateMany(
+    { countryId: "RU", "currentOffice.type": "congressDeputy" },
+    { $set: { currentOffice: null, updatedAt: now }, $unset: { seatsHeld: "" } },
+    { session }
+  );
   await electedOfficialsCollection(db).insertMany(rows, { session });
   const owners = new Map<
     string,
@@ -217,7 +216,7 @@ export async function materializeRussianAssemblySeating(input: {
       },
     }));
     const updated = isNpc
-      ? await db.collection<NPP>("npps").bulkWrite(operations, { session })
+      ? await nppsCollection(db).bulkWrite(operations, { session })
       : await charactersCollection(db).bulkWrite(operations, { session });
     if (updated.matchedCount !== selected.length)
       throw new Error("Assembly owner changed during handover");

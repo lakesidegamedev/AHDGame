@@ -9,6 +9,7 @@ import { cancelQueue } from "@/lib/governorOffice/legislation/cancelQueue";
 import { canManageOffice } from "@/lib/governorOffice/access";
 import { snapshotPolicyProvisionsInPlace } from "@/lib/legislature/provisionEnrichment";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 const VOTING_DURATION_HOURS = 24;
 
@@ -94,7 +95,7 @@ export async function processGovernorLegislationQueue(
     }
 
     // 2. NPP still eligible?
-    const npp = await db.collection<NPP>("npps").findOne({ _id: q.targetNppId });
+    const npp = await nppsCollection(db).findOne({ _id: q.targetNppId });
     if (!npp || npp.retiredAt != null) {
       await cancelQueue(db, q._id, "npp_retired");
       cancelled++;

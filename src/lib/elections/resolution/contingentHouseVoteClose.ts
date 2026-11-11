@@ -32,6 +32,7 @@ import {
 import { logger } from "@/lib/observability/logger";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 type TallyWithVote = ElectionVoteTally & {
   contingentHouseVote: NonNullable<ElectionVoteTally["contingentHouseVote"]>;
@@ -39,9 +40,10 @@ type TallyWithVote = ElectionVoteTally & {
 
 async function actingPersonPresent(db: Db, personId: string): Promise<boolean> {
   if (isNppContingentId(personId)) {
-    const npp = await db
-      .collection<NPP>("npps")
-      .findOne({ _id: toNppObjectId(personId) }, { projection: { retiredAt: 1 } });
+    const npp = await nppsCollection(db).findOne(
+      { _id: toNppObjectId(personId) },
+      { projection: { retiredAt: 1 } }
+    );
     return Boolean(npp && !npp.retiredAt);
   }
   const char = await charactersCollection(db).findOne(

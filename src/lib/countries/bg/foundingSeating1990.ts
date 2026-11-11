@@ -24,6 +24,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export const BG_FOUNDING_OFFICE_ARCHIVES_COLLECTION = "bgFoundingAssemblyOfficeArchives";
 interface BgFoundingAssemblyArchive {
@@ -122,8 +123,7 @@ async function materializeBgFoundingAssemblySeating(input: {
     .filter((row) => !row.isNpc)
     .map((row) => new ObjectId(row.ownerId));
   const npcs = npcIds.length
-    ? await db
-        .collection<NPP>("npps")
+    ? await nppsCollection(db)
         .find(
           { _id: { $in: npcIds }, countryId: "BG", retiredAt: null, isTechnocrat: { $ne: true } },
           {
@@ -227,7 +227,7 @@ async function materializeBgFoundingAssemblySeating(input: {
         { session }
       );
   for (const isNpc of [false, true]) {
-    const collection = isNpc ? db.collection<NPP>("npps") : charactersCollection(db);
+    const collection = isNpc ? nppsCollection(db) : charactersCollection(db);
     await collection.updateMany(
       { countryId: "BG", "currentOffice.type": { $in: ["assemblyDeputy"] } },
       {
@@ -260,7 +260,7 @@ async function materializeBgFoundingAssemblySeating(input: {
   for (const isNpc of [false, true]) {
     const selected = [...owners.values()].filter((row) => row.isNpc === isNpc);
     if (!selected.length) continue;
-    const collection = isNpc ? db.collection<NPP>("npps") : charactersCollection(db);
+    const collection = isNpc ? nppsCollection(db) : charactersCollection(db);
     await collection.bulkWrite(
       selected.map((row) => {
         const originalOffice = (isNpc ? npcMap : playerMap).get(row.ownerId)?.currentOffice;

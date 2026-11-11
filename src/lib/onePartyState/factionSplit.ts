@@ -46,6 +46,7 @@ import { pickDefectors } from "./rules/factionDefection";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export interface FactionSplitResult {
   newPartySequentialId: number;
@@ -118,8 +119,7 @@ export async function fireFactionSplit(
     charactersCollection(db)
       .find({ _id: { $in: characterIds } }, { projection: { _id: 1, policies: 1 } })
       .toArray(),
-    db
-      .collection<NPP>("npps")
+    nppsCollection(db)
       .find(
         { _id: { $in: nppIds } },
         { projection: { _id: 1, "policies.economic": 1, "policies.social": 1 } }
@@ -230,12 +230,10 @@ export async function fireFactionSplit(
     { $set: { party: String(newSeq) } }
   );
 
-  await db
-    .collection<NPP>("npps")
-    .updateMany(
-      { _id: { $in: defectorNppIds } },
-      { $set: { party: String(newSeq), updatedAt: now } }
-    );
+  await nppsCollection(db).updateMany(
+    { _id: { $in: defectorNppIds } },
+    { $set: { party: String(newSeq), updatedAt: now } }
+  );
   await electedOfficialsCollection(db).updateMany(
     { countryId, nppId: { $in: defectorNppIds } },
     { $set: { party: String(newSeq) } }

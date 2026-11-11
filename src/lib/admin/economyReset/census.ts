@@ -32,6 +32,7 @@ import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export const ECONOMY_RESET_PROCESSING_KIND = "economyReset";
 
@@ -270,8 +271,7 @@ async function loadSource(
       .collection<Document>("imperialCharacters")
       .find({}, { projection: { _id: 1 } })
       .toArray(),
-    db
-      .collection<Document>("npps")
+    nppsCollection<Document>(db)
       .find(
         {
           $or: [

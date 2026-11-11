@@ -18,6 +18,7 @@ import { NPP_ENGINE_LEVEL } from "@/lib/nppAutonomy/engineVersion";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import type { Document } from "mongodb";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export interface GatherNppCeoAffiliationsOptions {
   /** Load each free NPP's CEO track record (v6 selection only). */
@@ -51,16 +52,14 @@ export async function gatherNppCeoAffiliations(
     .toArray();
   const ceoIds = corps.map((c) => c.ceoId).filter(Boolean);
   const ceoNppDocs = ceoIds.length
-    ? await db
-        .collection<NPP>("npps")
+    ? await nppsCollection(db)
         .find({ _id: { $in: ceoIds } })
         .project<{ _id: ObjectId; party: string }>({ _id: 1, party: 1 })
         .toArray()
     : [];
   const existingCorpCeos = ceoNppDocs.map((n) => ({ nppId: n._id.toString(), party: n.party }));
 
-  const activeNppDocs = await db
-    .collection<NPP>("npps")
+  const activeNppDocs = await nppsCollection(db)
     .find({ countryId, retiredAt: null })
     .project<{
       _id: ObjectId;

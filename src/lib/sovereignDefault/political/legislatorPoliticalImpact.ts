@@ -18,6 +18,7 @@ import type { SovereignResolutionChoice } from "@/lib/db/types/budget";
 import type { NPP } from "@/lib/db/types/npp";
 import type { NpcIdeology } from "../npc/npcConstants";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 type AlignmentTable = Record<SovereignResolutionChoice, number>;
 
@@ -113,7 +114,7 @@ export async function applyLegislatorImpacts(
   }
 
   if (nppOps.length > 0) {
-    await db.collection<NPP>("npps").bulkWrite(
+    await nppsCollection(db).bulkWrite(
       nppOps.map((op) => ({
         updateOne: {
           filter: { _id: op.id },

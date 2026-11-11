@@ -30,6 +30,7 @@ import type { Document } from "mongodb";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /** Region-party ledger collections dissolved on secession (the new country reseeds). */
 const REGION_PARTY_LEDGERS = [
@@ -303,7 +304,7 @@ export async function splitParties(
   const outsideMembers = { countryId: fromCountryId, party: { $in: wholesaleIds } };
   const independentize = { $set: { party: "independent", updatedAt: now } };
   await charactersCollection<Document>(db).updateMany(outsideMembers, independentize);
-  await db.collection("npps").updateMany(outsideMembers, independentize);
+  await nppsCollection<Document>(db).updateMany(outsideMembers, independentize);
   const budgets = await db
     .collection("partyBudget")
     .find({ countryId: fromCountryId, scope: "national", partyId: { $in: wholesaleIds } })

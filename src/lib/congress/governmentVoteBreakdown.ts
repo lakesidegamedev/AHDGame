@@ -6,6 +6,7 @@ import { buildVotesByParty, type VoteByParty } from "@/lib/congress/billVoting";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export type { VoteByParty };
 
@@ -46,8 +47,7 @@ export async function buildVoterPartyAndWeightMaps(
           .toArray()
       : [],
     nppOids.length > 0
-      ? db
-          .collection<NPP>("npps")
+      ? nppsCollection(db)
           .find({ _id: { $in: nppOids } })
           .project({ _id: 1, party: 1 })
           .toArray()

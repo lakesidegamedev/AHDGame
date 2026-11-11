@@ -18,6 +18,7 @@ import type {
 } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 interface MisallocatedElection {
   electionId: string;
@@ -296,12 +297,10 @@ export async function POST() {
             : { type: "stateSenate" as const, state: election.state, seatsHeld: seats };
 
         if (candidate.isNPP && candidate.nppId) {
-          await db
-            .collection<NPP>("npps")
-            .updateOne(
-              { _id: candidate.nppId },
-              { $set: { currentOffice: officeType, updatedAt: now } }
-            );
+          await nppsCollection(db).updateOne(
+            { _id: candidate.nppId },
+            { $set: { currentOffice: officeType, updatedAt: now } }
+          );
         } else if (candidate.characterId) {
           await charactersCollection(db).updateOne(
             { _id: candidate.characterId },

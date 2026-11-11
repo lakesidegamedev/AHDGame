@@ -95,6 +95,7 @@ import { CA_NPP_CAPITAL_STATE } from "@/lib/countries/ca/geographyFacts";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /**
  * Default founding book for an admin/NPP-spawned corporation, in ₳ at MODERN
@@ -316,7 +317,7 @@ export async function createNppCorporationShell(
 
   let npp: NPP | null = null;
   if (choice.kind === "existing") {
-    npp = await db.collection<NPP>("npps").findOne({ _id: new ObjectId(choice.nppId) });
+    npp = await nppsCollection(db).findOne({ _id: new ObjectId(choice.nppId) });
   }
   // Fall back to creating a fresh NPP when told to (choice.kind === "new") or if
   // the chosen existing NPP vanished between gather and fetch (defensive). Either

@@ -52,6 +52,7 @@ import {
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /**
  * Bounded step toward the target: 0.5x the gap, clamped to [-1.75, +0.75].
@@ -279,9 +280,10 @@ export async function processNppChairAutoRate(
   const now = new Date();
   const chairName = bank.chairNppId
     ? ((
-        await db
-          .collection<{ _id: ObjectId; name?: string }>("npps")
-          .findOne({ _id: bank.chairNppId }, { projection: { name: 1 } })
+        await nppsCollection<{ _id: ObjectId; name?: string }>(db).findOne(
+          { _id: bank.chairNppId },
+          { projection: { name: 1 } }
+        )
       )?.name ?? null)
     : null;
   const fxNote =
@@ -400,9 +402,10 @@ export async function processNppCurrencyDefence(
     ceiling: baseRate * RATE_CEILING_MULTIPLIER,
   });
   if (!target) return "none";
-  const chair = await db
-    .collection<{ _id: ObjectId; name?: string }>("npps")
-    .findOne({ _id: bank.chairNppId }, { projection: { name: 1 } });
+  const chair = await nppsCollection<{ _id: ObjectId; name?: string }>(db).findOne(
+    { _id: bank.chairNppId },
+    { projection: { name: 1 } }
+  );
   const policy: InterventionPolicy = {
     floor: target.floor,
     ceiling: target.ceiling,

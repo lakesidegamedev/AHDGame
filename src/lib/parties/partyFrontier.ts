@@ -32,6 +32,7 @@ import { getPartyRenewalStatesCollection } from "@/lib/db/collections/partyRenew
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /** Keep paths inside the country's current region set, including transferred regions. */
 export function getTerritoryAdjacency(
@@ -143,7 +144,7 @@ export async function getPartyPresenceStates(
       ...(departing?.characterId ? { characterId: { $ne: departing.characterId } } : {}),
       ...(departing?.nppId ? { nppId: { $ne: departing.nppId } } : {}),
     }),
-    db.collection<NPP>("npps").distinct("homeState", {
+    nppsCollection(db).distinct("homeState", {
       ...countryScope,
       party: partyId,
       retiredAt: null,
@@ -243,8 +244,7 @@ export async function getPartyPresenceMap(
     electedOfficialsCollection(db)
       .find({ ...countryScope, party, state: homeState }, { projection: { party: 1, state: 1 } })
       .toArray(),
-    db
-      .collection<NPP>("npps")
+    nppsCollection(db)
       .find(
         { ...countryScope, party, homeState, retiredAt: null },
         { projection: { party: 1, homeState: 1 } }

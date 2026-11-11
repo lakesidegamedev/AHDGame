@@ -15,6 +15,7 @@ import { computeElectionPhase } from "@/lib/elections/phases";
 import { getGameTime, type GameTimeContext } from "@/lib/time/gameTime";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -122,8 +123,7 @@ async function loadCandidateStats(
           .toArray()
       : Promise.resolve([]),
     nppIds.length > 0
-      ? db
-          .collection<NPP>("npps")
+      ? nppsCollection(db)
           .find({ _id: { $in: nppIds } })
           .project<Pick<NPP, "_id" | "favorability" | "politicalInfluence">>(projection)
           .toArray()

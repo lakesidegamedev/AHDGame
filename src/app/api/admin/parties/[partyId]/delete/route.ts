@@ -26,6 +26,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export async function POST(request: Request, { params }: { params: Promise<{ partyId: string }> }) {
   try {
@@ -68,8 +69,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ par
     // Cascade-clean the party's NPPs: pull them out of active/upcoming
     // candidacies and held seats, then retire them. Otherwise they are left
     // orphaned, holding seats and running for a party that no longer exists.
-    const partyNpps = await db
-      .collection<NPP>("npps")
+    const partyNpps = await nppsCollection(db)
       .find({ countryId: partyCountryId, party: partySeqIdStr, retiredAt: null })
       .project<{ _id: NPP["_id"] }>({ _id: 1 })
       .toArray();
@@ -121,12 +121,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ par
 
       // Retire the NPPs themselves.
       const now = new Date();
-      const retireRes = await db
-        .collection<NPP>("npps")
-        .updateMany(
-          { _id: { $in: partyNppIds } },
-          { $set: { retiredAt: now, currentOffice: null, updatedAt: now } }
-        );
+      const retireRes = await nppsCollection(db).updateMany(
+        { _id: { $in: partyNppIds } },
+        { $set: { retiredAt: now, currentOffice: null, updatedAt: now } }
+      );
       nppsRetired = retireRes.modifiedCount;
     }
 

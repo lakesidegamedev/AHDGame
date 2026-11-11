@@ -63,6 +63,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 type Log = (message: string) => void;
 
@@ -159,7 +160,7 @@ async function phaseHolders(db: Db, plan: EconomyResetPlan): Promise<void> {
       },
     }))
   );
-  await db.collection("npps").updateMany(
+  await nppsCollection<Document>(db).updateMany(
     {
       $or: [
         { currencyBalances: { $exists: true } },
@@ -171,15 +172,14 @@ async function phaseHolders(db: Db, plan: EconomyResetPlan): Promise<void> {
   );
   // Executive track records are the margins of companies the reset deletes;
   // they set NPP CEO pay demands and who is picked as CEO.
-  await db
-    .collection("npps")
-    .updateMany({ ceoTrackRecord: { $exists: true } }, { $unset: { ceoTrackRecord: "" } });
-  await db
-    .collection("npps")
-    .updateMany(
-      { lineOfCredit: { $exists: true } },
-      { $set: { lineOfCredit: { balances: {}, arrears: {} } } }
-    );
+  await nppsCollection<Document>(db).updateMany(
+    { ceoTrackRecord: { $exists: true } },
+    { $unset: { ceoTrackRecord: "" } }
+  );
+  await nppsCollection<Document>(db).updateMany(
+    { lineOfCredit: { $exists: true } },
+    { $set: { lineOfCredit: { balances: {}, arrears: {} } } }
+  );
   await db
     .collection("users")
     .updateMany(

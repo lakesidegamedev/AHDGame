@@ -2,6 +2,7 @@ import type { Db } from "mongodb";
 import type { ElectedOfficial, StatePartyOrg, PartyBudget, NPP } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /**
  * Check if a party has presence in a state.
@@ -36,7 +37,7 @@ export async function checkPartyPresence(
   if (officialCount > 0) return true;
 
   // Check for active (non-retired) NPPs homed in the state for this party.
-  const nppCount = await db.collection<NPP>("npps").countDocuments({
+  const nppCount = await nppsCollection(db).countDocuments({
     party: partyId,
     homeState: stateId,
     retiredAt: null,

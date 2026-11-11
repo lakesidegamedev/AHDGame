@@ -18,6 +18,7 @@ import { getStatesCollection } from "@/lib/db/collections/states";
 import { getElectionsCollection } from "@/lib/db/collections/elections";
 import { getElectedOfficialsCollection } from "@/lib/db/collections/electedOfficials";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /**
  * Seat the parliament returned by the September 1992 election once both
@@ -240,8 +241,7 @@ async function materializeRoParliamentTransition(
     ].map((id) => new ObjectId(id));
     if (!ids.length) continue;
     const owners = isNpc
-      ? await db
-          .collection<NPP>("npps")
+      ? await nppsCollection(db)
           .find(
             { _id: { $in: ids }, countryId: "RO" },
             { session, projection: { currentOffice: 1 } }
@@ -279,7 +279,7 @@ async function materializeRoParliamentTransition(
         },
       };
     });
-    if (isNpc) await db.collection<NPP>("npps").bulkWrite(ops, { session });
+    if (isNpc) await nppsCollection(db).bulkWrite(ops, { session });
     else await charactersCollection(db).bulkWrite(ops, { session });
   }
   await db.collection<GovernmentFormation>("governmentFormations").updateOne(

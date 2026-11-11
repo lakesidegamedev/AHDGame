@@ -37,6 +37,7 @@ import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /** Resolved sessions returned to the panel (newest last in storage). */
 const MEETING_HISTORY_LIMIT = 10;
@@ -77,8 +78,7 @@ export async function GET(_request: Request, context: RouteContext) {
       .map((s) => s.nppId!);
     const nppNameById = new Map<string, string>();
     if (nppIds.length > 0) {
-      const npps = await db
-        .collection<NPP>("npps")
+      const npps = await nppsCollection(db)
         .find({ _id: { $in: nppIds } }, { projection: { name: 1 } })
         .toArray();
       for (const npp of npps) nppNameById.set(npp._id.toString(), npp.name);

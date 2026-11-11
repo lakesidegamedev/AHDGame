@@ -17,6 +17,7 @@ import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import type { CaucusMembership, NPP, NPPRelationship } from "@/lib/db/types";
 import { isSameCountry } from "@/lib/api/sameCountry";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 const joinSchema = z.discriminatedUnion("memberType", [
   z.object({
@@ -206,7 +207,7 @@ export async function GET(
       return errorResponse(403, "Only the Caucus Chair can review recruitable NPPs.");
     }
 
-    const npps = await db.collection<NPP>("npps").find({ party: partyId }).toArray();
+    const npps = await nppsCollection(db).find({ party: partyId }).toArray();
     const nppIds = npps.map((npp) => npp._id);
     const relationshipKeys = nppIds.map((nppId) => `${callerId.toString()}_${nppId.toString()}`);
     const now = new Date();
@@ -381,7 +382,7 @@ export async function POST(
         return errorResponse(409, "Character is already a member of another caucus.");
       }
     } else {
-      const target = await db.collection<NPP>("npps").findOne({ _id: memberOid });
+      const target = await nppsCollection(db).findOne({ _id: memberOid });
       if (!target) {
         return errorResponse(404, "NPP not found");
       }

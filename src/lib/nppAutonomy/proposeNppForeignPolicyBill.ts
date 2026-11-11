@@ -13,6 +13,7 @@ import { RESET_V2_READY } from "@/lib/resetVersions/availability";
 import { resetSystemVersionsForCountry } from "@/lib/resetVersions/rules";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export type NppTradeBillIntent = "raise_tariff" | "lower_tariff";
 
@@ -73,9 +74,10 @@ export async function proposeNppForeignPolicyBill(
   if (!official?.nppId) {
     return { ok: false, reason: "The governing party has no seated NPP bill sponsor." };
   }
-  const sponsor = await db
-    .collection<NPP>("npps")
-    .findOne({ _id: official.nppId }, { projection: { name: 1, party: 1 } });
+  const sponsor = await nppsCollection(db).findOne(
+    { _id: official.nppId },
+    { projection: { name: 1, party: 1 } }
+  );
   if (!sponsor) {
     return { ok: false, reason: "The selected legislative sponsor no longer exists." };
   }

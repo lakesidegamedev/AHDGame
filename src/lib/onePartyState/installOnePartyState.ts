@@ -13,6 +13,8 @@ import { ensureInitialEscalationState } from "@/lib/turn/regimeEscalationTurn";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import type { Document } from "mongodb";
 
 /**
  * Turn a country into a one-party state.
@@ -228,9 +230,10 @@ async function vacateSeatsOfParties(
     );
   }
   if (clearNpps.length > 0) {
-    await db
-      .collection("npps")
-      .updateMany({ _id: { $in: clearNpps } }, { $set: { currentOffice: null, updatedAt: now } });
+    await nppsCollection<Document>(db).updateMany(
+      { _id: { $in: clearNpps } },
+      { $set: { currentOffice: null, updatedAt: now } }
+    );
   }
   await Promise.all(
     doomed
