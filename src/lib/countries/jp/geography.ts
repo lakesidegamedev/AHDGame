@@ -4,6 +4,8 @@ import {
   JP_CORE5_NORMALS,
   JP_INCOME_ANCHORS,
   JP_ISO_NUMERIC,
+  JP_UN_MEMBER_SINCE,
+  JP_WORLD_REGION,
 } from "./geographyFacts";
 import type { ConscriptionPolicy } from "@/lib/demographics/conscription";
 import type { CountryModifierPatch } from "@/lib/states/conditions/countryPatches";
@@ -348,8 +350,8 @@ import { JP_MODIFIER_PATCHES } from "@/lib/countries/jp/data/jpModifierPatches";
 export const JP_GEOGRAPHY: CountryGeography = {
   continent: JP_CONTINENT,
   isoNumeric: JP_ISO_NUMERIC,
-  unMemberSince: 1956,
-  worldRegion: "asia",
+  unMemberSince: JP_UN_MEMBER_SINCE,
+  worldRegion: JP_WORLD_REGION,
   nppCapitalState: "KAN",
   nonPartyIndependentBias: 1.5,
   adjacency: JP_ADJACENCY_MAP,

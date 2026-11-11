@@ -20,6 +20,9 @@ const HERO_URLS: Record<string, string> = {
   // Bank of Canada head office, Wellington Street, Ottawa.
   "bank-of-canada":
     "https://commons.wikimedia.org/wiki/Special:FilePath/Bank_of_Canada.jpg?width=1280",
+  // Parliament Building (Hotel du Parlement), Quebec City: the QC executive and Assembly.
+  "quebec-parliament":
+    "https://commons.wikimedia.org/wiki/Special:FilePath/H%C3%B4tel_du_Parlement_du_Qu%C3%A9bec.jpg?width=1280",
   // First Minister's official residence, 6 Charlotte Square, Edinburgh.
   "bute-house": "https://commons.wikimedia.org/wiki/Special:FilePath/Bute_House.jpg?width=1280",
   // Senedd, home of the Welsh Government / Welsh Parliament, Cardiff Bay.

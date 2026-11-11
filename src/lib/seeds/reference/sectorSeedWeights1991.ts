@@ -6,6 +6,7 @@
  */
 
 import { CA_ECONOMY } from "@/lib/countries/ca/economy";
+import { QC_ECONOMY } from "@/lib/countries/qc/economy";
 import { OPERATING_SECTOR_TYPES } from "@/lib/constants/corporations";
 import type { OperatingSectorType } from "@/lib/constants/corporations";
 import type { CountryId } from "@/lib/constants/countries";
@@ -80,6 +81,7 @@ export const COUNTRY_SECTOR_WEIGHTS_1991: Record<CountryId, SectorWeightMap> = {
   TR: TR_ECONOMY.sectorWeights.byEra["1991"],
   DD: DD_ECONOMY.sectorWeights.byEra["1991"],
   CA: CA_ECONOMY.sectorWeights.byEra["1991"],
+  QC: QC_ECONOMY.sectorWeights.byEra["1991"],
 };
 
 /**

@@ -28,6 +28,8 @@ import { SCO_CABINET_MECHANICS } from "./scoCabinet";
 import { WAL_CABINET_MECHANICS } from "./walCabinet";
 import { ECON_COUNTRY_CABINET_MECHANICS } from "./econCountryCabinet";
 import { CA_CABINET_MECHANICS } from "@/lib/countries/ca/cabinet/mechanics";
+import { QC_CABINET_SEATS } from "@/lib/countries/qc/data/qcCabinet";
+import { devolvedCabinetMechanics } from "@/lib/cabinet/rules/devolvedSeats";
 
 export type { CabinetPositionMechanics } from "./cabinetMechanicsTypes";
 export type { CabinetNameBand, CabinetPositionDef } from "./cabinetPositions";
@@ -70,6 +72,7 @@ export const MECHANICS_BY_COUNTRY: Record<string, Record<string, CabinetPosition
   GR: ECON_COUNTRY_CABINET_MECHANICS,
   BR: ECON_COUNTRY_CABINET_MECHANICS,
   CA: CA_CABINET_MECHANICS,
+  QC: devolvedCabinetMechanics(QC_CABINET_SEATS, UK_CABINET_MECHANICS),
 };
 
 /** Get mechanics for a specific position in a country. Returns undefined if not found. */

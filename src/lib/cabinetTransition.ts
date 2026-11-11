@@ -7,6 +7,7 @@ import { IE_CABINET_POSITIONS } from "@/lib/constants/ieCabinet";
 import { CN_CABINET_POSITIONS } from "@/lib/constants/cnCabinet";
 import { NG_CABINET_POSITIONS } from "@/lib/constants/ngCabinet";
 import { SCO_CABINET_POSITIONS } from "@/lib/constants/scoCabinet";
+import { getCabinetPositions } from "@/lib/constants/cabinetPositions";
 import { WAL_CABINET_POSITIONS } from "@/lib/constants/walCabinet";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { createNotifications, type NotificationInput } from "@/lib/notifications";
@@ -131,6 +132,7 @@ export async function clearCabinetOnTransition(db: Db, countryId: CountryId): Pr
     NG: NG_CABINET_POSITIONS,
     SCO: SCO_CABINET_POSITIONS,
     WAL: WAL_CABINET_POSITIONS,
+    QC: getCabinetPositions("QC"),
   };
   const positions = positionsByCountry[countryId];
   if (!positions) return; // Country has no cabinet positions defined yet

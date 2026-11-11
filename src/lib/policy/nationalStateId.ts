@@ -29,6 +29,7 @@ import { BLR_ECONOMY } from "@/lib/countries/blr/economy";
 import { UKR_ECONOMY } from "@/lib/countries/ukr/economy";
 import { BAL_ECONOMY } from "@/lib/countries/bal/economy";
 import { CA_ECONOMY } from "@/lib/countries/ca/economy";
+import { QC_ECONOMY } from "@/lib/countries/qc/economy";
 
 /**
  * Mapping from country to the "stateId" used in collections like statePolicies
@@ -68,6 +69,7 @@ export const NATIONAL_POLICY_STATE_IDS: Record<CountryId, string> = {
   SCO: SCO_ECONOMY.nationalPolicyStateId,
   WAL: WAL_ECONOMY.nationalPolicyStateId,
   CA: CA_ECONOMY.nationalPolicyStateId,
+  QC: QC_ECONOMY.nationalPolicyStateId,
 };
 
 export function getNationalStateId(countryId: CountryId): string {

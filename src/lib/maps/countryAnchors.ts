@@ -28,6 +28,7 @@ import { BLR_MAP_ANCHOR } from "@/lib/countries/blr/geographyFacts";
 import { UKR_MAP_ANCHOR } from "@/lib/countries/ukr/geographyFacts";
 import { BAL_MAP_ANCHOR } from "@/lib/countries/bal/geographyFacts";
 import { CA_MAP_ANCHOR } from "@/lib/countries/ca/geographyFacts";
+import { QC_MAP_ANCHOR } from "@/lib/countries/qc/geographyFacts";
 
 /**
  * A rough interior lon/lat point per country, used to ORIENT a front: an invasion
@@ -43,6 +44,7 @@ export const COUNTRY_ANCHOR: Record<string, [number, number]> = {
   UK: UK_MAP_ANCHOR,
   IE: IE_MAP_ANCHOR,
   CA: CA_MAP_ANCHOR,
+  QC: QC_MAP_ANCHOR,
   SCO: SCO_MAP_ANCHOR,
   WAL: WAL_MAP_ANCHOR,
   RU: RU_MAP_ANCHOR,

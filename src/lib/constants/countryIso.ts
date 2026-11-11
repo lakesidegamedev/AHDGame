@@ -28,6 +28,7 @@ import { WAL_ISO_NUMERIC } from "@/lib/countries/wal/geographyFacts";
 import { BLR_ISO_NUMERIC } from "@/lib/countries/blr/geographyFacts";
 import { UKR_ISO_NUMERIC } from "@/lib/countries/ukr/geographyFacts";
 import { CA_ISO_NUMERIC } from "@/lib/countries/ca/geographyFacts";
+import { QC_ISO_NUMERIC } from "@/lib/countries/qc/geographyFacts";
 
 /** Natural-Earth ISO-numeric (topojson feature id) → in-game CountryId. */
 export const ISO_NUMERIC_TO_COUNTRY: Record<string, CountryId> = {
@@ -93,6 +94,7 @@ export const COUNTRY_TO_ISO_NUMERIC: Record<CountryId, string> = {
   SCO: SCO_ISO_NUMERIC, // shares GB code; not on the commodity map until secession
   WAL: WAL_ISO_NUMERIC, // shares GB code; not on the commodity map until secession
   CA: CA_ISO_NUMERIC,
+  QC: QC_ISO_NUMERIC, // shares the Canadian code; not on the commodity map until independence
 };
 
 /** Resolve a topojson feature id (ISO-numeric string) to a CountryId, or undefined. */

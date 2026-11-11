@@ -43,6 +43,7 @@ export const COUNTRY_REGION_LABELS: Record<CountryId, CountryRegionLabels> = {
   FI: { singular: "Region", plural: "Regions" },
   DD: { singular: "Region", plural: "Regions" },
   CA: { singular: "Province", plural: "Provinces & Territories" },
+  QC: { singular: "Region", plural: "Regions" },
 };
 
 export function getCountryRegionLabels(id: CountryId): CountryRegionLabels | undefined {
