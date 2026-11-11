@@ -7,7 +7,7 @@ summary: >-
   player into a higher tier.
 tags: [economy, taxes]
 badges: [patch]
-areas: [economy]
+areas: [engine]
 ---
 
 ## What changed

@@ -5,7 +5,7 @@ summary: >-
   Canada now has an election calendar for its 343-seat House of Commons and for
   its Premiers. It is not open to players yet.
 tags: [countries, canada, elections]
-badges: [content]
+badges: [minor]
 areas: [engine, backend]
 ---
 

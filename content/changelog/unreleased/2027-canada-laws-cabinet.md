@@ -5,7 +5,7 @@ summary: >-
   Canada now has a full law book and a 19-seat cabinet, ready for when the
   country opens to players.
 tags: [canada, legislation, cabinet]
-badges: [content]
+badges: [minor]
 areas: [backend]
 ---
 
