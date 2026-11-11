@@ -85,6 +85,7 @@ import { loadUSMediaOutletDelivery } from "@/lib/mediaRegulation/turnData";
 import type { Bill } from "@/lib/db/types";
 import type { NPP } from "@/lib/db/types";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /**
  * Conservative catalog of legislation types that are clearly market-liberalizing
@@ -411,7 +412,7 @@ async function loadGovernmentDirectives(
     }
   );
   if (!gov)
-    return countryId === "FR"
+    return countryHasFeature("frTurn", countryId)
       ? { europeanGovernmentParty: await loadFrenchEuropeanExecutiveParty(db) }
       : {};
   if (gov.status !== "formed") return {};

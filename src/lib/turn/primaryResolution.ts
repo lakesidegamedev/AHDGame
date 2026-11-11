@@ -100,6 +100,7 @@ import { scopeFilter, type ElectionSweepScope } from "./electionSweepScope";
 import { hasBankedGeneralTurn } from "@/lib/elections/rules/turnSlice";
 import { getElectionsCollection } from "@/lib/db/collections/elections";
 import { getStatesCollection } from "@/lib/db/collections/states";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export type { ElectionSweepScope } from "./electionSweepScope";
 export { recordPrimarySnapshots } from "./primarySnapshots";
@@ -311,7 +312,7 @@ export async function resolvePrimariesIfNeeded(
       // player party drafts and auto-generate NPP manifestos. Only writes to
       // `manifestos`; vote-share effect gated by UK_MANIFESTO_VOTE_EFFECT.
       if (
-        election.countryId === "UK" &&
+        countryHasFeature("ukTurn", election.countryId) &&
         (election.electionType === "commons" || election.electionType === "snap_commons")
       ) {
         const manifestoParties = [...partyCounts.keys()].map((partyId) => {
@@ -636,8 +637,10 @@ export async function resolvePrimariesIfNeeded(
           // ("the 12 primary" was the id leaking through).
           const partyName =
             partyMap.get(`${election.countryId ?? "US"}:${c.party}`)?.name ?? "party";
-          const where = election.state === "US" ? "National" : election.state;
-          const inWhere = election.state === "US" ? "" : ` in ${election.state}`;
+          const where = countryHasFeature("usTurn", election.state) ? "National" : election.state;
+          const inWhere = countryHasFeature("usTurn", election.state)
+            ? ""
+            : ` in ${election.state}`;
           notificationInputs.push({
             userId: char.userId,
             type: isLoser ? "primary_loss" : "primary_win",
@@ -697,7 +700,7 @@ export async function resolvePrimariesIfNeeded(
       // into primary) are wiped clean. The gate above ensures this only runs once
       // per primary close (tally.primaryResults absent); subsequent turns skip.
       if (
-        election.countryId === "RU" &&
+        countryHasFeature("ruTurn", election.countryId) &&
         election.electionType === "president" &&
         election.russianPresidentialRound
       ) {

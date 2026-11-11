@@ -35,6 +35,7 @@ import { resolveBillVoteField } from "@/lib/congress/billVoteField";
 import { isVotingDeadlinePassed } from "@/lib/legislature/billVotingWindow";
 import { isBillWhipInCurrentPhase } from "@/lib/congress/billWhipPhase";
 import { loadCabinetDiscipline, type CabinetDiscipline } from "@/lib/resetCabinet/loadDiscipline";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 // ─── Context Types ─────────────────────────────────────────────────────────────
 
@@ -475,7 +476,9 @@ export async function loadNPPContext(now: Date, options?: NPPContextOptions): Pr
   const billStatesById = new Map(allStates.map((state) => [state._id, state]));
   if (
     preset === "1991-default" &&
-    activeBills.some((bill) => resolveNppBillCountryId(bill, billStatesById) === "RU")
+    activeBills.some((bill) =>
+      countryHasFeature("ruTurn", resolveNppBillCountryId(bill, billStatesById))
+    )
   ) {
     runtimeCountryOffices.set("RU", await loadRuntimeCountryOffices(db, "RU", preset));
   }

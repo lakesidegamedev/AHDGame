@@ -80,6 +80,7 @@ import { regionalBudgetPhaseDue, resolveRegionalBudgetCadence } from "./regional
 import type { LegislationType } from "@/lib/db/types/legislation";
 import { RESET_V2_READY } from "@/lib/resetVersions/availability";
 import { RESET_V2_COUNTRIES, resetSystemVersionsForCountry } from "@/lib/resetVersions/rules";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export const stateEffectsAndNationalAggregationPhase: TurnPhaseAdapter = {
   key: "stateEffectsAndNationalAggregation",
@@ -191,7 +192,10 @@ export const stateEffectsAndNationalAggregationPhase: TurnPhaseAdapter = {
       const tiers = await countryTiers();
       const countries = (await getRegisteredCountryIds(db)).filter(
         (id): id is "UK" | "SCO" | "WAL" =>
-          (id === "UK" || id === "SCO" || id === "WAL") && tiers.tierOf(id) !== "background"
+          (countryHasFeature("ukTurn", id) ||
+            countryHasFeature("scoTurn", id) ||
+            countryHasFeature("walTurn", id)) &&
+          tiers.tierOf(id) !== "background"
       );
       let regionsProcessed = 0;
       for (const country of countries) {

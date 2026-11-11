@@ -68,6 +68,7 @@ import {
 } from "@/lib/nppAutonomy/v6/rules/primaryConsolidation";
 import { logger } from "../../observability/logger";
 import { workerConfig } from "@/lib/config/worker";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 // Optional global salt so headless sim runs can vary this RNG across runs
 // while staying reproducible within a run (mirrors nppActionProcessing.ts).
@@ -128,7 +129,7 @@ export async function processElectionEntry(ctx: NPPContext): Promise<number> {
     // Bound Assembly families use their atomic slate shells.
     if (
       isNativeRussianAssemblyElection(p) ||
-      (p.countryId === "BG" &&
+      (countryHasFeature("bgTurn", p.countryId) &&
         (p.bulgarianFoundingRound?.round === 2 || p.bulgarianFoundingRound?.byElection)) ||
       p.hungarianModernByElection != null ||
       (isHu1991AssemblyCampaign(p) &&
@@ -138,7 +139,7 @@ export async function processElectionEntry(ctx: NPPContext): Promise<number> {
     if (isPresidentialElectionType(p.electionType)) {
       return (
         (p.electionType === "president" &&
-          p.countryId === "RU" &&
+          countryHasFeature("ruTurn", p.countryId) &&
           p.russianPresidentialRound?.round === 1) ||
         autonomyPresidentCountries.has((p.countryId ?? "US") as CountryId)
       );

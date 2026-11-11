@@ -11,6 +11,7 @@ import {
   getHouseSeats,
   isUsElectoralState,
 } from "@/lib/constants/states";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /**
  * True when `stateId` is eligible for US federal seat backfill (House,
@@ -164,7 +165,7 @@ export async function backfillMissingSeats(
   // population-proportional apportionment below.
   const houseSeatsByState =
     // eslint-disable-next-line local/no-country-literals -- DC/AK/HI federal apportionment quirks are a US-only structural concept, not config-driven
-    countryId === "US"
+    countryHasFeature("usTurn", countryId)
       ? getHouseSeats(
           (await db.collection<GameState>("gameState").findOne({ _id: "current" }))?.preset
         )
@@ -269,7 +270,11 @@ async function backfillSubNationalChamber(
       .collection<State>("states")
       .find({ countryId }, { projection: { _id: 1, stateSenateSeats: 1 } })
       .toArray()
-  ).filter((s) => countryId !== "US" || isUsBackfillEligibleState(s._id, houseSeatsByState ?? {}));
+  ).filter(
+    (s) =>
+      !countryHasFeature("usTurn", countryId) ||
+      isUsBackfillEligibleState(s._id, houseSeatsByState ?? {})
+  );
   if (states.length === 0) return 0;
   const parties = await db
     .collection("politicalParties")
@@ -413,7 +418,11 @@ async function backfillChamber(
       .collection<State>("states")
       .find({ countryId }, { projection: { _id: 1, population: 1 } })
       .toArray()
-  ).filter((s) => countryId !== "US" || isUsBackfillEligibleState(s._id, houseSeatsByState ?? {}));
+  ).filter(
+    (s) =>
+      !countryHasFeature("usTurn", countryId) ||
+      isUsBackfillEligibleState(s._id, houseSeatsByState ?? {})
+  );
   const parties = await db
     .collection("politicalParties")
     .find({ countryId }, { projection: { sequentialId: 1, name: 1 } })

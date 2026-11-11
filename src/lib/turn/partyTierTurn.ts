@@ -12,6 +12,7 @@ import {
   updateEarnedRegions,
 } from "@/lib/parties/partyTier";
 import { resolveSeedPartyTier } from "@/lib/seeds/defaultPartyTiers";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /**
  * Recomputes each party's Major/Minor tier, earned-region set, demotion-warning
@@ -107,8 +108,9 @@ export async function processPartyTierTurn(
       currentTurn,
       // Three of the UK's twelve regions makes the threshold usable for
       // parties with a strong nation-wide base without changing other countries.
-      graduationRegionFraction:
-        party.countryId === "UK" ? UK_TIER_GRADUATION_REGION_FRACTION : undefined,
+      graduationRegionFraction: countryHasFeature("ukTurn", party.countryId)
+        ? UK_TIER_GRADUATION_REGION_FRACTION
+        : undefined,
       // One-party-state ruling parties are pinned Major (never demoted).
       exemptFromDemotion: party.regimeStatus === "ruling",
     });

@@ -82,6 +82,7 @@ import { getManufacturingProductKind } from "@/lib/products/manufacturingCatalog
 import { isLegalManufacturingProductForPlant } from "@/lib/products/rules/manufacturingEligibility";
 import { getMediaProductKind } from "@/lib/products/mediaProductCatalog";
 import { mediaProductOfferAvailability } from "@/lib/products/rules/mediaProductSales";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /**
  * Clearing pre-pass for the corporation turn, extracted from index.ts so the
@@ -632,7 +633,7 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
           (sector as { countryId?: string }).countryId;
         const fairnessDoctrineApplies =
           market.mediaFairnessDoctrineEnabled === true &&
-          sectorCountryId === "US" &&
+          countryHasFeature("usTurn", sectorCountryId) &&
           isFairnessDoctrineBroadcastOutlet(sector.sectorType, sector.strategyId ?? "");
         if (
           lookups.editorialAudienceLeanByState &&
@@ -710,7 +711,7 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
           const sectorType = sectorTypeBySectorId.get(input.sectorId);
           if (!stateId || !corporationId || sectorType !== "media") continue;
           if (
-            lookups.stateCountryMap?.get(stateId) !== "US" ||
+            !countryHasFeature("usTurn", lookups.stateCountryMap?.get(stateId)) ||
             lookups.corpById.get(corporationId)?.countryOwnerId
           )
             continue;

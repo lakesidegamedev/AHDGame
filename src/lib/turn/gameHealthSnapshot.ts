@@ -29,6 +29,7 @@ import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 type SeatScopedOfficial = ElectedOfficial & { seatId?: string };
 
@@ -494,7 +495,7 @@ export async function collectSeatIntegrity(
     // choosing either staggered chamber class. Its office and region are real,
     // but no exact class seat can be marked filled from that aggregate row.
     if (
-      official.countryId === "JP" &&
+      countryHasFeature("jpTurn", official.countryId) &&
       official.officeType === "sangiin" &&
       official.chamberClass == null &&
       (official.seatsHeld ?? 0) > 0 &&
