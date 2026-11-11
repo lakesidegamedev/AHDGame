@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { isOldLegislationTypeExcluded } from "@/lib/politicalMetrics/pipelinePreset";
 import { legislationTypes } from "@/lib/seeds/reference/legislationTypes";
 import {
   MECHANICAL_LEGISLATION_ERA_ENTRIES,
@@ -82,15 +81,6 @@ describe("reference legislation catalog", () => {
     const catalogIds = new Set(legislationTypes.map((type) => type._id));
     for (const id of MECHANICAL_TYPE_IDS) {
       expect(catalogIds.has(id), id).toBe(true);
-    }
-  });
-
-  it("lets the political-legislation preset keep every generated type", () => {
-    for (const type of mechanicalLegislationTypes) {
-      expect(
-        isOldLegislationTypeExcluded({ _id: type._id, countryScope: type.countryScope }),
-        type._id
-      ).toBe(false);
     }
   });
 });

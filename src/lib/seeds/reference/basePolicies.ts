@@ -187,27 +187,12 @@ function clampScore(n: number): number {
   return Math.max(-3, Math.min(3, Math.round(n)));
 }
 
-/** State base: from politicalLean (-4..+5). Types with strong social dimension use social axis; else economic. */
+/** State base: from politicalLean (-4..+5), on the economic axis. */
 function stateDefault(
-  legislationTypeId: string,
+  _legislationTypeId: string,
   politicalLean: number
 ): { economic: number; social: number } {
-  const score = clampScore(politicalLean * 0.6);
-  if (
-    legislationTypeId === "us_law_enforcement_criminal_justice" ||
-    legislationTypeId === "us_reproductive_rights" ||
-    legislationTypeId === "us_gun_control"
-  ) {
-    return { economic: 0, social: score };
-  }
-  if (
-    legislationTypeId === "us_school_standards" ||
-    legislationTypeId === "us_housing" ||
-    legislationTypeId === "us_state_housing"
-  ) {
-    return { economic: score, social: score };
-  }
-  return { economic: score, social: 0 };
+  return { economic: clampScore(politicalLean * 0.6), social: 0 };
 }
 
 // ═════════════════════════════════════════════════════════════════════════════

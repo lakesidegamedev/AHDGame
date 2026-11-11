@@ -6,10 +6,6 @@ import type { LegislationType } from "@/lib/db/types/legislation";
 import { resolvePolicyOptionJurisdiction } from "@/lib/legislature/jurisdiction";
 import { withLawAdministration } from "./lawAdministrationCatalog";
 import { clampRatio } from "./rules/implementation";
-import {
-  US_PUBLIC_HEALTH_LEGISLATION_TYPE_ID,
-  US_PUBLIC_HEALTH_POLITICAL_LAW_ID,
-} from "./deliveryMultiplier";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 export interface DepartmentDeliveryMultiplierInput {
@@ -19,16 +15,6 @@ export interface DepartmentDeliveryMultiplierInput {
   expectedLawIds?: ReadonlySet<string>;
   /** Laws whose selected responsibility model excludes a national program. */
   nationalDeliveryExcludedLawIds?: ReadonlySet<string>;
-}
-
-function deliveryLawId(legislationTypeId: string): string {
-  return legislationTypeId === US_PUBLIC_HEALTH_LEGISLATION_TYPE_ID
-    ? US_PUBLIC_HEALTH_POLITICAL_LAW_ID
-    : legislationTypeId;
-}
-
-function deliveryLawIds(legislationTypeId: string): string[] {
-  return [...new Set([legislationTypeId, deliveryLawId(legislationTypeId)])];
 }
 
 /**
@@ -51,9 +37,8 @@ export function resolveDepartmentDeliveryMultipliers(
           : 0;
       // One enacted option should own one program. Max makes the resolver safe
       // during migrations where an old department account may still coexist.
-      for (const lawId of deliveryLawIds(program.legislationTypeId)) {
-        multipliers.set(lawId, Math.max(multipliers.get(lawId) ?? 0, multiplier));
-      }
+      const lawId = program.legislationTypeId;
+      multipliers.set(lawId, Math.max(multipliers.get(lawId) ?? 0, multiplier));
     }
   }
   for (const lawId of input.nationalDeliveryExcludedLawIds ?? []) multipliers.set(lawId, 0);
@@ -85,11 +70,10 @@ export function resolveDepartmentDeliveryExpectations(
     const option = type?.policyOptions?.[law.policyOptionIndex ?? -1];
     if (!type?.administration || !option?.implementation) continue;
     const countryId = law.countryId ?? "US";
-    const lawIds = deliveryLawIds(law.legislationTypeId);
-    for (const lawId of lawIds) addToCountryMap(expectedByCountry, countryId, lawId);
+    addToCountryMap(expectedByCountry, countryId, law.legislationTypeId);
     const jurisdictionMode = resolvePolicyOptionJurisdiction(type, option, law.jurisdictionMode);
     if (jurisdictionMode === "regional_discretion") {
-      for (const lawId of lawIds) addToCountryMap(excludedByCountry, countryId, lawId);
+      addToCountryMap(excludedByCountry, countryId, law.legislationTypeId);
     }
   }
   return { expectedByCountry, excludedByCountry };
@@ -190,9 +174,8 @@ export function resolveRegionalDeliveryMultipliers(
       isCurrent && Number.isFinite(program.implementationFactor)
         ? clampRatio(program.implementationFactor)
         : 0;
-    for (const lawId of deliveryLawIds(program.legislationTypeId)) {
-      multipliers.set(lawId, Math.max(multipliers.get(lawId) ?? 0, multiplier));
-    }
+    const lawId = program.legislationTypeId;
+    multipliers.set(lawId, Math.max(multipliers.get(lawId) ?? 0, multiplier));
   }
   return multipliers;
 }

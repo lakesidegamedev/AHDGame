@@ -6,7 +6,7 @@
       "narrativeLines": 0
     },
     "scripts/architecture-audit.mjs": {
-      "longBlocks": 4,
+      "longBlocks": 3,
       "narrativeLines": 1
     },
     "scripts/audit/helpers.ts": {
@@ -10571,7 +10571,7 @@
     },
     "src/lib/politicalMetrics/pipelinePreset.ts": {
       "longBlocks": 1,
-      "narrativeLines": 2
+      "narrativeLines": 1
     },
     "src/lib/politicalMetrics/queries/countryPoliticalMetrics.sp2.test.ts": {
       "longBlocks": 0,
@@ -10592,10 +10592,6 @@
     "src/lib/politicalMetrics/seeds/regionalTexture1953.test.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
-    },
-    "src/lib/politicalMetrics/seeds/regionalTexture1953.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
     },
     "src/lib/politicalMetrics/types.ts": {
       "longBlocks": 0,
@@ -11138,35 +11134,19 @@
       "narrativeLines": 0
     },
     "src/lib/seeds/reference/basePolicies1953.ts": {
-      "longBlocks": 19,
+      "longBlocks": 17,
       "narrativeLines": 0
     },
     "src/lib/seeds/reference/basePolicies1979.ts": {
-      "longBlocks": 5,
-      "narrativeLines": 0
-    },
-    "src/lib/seeds/reference/basePolicies1991.ts": {
-      "longBlocks": 8,
-      "narrativeLines": 0
-    },
-    "src/lib/seeds/reference/basePolicies1999.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/seeds/reference/basePolicies2007.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/seeds/reference/basePolicies2019.ts": {
       "longBlocks": 3,
       "narrativeLines": 0
     },
-    "src/lib/seeds/reference/basePolicies2023.ts": {
-      "longBlocks": 1,
+    "src/lib/seeds/reference/basePolicies1991.ts": {
+      "longBlocks": 6,
       "narrativeLines": 0
     },
-    "src/lib/seeds/reference/basePolicies2027.ts": {
-      "longBlocks": 1,
+    "src/lib/seeds/reference/basePolicies2019.ts": {
+      "longBlocks": 2,
       "narrativeLines": 0
     },
     "src/lib/seeds/reference/blocSectorWeights.test.ts": {
@@ -13651,7 +13631,7 @@
     },
     "src/simulation/phases/turnPhaseRegistry.ts": {
       "longBlocks": 0,
-      "narrativeLines": 5
+      "narrativeLines": 4
     }
   }
 }

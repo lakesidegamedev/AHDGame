@@ -33,17 +33,7 @@ export async function seedStatePolicies(
   const { getBasePolicies } = await import("@/lib/seeds/reference/basePolicies");
   const { legislationTypes } = await import("@/lib/seeds/reference/legislationTypes");
 
-  // The old US/UK/RU/DD catalogs are unseeded, so their basePolicies records
-  // must not seed either (they would write conflicting statePolicies alongside
-  // the political-legislation baseline).
-  const { isOldLegislationTypeExcluded } = await import("@/lib/politicalMetrics/pipelinePreset");
-  const excludedOldIds = new Set(
-    legislationTypes.filter((lt) => isOldLegislationTypeExcluded(lt)).map((lt) => lt._id)
-  );
-
-  const basePolicies = (
-    await alignSeedIncomeTaxTierRecords(db, await getBasePolicies(preset))
-  ).filter((r) => !excludedOldIds.has(r.legislationTypeId));
+  const basePolicies = await alignSeedIncomeTaxTierRecords(db, await getBasePolicies(preset));
 
   // Build list of valid policy keys for cleanup
   const validPolicyKeys = new Set<string>();
@@ -89,16 +79,10 @@ export async function seedStatePolicies(
     await db.collection<StatePolicyRecord>("statePolicies").bulkWrite(ops, { ordered: true });
   }
 
-  // Generation-aware deleter (political-legislation spec §6, finding #3): the
-  // cleanup is country-blind, so without the new-generation id set it would
-  // DELETE every §7 baseline record as "stale". New-generation ids are always
-  // in the valid set; the excluded old US/UK/RU/DD ids drop OUT of it, so
-  // pre-existing conflicting records clean up.
+  // The cleanup is country-blind, so the new-generation id set must be in the
+  // valid set or every baseline record would be deleted as stale.
   const { getAllNewGenerationLawIds } = await import("@/lib/politicalLegislation/catalog");
-  const validLegTypeIds = [
-    ...legislationTypes.filter((lt) => !excludedOldIds.has(lt._id)).map((lt) => lt._id),
-    ...getAllNewGenerationLawIds(),
-  ];
+  const validLegTypeIds = [...legislationTypes.map((lt) => lt._id), ...getAllNewGenerationLawIds()];
 
   // Remove state policies that reference non-existent legislation types
   const deleteResult = await db.collection("statePolicies").deleteMany({

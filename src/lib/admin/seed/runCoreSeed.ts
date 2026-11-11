@@ -656,13 +656,9 @@ export async function runSeed(
     log(`Deleted ${deleteResult.deletedCount} deprecated legislation types`);
   }
 
-  // The old US/UK/RU/DD catalogs never seed; the projected political-legislation
-  // book seeds instead (a missing countryScope = legacy US).
   const { getProjectedPoliticalLegislationTypes } = await import("./seedPoliticalLegislation");
-  const { isOldLegislationTypeExcluded } = await import("@/lib/politicalMetrics/pipelinePreset");
-  const baseSeedTypes = legislationTypes.filter((lt) => !isOldLegislationTypeExcluded(lt));
   const allLegislationTypes = [
-    ...baseSeedTypes.map((lt) => ({ ...lt, source: "seed" as const })),
+    ...legislationTypes.map((lt) => ({ ...lt, source: "seed" as const })),
     ...getProjectedPoliticalLegislationTypes(politicalSeedYear).map((lt) => ({
       ...lt,
       source: "seed" as const,
@@ -682,8 +678,8 @@ export async function runSeed(
     );
   }
   log(
-    `Seeded ${baseSeedTypes.length} seed + ${adminLegislationTypes.length} admin legislation types` +
-      ` + ${allLegislationTypes.length - baseSeedTypes.length - adminLegislationTypes.length} projected political laws`
+    `Seeded ${legislationTypes.length} seed + ${adminLegislationTypes.length} admin legislation types` +
+      ` + ${allLegislationTypes.length - legislationTypes.length - adminLegislationTypes.length} projected political laws`
   );
 
   // Budgets — preset-aware. `seedBudgets` filters its FY1991 vs FY2020 config

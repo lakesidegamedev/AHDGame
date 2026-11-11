@@ -5,8 +5,8 @@ import { resolvePublicHealthDeliveryMultiplier } from "./deliveryMultiplier";
 function program(overrides: Partial<DepartmentProgramState> = {}): DepartmentProgramState {
   return {
     programId: "us_public_health_workforce",
-    legislationTypeId: "us_public_health",
-    policyOptionId: "public_health_opt_1",
+    legislationTypeId: "us.health.prevention.primary",
+    policyOptionId: "l4",
     status: "operating",
     annualDemand: 9_300_000_000,
     periodDemand: 193_750_000,

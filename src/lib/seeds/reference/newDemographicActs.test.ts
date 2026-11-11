@@ -4,7 +4,7 @@ import { COUNTRY_POLICY_CONFIGS } from "./basePolicies";
 import { COUNTRY_POLICY_CONFIGS_1991 } from "./basePolicies1991";
 
 /**
- * §4.6 new-act gaps: US Paid Family Leave, UK Childcare, JP Pension. Each fills a
+ * §4.6 new-act gaps: JP Pension. Each fills a
  * genuine demographic-legislation hole (verified absent before authoring) and
  * wires a live cohort-engine DRIVER (birthRate / laborParticipation), never a
  * derived readout. BR is deferred to P5 (no BR seeds exist yet).
@@ -12,8 +12,6 @@ import { COUNTRY_POLICY_CONFIGS_1991 } from "./basePolicies1991";
 const byId = (id: string) => legislationTypes.find((lt) => lt._id === id);
 
 const NEW_ACTS = [
-  { id: "us_paid_family_leave", scope: "us", country: "us", primary: "birthRate" },
-  { id: "uk_childcare", scope: "uk", country: "uk", primary: "birthRate" },
   { id: "jp_pension", scope: "jp", country: "jp", primary: "povertyRate" },
 ] as const;
 
@@ -61,14 +59,6 @@ describe("§4.6 new demographic acts", () => {
       });
     });
   }
-
-  it("the family/childcare acts wire laborParticipation POSITIVELY (childcare enables work)", () => {
-    for (const id of ["us_paid_family_leave", "uk_childcare"]) {
-      const lp = byId(id)!.effectTargetsWeighted!.find((w) => w.metricId === "laborParticipation");
-      expect(lp, `${id} should wire laborParticipation`).toBeDefined();
-      expect(lp!.weight).toBeGreaterThan(0); // childcare raises participation
-    }
-  });
 
   it("the JP pension act wires laborParticipation NEGATIVELY (expansion lowers participation)", () => {
     const lp = byId("jp_pension")!.effectTargetsWeighted!.find(

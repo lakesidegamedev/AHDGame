@@ -272,8 +272,8 @@ async function spawnNationalizationChallenge(
           // No specific taken sectors: keep a benign deregulatory ruling so a
           // divergence still has a real, safe, enactable consequence.
           effect: {
-            legislationTypeId: "us_minimum_wage",
-            policyOptionId: "minimum_wage_opt_5",
+            legislationTypeId: "us.economy.workerSecurity.primary",
+            policyOptionId: "l0",
             effectDirection: -1 as const,
           },
         }),

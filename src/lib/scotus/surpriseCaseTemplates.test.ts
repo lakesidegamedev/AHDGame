@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { SURPRISE_CASE_TEMPLATES, templatesForYear } from "./surpriseCaseTemplates";
 import { legislationTypes } from "@/lib/seeds/reference/legislationTypes";
+import { getProjectedPoliticalLegislationTypes } from "@/lib/admin/seed/seedPoliticalLegislation";
 
 describe("SURPRISE_CASE_TEMPLATES", () => {
   // #3607 scoped this to a small pool. Era windows changed what "small" has to
@@ -30,7 +31,9 @@ describe("SURPRISE_CASE_TEMPLATES", () => {
   });
 
   it("every effect references a real, currently-seeded legislationTypeId and policyOptionId", () => {
-    const typesById = new Map(legislationTypes.map((lt) => [lt._id, lt]));
+    const typesById = new Map(
+      [...legislationTypes, ...getProjectedPoliticalLegislationTypes()].map((lt) => [lt._id, lt])
+    );
     for (const t of SURPRISE_CASE_TEMPLATES) {
       for (const effect of [t.positiveEffect, t.negativeEffect]) {
         const lt = typesById.get(effect.legislationTypeId);

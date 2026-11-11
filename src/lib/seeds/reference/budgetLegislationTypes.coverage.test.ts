@@ -17,6 +17,7 @@
 import { describe, expect, it } from "vitest";
 
 import { legislationTypes } from "./legislationTypes";
+import { SEED_FISCAL_LEVERS } from "./seedFiscalLadders";
 import { jpLegislationTypes } from "@/lib/countries/jp/data/jpLegislationTypes";
 import { deLegislationTypes } from "@/lib/seeds/de/deLegislationTypes";
 import { ieLegislationTypes } from "@/lib/seeds/ie/ieLegislationTypes";
@@ -31,7 +32,11 @@ const allBudgetLegislationTypes = [
   ...ieLegislationTypes,
   ...cnLegislationTypes,
 ];
-const typesById = new Map(allBudgetLegislationTypes.map((lt) => [lt._id, lt] as const));
+// US and UK open from the fiscal ladder table, not from legislation types.
+const typesById = new Map<string, unknown>([
+  ...allBudgetLegislationTypes.map((lt) => [lt._id, lt] as const),
+  ...[...SEED_FISCAL_LEVERS.keys()].map((id) => [id, true] as const),
+]);
 
 const PRESETS = ["2019-default", "1991-default"] as const;
 
