@@ -280,11 +280,15 @@ export async function launchCyberOperation(args: LaunchCyberArgs): Promise<Launc
       budgetSpent: cost,
       slotsSpent: 0,
       effectSummary: message,
+      launchKey: key,
       turn,
       createdAt: new Date(),
     });
   } catch (error) {
     if (args.chargeAppropriation) await creditIntelligenceAppropriation(db, attackerId, cost);
+    // A concurrent launch on the same pair claimed this turn first.
+    if ((error as { code?: number }).code === 11000)
+      return { ok: false, status: 409, error: CYBER_REFUSAL_TEXT.cooldown };
     throw error;
   }
 

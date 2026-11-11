@@ -110,6 +110,8 @@ export interface IntelligenceOpLog {
   budgetSpent: number;
   slotsSpent: number;
   effectSummary: string;
+  /** Cyber launch rows only: one launch per pair and turn, held by a unique index. */
+  launchKey?: string;
   /** Cyber stand-down rows only: the turn the truce between the pair lapses. */
   truceUntilTurn?: number;
   turn: number;
