@@ -12,7 +12,7 @@ areas: [engine]
 
 ## What changed
 
-- A Canadian House of Commons seat that falls vacant mid-term opens a Commons By-Election in that province, contesting only the empty seats.
+- A Canadian House of Commons seat that falls vacant mid-term opens a Commons By-Election in that province, contesting only the empty seats. The vote is weighted by the share of the province's seats that are empty.
 - Sitting MPs keep their seats while the by-election runs, and an MP already holding a seat in the province cannot stand in it.
 - If nobody files, a candidate from the seat's previous party is entered so the seat is not left empty.
 - No by-election is held when the province's general election would fill the seat first.

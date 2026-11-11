@@ -478,8 +478,8 @@ describe("Canadian Commons by-elections", () => {
     const fake = createFakeCommonsDb();
     fake.seed("gameState", [{ _id: "current", preset: "2027-default" }]);
     fake.seed("states", [
-      { id: "CA_ON", countryId: "CA", houseDistricts: 122 },
-      { id: "CA_QC", countryId: "CA", houseDistricts: 78 },
+      { _id: "CA_ON", countryId: "CA", houseDistricts: 122 },
+      { _id: "CA_QC", countryId: "CA", houseDistricts: 78 },
     ]);
     return fake;
   }
