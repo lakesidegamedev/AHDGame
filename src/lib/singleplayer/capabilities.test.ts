@@ -16,9 +16,12 @@ describe("buildSingleplayerCapabilities", () => {
     expect(seedable).toContain("2027-default");
   });
 
-  it("gives 2027 the US as its only player country and keeps unready eras empty", () => {
+  it("gives 2027 the US and Canada as player countries and keeps unready eras empty", () => {
     const era2027 = manifest.presets.find((entry) => entry.preset === "2027-default");
-    expect(era2027?.playerCountries).toEqual([{ id: "US", name: "United States" }]);
+    expect(era2027?.playerCountries).toEqual([
+      { id: "US", name: "United States" },
+      { id: "CA", name: "Canada" },
+    ]);
     expect(era2027?.computerCountries.map((entry) => entry.id)).toContain("UK");
     expect(era2027?.backgroundCountries.map((entry) => entry.id)).toContain("IE");
     for (const entry of manifest.presets.filter((preset) => !preset.seedable)) {

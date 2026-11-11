@@ -226,17 +226,17 @@ describe("GET /api/search/universal proposable legislation", () => {
   });
 
   it("hides legislation that is not active in the current era", async () => {
-    await setEnabledCountries(["JP"]);
+    await setEnabledCountries(["IE"]);
     seedLegislationTypes([
       {
-        _id: "jp_ai_liability_act",
-        name: "AI Liability Act",
-        description: "A synthetic AI liability statute.",
-        countryScope: "jp",
+        _id: "ie_cybersecurity",
+        name: "Cybersecurity Act",
+        description: "A synthetic cybersecurity statute.",
+        countryScope: "ie",
         policyOptions: [],
       },
     ]);
-    // jp_ai_liability_act is a modern law; the world is still in 1950.
+    // ie_cybersecurity opens in 1998; the world is still in 1950.
     db.collection("gameState");
     db.collectionMocks.gameState!.findOne.mockResolvedValue({
       _id: "current",
@@ -244,6 +244,6 @@ describe("GET /api/search/universal proposable legislation", () => {
       currentYear: 1950,
     });
 
-    expect(await billResults("ai liability")).toHaveLength(0);
+    expect(await billResults("cybersecurity")).toHaveLength(0);
   });
 });

@@ -930,7 +930,6 @@ for (const [registry, why, countries] of ABSENT_BY_REGISTRY) {
  */
 ABSENT_UPSTREAM.CA = {
   ...(ABSENT_UPSTREAM.CA ?? {}),
-  EXECUTIVE_SEALS: "no seal; getSeal returns null and the UI omits it",
   FULL_ERA_REGION_BUNDLES:
     "no row in the seed-diagnostic registry; the seed runner is the authority",
   POPULATION_ANCHOR_BUNDLES: "no population anchors are authored for any era",
