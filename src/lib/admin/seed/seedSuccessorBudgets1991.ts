@@ -10,6 +10,7 @@ import {
 } from "@/lib/seeds/reference/budgets";
 import { upsertCountryOwnedCorpEntries } from "./upsertCountryOwnedCorps";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 const COUNTRY_IDS = [
   "RU",
@@ -75,7 +76,7 @@ export async function seedSuccessorBudgets1991(
     .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } });
   const commandEconomyEnabled = gameConfig?.commandEconomyEnabled === true;
   const ruStatesForCorps = regions
-    .filter((region) => region.countryId === "RU")
+    .filter((region) => countryHasFeature("ruAdmin", region.countryId))
     .map((region) => ({
       id: region._id,
       population: region.population,
@@ -87,7 +88,7 @@ export async function seedSuccessorBudgets1991(
     preset,
     commandEconomyEnabled,
     log
-  ).filter((entry) => entry.corporation.countryOwnerId === "RU");
+  ).filter((entry) => countryHasFeature("ruAdmin", entry.corporation.countryOwnerId));
   await upsertCountryOwnedCorpEntries(db, "RU", ruCorpData);
   const ruSectorCount = ruCorpData.reduce((n, e) => n + e.sectors.length, 0);
   if (ruCorpData.length > 0)

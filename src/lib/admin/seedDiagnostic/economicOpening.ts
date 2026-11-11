@@ -25,6 +25,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export async function checkEconomicOpening(db: Db, preset: string): Promise<SeedDiagnosticCheck[]> {
   if (preset !== "1991-default") return [];
@@ -280,7 +281,8 @@ export async function checkEconomicOpening(db: Db, preset: string): Promise<Seed
   assert(
     "DD",
     "post-reunification-absence",
-    !fx.some((row) => row.countryId === "DD") && !banks.some((row) => row.countryId === "DD")
+    !fx.some((row) => countryHasFeature("ddAdmin", row.countryId)) &&
+      !banks.some((row) => countryHasFeature("ddAdmin", row.countryId))
   );
   return checks;
 }

@@ -4,6 +4,7 @@ import type { CorporateSector, State } from "@/lib/db/types";
 import type { EnactedLaw, StateBudget, FormulaGrant } from "@/lib/db/types/budget";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /**
  * Seeds US-only budget data: federal budget, US enacted laws, US state budgets,
@@ -56,11 +57,12 @@ export async function seedBudgets(
 
   const presetBudgets = getInitialNationalBudgetsForPreset(preset);
   const usFiscalYear =
-    getNationalBudgetSeedConfigsForPreset(preset).find((c) => c.countryId === "US")?.fiscalYear ??
-    2020;
+    getNationalBudgetSeedConfigsForPreset(preset).find((c) =>
+      countryHasFeature("usAdmin", c.countryId)
+    )?.fiscalYear ?? 2020;
 
   // Seed US national budget only (UK is handled by seedUkBudgets)
-  const usNationalBudgets = presetBudgets.filter((b) => b.countryId === "US");
+  const usNationalBudgets = presetBudgets.filter((b) => countryHasFeature("usAdmin", b.countryId));
   for (const nationalBudget of usNationalBudgets) {
     const { _id, ...budgetData } = nationalBudget;
     await federalBudgetCollection(db).updateOne(
@@ -90,8 +92,8 @@ export async function seedBudgets(
 
   // Seed US country-owned public corporation (UK NHS handled by seedUkBudgets, JP by seedJpBudgets)
   const countryOwnedSeedData = generateCountryOwnedSeedData(statesForBudgets, preset);
-  const usCorpData = countryOwnedSeedData.filter(
-    (entry) => entry.corporation.countryOwnerId === "US"
+  const usCorpData = countryOwnedSeedData.filter((entry) =>
+    countryHasFeature("usAdmin", entry.corporation.countryOwnerId)
   );
   for (const entry of usCorpData) {
     const { _id: corpId, ...corpData } = entry.corporation;

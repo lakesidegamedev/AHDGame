@@ -31,6 +31,7 @@ import type { SeedDiagnosticCheck, SeedDiagnosticSeverity } from "./types";
 import { calendarTurnFromGameState } from "./types";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /** Default annual population growth percent when seed configs omit an explicit rate. */
 export const DEFAULT_POP_GROWTH_PCT = 1;
@@ -521,7 +522,7 @@ export async function runDriftChecks(
     if (!doc || doc.gdp == null || doc.population == null) continue;
 
     let forexRate = 1;
-    if (countryId !== "US") {
+    if (!countryHasFeature("usAdmin", countryId)) {
       const rateDoc = getRateDoc(rateMap, countryId as CountryId);
       if (rateDoc) {
         forexRate = rateFromDoc(rateDoc);
