@@ -40,6 +40,40 @@ beforeEach(() => {
   db.collectionMocks.resetMetricSnapshots!.find.mockClear();
 });
 describe("Metrics v2 approval source", () => {
+  it.each(["US", "UK", "JP", "IE", "SCO", "WAL"] as const)(
+    "reads BSON-null national region ids for %s without accepting invalid regional identities",
+    async (countryId) => {
+      const rows = boards.map((board) => ({
+        ...board,
+        _id: `${countryId}:${board.regionId ?? "national"}`,
+        countryId,
+        ...(board.scope === "national" ? { regionId: null } : {}),
+      }));
+      const active = {
+        ...game,
+        resetVersionSeeds: {
+          metrics: { ...game.resetVersionSeeds!.metrics!, countries: [countryId] },
+        },
+      } as GameState;
+      const read = (source: unknown) =>
+        loadResetApprovalModifiers(
+          db as unknown as Db,
+          countryId,
+          ["SCO"],
+          active,
+          undefined,
+          source as ResetMetricSnapshot[],
+          []
+        );
+      expect((await read(rows))!.metrics).toHaveLength(1);
+      await expect(
+        read(rows.map((row) => (row.scope === "regional" ? { ...row, regionId: null } : row)))
+      ).rejects.toThrow();
+      await expect(
+        read(rows.map((row) => (row.scope === "national" ? { ...row, regionId: "SCO" } : row)))
+      ).rejects.toThrow();
+    }
+  );
   it("loads bases and named conditions without consulting the v1 political board", async () => {
     const result = await loadPoliticalApprovalBases(db as unknown as Db, "UK");
     expect(result!.byRegion.size).toBe(states.length);

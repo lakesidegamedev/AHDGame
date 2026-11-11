@@ -10,7 +10,7 @@ import {
 import type { OpeningMetricObservation } from "./rules/openingObservation";
 import { refreshResetMetricBoard } from "./rules/refresh";
 import { primaryMetrics } from "./catalog";
-import type { ResetMetricSnapshot } from "./rules/snapshot";
+import { normalizeNationalMetricBoard, type ResetMetricSnapshot } from "./rules/snapshot";
 import { appendMetricHistory, metricHistoryDue, RESET_METRIC_HISTORY_LIMIT } from "./rules/history";
 import type { HousingState } from "./rules/housing";
 import type { HouseholdProductionStatus } from "./rules/householdSources";
@@ -59,7 +59,7 @@ export async function refreshResetMetricSnapshotsTurn(input: {
   }
   const recordHistory = metricHistoryDue(sourceTurn!, turn);
   const collection = db.collection<ResetMetricSnapshot>("resetMetricSnapshots");
-  const current = await collection
+  const stored = await collection
     .find(
       { countryId: { $in: [...activeCountries] }, worldId: gameState.resetWorldId },
       {
@@ -116,6 +116,7 @@ export async function refreshResetMetricSnapshotsTurn(input: {
       }
     )
     .toArray();
+  const current = stored.map(normalizeNationalMetricBoard);
   const ids = current.map((board) => board._id);
   const idSet = new Set(ids);
   if (current.length === 0 || idSet.size !== current.length) {
@@ -208,6 +209,7 @@ export async function refreshResetMetricSnapshotsTurn(input: {
             },
             update: {
               $set: fields,
+              ...(board.scope === "national" ? { $unset: { regionId: "" } } : {}),
               ...(Object.keys(pushes).length ? { $push: pushes } : {}),
             },
           },
