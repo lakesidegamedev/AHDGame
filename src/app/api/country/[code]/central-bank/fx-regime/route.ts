@@ -19,6 +19,7 @@ import { recordAudit } from "@/lib/audit/recordAudit";
 import { createSystemNewsPost } from "@/lib/news";
 import { describeTrinity, resolveTrinity, type FxRegime } from "@/lib/currency/exchangeRateRegime";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 interface RouteContext {
   params: Promise<{ code: string }>;
@@ -47,8 +48,7 @@ export async function GET(_request: Request, context: RouteContext) {
     const db = await getDb();
     const scope = await getMonetaryPolicyScope(db, countryId);
     const fxCountryId = scope.currencyCode === "EUR" ? "DE" : countryId;
-    const fx = await db
-      .collection<ExchangeRate>("exchangeRates")
+    const fx = await exchangeRatesCollection(db)
       .findOne({ countryId: fxCountryId });
     const regime: FxRegime = fx?.fxRegime ?? (fx?.interventionPolicy ? "band" : "float");
     const capitalControls = fx?.capitalControls === true;
@@ -109,8 +109,7 @@ export async function POST(request: Request, context: RouteContext) {
     if (regime === "peg" && !(pegTarget && pegTarget > 0))
       return errorResponse(400, "A peg needs a target rate.");
 
-    const fx = await db
-      .collection<ExchangeRate>("exchangeRates")
+    const fx = await exchangeRatesCollection(db)
       .findOne({ countryId: fxCountryId });
     if (!fx)
       return NextResponse.json(notFound("No exchange rate for this country").toJson(), {
@@ -127,7 +126,7 @@ export async function POST(request: Request, context: RouteContext) {
       );
     }
 
-    await db.collection<ExchangeRate>("exchangeRates").updateOne(
+    await exchangeRatesCollection(db).updateOne(
       { countryId: fxCountryId },
       {
         $set: {

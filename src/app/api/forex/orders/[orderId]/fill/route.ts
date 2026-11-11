@@ -30,6 +30,7 @@ import type { CurrencyOrder, GameConfig, GameState, TradeHistoryEntry } from "@/
 import { recordAudit } from "@/lib/audit/recordAudit";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { currencyOrdersCollection } from "@/lib/db/repositories/currencyOrders";
 
 interface RouteParams {
   params: Promise<{ orderId: string }>;
@@ -77,8 +78,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       restoreFillClaim,
       reverseLandedFillLegs,
     } = await import("@/lib/forex/fillRecovery");
-    let order = await db
-      .collection<CurrencyOrder>("currencyOrders")
+    let order = await currencyOrdersCollection(db)
       .findOne({ _id: new ObjectId(orderId) });
 
     if (!order) throw notFound("Order not found");
@@ -88,8 +88,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       // or undone first; a live one is never stolen.
       const recovery = await recoverFillClaim(db, order._id);
       if (recovery.outcome === "completed" || recovery.outcome === "rolled-back") {
-        const reread = await db
-          .collection<CurrencyOrder>("currencyOrders")
+        const reread = await currencyOrdersCollection(db)
           .findOne({ _id: order._id });
         if (!reread) throw notFound("Order not found");
         order = reread;
@@ -269,8 +268,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     };
     await runWithOptionalTransaction(
       async (session) => {
-        const claimedOrder = await db
-          .collection<CurrencyOrder>("currencyOrders")
+        const claimedOrder = await currencyOrdersCollection(db)
           .findOneAndUpdate(
             claimFilter,
             { $set: { status: "processing", updatedAt: now } },
@@ -303,7 +301,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
         await distributeSpreadFees(session);
 
-        const fillResult = await db.collection<CurrencyOrder>("currencyOrders").updateOne(
+        const fillResult = await currencyOrdersCollection(db).updateOne(
           { _id: order._id, status: "processing" },
           {
             $set: { status: newStatus, updatedAt: now },
@@ -343,8 +341,7 @@ export async function POST(request: Request, { params }: RouteParams) {
           if (!applied.flipWon) {
             // A concurrent recovery flipped this same intent first. Re-read
             // for the true state rather than reporting the race as a failure.
-            const current = await db
-              .collection<CurrencyOrder>("currencyOrders")
+            const current = await currencyOrdersCollection(db)
               .findOne({ _id: order._id });
             if (!current || current.processingFillKey === fillIntent.key) {
               throw badRequest("Order was already filled by another trader");

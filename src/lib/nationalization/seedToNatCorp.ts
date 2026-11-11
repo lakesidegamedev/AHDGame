@@ -17,6 +17,7 @@ import {
 } from "@/lib/corporations/sectorTransferCapex";
 import { seedPlantLedger } from "@/lib/corporations/plantLedger";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 const DEFAULT_PROFIT_MARGIN = 20;
 const DEFAULT_GROWTH_RATE = 1;
@@ -35,13 +36,13 @@ async function loadFxRateForCountry(
   db: Db,
   countryId: CountryId
 ): Promise<{ code: CurrencyCode | undefined; rate: number }> {
-  const direct = await db.collection<ExchangeRate>("exchangeRates").findOne({ countryId });
+  const direct = await exchangeRatesCollection(db).findOne({ countryId });
   if (direct && direct.rate > 0) {
     return { code: direct.currencyCode, rate: direct.rate };
   }
   const code = COUNTRY_CURRENCY_MAP[countryId];
   if (!code) return { code: undefined, rate: 1 };
-  const doc = await db.collection<ExchangeRate>("exchangeRates").findOne({ currencyCode: code });
+  const doc = await exchangeRatesCollection(db).findOne({ currencyCode: code });
   return { code, rate: doc?.rate && doc.rate > 0 ? doc.rate : 1 };
 }
 

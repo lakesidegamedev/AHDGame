@@ -19,6 +19,7 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 import { loadQueuedRedemptionUnitsByFundId } from "@/lib/indexFunds/fundValuation";
 import { emitTxBulk, loadTxThresholds, type TxInput } from "@/lib/financialTxLog/emit";
 import { markNationalIndexFund, nationalIndexFundIdentity } from "./rules/nationalIndex";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 
 const MARK_ATTEMPTS = 3;
 const FUND_PROJECTION = {
@@ -80,7 +81,7 @@ export async function markNationalIndexFunds(
   now = new Date()
 ): Promise<{ created: number; marked: number }> {
   if (marks.length === 0) return { created: 0, marked: 0 };
-  const funds = db.collection<IndexFund>("indexFunds");
+  const funds = indexFundsCollection(db);
   const existing = await funds
     .find(
       { "nationalIndex.entityId": { $in: marks.map((m) => m.countryId) } },

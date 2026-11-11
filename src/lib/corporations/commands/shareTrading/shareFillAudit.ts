@@ -30,6 +30,7 @@ import type { ShareListing, ShareOffer } from "@/lib/db/types/shareListings";
 import type { ShareTradeParty } from "@/lib/db/types/shareTradeHistory";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
 
 /**
  * Durable audit for peer order-book fills.
@@ -786,8 +787,7 @@ export async function recoverShareFillAttempt(
  */
 export async function repairStrandedShareFillClaim(db: Db, order: ShareOrder): Promise<boolean> {
   if (order.status !== "filled" || order.sharesRemaining <= 0) return false;
-  await db
-    .collection<ShareOrder>("shareOrders")
+  await shareOrdersCollection(db)
     .updateOne({ _id: order._id }, { $set: { status: "open", updatedAt: new Date() } });
   return true;
 }
@@ -1104,8 +1104,7 @@ async function recoverLoadedReceipts(
   const projection = { _id: 1, sharesRemaining: 1, activeShareFillKey: 1, lastShareFillKey: 1 };
   const [orders, listings] = await Promise.all([
     orderIds.length
-      ? db
-          .collection<ShareOrder>("shareOrders")
+      ? shareOrdersCollection(db)
           .find({ _id: { $in: orderIds } }, { projection })
           .toArray()
       : [],

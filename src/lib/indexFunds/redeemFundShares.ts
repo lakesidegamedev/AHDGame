@@ -46,6 +46,8 @@ import { recordAudit } from "@/lib/audit/recordAudit";
 import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
 import { claimFundRedemptionLock } from "@/lib/indexFunds/redemptionLock";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import type { Document } from "mongodb";
 
 class FundQuoteMovedError extends Error {}
 
@@ -129,8 +131,7 @@ export async function handleRedeemFundShares(
       const quotedNavGuard = fund.nationalIndex ? { quotedNav: fund.quotedNav } : {};
       const navMoved = async (s?: { session?: import("mongodb").ClientSession }) => {
         if (!fund.nationalIndex) return false;
-        const current = await db
-          .collection<IndexFund>("indexFunds")
+        const current = await indexFundsCollection(db)
           .findOne({ _id: fund._id }, { projection: { quotedNav: 1 }, ...s });
         return !!current && current.quotedNav !== fund.quotedNav;
       };
@@ -266,7 +267,7 @@ export async function handleRedeemFundShares(
 
           // Burn all accepted units up front. Any unpaid remainder becomes a
           // queued cash payable, not phantom fund units in the NAV denominator.
-          const supplyBurn = await db.collection("indexFunds").updateOne(
+          const supplyBurn = await indexFundsCollection<Document>(db).updateOne(
             {
               _id: fund._id,
               unitSupply: { $gte: units },
@@ -286,8 +287,7 @@ export async function handleRedeemFundShares(
           }
           if (compensate) {
             undo.push(async () => {
-              await db
-                .collection("indexFunds")
+              await indexFundsCollection<Document>(db)
                 .updateOne(
                   { _id: fund._id },
                   { $inc: { unitSupply: units }, $set: { updatedAt: new Date() } }
@@ -329,7 +329,7 @@ export async function handleRedeemFundShares(
             // could both read the same cash, both pass the affordability check and
             // both debit, driving fund cash negative. The queued-redemption path
             // already guards this way; the immediate path did not.
-            const cashDebit = await db.collection("indexFunds").updateOne(
+            const cashDebit = await indexFundsCollection<Document>(db).updateOne(
               {
                 _id: fundState!._id,
                 cashAnchor: { $gte: quote.paidAmountAnchor },
@@ -351,7 +351,7 @@ export async function handleRedeemFundShares(
             // later leg throws.
             const cashUndo = compensate
               ? async () => {
-                  await db.collection("indexFunds").updateOne(
+                  await indexFundsCollection<Document>(db).updateOne(
                     { _id: fundState!._id },
                     {
                       $inc: { cashAnchor: quote.paidAmountAnchor },

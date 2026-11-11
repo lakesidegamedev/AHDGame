@@ -5,6 +5,7 @@ import { fundPositionValue } from "./rules/portfolioValue";
  */
 import type { Db, ObjectId } from "mongodb";
 import type { IndexFund, IndexFundPosition } from "@/lib/db/types";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 
 export async function loadCorporationFundPortfolio(db: Db, corporationId: ObjectId) {
   return loadFundPortfolio(db, { holderKind: "corporation", corporationId });
@@ -25,8 +26,7 @@ async function loadFundPortfolio(
     .find({ ...holder, units: { $gt: 0 } })
     .toArray();
   const funds = positions.length
-    ? await db
-        .collection<IndexFund>("indexFunds")
+    ? await indexFundsCollection(db)
         .find(
           { _id: { $in: positions.map((p) => p.fundId) } },
           { projection: { name: 1, slug: 1, quotedNav: 1, status: 1 } }

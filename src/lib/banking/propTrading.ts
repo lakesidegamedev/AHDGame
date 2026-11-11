@@ -43,6 +43,7 @@ import {
 } from "@/lib/banking/rules/propLeverage";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 
 export { PROP_LEVERAGE_MULTIPLE, computePropEquityBase, sumPositionMarks };
 
@@ -173,7 +174,7 @@ async function resolvePositionRef(
         : { ok: false, error: "Bond positions require a valid id" };
     }
     if (ObjectId.isValid(ref)) return { ok: true, ref: new ObjectId(ref).toString() };
-    const fund = await db.collection<IndexFund>("indexFunds").findOne(
+    const fund = await indexFundsCollection(db).findOne(
       {
         $or: [
           { slug: ref.toLowerCase() },
@@ -261,8 +262,7 @@ async function loadMarkInputs(
           .toArray()
       : Promise.resolve([] as Corporation[]),
     fundIds.length > 0
-      ? db
-          .collection<IndexFund>("indexFunds")
+      ? indexFundsCollection(db)
           .find({ _id: { $in: fundIds } }, { projection: { quotedNav: 1 } })
           .toArray()
       : Promise.resolve([] as IndexFund[]),

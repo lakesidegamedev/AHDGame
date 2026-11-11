@@ -23,6 +23,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import type { Document } from "mongodb";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 
 const IMPERIAL_STARTING_CAPITAL = 50_000_000;
 const IMPERIAL_INITIAL_SHARES = 10_000_000;
@@ -68,8 +69,7 @@ export async function POST(request: Request) {
     }
 
     // Check no imperial character already exists for this country
-    const existing = await db
-      .collection<ImperialCharacter>("imperialCharacters")
+    const existing = await imperialCharactersCollection(db)
       .findOne({ countryId: countryId as CountryId });
     if (existing) {
       return errorResponse(400, `An imperial character already exists for ${countryId}`);
@@ -107,7 +107,7 @@ export async function POST(request: Request) {
       updatedAt: now,
     };
 
-    await db.collection<ImperialCharacter>("imperialCharacters").insertOne(imperialCharacter);
+    await imperialCharactersCollection(db).insertOne(imperialCharacter);
 
     // Create starter corporation
     const corpSequentialId = await getNextSequentialId(db, "corporation");
@@ -193,8 +193,7 @@ export async function GET(request: Request) {
     const config = COUNTRY_CONFIGS[countryId as CountryId];
     const resolvedCountryId = config?.imperialSharedWith ?? countryId;
 
-    const imperial = await db
-      .collection<ImperialCharacter>("imperialCharacters")
+    const imperial = await imperialCharactersCollection(db)
       .findOne({ countryId: resolvedCountryId as CountryId });
 
     if (!imperial) {

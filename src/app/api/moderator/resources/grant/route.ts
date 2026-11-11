@@ -13,6 +13,7 @@ import {
   buildCampaignFundsGrantExpression,
 } from "@/lib/currency/grantCashBuilder";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 // POST /api/moderator/resources/grant — Grant resources to players.
 // Auth: requireModerator
@@ -42,7 +43,7 @@ export async function POST(request: Request) {
     if (funds !== undefined && funds !== 0) {
       if (forexEnabled) {
         setStage.funds = { $add: [{ $ifNull: ["$funds", 0] }, funds] };
-        const rateDocs = await db.collection<ExchangeRate>("exchangeRates").find({}).toArray();
+        const rateDocs = await exchangeRatesCollection(db).find({}).toArray();
         const rateByCountry = new Map<string, number>(
           rateDocs.map((r) => [r._id as string, r.rate])
         );
@@ -67,7 +68,7 @@ export async function POST(request: Request) {
           // character's home currency at live FX so every country gets equal real value.
           // Accumulate per currency, not per country, so shared currencies (EUR: DE + IE)
           // sum into one bucket instead of clobbering each other.
-          const rateDocs = await db.collection<ExchangeRate>("exchangeRates").find({}).toArray();
+          const rateDocs = await exchangeRatesCollection(db).find({}).toArray();
           const rateByCountry = new Map<string, number>(
             rateDocs.map((r) => [r._id as string, r.rate])
           );

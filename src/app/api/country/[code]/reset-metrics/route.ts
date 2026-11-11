@@ -31,6 +31,7 @@ import { cabinetActionApplies } from "@/lib/resetMetrics/loadPolicyPressure";
 import type { ResetCountry } from "@/lib/resetLegislation/fundingOwner";
 import { loadMetricLawDelivery } from "@/lib/resetMetrics/loadLawDelivery";
 import { deliveredLawFactor, deliveredMetricEffects } from "@/lib/resetMetrics/rules/lawDelivery";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 
 const cabinetActionTitles = new Map(resetCabinetActions.map((action) => [action.id, action.title]));
 
@@ -110,8 +111,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
         : Promise.resolve([]),
       board.board.scope === "regional" && board.board.regionId
         ? countryId === COUNTRY_CONFIGS.US.id
-          ? db
-              .collection<StateBudget>("stateBudgets")
+          ? stateBudgetsCollection(db)
               .findOne(
                 { _id: board.board.regionId, countryId: COUNTRY_CONFIGS.US.id },
                 { projection: { regionalProgramSettlements: 1 } }

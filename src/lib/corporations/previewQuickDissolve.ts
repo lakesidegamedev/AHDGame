@@ -50,6 +50,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 
 export type CommodityGlobalDeltaPreview = {
   commodity: CommodityType;
@@ -213,8 +214,7 @@ export async function previewQuickDissolve(
           .toArray()
       : [],
     imperialShareholderIds.length > 0
-      ? db
-          .collection<ImperialCharacter>("imperialCharacters")
+      ? imperialCharactersCollection(db)
           .find({ _id: { $in: imperialShareholderIds } }, { projection: { _id: 1, name: 1 } })
           .toArray()
       : [],

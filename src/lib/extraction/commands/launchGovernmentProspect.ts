@@ -24,6 +24,7 @@ import {
   prospectCostAnchor,
 } from "@/lib/constants/prospecting";
 import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 
 export interface GovernmentProspectCosts {
   costAnchor: number;
@@ -393,7 +394,7 @@ export async function launchGovernmentProspect(
     }
     // Book the spend to the persistent state-budget prospecting line so it
     // survives the annual fiscal recompute (mirror of revenue.resourceRoyalties).
-    await db.collection<StateBudget>("stateBudgets").updateOne(
+    await stateBudgetsCollection(db).updateOne(
       { _id: stateId, countryId },
       {
         $inc: { "spending.resourceProspecting": costLocal, "spending.total": costLocal },

@@ -1,5 +1,6 @@
 import { ObjectId, type Db } from "mongodb";
 import type { IndexFundRedemptionQueueEntry, ShareOrder } from "@/lib/db/types";
+import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
 
 type IdLike = ObjectId | { toString(): string };
 
@@ -27,8 +28,7 @@ export async function loadOpenOrdersEscrowByFundId(
     status: "open",
   };
 
-  const rows = await db
-    .collection<ShareOrder>("shareOrders")
+  const rows = await shareOrdersCollection(db)
     .aggregate<{ _id: string; totalEscrowAnchor: number }>([
       { $match: match },
       {

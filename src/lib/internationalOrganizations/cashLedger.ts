@@ -21,6 +21,7 @@ import {
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 export interface OrganizationCashContext {
   turn: number;
@@ -229,8 +230,7 @@ export async function loadOrganizationCashContext(
         { _id: "current" },
         { projection: { currentTurn: 1, preset: 1 } }
       ),
-      db
-        .collection<{ currencyCode: string; rate: number }>("exchangeRates")
+      exchangeRatesCollection<{ currencyCode: string; rate: number }>(db)
         .find({}, { projection: { currencyCode: 1, rate: 1 } })
         .toArray(),
       federalBudgetCollection<{ countryId: string; currencyCode?: CurrencyCode }>(db)

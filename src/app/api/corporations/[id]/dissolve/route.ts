@@ -56,6 +56,7 @@ import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -323,8 +324,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
                     .toArray()
                 : [],
               imperialShareholderIds.length > 0
-                ? db
-                    .collection<ImperialCharacter>("imperialCharacters")
+                ? imperialCharactersCollection(db)
                     .find(
                       { _id: { $in: imperialShareholderIds } },
                       { projection: { _id: 1, name: 1, countryId: 1 } }
@@ -438,7 +438,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
             await charactersCollection(db).bulkWrite(characterOps);
           }
           if (imperialOps.length > 0) {
-            await db.collection<ImperialCharacter>("imperialCharacters").bulkWrite(imperialOps);
+            await imperialCharactersCollection(db).bulkWrite(imperialOps);
           }
 
           // ── Corporate equity shareholder payouts (→ liquidCapital) ───────

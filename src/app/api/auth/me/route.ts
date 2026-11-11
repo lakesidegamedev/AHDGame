@@ -33,6 +33,7 @@ import { unifiedSessionIsCurrent } from "@/lib/auth/unifiedSession";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 
 function getPatreonAdPreference(
   user: User | null | undefined
@@ -139,8 +140,7 @@ export const GET = withNoStore(async () => {
     let imperialCharacter: ImperialCharacter | null = null;
 
     if (isImperialMode && user?.activeImperialCharacterId) {
-      imperialCharacter = await db
-        .collection<ImperialCharacter>("imperialCharacters")
+      imperialCharacter = await imperialCharactersCollection(db)
         .findOne({ _id: user.activeImperialCharacterId, userId: new ObjectId(userId) });
 
       // If the imperial character was deleted (e.g., by a game reset), clear the orphaned

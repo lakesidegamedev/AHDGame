@@ -17,6 +17,9 @@ import { incomeTaxRate } from "./rules/incomeTaxTiers";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 export type StockSeller = { id: ObjectId; collection: "characters" | "imperialCharacters" };
 export const stockSellerKey = (seller: StockSeller) =>
@@ -63,8 +66,7 @@ export async function loadStockWithholdingContexts(
         )
         .toArray(),
     () =>
-      db
-        .collection<Character>("imperialCharacters")
+      imperialCharactersCollection<Character>(db)
         .find(
           {
             _id: {
@@ -92,13 +94,11 @@ export async function loadStockWithholdingContexts(
         )
         .toArray(),
     () =>
-      db
-        .collection<StateBudget>("stateBudgets")
+      stateBudgetsCollection(db)
         .find({}, { session: options?.session, projection: { countryId: 1, taxRates: 1 } })
         .toArray(),
     () =>
-      db
-        .collection<ExchangeRate>("exchangeRates")
+      exchangeRatesCollection(db)
         .find({}, { session: options?.session, projection: { currencyCode: 1, rate: 1 } })
         .toArray(),
   ] as const;

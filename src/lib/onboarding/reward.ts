@@ -7,6 +7,7 @@ import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { emitTx } from "@/lib/financialTxLog/emit";
 import { onboardingRewardLocalAmount } from "./rules";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 /**
  * One-time payout for completing all seven onboarding checklist steps,
@@ -75,7 +76,7 @@ export async function grantOnboardingReward(
   // currencies (EUR: DE + IE) convert identically (see grantCashBuilder.ts).
   const anchorCountry = getCountryIdForCurrency(homeCurrency);
   const rateDoc = forexEnabled
-    ? await db.collection<ExchangeRate>("exchangeRates").findOne({ _id: anchorCountry })
+    ? await exchangeRatesCollection(db).findOne({ _id: anchorCountry })
     : null;
   // A zero/negative stored rate would credit ₳0 usable currency while the
   // funds mirror and anchorAmount still say full value; treat it like an

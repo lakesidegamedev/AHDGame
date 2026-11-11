@@ -42,6 +42,8 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import type { Document } from "mongodb";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 
 /**
  * ₳ → fund-currency rate for a holder payout, matching what redeem applies.
@@ -121,7 +123,7 @@ export async function processIndexFundDividend(
   }
 
   // Credit the reinvestment portion (75%) to fund cash.
-  await db.collection("indexFunds").updateOne(
+  await indexFundsCollection<Document>(db).updateOne(
     { _id: fundId },
     {
       $inc: { cashAnchor: split.reinvestAnchor },
@@ -180,8 +182,7 @@ export async function processIndexFundDividend(
           .toArray()
       : Promise.resolve([] as Pick<Character, "_id" | "name">[]),
     imperialIds.length > 0
-      ? db
-          .collection<ImperialCharacter>("imperialCharacters")
+      ? imperialCharactersCollection(db)
           .find({ _id: { $in: imperialIds } }, { projection: { _id: 1, name: 1 } })
           .toArray()
       : Promise.resolve([] as Pick<ImperialCharacter, "_id" | "name">[]),
@@ -372,7 +373,7 @@ export async function processIndexFundDividend(
   const undistributedPassThrough =
     Math.round(Math.max(0, split.passThroughAnchor - distributedAnchor) * 100) / 100;
   if (undistributedPassThrough > 0) {
-    await db.collection("indexFunds").updateOne(
+    await indexFundsCollection<Document>(db).updateOne(
       { _id: fundId },
       {
         $inc: { cashAnchor: undistributedPassThrough },
@@ -528,8 +529,7 @@ export async function processIndexFundDividendsBatch(
           .toArray()
       : Promise.resolve([] as Pick<Character, "_id" | "name">[]),
     impIds.length
-      ? db
-          .collection<ImperialCharacter>("imperialCharacters")
+      ? imperialCharactersCollection(db)
           .find({ _id: { $in: impIds } }, { projection: { _id: 1, name: 1 } })
           .toArray()
       : Promise.resolve([] as Pick<ImperialCharacter, "_id" | "name">[]),
@@ -796,7 +796,7 @@ export async function processIndexFundDividendsBatch(
   /* eslint-disable @typescript-eslint/no-explicit-any */
   await Promise.all([
     corporateOps.length ? corporationsCollection(db).bulkWrite(corporateOps) : Promise.resolve(),
-    fundOps.length ? db.collection("indexFunds").bulkWrite(fundOps as any[]) : Promise.resolve(),
+    fundOps.length ? indexFundsCollection<Document>(db).bulkWrite(fundOps as any[]) : Promise.resolve(),
     nppOps.length ? nppsCollection<Document>(db).bulkWrite(nppOps as any[]) : Promise.resolve(),
   ]);
   /* eslint-enable @typescript-eslint/no-explicit-any */

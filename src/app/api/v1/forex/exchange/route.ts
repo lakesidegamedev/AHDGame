@@ -22,6 +22,7 @@ import type { GameConfig, GameState, User } from "@/lib/db/types";
 import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 
 const marketOrderSchema = z
   .object({
@@ -93,7 +94,7 @@ export async function POST(request: Request) {
     let characterName: string;
 
     if (isImperialMode) {
-      const imperial = await db.collection<ImperialCharacter>("imperialCharacters").findOne({
+      const imperial = await imperialCharactersCollection(db).findOne({
         _id: userDoc!.activeImperialCharacterId!,
         userId: new ObjectId(apiAuth.ownerUserId),
       });

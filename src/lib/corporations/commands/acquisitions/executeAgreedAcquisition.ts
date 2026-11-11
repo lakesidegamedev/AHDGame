@@ -79,6 +79,8 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 
 export interface ExecuteAgreedAcquisitionParams {
   db: Db;
@@ -393,8 +395,7 @@ async function runAgreedAcquisition(
           .toArray()
       : [],
     imperialIds.length > 0
-      ? db
-          .collection<ImperialCharacter>("imperialCharacters")
+      ? imperialCharactersCollection(db)
           .find({ _id: { $in: imperialIds } })
           .toArray()
       : [],
@@ -404,8 +405,7 @@ async function runAgreedAcquisition(
           .toArray()
       : [],
     fundIds.length > 0
-      ? db
-          .collection<IndexFund>("indexFunds")
+      ? indexFundsCollection(db)
           .find({ _id: { $in: fundIds } })
           .toArray()
       : [],

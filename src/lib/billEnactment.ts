@@ -111,6 +111,7 @@ import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 
 type EnactableBill = Pick<
   Bill | StateBill,
@@ -329,8 +330,7 @@ async function applyTaxRateChange(
 
     const stateBudgetCountryId =
       countryOverride ?? ((legislationType.countryScope ?? "us").toUpperCase() as CountryId);
-    const budget = await db
-      .collection<StateBudget>("stateBudgets")
+    const budget = await stateBudgetsCollection(db)
       .findOne({ _id: stateId, countryId: stateBudgetCountryId });
     if (!budget) return;
     const normalizedTaxRates = normalizeStateTaxRates(budget.taxRates);
@@ -355,7 +355,7 @@ async function applyTaxRateChange(
     );
     const newSurplus = newRevenue.total - (budget.spending?.total ?? 0);
 
-    const written = await db.collection<StateBudget>("stateBudgets").updateOne(
+    const written = await stateBudgetsCollection(db).updateOne(
       {
         _id: stateId,
         countryId: stateBudgetCountryId,

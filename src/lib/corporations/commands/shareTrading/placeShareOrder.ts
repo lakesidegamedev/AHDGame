@@ -91,6 +91,7 @@ import { recordAudit } from "@/lib/audit/recordAudit";
 import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -484,7 +485,7 @@ export async function placeShareOrder(request: Request, { params }: RouteParams)
           return errorResponse(400, "Insufficient corporation funds for escrow");
         }
         try {
-          await db.collection<ShareOrder>("shareOrders").insertOne({
+          await shareOrdersCollection(db).insertOne({
             _id: new ObjectId(),
             corporationId: corporation._id,
             characterId: character._id,
@@ -566,8 +567,7 @@ export async function placeShareOrder(request: Request, { params }: RouteParams)
           (sh) => sh.corporationId?.toString() === placerCorp._id.toString()
         );
         const ownedShares = shareholderEntry?.shares ?? 0;
-        const openSellOrders = await db
-          .collection<ShareOrder>("shareOrders")
+        const openSellOrders = await shareOrdersCollection(db)
           .find({
             corporationId: corporation._id,
             placerCorporationId: placerCorp._id,
@@ -727,7 +727,7 @@ export async function placeShareOrder(request: Request, { params }: RouteParams)
           return errorResponse(409, "Shares were already sold or reserved by another action");
         }
         try {
-          await db.collection<ShareOrder>("shareOrders").insertOne({
+          await shareOrdersCollection(db).insertOne({
             _id: new ObjectId(),
             corporationId: corporation._id,
             characterId: character._id,
@@ -945,7 +945,7 @@ export async function placeShareOrder(request: Request, { params }: RouteParams)
         );
       }
       try {
-        await db.collection<ShareOrder>("shareOrders").insertOne({
+        await shareOrdersCollection(db).insertOne({
           _id: new ObjectId(),
           corporationId: corporation._id,
           characterId: character._id,
@@ -1007,8 +1007,7 @@ export async function placeShareOrder(request: Request, { params }: RouteParams)
       const ownedShares = shareholderEntry?.shares ?? 0;
 
       // Also check for already-reserved shares in open sell orders
-      const openSellOrders = await db
-        .collection<ShareOrder>("shareOrders")
+      const openSellOrders = await shareOrdersCollection(db)
         .find({
           corporationId: corporation._id,
           characterId: character._id,
@@ -1234,7 +1233,7 @@ export async function placeShareOrder(request: Request, { params }: RouteParams)
         return errorResponse(409, "Shares were already sold or reserved by another action");
       }
       try {
-        await db.collection<ShareOrder>("shareOrders").insertOne({
+        await shareOrdersCollection(db).insertOne({
           _id: new ObjectId(),
           corporationId: corporation._id,
           characterId: character._id,

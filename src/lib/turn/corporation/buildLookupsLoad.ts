@@ -31,6 +31,8 @@ import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 /** Issues the parallel reads the lookups are built from. */
 export async function loadCorporationLookupInputs({
@@ -234,8 +236,7 @@ export async function loadCorporationLookupInputs({
         }
       )
       .toArray(),
-    db
-      .collection<StateBudget>("stateBudgets")
+    stateBudgetsCollection(db)
       .find(
         {},
         {
@@ -268,8 +269,7 @@ export async function loadCorporationLookupInputs({
       )
       .toArray(),
     // Only currencyCode + rate read; consumed only as exchangeRatesByCurrency map.
-    db
-      .collection<ExchangeRate>("exchangeRates")
+    exchangeRatesCollection(db)
       .find({}, { projection: { currencyCode: 1, rate: 1 } })
       .toArray() as Promise<ExchangeRate[]>,
     db

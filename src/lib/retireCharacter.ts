@@ -50,6 +50,8 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 /**
  * Core retirement function: snapshots a character, cleans up all gameplay
@@ -151,8 +153,7 @@ export async function retireCharacter(
     const localValue = units * BOND_UNIT_FACE_VALUE * (bond.marketPrice ?? 1);
     const fxRate = bond.currencyCode
       ? ((
-          await db
-            .collection<ExchangeRate>("exchangeRates")
+          await exchangeRatesCollection(db)
             .findOne({ currencyCode: bond.currencyCode })
         )?.rate ?? 1)
       : 1;
@@ -163,8 +164,7 @@ export async function retireCharacter(
   let indexFundValueAnchor = 0;
   if (heldFundPositions.length > 0) {
     const fundIds = heldFundPositions.map((p) => p.fundId);
-    const funds = await db
-      .collection<IndexFund>("indexFunds")
+    const funds = await indexFundsCollection(db)
       .find({ _id: { $in: fundIds } }, { projection: { _id: 1, quotedNav: 1 } })
       .toArray();
     const navByFund = new Map(funds.map((f) => [f._id.toString(), f.quotedNav]));

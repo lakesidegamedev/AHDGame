@@ -6,6 +6,7 @@ import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
 import { emitTx, emitTxBulk, loadTxThresholds } from "@/lib/financialTxLog/emit";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 
 export type IndexFundTxSource = "player" | "cron_queue";
 
@@ -343,8 +344,7 @@ export async function resolveIndexFundHolder(
   }
 
   if (entry.holderKind === "imperial_character" && entry.imperialCharacterId) {
-    const imperial = await db
-      .collection<ImperialCharacter>("imperialCharacters")
+    const imperial = await imperialCharactersCollection(db)
       .findOne(
         { _id: entry.imperialCharacterId },
         { projection: { name: 1, countryId: 1, userId: 1 } }

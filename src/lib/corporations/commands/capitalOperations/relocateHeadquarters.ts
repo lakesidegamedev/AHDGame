@@ -56,6 +56,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 
 const relocateSchema = z.object({
   targetStateId: z.string().min(1, "Target state/region ID required"),
@@ -235,8 +236,7 @@ export async function relocateHeadquarters(request: Request, { params }: RoutePa
 
     const isImperialCeo = corporation.ceoType === "imperial";
     const ceoChar = isImperialCeo
-      ? await db
-          .collection<ImperialCharacter>("imperialCharacters")
+      ? await imperialCharactersCollection(db)
           .findOne({ _id: corporation.ceoId }, { projection: { userId: 1, homeState: 1 } })
       : await charactersCollection(db).findOne(
           { _id: corporation.ceoId },

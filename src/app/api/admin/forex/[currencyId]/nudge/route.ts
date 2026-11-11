@@ -11,6 +11,7 @@ import { requireAdmin } from "@/lib/api/requireAdmin";
 import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, notFound, errorResponse } from "@/lib/api/errors";
 import type { ExchangeRate } from "@/lib/db/types";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 const schema = z.object({ rate: z.number().positive() });
 
@@ -27,8 +28,7 @@ export async function POST(
     if (!parsed.success) return errorResponse(parsed.status, parsed.error);
 
     const db = await getDb();
-    const result = await db
-      .collection<ExchangeRate>("exchangeRates")
+    const result = await exchangeRatesCollection(db)
       .updateOne({ _id: currencyId }, { $set: { rate: parsed.data.rate, updatedAt: new Date() } });
     if (result.matchedCount === 0) throw notFound("Currency not found");
 

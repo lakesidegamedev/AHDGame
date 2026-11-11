@@ -38,6 +38,7 @@ import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { closeCeoTenure } from "@/lib/corporations/ceoHistory";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -146,8 +147,7 @@ export async function createShareListing(request: Request, { params }: RoutePara
       );
       const ownedShares = shareholderEntry?.shares ?? 0;
 
-      const openOrders = await db
-        .collection<ShareOrder>("shareOrders")
+      const openOrders = await shareOrdersCollection(db)
         .find({
           corporationId: corporation._id,
           placerCorporationId: placerCorp._id,
@@ -215,8 +215,7 @@ export async function createShareListing(request: Request, { params }: RoutePara
     );
     const ownedShares = shareholderEntry?.shares ?? 0;
 
-    const openOrders = await db
-      .collection<ShareOrder>("shareOrders")
+    const openOrders = await shareOrdersCollection(db)
       .find({
         corporationId: corporation._id,
         characterId: character._id,

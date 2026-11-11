@@ -36,6 +36,7 @@ import { emitTx } from "@/lib/financialTxLog/emit";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 /** Keep this many days of revenue as operating cash. Revenue is already daily. */
 export const NPP_TREASURY_REVENUE_DAYS = 1;
@@ -181,7 +182,7 @@ async function runNppCorpTreasury(db: Db, turn: number, now: Date): Promise<numb
   }
 
   const fxByCurrency = new Map<string, number>();
-  for (const rate of await db.collection<ExchangeRate>("exchangeRates").find({}).toArray()) {
+  for (const rate of await exchangeRatesCollection(db).find({}).toArray()) {
     if (rate.currencyCode && typeof rate.rate === "number" && rate.rate > 0) {
       fxByCurrency.set(rate.currencyCode, rate.rate);
     }

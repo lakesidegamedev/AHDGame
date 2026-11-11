@@ -11,6 +11,7 @@ import { isNewGenerationType } from "@/lib/politicalLegislation/project";
 import type { LawCountryId } from "@/lib/politicalLegislation/types";
 import type { FiscalScope, ProvisionFiscal } from "./types";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 
 /**
  * A provision's fiscal profile, priced at the bill's own scope.
@@ -43,8 +44,7 @@ export async function resolveProvisionFiscal(
     // national-scope slider always prices against the national one, even when
     // the slider appears on a regional bill.
     if (lt.taxSlider.scope === "state" && scope.scope === "region") {
-      const budget = await db
-        .collection<StateBudget>("stateBudgets")
+      const budget = await stateBudgetsCollection(db)
         .findOne(
           { _id: scope.regionId, countryId: countryId as StateBudget["countryId"] },
           { projection: { taxRates: 1, taxBases: 1 } }

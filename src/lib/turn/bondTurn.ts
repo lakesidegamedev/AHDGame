@@ -74,6 +74,9 @@ import { getCharactersCollection } from "@/lib/db/collections/characters";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import type { Document } from "mongodb";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 /** Concurrent sovereign maturity settlements; one Treasury still runs one at a time. */
 const SOVEREIGN_MATURITY_LANES = 8;
@@ -143,8 +146,7 @@ export async function processBondTurn(
     config?.treasuryCashLedgerEnabled === true && !poolLedgerContext
       ? new Map(
           (
-            await db
-              .collection<{ currencyCode: string; rate: number }>("exchangeRates")
+            await exchangeRatesCollection<{ currencyCode: string; rate: number }>(db)
               .find({}, { projection: { currencyCode: 1, rate: 1 } })
               .toArray()
           ).map((rate) => [rate.currencyCode, rate.rate])
@@ -379,8 +381,7 @@ export async function processBondTurn(
   // Fund-holder coupon/maturity rows are fund-subject legs: book them against fund:<id> (the stock-checked cash account), not a phantom corporation:<fundId>. One projected read: funds are few and currency is stable mid-turn.
   const fundCurrencyById = new Map(
     (
-      await db
-        .collection("indexFunds")
+      await indexFundsCollection<Document>(db)
         .find({}, { projection: { anchorCurrencyCode: 1 } })
         .toArray()
     ).map((f) => [
@@ -844,7 +845,7 @@ export async function processBondTurn(
         },
       }));
     if (fundPaymentOps.length > 0) {
-      await db.collection("indexFunds").bulkWrite(fundPaymentOps);
+      await indexFundsCollection<Document>(db).bulkWrite(fundPaymentOps);
     }
   }
 

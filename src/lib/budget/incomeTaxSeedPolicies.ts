@@ -4,6 +4,7 @@ import type { FederalBudget, StateBudget, LegislationType } from "@/lib/db/types
 import { incomeTierForTaxKey, incomeTaxRate } from "./rules/incomeTaxTiers";
 import { capitalGainsTierForTaxKey, capitalGainsTaxRate } from "./rules/capitalGainsTax";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 
 export async function alignSeedIncomeTaxTierRecords<
   T extends { scope: string; stateId?: string; legislationTypeId: string; policyOptionId?: string },
@@ -12,8 +13,7 @@ export async function alignSeedIncomeTaxTierRecords<
     federalBudgetCollection(db)
       .find({}, { projection: { countryId: 1, taxRates: 1, taxRatePhaseIn: 1 } })
       .toArray(),
-    db
-      .collection<StateBudget>("stateBudgets")
+    stateBudgetsCollection(db)
       .find({}, { projection: { countryId: 1, taxRates: 1 } })
       .toArray(),
     db

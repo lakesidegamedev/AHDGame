@@ -231,6 +231,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 
 async function seedInitialBudgetSnapshots(db: Db, log: (msg: string) => void): Promise<void> {
   const budgets = await federalBudgetCollection(db).find({}).toArray();
@@ -967,7 +968,7 @@ export async function bootstrapGameWorld(options: BootstrapOptions) {
   // back that flag on a fresh world. Mirrors the on-demand run in the admin
   // index-funds enable route.
   const forceIndexFundBootstrap =
-    (await db.collection("indexFunds").countDocuments({}, { limit: 1 })) === 0;
+    (await indexFundsCollection<Document>(db).countDocuments({}, { limit: 1 })) === 0;
   const indexFundBootstrap = await runMigrations(db, {
     migrations: MIGRATIONS,
     dryRun: false,

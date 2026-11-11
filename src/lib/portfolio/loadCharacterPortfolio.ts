@@ -38,6 +38,7 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { ExchangeRate } from "@/lib/db/types/exchangeRate";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 type PortfolioHistoryReading = Pick<
   PortfolioHistory,
@@ -362,7 +363,7 @@ export async function loadPortfolioForCharacter(
   // Load exchange rates so multi-currency personal wealth is correctly summed
   let exchangeRates: Partial<Record<CurrencyCode, number>> | undefined;
   if (forexEnabled) {
-    const ratesDocs = await db.collection<ExchangeRate>("exchangeRates").find({}).toArray();
+    const ratesDocs = await exchangeRatesCollection(db).find({}).toArray();
     exchangeRates = Object.fromEntries(ratesDocs.map((r) => [r.currencyCode, r.rate])) as Partial<
       Record<CurrencyCode, number>
     >;

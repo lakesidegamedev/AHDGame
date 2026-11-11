@@ -197,6 +197,7 @@ import { getCorporateSectorsCollection } from "@/lib/db/collections/corporateSec
 import { getNppsCollection } from "@/lib/db/collections/npps";
 import { getGameStateCollection } from "@/lib/db/collections/gameState";
 import { getStatesCollection } from "@/lib/db/collections/states";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 export {
   NPP_GROWTH_MIN_SHORTAGE,
@@ -597,7 +598,7 @@ export async function processNppCorporationDecisions(
   // Local-per-₳ rates for every live currency, loaded once. NPP money constants
   // are all ₳; `liquidCapital` is not. See `NppCorpDecisionContext.fxRate`.
   const fxByCurrency = new Map<string, number>();
-  for (const rate of await db.collection<ExchangeRate>("exchangeRates").find({}).toArray()) {
+  for (const rate of await exchangeRatesCollection(db).find({}).toArray()) {
     if (rate.currencyCode && typeof rate.rate === "number" && rate.rate > 0) {
       fxByCurrency.set(rate.currencyCode, rate.rate);
     }

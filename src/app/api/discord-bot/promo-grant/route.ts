@@ -25,6 +25,7 @@ import {
 } from "@/lib/promo/promoGrants";
 import type { Character, ExchangeRate, User } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 const BOT_ADMIN_NAME = "Discord Bot";
 
@@ -76,7 +77,7 @@ async function resolveCredit(
   if (!forexEnabled) {
     return { currency, rate: 1, amountLocal: amountAnchor, forexEnabled, rateByCountry: new Map() };
   }
-  const rateDocs = await db.collection<ExchangeRate>("exchangeRates").find({}).toArray();
+  const rateDocs = await exchangeRatesCollection(db).find({}).toArray();
   const rateByCountry = new Map<string, number>(rateDocs.map((r) => [r._id as string, r.rate]));
   const anchorCountry = getCountryIdForCurrency(currency);
   const rate = rateByCountry.get(anchorCountry) ?? INITIAL_RATES[anchorCountry] ?? 1;

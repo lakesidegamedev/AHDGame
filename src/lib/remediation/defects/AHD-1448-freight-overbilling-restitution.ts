@@ -17,6 +17,7 @@ import {
 } from "./AHD-1448-freight-overbilling-restitution.data";
 import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 /**
  * Restitution for freight overbilling: the sourcing pass settles the commodity
@@ -83,7 +84,7 @@ async function loadCorporations(db: Db): Promise<Map<string, CorporationDoc>> {
 }
 
 async function loadRatesByCurrency(db: Db): Promise<Map<string, number>> {
-  const rates = await db.collection<ExchangeRate>("exchangeRates").find({}).toArray();
+  const rates = await exchangeRatesCollection(db).find({}).toArray();
   return new Map(rates.map((rate) => [String(rate.currencyCode), rate.rate]));
 }
 

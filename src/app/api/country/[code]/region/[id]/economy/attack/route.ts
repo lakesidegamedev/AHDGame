@@ -74,6 +74,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 
 const splitSchema = z.object({
   sectorType: z.enum(OPERATING_SECTOR_TYPES),
@@ -168,7 +169,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     let corporation: Corporation | null = null;
 
     if (userDoc?.activeCharacterType === "imperial" && userDoc.activeImperialCharacterId) {
-      const imperial = await db.collection<ImperialCharacter>("imperialCharacters").findOne({
+      const imperial = await imperialCharactersCollection(db).findOne({
         _id: userDoc.activeImperialCharacterId,
         userId: new ObjectId(auth.user.userId),
       });

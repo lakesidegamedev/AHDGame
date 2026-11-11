@@ -15,6 +15,7 @@ import {
   loadFxRatesByCurrency,
 } from "@/lib/currency/corporationCapital";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 
 export type FundOnlyBuyoutResult = { ok: true } | { ok: false; error: string; status: number };
 
@@ -163,8 +164,7 @@ export async function executeFundOnlyBuyout(
   }
 
   const fundIds = fundHolders.map((h) => h.fundId!);
-  const funds = await db
-    .collection<IndexFund>("indexFunds")
+  const funds = await indexFundsCollection(db)
     .find({ _id: { $in: fundIds } })
     .toArray();
 
@@ -264,8 +264,7 @@ export async function executeFundOnlyBuyout(
           ? Math.round((topUpAnchorTotal - creditedAnchor) * 100) / 100
           : Math.round((s.sharesSold / boughtBack) * topUpAnchorTotal * 100) / 100;
       if (share <= 0) continue;
-      await db
-        .collection<IndexFund>("indexFunds")
+      await indexFundsCollection(db)
         .updateOne({ _id: s.fundId }, { $inc: { cashAnchor: share }, $set: { updatedAt: now } });
       creditedAnchor += share;
     }

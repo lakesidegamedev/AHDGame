@@ -8,6 +8,7 @@ import { legacyValueFromPoliticalScore } from "@/lib/politicalMetrics/derive/leg
 import type { TriggerClause, TriggerCondition, TriggerMetric } from "@/lib/db/types/crisis";
 import { loadLossShareSignal } from "./marketAdjustment/signals";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 interface MetricPoint {
   turn: number;
@@ -74,12 +75,11 @@ export async function loadNationalSnapshot(
     db
       .collection<{ countryId: CountryId; approvalRating?: number }>("governmentApprovals")
       .findOne({ countryId }),
-    db
-      .collection<{
+    exchangeRatesCollection<{
         countryId: CountryId;
         rate?: number;
         rateHistory?: { turn: number; rate: number }[];
-      }>("exchangeRates")
+      }>(db)
       .findOne({ countryId }),
   ]);
 

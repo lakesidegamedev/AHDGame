@@ -21,6 +21,8 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import type { Document } from "mongodb";
+import { currencyOrdersCollection } from "@/lib/db/repositories/currencyOrders";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 const BATCH_SIZE = 500;
 
@@ -197,7 +199,7 @@ export async function seedExchangeRates(db: Db, preset: string): Promise<void> {
   });
 
   // exchangeRates uses string _id (CountryId), not ObjectId
-  await db.collection("exchangeRates").bulkWrite(ops as never);
+  await exchangeRatesCollection<Document>(db).bulkWrite(ops as never);
 }
 
 // ── Central bank updates ────────────────────────────────────────────────────────
@@ -278,7 +280,7 @@ export async function updateCentralBanks(db: Db, preset: string): Promise<void> 
  */
 export async function migrateCorporationLiquidCapital(db: Db): Promise<MigrationResult> {
   // Load exchange rates (seeded in prior step)
-  const rateEntries = await db.collection("exchangeRates").find({}).toArray();
+  const rateEntries = await exchangeRatesCollection<Document>(db).find({}).toArray();
   const rateByCountry = new Map(
     (rateEntries as unknown as { countryId: string; rate: number; currencyCode: string }[]).map(
       (r) => [r.countryId, { rate: r.rate, currencyCode: r.currencyCode }]
@@ -346,8 +348,7 @@ export async function createForexIndexes(db: Db): Promise<void> {
     db
       .collection("tradeHistory")
       .createIndex({ buyerCharacterId: 1, turn: -1 }, { background: true }),
-    db
-      .collection("currencyOrders")
+    currencyOrdersCollection<Document>(db)
       .createIndex({ status: 1, expiresAtTurn: 1 }, { background: true }),
   ]);
 }

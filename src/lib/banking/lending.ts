@@ -36,6 +36,7 @@ import { quoteLoanOrigination } from "@/lib/banking/rules/loanFees";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 
 export { CHARACTER_LOAN_SPREAD_PP };
 
@@ -100,8 +101,7 @@ export async function buildFundConstituentResolver(
     return () => [];
   }
 
-  const funds = await db
-    .collection<IndexFund>("indexFunds")
+  const funds = await indexFundsCollection(db)
     .find({ slug: { $in: [...fundIds] } })
     .project({ slug: 1, targetConstituents: 1 })
     .toArray();

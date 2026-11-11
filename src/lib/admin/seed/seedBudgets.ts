@@ -8,6 +8,7 @@ import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 
 /**
  * Seeds US-only budget data: federal budget, US enacted laws, US state budgets,
@@ -30,8 +31,7 @@ export async function seedBudgets(
       await statesCollection<Document>(db).find({ countryId: "US" }).project({ _id: 1 }).toArray()
     ).map((s) => s._id as string);
     if (usStateIds.length > 0) {
-      await db
-        .collection<StateBudget>("stateBudgets")
+      await stateBudgetsCollection(db)
         .deleteMany({ stateId: { $in: usStateIds }, countryId: "US" });
     }
     // The US enacted-law book comes from `seedPoliticalLegislationBaseline`,
@@ -87,8 +87,7 @@ export async function seedBudgets(
   const stateBudgets = generateStateBudgets(statesForBudgets, usFiscalYear);
   for (const budget of stateBudgets) {
     const { _id, ...budgetData } = budget;
-    await db
-      .collection<StateBudget>("stateBudgets")
+    await stateBudgetsCollection(db)
       .updateOne({ _id }, { $set: budgetData }, { upsert: true });
   }
   log(`Seeded ${stateBudgets.length} US state budgets`);
@@ -142,8 +141,7 @@ export async function seedBudgets(
   );
 
   // Budget indexes
-  await db
-    .collection("stateBudgets")
+  await stateBudgetsCollection<Document>(db)
     .createIndex({ stateId: 1 })
     .catch((error) => {
       logWarning("Index creation failed (may already exist)", {

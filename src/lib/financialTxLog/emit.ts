@@ -26,6 +26,7 @@ import type {
   ActionAuditSubject,
 } from "@/lib/db/types/actionAuditLog";
 import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 export type TxInput = Omit<FinancialTxLogEntry, "_id" | "expiresAt" | "flagged">;
 
@@ -47,8 +48,7 @@ export async function loadAnchorRateMap(
     ...new Set(entries.filter((e) => e.anchorAmount === undefined).map((e) => e.currencyCode)),
   ];
   if (currencies.length === 0) return new Map();
-  const rates = await db
-    .collection<ExchangeRate>("exchangeRates")
+  const rates = await exchangeRatesCollection(db)
     .find({ currencyCode: { $in: currencies } })
     .toArray();
   return new Map(rates.map((rate) => [rate.currencyCode as string, rate.rate]));

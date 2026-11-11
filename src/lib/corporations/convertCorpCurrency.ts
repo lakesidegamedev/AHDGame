@@ -16,6 +16,7 @@ import {
 } from "@/lib/corporations/securedConstructionProperty";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
 
 export type ConvertCorpCurrencyResult = ConvertCorpCurrencySuccess | ConvertCorpCurrencyError;
 
@@ -180,8 +181,7 @@ export async function convertCorpCurrency(
   //    MUST run before the currency field is rewritten. Any failure here aborts
   //    the conversion: a stale-currency open order on a converted corp would
   //    leak player escrow across a currency boundary at next fill / cancel.
-  const openOrders = await db
-    .collection<ShareOrder>("shareOrders")
+  const openOrders = await shareOrdersCollection(db)
     .find({ corporationId: corp._id, status: "open" })
     .toArray();
   let ordersCancelled = 0;

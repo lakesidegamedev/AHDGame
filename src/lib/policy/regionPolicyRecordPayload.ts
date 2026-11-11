@@ -32,6 +32,7 @@ import type { PolicyProvenance } from "@/lib/policy/policyRecordPayload";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 
 /**
  * "<Surname> administration", from whichever office actually governs this
@@ -78,7 +79,7 @@ export async function loadRegionPolicyRecordPayload(
       .sort({ enactedAt: 1 })
       .toArray(),
     statesCollection(db).findOne({ _id: regionId }, { projection: { population: 1, gdp: 1 } }),
-    db.collection<StateBudget>("stateBudgets").findOne({ _id: regionId }),
+    stateBudgetsCollection(db).findOne({ _id: regionId }),
     resolveRegionalEra(db, countryId, regionId),
   ]);
 

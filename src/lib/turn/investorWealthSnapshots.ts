@@ -41,6 +41,7 @@ import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 /**
  * Generate pre-computed global investor rankings.
@@ -173,8 +174,7 @@ export async function generateWealthListSnapshots(currentTurn: number, db?: Db):
   const exchangeRates = forexEnabled
     ? (Object.fromEntries(
         (
-          await database
-            .collection<ExchangeRate>("exchangeRates")
+          await exchangeRatesCollection(database)
             .find({})
             .project<Pick<ExchangeRate, "_id" | "currencyCode" | "rate">>({
               currencyCode: 1,

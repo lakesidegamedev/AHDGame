@@ -45,6 +45,7 @@ import {
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 export { MAX_GLOBAL_SOVEREIGN_ISSUES_PER_PASS };
 export {
@@ -135,10 +136,7 @@ export async function loadBondFundCandidates(
   }
   if (universe.homeOnly) return rankSovereignIssuesForBreadth(eligible);
 
-  const currencyRows = await db
-    .collection<{ currencyCode?: string; rate?: number; capitalControls?: boolean }>(
-      "exchangeRates"
-    )
+  const currencyRows = await exchangeRatesCollection<{ currencyCode?: string; rate?: number; capitalControls?: boolean }>(db)
     .find({})
     .project({ currencyCode: 1, rate: 1, capitalControls: 1 })
     .toArray();
@@ -268,10 +266,7 @@ async function deployBondReserve(
           .toArray();
 
   if (globalDemandEnabled && !bondUniverse && !candidateSource) {
-    const currencyRows = await db
-      .collection<{ currencyCode?: string; rate?: number; capitalControls?: boolean }>(
-        "exchangeRates"
-      )
+    const currencyRows = await exchangeRatesCollection<{ currencyCode?: string; rate?: number; capitalControls?: boolean }>(db)
       .find({})
       .project({ currencyCode: 1, rate: 1, capitalControls: 1 })
       .toArray();

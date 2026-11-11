@@ -43,6 +43,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 const COLLECTION = "monetaryOperationCommands";
 export class MonetaryOperationRejected extends Error {}
@@ -214,8 +215,7 @@ async function prepare(db: Db, command: Command): Promise<Receipt> {
     ];
     if (isLedgerShadowEnabledFromConfig(config)) {
       const [rate, state] = await Promise.all([
-        db
-          .collection<{ currencyCode: string; rate: number }>("exchangeRates")
+        exchangeRatesCollection<{ currencyCode: string; rate: number }>(db)
           .findOne({ currencyCode: receipt.currency }, { projection: { rate: 1 } }),
         gameStateCollection<{ _id: string; preset?: string }>(db).findOne(
           { _id: "current" },
@@ -393,8 +393,7 @@ async function prepare(db: Db, command: Command): Promise<Receipt> {
   }
   if (isLedgerShadowEnabledFromConfig(config)) {
     // Published only with a completed receipt; a refused or refunded operation moved nothing.
-    const quote = await db
-      .collection<{ currencyCode: string; rate: number }>("exchangeRates")
+    const quote = await exchangeRatesCollection<{ currencyCode: string; rate: number }>(db)
       .findOne({ currencyCode: receipt.currency }, { projection: { rate: 1 } });
     const amount = command.type === "qe" ? plan.consideration : -plan.consideration;
     // Same valuation and missing-rate fallback as the snapshot's bond_pool account.

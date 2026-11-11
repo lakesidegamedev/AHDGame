@@ -31,6 +31,8 @@ import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 
 interface RouteParams {
   params: Promise<{ bondId: string }>;
@@ -122,8 +124,7 @@ export const GET = withNoStore(async function GET(_request: Request, { params }:
 
       if (isImperialMode) {
         // Imperial character path
-        const imperial = await db
-          .collection<ImperialCharacter>("imperialCharacters")
+        const imperial = await imperialCharactersCollection(db)
           .findOne({ _id: userDoc!.activeImperialCharacterId!, userId: new ObjectId(user.userId) });
         if (imperial) {
           myCharacterId = imperial._id.toString();
@@ -255,8 +256,7 @@ export const GET = withNoStore(async function GET(_request: Request, { params }:
     const [charMap, imperialChars, holderCorps, holderFunds, holderNpps] = await Promise.all([
       bulkFetchCharacterNames(db, characterIds, { includeAvatar: true }),
       imperialIds.length > 0
-        ? db
-            .collection<ImperialCharacter>("imperialCharacters")
+        ? imperialCharactersCollection(db)
             .find({ _id: { $in: imperialIds } })
             .project<Pick<ImperialCharacter, "_id" | "name" | "avatarUrl" | "sequentialId">>({
               _id: 1,
@@ -280,8 +280,7 @@ export const GET = withNoStore(async function GET(_request: Request, { params }:
             .toArray()
         : [],
       fundIds.length > 0
-        ? db
-            .collection<IndexFund>("indexFunds")
+        ? indexFundsCollection(db)
             .find({ _id: { $in: fundIds } })
             .project<Pick<IndexFund, "_id" | "name" | "slug" | "scope" | "countryId">>({
               _id: 1,

@@ -123,6 +123,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 export {
   settleFundedWholeCorpLiquidation,
   settleFundedWholeCorpShareholderPool,
@@ -1596,12 +1597,11 @@ export async function payShareholders(
 
   if (imperialRows.length > 0) {
     const ids = imperialRows.map((r) => new ObjectId(r.characterId));
-    const docs = await db
-      .collection<ImperialCharacter>("imperialCharacters")
+    const docs = await imperialCharactersCollection(db)
       .find({ _id: { $in: ids } })
       .toArray();
     const currencyById = new Map(docs.map((c) => [c._id.toString(), getHomeCurrency(c)]));
-    await db.collection<ImperialCharacter>("imperialCharacters").bulkWrite(
+    await imperialCharactersCollection(db).bulkWrite(
       imperialRows.map((r) => {
         const currency = currencyById.get(r.characterId) ?? "USD";
         const amt = forexEnabled ? anchorToLocal(r.payout, currency) : r.payout;

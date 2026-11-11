@@ -30,6 +30,8 @@ import {
 } from "./rules";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 /** Trade kinds that are price-forming executions between two parties. */
 const EXECUTION_KINDS = ["market_buy", "market_sell", "limit_fill", "peer_fill", "listing_fill"];
@@ -81,8 +83,7 @@ export async function buildSecurityTelemetryRowForTurn(
         { projection: { corporationId: 1, shares: 1, totalAnchor: 1 } }
       )
       .toArray(),
-    db
-      .collection<ShareOrder>("shareOrders")
+    shareOrdersCollection(db)
       .find(
         { status: "open", sharesRemaining: { $gt: 0 } },
         {
@@ -115,7 +116,7 @@ export async function buildSecurityTelemetryRowForTurn(
       })
       .toArray(),
     db.collection<BondMarketPool>(BOND_MARKET_POOLS_COLLECTION).find({}).toArray(),
-    db.collection<ExchangeRate>("exchangeRates").find({}).toArray(),
+    exchangeRatesCollection(db).find({}).toArray(),
   ]);
 
   const fxByCurrency = new Map<string, number>(

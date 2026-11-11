@@ -30,6 +30,9 @@ import {
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 /**
  * Pass-through distributions already taxed at source (the owner tax on
@@ -119,16 +122,14 @@ export async function processPlayerIncomeTax(
     federalBudgetCollection(db)
       .find({}, { projection: { countryId: 1, taxRates: 1, currencyCode: 1, priceIndex: 1 } })
       .toArray(),
-    db
-      .collection<StateBudget>("stateBudgets")
+    stateBudgetsCollection(db)
       .find({}, { projection: { countryId: 1, taxRates: 1 } })
       .toArray(),
     db
       .collection<MacroMetricsDoc>("macroMetrics")
       .find({}, { projection: { "economic.medianIncome.value": 1 } })
       .toArray(),
-    db
-      .collection<ExchangeRate>("exchangeRates")
+    exchangeRatesCollection(db)
       .find({}, { projection: { currencyCode: 1, rate: 1 } })
       .toArray(),
     db
@@ -149,8 +150,7 @@ export async function processPlayerIncomeTax(
         }
       )
       .toArray(),
-    db
-      .collection<ImperialCharacter>("imperialCharacters")
+    imperialCharactersCollection(db)
       .find(
         { incomeTaxStartTurn: { $lte: turn } },
         {
@@ -519,7 +519,7 @@ export async function processPlayerIncomeTax(
   }
   if (tierOps.length) await charactersCollection(db).bulkWrite(tierOps);
   if (imperialTierOps.length)
-    await db.collection<ImperialCharacter>("imperialCharacters").bulkWrite(imperialTierOps);
+    await imperialCharactersCollection(db).bulkWrite(imperialTierOps);
   const inserted = assessmentOps.length
     ? await db
         .collection<PlayerIncomeTaxAssessment>("playerIncomeTaxAssessments")

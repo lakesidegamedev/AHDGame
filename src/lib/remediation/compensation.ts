@@ -34,6 +34,7 @@ import type {
 import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 export interface CompensationProblem {
   field: string;
@@ -177,7 +178,7 @@ export function compileCompensationDefect(spec: CompensationSpec): Defect {
           projection: { name: 1, countryId: 1, liquidCurrencyCode: 1, remediation: 1 },
         })
         .toArray(),
-      db.collection<ExchangeRate>("exchangeRates").find({}).toArray(),
+      exchangeRatesCollection(db).find({}).toArray(),
     ]);
     return {
       byId: new Map(docs.map((doc) => [String(doc._id), doc])),

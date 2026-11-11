@@ -47,6 +47,8 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import type { Document } from "mongodb";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 
 /** Reads the state, country, tariff, sibling and market context for one sector. */
 export async function loadSectorDetailContext({
@@ -127,7 +129,7 @@ export async function loadSectorDetailContext({
     const imperialActive =
       userDoc?.activeCharacterType === "imperial" && !!userDoc.activeImperialCharacterId;
     const viewerChar = imperialActive
-      ? await db.collection<ImperialCharacter>("imperialCharacters").findOne(
+      ? await imperialCharactersCollection(db).findOne(
           {
             _id: userDoc.activeImperialCharacterId,
             userId: new ObjectId(user.userId),
@@ -192,8 +194,7 @@ export async function loadSectorDetailContext({
         .toArray(),
       findMergedRegionMetrics(db, { _id: sector.stateId, countryId: sector.countryId }),
       corporation.ceoType === "imperial"
-        ? db
-            .collection("imperialCharacters")
+        ? imperialCharactersCollection<Document>(db)
             .findOne(
               { _id: corporation.ceoId },
               { projection: { name: 1, sequentialId: 1, avatarUrl: 1 } }
@@ -311,8 +312,7 @@ export async function loadSectorDetailContext({
           }
         )
         .toArray(),
-      db
-        .collection<StateBudget>("stateBudgets")
+      stateBudgetsCollection(db)
         .find(
           { _id: { $in: [...siblingStateIds] } },
           {

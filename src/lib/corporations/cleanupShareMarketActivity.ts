@@ -17,6 +17,7 @@ import { emitTx } from "@/lib/financialTxLog/emit";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
 
 export interface ShareMarketCleanupResult {
   ordersCancelled: number;
@@ -149,8 +150,7 @@ export async function cancelPendingShareOfferAndRefund(
 }
 
 async function cancelOpenOrders(db: Db, filter: Record<string, unknown>): Promise<number> {
-  const openOrders = await db
-    .collection<ShareOrder>("shareOrders")
+  const openOrders = await shareOrdersCollection(db)
     .find({ status: "open", ...filter })
     .toArray();
 

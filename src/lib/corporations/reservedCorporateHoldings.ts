@@ -3,6 +3,7 @@ import type { Corporation, ShareListing, ShareOrder } from "@/lib/db/types";
 import { getControllingCorporateParent } from "@/lib/corporations/corporateOwnership";
 import { shouldRedactCorporation } from "@/lib/corporations/redaction";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
 
 export interface ReservedCorporatePosition {
   corporationId: ObjectId;
@@ -76,8 +77,7 @@ export async function loadReservedCorporatePositions(
   targetCorpId: ObjectId
 ): Promise<ReservedCorporatePosition[]> {
   const [orders, listings] = await Promise.all([
-    db
-      .collection<ShareOrder>("shareOrders")
+    shareOrdersCollection(db)
       .find({
         corporationId: targetCorpId,
         type: "sell",
@@ -105,8 +105,7 @@ export async function loadReservedCorporatePositionsByTarget(
   if (targetCorpIds?.length === 0) return new Map();
   const targetFilter = targetCorpIds ? { corporationId: { $in: [...targetCorpIds] } } : {};
   const [orders, listings] = await Promise.all([
-    db
-      .collection<ShareOrder>("shareOrders")
+    shareOrdersCollection(db)
       .find({
         ...targetFilter,
         type: "sell",
@@ -169,8 +168,7 @@ export async function loadReservedPositionsPlacedBy(
   placerCorpId: ObjectId
 ): Promise<Array<{ targetCorpId: ObjectId; shares: number }>> {
   const [orders, listings] = await Promise.all([
-    db
-      .collection<ShareOrder>("shareOrders")
+    shareOrdersCollection(db)
       .find({
         placerCorporationId: placerCorpId,
         type: "sell",

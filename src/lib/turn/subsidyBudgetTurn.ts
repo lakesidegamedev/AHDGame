@@ -24,6 +24,7 @@ import { loadAnnualSubsidyCostMaps } from "@/lib/subsidies/subsidyBudgetCosts";
 import { getRegisteredCountryIdSet } from "@/lib/country/registeredCountries";
 import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 
 export { SUBSIDY_COST_MULTIPLIER } from "@/lib/subsidies/subsidyBudgetCosts";
 
@@ -36,7 +37,7 @@ export async function processSubsidyBudget(db: Db): Promise<number> {
     await Promise.all([
       loadAnnualSubsidyCostMaps(db),
       (await getFederalBudgetCollection(db)).find({}).toArray(),
-      db.collection<StateBudget>("stateBudgets").find({}).toArray(),
+      stateBudgetsCollection(db).find({}).toArray(),
     ]);
 
   // Dissolved countries keep their budget doc but must not be simulated against
@@ -99,8 +100,7 @@ export async function processSubsidyBudget(db: Db): Promise<number> {
     }
 
     writes.push(
-      db
-        .collection<StateBudget>("stateBudgets")
+      stateBudgetsCollection(db)
         .updateOne(
           { _id: budget._id },
           { $set: { spending, surplus: balance, balance, updatedAt: now } }

@@ -37,6 +37,7 @@ import { unownedPoolBoostSet } from "@/lib/market/unownedHeadroom";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 const LEGACY_BOOST_MULTIPLIER = 1.2;
 const MAX_BOOST_CAP = 3.0;
@@ -57,7 +58,7 @@ export async function GET(request: Request) {
     const [gameState, ranking, rateDocs] = await Promise.all([
       gameStateCollection(db).findOne({ _id: "current" }),
       computeSectorDistressRanking(db),
-      db.collection<ExchangeRate>("exchangeRates").find({}).toArray(),
+      exchangeRatesCollection(db).find({}).toArray(),
     ]);
     const boostMap = distressRankingToBoostMap(ranking, maxBoost);
 

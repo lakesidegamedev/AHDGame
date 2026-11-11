@@ -10,6 +10,7 @@ import { COMMAND_CEILING, scheduledMarketizationLevel } from "@/lib/constants/co
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import type { StateContext } from "./governanceShell";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 type ExecutionPolicy = Pick<StateContext, "fxCommitment" | "commandEconomy">;
 
@@ -22,8 +23,7 @@ export async function loadExecutionPolicies(
   const ids = [...new Set(countryIds)];
   if (ids.length === 0) return new Map();
   const [exchangeRates, budgets] = await Promise.all([
-    db
-      .collection<ExchangeRate>("exchangeRates")
+    exchangeRatesCollection(db)
       .find(
         { countryId: { $in: ids } },
         { projection: { countryId: 1, fxRegime: 1, capitalControls: 1 } }

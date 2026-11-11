@@ -25,6 +25,12 @@ export const FRONT_DOOR_COLLECTIONS = [
   "savingsLedger",
   "ledgerEntries",
   "bankMoneyMoves",
+  "indexFunds",
+  "shareOrders",
+  "currencyOrders",
+  "stateBudgets",
+  "imperialCharacters",
+  "exchangeRates",
 ] as const;
 
 export const UNTYPED = "untyped";

@@ -25,6 +25,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 
 const FEDERAL_TAX_RATE_KEYS: ReadonlySet<keyof FederalTaxRates> = new Set([
   "incomeTax",
@@ -157,7 +158,7 @@ export async function GET() {
     }
 
     // ── Regional/state budget diagnostics ────────────────────────────────
-    const stateBudgets = await db.collection<StateBudget>("stateBudgets").find({}).toArray();
+    const stateBudgets = await stateBudgetsCollection(db).find({}).toArray();
     const allStates = await statesCollection(db).find({}).toArray();
     const stateMap = new Map(allStates.map((s) => [s._id, s]));
 
@@ -423,7 +424,7 @@ export async function POST() {
     }
 
     // ── Step 3: Heal regional/state budgets ──────────────────────────────
-    const stateBudgets = await db.collection<StateBudget>("stateBudgets").find({}).toArray();
+    const stateBudgets = await stateBudgetsCollection(db).find({}).toArray();
     const allStates = await statesCollection(db).find({}).toArray();
     const stateMap = new Map(allStates.map((s) => [s._id, s]));
     let regionalHealed = 0;
@@ -461,7 +462,7 @@ export async function POST() {
 
       const surplus = revenue.total - finalSpending.total;
 
-      await db.collection<StateBudget>("stateBudgets").updateOne(
+      await stateBudgetsCollection(db).updateOne(
         { _id: sb._id },
         {
           $set: {

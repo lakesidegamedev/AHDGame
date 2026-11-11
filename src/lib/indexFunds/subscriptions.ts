@@ -15,6 +15,8 @@ import { refundCharacterCash, refundCorpLiquidCapital } from "@/lib/financialTxL
 import { creditFundPosition, insertFundTransaction } from "./fundQueries";
 import { getQueuedRedemptionUnits } from "./fundValuation";
 import { emitTx } from "@/lib/financialTxLog/emit";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import type { Document } from "mongodb";
 
 export interface BankSubscription {
   _id: string;
@@ -144,8 +146,7 @@ export async function cancelBankFundSubscription(
       return errorResponse(409, "Your investment has settled. You can withdraw on the fund page.");
     if (order.subscription.status === "refunded")
       return statusResponse(200, { success: true, refunded: true });
-    const fund = await tx
-      .collection<IndexFund>("indexFunds")
+    const fund = await indexFundsCollection(tx)
       .findOne({ _id: order.subscription.fundId }, { projection: { floatSettlementPlan: 0 } });
     if (!fund) throw new Error("Subscription fund is unavailable");
     await refundSubscription(tx, fund, order, await getCurrentTurn(tx));
@@ -167,8 +168,7 @@ export async function refundQueuedSubscriptionsForFund(
   turn: number
 ): Promise<number> {
   return withSessionDb(db, async (tx) => {
-    const fund = await tx
-      .collection<IndexFund>("indexFunds")
+    const fund = await indexFundsCollection(tx)
       .findOne({ _id: fundId }, { projection: { floatSettlementPlan: 0 } });
     if (!fund) return 0;
     const orders = await tx
@@ -201,8 +201,7 @@ export async function settleBankFundSubscriptions(
     let moreDue = true;
     while (moreDue) {
       moreDue = await withSessionDb(db, async (tx) => {
-        const fund = await tx
-          .collection<IndexFund>("indexFunds")
+        const fund = await indexFundsCollection(tx)
           .findOne({ _id: new ObjectId(id) }, { projection: { floatSettlementPlan: 0 } });
         if (!fund) throw new Error("Subscription fund is unavailable");
         const accepting = await bankFundAcceptsSubscriptions(tx, fund);
@@ -288,7 +287,7 @@ export async function settleBankFundSubscriptions(
         );
         if (receipts.matchedCount !== orders.length)
           throw new Error("Subscription receipts changed");
-        const credited = await tx.collection("indexFunds").updateOne(
+        const credited = await indexFundsCollection<Document>(tx).updateOne(
           {
             _id: fund._id,
             status: "active",

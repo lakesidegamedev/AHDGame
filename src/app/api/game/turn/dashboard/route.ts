@@ -43,6 +43,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 const MIN_BASE_ACTIONS_PER_TURN = 4;
 
@@ -75,7 +76,7 @@ async function handleGET() {
     ]);
     const forexRates: Record<string, number> | undefined = forexEnabled
       ? Object.fromEntries(
-          (await db.collection<ExchangeRate>("exchangeRates").find({}).toArray()).map((r) => [
+          (await exchangeRatesCollection(db).find({}).toArray()).map((r) => [
             r.currencyCode,
             r.rate,
           ])

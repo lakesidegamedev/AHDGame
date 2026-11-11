@@ -40,6 +40,7 @@ import { withCorporationSettlementLock } from "@/lib/corporations/settlementLock
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -306,8 +307,7 @@ export async function POST(request: Request, { params }: RouteParams) {
           let imperialReverseOps: AnyBulkWriteOperation<ImperialCharacter>[] = [];
           if (imperialIncs.size > 0) {
             const imperialIds = [...imperialIncs.keys()].map((entryId) => new ObjectId(entryId));
-            const imperialDocs = await db
-              .collection<ImperialCharacter>("imperialCharacters")
+            const imperialDocs = await imperialCharactersCollection(db)
               .find({ _id: { $in: imperialIds } }, sessionOpt)
               .project<Pick<ImperialCharacter, "_id" | "countryId" | "name">>({
                 _id: 1,
@@ -448,15 +448,13 @@ export async function POST(request: Request, { params }: RouteParams) {
           }
           if (imperialOps.length > 0) {
             try {
-              await db
-                .collection<ImperialCharacter>("imperialCharacters")
+              await imperialCharactersCollection(db)
                 .bulkWrite(imperialOps, sessionOpt);
             } catch (err) {
               return compensateAndThrow(err);
             }
             undo.push(async () => {
-              await db
-                .collection<ImperialCharacter>("imperialCharacters")
+              await imperialCharactersCollection(db)
                 .bulkWrite(imperialReverseOps, sessionOpt);
             });
           }

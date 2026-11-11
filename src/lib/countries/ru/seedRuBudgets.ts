@@ -6,6 +6,7 @@ import { upsertCountryOwnedCorpEntries } from "@/lib/admin/seed/upsertCountryOwn
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 
 /**
  * Seeds the USSR FY1979 national budget, default enacted laws (from the su_*
@@ -28,8 +29,7 @@ export async function seedRuBudgets(
       await statesCollection<Document>(db).find({ countryId: "RU" }).project({ _id: 1 }).toArray()
     ).map((s) => s._id as string);
     if (suStateIds.length > 0) {
-      await db
-        .collection<StateBudget>("stateBudgets")
+      await stateBudgetsCollection(db)
         .deleteMany({ stateId: { $in: suStateIds }, countryId: "RU" });
     }
     await db.collection<EnactedLaw>("enactedLaws").deleteMany({ countryId: "RU" });
@@ -97,8 +97,7 @@ export async function seedRuBudgets(
   const stateBudgets = generateStateBudgets(statesForBudgets, suFiscalYear);
   for (const budget of stateBudgets) {
     const { _id, ...budgetData } = budget;
-    await db
-      .collection<StateBudget>("stateBudgets")
+    await stateBudgetsCollection(db)
       .updateOne({ _id }, { $set: budgetData }, { upsert: true });
   }
   log(`Seeded ${stateBudgets.length} SU regional budgets`);

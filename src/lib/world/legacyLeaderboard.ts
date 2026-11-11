@@ -32,6 +32,7 @@ import type {
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 
 function sameIteration(a: GameIteration | null, b: GameIteration | null): boolean {
   if (!a || !b) return false;
@@ -250,8 +251,7 @@ export async function getLegacyLeaderboardData(
     const fundIds = [
       ...new Map(fundPositions.map((p) => [p.fundId.toString(), p.fundId])).values(),
     ];
-    const funds = await db
-      .collection<IndexFund>("indexFunds")
+    const funds = await indexFundsCollection(db)
       .find({ _id: { $in: fundIds } }, { projection: { _id: 1, quotedNav: 1 } })
       .toArray();
     const navByFund = new Map(funds.map((f) => [f._id.toString(), f.quotedNav]));

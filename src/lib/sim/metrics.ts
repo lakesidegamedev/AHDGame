@@ -28,6 +28,7 @@ import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficia
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 
 /**
  * Read-only balance-metric aggregations over a (sandbox) world DB, for the
@@ -503,8 +504,7 @@ export async function computeNppWealthAnchorMap(
     .find({ holderKind: "npp", nppId: { $in: nppIds } })
     .toArray();
   if (positions.length > 0) {
-    const funds = await db
-      .collection<IndexFund>("indexFunds")
+    const funds = await indexFundsCollection(db)
       .find(
         { _id: { $in: positions.map((p) => p.fundId) } },
         { projection: { quotedNav: 1, anchorCurrencyCode: 1 } }

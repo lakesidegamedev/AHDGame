@@ -26,6 +26,7 @@ import {
 } from "@/lib/budget/rules/fiscalScale";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 export interface PrimaryAccountingContext {
   ledgerShadow: boolean;
@@ -119,8 +120,7 @@ export async function loadPrimaryAccounting(db: Db): Promise<PrimaryAccountingCo
           },
         }
       ),
-    db
-      .collection<{ currencyCode: string; rate: number }>("exchangeRates")
+    exchangeRatesCollection<{ currencyCode: string; rate: number }>(db)
       .find({}, { projection: { currencyCode: 1, rate: 1 } })
       .toArray(),
     gameStateCollection<{ _id: string; preset?: string }>(db).findOne(

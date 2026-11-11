@@ -24,6 +24,8 @@ import { logWireEvent } from "@/lib/wireEvent";
 import type { NewsCategory } from "@/lib/db/types/newsPost";
 import { planBriefs, type BriefKind, type BriefObservation } from "./rules/countryBriefs";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 /** Briefs are looked for this often. */
 export const COUNTRY_BRIEF_INTERVAL_TURNS = 6;
@@ -116,8 +118,7 @@ export async function processCountryBriefs(db: Db, turn: number): Promise<Countr
         }
       )
       .toArray(),
-    db
-      .collection<FxDoc>("exchangeRates")
+    exchangeRatesCollection<FxDoc>(db)
       .find({ _id: { $in: ids } }, { projection: { currencyCode: 1, rate: 1, rateHistory: 1 } })
       .toArray(),
     // One nearest-maturity bond per country. A global limit would let a country
@@ -142,8 +143,7 @@ export async function processCountryBriefs(db: Db, turn: number): Promise<Countr
         },
       ])
       .toArray(),
-    db
-      .collection<FundDoc>("indexFunds")
+    indexFundsCollection<FundDoc>(db)
       .find(
         { "nationalIndex.entityId": { $in: ids } },
         { projection: { slug: 1, name: 1, countryId: 1, nationalIndex: 1 } }

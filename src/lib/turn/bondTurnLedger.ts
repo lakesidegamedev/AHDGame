@@ -11,6 +11,9 @@ import { resolveBondCurrency } from "./bondTurnHelpers";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import type { Document } from "mongodb";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 
 // Tx log entry accumulators (resolved to names + emitted after all phases).
 // `charId` carries the holder id in string form for batched name lookup;
@@ -165,8 +168,7 @@ export async function emitBondTurnLedger(args: {
             .toArray()
         : Promise.resolve([] as Pick<Character, "_id" | "name">[]),
       imperialCharIds.length > 0
-        ? db
-            .collection<ImperialCharacter>("imperialCharacters")
+        ? imperialCharactersCollection(db)
             .find({ _id: { $in: imperialCharIds.map((id) => new ObjectId(id!)) } })
             .project({ _id: 1, name: 1 })
             .toArray()
@@ -206,8 +208,7 @@ export async function emitBondTurnLedger(args: {
     ];
     const fundNameDocs =
       fundSubjectIds.length > 0
-        ? await db
-            .collection("indexFunds")
+        ? await indexFundsCollection<Document>(db)
             .find({ _id: { $in: fundSubjectIds.map((id) => new ObjectId(id)) } })
             .project({ _id: 1, name: 1 })
             .toArray()

@@ -7,6 +7,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 
 /**
  * Seeds only UK budget data: national budget, enacted laws, regional budgets,
@@ -24,8 +25,7 @@ export async function seedUkBudgets(
     const ukStateIds = (
       await statesCollection<Document>(db).find({ countryId: "UK" }).project({ _id: 1 }).toArray()
     ).map((s) => s._id as string);
-    await db
-      .collection<StateBudget>("stateBudgets")
+    await stateBudgetsCollection(db)
       .deleteMany({ stateId: { $in: ukStateIds }, countryId: "UK" });
     await db.collection<EnactedLaw>("enactedLaws").deleteMany({ countryId: "UK" });
     log("Reset: deleted UK budget data");
@@ -101,8 +101,7 @@ export async function seedUkBudgets(
   const stateBudgets = generateStateBudgets(statesForBudgets, ukFiscalYear);
   for (const budget of stateBudgets) {
     const { _id, ...budgetData } = budget;
-    await db
-      .collection<StateBudget>("stateBudgets")
+    await stateBudgetsCollection(db)
       .updateOne({ _id }, { $set: budgetData }, { upsert: true });
   }
   log(`Seeded ${stateBudgets.length} UK regional budgets`);
@@ -138,8 +137,7 @@ export async function seedUkBudgets(
   }
 
   // Budget indexes (idempotent, safe to run for both US and UK)
-  await db
-    .collection("stateBudgets")
+  await stateBudgetsCollection<Document>(db)
     .createIndex({ stateId: 1 })
     .catch((error) => {
       logWarning("Index creation failed (may already exist)", {

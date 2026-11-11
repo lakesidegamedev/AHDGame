@@ -25,6 +25,7 @@ import type { CurrencyOrder, CurrencyOrderStatus, GameConfig, GameState } from "
 import { recordAudit } from "@/lib/audit/recordAudit";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { currencyOrdersCollection } from "@/lib/db/repositories/currencyOrders";
 
 const limitOrderSchema = z
   .object({
@@ -59,8 +60,7 @@ async function handleGET(request: Request) {
         ? { $in: ["filled", "cancelled", "expired"] as CurrencyOrderStatus[] }
         : { $in: ["open", "partial", "processing"] as CurrencyOrderStatus[] };
 
-    const orders = await db
-      .collection<CurrencyOrder>("currencyOrders")
+    const orders = await currencyOrdersCollection(db)
       .find({
         characterId: auth.user.character._id,
         status: statusFilter,
@@ -178,8 +178,7 @@ export async function POST(request: Request) {
           );
         }
 
-        const result: InsertOneResult<CurrencyOrder> = await db
-          .collection<CurrencyOrder>("currencyOrders")
+        const result: InsertOneResult<CurrencyOrder> = await currencyOrdersCollection(db)
           .insertOne(order as CurrencyOrder, { session });
         insertedId = result.insertedId;
       },
@@ -196,8 +195,7 @@ export async function POST(request: Request) {
         }
 
         try {
-          const result: InsertOneResult<CurrencyOrder> = await db
-            .collection<CurrencyOrder>("currencyOrders")
+          const result: InsertOneResult<CurrencyOrder> = await currencyOrdersCollection(db)
             .insertOne(order as CurrencyOrder);
           insertedId = result.insertedId;
         } catch (error) {

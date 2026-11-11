@@ -48,6 +48,9 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { ledgerEntriesCollection } from "@/lib/db/repositories/ledgerEntries";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 export {
   summarizeLedgerTurnover,
   computeEconomicVitalSigns,
@@ -202,9 +205,8 @@ export async function snapshotEconomicVitalSigns(
 ): Promise<EconomicVitalSigns> {
   const windowStart = Math.max(0, turn - ECONOMIC_VITAL_SIGNS_WINDOW_TURNS + 1);
   const shareOrdersPromise = Promise.all([
-    db.collection<ShareOrder>("shareOrders").find({ status: "open" }).toArray(),
-    db
-      .collection<ShareOrder>("shareOrders")
+    shareOrdersCollection(db).find({ status: "open" }).toArray(),
+    shareOrdersCollection(db)
       .find({ status: "filled" })
       .sort({ updatedAt: -1 })
       .limit(5_000)
@@ -318,7 +320,7 @@ export async function snapshotEconomicVitalSigns(
     ledgerEntriesCollection(db)
       .countDocuments({ turn: { $gte: windowStart, $lte: turn } }),
     resolveFormalizedGroups(db),
-    db.collection<ExchangeRate>("exchangeRates").find({}).toArray(),
+    exchangeRatesCollection(db).find({}).toArray(),
     // Ring-fenced money lives on corporations, outside the ledger: active bank
     // charter reserves plus share-escrow balances. Narrow projection on
     // purpose: only the classification and balance fields below are read.
@@ -358,8 +360,7 @@ export async function snapshotEconomicVitalSigns(
     // Demand-gap inputs: three batched projected reads, no per-row loop.
     // Fund holdings arrays stay out of the projection; the bond principal
     // comes from the `bonds` read above, computed in memory below.
-    db
-      .collection<IndexFund>("indexFunds")
+    indexFundsCollection(db)
       .find(
         {},
         {

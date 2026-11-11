@@ -21,6 +21,7 @@ import { ENERGY_MAX_ACTION_CAP } from "@/lib/stats/statsConstants";
 import { emitTxBulk, loadTxThresholds } from "@/lib/financialTxLog/emit";
 import { POSITION_UPDATE_VOUCHER_GRANT_AMOUNT } from "@/lib/positionUpdateVouchers/rules";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 export const POST = withAdminRoute(async (auth, request: Request) => {
   const { admin } = auth;
@@ -59,7 +60,7 @@ export const POST = withAdminRoute(async (auth, request: Request) => {
   if (funds !== undefined && funds !== 0) {
     if (forexEnabled) {
       setStage.funds = { $add: [{ $ifNull: ["$funds", 0] }, funds] };
-      const rateDocs = await db.collection<ExchangeRate>("exchangeRates").find({}).toArray();
+      const rateDocs = await exchangeRatesCollection(db).find({}).toArray();
       const rateByCountry = new Map<string, number>(rateDocs.map((r) => [r._id as string, r.rate]));
       setStage["currencyBalances.campaign"] = buildCampaignFundsGrantExpression(
         funds,
@@ -82,7 +83,7 @@ export const POST = withAdminRoute(async (auth, request: Request) => {
         // the live FX rate so every country receives equal real value. `cashOnHand`
         // is internal units (USD-equivalent, rate = 1.0). Bucket per currency so
         // currencies shared by two countries (EUR: DE + IE) accumulate together.
-        const rateDocs = await db.collection<ExchangeRate>("exchangeRates").find({}).toArray();
+        const rateDocs = await exchangeRatesCollection(db).find({}).toArray();
         const rateByCountry = new Map<string, number>(
           rateDocs.map((r) => [r._id as string, r.rate])
         );
@@ -161,7 +162,7 @@ export const POST = withAdminRoute(async (auth, request: Request) => {
       .toArray();
     const transferThresholds = await loadTxThresholds(db);
     const rateDocs = forexEnabled
-      ? await db.collection<ExchangeRate>("exchangeRates").find({}).toArray()
+      ? await exchangeRatesCollection(db).find({}).toArray()
       : [];
     const rateByCountry = new Map<string, number>(rateDocs.map((r) => [r._id as string, r.rate]));
     const transferEntries = affectedChars.flatMap((char) => {

@@ -4,6 +4,8 @@ import { corpLiquidCapitalToAnchor } from "@/lib/currency/corporationCapital";
 import { insertFundTransaction } from "@/lib/indexFunds/fundQueries";
 import { emitTx, type TxInput } from "@/lib/financialTxLog/emit";
 import type { TxThresholds } from "@/lib/db/types/financialTxLog";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
 
 /**
  * Index-fund-owned order-book buy orders.
@@ -31,8 +33,7 @@ async function atomicallyDebitFundCashAnchor(
   amountAnchor: number
 ): Promise<boolean> {
   if (!Number.isFinite(amountAnchor) || amountAnchor <= 0) return false;
-  const res = await db
-    .collection<IndexFund>("indexFunds")
+  const res = await indexFundsCollection(db)
     .updateOne(
       { _id: fundId, cashAnchor: { $gte: amountAnchor } },
       { $inc: { cashAnchor: -amountAnchor }, $set: { updatedAt: new Date() } }
@@ -43,8 +44,7 @@ async function atomicallyDebitFundCashAnchor(
 /** Refund `amountAnchor` back to a fund's `cashAnchor`. */
 async function refundFundCashAnchor(db: Db, fundId: ObjectId, amountAnchor: number): Promise<void> {
   if (!Number.isFinite(amountAnchor) || amountAnchor <= 0) return;
-  await db
-    .collection<IndexFund>("indexFunds")
+  await indexFundsCollection(db)
     .updateOne(
       { _id: fundId },
       { $inc: { cashAnchor: amountAnchor }, $set: { updatedAt: new Date() } }
@@ -99,8 +99,7 @@ export async function placeFundShareBuyOrder(
 ): Promise<PlaceFundShareBuyOrderResult> {
   const { fund, corp, shares, limitPriceLocal, fxRate } = input;
   if (!input.verifiedNotPickedStocks) {
-    const current = await db
-      .collection<IndexFund>("indexFunds")
+    const current = await indexFundsCollection(db)
       .findOne({ _id: fund._id }, { projection: { mandate: 1 } });
     if (current?.mandate?.mode === "picked_stocks")
       return { ok: false, reason: "This fund buys available shares during rebalancing." };
@@ -126,7 +125,7 @@ export async function placeFundShareBuyOrder(
   const orderId = new ObjectId();
   const rows = fundBuyOrderRows(input, orderId, escrowAmount, escrowAnchor, new Date());
   try {
-    await db.collection<ShareOrder>("shareOrders").insertOne(rows.order);
+    await shareOrdersCollection(db).insertOne(rows.order);
     if (input.txSink) input.txSink.push(rows.escrowTx);
     else await insertFundTransaction(db, rows.escrowTx);
     if (input.ledgerSink) input.ledgerSink.push(rows.ledgerEntry);
@@ -238,8 +237,7 @@ export async function placeFundQuotesBatch(
   escrowTxs: Omit<IndexFundTransaction, "_id">[];
   ledgerEntries: TxInput[];
 } | null> {
-  const current = await db
-    .collection<IndexFund>("indexFunds")
+  const current = await indexFundsCollection(db)
     .findOne({ _id: fund._id }, { projection: { cashAnchor: 1, mandate: 1 } });
   if (!current || current.mandate?.mode === "picked_stocks") return null;
   let cash = current.cashAnchor;
@@ -293,8 +291,7 @@ export async function placeFundQuotesBatch(
     results.push(result);
   }
   if (totalEscrow > 0) {
-    const debited = await db
-      .collection<IndexFund>("indexFunds")
+    const debited = await indexFundsCollection(db)
       .updateOne(
         { _id: fund._id, cashAnchor: current.cashAnchor },
         { $inc: { cashAnchor: -totalEscrow }, $set: { updatedAt: now } }
@@ -303,13 +300,12 @@ export async function placeFundQuotesBatch(
   }
   if (orders.length) {
     try {
-      await db.collection<ShareOrder>("shareOrders").insertMany(orders, { ordered: true });
+      await shareOrdersCollection(db).insertMany(orders, { ordered: true });
     } catch (err) {
       // Roll back the escrow of every bid whose order did not persist.
       const landed = new Set(
         (
-          await db
-            .collection<ShareOrder>("shareOrders")
+          await shareOrdersCollection(db)
             .find({ _id: { $in: orders.map((order) => order._id) } }, { projection: { _id: 1 } })
             .toArray()
         ).map((row) => row._id.toString())
@@ -350,8 +346,7 @@ export async function placeFundShareSellOrder(
   const reserved =
     input.reservedOpenShares ??
     (
-      await db
-        .collection<ShareOrder>("shareOrders")
+      await shareOrdersCollection(db)
         .find({
           placerFundId: fund._id,
           corporationId: corp._id,
@@ -364,8 +359,7 @@ export async function placeFundShareSellOrder(
   if (!decision.ok) return decision;
 
   const orderId = new ObjectId();
-  await db
-    .collection<ShareOrder>("shareOrders")
+  await shareOrdersCollection(db)
     .insertOne(fundSellOrderDoc(input, orderId, new Date()));
   return { ok: true, orderId };
 }
@@ -446,8 +440,7 @@ export async function cancelFundShareOrder(
   }
 ): Promise<void> {
   // Atomically claim the order so a concurrent fill/cancel can't double-refund.
-  const claimed = await db
-    .collection<ShareOrder>("shareOrders")
+  const claimed = await shareOrdersCollection(db)
     .findOneAndUpdate(
       { _id: orderId, status: "open", activeShareFillKey: { $exists: false } },
       { $set: { status: "cancelled", updatedAt: new Date() } },
@@ -457,8 +450,7 @@ export async function cancelFundShareOrder(
   if (!claimed) return;
   if (!claimed.placerFundId) {
     // Not a fund order - restore status; this helper only handles fund orders.
-    await db
-      .collection<ShareOrder>("shareOrders")
+    await shareOrdersCollection(db)
       .updateOne({ _id: orderId, status: "cancelled" }, { $set: { status: "open" } });
     return;
   }
@@ -475,8 +467,7 @@ export async function cancelFundShareOrder(
       const fund =
         options?.fund?._id.toString() === claimed.placerFundId.toString()
           ? options.fund
-          : await db
-              .collection<IndexFund>("indexFunds")
+          : await indexFundsCollection(db)
               .findOne(
                 { _id: claimed.placerFundId },
                 { projection: { name: 1, anchorCurrencyCode: 1 } }
@@ -530,7 +521,7 @@ export async function cancelFundShareOrdersBatch(
   if (!orderIds.length) return true;
   const claimId = new ObjectId();
   const now = new Date();
-  await db.collection<ShareOrder>("shareOrders").bulkWrite(
+  await shareOrdersCollection(db).bulkWrite(
     orderIds.map((_id) => ({
       updateOne: {
         filter: {
@@ -546,8 +537,7 @@ export async function cancelFundShareOrdersBatch(
   );
   const position = new Map(orderIds.map((id, i) => [id.toString(), i]));
   const claimed = (
-    await db
-      .collection<ShareOrder>("shareOrders")
+    await shareOrdersCollection(db)
       .find(
         { _id: { $in: [...orderIds] }, cancelClaimId: claimId },
         { projection: { _id: 1, type: 1, corporationId: 1, escrowAnchor: 1 } }

@@ -38,6 +38,7 @@ import { emitLedgerEntries } from "@/lib/ledger/emit";
 import { isLedgerShadowEnabledFromConfig } from "@/lib/ledger/featureFlag";
 import type { LedgerEntryInput } from "@/lib/ledger/types";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 
 // ── GDP per capita by country (USD-equivalent, annual) ────────────────
 // These are approximate 2024 GDP per capita figures used to determine NPP
@@ -778,7 +779,7 @@ export async function processNPPFundInvestments(
             };
           }
         );
-        const result = await db.collection("indexFunds").bulkWrite(undoOps, { ordered: false });
+        const result = await indexFundsCollection<Document>(db).bulkWrite(undoOps, { ordered: false });
         assertCompensationCount(
           "fund compensation",
           result.modifiedCount,
@@ -812,7 +813,7 @@ export async function processNPPFundInvestments(
   try {
     if (fundOps.length > 0) {
       completed.funds = "uncertain";
-      const result = await db.collection("indexFunds").bulkWrite(fundOps, { ordered: false });
+      const result = await indexFundsCollection<Document>(db).bulkWrite(fundOps, { ordered: false });
       assertBulkWriteCount("fund subscription credits", result.modifiedCount, fundOps.length);
       completed.funds = "confirmed";
     }

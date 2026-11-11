@@ -31,6 +31,9 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { savingsAccountsCollection } from "@/lib/db/repositories/savingsAccounts";
 import { ledgerEntriesCollection } from "@/lib/db/repositories/ledgerEntries";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 export interface IncomeCredit {
   characterId: ObjectId;
@@ -108,8 +111,7 @@ export async function creditIncomeAfterTax(
         income: true,
         session,
       });
-      const exchange = await db
-        .collection("exchangeRates")
+      const exchange = await exchangeRatesCollection<Document>(db)
         .find(
           {},
           {
@@ -138,8 +140,7 @@ export async function creditIncomeAfterTax(
           { session, projection: { name: 1, pendingStockTaxReceipts: 1 } }
         )
         .toArray();
-      const imperialActors = await db
-        .collection<Character>("imperialCharacters")
+      const imperialActors = await imperialCharactersCollection<Character>(db)
         .find(
           {
             _id: {
@@ -590,8 +591,7 @@ export async function creditIncomeAfterTax(
           throw new Error("Income recipient changed");
       }
       if (walletOps.imperialCharacters.length) {
-        const credited = await db
-          .collection<IncomeWallet>("imperialCharacters")
+        const credited = await imperialCharactersCollection<IncomeWallet>(db)
           .bulkWrite(walletOps.imperialCharacters, { session });
         if (credited.matchedCount !== walletOps.imperialCharacters.length)
           throw new Error("Income recipient changed");
@@ -644,7 +644,7 @@ export async function creditIncomeAfterTax(
           },
         }));
       if (regionalOps.length) {
-        const saved = await db.collection("stateBudgets").bulkWrite(regionalOps, { session });
+        const saved = await stateBudgetsCollection<Document>(db).bulkWrite(regionalOps, { session });
         if (saved.matchedCount !== regionalOps.length)
           throw new Error("Income tax regional treasury unavailable");
       }

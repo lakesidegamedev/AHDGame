@@ -31,6 +31,9 @@ import { rankReserveCurrencies } from "@/lib/centralBank/reserveCurrencyRanking"
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { currencyOrdersCollection } from "@/lib/db/repositories/currencyOrders";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 const marketOrderSchema = z
   .object({
@@ -52,7 +55,7 @@ export async function GET() {
     const db = await getDb();
 
     // Rates are public — no auth required
-    const rates = await db.collection<ExchangeRate>("exchangeRates").find({}).toArray();
+    const rates = await exchangeRatesCollection(db).find({}).toArray();
 
     // Top reserve currencies by FX reserve volume held across every central bank
     // (the spread-fee reserve bucket; home lending reserves are excluded),
@@ -77,8 +80,7 @@ export async function GET() {
     // Public order book: open limit orders only (no direct requests), excluding expired
     const gs = await gameStateCollection(db).findOne({ _id: "current" });
     const currentTurn = gs?.currentTurn ?? 0;
-    const openOrders = await db
-      .collection<CurrencyOrder>("currencyOrders")
+    const openOrders = await currencyOrdersCollection(db)
       .find({
         status: { $in: ["open", "partial"] },
         type: "limit",
@@ -191,7 +193,7 @@ export async function POST(request: Request) {
     let characterName: string;
 
     if (isImperialMode) {
-      const imperial = await db.collection<ImperialCharacter>("imperialCharacters").findOne({
+      const imperial = await imperialCharactersCollection(db).findOne({
         _id: userDoc!.activeImperialCharacterId!,
         userId: new ObjectId(auth.user.userId),
       });

@@ -23,6 +23,7 @@ import { getMonetaryPolicyScope } from "@/lib/centralBank/helpers";
 import { getGameState } from "@/lib/gameState";
 import type { Character, ExchangeRate, GameState } from "@/lib/db/types";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 interface RouteContext {
   params: Promise<{ code: string }>;
@@ -86,7 +87,7 @@ export async function POST(request: Request, context: RouteContext) {
     const gs = (await getGameState()) as Pick<GameState, "currentTurn"> | null;
     const currentTurn = gs?.currentTurn ?? 0;
 
-    const rateDoc = await db.collection<ExchangeRate>("exchangeRates").findOne({ _id: rateDocId });
+    const rateDoc = await exchangeRatesCollection(db).findOne({ _id: rateDocId });
     if (!rateDoc) throw notFound("Exchange rate not found for this currency");
 
     // Cooldown (admins bypass).
@@ -103,7 +104,7 @@ export async function POST(request: Request, context: RouteContext) {
       );
     }
 
-    await db.collection<ExchangeRate>("exchangeRates").updateOne(
+    await exchangeRatesCollection(db).updateOne(
       { _id: rateDocId },
       {
         $set: {

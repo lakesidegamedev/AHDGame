@@ -34,6 +34,7 @@ import {
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 
 type ConstructionBorrowerLoan = Pick<
   BankLoan,
@@ -180,8 +181,7 @@ export async function loadNppConstructionFundingPool(input: {
   ];
   const [funds, centralBanks] = await Promise.all([
     fundIds.length > 0
-      ? db
-          .collection<BlacklistFund>("indexFunds")
+      ? indexFundsCollection<BlacklistFund>(db)
           .find({ slug: { $in: fundIds } })
           .project<BlacklistFund>({ slug: 1, targetConstituents: 1 })
           .toArray()

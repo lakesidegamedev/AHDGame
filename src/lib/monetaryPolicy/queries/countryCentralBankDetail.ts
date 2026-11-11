@@ -77,6 +77,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { savingsLedgerCollection } from "@/lib/db/repositories/savingsLedger";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 type ViewerCharacter = Character | null;
 
@@ -276,7 +277,7 @@ export async function loadCountryCentralBankDetail(params: {
   let forexSpreadStrength = FOREX_SPREAD_STRENGTH_DEFAULT;
   let forexSpreadStrengthLastChangedTurn: number | null = null;
   if (forexEnabled) {
-    const rateDocs = await db.collection<ExchangeRate>("exchangeRates").find({}).toArray();
+    const rateDocs = await exchangeRatesCollection(db).find({}).toArray();
     rateMap = Object.fromEntries(rateDocs.map((rate) => [rate.currencyCode, rate.rate])) as Partial<
       Record<CurrencyCode, number>
     >;
@@ -371,7 +372,7 @@ export async function loadCountryCentralBankDetail(params: {
         { $group: { _id: { type: "$type" }, total: { $sum: "$amount" } } },
       ])
       .toArray(),
-    db.collection<ExchangeRate>("exchangeRates").findOne({ _id: countryId }),
+    exchangeRatesCollection(db).findOne({ _id: countryId }),
     loadTurnTariffInflationExposure(db, currentTurn),
   ]);
 
@@ -638,7 +639,7 @@ export async function loadCountryCentralBankDetail(params: {
 
   const policyFx =
     policyCurrency === "EUR" && !countryHasFeature("deLib", countryId)
-      ? await db.collection<ExchangeRate>("exchangeRates").findOne({ _id: "DE" })
+      ? await exchangeRatesCollection(db).findOne({ _id: "DE" })
       : fxDocForBreakdown;
 
   const interventionPolicy = policyFx ? effectiveInterventionPolicy(policyFx) : null;

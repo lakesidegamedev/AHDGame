@@ -23,6 +23,7 @@ import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import type { Document } from "mongodb";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 
 /**
  * Post-run economy telemetry.
@@ -419,8 +420,7 @@ async function collectFunds(db: Db, currentTurn: number): Promise<FundTelemetry>
       .collection("indexFundPositions")
       .find({}, { projection: { fundId: 1, units: 1 } })
       .toArray(),
-    db
-      .collection("indexFunds")
+    indexFundsCollection<Document>(db)
       .find({}, { projection: { _id: 1 } })
       .toArray(),
     db.collection("gameConfig").findOne({ _id: "default" as never }),

@@ -6,6 +6,7 @@ import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
 import { isStockMarketCorporation } from "@/lib/turn/corporation/marketCapSnapshot";
 import type { Defect, DetectResult, HealPlan, HealResult, VerifyResult } from "../types";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 type HistoryRow = MarketCapHistory & { _id: ObjectId };
 
@@ -102,7 +103,7 @@ async function survey(db: Db): Promise<Survey> {
       .sort({ turn: 1 })
       .toArray(),
     corporationsCollection(db).find({}).toArray(),
-    db.collection<ExchangeRate>("exchangeRates").find({}).toArray(),
+    exchangeRatesCollection(db).find({}).toArray(),
   ]);
   const unlisted = corporations.filter((corp) => !isStockMarketCorporation(corp));
   if (rows.length === 0 || unlisted.length === 0) {

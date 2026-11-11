@@ -54,6 +54,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 
 /**
  * Whether to show the "Campaign Manager" navbar link. Returns true for: admins,
@@ -529,7 +530,7 @@ export async function GET() {
 
     if (isImperialMode && user.activeImperialCharacterId) {
       const [activeImperialCharacterDoc, imperialCorporation] = await Promise.all([
-        db.collection<ImperialCharacter>("imperialCharacters").findOne(
+        imperialCharactersCollection(db).findOne(
           { _id: user.activeImperialCharacterId, userId: userOid },
           {
             projection: {
@@ -591,7 +592,7 @@ export async function GET() {
           .project({ _id: 1, name: 1, countryId: 1, party: 1 })
           .toArray(),
         user.activeImperialCharacterId
-          ? db.collection<ImperialCharacter>("imperialCharacters").findOne(
+          ? imperialCharactersCollection(db).findOne(
               { _id: user.activeImperialCharacterId },
               {
                 projection: {

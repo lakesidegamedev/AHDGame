@@ -5,6 +5,7 @@ import {
   CEO_SELF_ACQUISITION_CAP_FRACTION,
   CEO_SELF_ACQUISITION_WINDOW_TURNS,
 } from "@/lib/constants/corporations";
+import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
 
 export type CeoHolderField = "characterId" | "imperialCharacterId";
 
@@ -51,8 +52,7 @@ export async function ceoSelfAcquisitionWindow(
     if (oldestInWindowTurn === null || r.turn < oldestInWindowTurn) oldestInWindowTurn = r.turn;
   }
 
-  const openOrders = await db
-    .collection<ShareOrder>("shareOrders")
+  const openOrders = await shareOrdersCollection(db)
     .find({ corporationId: corp._id, characterId: ceoId, type: "buy", status: "open" })
     .toArray();
   const openOrderShares = openOrders.reduce((s, o) => s + (o.sharesRemaining ?? 0), 0);

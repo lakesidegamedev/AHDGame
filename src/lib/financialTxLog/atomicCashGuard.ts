@@ -3,6 +3,8 @@ import type { ClientSession, Db, ObjectId } from "mongodb";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import type { Document } from "mongodb";
 
 export type DebitResult = { ok: true; newBalance: number } | { ok: false; error: string };
 
@@ -402,7 +404,7 @@ export async function atomicallyDebitImperialCash(
     return { ok: false, error: "Invalid amount" };
   }
   const balanceField = forexEnabled ? `currencyBalances.personal.${currency}` : "cashOnHand";
-  const result = await db.collection("imperialCharacters").findOneAndUpdate(
+  const result = await imperialCharactersCollection<Document>(db).findOneAndUpdate(
     { _id: imperialId, [balanceField]: { $gte: amount } },
     { $inc: { [balanceField]: -amount }, $set: { updatedAt: new Date() } },
     {
@@ -433,8 +435,7 @@ export async function refundImperialCash(
 ): Promise<void> {
   if (!Number.isFinite(amount) || amount <= 0) return;
   const balanceField = forexEnabled ? `currencyBalances.personal.${currency}` : "cashOnHand";
-  await db
-    .collection("imperialCharacters")
+  await imperialCharactersCollection<Document>(db)
     .updateOne(
       { _id: imperialId },
       { $inc: { [balanceField]: amount }, $set: { updatedAt: new Date() } },

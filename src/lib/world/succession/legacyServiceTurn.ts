@@ -25,6 +25,7 @@ import {
 } from "./runtimeEntities";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 const FEDERATION_LEGACY_SERVICE_TURNS_COLLECTION = "federationLegacyServiceTurns";
 
@@ -150,8 +151,7 @@ export async function materializeLegacyFederationServiceTurn(input: {
   ];
   if (currencyCodes.some((code) => !Object.hasOwn(CURRENCY_ANCHOR_COUNTRY, code)))
     throw new Error("Legacy service has an unsupported issuer currency");
-  const exchangeRows = await db
-    .collection<ExchangeRate>("exchangeRates")
+  const exchangeRows = await exchangeRatesCollection(db)
     .find({ currencyCode: { $in: currencyCodes as CurrencyCode[] } }, { session })
     .toArray();
   const rates: Record<string, number> = {};

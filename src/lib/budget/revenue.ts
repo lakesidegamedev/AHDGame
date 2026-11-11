@@ -112,6 +112,7 @@ export function applyEraRevenueCap(
 import { initializeCapitalGainsTaxRates } from "./rules/capitalGainsTax";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 
 type LegacyFederalTaxRates = Partial<FederalTaxRates> & {
   corporateTax?: number;
@@ -721,8 +722,7 @@ export async function calculateStateRevenue(
   };
 
   // Get the current state budget to read tax bases
-  const stateBudget = await db
-    .collection<StateBudget>("stateBudgets")
+  const stateBudget = await stateBudgetsCollection(db)
     .findOne({ _id: stateId, countryId });
 
   // Use stored tax bases if available, otherwise derive from state data

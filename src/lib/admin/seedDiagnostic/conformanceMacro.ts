@@ -29,6 +29,7 @@ import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 export async function checkNationalBudgets(
   db: Db,
@@ -376,10 +377,7 @@ export async function checkMonetary(
 }
 
 export async function checkForex(db: Db, expect: SeedExpectations): Promise<SeedDiagnosticCheck[]> {
-  const rates = await db
-    .collection<{ _id: string; countryId?: string; currencyCode?: CurrencyCode; rate?: number }>(
-      "exchangeRates"
-    )
+  const rates = await exchangeRatesCollection<{ _id: string; countryId?: string; currencyCode?: CurrencyCode; rate?: number }>(db)
     .find({})
     .toArray();
   const byCountry = new Map(rates.map((r) => [String(r.countryId ?? r._id), r] as const));

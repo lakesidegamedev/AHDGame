@@ -2,6 +2,7 @@ import type { Db, ObjectId } from "mongodb";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import type { Document } from "mongodb";
+import { currencyOrdersCollection } from "@/lib/db/repositories/currencyOrders";
 
 /**
  * Propagate a character name change to all denormalized collections.
@@ -183,11 +184,9 @@ export async function propagateCharacterNameChange(
 
   // ── 8. Forex / currency orders ────────────────────────────────────────────
   await Promise.all([
-    db
-      .collection("currencyOrders")
+    currencyOrdersCollection<Document>(db)
       .updateMany({ characterId }, { $set: { characterName: newName } }),
-    db
-      .collection("currencyOrders")
+    currencyOrdersCollection<Document>(db)
       .updateMany({ targetCharacterId: characterId }, { $set: { targetCharacterName: newName } }),
   ]);
 }

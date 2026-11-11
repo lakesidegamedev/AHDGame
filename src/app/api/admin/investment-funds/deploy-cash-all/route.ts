@@ -18,6 +18,8 @@ import {
   loadOpenOrdersEscrowByFundId,
   loadQueuedRedemptionUnitsByFundId,
 } from "@/lib/indexFunds/fundValuation";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import type { Document } from "mongodb";
 
 const schema = z.object({
   /** Flat anchor-currency cash amount to inject into every active fund as deployable buying power. */
@@ -79,7 +81,7 @@ export const POST = withAdminRoute(async (auth, request: Request) => {
       unitSupply: fund.unitSupply,
     });
 
-    const updateResult = await db.collection("indexFunds").updateOne(
+    const updateResult = await indexFundsCollection<Document>(db).updateOne(
       { _id: fund._id },
       {
         $inc: { cashAnchor: amountAnchor },

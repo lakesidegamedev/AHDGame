@@ -40,6 +40,7 @@ import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 export async function loadEquityCashoutLimitsStage(db: Db): Promise<number> {
   const config = await db
@@ -148,7 +149,7 @@ export async function loadCorpBookBasisById(
         { projection: { borrowerId: 1, outstanding: 1, currency: 1 } }
       )
       .toArray(),
-    db.collection<ExchangeRate>("exchangeRates").find({}).toArray(),
+    exchangeRatesCollection(db).find({}).toArray(),
     getGameState(db),
     loadWorldEraUnitScale(db),
   ]);

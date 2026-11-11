@@ -52,6 +52,8 @@ import type { Document } from "mongodb";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 /**
  * Runtime collections that `resetGameWorld` handles with bespoke logic instead
@@ -728,8 +730,7 @@ export async function resetGameWorld(
   // The imperial roll also survives the reset. Restore its sequential counter
   // from the preserved roster after the generic counter sweep, so a new
   // country's imperial profile cannot reuse an existing profile URL.
-  const imperialCounterRows = await db
-    .collection<ImperialCharacter>("imperialCharacters")
+  const imperialCounterRows = await imperialCharactersCollection(db)
     .aggregate<{ _id: null; maxSeq: number }>([
       { $group: { _id: null, maxSeq: { $max: "$sequentialId" } } },
     ])
@@ -747,7 +748,7 @@ export async function resetGameWorld(
   // re-seeded by seedStatePolicies below; commodity/forex by their seeders.
   await db.collection("statePolicies").deleteMany({});
   await db.collection("commodityPrices").deleteMany({});
-  await db.collection("exchangeRates").deleteMany({});
+  await exchangeRatesCollection<Document>(db).deleteMany({});
   await centralBanksCollection(db).deleteMany({});
 
   log("Teardown complete — bootstrap builds the new world, then finalize cleans up");

@@ -13,6 +13,7 @@ import { isR2Enabled, uploadFile, deleteByPrefix } from "@/lib/r2";
 import { toAbsoluteUploadUrl } from "@/lib/discord";
 import { getBaseUrl } from "@/lib/utils/network";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 const MAX_SIZE = 2 * 1024 * 1024; // 2 MB
@@ -55,8 +56,7 @@ export async function POST(request: Request) {
     let targetCollection: "characters" | "imperialCharacters";
 
     if (isImperialMode && user?.activeImperialCharacterId) {
-      const imperial = await db
-        .collection<ImperialCharacter>("imperialCharacters")
+      const imperial = await imperialCharactersCollection(db)
         .findOne({ _id: user.activeImperialCharacterId, userId: new ObjectId(authUser.userId) });
       if (!imperial) {
         return errorResponse(400, "No imperial character found");

@@ -9,6 +9,7 @@ import type { CentralBank } from "@/lib/db/types/centralBank";
 import type { ExchangeRate, InterventionPolicy } from "@/lib/db/types/exchangeRate";
 import { FOREX_AND_MACRO_CHART_HISTORY_TURNS } from "@/lib/constants/turnTime";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 export interface FxSettlement {
   turn: number;
@@ -72,8 +73,7 @@ export async function publishDefenceSettlement(
       ...policy,
       updatedAt: now,
     };
-    const write = await db
-      .collection<ExchangeRate>("exchangeRates")
+    const write = await exchangeRatesCollection(db)
       .updateOne(
         { _id: receipt.countryId, rate: fx.rate, updatedAt: fx.updatedAt },
         { $set: fields }

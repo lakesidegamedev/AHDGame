@@ -15,6 +15,7 @@ import { loadOpenOrdersEscrowByFundId, loadQueuedRedemptionUnitsByFundId } from 
 import { cancelFundShareOrder } from "./fundShareOrders";
 import { sellFundBondHoldingsForCash } from "@/lib/bonds/sellFundBondUnits";
 import { sumFundBondHoldingsValueAnchor } from "@/lib/bonds/fundBondHoldings";
+import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
 
 export function recomputeNav(
   fund: IndexFund,
@@ -171,8 +172,7 @@ export async function restoreFundCashBuffer(
   if (shortfall <= 0.01) return { fund, bondPrincipalAnchor };
   // Committed bids still back NAV but are not spendable allocation reserves.
   // Release them before paying a dealer spread to restore the cash buffer.
-  const bids = await db
-    .collection<ShareOrder>("shareOrders")
+  const bids = await shareOrdersCollection(db)
     .find({ placerFundId: fund._id, type: "buy", status: "open" })
     .toArray();
   let released = 0;

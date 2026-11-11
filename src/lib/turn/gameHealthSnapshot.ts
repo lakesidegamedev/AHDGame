@@ -38,6 +38,7 @@ import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParti
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 type SeatScopedOfficial = ElectedOfficial & { seatId?: string };
 
@@ -663,8 +664,7 @@ async function collectEconomyStats(db: Db): Promise<EconomyStats> {
     // of zeroes.
     getSimulatedCountryIds(db),
     // FX rates, so corporate revenue can be reported in a single comparable unit.
-    db
-      .collection<{ _id: string; rate?: number; currencyCode?: string }>("exchangeRates")
+    exchangeRatesCollection<{ _id: string; rate?: number; currencyCode?: string }>(db)
       .find({}, { projection: { rate: 1, currencyCode: 1 } })
       .toArray(),
     (await getFederalBudgetCollection(db))

@@ -41,6 +41,9 @@ import { cancelFundShareOrder } from "@/lib/indexFunds/fundShareOrders";
 import { refundQueuedSubscriptionsForFund } from "@/lib/indexFunds/subscriptions";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
+import type { Document } from "mongodb";
 
 const FUND_TX = "indexFundTransactions";
 const REDEMPTION_QUEUE = "indexFundRedemptionQueue";
@@ -64,7 +67,7 @@ export async function beginWindUp(
   if (fund.status === "winding_down" || fund.status === "delisted")
     return { ok: true, status: fund.status };
 
-  const claim = await db.collection<IndexFund>("indexFunds").updateOne(
+  const claim = await indexFundsCollection(db).updateOne(
     { _id: fund._id, status: { $in: ["active", "paused"] } },
     {
       $set: {
@@ -114,8 +117,7 @@ export async function advanceWindDowns(
     errors: [],
   };
 
-  const funds = await db
-    .collection<IndexFund>("indexFunds")
+  const funds = await indexFundsCollection(db)
     .find({ status: "winding_down" })
     .toArray();
 
@@ -220,8 +222,7 @@ async function clearSettlementBlockers(
   fund: IndexFund,
   currentTurn: number
 ): Promise<void> {
-  const openOrders = await db
-    .collection("shareOrders")
+  const openOrders = await shareOrdersCollection<Document>(db)
     .find({ placerFundId: fund._id, status: "open" }, { projection: { _id: 1 } })
     .toArray();
   for (const order of openOrders) {
@@ -275,8 +276,7 @@ export async function completeWindUp(
   currentTurn: number
 ): Promise<number> {
   return withSessionDb(db, async (tx) => {
-    const current = await tx
-      .collection<IndexFund>("indexFunds")
+    const current = await indexFundsCollection(tx)
       .findOne({ _id: fund._id }, { projection: { floatSettlementPlan: 0 } });
     if (!current || current.status === "delisted") return 0;
     if (current.status !== "winding_down") throw new Error("Fund is not winding down");
@@ -285,8 +285,7 @@ export async function completeWindUp(
     const bonds = await bondsCollection(tx).countDocuments({
       holders: { $elemMatch: { fundId: fund._id, units: { $gt: 0 } } },
     });
-    const orders = await tx
-      .collection("shareOrders")
+    const orders = await shareOrdersCollection<Document>(tx)
       .countDocuments({ placerFundId: fund._id, status: "open" });
     const withdrawals = await tx
       .collection("indexFundRedemptionQueue")
@@ -437,7 +436,7 @@ async function settleWindUp(db: Db, fund: IndexFund, currentTurn: number): Promi
     createdAt: now,
   } as IndexFundTransaction);
 
-  await db.collection<IndexFund>("indexFunds").updateOne(
+  await indexFundsCollection(db).updateOne(
     { _id: fund._id },
     {
       $set: {

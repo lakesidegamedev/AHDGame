@@ -48,6 +48,9 @@ import type { EquityMarketPool } from "@/lib/db/types";
 import { EQUITY_MARKET_POOLS_COLLECTION } from "@/lib/db/types/equityMarketPool";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import type { Document } from "mongodb";
+import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
 
 /** Per-character delta for a corp, plus the fill price for new-entry cost basis. */
 interface ShareDelta {
@@ -97,8 +100,7 @@ export async function fillPendingShareOrders(
 
   // Fill decisions and their escrow/history writes only use these order
   // fields; the query filter still applies `status` server-side.
-  const openOrders = await db
-    .collection<ShareOrder>("shareOrders")
+  const openOrders = await shareOrdersCollection(db)
     .find(
       { status: "open", activeShareFillKey: { $exists: false } },
       {
@@ -748,7 +750,7 @@ export async function fillPendingShareOrders(
   }
 
   if (orderFillOps.length > 0) {
-    await db.collection("shareOrders").bulkWrite(orderFillOps);
+    await shareOrdersCollection<Document>(db).bulkWrite(orderFillOps);
   }
   if (incOps.length > 0) {
     await corporationsCollection(db).bulkWrite(incOps);
@@ -917,8 +919,7 @@ export async function fillPendingShareOrders(
         [...fundShareholderUpdates.values()].flatMap((fundDeltas) => [...fundDeltas.keys()])
       ),
     ];
-    const funds = await db
-      .collection<IndexFund>("indexFunds")
+    const funds = await indexFundsCollection(db)
       .find({ _id: { $in: fundIds.map((id) => new ObjectId(id)) } })
       .project<Pick<IndexFund, "_id" | "holdings">>({ _id: 1, holdings: 1 })
       .toArray();
@@ -1020,7 +1021,7 @@ export async function fillPendingShareOrders(
       await corporationsCollection(db).bulkWrite(fundCapTableOps);
     }
     if (fundHoldingOps.length > 0) {
-      await db.collection("indexFunds").bulkWrite(fundHoldingOps);
+      await indexFundsCollection<Document>(db).bulkWrite(fundHoldingOps);
     }
   }
 
@@ -1034,7 +1035,7 @@ export async function fillPendingShareOrders(
         },
       }));
     if (fundRefundOps.length > 0) {
-      await db.collection("indexFunds").bulkWrite(fundRefundOps);
+      await indexFundsCollection<Document>(db).bulkWrite(fundRefundOps);
     }
     // #992 tranche 4: one aggregate stock_order_refund row per fund for the
     // unused-escrow refunds just credited above (partial fills execute below
@@ -1047,8 +1048,7 @@ export async function fillPendingShareOrders(
       .filter(([, amount]) => amount > 0)
       .map(([fundIdStr]) => fundIdStr);
     if (refundedFundIds.length > 0) {
-      const refundedFunds = await db
-        .collection<IndexFund>("indexFunds")
+      const refundedFunds = await indexFundsCollection(db)
         .find({ _id: { $in: refundedFundIds.map((id) => new ObjectId(id)) } })
         .project<{ _id: ObjectId; name: string; anchorCurrencyCode: string }>({
           _id: 1,

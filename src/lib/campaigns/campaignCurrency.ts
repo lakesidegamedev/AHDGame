@@ -11,11 +11,11 @@ import type { ExchangeRate } from "@/lib/db/types";
 export { campaignAnchorToLocal, campaignLocalRate, getCampaignCurrency } from "./rules/currency";
 import type { CampaignCurrencyRates } from "./rules/currency";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 export type { CampaignCurrencyRates } from "./rules/currency";
 
 export async function loadCampaignCurrencyRates(db: Db): Promise<CampaignCurrencyRates> {
-  const rows = await db
-    .collection<ExchangeRate>("exchangeRates")
+  const rows = await exchangeRatesCollection(db)
     .find({}, { projection: { currencyCode: 1, baseRate: 1 } })
     .toArray();
   const rates: CampaignCurrencyRates = {};

@@ -24,6 +24,8 @@ import {
   type ShareFillAuditPlan,
 } from "./shareFillAudit";
 import { recoverShareFillMoneyByFillKey } from "./shareFillMoney";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
 
 export interface MarketSellParty {
   id: ObjectId;
@@ -61,8 +63,7 @@ export async function fillBestBuyOrderForMarketSell(input: {
   const { db, corporation, seller, shares, forexEnabled, sellerFxRate, now, turn } = input;
   if (!Number.isInteger(shares) || shares <= 0) return { filled: false };
 
-  const candidates = await db
-    .collection<ShareOrder>("shareOrders")
+  const candidates = await shareOrdersCollection(db)
     .find({
       corporationId: corporation._id,
       placerFundId: { $exists: true },
@@ -83,8 +84,7 @@ export async function fillBestBuyOrderForMarketSell(input: {
   const issuerFx = candidates.length ? await getCorpFxRate(db, corporation) : 1;
   for (let order of candidates) {
     if (!order.placerFundId || !(order.escrowAnchor && order.escrowAnchor > 0)) continue;
-    const provider = await db
-      .collection<Pick<IndexFund, "_id" | "name" | "status">>("indexFunds")
+    const provider = await indexFundsCollection<Pick<IndexFund, "_id" | "name" | "status">>(db)
       .findOne({ _id: order.placerFundId, status: "active" });
     if (!provider) continue;
 
@@ -172,7 +172,7 @@ export async function fillBestBuyOrderForMarketSell(input: {
         pricePerShare: order.pricePerShare,
       })
     );
-    const claimed = await db.collection<ShareOrder>("shareOrders").findOneAndUpdate(
+    const claimed = await shareOrdersCollection(db).findOneAndUpdate(
       {
         _id: order._id,
         status: "open",
@@ -215,8 +215,7 @@ export async function fillBestBuyOrderForMarketSell(input: {
       if (order.lastShareFillKey === undefined) {
         restoreUpdate.$unset = { ...restoreUpdate.$unset, lastShareFillKey: "" };
       }
-      await db
-        .collection<ShareOrder>("shareOrders")
+      await shareOrdersCollection(db)
         .updateOne({ _id: order._id, activeShareFillKey: fillKey }, restoreUpdate);
     };
     const settlementError = await settleBuyOrderFill({

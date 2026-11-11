@@ -1,6 +1,7 @@
 import type { Db, ObjectId } from "mongodb";
 import type { Corporation, IndexFund, IndexFundPosition, Shareholder } from "@/lib/db/types";
 import { shareholderVotingPower } from "@/lib/corporations/superShares";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 
 /**
  * Index-fund stewardship: how a fund votes the shares it holds.
@@ -205,8 +206,7 @@ export async function directableFundsFor(
   }
   if (directable.length === 0) return [];
 
-  const funds = await db
-    .collection<IndexFund>("indexFunds")
+  const funds = await indexFundsCollection(db)
     .find(
       { _id: { $in: directable.map((d) => d.stake.fundId) } },
       { projection: { name: 1, tickerSymbol: 1 } }

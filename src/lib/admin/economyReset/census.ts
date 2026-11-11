@@ -35,6 +35,8 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
 import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 export const ECONOMY_RESET_PROCESSING_KIND = "economyReset";
 
@@ -247,8 +249,7 @@ async function loadSource(
         db.collection(name).countDocuments({})
       )
     ),
-    db
-      .collection<{ currencyCode: string; rate: number }>("exchangeRates")
+    exchangeRatesCollection<{ currencyCode: string; rate: number }>(db)
       .find({}, { projection: { currencyCode: 1, rate: 1 } })
       .toArray(),
     loadCampaignCurrencyRates(db),
@@ -269,8 +270,7 @@ async function loadSource(
         }
       )
       .toArray(),
-    db
-      .collection<Document>("imperialCharacters")
+    imperialCharactersCollection<Document>(db)
       .find({}, { projection: { _id: 1 } })
       .toArray(),
     nppsCollection<Document>(db)

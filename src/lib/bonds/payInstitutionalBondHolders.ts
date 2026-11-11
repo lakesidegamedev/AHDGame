@@ -3,6 +3,7 @@ import type { Bond, IndexFund } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
 import { payNppBondReturns, type NppBondReturns } from "@/lib/turn/nppBondCash";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 
 /** ₳ owed to the non-personal holders of a bond position, keyed by holder id. */
 export interface InstitutionalBondPayouts {
@@ -80,15 +81,14 @@ export async function payInstitutionalBondHolders(
     .map(([id, amount]) => [id, Math.round(amount * 100) / 100] as const)
     .filter(([, amount]) => amount > 0);
   if (fundRows.length > 0) {
-    const funds = await db
-      .collection<IndexFund>("indexFunds")
+    const funds = await indexFundsCollection(db)
       .find(
         { _id: { $in: fundRows.map(([id]) => new ObjectId(id)) } },
         { projection: { anchorCurrencyCode: 1, name: 1 } }
       )
       .toArray();
     const fundById = new Map(funds.map((f) => [f._id.toString(), f]));
-    await db.collection<IndexFund>("indexFunds").bulkWrite(
+    await indexFundsCollection(db).bulkWrite(
       fundRows.map(([id, amount]) => ({
         updateOne: {
           filter: { _id: new ObjectId(id) },

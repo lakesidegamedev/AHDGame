@@ -24,6 +24,7 @@ import { resolveCorpLiquidCurrencyCode } from "@/lib/currency/corporationCapital
 import { runWithOptionalTransaction } from "@/lib/db/runWithOptionalTransaction";
 import { emitTx } from "@/lib/financialTxLog/emit";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -383,8 +384,7 @@ async function executeSingleTransfer(
       }
       if (completed.buyerHoldingsUpdated) {
         await attempt("restore buyer holdings", async () => {
-          const result = await db
-            .collection<IndexFund>("indexFunds")
+          const result = await indexFundsCollection(db)
             .updateOne(
               { _id: plan.buyerFundId, holdings: completed.buyerAppliedHoldings },
               { $set: { holdings: buyerFund.holdings, updatedAt: new Date() } }
@@ -394,8 +394,7 @@ async function executeSingleTransfer(
       }
       if (completed.sellerHoldingsUpdated) {
         await attempt("restore seller holdings", async () => {
-          const result = await db
-            .collection<IndexFund>("indexFunds")
+          const result = await indexFundsCollection(db)
             .updateOne(
               { _id: plan.sellerFundId, holdings: completed.sellerAppliedHoldings },
               { $set: { holdings: sellerFund.holdings, updatedAt: new Date() } }
@@ -405,8 +404,7 @@ async function executeSingleTransfer(
       }
       if (completed.sellerCashCredited) {
         await attempt("debit seller compensation cash", async () => {
-          const result = await db
-            .collection<IndexFund>("indexFunds")
+          const result = await indexFundsCollection(db)
             .updateOne(
               { _id: plan.sellerFundId, cashAnchor: { $gte: plan.valueAnchor } },
               { $inc: { cashAnchor: -plan.valueAnchor }, $set: { updatedAt: new Date() } }
@@ -416,8 +414,7 @@ async function executeSingleTransfer(
       }
       if (completed.buyerCashDebited) {
         await attempt("credit buyer compensation cash", async () => {
-          const result = await db
-            .collection<IndexFund>("indexFunds")
+          const result = await indexFundsCollection(db)
             .updateOne(
               { _id: plan.buyerFundId },
               { $inc: { cashAnchor: plan.valueAnchor }, $set: { updatedAt: new Date() } }
@@ -786,8 +783,7 @@ async function atomicallyMoveFundCash(
   const now = new Date();
   const sessionOpts = options?.session ? { session: options.session } : undefined;
 
-  const buyerDebit = await db
-    .collection<IndexFund>("indexFunds")
+  const buyerDebit = await indexFundsCollection(db)
     .updateOne(
       { _id: buyerFundId, cashAnchor: { $gte: amountAnchor } },
       { $inc: { cashAnchor: -amountAnchor }, $set: { updatedAt: now } },
@@ -796,8 +792,7 @@ async function atomicallyMoveFundCash(
   if (buyerDebit.matchedCount === 0) return false;
   if (progress) progress.buyerCashDebited = true;
 
-  const sellerCredit = await db
-    .collection<IndexFund>("indexFunds")
+  const sellerCredit = await indexFundsCollection(db)
     .updateOne(
       { _id: sellerFundId },
       { $inc: { cashAnchor: amountAnchor }, $set: { updatedAt: now } },

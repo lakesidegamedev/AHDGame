@@ -19,6 +19,8 @@ import { boundedParallelMap } from "@/lib/indexFunds/boundedParallelMap";
 import { emitTx, emitTxBulk, loadTxThresholds, type TxInput } from "@/lib/financialTxLog/emit";
 import { loadTurnLengthMinutes } from "@/lib/financialTxLog/expiresAt";
 import type { TxThresholds } from "@/lib/db/types/financialTxLog";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
 
 // Each worker owns one fund's cash, escrow and inventory. Eight overlaps the
 // remote Mongo waits while remaining far below the driver's connection pool;
@@ -152,8 +154,7 @@ export async function refreshEquityLiquidityFacility(input: {
   bondValueByFundId?: Map<string, number>;
 }): Promise<EquityLiquidityFacilitySnapshot> {
   const { db, turn } = input;
-  const priorQuotes = await db
-    .collection<ShareOrder>("shareOrders")
+  const priorQuotes = await shareOrdersCollection(db)
     .find({ liquidityProvider: true, status: "open" })
     .toArray();
   const fundById = new Map(input.funds.map((fund) => [fund._id.toString(), fund]));
@@ -250,8 +251,7 @@ export async function refreshEquityLiquidityFacility(input: {
       const ids = input.funds.map((fund) => fund._id);
       // Prior facility orders have just been cancelled. Read their refunded
       // cash and any other open bid escrow before budgeting fresh quotes.
-      quoteFunds = await db
-        .collection<IndexFund>("indexFunds")
+      quoteFunds = await indexFundsCollection(db)
         .find({ _id: { $in: ids } })
         .toArray();
       const openEscrow = await loadOpenOrdersEscrowByFundId(db, ids);
@@ -291,8 +291,7 @@ export async function refreshEquityLiquidityFacility(input: {
     // after a successful ask instead of querying the order book per quote.
     const openAsks =
       plansByFund.size > 0
-        ? await db
-            .collection<ShareOrder>("shareOrders")
+        ? await shareOrdersCollection(db)
             .find(
               {
                 placerFundId: { $in: [...plansByFund.keys()].map((id) => new ObjectId(id)) },

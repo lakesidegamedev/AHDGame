@@ -46,6 +46,7 @@ import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 
 // GET /api/banking/hub - World banking hub payload (CBs, private banks, savings, loans).
 // Auth: requireAuth
@@ -301,8 +302,7 @@ async function handleGET() {
               .toArray()
           : [],
         imperialCeoIds.length
-          ? db
-              .collection<ImperialCharacter>("imperialCharacters")
+          ? imperialCharactersCollection(db)
               .find({ _id: { $in: imperialCeoIds } })
               .project({ _id: 1, name: 1, avatarUrl: 1 })
               .toArray()

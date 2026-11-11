@@ -14,6 +14,7 @@ import type { LedgerEntryInput } from "@/lib/ledger/types";
 import { emitLedgerEntries } from "@/lib/ledger/emit";
 import { ledgerTurnFromClock } from "@/lib/ledger/ledgerTurn";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 export interface BondPoolLedgerContext {
   turn: number;
@@ -33,8 +34,7 @@ export async function loadBondPoolLedgerContext(
       .findOne({ _id: "default" }, { projection: { ledgerShadow: 1 } });
     if (config?.ledgerShadow !== true) return null;
     const [rates, state] = await Promise.all([
-      db
-        .collection<{ currencyCode: string; rate: number }>("exchangeRates")
+      exchangeRatesCollection<{ currencyCode: string; rate: number }>(db)
         .find({}, { projection: { currencyCode: 1, rate: 1 } })
         .toArray(),
       turn === undefined

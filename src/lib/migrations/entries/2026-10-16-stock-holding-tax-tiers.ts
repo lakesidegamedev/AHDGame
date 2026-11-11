@@ -36,6 +36,9 @@ import type { Migration, MigrationContext, MigrationResult } from "../types";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 export const STOCK_HOLDING_MIGRATION_ID = "2026-10-16-stock-holding-tax-tiers";
 function ownerKey(
@@ -79,8 +82,7 @@ function historyEvents(rows: readonly ShareTradeHistory[], owner: string): Legac
 
 async function migrate(db: Db, ctx: MigrationContext): Promise<MigrationResult> {
   if (
-    await db
-      .collection<ShareOrder>("shareOrders")
+    await shareOrdersCollection(db)
       .countDocuments({ activeShareFillKey: { $exists: true } })
   )
     throw new Error("Recover pending share fills before migrating stock holdings");
@@ -108,8 +110,7 @@ async function migrate(db: Db, ctx: MigrationContext): Promise<MigrationResult> 
           }
         )
         .toArray(),
-      db
-        .collection<ShareOrder>("shareOrders")
+      shareOrdersCollection(db)
         .find({
           type: "sell",
           status: "open",
@@ -127,15 +128,13 @@ async function migrate(db: Db, ctx: MigrationContext): Promise<MigrationResult> 
         .find({})
         .sort({ turn: 1, createdAt: 1, _id: 1 })
         .toArray(),
-      db
-        .collection<ExchangeRate>("exchangeRates")
+      exchangeRatesCollection(db)
         .find({}, { projection: { currencyCode: 1, rate: 1 } })
         .toArray(),
       federalBudgetCollection(db)
         .find({}, { projection: { countryId: 1, taxRates: 1 } })
         .toArray(),
-      db
-        .collection<StateBudget>("stateBudgets")
+      stateBudgetsCollection(db)
         .find({}, { projection: { countryId: 1, taxRates: 1 } })
         .toArray(),
       db

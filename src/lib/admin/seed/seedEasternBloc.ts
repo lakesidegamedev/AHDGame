@@ -13,6 +13,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 
 export interface EasternBlocSeedConfig {
   countryId: CountryId;
@@ -151,8 +152,7 @@ export async function seedEasternBlocBudget(
       await statesCollection<Document>(db).find({ countryId }).project({ _id: 1 }).toArray()
     ).map((s) => s._id as string);
     if (ids.length > 0) {
-      await db
-        .collection<StateBudget>("stateBudgets")
+      await stateBudgetsCollection(db)
         .deleteMany({ stateId: { $in: ids }, countryId });
     }
     await db.collection<EnactedLaw>("enactedLaws").deleteMany({ countryId });
@@ -222,8 +222,7 @@ export async function seedEasternBlocBudget(
   }));
   for (const budget of generateStateBudgets(statesForBudgets, fiscalYear)) {
     const { _id, ...budgetData } = budget;
-    await db
-      .collection<StateBudget>("stateBudgets")
+    await stateBudgetsCollection(db)
       .updateOne({ _id }, { $set: budgetData }, { upsert: true });
   }
 

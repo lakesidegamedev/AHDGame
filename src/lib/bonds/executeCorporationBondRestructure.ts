@@ -37,6 +37,8 @@ import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import type { Document } from "mongodb";
 
 export interface CorporationRestructureResult {
   /** Defaulted principal repaid in full, in ₳. */
@@ -303,8 +305,7 @@ export async function executeCorporationBondRestructure(
 
   if (imperialIncs.size > 0) {
     const imperialIds = [...imperialIncs.keys()].map((idStr) => new ObjectId(idStr));
-    const imperialDocs = await db
-      .collection<ImperialCharacter>("imperialCharacters")
+    const imperialDocs = await imperialCharactersCollection(db)
       .find({ _id: { $in: imperialIds } })
       .project<Pick<ImperialCharacter, "_id" | "countryId" | "name">>({
         _id: 1,
@@ -329,7 +330,7 @@ export async function executeCorporationBondRestructure(
         },
       };
     });
-    if (imperialOps.length > 0) await db.collection("imperialCharacters").bulkWrite(imperialOps);
+    if (imperialOps.length > 0) await imperialCharactersCollection<Document>(db).bulkWrite(imperialOps);
   }
 
   if (corpIncs.size > 0) {

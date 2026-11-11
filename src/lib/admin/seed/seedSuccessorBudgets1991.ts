@@ -12,6 +12,7 @@ import { upsertCountryOwnedCorpEntries } from "./upsertCountryOwnedCorps";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 
 const COUNTRY_IDS = [
   "RU",
@@ -33,8 +34,7 @@ export async function seedSuccessorBudgets1991(
   if (preset !== "1991-default") return;
   if (reset) {
     await federalBudgetCollection(db).deleteMany({ countryId: { $in: [...COUNTRY_IDS] } });
-    await db
-      .collection<StateBudget>("stateBudgets")
+    await stateBudgetsCollection(db)
       .deleteMany({ countryId: { $in: [...COUNTRY_IDS] } });
   }
   const budgets = getInitialNationalBudgetsForPreset(preset).filter((budget) =>
@@ -63,7 +63,7 @@ export async function seedSuccessorBudgets1991(
   );
   if (stateBudgets.length !== regions.length)
     throw new Error("Missing 1991 transition regional budget");
-  await db.collection<StateBudget>("stateBudgets").bulkWrite(
+  await stateBudgetsCollection(db).bulkWrite(
     stateBudgets.map(({ _id, ...budget }) => ({
       updateOne: { filter: { _id }, update: { $set: budget }, upsert: true },
     }))

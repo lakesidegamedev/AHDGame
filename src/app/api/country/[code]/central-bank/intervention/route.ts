@@ -23,6 +23,7 @@ import {
 import { getGameState } from "@/lib/gameState";
 import { getMonetaryPolicyScope } from "@/lib/centralBank/helpers";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 interface RouteContext {
   params: Promise<{ code: string }>;
@@ -91,7 +92,7 @@ async function authorizeChair(countryId: CountryId): Promise<GuardSuccess | Guar
       response: NextResponse.json(notFound("Central bank not found").toJson(), { status: 404 }),
     };
   }
-  const rate = await db.collection<ExchangeRate>("exchangeRates").findOne({ _id: fxCountryId });
+  const rate = await exchangeRatesCollection(db).findOne({ _id: fxCountryId });
   if (!rate) {
     return {
       ok: false,
@@ -198,8 +199,7 @@ export async function POST(request: Request, context: RouteContext) {
       lastAdjustedAtTurn: currentTurn,
       recentInterventions: [],
     };
-    await guard.db
-      .collection<ExchangeRate>("exchangeRates")
+    await exchangeRatesCollection(guard.db)
       .updateOne(
         { _id: guard.fxCountryId },
         { $set: { interventionPolicy: policy, updatedAt: new Date() } }
@@ -268,8 +268,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       lastAdjustedAtTurn: isWiden ? existing.lastAdjustedAtTurn : currentTurn,
     };
     if (parsed.data.maxSpendPerTurn === undefined) delete next.maxSpendPerTurn;
-    await guard.db
-      .collection<ExchangeRate>("exchangeRates")
+    await exchangeRatesCollection(guard.db)
       .updateOne(
         { _id: guard.fxCountryId },
         { $set: { interventionPolicy: next, updatedAt: new Date() } }
@@ -307,8 +306,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
       }
     }
 
-    await guard.db
-      .collection<ExchangeRate>("exchangeRates")
+    await exchangeRatesCollection(guard.db)
       .updateOne(
         { _id: guard.fxCountryId },
         { $set: { interventionPolicy: null, updatedAt: new Date() } }

@@ -7,6 +7,7 @@ import { resolvePolicyOptionJurisdiction } from "@/lib/legislature/jurisdiction"
 import { withLawAdministration } from "./lawAdministrationCatalog";
 import { clampRatio } from "./rules/implementation";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 
 export interface DepartmentDeliveryMultiplierInput {
   currentTurn: number;
@@ -194,8 +195,7 @@ export async function loadRegionalDeliveryMultipliersByRegion(
       .collection<RegionalBudget>("regionalBudgets")
       .find(filter, { projection: { programSettlements: 1 } })
       .toArray(),
-    db
-      .collection<StateBudget>("stateBudgets")
+    stateBudgetsCollection(db)
       .find(filter, { projection: { regionalProgramSettlements: 1 } })
       .toArray(),
   ]);

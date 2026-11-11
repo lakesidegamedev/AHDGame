@@ -17,6 +17,7 @@ import { sumObligationInternal, toInternalUnits } from "./locMath";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 /**
  * Total player net worth in internal units: liquid + savings + stocks + bonds.
@@ -164,7 +165,7 @@ export async function computePlayerGrossNetLocInternal(
 }
 
 export async function loadExchangeRatesMap(db: Db): Promise<Partial<Record<CurrencyCode, number>>> {
-  const ratesDocs = await db.collection<ExchangeRate>("exchangeRates").find({}).toArray();
+  const ratesDocs = await exchangeRatesCollection(db).find({}).toArray();
   return Object.fromEntries(ratesDocs.map((r) => [r.currencyCode, r.rate])) as Partial<
     Record<CurrencyCode, number>
   >;

@@ -77,6 +77,7 @@ import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -140,7 +141,7 @@ export async function buyPublicShares(request: Request, { params }: RouteParams)
 
       let ceoId: ObjectId;
       if (isCeoImperial) {
-        const imperial = await db.collection<ImperialCharacter>("imperialCharacters").findOne({
+        const imperial = await imperialCharactersCollection(db).findOne({
           _id: corpUserDoc!.activeImperialCharacterId!,
           userId: new ObjectId(corpAuth.user.userId),
         });
@@ -455,7 +456,7 @@ export async function buyPublicShares(request: Request, { params }: RouteParams)
 
     if (isImperialMode) {
       // ── Imperial character share buy ────────────────────────────
-      const imperial = await db.collection<ImperialCharacter>("imperialCharacters").findOne({
+      const imperial = await imperialCharactersCollection(db).findOne({
         _id: userDoc!.activeImperialCharacterId!,
         userId: new ObjectId(basicAuth.user.userId),
       });

@@ -1,6 +1,7 @@
 import type { Db, ObjectId } from "mongodb";
 import type { IndexFund, IndexFundPosition } from "@/lib/db/types/indexFund";
 import { creditFundPosition, debitFundPosition } from "./fundQueries";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 
 export interface ReleaseCharacterHeldPositionsResult {
   unitsReleased: number;
@@ -61,8 +62,7 @@ export async function releaseCharacterHeldIndexFundPositionsToFloat(
     const debited = await debitFundPosition(db, pos.fundId, "character", { characterId }, units);
     if (!debited.ok) continue;
 
-    const fund = await db
-      .collection<IndexFund>("indexFunds")
+    const fund = await indexFundsCollection(db)
       .findOne({ _id: pos.fundId }, { projection: { quotedNav: 1 } });
 
     await creditFundPosition(db, pos.fundId, "fund_reserve", {}, units, fund?.quotedNav ?? 0);

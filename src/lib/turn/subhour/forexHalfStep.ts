@@ -32,6 +32,7 @@ import { yearOfTurn } from "@/lib/utils/gameDate";
 import { HALF_TICK_FRACTION, hasSubhourStep, subhourStepStamp } from "./stepFraction";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 /**
  * :30 half step for forex, under the stepFraction.ts contract: each floating
@@ -371,8 +372,7 @@ export async function runForexHalfStep(
   const euroUnion = state.euroMonetaryUnion;
 
   const [rows, banks, gameConfig] = await Promise.all([
-    db
-      .collection<ExchangeRate>("exchangeRates")
+    exchangeRatesCollection(db)
       .find({}, { projection: ROW_PROJECTION })
       .toArray() as Promise<ForexHalfStepRow[]>,
     centralBanksCollection(db).find({}, { projection: BANK_PROJECTION }).toArray(),
@@ -399,7 +399,7 @@ export async function runForexHalfStep(
     euroUnion,
   });
 
-  const collection = db.collection<ExchangeRate>("exchangeRates");
+  const collection = exchangeRatesCollection(db);
   let written = 0;
   let casSkipped = 0;
 

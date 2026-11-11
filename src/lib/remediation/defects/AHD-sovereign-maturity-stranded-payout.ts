@@ -36,6 +36,8 @@ import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 
 export const DEFECT_ID = "AHD-sovereign-maturity-stranded-payout";
 const PAYOUT_KIND = "sovereign_maturity_payout";
@@ -147,9 +149,9 @@ async function survey(db: Db): Promise<PayoutPatch[]> {
       )
       .toArray(),
     liveIds("characters", charactersCollection<{ _id: unknown }>(db)),
-    liveIds("imperialCharacters", db.collection<{ _id: unknown }>("imperialCharacters")),
+    liveIds("imperialCharacters", imperialCharactersCollection<{ _id: unknown }>(db)),
     liveIds("corporations", corporationsCollection<{ _id: unknown }>(db)),
-    liveIds("indexFunds", db.collection<{ _id: unknown }>("indexFunds")),
+    liveIds("indexFunds", indexFundsCollection<{ _id: unknown }>(db)),
     liveIds("npps", nppsCollection<{ _id: unknown }>(db)),
   ]);
   const live = new Set(liveGroups.flat());

@@ -111,6 +111,8 @@ import { TURNS_PER_DAY } from "@/lib/constants/turnTime";
 import { emitTxBulk, type TxInput } from "@/lib/financialTxLog/emit";
 import type { EquityMarketPool, ShareOrder } from "@/lib/db/types";
 import { workerConfig } from "@/lib/config/worker";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import type { Document } from "mongodb";
 export {
   INDEX_FUND_NAV_CONCURRENCY,
   shouldRebalanceIndexFundConstituents,
@@ -237,8 +239,7 @@ async function runFundCron(db: Db, options?: IndexFundCronOptions): Promise<Fund
 
   if (
     !(await isIndexFundsEnabled()) &&
-    !(await db
-      .collection("indexFunds")
+    !(await indexFundsCollection<Document>(db)
       .countDocuments({ "mandate.mode": "picked_stocks", status: { $ne: "delisted" } }))
   ) {
     try {

@@ -13,6 +13,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 
 interface CountryBudgetSeedOptions {
   countryId: CountryId;
@@ -47,12 +48,12 @@ export async function seedCountryBudgets(
       await statesCollection<Document>(db).find({ countryId }).project({ _id: 1 }).toArray()
     ).map((state) => state._id as string);
     if (stateIds.length > 0) {
-      await db.collection<StateBudget>("stateBudgets").deleteMany({
+      await stateBudgetsCollection(db).deleteMany({
         stateId: { $in: stateIds },
         ...(regionalResetIncludesCountry ? { countryId } : {}),
       });
       if (legacyRegionalBudgetIds) {
-        await db.collection<StateBudget>("stateBudgets").deleteMany({
+        await stateBudgetsCollection(db).deleteMany({
           _id: { $in: legacyRegionalBudgetIds } as never,
         });
       }
@@ -126,8 +127,7 @@ export async function seedCountryBudgets(
   const stateBudgets = generateStateBudgets(statesForBudgets, fiscalYear);
   for (const budget of stateBudgets) {
     const { _id, ...budgetData } = budget;
-    await db
-      .collection<StateBudget>("stateBudgets")
+    await stateBudgetsCollection(db)
       .updateOne({ _id }, { $set: budgetData }, { upsert: true });
   }
   log(`Seeded ${stateBudgets.length} ${countryId} regional budgets`);

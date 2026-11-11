@@ -20,6 +20,8 @@ import { quoteIndexFundSubscription } from "./unitAccounting";
 import { witnessSubscription, type BankSubscription } from "./subscriptions";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import type { Document } from "mongodb";
 
 export async function queueBankFundSubscription(
   db: Db,
@@ -57,8 +59,7 @@ export async function queueBankFundSubscription(
     return await withSessionDb(db, async (tx) => {
       const prior = await replay(tx);
       if (prior) return prior;
-      const fund = await tx
-        .collection<IndexFund>("indexFunds")
+      const fund = await indexFundsCollection(tx)
         .findOne({ _id: input.fund._id }, { projection: { floatSettlementPlan: 0 } });
       if (
         !fund ||
@@ -112,8 +113,7 @@ export async function queueBankFundSubscription(
         : await atomicallyDebitCharacterCash(tx, input.characterId, currency, amountNative, forex);
       if (!debit.ok) throw badRequest(debit.error);
       // Touch the fund so enqueue conflicts with concurrent closure and redemption.
-      const reserved = await tx
-        .collection("indexFunds")
+      const reserved = await indexFundsCollection<Document>(tx)
         .updateOne({ _id: fund._id, status: "active" }, { $set: { updatedAt: new Date() } });
       if (!reserved.matchedCount) throw badRequest("The fund is no longer accepting investments.");
       const body = {

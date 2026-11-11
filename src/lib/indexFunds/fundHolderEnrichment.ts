@@ -3,6 +3,7 @@ import type { IndexFundPosition } from "@/lib/db/types";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 
 export type EnrichedFundHolder = {
   holderKind: IndexFundPosition["holderKind"];
@@ -55,8 +56,7 @@ export async function enrichFundPositions(
           .toArray()
       : Promise.resolve([]),
     imperialIds.length
-      ? db
-          .collection<{ _id: ObjectId; name: string }>("imperialCharacters")
+      ? imperialCharactersCollection<{ _id: ObjectId; name: string }>(db)
           .find({ _id: { $in: imperialIds } })
           .project({ name: 1 })
           .toArray()

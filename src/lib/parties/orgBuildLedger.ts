@@ -9,6 +9,7 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 import { accountId, mintSinkAccount } from "@/lib/ledger/accounts";
 import { snapshotPartyCurrency, snapshotStatePartyCurrency } from "@/lib/ledger/balanceSnapshot";
 import { emitLedgerEntries } from "@/lib/ledger/emit";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 export interface OrgBuildLedgerContext {
   rates: ReadonlyMap<string, number>;
@@ -26,8 +27,7 @@ export async function loadOrgBuildLedgerContext(db: Db): Promise<OrgBuildLedgerC
       .collection<{ _id: string; ledgerShadow?: boolean }>("gameConfig")
       .findOne({ _id: "default" }, { projection: { ledgerShadow: 1 } });
     if (config?.ledgerShadow !== true) return null;
-    const rates = await db
-      .collection<{ currencyCode: string; rate: number }>("exchangeRates")
+    const rates = await exchangeRatesCollection<{ currencyCode: string; rate: number }>(db)
       .find({}, { projection: { currencyCode: 1, rate: 1 } })
       .toArray();
     return { rates: new Map(rates.map((row) => [row.currencyCode, row.rate])) };

@@ -5,6 +5,7 @@ import { getDb } from "@/lib/mongodb";
 import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
 import { getSiteUrl } from "@/lib/siteMetadata";
 import ImperialProfileClient from "./ImperialProfileClient";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 
 const truncate = (s: string | undefined | null, max = 200) =>
   !s ? "" : s.length <= max ? s : `${s.slice(0, max - 1).trimEnd()}…`;
@@ -29,13 +30,11 @@ export async function generateMetadata({
 
   let imp: ImperialCharacter | null = null;
   if (Number.isFinite(sequentialId)) {
-    imp = await db
-      .collection<ImperialCharacter>("imperialCharacters")
+    imp = await imperialCharactersCollection(db)
       .findOne({ sequentialId }, { projection });
   }
   if (!imp && ObjectId.isValid(id)) {
-    imp = await db
-      .collection<ImperialCharacter>("imperialCharacters")
+    imp = await imperialCharactersCollection(db)
       .findOne({ _id: new ObjectId(id) }, { projection });
   }
   if (!imp) return {};

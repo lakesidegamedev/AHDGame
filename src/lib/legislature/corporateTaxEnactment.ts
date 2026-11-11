@@ -12,6 +12,7 @@ import {
 import type { ResetLawEnactmentReceipt } from "@/lib/resetLegislation/program";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 
 export interface CorporateTaxVoteInput {
   billId: string;
@@ -42,8 +43,7 @@ export async function applyCorporateTaxBillChange(
             { _id: getNationalBudgetId(input.countryId) },
             { projection: { taxRates: 1, taxRatePhaseIn: 1 } }
           )
-        : await transactionDb
-            .collection<StateBudget>("stateBudgets")
+        : await stateBudgetsCollection(transactionDb)
             .findOne(
               { _id: input.stateId, countryId: input.countryId },
               { projection: { taxRates: 1 } }

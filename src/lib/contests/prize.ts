@@ -14,6 +14,7 @@ import { onboardingRewardLocalAmount } from "@/lib/onboarding/rules";
 import { createNotification } from "@/lib/notifications";
 import { placePrizeAnchor } from "./rules";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 export const CONTEST_KIND_TITLES: Record<ContestKind, string> = {
   corp_growth_small: "Small Business Growth",
@@ -61,8 +62,7 @@ export async function payContestPrize(
   const anchorAmount = placePrizeAnchor(round.kind, input.place, preset);
   const currencyCode = getHomeCurrency(character, preset);
   const rateDoc = forexEnabled
-    ? await db
-        .collection<ExchangeRate>("exchangeRates")
+    ? await exchangeRatesCollection(db)
         .findOne({ _id: getCountryIdForCurrency(currencyCode) })
     : null;
   const localAmount = onboardingRewardLocalAmount(

@@ -35,6 +35,7 @@ import {
 } from "./rules/continuingService";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 const FEDERATION_CONTINUING_SERVICE_TURNS_COLLECTION = "federationContinuingServiceTurns";
 export interface FederationContinuingServiceTurn {
@@ -164,8 +165,7 @@ export async function materializeContinuingFederationServiceTurn(input: {
   ];
   if (currencyCodes.some((code) => !Object.hasOwn(CURRENCY_ANCHOR_COUNTRY, code!)))
     throw new Error("Continuing service has an unsupported issuer currency");
-  const exchangeRows = await db
-    .collection<ExchangeRate>("exchangeRates")
+  const exchangeRows = await exchangeRatesCollection(db)
     .find({ currencyCode: { $in: currencyCodes as CurrencyCode[] } }, { session })
     .toArray();
   const rates: Record<string, number> = {};

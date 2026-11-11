@@ -42,6 +42,8 @@ import {
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -157,7 +159,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const forexEnabled = await isForexEnabled();
 
     if (isImperialMode) {
-      const imperial = await db.collection<ImperialCharacter>("imperialCharacters").findOne({
+      const imperial = await imperialCharactersCollection(db).findOne({
         _id: userDoc!.activeImperialCharacterId!,
         userId: new ObjectId(auth.user.userId),
       });
@@ -332,8 +334,7 @@ export async function POST(request: Request, { params }: RouteParams) {
           .collection<ShareListing>("shareListings")
           .find({ corporationId: corporation._id, status: "open" })
           .toArray(),
-        db
-          .collection<ShareOrder>("shareOrders")
+        shareOrdersCollection(db)
           .find({
             corporationId: corporation._id,
             type: "sell",

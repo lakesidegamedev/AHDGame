@@ -28,6 +28,7 @@ import { loadTurnLengthMinutes } from "@/lib/financialTxLog/expiresAt";
 import { loadQueuedPayoutAuditContext } from "./queuedPayoutSettlement";
 import { type FundFloatPlan, type SettlementFund } from "./fundFloatSettlement";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 
 export type FloatAuditContext = Awaited<ReturnType<typeof loadQueuedPayoutAuditContext>>;
 export async function loadFloatAuditContext(
@@ -530,7 +531,7 @@ export async function prepareFundFloatTrade(db: Db, input: Input) {
     input.shares <= 0
   )
     return undefined;
-  const fundRow = await db.collection<SettlementFund>("indexFunds").findOne(
+  const fundRow = await indexFundsCollection<SettlementFund>(db).findOne(
     { _id: input.fund._id },
     {
       projection: {
@@ -702,7 +703,7 @@ export async function openFundFloatBatch(
     orderFlowWindowSellValue: 1,
   };
   const [fundRow, snapshotRows] = await Promise.all([
-    db.collection<SettlementFund>("indexFunds").findOne(
+    indexFundsCollection<SettlementFund>(db).findOne(
       { _id: ctx.fund._id },
       {
         projection: {

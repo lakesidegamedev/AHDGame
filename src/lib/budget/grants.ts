@@ -12,6 +12,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import { formulaGrants } from "@/lib/seeds/reference/formulaGrants";
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 
 interface StateData {
   id: string;
@@ -131,7 +132,7 @@ export async function updateStateGrantRevenue(
   countryId: CountryId,
   grantAmount: number
 ): Promise<void> {
-  await db.collection<StateBudget>("stateBudgets").updateOne(
+  await stateBudgetsCollection(db).updateOne(
     { _id: stateId, countryId },
     {
       $set: {
