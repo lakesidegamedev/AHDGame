@@ -1,6 +1,7 @@
 import { bankIdleCapacity } from "@/lib/corporations/rules/bankIdleCapacity";
 import type { PlantIdleCause, PlantBuildOrderView, SectorPlantsSection } from "./sectorPlantsTypes";
 export type { PlantIdleCause, PlantBuildOrderView, SectorPlantsSection } from "./sectorPlantsTypes";
+import { fundedIdleWeights, type IdleWeight } from "./sectorFundedIdle";
 import {
   inManualRestartGrace,
   manualRestartGraceEndsTurn,
@@ -1278,65 +1279,6 @@ export function computeSectorMarginSection(args: {
 
 // ─── Plants tier (marketSystemMode >= "plants") ──────────────────────────────
 
-type IdleWeight = { cause: PlantIdleCause["cause"]; w: number; heldInput?: string };
-
-/**
- * Idle weights from a funded settlement receipt, or null when the sector has
- * none for the last turn (legacy worlds keep the throttle reading).
- *
- * A funded plant loses run for distinct reasons, and the page has to name the
- * one the player can act on (ticket 1728): the demand plan held its run below
- * capacity (demand, or ramping back up once it sells out), short inputs or
- * short cash cut what it made below that plan, and unsold output is demand.
- * A sold-out plant whose run was cut is held by that input or by cash, not
- * ramping up (ticket 1765): the plan is not what is keeping it down.
- */
-function fundedIdleWeights(
-  receipt: CorporateSector["producerSettlement"] | null | undefined,
-  currentTurn: number
-): IdleWeight[] | null {
-  if (!receipt || !(receipt.turn >= currentTurn - 1)) return null;
-  const active = receipt.activeUnits;
-  if (!(Number.isFinite(active) && active > 0)) return null;
-  const share = (x: number) => Math.max(0, Math.min(1, Number.isFinite(x) ? x : 0));
-  const offered = receipt.offeredUnits;
-  // Units delivered to the company's own sites found a use; they are not demand-idle.
-  const ownDelivered = (receipt.products ?? []).reduce(
-    (n, p) => n + Math.max(0, p.internalDeliveredUnits ?? 0),
-    0
-  );
-  const sellThrough = offered > 0 ? share((receipt.soldUnits + ownDelivered) / offered) : 1;
-  const runShare = share(receipt.plannedRunShare ?? 1);
-  const made = share(receipt.producedUnits / active);
-  const cutBy = receipt.runCutBy ?? [];
-  const heldInput =
-    cutBy.includes("inputs") && receipt.bindingInput
-      ? (COMMODITY_LABELS[receipt.bindingInput as CommodityType] ?? receipt.bindingInput)
-      : undefined;
-  const held = heldInput != null || cutBy.includes("cash");
-  const weights: IdleWeight[] = [];
-  if (runShare < 1) {
-    if (sellThrough < SOLD_OUT_FILL) weights.push({ cause: "demand", w: 1 - runShare });
-    else if (held)
-      weights.push({ cause: "held", w: 1 - runShare, ...(heldInput ? { heldInput } : {}) });
-    else weights.push({ cause: "ramping", w: 1 - runShare });
-  }
-  const shortfall = Math.max(0, runShare - made);
-  if (shortfall > 0)
-    weights.push({
-      cause:
-        cutBy.length > 0
-          ? cutBy.includes("inputs")
-            ? "inputs"
-            : "cash"
-          : (receipt.operatingArrears ?? 0) > 0
-            ? "cash"
-            : "inputs",
-      w: shortfall,
-    });
-  return weights;
-}
-
 /**
  * Build the plants-tier section. Pure: every DB-derived input is passed in, so
  * this is directly testable and adds no read to the sector-detail query beyond
@@ -1381,10 +1323,11 @@ export function buildSectorPlantsSection(args: {
   corpCapitalAnchor: number;
   /** Untapped units in this market — see `unownedHeadroomUnitsOf`. */
   headroomUnits: number;
-  /** True buyers' room (see SectorPlantsSection.demandGapUnits). Optional so
-   *  test fixtures predating the field keep compiling; defaults to 0. */
+  /** Expansion appetite; automatic sizing uses measuredDemandGapUnits. */
   demandGapUnits?: number;
   measuredDemandGapUnits?: number | null;
+  buildDemand?: import("@/lib/corporations/rules/fundedBuildDemand").BuildDemandRow[];
+  buildDemandTurn?: number;
   /** Owned capacity in this (state, sectorType) cell, every producer, units/day. */
   ownedCellCapacityUnits?: number;
   /** Strategy suggestion when the plant's valuable output is oversupplied (computeRetoolHint). */
@@ -1904,6 +1847,8 @@ export function buildSectorPlantsSection(args: {
     headroomUnits: nonNeg(headroomUnits),
     demandGapUnits: roomHeldByOwnIdle ? 0 : nonNeg(demandGapUnits),
     measuredDemandGapUnits: roomHeldByOwnIdle ? 0 : (args.measuredDemandGapUnits ?? null),
+    buildDemand: args.buildDemand,
+    buildDemandTurn: args.buildDemandTurn,
     roomHeldByOwnIdle,
     ...(!mothballed && (num(sector.demandIdleTurns) ?? 0) > 0
       ? {

@@ -82,7 +82,7 @@ export interface PurchaseOrder {
   /**
    * Shares each price level of the ordinary pass with the other flagged orders
    * of the same priority on the same book, pro rata to what each still wants
-   * (always for producer inputs; gameConfig.producerPublicFairShareStage for
+   * (always for producer inputs and households; gameConfig.producerPublicFairShareStage for
    * public buyers). Absent = the
    * order takes the level whole when it comes up in id order.
    */
@@ -337,6 +337,7 @@ export interface ProducerMarketResult {
    * exports are units that actually changed hands across a border.
    */
   countryBooks?: FundedCountryBookRow[];
+  regionalBooks?: import("./fundedBookRules").FundedRegionalBookRow[];
 }
 
 function nonNegative(value: number, label: string): number {
@@ -456,6 +457,18 @@ export function settleProducerMarket(input: {
     internalDeliveries.set(key, row);
   };
   const countryBookRows = new Map<string, FundedCountryBookRow>();
+  const regionalBookRows = new Map<string, import("./fundedBookRules").FundedRegionalBookRow>();
+  const regionalBookRow = (order: PurchaseOrder) => {
+    const stateId = order.book.startsWith("state:") ? order.book.slice(6) : order.stateId;
+    if (!stateId) return undefined;
+    const key = JSON.stringify([stateId, order.commodity]);
+    let row = regionalBookRows.get(key);
+    if (!row) {
+      row = { stateId, commodity: order.commodity, funded: 0, filled: 0 };
+      regionalBookRows.set(key, row);
+    }
+    return row;
+  };
   const countryBookRow = (countryId: string, commodity: string): FundedCountryBookRow => {
     const key = JSON.stringify([countryId, commodity]);
     let row = countryBookRows.get(key);
@@ -629,7 +642,11 @@ export function settleProducerMarket(input: {
       input.orders.filter((o) => !(o.demandStep && o.demandStep > 0)),
       budgets,
       countryBookRow,
-      input.spilloverUnitsByOrder
+      input.spilloverUnitsByOrder,
+      (order, units) => {
+        const row = regionalBookRow(order);
+        if (row) row.funded += units;
+      }
     );
   // Shared budgets for spend groups: what every order in the group may still spend.
   const spendGroupLeft = new Map<string, number>();
@@ -1395,6 +1412,13 @@ export function settleProducerMarket(input: {
     cash.set(offer.accountId, credited(offer.accountId, amount));
   }
   if (tracked) {
+    for (const order of input.orders) {
+      const row = regionalBookRow(order);
+      if (!row) continue;
+      const delivered = orderResults.get(order.id)?.deliveredUnits ?? 0;
+      row.filled += delivered;
+      if (order.demandStep && order.demandStep > 0) row.funded += delivered;
+    }
     for (const [key, units] of deliveredAcross) {
       const [seller, buyer, commodity] = JSON.parse(key) as [string, string, string];
       countryBookRow(buyer, commodity).imports += units;
@@ -1440,6 +1464,13 @@ export function settleProducerMarket(input: {
           countryBooks: sortFundedCountryBookRows(
             filledByCountry(input.orders, orderResults, countryBookRow, countryBookRows)
           ),
+          ...(regionalBookRows.size > 0
+            ? {
+                regionalBooks: [...regionalBookRows.values()].sort(
+                  (a, b) => compareId(a.stateId, b.stateId) || compareId(a.commodity, b.commodity)
+                ),
+              }
+            : {}),
         }
       : {}),
   };
@@ -1470,7 +1501,8 @@ function fundedDemandByCountry(
   orders: readonly PurchaseOrder[],
   openingBudgets: ReadonlyMap<string, number>,
   row: (countryId: string, commodity: string) => FundedCountryBookRow,
-  spilloverUnits?: ReadonlyMap<string, number>
+  spilloverUnits?: ReadonlyMap<string, number>,
+  onFunded?: (order: PurchaseOrder, units: number) => void
 ): void {
   const budget = new Map(openingBudgets);
   const groupTarget = new Map<string, number>();
@@ -1505,6 +1537,7 @@ function fundedDemandByCountry(
     }
     units = Math.max(0, units);
     book.funded = (book.funded ?? 0) + units;
+    onFunded?.(order, units);
     if (price > 0) budget.set(order.accountId, (budget.get(order.accountId) ?? 0) - units * price);
     if (group !== undefined) groupLeft.set(group, groupLeft.get(group)! - units);
   }

@@ -43,7 +43,7 @@ async function fetchLegislationTypes(
   // allowlist meant seeded countries missing from it (NG, and others) fell through
   // with NO country filter, leaking every country's laws into the picker (#912).
   if (country && country !== "us") {
-    query.countryScope = country;
+    query.countryScope = country === "wal" ? "wls" : country;
   } else {
     // US, or no country specified: US-scoped + legacy no-scope types.
     query.$or = [{ countryScope: "us" }, { countryScope: { $exists: false } }];

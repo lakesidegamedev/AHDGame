@@ -1,0 +1,23 @@
+{
+  "economyHistory": {
+    "title": "National history",
+    "recorded": "every recorded turn",
+    "blurb": "Population, GDP and GDP per capita in {currency}, aggregated from every region.",
+    "metric": {
+      "population": "Population",
+      "gdp": "GDP",
+      "gdpPerCapita": "GDP per capita"
+    },
+    "unit": {
+      "people": "people",
+      "localCurrency": "local currency"
+    },
+    "change": "{change} over window",
+    "error": "Could not load national history for this country.",
+    "retry": "Retry",
+    "empty": "Not enough recorded history yet. One point is stored per completed turn, so this chart fills in as the world runs.",
+    "chartLabel": "{metric} across {turns} recorded turns",
+    "turn": "Turn {turn}",
+    "turnAxis": "T{turn}"
+  }
+}

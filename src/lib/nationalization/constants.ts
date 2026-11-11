@@ -245,6 +245,17 @@ export const EXPROPRIATION_TENSION_BY_TIER: Record<CompensationTier, number> = {
   seizure: 3,
 };
 
+/**
+ * Multiplier on the DOMESTIC political cost of a wartime seizure of enemy-held
+ * assets. The public rallies behind a government that is taking an enemy's
+ * industry while the war is on, so trust and legitimacy losses shrink; foreign
+ * investor confidence keeps its full expropriation hit, because foreign capital
+ * does not rally. 1 (no reduction) when the owner is not an enemy in an active
+ * war. Balance constant: needs rules tests and live read-only evidence, not a
+ * world simulation, before it is treated as settled.
+ */
+export const WARTIME_POLITICAL_FACTOR = 0.35;
+
 /** Legitimacy points removed for a full seizure (confidence-model countries). */
 export const LEGITIMACY_HIT_BASE = 6;
 

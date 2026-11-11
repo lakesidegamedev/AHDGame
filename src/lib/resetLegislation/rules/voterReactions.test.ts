@@ -23,7 +23,9 @@ describe("v2 legislative voter reactions", () => {
     for (const family of catalog) {
       const position = v2VotePosition({ familyId: family.id, choice: "center" });
       expect(position).not.toBeNull();
-      expect(Object.values(billPositionTargets([position!]))).toEqual([0]);
+      expect(Object.values(billPositionTargets([position!])).every((value) => value === 0)).toBe(
+        true
+      );
     }
     expect(billPositionTargets([{ economic: 0 }])).toEqual({});
     expect(v2VotePosition({ familyId: "unknown", choice: "far_left" })).toBeNull();

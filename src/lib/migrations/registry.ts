@@ -1,3 +1,5 @@
+import { migration as financialTxLogTurnOrderIndex } from "./entries/2026-11-10-financial-tx-log-turn-order-index";
+import { migration as successorTaxTypes } from "./entries/2026-11-09-successor-tax-types";
 import { migration as jpLawLeanEffects } from "./entries/2026-11-09-jp-law-lean-effects";
 import { migration as ukJpSubdivisionPopulations } from "./entries/2026-11-01-uk-jp-subdivision-populations";
 import { migration as archiveNonPresidentialCampaigns } from "./entries/2026-11-01-archive-non-presidential-campaigns";
@@ -133,6 +135,7 @@ import { migration as productVentureIndexes } from "./entries/2026-10-08-product
 import { migration as campaignFieldOfficeIndexes } from "./entries/2026-10-09-campaign-field-office-indexes";
 import { migration as marketCapTickIndexes } from "./entries/2026-10-09-market-cap-tick-indexes";
 import { migration as supplyAgreementStatusIndex } from "./entries/2026-10-10-supply-agreement-status-index";
+import { migration as navairBasingIndex } from "./entries/2026-11-10-navair-basing-index";
 import { migration as subhourWikiCadence } from "./entries/2026-10-09-subhour-wiki-cadence";
 import { migration as backfillSpinOffTechBaselines } from "./entries/2026-10-08-backfill-spinoff-tech-baselines";
 import { migration as mediaProductProjectsV1Index } from "./entries/2026-10-04-media-product-projects-v1-index";
@@ -382,6 +385,7 @@ export const MIGRATIONS: Migration[] = [
   // 15-minute market cap chart rows; also in the startup allowlist.
   marketCapTickIndexes,
   supplyAgreementStatusIndex,
+  navairBasingIndex,
   corporateFundPositions,
   subhourWikiCadence,
   // Suggestion #363: spin-offs were created with no tech. Additive heal.
@@ -396,6 +400,7 @@ export const MIGRATIONS: Migration[] = [
   incomeTaxPolicyParity,
   incomeTaxTiers,
   backfillMechanicalLawTypes,
+  successorTaxTypes,
   bankMoneyMoveUnprojectedIndex,
   turnGrowthIndexes,
   playerReadIndexes,
@@ -403,6 +408,7 @@ export const MIGRATIONS: Migration[] = [
   partyNppRegionalBills,
   nationalPartyNppBills,
   archiveNonPresidentialCampaigns,
+  financialTxLogTurnOrderIndex,
 ];
 
 // D13 rollback drill - registered but deliberately OUTSIDE the normal chain.

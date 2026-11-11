@@ -19,7 +19,7 @@ import {
 } from "@/lib/currency/corporationCapital";
 import { atomicallyDebitCorpLiquidCapital } from "@/lib/financialTxLog/atomicCashGuard";
 import { emitTx } from "@/lib/financialTxLog/emit";
-import { creditTreasuryProceeds } from "@/lib/nationalization/treasury";
+import { creditTreasuryProceedsPaired } from "@/lib/nationalization/treasury";
 import { withSessionDb, afterCommit } from "@/lib/db/sessionDb";
 import { resolveCountryCurrencyCode } from "@/lib/currency/govBudgetFields";
 import { sponsorSeedUnits } from "./rules/accounting";
@@ -318,7 +318,14 @@ async function commitCharter(
   // spin-off path). Capture the credited amount so the treasury leg below is
   // booked for exactly what moved.
   const feeToTreasury = sponsor.countryId
-    ? await creditTreasuryProceeds(db, sponsor.countryId as CountryId, feeLocal, now)
+    ? await creditTreasuryProceedsPaired(db, {
+        countryId: sponsor.countryId as CountryId,
+        amountLocal: feeLocal,
+        now,
+        flow: "index_fund_charter_fee",
+        key: `fund-charter-fee:${fundId.toHexString()}`,
+        site: "charterFund.fee",
+      })
     : 0;
 
   // #992 tranche 3: the corp debit below covers seed + fee while the fund

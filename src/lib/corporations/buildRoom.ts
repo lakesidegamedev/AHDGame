@@ -9,6 +9,8 @@
  * world the price documents carry the settled market's supply and demand, so
  * this reads real buyers.
  */
+import { sizeBuildDemand, fullMixBuildRoom } from "./rules/buildDemandCapacity";
+import { loadBuildDemandProducers } from "./loadBuildDemandProducers";
 import type { Db } from "mongodb";
 import type { CommodityType } from "@/lib/constants/commodities";
 import type { OperatingSectorType } from "@/lib/constants/corporationsClient";
@@ -20,10 +22,20 @@ import { commodityDemandGap, isStateScopedCommodity } from "@/lib/market/commodi
 import { commodityMarketScope } from "@/lib/market/rules/commodityMarketScope";
 import { latentTopUpForCountry, latentTopUpForState } from "@/lib/market/latentShortageSignal";
 import { bookFor, loadReachableBooks } from "@/lib/trade/queries/loadReachableBooks";
+import { loadFundedBuildDemand } from "./loadFundedBuildDemand";
+import { isCountryBookCommodity } from "@/lib/market/rules/commodityMarketScope";
 
 type Balance = { supply: number; demand: number };
 
 export interface BuildRoomContext {
+  funded?: boolean;
+  demandRows?: (
+    supply: Partial<Record<CommodityType, number>>,
+    stateId: string,
+    countryId: string,
+    outputMultiplier?: number
+  ) => import("./rules/fundedBuildDemand").BuildDemandRow[] | undefined;
+  demandTurn?: number;
   /** Unmet demand for an output mix in a state, in capacity units per day. */
   demandGapUnits(
     supplyMix: Partial<Record<CommodityType, number>>,
@@ -33,7 +45,7 @@ export interface BuildRoomContext {
 }
 
 export async function loadBuildRoomContext(db: Db): Promise<BuildRoomContext> {
-  const [reachableBooks, priceDocs] = await Promise.all([
+  const [reachableBooks, priceDocs, funded] = await Promise.all([
     loadReachableBooks(db),
     db
       .collection<CommodityPrice>("commodityPrices")
@@ -53,7 +65,25 @@ export async function loadBuildRoomContext(db: Db): Promise<BuildRoomContext> {
         }
       )
       .toArray(),
+    loadFundedBuildDemand(db),
   ]);
+  const capacity = funded ? await loadBuildDemandProducers(db) : null;
+  const demandRows = (
+    supply: Partial<Record<CommodityType, number>>,
+    stateId: string,
+    countryId: string,
+    outputMultiplier = 1
+  ) =>
+    funded && capacity
+      ? sizeBuildDemand({
+          rows: funded.rows(supply, stateId, countryId),
+          supply,
+          outputMultiplier,
+          stateId,
+          countryId,
+          producers: capacity.producers,
+        })
+      : undefined;
   const globalBalances = new Map<CommodityType, Balance>(
     priceDocs.map((p) => [
       p.commodity,
@@ -75,7 +105,26 @@ export async function loadBuildRoomContext(db: Db): Promise<BuildRoomContext> {
     }
   const priceDocByCommodity = new Map(priceDocs.map((p) => [p.commodity, p]));
   return {
+    funded: funded != null,
+    demandRows,
+    demandTurn: funded?.turn,
     demandGapUnits(supplyMix, stateId, countryId) {
+      if (funded) {
+        // This API is a raw gap; older callers subtract queues themselves.
+        // demandRows supplies the fully reserved candidate-specific estimate.
+        return (
+          fullMixBuildRoom(
+            sizeBuildDemand({
+              rows: funded.rows(supplyMix, stateId, countryId),
+              supply: supplyMix,
+              stateId,
+              countryId,
+              outputMultiplier: 1,
+              producers: [],
+            })
+          ) ?? 0
+        );
+      }
       return sectorDemandGapUnits(supplyMix, (commodity) => {
         // Restore the cap-hidden demand: state share for local outputs,
         // country share for reachable ones (demand audit step 1).
@@ -123,12 +172,17 @@ export function buildRoomUnits(demandGapUnits: number, queuedUnits: number): num
  * The expansion picker and the state board both key on this.
  */
 export function supplyMixSharesCountryDemand(
-  supplyMix: Partial<Record<CommodityType, number>>
+  supplyMix: Partial<Record<CommodityType, number>>,
+  fundedMarket = false
 ): boolean {
   const outputs = Object.entries(supplyMix).filter(([, rate]) => (rate ?? 0) > 0);
   return (
     outputs.length > 0 &&
-    outputs.every(([commodity]) => commodityMarketScope(commodity as CommodityType) === "reachable")
+    outputs.every(
+      ([commodity]) =>
+        (fundedMarket && isCountryBookCommodity(commodity)) ||
+        commodityMarketScope(commodity as CommodityType) === "reachable"
+    )
   );
 }
 

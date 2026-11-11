@@ -1,4 +1,5 @@
 "use client";
+import { useBodyScrollLock } from "@/components/ui/useBodyScrollLock";
 
 import { useTranslations } from "next-intl";
 import { InlineError } from "@/components/ui/InlineError";
@@ -16,6 +17,7 @@ import type { OperatingSectorType } from "@/lib/constants/corporationsClient";
 import { COUNTRY_CURRENCY_MAP, type CurrencyCode } from "@/lib/constants/currencies";
 import { type CountryId } from "@/lib/constants/countriesCore";
 import { CorporationLogo } from "@/components/corporation/CorporationLogo";
+import FundedBuildDemand from "./FundedBuildDemand";
 import {
   CAPACITY_UNIT_LABEL,
   formatUnits,
@@ -24,8 +26,13 @@ import {
 } from "./plantsPresentation";
 
 /** Big-number form of room to build: whole plants, "<1" for a sliver, "0" for none. */
-function roomPlantsFigure(units: number | null | undefined, sectorType: string): string {
-  if (units == null || !Number.isFinite(units) || units <= 0) return "0";
+function roomPlantsFigure(
+  units: number | null | undefined,
+  sectorType: string,
+  unknown: string
+): string {
+  if (units == null || !Number.isFinite(units)) return unknown;
+  if (units <= 0) return "0";
   const plants = plantsOfRoom(units, { sectorType });
   return plants >= 1 ? plants.toLocaleString("en-US") : "<1";
 }
@@ -72,6 +79,8 @@ interface Suggestion {
   roomToBuildUnits?: number | null;
   /** Plants tier: "country" when that room is one figure shared by the country. */
   roomScope?: "state" | "country" | null;
+  buildDemand?: import("@/lib/corporations/rules/fundedBuildDemand").BuildDemandRow[];
+  buildDemandTurn?: number;
 }
 
 type EntryBlockReason =
@@ -147,6 +156,7 @@ export default function ExpandMarketModal({
 }: ExpandMarketModalProps) {
   const t = useTranslations("corporations.sectorInvestment");
   const { dialogProps, titleId } = useDialogA11y(onClose);
+  useBodyScrollLock();
   const resolveCountryName = useCountryDisplayName();
   const { formatAmount } = useCurrency();
   const router = useRouter();
@@ -313,9 +323,11 @@ export default function ExpandMarketModal({
   const activeSuggestion = suggestions[activeIndex] ?? suggestions[0] ?? null;
   // Room to build: the same figure the state board shows for this market.
   const roomFor = (s: Suggestion): number | null =>
-    s.roomToBuildUnits ??
-    (countrySharedDemand ? countryDemandEstimates[s.countryId] : s.headroomUnits) ??
-    null;
+    s.buildDemand
+      ? (s.roomToBuildUnits ?? null)
+      : (s.roomToBuildUnits ??
+        (countrySharedDemand ? countryDemandEstimates[s.countryId] : s.headroomUnits) ??
+        null);
   const activeDemandUnits = activeSuggestion ? roomFor(activeSuggestion) : null;
   const activeCanEnter = activeSuggestion ? canEnterNow(activeSuggestion) : false;
   const activeBlockMessage =
@@ -412,7 +424,7 @@ export default function ExpandMarketModal({
           </button>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6">
           {/* Step 1: Select sector type */}
           {step === "selectType" && (
             <div className="space-y-4">
@@ -739,7 +751,9 @@ export default function ExpandMarketModal({
                           className="text-right"
                           title="Demand buyers are not getting, less plants already under construction. Matches the state market page. Legacy unowned revenue does not limit building."
                         >
-                          Room to build
+                          {suggestions.some((s) => s.buildDemand)
+                            ? t("fundedAdvice.allOutputRoom")
+                            : "Room to build"}
                         </span>
                         <span className="text-right">Entry</span>
                       </div>
@@ -816,7 +830,11 @@ export default function ExpandMarketModal({
                                     }
                                   >
                                     {showCountryEstimate
-                                      ? roomPlantsFigure(room, selectedType)
+                                      ? roomPlantsFigure(
+                                          room,
+                                          selectedType,
+                                          t("fundedAdvice.unknown")
+                                        )
                                       : ""}
                                   </span>
                                   <span className="block text-[9px] font-normal text-muted">
@@ -856,8 +874,13 @@ export default function ExpandMarketModal({
                             {activeSuggestion.stateName}
                           </p>
                           <p className="text-[11px] text-muted">
-                            Room to build:{" "}
-                            {roomInPlantsLabel(activeDemandUnits, { sectorType: selectedType })}
+                            {activeSuggestion.buildDemand
+                              ? t("fundedAdvice.allOutputRoom")
+                              : "Room to build"}
+                            :{" "}
+                            {activeDemandUnits == null
+                              ? t("fundedAdvice.unknown")
+                              : roomInPlantsLabel(activeDemandUnits, { sectorType: selectedType })}
                             {" · "}
                             {activeSuggestion.foundingTotalAnchor != null
                               ? formatTreasuryAmount(activeSuggestion.foundingTotalAnchor)
@@ -921,6 +944,11 @@ export default function ExpandMarketModal({
                         )}
                       </div>
 
+                      <FundedBuildDemand
+                        rows={activeSuggestion.buildDemand}
+                        turn={activeSuggestion.buildDemandTurn}
+                        unitsPerFacility={foundingQuote?.starterUnits}
+                      />
                       {/* Stats row — plants */}
                       {plantsMode && foundingQuote && (
                         <div className="grid grid-cols-3 gap-2">
@@ -929,13 +957,19 @@ export default function ExpandMarketModal({
                               className="text-body-sm font-medium text-muted"
                               title="What buyers want and are not getting, less plants already under construction. The same figure the state market page shows. It does not limit what you can build."
                             >
-                              Room to build
+                              {suggestions.some((s) => s.buildDemand)
+                                ? t("fundedAdvice.allOutputRoom")
+                                : "Room to build"}
                             </p>
                             <p
                               className="text-sm font-bold text-foreground tabular-nums"
                               title={`${formatUnits(activeDemandUnits)} ${CAPACITY_UNIT_LABEL} of unmet demand`}
                             >
-                              {roomPlantsFigure(activeDemandUnits, selectedType)}
+                              {roomPlantsFigure(
+                                activeDemandUnits,
+                                selectedType,
+                                t("fundedAdvice.unknown")
+                              )}
                             </p>
                             <p className="text-[10px] text-muted">
                               {activeSuggestion.roomScope === "country" || countrySharedDemand
@@ -970,16 +1004,18 @@ export default function ExpandMarketModal({
                       {/* The state market lists can still show a leftover legacy
                           revenue pool here. Name it so the two screens read the
                           same, and say it is not what entry is sized against. */}
-                      {plantsMode && activeSuggestion.unownedRevenue > 0 && (
-                        <p
-                          className="text-[11px] leading-snug text-muted"
-                          title={marketCurrencyTitle}
-                        >
-                          Unclaimed legacy revenue here:{" "}
-                          {formatMarketAmount(activeSuggestion.unownedRevenue)}/day. You enter by
-                          building, so room to build is the figure that matters.
-                        </p>
-                      )}
+                      {plantsMode &&
+                        !activeSuggestion.buildDemand &&
+                        activeSuggestion.unownedRevenue > 0 && (
+                          <p
+                            className="text-[11px] leading-snug text-muted"
+                            title={marketCurrencyTitle}
+                          >
+                            Unclaimed legacy revenue here:{" "}
+                            {formatMarketAmount(activeSuggestion.unownedRevenue)}/day. You enter by
+                            building, so room to build is the figure that matters.
+                          </p>
+                        )}
 
                       {/* Stats row */}
                       <div className={`${plantsMode ? "hidden" : "grid"} grid-cols-3 gap-2`}>
@@ -1115,8 +1151,7 @@ export default function ExpandMarketModal({
 
                       {activeSuggestion.competitors.length === 0 && (
                         <p className="text-[11px] text-success">
-                          No competitors in this state market. Full in-state untapped demand
-                          available.
+                          {t("fundedAdvice.noLocalCompetitors")}
                         </p>
                       )}
 
@@ -1190,19 +1225,31 @@ export default function ExpandMarketModal({
                                         : "border-warning/30 bg-warning/10 text-warning"
                                     }`}
                                   >
-                                    {enough
-                                      ? t("foundingShareRoom", {
-                                          state: activeSuggestion.stateName,
-                                          plants: roomInPlantsLabel(headroom, {
-                                            sectorType: selectedType,
-                                          }),
-                                        })
-                                      : t("foundingShareLimited", {
-                                          state: activeSuggestion.stateName,
-                                          plants: roomInPlantsLabel(headroom, {
-                                            sectorType: selectedType,
-                                          }),
-                                        })}
+                                    {activeSuggestion.buildDemand && activeDemandUnits == null
+                                      ? t("fundedAdvice.someUnknown")
+                                      : enough
+                                        ? t(
+                                            activeSuggestion.buildDemand
+                                              ? "fundedAdvice.foundingRoom"
+                                              : "foundingShareRoom",
+                                            {
+                                              state: activeSuggestion.stateName,
+                                              plants: roomInPlantsLabel(headroom, {
+                                                sectorType: selectedType,
+                                              }),
+                                            }
+                                          )
+                                        : t(
+                                            activeSuggestion.buildDemand
+                                              ? "fundedAdvice.foundingLimited"
+                                              : "foundingShareLimited",
+                                            {
+                                              state: activeSuggestion.stateName,
+                                              plants: roomInPlantsLabel(headroom, {
+                                                sectorType: selectedType,
+                                              }),
+                                            }
+                                          )}
                                   </p>
                                 );
                               })()}

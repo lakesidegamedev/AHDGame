@@ -1,3 +1,4 @@
+import { migration as successorTaxTypes } from "./entries/2026-11-09-successor-tax-types";
 import { migration as incomeTaxTiers } from "./entries/2026-10-16-income-tax-tiers";
 import { migration as backfillMechanicalLawTypes } from "./entries/2026-10-21-backfill-mechanical-law-types";
 import { migration as bankMoneyMoveUnprojectedIndex } from "./entries/2026-10-23-bank-money-move-unprojected-index";
@@ -33,8 +34,11 @@ import { migration as productVentureIndexes } from "./entries/2026-10-08-product
 import { migration as campaignFieldOfficeIndexes } from "./entries/2026-10-09-campaign-field-office-indexes";
 import { migration as marketCapTickIndexes } from "./entries/2026-10-09-market-cap-tick-indexes";
 import { migration as supplyAgreementStatusIndex } from "./entries/2026-10-10-supply-agreement-status-index";
+import { migration as navairBasingIndex } from "./entries/2026-11-10-navair-basing-index";
 import { migration as subhourWikiCadence } from "./entries/2026-10-09-subhour-wiki-cadence";
 import { runMigrations, type RunSummary } from "./runner";
+import { migration as jpLawLeanEffects } from "./entries/2026-11-09-jp-law-lean-effects";
+import { migration as financialTxLogTurnOrderIndex } from "./entries/2026-11-10-financial-tx-log-turn-order-index";
 import { migration as scotusCareerAchievements } from "./entries/2026-10-16-scotus-career-achievements";
 import type { Migration } from "./types";
 
@@ -51,6 +55,7 @@ export const REQUIRED_STARTUP_MIGRATIONS: readonly Migration[] = [
   // The Competition, Subsidiary Limits and Foreign Investment Acts must exist
   // before the merger gate reads them, or every new country fails open.
   backfillMechanicalLawTypes,
+  successorTaxTypes,
   // Ownership and achievement definitions must exist before the next reset or settlement.
   contestAccountHistory,
   governmentContractBidding,
@@ -95,6 +100,7 @@ export const REQUIRED_STARTUP_MIGRATIONS: readonly Migration[] = [
   campaignFieldOfficeIndexes,
   marketCapTickIndexes,
   supplyAgreementStatusIndex,
+  navairBasingIndex,
   corporateFundPositions,
   subhourWikiCadence,
   // NPP engine 6 on the hosted world ships with the build that carries it;
@@ -106,6 +112,9 @@ export const REQUIRED_STARTUP_MIGRATIONS: readonly Migration[] = [
   bankMoneyMoveUnprojectedIndex,
   // Unused text indexes on the turn's two busiest logs cost index writes every turn.
   dropLogTextIndexes,
+  // Japanese laws carry lean effects in code; the live law types need them stored or
+  // passed bills still move no regional lean. Idempotent, existing jp_* docs only.
+  jpLawLeanEffects,
 ];
 
 /** Index metadata can disappear on reset even when migration markers survive. */
@@ -128,6 +137,9 @@ export const REQUIRED_STARTUP_INDEX_MIGRATIONS: readonly Migration[] = [
   // Turn-phase probes on bonds and money moves stay bounded by live work.
   turnGrowthIndexes,
   playerReadIndexes,
+  // The ledger listing sorts by turn, write time and id; without this index Mongo
+  // sorts the whole filtered log in memory on every page.
+  financialTxLogTurnOrderIndex,
 ];
 
 export async function runRequiredStartupMigrations(db: Db): Promise<RunSummary> {

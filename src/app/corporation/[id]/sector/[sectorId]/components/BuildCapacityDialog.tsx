@@ -15,6 +15,8 @@ import {
 } from "@/lib/corporations/rules/operatingReserve";
 import { recommendSectorExpansion } from "@/lib/corporations/investment/expansion/rules";
 import ConstructionFinanceControls from "./ConstructionFinanceControls";
+import FundedBuildDemand from "@/components/corporation/FundedBuildDemand";
+import { fullMixBuildRoom } from "@/lib/corporations/rules/buildDemandCapacity";
 import type {
   ConstructionFinanceChoice,
   ConstructionFinanceRequest,
@@ -219,14 +221,16 @@ export default function BuildCapacityDialog({
     );
   const buyersRoomUnits = Math.max(
     0,
-    Math.min(plants.headroomUnits, plants.measuredDemandGapUnits ?? 0)
+    plants.buildDemand
+      ? (fullMixBuildRoom(plants.buildDemand) ?? 0)
+      : Math.min(plants.headroomUnits, plants.measuredDemandGapUnits ?? 0)
   );
   // A profitable observed extraction pace cannot be scaled beyond finite deposits.
   const resourceSizingUnavailable = sectorType === "extraction";
   const sizing = recommendSectorExpansion({
     unitsPerFacility,
     measuredDemandUnits: plants.measuredDemandGapUnits ?? null,
-    shareHeadroomUnits: plants.headroomUnits,
+    shareHeadroomUnits: plants.buildDemand ? buyersRoomUnits : plants.headroomUnits,
     // The measured quote already reserves every known build in this market.
     queuedUnits: 0,
     cashAnchor: q.corpCapitalAnchor,
@@ -247,7 +251,7 @@ export default function BuildCapacityDialog({
   // Which constraint actually bound, when there is no room at all. A market
   // whose SHARE is fully claimed is a different situation from one where
   // buyers have no unmet demand, and the player can act on the difference.
-  const noShareLeft = plants.headroomUnits < 1;
+  const noShareLeft = !plants.buildDemand && plants.headroomUnits < 1;
   const blockedByMothball = plants.mothballed;
   const affordable = financingChoice ? financingChoice.affordable : preview.affordable;
   // Next turn's run once this build has taken its cash. A financed build only
@@ -278,11 +282,11 @@ export default function BuildCapacityDialog({
       open={open}
       onClose={onClose}
       scrollable
-      maxWidthClass="max-w-2xl max-h-[calc(100dvh-4rem)] flex flex-col"
-      bodyClassName="flex min-h-0 flex-1 flex-col"
+      maxWidthClass="max-w-2xl max-h-[calc(100dvh-4rem)] flex flex-col overflow-hidden"
+      bodyClassName="flex min-h-0 flex-1 flex-col overflow-hidden"
       title={t("expansionTitle")}
     >
-      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 pb-5">
+      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-5 pb-5">
         <p className="text-body-sm text-muted">
           {t("rampSubtitle", { sector: sectorLabel, turns: plants.buildTurns })}
         </p>
@@ -437,6 +441,11 @@ export default function BuildCapacityDialog({
           />
         </div>
 
+        <FundedBuildDemand
+          rows={plants.buildDemand}
+          turn={plants.buildDemandTurn}
+          unitsPerFacility={unitsPerFacility}
+        />
         {/* Demand warnings remain visible, including markets with no room. */}
         <div
           className={`flex gap-2 rounded-lg border p-3 ${
@@ -450,18 +459,28 @@ export default function BuildCapacityDialog({
           )}
           <div className="min-w-0">
             <h3 className="mb-1 text-body-sm font-semibold text-foreground">
-              {t(
-                sectorType === "logistics"
-                  ? "freightDemand"
-                  : plants.measuredDemandGapUnits == null
-                    ? "measuredDemandTitle"
-                    : preview.overHeadroom
-                      ? "beyondDemand"
-                      : "withinDemand"
-              )}
+              {plants.buildDemand
+                ? t("fundedAdvice.limits")
+                : t(
+                    sectorType === "logistics"
+                      ? "freightDemand"
+                      : plants.measuredDemandGapUnits == null
+                        ? "measuredDemandTitle"
+                        : preview.overHeadroom
+                          ? "beyondDemand"
+                          : "withinDemand"
+                  )}
             </h3>
             <p className="text-body-sm text-foreground">
-              {sectorType === "logistics" ? (
+              {plants.buildDemand ? (
+                <>
+                  {plants.buildDemand.some((row) => (row.unmet ?? 0) > 0)
+                    ? t("fundedAdvice.someUnfilled")
+                    : plants.buildDemand.some((row) => row.unmet == null)
+                      ? t("fundedAdvice.someUnknown")
+                      : t("fundedAdvice.noneUnfilled")}
+                </>
+              ) : sectorType === "logistics" ? (
                 <>
                   Freight demand is the state&apos;s combined bulk and special cargo load. Both draw
                   from one shared fleet, and special cargo uses three times as much TEU per unit.

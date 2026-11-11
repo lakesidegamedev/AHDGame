@@ -1,8 +1,4 @@
-import {
-  expansionOperatingReserve,
-  expansionGapAfterExistingCapacity,
-  sellableExpansionUnits,
-} from "@/lib/corporations/investment/expansion/rules";
+import { expansionOperatingReserve } from "@/lib/corporations/investment/expansion/rules";
 import {
   commodityTollModels,
   loadCommodityDominanceContext,
@@ -84,16 +80,12 @@ import {
   roundOwnershipTerms,
 } from "@/lib/nationalization/ownershipMarginTerms";
 import { loadEconomicModelsByCountry } from "@/lib/economicModels/queries";
-import {
-  eraScaledBasePrices,
-  commodityMixWeight,
-  COMMODITY_BASE_PRICES,
-  type CommodityType,
-} from "@/lib/constants/commodities";
+import { eraScaledBasePrices, type CommodityType } from "@/lib/constants/commodities";
 import { sectorDemandGapUnits } from "@/lib/market/sectorDemandGap";
 import { commodityDemandGap, isStateScopedCommodity } from "@/lib/market/commodityMarketScope";
-import { latentTopUpForCountry, latentTopUpForState } from "@/lib/market/latentShortageSignal";
+import { legacyBuildDemandGap } from "@/lib/corporations/rules/legacyBuildDemandGap";
 import { bookFor, loadReachableBooks } from "@/lib/trade/queries/loadReachableBooks";
+import { loadFundedBuildDemand } from "@/lib/corporations/loadFundedBuildDemand";
 import type { CountryId } from "@/lib/constants/countries";
 import type { CommodityPrice, GameConfig, GameState } from "@/lib/db/types";
 import { resolveMinWageRatioByCountry } from "@/lib/labour/minimumWageLaws";
@@ -113,7 +105,11 @@ import {
   explainOwnSupplyReach,
   type OwnSupplyRow,
 } from "@/lib/corporations/queries/sectorDetailOwnSupply";
-import { productionProductivityMultiplier } from "@/lib/corporations/rules/productionProductivity";
+import {
+  buildAdviceOutputMultiplier,
+  buildDemandProducer,
+} from "@/lib/corporations/rules/buildDemandProducers";
+import { sizeBuildDemand, fullMixBuildRoom } from "@/lib/corporations/rules/buildDemandCapacity";
 import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import {
   getCorpFxRate,
@@ -1071,34 +1067,23 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
         (sum, d) => sum + (d.units > 0 ? d.units * (d.billedUnitPrice ?? d.marketPrice) : 0),
         0
       );
-      // True buyers' room for THIS sector's outputs, in sector output units.
-      // `headroomUnits` (the unowned pool) measures claimable market SHARE,
-      // under a clearing glut it reads tens of thousands of "room" while every
-      // leg goes unsold (ticket #1027 follow-up: player read it as demand).
-      //
-      // Scoped to the sector's HOME COUNTRY reachable book, which is the book
-      // the clearing engine actually settles this sector against (see
-      // market/tradePartition). The world aggregate it used to read counted
-      // embargoed and untraded supply the sector can neither buy from nor lose
-      // a sale to, so a sector in a real shortage was told it was oversupplied
-      // (ticket #1077). Falls back to the aggregate when no book is persisted.
+      // Funded domestic buyers determine demand room, independently of unclaimed
+      // market share. Older worlds retain their reachable-book estimate.
       const reachableBooks = await loadReachableBooks(db, currentTurn);
+      const fundedBuild = await loadFundedBuildDemand(db, gameState);
+      const buildDemand = fundedBuild?.rows(effectiveSupply, sector.stateId, sectorCountryId);
+      const fundedGap = new Map(buildDemand?.map((row) => [row.commodity, row.unmet]));
       const priceDocByCommodity = new Map(commodityPrices.map((cp) => [cp.commodity, cp]));
       const demandGapUnits = sectorDemandGapUnits(effectiveSupply, (gapCommodity) => {
-        // Demand audit step 1: restore the 1.5x-cap-hidden demand to the
-        // sector gap the player reads. Zero below the cap (quote unchanged).
-        const doc = priceDocByCommodity.get(gapCommodity);
-        const latentDemandTopUp = doc
-          ? isStateScopedCommodity(gapCommodity)
-            ? latentTopUpForState(doc, sector.stateId)
-            : latentTopUpForCountry(doc, sectorCountryId)
-          : 0;
-        return commodityDemandGap({
+        if (fundedBuild) return fundedGap.get(gapCommodity) ?? 0;
+        return legacyBuildDemandGap({
+          price: priceDocByCommodity.get(gapCommodity),
+          stateId: sector.stateId,
+          countryId: sectorCountryId,
           commodity: gapCommodity,
           stateBalance: stateBalances.get(gapCommodity),
           reachableBook: bookFor(reachableBooks, sectorCountryId, gapCommodity),
           globalBalance: globalBalances.get(gapCommodity),
-          latentDemandTopUp,
         });
       });
 
@@ -1109,119 +1094,76 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
       const stateCountry = new Map(
         allStates.map((candidate) => [candidate._id, candidate.countryId])
       );
-      const producerOutputMultiplier = (
-        candidate: CorporateSector,
-        supply: Partial<Record<CommodityType, number>>
-      ) => {
-        const owner =
-          candidate.corporationId.toString() === corporation._id.toString()
-            ? corporation
-            : corpByIdForLookup.get(candidate.corporationId.toString());
-        if (techTreesEnabled && !owner) return NaN;
-        const tech =
-          techTreesEnabled && owner
-            ? getSectorTechEffects(
-                owner,
-                getOperatingSectorType(
-                  candidate.sectorType,
-                  candidate.industryModel,
-                  candidate.mediaDiscriminator
-                ),
-                candidate.industryModel,
-                candidate.mediaDiscriminator
-              ).outputRateMult
-            : undefined;
-        return productionProductivityMultiplier({
-          sectorType: candidate.sectorType,
-          supply,
-          outputRateMult: tech,
-          currentTurn,
-          preset: sectorDetailPreset,
-        });
+      const outputContext = {
+        techEnabled: techTreesEnabled,
+        turn: currentTurn,
+        preset: sectorDetailPreset,
       };
-      const focalOutputMultiplier = producerOutputMultiplier(sector, effectiveRates.supply);
-      const existingProducers = allSectorsRaw.map((candidate) => {
-        const supply = getEffectiveStrategyRatesForOperatingModel(
-          candidate.sectorType,
-          candidate.strategyId ?? "standard",
-          candidate.transitionFromStrategyId,
-          candidate.transitionStartTurn,
-          currentTurn,
-          candidate.industryModel,
-          candidate.mediaDiscriminator,
-          sectorDetailPreset,
-          gameState?.hardwareInputReliefStartTurn
-        ).supply;
-        const multiplier = producerOutputMultiplier(candidate, supply);
-        const capacityUnits = candidate.operatingCapacityUnits ?? candidate.capitalStock ?? NaN;
-        return {
-          stateId: candidate.stateId,
-          countryId: stateCountry.get(candidate.stateId) ?? candidate.countryId,
-          capacity: capacityUnits * multiplier,
-          // A newly founded sector has no plants and has not run a turn yet, so
-          // it has no recorded output. With zero capacity it cannot produce
-          // anything, so its output is exactly zero rather than unknown.
-          produced: candidate.producedUnits ?? (capacityUnits === 0 ? 0 : undefined),
-          queued:
-            (candidate.buildQueue ?? []).reduce(
-              (sum, order) =>
-                sum + order.unitsOrdered * (1 - deliveredFraction(order, currentTurn)),
-              0
-            ) * multiplier,
-          supply,
-        };
+      const focalOutputMultiplier = buildAdviceOutputMultiplier({
+        ...outputContext,
+        sector,
+        supply: effectiveRates.supply,
+        owner: corporation,
       });
+      const existingProducers = allSectorsRaw.map((candidate) =>
+        buildDemandProducer({
+          ...outputContext,
+          sector: candidate,
+          countryId: stateCountry.get(candidate.stateId),
+          owner:
+            candidate.corporationId.toString() === corporation._id.toString()
+              ? corporation
+              : corpByIdForLookup.get(candidate.corporationId.toString()),
+          hardwareInputReliefStartTurn: gameState?.hardwareInputReliefStartTurn,
+        })
+      );
+      const sizedDemand = buildDemand
+        ? sizeBuildDemand({
+            rows: buildDemand,
+            supply: effectiveSupply,
+            outputMultiplier: focalOutputMultiplier,
+            stateId: sector.stateId,
+            countryId: sectorCountryId,
+            producers: existingProducers,
+          })
+        : undefined;
       const currentDemand = Object.entries(effectiveSupply)
         .filter(([, rate]) => (rate ?? 0) > 0)
         .every(([commodity]) => {
           const key = commodity as CommodityType;
+          if (fundedBuild) return fundedBuild.turn === currentTurn && fundedGap.get(key) != null;
           return isStateScopedCommodity(key)
             ? priceDocByCommodity.get(key)?.turn === currentTurn
             : !!bookFor(reachableBooks, sectorCountryId, key);
         });
-      const expansionLegs = Object.entries(effectiveSupply)
-        .filter(([, rate]) => (rate ?? 0) > 0)
-        .map(([commodity]) => {
-          const key = commodity as CommodityType;
-          const gap = commodityDemandGap({
-            commodity: key,
-            stateBalance: stateBalances.get(key),
-            reachableBook: bookFor(reachableBooks, sectorCountryId, key),
-            globalBalance: globalBalances.get(key),
-            latentDemandTopUp: 0,
-          });
-          return {
-            weight: commodityMixWeight(effectiveSupply, COMMODITY_BASE_PRICES, key),
-            gap: expansionGapAfterExistingCapacity(
-              gap,
-              existingProducers
-                .filter(
-                  (candidate) =>
-                    (candidate.supply?.[key] ?? 0) > 0 &&
-                    (isStateScopedCommodity(key)
-                      ? candidate.stateId === sector.stateId
-                      : candidate.countryId === sectorCountryId)
-                )
-                .map((candidate) => ({
-                  capacity: candidate.capacity ?? NaN,
-                  produced: candidate.produced ?? NaN,
-                  queued: candidate.queued,
-                  weight: commodityMixWeight(candidate.supply ?? {}, COMMODITY_BASE_PRICES, key),
-                }))
-            ),
-          };
+      const sizingRows =
+        sizedDemand ??
+        sizeBuildDemand({
+          rows: Object.entries(effectiveSupply)
+            .filter(([, rate]) => (rate ?? 0) > 0)
+            .map(([commodity]) => {
+              const key = commodity as CommodityType;
+              return {
+                commodity: key,
+                scope: isStateScopedCommodity(key) ? ("regional" as const) : ("national" as const),
+                funded: null,
+                delivered: null,
+                unmet: commodityDemandGap({
+                  commodity: key,
+                  stateBalance: stateBalances.get(key),
+                  reachableBook: bookFor(reachableBooks, sectorCountryId, key),
+                  globalBalance: globalBalances.get(key),
+                  latentDemandTopUp: 0,
+                }),
+              };
+            }),
+          supply: effectiveSupply,
+          outputMultiplier: focalOutputMultiplier,
+          stateId: sector.stateId,
+          countryId: sectorCountryId,
+          producers: existingProducers,
         });
-      const measuredDemandGapUnits =
-        currentDemand &&
-        Number.isFinite(focalOutputMultiplier) &&
-        focalOutputMultiplier > 0 &&
-        expansionLegs.every((leg) => leg.gap != null)
-          ? Math.max(
-              0,
-              sellableExpansionUnits(expansionLegs.map((leg) => ({ ...leg, gap: leg.gap! }))) /
-                focalOutputMultiplier
-            )
-          : null;
+      const measuredDemandGapUnits = currentDemand ? fullMixBuildRoom(sizingRows) : null;
       // Existing debt needs a repayment budget, which this operating scenario
       // does not model. Do not offer automatic sizing for an indebted company.
       const [activeLoan, activeBond] = await Promise.all([
@@ -1420,6 +1362,8 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
         ),
         demandGapUnits,
         measuredDemandGapUnits,
+        buildDemand: sizedDemand,
+        buildDemandTurn: fundedBuild?.turn,
         // Every producer's capacity in this cell (the focal sector included),
         // so "Unclaimed share" reads the same pool `headroomUnits` measures.
         retoolHint,

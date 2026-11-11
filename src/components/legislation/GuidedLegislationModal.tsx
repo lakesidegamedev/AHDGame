@@ -1,5 +1,8 @@
 "use client";
 
+import { PositionBadges } from "@/components/PositionBadges";
+import { v2VotePosition } from "@/lib/resetLegislation/rules/politicalPositions";
+import { taxSliderNpcEconomic } from "@/lib/resetLegislation/rules/taxPosition";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import type { CountryId } from "@/lib/constants/countriesCore";
@@ -149,15 +152,6 @@ function subsidyTargetKey(provision: {
 }
 
 type Step = "starting" | "family" | "level" | "review" | "overview";
-
-const POSITION_LABEL: Record<LawChoice, string> = {
-  far_left: "Far left",
-  center_left: "Center left",
-  center: "Center",
-  center_right: "Center right",
-  far_right: "Far right",
-  leave_to_states: "Federalism",
-};
 
 function money(value: number): string {
   const sign = value < 0 ? "-" : value > 0 ? "+" : "";
@@ -1011,10 +1005,21 @@ export function GuidedLegislationModal({
                           className={`rounded-xl border p-4 text-left ${current ? "cursor-not-allowed border-card-border bg-background/20 opacity-60" : "border-card-border bg-background/40 hover:border-primary"}`}
                         >
                           <span className="text-[10px] font-semibold uppercase text-primary">
-                            {POSITION_LABEL[candidate.option.choice]}
+                            {candidate.option.choice === "leave_to_states"
+                              ? "Leave it to the States"
+                              : "Policy option"}
                             {current ? " · current law" : ""}
                           </span>
                           <span className="mt-1 block font-semibold">{candidate.title}</span>
+                          <PositionBadges
+                            {...v2VotePosition({
+                              familyId: family.familyId,
+                              choice: candidate.option.choice,
+                            })}
+                            countryId={countryId}
+                            align="items-start"
+                            className="mt-2"
+                          />
                           <span className="mt-2 block text-xs text-muted">
                             {candidate.description}
                           </span>
@@ -1099,6 +1104,13 @@ export function GuidedLegislationModal({
                       </label>
                     </div>
                   </div>
+                  {taxRate !== "" && Number.isFinite(taxRate) && (
+                    <PositionBadges
+                      economic={taxSliderNpcEconomic(taxEstimate, taxEstimate.currentRate, taxRate)}
+                      countryId={countryId}
+                      align="items-start"
+                    />
+                  )}
                   <div className="flex gap-2">
                     <button
                       type="button"
@@ -1217,9 +1229,18 @@ export function GuidedLegislationModal({
                   {family && option ? (
                     <div className="rounded-xl border border-card-border bg-background/40 p-5">
                       <p className="text-xs font-semibold uppercase text-primary">
-                        {POSITION_LABEL[option.option.choice]}
+                        Proposed policy
                       </p>
                       <h4 className="mt-1 font-semibold">{option.title}</h4>
+                      <PositionBadges
+                        {...v2VotePosition({
+                          familyId: family.familyId,
+                          choice: option.option.choice,
+                        })}
+                        countryId={countryId}
+                        align="items-start"
+                        className="mt-2"
+                      />
                       <p className="mt-2 text-sm text-muted">{option.description}</p>
                       <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
                         <div>
@@ -1283,6 +1304,16 @@ export function GuidedLegislationModal({
                   ) : tax && taxEstimate && taxRateValid ? (
                     <div className="rounded-xl border border-card-border bg-background/40 p-5">
                       <h4 className="font-semibold">{tax.title}</h4>
+                      <PositionBadges
+                        economic={taxSliderNpcEconomic(
+                          taxEstimate,
+                          taxEstimate.currentRate,
+                          Number(taxRate)
+                        )}
+                        countryId={countryId}
+                        align="items-start"
+                        className="mt-2"
+                      />
                       <p className="mt-2 text-sm">
                         Current rate {taxEstimate.currentRate}% → proposed rate {taxRate}%
                       </p>
@@ -1361,6 +1392,16 @@ export function GuidedLegislationModal({
                           className="flex items-start justify-between gap-3 rounded-xl border border-card-border bg-background/40 p-4"
                         >
                           <div>
+                            {provision.kind === "law" && (
+                              <PositionBadges
+                                {...v2VotePosition({
+                                  familyId: provision.family.familyId,
+                                  choice: provision.option.option.choice,
+                                })}
+                                countryId={countryId}
+                                align="items-start"
+                              />
+                            )}
                             <p className="font-medium">
                               {provision.kind === "embargo"
                                 ? formatEmbargoProvisionLabel(embargoToPayload(provision.row))

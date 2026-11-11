@@ -52,7 +52,7 @@ import {
 import { foundingCooldownTurnsRemaining } from "@/lib/corporations/foundingCooldown";
 import { getDefaultLegalStructureId } from "@/lib/corporations/legalStructure";
 import { readInvestorConfidence } from "@/lib/nationalization/investorConfidence";
-import { creditTreasuryProceeds } from "@/lib/nationalization/treasury";
+import { creditTreasuryProceedsPaired } from "@/lib/nationalization/treasury";
 import { shouldRedactCorporation, redactPrivateCorporation } from "@/lib/corporations/redaction";
 import { parentCeoVisibleCorporationIds } from "@/lib/corporations/parentCeoVisibility";
 import { emitTx } from "@/lib/financialTxLog/emit";
@@ -981,7 +981,14 @@ export async function POST(request: Request) {
       // seed. Move it to the country treasury so money is conserved (no burn),
       // and ledger the leg. Zero at/above baseline confidence ⇒ no-op.
       if (confidencePremiumLocal > 0) {
-        await creditTreasuryProceeds(db, corpCountryId, confidencePremiumLocal, now);
+        await creditTreasuryProceedsPaired(db, {
+          countryId: corpCountryId,
+          amountLocal: confidencePremiumLocal,
+          now,
+          flow: "founding_confidence_premium",
+          key: `founding-premium:${result.insertedId.toHexString()}`,
+          site: "corporations.confidencePremium",
+        });
         void emitTx(db, {
           type: "corp_capital_seed",
           turn: 0,

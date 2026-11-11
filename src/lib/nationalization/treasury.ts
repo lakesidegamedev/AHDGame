@@ -524,6 +524,134 @@ export async function creditTreasuryProceedsFromAnchor(
   return amount;
 }
 
+/** Flows whose payer's own rows evidence the cash, so the Treasury leg adds no witness of its own. */
+export type PayerEvidencedProceedsFlow =
+  "incorporation_fee" | "founding_confidence_premium" | "index_fund_charter_fee";
+
+type PairedProceedsFlow =
+  | "privatization_ipo"
+  | "privatization_auction_proceeds"
+  | "nationalization_compensation"
+  | PayerEvidencedProceedsFlow;
+
+function isWitnessedProceedsFlow(
+  flow: PairedProceedsFlow
+): flow is Extract<PairedProceedsFlow, TreasuryCashFlow> {
+  return (
+    flow !== "incorporation_fee" &&
+    flow !== "founding_confidence_premium" &&
+    flow !== "index_fund_charter_fee"
+  );
+}
+
+/**
+ * Credit Treasury proceeds whose payer already parted with the cash outside
+ * the Treasury ledger (a bid escrow, an IPO float that no buyer funds). Under
+ * the funded Treasury ledger the credit settles as one durable receipt: the
+ * spendable-cash credit, the named mint that is its source leg, and the signed
+ * fiscal projection, keyed so a retry cannot pay twice. With the funded ledger
+ * off it is the plain proceeds credit.
+ *
+ * Pass `amountAnchor` when the figure is in anchor units, `amountLocal` when it
+ * is already in the country's own currency. Returns the local amount credited.
+ */
+export async function creditTreasuryProceedsPaired(
+  db: Db,
+  input: {
+    countryId: CountryId;
+    now: Date;
+    flow: PairedProceedsFlow;
+    key: string;
+    site: string;
+    amountLocal?: number;
+    amountAnchor?: number;
+    ledger?: TreasuryCashOptions;
+  }
+): Promise<number> {
+  const options = await resolveTreasuryCashOptions(db, input.ledger);
+  const context = options.context;
+  const funded = context?.treasuryCashLedgerEnabled === true;
+  const currencyOf = async (): Promise<CurrencyCode> =>
+    context?.treasuryCurrencies.get(input.countryId) ??
+    (await loadTreasuryCurrency(db, input.countryId));
+  let amount = input.amountLocal ?? 0;
+  if (input.amountAnchor !== undefined) {
+    const currency = await currencyOf();
+    amount = writeGovBudgetLocal(
+      input.amountAnchor,
+      currency,
+      await getCurrencyFxRate(db, currency)
+    );
+  }
+  amount = Math.round(amount);
+  if (!(amount > 0)) return 0;
+  if (!funded || !context) {
+    // Fee flows are already evidenced by the payer's own rows, so the plain credit must not witness them again.
+    await creditTreasuryProceeds(
+      db,
+      input.countryId,
+      amount,
+      input.now,
+      isWitnessedProceedsFlow(input.flow) ? { flow: input.flow, ledger: input.ledger } : undefined
+    );
+    return amount;
+  }
+
+  const currency = await currencyOf();
+  const rate = treasuryAnchorValuation({
+    countryId: input.countryId,
+    currencyCode: currency,
+    preset: context.preset,
+    observedRate: context.rates.get(currency),
+  }).anchorRate;
+  const valuation = { currencyCode: currency, localPerAnchor: rate };
+  const treasury = await loadTreasuryAccount(db, input.countryId);
+  const settled = await settleTransition(db, {
+    key: `treasury-proceeds:${input.key}`,
+    kind: "treasury_paired_proceeds",
+    turn: context.turn,
+    currency,
+    legs: [
+      {
+        kind: "credit",
+        amount,
+        valuation,
+        collection: "federalBudget",
+        filter: { _id: treasury._id, countryId: input.countryId },
+        path: "treasuryCashLocal",
+        note: "Deliver the proceeds to spendable Treasury cash",
+      },
+      {
+        kind: "mint",
+        amount,
+        valuation,
+        note: "Source of cash the payer already gave up outside the Treasury ledger",
+      },
+    ],
+    projections: [
+      {
+        collection: "federalBudget",
+        filter: { _id: treasury._id },
+        update: { $inc: { treasuryBalance: amount }, $set: { updatedAt: input.now } },
+        note: "Update signed fiscal position after the paired proceeds",
+      },
+    ],
+    event: {
+      kind: "monetary.executed",
+      command: input.site,
+      subjectType: "government",
+      subjectId: input.countryId,
+      amount,
+      meta: { flow: input.flow },
+    },
+  });
+  if (settled.status !== "applied" && settled.status !== "replayed") {
+    throw new Error(settled.error ?? "Paired Treasury proceeds are incomplete");
+  }
+  if (settled.error) throw new Error(settled.error);
+  return amount;
+}
+
 /**
  * Collect a corporation's payment (a fine or assessment) into spendable
  * Treasury cash as one durable receipt: the guarded corporation debit, the
