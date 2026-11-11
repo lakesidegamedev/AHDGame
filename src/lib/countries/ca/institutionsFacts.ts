@@ -143,6 +143,8 @@ export const CA_CONFIG: CountryConfig = {
     abbreviation: "BoC",
     chairTitle: "Governor of the Bank of Canada",
     defaultPrimeRate: 2.25,
+    heroImage: "/api/images/hero/bank-of-canada",
+    heroAlt: "Bank of Canada, Wellington Street, Ottawa",
   },
   exchangeName: "TSX",
   usdExchangeRate: 1,
