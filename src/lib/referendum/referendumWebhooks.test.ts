@@ -49,6 +49,16 @@ describe("referendum webhook builders", () => {
     expect(e.title).toContain("Referendum Requested");
   });
 
+  it("names the region's own executive title", () => {
+    const e = buildReferendumRequestedEmbed({
+      region: "Quebec",
+      kind: "independence",
+      executiveTitle: "Premier",
+    });
+    expect(e.description).toContain("The Premier of Quebec");
+    expect(e.description).not.toContain("First Minister");
+  });
+
   it("grant vs decline differ in wording and color", () => {
     const grant = buildReferendumDecisionEmbed({
       region: "Scotland",
