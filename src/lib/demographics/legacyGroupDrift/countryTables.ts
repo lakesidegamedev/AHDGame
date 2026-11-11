@@ -1,6 +1,7 @@
 import { getCountryLayer1Model } from "@/lib/seeds/international";
 import type { EraId } from "@/lib/seeds/presetSelector";
-import { US_GROUP_BUCKETS, type GroupBucketTable, type GroupBucketWeight } from "./rules";
+import { US_GROUP_BUCKETS } from "@/lib/countries/us/data/usLegacyGroupBuckets";
+import type { GroupBucketTable, GroupBucketWeight } from "./rules";
 
 /**
  * Countries whose voter groups the older builds projected through their own

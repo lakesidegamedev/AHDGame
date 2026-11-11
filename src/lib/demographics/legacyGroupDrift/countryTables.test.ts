@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createGroupTableResolver } from "./countryTables";
-import { US_GROUP_BUCKETS } from "./rules";
+import { US_GROUP_BUCKETS } from "@/lib/countries/us/data/usLegacyGroupBuckets";
 
 describe("createGroupTableResolver", () => {
   const resolve = createGroupTableResolver();

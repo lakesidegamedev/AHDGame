@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { US_GROUP_BUCKETS } from "@/lib/countries/us/data/usLegacyGroupBuckets";
 import {
-  US_GROUP_BUCKETS,
   convertGroupDrift,
   projectGroupValues,
   type GroupBucketTable,
