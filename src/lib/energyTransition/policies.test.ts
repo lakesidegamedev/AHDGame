@@ -18,9 +18,12 @@ describe("foldTransitionPolicies", () => {
       { legislationTypeId: "uk.sec.coalPhaseOut", policyOptionIndex: 4, scope: "national" },
       { legislationTypeId: "uk.sec.criticalMineralsStockpile", policyOptionIndex: 4 },
       // Legacy ladder: index 0 is the strongest reform, index 3 no statute.
-      { legislationTypeId: "de_carbon_price", policyOptionIndex: 1, scope: "national" },
-      { legislationTypeId: "jp_clean_power_standard", policyOptionIndex: 5, scope: "national" },
-      { legislationTypeId: "cn_coal_phase_out", policyOptionIndex: 0, scope: "national" },
+      { legislationTypeId: "ie_carbon_price", policyOptionIndex: 1, scope: "national" },
+      { legislationTypeId: "ie_clean_power_standard", policyOptionIndex: 5, scope: "national" },
+      { legislationTypeId: "ie_coal_phase_out", policyOptionIndex: 0, scope: "national" },
+      { legislationTypeId: "de.sec.carbonPrice", policyOptionIndex: 2, scope: "national" },
+      { legislationTypeId: "jp.sec.cleanPowerStandard", policyOptionIndex: 1, scope: "national" },
+      { legislationTypeId: "cn.sec.coalPhaseOut", policyOptionIndex: 4, scope: "national" },
       { legislationTypeId: "us.sec.cleanPowerStandard", policyOptionIndex: 4, scope: "state" },
       { legislationTypeId: "us.sec.automationTax", policyOptionIndex: 4, scope: "national" },
     ]);
@@ -32,8 +35,11 @@ describe("foldTransitionPolicies", () => {
     });
     expect(policies.get("UK")?.coalPhaseOut).toBe(4);
     expect(policies.get("UK")?.mineralsRecycling).toBe(4);
-    expect(policies.get("DE")?.carbonPrice).toBe(3);
-    expect(policies.get("JP")?.cleanPowerStandard).toBe(0);
+    expect(policies.get("IE")?.carbonPrice).toBe(3);
+    expect(policies.get("IE")?.cleanPowerStandard).toBe(0);
+    expect(policies.get("IE")?.coalPhaseOut).toBe(4);
+    expect(policies.get("DE")?.carbonPrice).toBe(2);
+    expect(policies.get("JP")?.cleanPowerStandard).toBe(1);
     expect(policies.get("CN")?.coalPhaseOut).toBe(4);
   });
 });

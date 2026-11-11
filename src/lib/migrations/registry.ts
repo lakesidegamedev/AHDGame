@@ -5,6 +5,7 @@ import { migration as cyberLaunchKeyIndex } from "./entries/2026-11-12-cyber-lau
 import { migration as jpLawBookBackfill } from "./entries/2026-11-12-jp-law-book-backfill";
 import { migration as successorTaxTypes } from "./entries/2026-11-09-successor-tax-types";
 import { migration as cnLawBookBackfill } from "./entries/2026-11-12-cn-law-book-backfill";
+import { migration as modernEraBookBackfill } from "./entries/2026-11-13-modern-era-book-backfill";
 import { migration as jpLawLeanEffects } from "./entries/2026-11-09-jp-law-lean-effects";
 import { migration as ukJpSubdivisionPopulations } from "./entries/2026-11-01-uk-jp-subdivision-populations";
 import { migration as archiveNonPresidentialCampaigns } from "./entries/2026-11-01-archive-non-presidential-campaigns";
@@ -454,6 +455,7 @@ export const HELD_MIGRATIONS: Migration[] = [
   deLawBookBackfill,
   jpLawBookBackfill,
   cnLawBookBackfill,
+  modernEraBookBackfill,
   cyberLaunchKeyIndex,
 ];
 

@@ -12,12 +12,36 @@ import { lawTargets } from "../dynamics";
 import { validateCatalog } from "../validate";
 import { projectLawToLegislationType } from "../project";
 import type { PoliticalLaw } from "../types";
-import { MODERN_ERA_LAW_SPECS, UK_MODERN_ERA_LAWS, US_MODERN_ERA_LAWS } from "./modernEraLaws";
+import {
+  CN_MODERN_ERA_LAWS,
+  DE_MODERN_ERA_LAWS,
+  JP_MODERN_ERA_LAWS,
+  MODERN_ERA_LAW_SPECS,
+  UK_MODERN_ERA_LAWS,
+  US_MODERN_ERA_LAWS,
+} from "./modernEraLaws";
+import { CN_LAWS } from "@/lib/countries/cn/data/cnLaws";
+import { DE_LAWS } from "@/lib/countries/de/data/deLaws";
+import { JP_LAWS } from "@/lib/countries/jp/data/jpLaws";
 import { UK_LAWS } from "./ukLaws";
 import { US_LAWS } from "./usLaws";
 
-const BOOKS = { US: US_MODERN_ERA_LAWS, UK: UK_MODERN_ERA_LAWS } as const;
-const CORE = { US: US_LAWS, UK: UK_LAWS } as const;
+const BOOKS = {
+  US: US_MODERN_ERA_LAWS,
+  UK: UK_MODERN_ERA_LAWS,
+  DE: DE_MODERN_ERA_LAWS,
+  JP: JP_MODERN_ERA_LAWS,
+  CN: CN_MODERN_ERA_LAWS,
+} as const;
+const CORE = { US: US_LAWS, UK: UK_LAWS, DE: DE_LAWS, JP: JP_LAWS, CN: CN_LAWS } as const;
+/** DE, JP and CN have no separate pension line, so pension savings land on welfare. */
+const PENSION_KEY = {
+  US: "socialSecurity",
+  UK: "statePensions",
+  DE: "welfare",
+  JP: "welfare",
+  CN: "welfare",
+} as const;
 const SLUGS_2027 = [
   "aiLiabilityTransparency",
   "dataProtectionOverhaul",
@@ -99,7 +123,7 @@ function allCopy(law: PoliticalLaw): string[] {
   ];
 }
 
-describe.each(["US", "UK"] as const)("%s later-era laws", (countryId) => {
+describe.each(["US", "UK", "DE", "JP", "CN"] as const)("%s later-era laws", (countryId) => {
   const laws = BOOKS[countryId];
   const cc = countryId.toLowerCase();
 
@@ -215,7 +239,7 @@ describe.each(["US", "UK"] as const)("%s later-era laws", (countryId) => {
 
   it("books a real, growing saving on the pension line for pension age indexation", () => {
     const law = laws.find((entry) => entry.id === `${cc}.sec.pensionAgeIndexation`)!;
-    expect(budgetKeyForLaw(law)).toBe(countryId === "US" ? "socialSecurity" : "statePensions");
+    expect(budgetKeyForLaw(law)).toBe(PENSION_KEY[countryId]);
     const [, review, ...indexed] = law.levels!.map((level) => level.gdpCostFraction ?? 0);
     // The review alone only costs its running; indexation then saves.
     expect(review).toBeGreaterThan(0);
@@ -232,7 +256,7 @@ describe.each(["US", "UK"] as const)("%s later-era laws", (countryId) => {
 
   it("books the automation pension levy as a growing saving on the pension line", () => {
     const law = laws.find((entry) => entry.id === `${cc}.sec.automationPensionLevy`)!;
-    expect(budgetKeyForLaw(law)).toBe(countryId === "US" ? "socialSecurity" : "statePensions");
+    expect(budgetKeyForLaw(law)).toBe(PENSION_KEY[countryId]);
     const savings = law.levels!.slice(1).map((level) => level.gdpCostFraction ?? 0);
     expect(savings.every((cost, i) => cost < 0 && (i === 0 || cost < savings[i - 1]))).toBe(true);
     // Conservative: even the top rung saves well under half a percent of output.

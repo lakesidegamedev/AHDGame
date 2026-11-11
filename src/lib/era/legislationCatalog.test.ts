@@ -59,7 +59,7 @@ describe("untilYear: filing closes, enacted laws stay in force", () => {
   }
 
   it("ships with only the retirements that have a named successor", () => {
-    const prefixes = ["cn", "de", "ie", "jp"];
+    const prefixes = ["ie"];
     const slugs = [
       "automation_tax",
       "coal_phase_out",

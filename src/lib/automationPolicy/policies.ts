@@ -5,6 +5,7 @@
  */
 import type { Db } from "mongodb";
 import type { StatePolicy } from "@/lib/db/types/statePolicy";
+import { MODERN_ERA_BOOK_COUNTRY_IDS } from "@/lib/politicalLegislation/laws/modernEraCountries";
 import { MODERN_ERA_LEGISLATURE_SPECS } from "@/lib/seeds/shared/modernEraLegislation";
 import { legacyOptionLevel } from "@/lib/energyTransition/rules";
 import { clampUnionLawBias } from "@/lib/labour/unionLaws";
@@ -33,7 +34,7 @@ function automationLawRefs(): Map<string, LawRef> {
   const refs = new Map<string, LawRef>();
   for (const key of Object.keys(AUTOMATION_LAW_SLUGS) as PolicyKey[]) {
     const slugs = AUTOMATION_LAW_SLUGS[key];
-    for (const countryId of ["US", "UK"])
+    for (const countryId of MODERN_ERA_BOOK_COUNTRY_IDS)
       refs.set(`${countryId.toLowerCase()}.sec.${slugs.modern}`, { countryId, key, legacy: false });
     if (!slugs.legacy) continue;
     for (const spec of MODERN_ERA_LEGISLATURE_SPECS)

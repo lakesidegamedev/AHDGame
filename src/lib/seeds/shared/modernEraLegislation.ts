@@ -23,8 +23,8 @@ type ChamberKey = LegislationType["positions"][number]["chamber"];
  * materializer leaves them alone, and the cost catalog excludes these types
  * from its per-domain divisor so adding them does not reprice existing laws.
  *
- * The United States and United Kingdom use the new-generation law book and
- * are not covered here.
+ * Countries on the one law book carry these laws there (politicalLegislation/laws/modernEraLaws.ts)
+ * and are not covered here.
  */
 
 /** Spending line a law's cost books to; resolved per country below. */
@@ -38,47 +38,8 @@ export interface ModernEraLegislatureSpec {
   budgetCategories: Record<BudgetLine, string>;
 }
 
-/** The legacy-catalog legislatures that run the full simulation in a modern world. */
+/** The legacy-catalog legislatures that still run the full simulation in a modern world. */
 export const MODERN_ERA_LEGISLATURE_SPECS: readonly ModernEraLegislatureSpec[] = [
-  {
-    prefix: "de",
-    scope: "de",
-    chamberKey: "bundestag",
-    budgetCategories: {
-      technology: "other",
-      housing: "other",
-      industry: "other",
-      security: "defense",
-      welfare: "welfare",
-      environment: "environment",
-    },
-  },
-  {
-    prefix: "jp",
-    scope: "jp",
-    chamberKey: "shugiin",
-    budgetCategories: {
-      technology: "technology",
-      housing: "infrastructure",
-      industry: "economic",
-      security: "defense",
-      welfare: "social",
-      environment: "environment",
-    },
-  },
-  {
-    prefix: "cn",
-    scope: "cn",
-    chamberKey: "npc",
-    budgetCategories: {
-      technology: "other",
-      housing: "infrastructure",
-      industry: "other",
-      security: "defense",
-      welfare: "socialSecurity",
-      environment: "infrastructure",
-    },
-  },
   {
     prefix: "ie",
     scope: "ie",

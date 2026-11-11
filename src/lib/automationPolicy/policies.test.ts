@@ -9,7 +9,7 @@ import {
 import { NO_AUTOMATION_POLICY } from "./rules";
 
 describe("foldAutomationPolicies", () => {
-  it("reads the modern ids for the US and UK and the legacy automation tax elsewhere", () => {
+  it("reads the modern ids for the law book countries and the legacy automation tax elsewhere", () => {
     const map = foldAutomationPolicies([
       { legislationTypeId: "us.sec.automationTax", policyOptionIndex: 3, scope: "national" },
       { legislationTypeId: "us.sec.retrainingGuarantee", policyOptionIndex: 2, scope: "national" },
@@ -21,7 +21,8 @@ describe("foldAutomationPolicies", () => {
       },
       { legislationTypeId: "uk.sec.transitionCompacts", policyOptionIndex: 3, scope: "national" },
       { legislationTypeId: "us.sec.wageInsurance", policyOptionIndex: 2, scope: "national" },
-      { legislationTypeId: "de_automation_tax", policyOptionIndex: 0, scope: "national" },
+      { legislationTypeId: "ie_automation_tax", policyOptionIndex: 0, scope: "national" },
+      { legislationTypeId: "de.sec.automationTax", policyOptionIndex: 2, scope: "national" },
     ]);
     expect(map.get("US")).toEqual({
       ...NO_AUTOMATION_POLICY,
@@ -35,19 +36,20 @@ describe("foldAutomationPolicies", () => {
       pensionLevy: 1,
       transitionCompacts: 3,
     });
-    expect(map.get("DE")).toEqual({ ...NO_AUTOMATION_POLICY, automationTax: 4 });
+    expect(map.get("IE")).toEqual({ ...NO_AUTOMATION_POLICY, automationTax: 4 });
+    expect(map.get("DE")).toEqual({ ...NO_AUTOMATION_POLICY, automationTax: 2 });
   });
 
   it("ignores regional rows, other laws, and legacy options right of centre", () => {
     const map = foldAutomationPolicies([
       { legislationTypeId: "us.sec.automationTax", policyOptionIndex: 4, scope: "state" },
       { legislationTypeId: "us.sec.carbonPrice", policyOptionIndex: 4, scope: "national" },
-      { legislationTypeId: "jp_automation_tax", policyOptionIndex: 5, scope: "national" },
+      { legislationTypeId: "ie_automation_tax", policyOptionIndex: 5, scope: "national" },
       { legislationTypeId: "us.sec.hiringSubsidy", policyOptionIndex: 9, scope: "national" },
     ]);
     expect(map.has("US")).toBe(true);
     expect(map.get("US")).toEqual({ ...NO_AUTOMATION_POLICY, hiringSubsidy: 4 });
-    expect(map.get("JP")).toEqual(NO_AUTOMATION_POLICY);
+    expect(map.get("IE")).toEqual(NO_AUTOMATION_POLICY);
   });
 
   it("returns a neutral policy for an unknown country", () => {
