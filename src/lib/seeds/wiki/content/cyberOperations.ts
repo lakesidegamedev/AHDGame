@@ -57,9 +57,9 @@ If the target cannot name you, there is none of that. The attack is simply a cri
 
 ## Standing down
 
-A country can publicly stand down against a target at any time unless a truce is already in force. Standing down:
+A country that has run an operation against a target can publicly stand down against it, unless a truce is already in force. A country that has never attacked a target has nothing to stand down from. Standing down:
 
-- opens a **truce of 72 turns** (one and a half game years) that refuses any further operation between the two countries, in both directions;
+- opens a **truce of 72 turns** (one and a half game years) that refuses any further operation by the country that stood down. The other country is also held back, but only until the stand-down country's own 24 turn cooldown would have ended, so a stand-down cannot shield an attacker from retaliation;
 - lowers world tension by 4 points;
 - posts a news item announcing the truce.
 
@@ -83,7 +83,7 @@ You cannot block an attack in the moment. What you can do is raise your resilien
 - Keep research and development spending up.
 - Keep the utility network in good repair.
 
-Standing down yourself also buys 72 turns of quiet, because the truce binds both sides.
+Standing down yourself only helps if you have been attacking: the other side is held back for as long as your own cooldown would last, not for the full 72 turns.
 
 Last checked 2026-11-11, version 1.20.0.
 `;
