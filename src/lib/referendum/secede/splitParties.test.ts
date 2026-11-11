@@ -138,4 +138,38 @@ describe("splitParties", () => {
     // Region party-ledger history dissolved.
     expect(cols.partyBudget).toHaveLength(0);
   });
+  // Regression: every party's slate for one election was relabelled "independent",
+  // so two slates for the same election hit the unique (countryId, partyId,
+  // electionId) index and the secession rolled back on every turn.
+  it("retires slates of dissolved parties instead of colliding on the unique slate key", async () => {
+    const { cols } = seedWorld();
+    const election = "election-1";
+    const slates = [
+      { _id: "sSnp", countryId: "SCO", partyId: "20", electionId: election },
+      { _id: "sLab", countryId: "SCO", partyId: "21", electionId: election },
+      { _id: "sCon", countryId: "SCO", partyId: "22", electionId: election },
+      { _id: "sUk", countryId: "UK", partyId: "21", electionId: election },
+    ];
+    const world = makeStrictInMemoryStore({
+      politicalParties: cols.politicalParties,
+      electedOfficials: cols.electedOfficials,
+      statePartyOrg: cols.statePartyOrg,
+      characters: cols.characters,
+      recruitmentSlates: slates,
+      slateCandidates: [
+        { _id: "c1", slateId: "sSnp", candidateId: "cA" },
+        { _id: "c2", slateId: "sLab", candidateId: "cB" },
+        { _id: "c3", slateId: "sCon", candidateId: "cC" },
+      ],
+    });
+    await splitParties(world.db, "SCO", "UK", "SCO");
+
+    const kept = world.cols.recruitmentSlates;
+    expect(kept.map((r) => r._id).sort()).toEqual(["sSnp", "sUk"]);
+    expect(kept.find((r) => r._id === "sSnp")).toMatchObject({ countryId: "SCO", partyId: "1" });
+    expect(kept.find((r) => r._id === "sUk")).toMatchObject({ countryId: "UK", partyId: "21" });
+    const keys = kept.map((r) => `${r.countryId}|${r.partyId}|${r.electionId}`);
+    expect(new Set(keys).size).toBe(keys.length);
+    expect(world.cols.slateCandidates.map((r) => r._id)).toEqual(["c1"]);
+  });
 });

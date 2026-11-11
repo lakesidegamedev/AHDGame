@@ -375,6 +375,30 @@ export async function splitParties(
         }))
       );
   };
+  // A recruitment slate belongs to one party. A slate whose party does not
+  // survive into the new country cannot be relabelled "independent": every
+  // party's slate for the same election would then share one
+  // (countryId, partyId, electionId) key and trip the unique index, rolling the
+  // whole secession back every turn. Retire those slates with their candidates.
+  const survivingSlateParty = (row: Record<string, unknown>) =>
+    row.countryId === toCountryId && plan.idMap[Number(row.partyId)] != null;
+  const regionSlates = await db
+    .collection("recruitmentSlates")
+    .find(
+      {
+        $or: [
+          { countryId: toCountryId },
+          { countryId: fromCountryId, partyId: { $in: wholesaleIds } },
+        ],
+      },
+      { projection: { _id: 1, countryId: 1, partyId: 1 } }
+    )
+    .toArray();
+  const retiredSlateIds = regionSlates.filter((row) => !survivingSlateParty(row)).map((r) => r._id);
+  if (retiredSlateIds.length) {
+    await db.collection("slateCandidates").deleteMany({ slateId: { $in: retiredSlateIds } });
+    await db.collection("recruitmentSlates").deleteMany({ _id: { $in: retiredSlateIds } });
+  }
   await remapRoster("recruitmentSlates");
   await remapRoster("statePartyCandidates");
   await remapRoster("slateCandidates");
