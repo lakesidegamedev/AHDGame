@@ -65,10 +65,8 @@
     "src/lib/constants/countryClientConfig.ts": 1,
     "src/lib/constants/countryOfficesClient.ts": 1,
     "src/lib/constants/readinessExpectations.ts": 1,
-    "src/lib/constants/regionBanner.ts": 29,
     "src/lib/counties/subdivisionReference.ts": 9,
     "src/lib/seats/rules/historicalSeats.ts": 5,
-    "src/lib/seeds/international/index.ts": 28,
     "src/lib/states/regionalExecutive.ts": 6,
     "src/lib/world/worldEntityManifest.ts": 4
   }
