@@ -1,3 +1,4 @@
+import { redenominateTransferredSavings } from "@/lib/savings/redenominateTransferredSavings";
 /**
  * Re-denominate a transferred region's money into its new country's currency.
  * When NI joins Ireland its residents' sterling becomes Irish pounds (an involuntary
@@ -40,6 +41,7 @@ export async function convertTransferredResidentsCurrency(
   if (pair.kind !== "convert") return;
   const { scale, oldCurrency, newCurrency, fxByCurrency } = pair;
   const now = new Date();
+  await redenominateTransferredSavings(db, regionId, oldCurrency, newCurrency, scale);
 
   // Corps that followed the region into the new country re-denominate to its
   // currency (NPP-relocated corps that stayed in the source country are excluded

@@ -857,11 +857,13 @@ class InMemoryCollection {
   }
 
   async bulkWrite(ops: Doc[]): Promise<{
+    insertedCount: number;
     matchedCount: number;
     modifiedCount: number;
     upsertedCount: number;
     upsertedIds: Record<number, unknown>;
   }> {
+    let inserted = 0;
     let matched = 0;
     let modified = 0;
     let upserted = 0;
@@ -880,6 +882,7 @@ class InMemoryCollection {
         if (res.upsertedCount) upsertedIds[index] = res.upsertedId;
       } else if (op.insertOne) {
         await this.insertOne((op.insertOne as { document: Doc }).document);
+        inserted++;
       } else if (op.replaceOne) {
         const { filter, replacement, upsert } = op.replaceOne as {
           filter: Doc;
@@ -909,7 +912,13 @@ class InMemoryCollection {
         throw new Error(`inMemoryDb: unsupported bulk op ${Object.keys(op).join(",")}`);
       }
     }
-    return { matchedCount: matched, modifiedCount: modified, upsertedCount: upserted, upsertedIds };
+    return {
+      insertedCount: inserted,
+      matchedCount: matched,
+      modifiedCount: modified,
+      upsertedCount: upserted,
+      upsertedIds,
+    };
   }
 
   /**
