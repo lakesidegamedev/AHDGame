@@ -32,6 +32,11 @@ import {
 import { NPP_AUTONOMY_LEVEL_RANK } from "@/lib/nppAutonomy/levels";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import {
+  isSeededInWorld,
+  ROW_GATED_COUNTRY_IDS,
+  seededInWorld,
+} from "@/lib/country/rules/seededRegistration";
 
 export interface CountryAccess {
   enabledForPlayers: boolean;
@@ -130,6 +135,13 @@ export async function withCountryAccessSnapshot<T>(db: Db, fn: () => Promise<T>)
   return countryAccessSnapshot.run(await getAllCountryAccess(db), fn);
 }
 
+/** A row-gated country this world never seeded. Reads only when the row is missing. */
+async function unseededHere(db: Db, countryId: string, doc: unknown): Promise<boolean> {
+  if (doc != null || !ROW_GATED_COUNTRY_IDS.has(countryId)) return false;
+  const anyRow = await countryGameStatesCollection(db).findOne({}, { projection: { _id: 1 } });
+  return !isSeededInWorld(countryId, false, anyRow != null);
+}
+
 /**
  * `Db`-injecting variant of `getCountryAccess`. Use from contexts that already
  * hold a `Db` reference (per-turn processors, evaluators) so we don't ping the
@@ -147,8 +159,7 @@ export async function getCountryAccessFromDb(db: Db, countryId: CountryId): Prom
   const cached = snapshot?.[countryId];
   if (cached) return cached;
 
-  const doc = await countryGameStatesCollection(db)
-    .findOne({ _id: countryId });
+  const doc = await countryGameStatesCollection(db).findOne({ _id: countryId });
 
   // A DISSOLVED country is out of the registry, matching `registeredBase()` for
   // list paths. Otherwise the single-country path contradicts them: a merged
@@ -158,7 +169,11 @@ export async function getCountryAccessFromDb(db: Db, countryId: CountryId): Prom
   // An era-ABSENT country is unregistered for the same reason and takes the
   // same branch. The causes stay distinct in the data (see `absentInEra`) to
   // preserve merge idempotency, but produce the identical access answer.
-  if (doc?.dissolvedTurn != null || doc?.absentInEra === true) {
+  if (
+    doc?.dissolvedTurn != null ||
+    doc?.absentInEra === true ||
+    (await unseededHere(db, countryId, doc))
+  ) {
     return {
       enabledForPlayers: false,
       // `dissolvedTurn` is deliberately NOT a `CountryStatus` member (see the
@@ -226,7 +241,10 @@ function registeredBase(docs: CountryGameState[]): CountryId[] {
   // conflating the two would break merge idempotency (see CountryGameState).
   // Undefined reads as registered, so rows predating the field are unaffected.
   const absent = new Set(docs.filter((d) => d.absentInEra === true).map((d) => String(d._id)));
-  return [...COUNTRY_ORDER, ...activeExtra].filter((id) => !dissolved.has(id) && !absent.has(id));
+  return seededInWorld(
+    [...COUNTRY_ORDER, ...activeExtra].filter((id) => !dissolved.has(id) && !absent.has(id)),
+    new Set(docs.map((d) => String(d._id)))
+  );
 }
 
 /**
