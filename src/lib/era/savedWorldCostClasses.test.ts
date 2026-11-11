@@ -16,6 +16,9 @@ describe("saved-world cost classes", () => {
     expect(getCostClass("de_pension_system")).toBe("perCapita");
     expect(getCostClass("jp_defense_spending")).toBe("gdpFraction");
     expect(getCostClass("jp_income_tax_rate")).toBe("none");
+    expect(getCostClass("cn_pension_system")).toBe("perCapita");
+    expect(getCostClass("cn_pla_modernization")).toBe("gdpFraction");
+    expect(getCostClass("cn_value_added_tax")).toBe("none");
   });
 
   it("still prices an enacted old program in a saved world", () => {

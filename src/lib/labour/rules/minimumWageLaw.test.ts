@@ -209,4 +209,13 @@ describe("saved worlds on old minimum wage laws", () => {
     expect(out.get("DE")).toBe(0.55);
     expect(MINIMUM_WAGE_LAW_TYPE_IDS).toContain("jp_minimum_wage");
   });
+
+  it("keeps China's old-book floor, whose options run from the highest floor down", () => {
+    const out = buildMinWageRatioWithLaws(
+      [],
+      [{ countryId: "CN", legislationTypeId: "cn_minimum_wage", policyOptionIndex: 1 }]
+    );
+    expect(out.get("CN")).toBe(0.4);
+    expect(minimumWageLawKaitz("cn_minimum_wage", 5)).toBe(0);
+  });
 });
