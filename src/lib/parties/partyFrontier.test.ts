@@ -8,7 +8,9 @@ import {
   canCharacterJoinParty,
   getPartyFrontiers,
   isolatedRegions,
+  getTerritoryAdjacency,
 } from "@/lib/parties/partyFrontier";
+import { connectedGrowthFrontier } from "@/lib/parties/rules/territory";
 import { STATE_ADJACENCY } from "@/lib/constants/stateAdjacency";
 
 describe("expandFrontier", () => {
@@ -318,5 +320,48 @@ describe("canCharacterJoinParty", () => {
     await expect(canCharacterJoinParty(db, { homeState: "" }, party, "US")).resolves.toEqual({
       ok: true,
     });
+  });
+});
+
+describe("annexed region (IE Northern Ireland)", () => {
+  const IE_WITH_NIR = [...Object.keys(STATE_ADJACENCY.IE), "NIR"];
+
+  it("lets a party present in Donegal grow into Northern Ireland once it is an Irish region", () => {
+    const presence = new Set(["DON"]);
+    const frontier = expandFrontier("IE", presence, IE_WITH_NIR);
+    expect(isInFrontier(presence, frontier, "NIR")).toBe(true);
+  });
+
+  it("lets a Dublin-only party reach Northern Ireland only by reconnecting through its border", () => {
+    const presence = new Set(["DUB"]);
+    const frontier = expandFrontier("IE", presence, IE_WITH_NIR);
+    // One hop from DUB is KIL; NIR is two hops away, so it stays closed.
+    expect(isInFrontier(presence, frontier, "NIR")).toBe(false);
+  });
+
+  it("does not detach a Northern Ireland foothold from a connected party", () => {
+    const presence = new Set(["DON", "KIL"]);
+    const adjacency = getTerritoryAdjacency("IE", IE_WITH_NIR);
+    const frontier = connectedGrowthFrontier(
+      presence,
+      expandFrontier("IE", presence, IE_WITH_NIR),
+      adjacency
+    );
+    expect(frontier.has("NIR")).toBe(true);
+  });
+
+  it("gives Northern Ireland neighbours in the territory graph, symmetric with the border regions", () => {
+    const adjacency = getTerritoryAdjacency("IE", IE_WITH_NIR);
+    expect([...adjacency.NIR].sort()).toEqual(["DON", "KIL", "MID"]);
+    expect(adjacency.DON).toContain("NIR");
+    expect(adjacency.KIL).toContain("NIR");
+    expect(adjacency.MID).toContain("NIR");
+  });
+
+  it("changes nothing while Northern Ireland is still outside the country", () => {
+    const seeded = Object.keys(STATE_ADJACENCY.IE);
+    expect(expandFrontier("IE", ["DON"], seeded).has("NIR")).toBe(false);
+    expect(getTerritoryAdjacency("IE", seeded)).toEqual(STATE_ADJACENCY.IE);
+    expect(expandFrontier("IE", ["DON"]).has("NIR")).toBe(false);
   });
 });
