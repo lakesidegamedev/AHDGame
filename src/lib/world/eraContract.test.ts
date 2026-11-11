@@ -535,6 +535,7 @@ describe("S4 — player chambers agree with their era config", () => {
     US: ["house", "senate"],
     UK: ["commons"],
     JP: ["shugiin", "sangiin"],
+    CA: ["caCommons"],
   };
 
   function s4Failures(preset: ShippingPreset): string[] {

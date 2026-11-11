@@ -32,6 +32,7 @@ import { PANDEMIC_KEY } from "@/lib/livingConflict/rules/pandemic";
 import type { LivingConflictDef } from "@/lib/livingConflict/types";
 import { matchesCountryLegislationType } from "@/lib/policy/nationalPolicyRecords";
 import { legislationTypes } from "@/lib/seeds/reference/legislationTypes";
+import { getCoreCatalog, isLawFileable } from "@/lib/politicalLegislation/catalog";
 import { countriesByTier, type ShippingPreset } from "@/lib/world/eraRoster";
 
 export const CALENDAR_PRESET: ShippingPreset = "2027-default";
@@ -190,7 +191,13 @@ export function buildContentCalendar(
           crisisTemplates: reaching.filter(([, t]) => t.opportunity !== true).map(([key]) => key),
           preeEvents: openPree.filter((d) => preeReachesCountry(d, countryId)).map((d) => d.kind),
           opportunities: reaching.filter(([, t]) => t.opportunity === true).map(([key]) => key),
-          lawTypes: lawsByCountry.get(countryId) ?? [],
+          lawTypes: [
+            ...(lawsByCountry.get(countryId) ?? []),
+            ...getCoreCatalog(countryId, year)
+              .filter((law) => isLawFileable(law, year))
+              .map((law) => law.id)
+              .sort(),
+          ],
           researchTiers: research,
         },
       });

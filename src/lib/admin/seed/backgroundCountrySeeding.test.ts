@@ -14,7 +14,7 @@ describe("2027 background countries at bootstrap", () => {
       expect(authored.length, countryId).toBeGreaterThan(0);
       for (const seat of authored) expect(seats).not.toContain(seat);
     }
-    const full = ["US", "UK", "JP", "DE", "CN"] as const;
+    const full = ["US", "CA", "UK", "JP", "DE", "CN"] as const;
     const expected = full.reduce((n, id) => n + seatsForCountry("2027-default", id).length, 0);
     expect(seats).toHaveLength(expected);
   });

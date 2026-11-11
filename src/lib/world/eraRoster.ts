@@ -235,7 +235,7 @@ const ERA_ROSTER_LITERAL = {
   /**
    * The 2027 preset. Three kinds of country:
    *
-   * - player: the US, the only country players can join at launch.
+   * - player: the US and Canada, the countries players can join at launch.
    * - npp: full simulation run by NPPs; each can be opened to players later
    *   via `enabledForPlayers` without a reseed.
    * - background: outside the full simulation to avoid turning them.
@@ -246,8 +246,10 @@ const ERA_ROSTER_LITERAL = {
    */
   "2027-default": {
     default: "absent",
-    player: ["US"],
+    player: ["US", "CA"],
     npp: ["UK", "DE", "JP", "CN"],
+    // Canada's Premiers fill on the shared regional executive cycle.
+    vacantChambers: ["CA.governor"],
     background: [
       "IE",
       "BR",

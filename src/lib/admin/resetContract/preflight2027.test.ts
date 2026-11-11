@@ -30,9 +30,9 @@ async function seedWorld(db: Db, countries: string[]) {
 }
 
 describe("2027 preflight shell", () => {
-  it("covers the owner's tiers: US plus UK, DE, JP, CN", () => {
+  it("covers the owner's tiers: US and CA plus UK, DE, JP, CN", () => {
     expect(new Set(fullSimulationCountries(PREFLIGHT_PRESET))).toEqual(
-      new Set(["US", "UK", "DE", "JP", "CN"])
+      new Set(["US", "CA", "UK", "DE", "JP", "CN"])
     );
     expect(
       SEAT_FIELD_REQUIREMENTS.some((r) => r.countryId === "DE" && r.level === "positive")
