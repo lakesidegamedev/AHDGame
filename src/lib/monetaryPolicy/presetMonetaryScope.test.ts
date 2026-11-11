@@ -121,4 +121,19 @@ describe("getPresetMonetaryScope", () => {
     );
     expect(scope.exclusions.map(({ countryId }) => countryId)).not.toContain("RU");
   });
+
+  it.each(SHIPPING_PRESETS)(
+    "gives no central bank to a country outside the %s roster",
+    (preset) => {
+      const scope = getPresetMonetaryScope(preset);
+      expect(scope.centralBankCountries.filter((c) => tierFor(preset, c) === "absent")).toEqual([]);
+    }
+  );
+
+  it("keeps Canada's exchange row but not a central bank before 2027", () => {
+    const scope = getPresetMonetaryScope("2019-default");
+    expect(scope.forexCountries).toContain("CA");
+    expect(scope.centralBankCountries).not.toContain("CA");
+    expect(getPresetMonetaryScope("2027-default").centralBankCountries).toContain("CA");
+  });
 });

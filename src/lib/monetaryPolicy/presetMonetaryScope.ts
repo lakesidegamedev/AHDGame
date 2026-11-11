@@ -95,7 +95,6 @@ export function getPresetMonetaryScope(preset: string): PresetMonetaryScope {
       });
     }
   }
-  const excluded = new Set(exclusions.map(({ countryId }) => countryId));
   const candidateForexCountries =
     preset === "1991-default"
       ? ([...FOREX_ACTIVE_COUNTRIES, "PL", "HU", "RO", "BG", "CS", "YU"] as CountryId[])
@@ -111,6 +110,18 @@ export function getPresetMonetaryScope(preset: string): PresetMonetaryScope {
     preset === "1991-default" || preset === "2027-default"
       ? candidateForexCountries.filter((countryId) => !absentInEra.has(countryId))
       : candidateForexCountries;
+  // A country outside this era's roster keeps its exchange row for valuations
+  // but has no fiscal book, so it gets no central bank.
+  for (const countryId of forexCountries) {
+    if (exclusions.some((entry) => entry.countryId === countryId)) continue;
+    if (tierFor(preset, countryId) !== "absent") continue;
+    exclusions.push({
+      countryId,
+      reason: "fiscal-model-unauthored",
+      detail: `${countryId} is outside the ${preset} roster and has no national fiscal model there`,
+    });
+  }
+  const excluded = new Set(exclusions.map(({ countryId }) => countryId));
   const centralBankCountries = forexCountries.filter((countryId) => !excluded.has(countryId));
 
   return {
