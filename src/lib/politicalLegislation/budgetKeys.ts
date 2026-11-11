@@ -91,6 +91,17 @@ const BUDGET_KEY_BY_CATEGORY: Record<
     governance: "other",
     defense: "defense",
   },
+  CN: {
+    economy: "other",
+    education: "education",
+    health: "healthcare",
+    infrastructure: "transport",
+    order: "other",
+    environment: "other",
+    society: "welfare",
+    governance: "other",
+    defense: "defense",
+  },
 };
 
 /** The effective budget key for a law: per-law override wins over the category table. */

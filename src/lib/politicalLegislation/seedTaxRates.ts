@@ -90,12 +90,12 @@ export const SEED_TAX_RATES_1953: Record<LawCountryId, Record<SeedTaxType, numbe
 export const SEED_TAX_RATES_PENDING: Partial<
   Record<Exclude<CostAnchorCountryId, LawCountryId>, Record<SeedTaxType, number>>
 > = {
-  JP: {
-    incomeTax: 33,
-    domesticCorporateTax: 30,
-    foreignCorporateTax: 30,
-    payrollTax: 15,
-    salesTax: 10,
-    tariffs: 0,
+  CN: {
+    incomeTax: 20,
+    domesticCorporateTax: 25,
+    foreignCorporateTax: 25,
+    payrollTax: 17,
+    salesTax: 13,
+    tariffs: 2,
   },
 };
