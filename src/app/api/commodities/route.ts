@@ -27,6 +27,7 @@ import { conditionalJson } from "@/lib/api/conditionalJson";
 import { isStateScopedCommodity } from "@/lib/market/rules/commodityMarketScope";
 import { stateShortage } from "@/lib/market/rules/stateShortage";
 import { loadReachableBooks, reachableBooksFor } from "@/lib/trade/queries/loadReachableBooks";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /**
  * GET /api/commodities?exchange=nyse|ftse
@@ -135,8 +136,7 @@ export async function GET(request: Request) {
     );
 
     // Build state → countryId lookup for exchange filtering
-    const allStates = await db
-      .collection<State>("states")
+    const allStates = await statesCollection(db)
       .find({})
       .project<{ _id: string; countryId: string }>({ _id: 1, countryId: 1 })
       .toArray();

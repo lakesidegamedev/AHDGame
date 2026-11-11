@@ -6,6 +6,7 @@ import type { PoliticalMetricsDoc } from "@/lib/db/types/politicalMetrics";
 import { loadDemocraticCompetition } from "./loadCompetition";
 import { scoreGovernanceStyle } from "./score";
 import { aggregateNationalPoliticalMetrics } from "@/lib/politicalMetrics/aggregate";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 type DemocraticHealthGameState =
   Pick<GameState, "preset" | "presidentialTenureByCountry"> | null | undefined;
@@ -23,8 +24,7 @@ export async function loadDemocraticHealth(
 ): Promise<number | null> {
   const [docs, states] = await Promise.all([
     db.collection<PoliticalMetricsDoc>("politicalMetrics").find({ countryId }).toArray(),
-    db
-      .collection<Pick<State, "_id" | "population">>("states")
+    statesCollection<Pick<State, "_id" | "population">>(db)
       .find({ countryId }, { projection: { _id: 1, population: 1 } })
       .toArray(),
   ]);

@@ -43,6 +43,7 @@ import type {
 } from "../types";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export const DEFECT_ID = "AHD-1271-merged-state-extraction";
 
@@ -112,8 +113,7 @@ async function survey(db: Db): Promise<Survey> {
   if (gameConfig?.commandEconomyEnabled !== true) return empty;
 
   const year = seedYear(preset, gameState?.currentYear ?? null);
-  const states = await db
-    .collection<State>("states")
+  const states = await statesCollection(db)
     .find({ _id: { $not: /^NATIONAL_/ } })
     .project<Pick<State, "_id" | "countryId">>({ countryId: 1 })
     .toArray();
@@ -278,8 +278,7 @@ async function buildSectors(
 ): Promise<Record<string, unknown>[]> {
   if (stranded.length === 0) return [];
   const strandedIds = stranded.map((s) => s.stateId);
-  const states = await db
-    .collection<State>("states")
+  const states = await statesCollection(db)
     .find({ _id: { $in: strandedIds } })
     .project<Pick<State, "_id" | "countryId" | "population" | "gdp">>({
       countryId: 1,

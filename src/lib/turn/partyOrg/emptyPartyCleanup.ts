@@ -26,6 +26,8 @@ import type {
 } from "@/lib/db/types";
 import type { Coalition } from "@/lib/db/types/coalition";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
 
 export interface EmptyPartyCleanupResult {
   deletedParties: string[];
@@ -197,8 +199,7 @@ export async function cleanupEmptyParties(): Promise<EmptyPartyCleanupResult> {
   const uniqueCountries = [...new Set(partyCountryPairs.map((p) => p.countryId))];
   const stateIdsByCountry = new Map<string, string[]>();
   for (const cid of uniqueCountries) {
-    const states = await db
-      .collection("states")
+    const states = await statesCollection<Document>(db)
       .find({ countryId: cid })
       .project({ _id: 1 })
       .toArray();

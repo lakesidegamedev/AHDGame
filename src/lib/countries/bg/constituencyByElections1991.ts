@@ -39,6 +39,7 @@ import {
 } from "./rules/constituencyByElection1991";
 import type { BgFoundingMajorityBallot } from "./rules/foundingMajority1990";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export const BG_GRAND_BY_ELECTIONS_COLLECTION = "bgGrandConstituencyByElections";
 export interface BgGrandByElectionRecord {
@@ -248,8 +249,7 @@ export async function openBgGrandConstituencyByElections(
         vacancyObservedTurn: turn,
         termEndTurn: current.endTurn!,
       })!;
-      const states = await db
-        .collection<State>("states")
+      const states = await statesCollection(db)
         .find(
           { countryId: "BG" },
           { session, projection: { population: 1, votingEligiblePopulation: 1 } }

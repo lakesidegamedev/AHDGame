@@ -19,6 +19,7 @@ import { buildCharacterHref, parseCharacterId } from "@/lib/utils/profileUrls";
 import { partyUrl } from "@/lib/urls";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -106,8 +107,7 @@ async function enrichPublicCharacters(db: Db, characters: Character[]): Promise<
           })
           .toArray()
       : Promise.resolve([]),
-    db
-      .collection<State>("states")
+    statesCollection(db)
       .find({ _id: { $in: stateIds } })
       .toArray(),
     db

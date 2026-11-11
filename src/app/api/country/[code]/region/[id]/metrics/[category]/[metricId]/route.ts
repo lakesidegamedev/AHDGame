@@ -24,6 +24,7 @@ import { getNeutralFederalSalesTaxRate, getNeutralStateSalesTaxRate } from "@/li
 import { getMetricDefinition } from "@/lib/constants/metricDefinitions";
 import { pushesValueUp } from "@/lib/utils/policyDirection";
 import { MIRROR_CONTROLLED_METRIC_IDS } from "@/lib/metricEngine/fiscalMirror";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 type AffectingPolicy = {
   name: string;
@@ -239,15 +240,14 @@ export async function GET(
     // is scoped to this country's state ids instead of loading every region
     // metric doc in the world. countryId on StateMetrics is optional/legacy,
     // so scoping by _id set is the reliable filter.
-    const allStates = await db
-      .collection<State>("states")
+    const allStates = await statesCollection(db)
       .find({}, { projection: { countryId: 1 } })
       .toArray();
     const sameCountryIds = allStates
       .filter((state) => state.countryId === countryId)
       .map((state) => state._id);
     const [stateDoc, metrics, allMetrics] = await Promise.all([
-      db.collection<State>("states").findOne({ _id: stateId, countryId }),
+      statesCollection(db).findOne({ _id: stateId, countryId }),
       findMergedRegionMetricsForDisplay(db, { _id: stateId, countryId }),
       findMergedRegionMetricsManyForDisplay(db, { _id: { $in: sameCountryIds } }),
     ]);

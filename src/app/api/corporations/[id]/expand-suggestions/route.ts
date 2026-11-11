@@ -66,6 +66,7 @@ import {
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -252,8 +253,7 @@ export async function GET(request: Request, { params }: RouteParams) {
 
     // Fetch all relevant data for the candidate states in parallel
     const [states, ownedSectors, siblingCorpSectors, unownedSectors] = await Promise.all([
-      db
-        .collection<State>("states")
+      statesCollection(db)
         .find({ _id: { $in: stateIds } }, { projection: { _id: 1, name: 1, countryId: 1 } })
         .toArray(),
       db

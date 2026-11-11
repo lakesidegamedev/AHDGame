@@ -11,6 +11,7 @@ import { BG_1990_LIST_DISTRICTS } from "./data/foundingDistricts1990";
 import { isBgOrdinaryCapacity } from "./rules/assemblyTransition";
 import { STATE_POPULATION_FIELDS } from "@/lib/db/collections/states";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 async function materializeBgFoundingCampaignBinding(input: {
   db: Db;
@@ -77,8 +78,7 @@ async function materializeBgFoundingCampaignBinding(input: {
       throw new Error("Bulgarian frozen campaign cohort is incomplete or changed");
     return false;
   }
-  const states = await db
-    .collection<State>("states")
+  const states = await statesCollection(db)
     .find(
       { countryId: "BG" },
       {

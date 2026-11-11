@@ -7,6 +7,7 @@ import { adminPartyOrgPatchSchema } from "@/lib/api/schemas/admin";
 import type { StatePartyOrg, State, PoliticalParty } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { validateOrganization } from "@/lib/utils/partyOrg";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 // GET - Fetch party org for a state or all states
 // Returns organization data for ALL parties, defaulting to 0 for parties without records
@@ -35,7 +36,7 @@ export async function GET(request: Request) {
       const countryId = (searchParams.get("country") ?? "US").toUpperCase() as CountryId;
 
       // Get the state for political lean
-      const state = await db.collection<State>("states").findOne({ _id: upperStateId, countryId });
+      const state = await statesCollection(db).findOne({ _id: upperStateId, countryId });
       if (!state) {
         return errorResponse(404, "State not found");
       }
@@ -103,7 +104,7 @@ export async function PATCH(request: Request) {
     const db = await getDb();
 
     // Validate state exists (scope by countryId to avoid cross-country ID collisions).
-    const state = await db.collection<State>("states").findOne({
+    const state = await statesCollection(db).findOne({
       _id: stateId.toUpperCase(),
       countryId: countryId.toUpperCase() as CountryId,
     });

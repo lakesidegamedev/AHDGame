@@ -22,6 +22,7 @@ import { settleBgFoundingMandates } from "./rules/foundingMandates1990";
 import { BG_1990_REGION_CAPACITY } from "./data/foundingDistricts1990";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export const BG_FOUNDING_OFFICE_ARCHIVES_COLLECTION = "bgFoundingAssemblyOfficeArchives";
 interface BgFoundingAssemblyArchive {
@@ -376,7 +377,7 @@ async function materializeBgFoundingAssemblySeating(input: {
   );
   if (finalizedElections.matchedCount !== ids.length)
     throw new Error("Bulgarian handover lost election custody");
-  const resized = await db.collection<State>("states").bulkWrite(
+  const resized = await statesCollection(db).bulkWrite(
     Object.entries(BG_1990_REGION_CAPACITY).map(([id, seats]) => ({
       updateOne: {
         filter: { _id: id, countryId: "BG" },

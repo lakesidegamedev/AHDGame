@@ -35,6 +35,7 @@ import type {
   ConsequenceResult,
   PrivatizationConsequenceContext,
 } from "./types";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export async function applyNationalizationConsequences(
   db: Db,
@@ -212,8 +213,7 @@ async function applyPublicTrustNudge(
   await applyLegacyTrustDelta(db, countryId, delta);
 
   // The reported nudges stay per-region so callers keep their existing shape.
-  const states = await db
-    .collection<State>("states")
+  const states = await statesCollection(db)
     .find({ countryId }, { projection: { _id: 1 } })
     .toArray();
   return states.map((s) => ({

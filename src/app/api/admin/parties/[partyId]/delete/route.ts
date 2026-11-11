@@ -22,6 +22,8 @@ import type {
 } from "@/lib/db/types";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { notifyGovernorOfSenateVacancy } from "@/lib/governors/senateVacancy";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
 
 export async function POST(request: Request, { params }: { params: Promise<{ partyId: string }> }) {
   try {
@@ -143,8 +145,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ par
       .deleteMany({ partyId: partySeqIdStr, countryId: partyCountryId });
 
     // StatePartyElection doesn't have countryId — resolve via states collection
-    const countryStates = await db
-      .collection("states")
+    const countryStates = await statesCollection<Document>(db)
       .find({ countryId: partyCountryId })
       .project({ _id: 1 })
       .toArray();

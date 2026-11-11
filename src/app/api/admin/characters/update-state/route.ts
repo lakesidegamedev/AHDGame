@@ -13,6 +13,7 @@ import { MAX_REGION_ID_LENGTH } from "@/lib/constants/states";
 import type { State } from "@/lib/db/types";
 import { performRelocation } from "@/lib/character/performRelocation";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 const updateStateSchema = z.object({
   username: z.string().min(1, "username is required"),
@@ -68,9 +69,10 @@ export const PATCH = withAdminRoute(async (_auth, request: Request) => {
   // Admins move characters WITHIN their own country: scoping the lookup to
   // `character.countryId` both resolves the region and rejects cross-country
   // moves in one step. This is the authoritative check on `homeState`.
-  const targetState = await db
-    .collection<State>("states")
-    .findOne({ _id: homeState, countryId: character.countryId });
+  const targetState = await statesCollection(db).findOne({
+    _id: homeState,
+    countryId: character.countryId,
+  });
   if (!targetState) {
     // Name the country that was searched: the caller picks a region from a
     // country list, so "not found" is far more often the wrong country than

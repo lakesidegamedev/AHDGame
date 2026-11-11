@@ -17,6 +17,7 @@ import type {
 } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 interface OrphanedCandidate {
   candidateId: string;
@@ -40,8 +41,7 @@ export async function GET() {
     const orphaned: OrphanedCandidate[] = [];
 
     // Build state → countryId lookup
-    const allStates = await db
-      .collection<State>("states")
+    const allStates = await statesCollection(db)
       .find({})
       .project<{ _id: string; countryId: CountryId }>({ _id: 1, countryId: 1 })
       .toArray();
@@ -229,8 +229,7 @@ export async function POST() {
     let fixed = 0;
 
     // Build state → countryId lookup
-    const allStates = await db
-      .collection<State>("states")
+    const allStates = await statesCollection(db)
       .find({})
       .project<{ _id: string; countryId: CountryId }>({ _id: 1, countryId: 1 })
       .toArray();

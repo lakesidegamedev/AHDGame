@@ -1,6 +1,7 @@
 import { ObjectId, type Db, type Filter } from "mongodb";
 import type { PoliticalParty, Referendum, State } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 function iso(value: Date | null | undefined): string | null {
   return value instanceof Date && !Number.isNaN(value.getTime()) ? value.toISOString() : null;
@@ -22,8 +23,7 @@ async function hydrateReferendums(db: Db, rows: Referendum[]) {
 
   const [regions, parties] = await Promise.all([
     regionIds.length
-      ? db
-          .collection<State>("states")
+      ? statesCollection(db)
           .find({ _id: { $in: regionIds } }, { projection: { _id: 1, name: 1 } })
           .toArray()
       : Promise.resolve([]),

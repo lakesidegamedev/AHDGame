@@ -14,6 +14,7 @@ import {
   type ResetRegionalOpeningBoard,
 } from "@/lib/resetFinance/rules/regionalOpeningBoard";
 import type { ResetOpeningCountry } from "@/lib/resetFinance/opening1991";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export async function seedOpeningLawBoards1991(
   db: Db,
@@ -27,8 +28,7 @@ export async function seedOpeningLawBoards1991(
   const expectedRegional = buildOpeningRegionalBoards1991(worldId, sourceTurn).filter((board) =>
     countries.includes(board.countryId as ResetOpeningCountry)
   );
-  const seededRegions = await db
-    .collection<State>("states")
+  const seededRegions = await statesCollection(db)
     .find({ countryId: { $in: [...countries] } }, { projection: { _id: 1, countryId: 1 } })
     .toArray();
   const actualIds = seededRegions.map((region) => `${region.countryId}:${region._id}`).sort();

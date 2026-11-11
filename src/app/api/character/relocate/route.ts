@@ -49,6 +49,7 @@ import {
   unplayableTerritoryHomeError,
 } from "@/lib/elections/usPoliticalHome";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 const relocateBodySchema = z.object({
   targetStateId: z.string().min(1, "Target state/region ID required"),
@@ -92,9 +93,10 @@ export async function POST(request: Request) {
       db,
       [{ countryId: auth.character.countryId ?? "US", partyId: auth.character.party }],
       async () => {
-        const targetState = await db
-          .collection<State>("states")
-          .findOne({ _id: normalizedTarget, countryId: targetCountryId });
+        const targetState = await statesCollection(db).findOne({
+          _id: normalizedTarget,
+          countryId: targetCountryId,
+        });
         if (!targetState) {
           return errorResponse(400, "Invalid target state or region");
         }

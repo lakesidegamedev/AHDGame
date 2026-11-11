@@ -29,6 +29,7 @@ import {
 import { scheduledMarketizationLevel, DUAL_TRACK_CEILING } from "@/lib/constants/commandEconomy";
 import { batchSpawnNppCorporations, NPP_CAPITAL_STATES } from "@/lib/admin/spawnNppCorporation";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export interface NppCorpCountryPlan {
   countryId: CountryId;
@@ -155,8 +156,7 @@ export async function seedNppCorporations(
     // economy rather than its capital region (see rules/nppSeedCapacity.ts).
     const countryStates =
       preset === "1991-default"
-        ? await db
-            .collection<State>("states")
+        ? await statesCollection(db)
             .find({ countryId, _id: { $not: /^NATIONAL_/ } })
             .project<Pick<State, "_id" | "gdp">>({ gdp: 1 })
             .toArray()

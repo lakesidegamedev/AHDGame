@@ -6,6 +6,7 @@ import { handleRouteError } from "@/lib/api/errors";
 import type { Character, State, User } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 // GET /api/admin/heal/discord-users — Diagnoses user/character linkage issues and characters missing countryId
 // Auth: requireAdmin
@@ -171,8 +172,7 @@ export async function POST() {
 
     if (charsMissingCountryId.length > 0) {
       const stateIds = [...new Set(charsMissingCountryId.map((c) => c.homeState))];
-      const states = await db
-        .collection<State>("states")
+      const states = await statesCollection(db)
         .find({ _id: { $in: stateIds } })
         .toArray();
 

@@ -35,6 +35,7 @@ import {
   recruitmentCooldownReadyFilter,
   recruitmentCooldownUntilIso,
 } from "@/lib/npp/recruitmentCooldown";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 // GET /api/country/[code]/region/[id]/party/[partyId]/recruitment — Return NPP recruitment status and slot info for state leadership
 // Auth: requireAuthWithCharacter
@@ -64,7 +65,7 @@ export async function GET(
     const db = await getDb();
 
     // Get state to determine country
-    const state = await db.collection<State>("states").findOne({ _id: stateId, countryId });
+    const state = await statesCollection(db).findOne({ _id: stateId, countryId });
     if (!state) {
       return errorResponse(404, "State not found");
     }
@@ -214,7 +215,7 @@ export async function POST(
       const gameNow = gameTime.effectiveNow;
 
       // Get state to determine country
-      const state = await db.collection<State>("states").findOne({ _id: stateId, countryId });
+      const state = await statesCollection(db).findOne({ _id: stateId, countryId });
       if (!state) {
         return errorResponse(404, "State not found");
       }

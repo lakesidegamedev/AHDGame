@@ -37,6 +37,7 @@ import { AT_IDENTITY } from "@/lib/countries/at/identity";
 import { FI_IDENTITY } from "@/lib/countries/fi/identity";
 import { CA_IDENTITY } from "@/lib/countries/ca/identity";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /** Provisional: how many NPP retail banks each eligible country seeds. */
 export const NPC_BANKS_PER_COUNTRY = 2;
@@ -221,8 +222,7 @@ export async function seedNpcBanks(
   const capitals = Object.values(NPP_CAPITAL_STATES).filter((id): id is string => !!id);
   const batch = options.batchReads
     ? await Promise.all([
-        db
-          .collection<State>("states")
+        statesCollection(db)
           .find({ _id: { $in: capitals } }, { projection: { countryId: 1 } })
           .toArray(),
         corporationsCollection<NpcBankCorporation>(db)
@@ -267,9 +267,7 @@ export async function seedNpcBanks(
     // spawn that fails with `State "…" not found`.
     const hqDoc = batch
       ? states.get(hqState)
-      : await db
-          .collection<State>("states")
-          .findOne({ _id: hqState }, { projection: { countryId: 1 } });
+      : await statesCollection(db).findOne({ _id: hqState }, { projection: { countryId: 1 } });
     if (!hqDoc || hqDoc.countryId !== countryId) {
       const reason: NpcBankHqExclusionReason = !hqDoc
         ? "no-state-in-preset"

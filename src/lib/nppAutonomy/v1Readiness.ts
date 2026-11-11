@@ -23,6 +23,8 @@ import {
 import { getCabinetPositions } from "@/lib/constants/cabinetMechanics";
 import { getLowerChamberOfficeType } from "@/lib/legislature/chamberOfficeType";
 import { isCountryEnabledForPlayers } from "@/lib/countryAccess";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
 
 export type CheckSeverity = "required" | "recommended";
 
@@ -68,7 +70,7 @@ export async function assessCountryV1Readiness(
     db
       .collection("electedOfficials")
       .countDocuments({ countryId, officeType: lowerOffice, isNPP: true }),
-    db.collection("states").countDocuments({ countryId }),
+    statesCollection<Document>(db).countDocuments({ countryId }),
     isCountryEnabledForPlayers(db, countryId),
   ]);
   const cabinetPositions = getCabinetPositions(countryId).length;

@@ -8,6 +8,8 @@ import {
   passesRoElectoralAmendment,
   ro1992DecisionAvailability,
 } from "./rules/electoralDecision1992";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
 export async function processRo1992ElectoralNpcProposal(
   db: Db,
   game: GameState,
@@ -40,8 +42,7 @@ export async function processRo1992ElectoralNpcProposal(
         { projection: { officeType: 1, characterId: 1, party: 1, seatsHeld: 1 } }
       )
       .toArray(),
-    db
-      .collection("states")
+    statesCollection<Document>(db)
       .find({ countryId: "RO" }, { projection: { houseDistricts: 1, stateSenateSeats: 1 } })
       .toArray(),
   ]);

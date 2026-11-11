@@ -21,6 +21,7 @@ import {
   type RussianDumaConvocationRecord,
 } from "./dumaConvocationAuthority";
 import { STATE_POPULATION_FIELDS } from "@/lib/db/collections/states";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export async function materializeRussianDumaConvocationOpening(input: {
   db: Db;
@@ -96,8 +97,7 @@ export async function materializeRussianDumaConvocationOpening(input: {
     )
   )
     return null;
-  const regions = await db
-    .collection<State>("states")
+  const regions = await statesCollection(db)
     .find({ countryId: "RU" }, { session, projection: STATE_POPULATION_FIELDS })
     .toArray();
   const pools = await db

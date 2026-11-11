@@ -148,6 +148,8 @@ import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
 
 /** Assembles the cabinet position briefing payload for the viewing user. */
 export async function buildCabinetBriefing(
@@ -288,8 +290,7 @@ export async function buildCabinetBriefing(
   const nationalDocId = getNationalDocId(countryId) ?? null;
 
   // Fetch state metrics for country regions
-  const countryStates = await db
-    .collection("states")
+  const countryStates = await statesCollection<Document>(db)
     .find({ countryId })
     .project({ _id: 1, name: 1, population: 1 })
     .toArray();

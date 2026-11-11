@@ -19,6 +19,7 @@ import {
 } from "@/lib/constants/states";
 import type { StateTravelOption } from "@/lib/elections/dto/campaignStatePresence";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export type { StateTravelOption };
 
@@ -58,8 +59,7 @@ export async function loadStateTravelOptions(db: Db, preset?: string): Promise<S
     (await gameStateCollection<{ _id: string; preset?: string }>(db).findOne({ _id: "current" }))
       ?.preset;
 
-  const states = await db
-    .collection<State>("states")
+  const states = await statesCollection(db)
     .find({ _id: { $in: TRAVEL_STATE_IDS } })
     .toArray();
   const nameById = new Map(states.map((s) => [s._id as string, s.name]));

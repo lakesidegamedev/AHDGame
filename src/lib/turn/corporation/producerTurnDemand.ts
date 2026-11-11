@@ -67,6 +67,7 @@ import {
   backgroundTradeLines,
   type BackgroundEconomy,
 } from "@/lib/market/producerMarket/backgroundTradeRules";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /**
  * Funded-market demand for one producer turn: every plant prepared from its
@@ -272,8 +273,7 @@ export async function buildProducerTurnDemand(
   input.stage?.("demand.households");
   // 3. Public buyers: the existing budget outlay times the plant economy's
   //    share of GDP, so only the plant market's slice of a budget is spent here.
-  const states = await db
-    .collection<{ _id: unknown; countryId?: string; gdp?: number }>("states")
+  const states = await statesCollection<{ _id: unknown; countryId?: string; gdp?: number }>(db)
     .find({}, { projection: { countryId: 1, gdp: 1 } })
     .toArray();
   const stateWeightsByCountry = new Map<string, Map<string, number>>();

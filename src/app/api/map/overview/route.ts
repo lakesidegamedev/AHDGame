@@ -17,6 +17,7 @@ import { loadUsPoliticalStateIds } from "@/lib/elections/usPoliticalHome";
 import type { State } from "@/lib/db/types";
 
 import type { MapSectorSpecializationState, MapOverviewResponse } from "@/lib/map/overviewTypes";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 // Re-export for any consumer that still imports types from the route file.
 // New consumers should import from "@/lib/map/overviewTypes".
@@ -26,8 +27,7 @@ async function computeSectorSpecializationMap(
   db: Awaited<ReturnType<typeof getDb>>,
   countryId: CountryId
 ): Promise<Record<string, MapSectorSpecializationState>> {
-  const states = await db
-    .collection<State>("states")
+  const states = await statesCollection(db)
     .find({ countryId }, { projection: { _id: 1, name: 1, sectorSpecializations: 1 } })
     .toArray();
 
@@ -66,8 +66,7 @@ export async function GET(request: Request) {
     // Live region roster (drives the nation map's list / names / seat counts) —
     // read straight from the country's owned states so it follows ownership and
     // future cross-country transfers.
-    const rosterStates = await db
-      .collection<State>("states")
+    const rosterStates = await statesCollection(db)
       .find(
         { countryId },
         { projection: { _id: 1, name: 1, houseDistricts: 1, region: 1, population: 1 } }

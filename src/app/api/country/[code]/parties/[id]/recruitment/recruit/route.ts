@@ -34,6 +34,7 @@ import {
   recruitmentCooldownSet,
   recruitmentCooldownReadyFilter,
 } from "@/lib/npp/recruitmentCooldown";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 // POST /api/country/[code]/parties/[id]/recruitment/recruit — Recruit an NPP into the party in a specified state
 // Auth: requireAuthWithCharacter
@@ -115,7 +116,7 @@ export async function POST(
       }
 
       // Verify state exists and is in correct country
-      const state = await db.collection<State>("states").findOne({ _id: stateId, countryId });
+      const state = await statesCollection(db).findOne({ _id: stateId, countryId });
       if (!state) {
         return errorResponse(404, "State not found");
       }

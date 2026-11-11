@@ -7,10 +7,10 @@
 import type { AnyBulkWriteOperation, Db } from "mongodb";
 import type { State, StateDemographics } from "@/lib/db/types";
 import { censusCachedStateLean } from "@/lib/demographics/cachedStateLean";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export async function backfillMissingRegionLeans(db: Db, now: Date, preset: string) {
-  const states = await db
-    .collection<State>("states")
+  const states = await statesCollection(db)
     .find(
       {},
       {
@@ -75,7 +75,7 @@ export async function backfillMissingRegionLeans(db: Db, now: Date, preset: stri
     await db
       .collection<StateDemographics>("stateDemographics")
       .bulkWrite(demoOps, { ordered: false });
-    await db.collection<State>("states").bulkWrite(stateOps, { ordered: false });
+    await statesCollection(db).bulkWrite(stateOps, { ordered: false });
   }
   return { written: stateOps.length, missingDemographics, missingCategories };
 }

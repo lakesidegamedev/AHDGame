@@ -103,6 +103,7 @@ import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 type TakeoverTxInput = Omit<FinancialTxLogEntry, "_id" | "expiresAt" | "flagged">;
 
@@ -771,8 +772,7 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
         const sectorStateIds = [
           ...new Set([...targetSectors, ...parentSectors].map((s) => s.stateId)),
         ];
-        const sectorStates = await db
-          .collection<State>("states")
+        const sectorStates = await statesCollection(db)
           .find({ _id: { $in: sectorStateIds } }, { projection: { _id: 1, countryId: 1 } })
           .toArray();
         const stateCountryByStateId = buildSectorStateCountryMap(sectorStates);

@@ -14,6 +14,7 @@ import { validateStateBudgetImpact } from "@/lib/budget/validation";
 import { captureBillStatusChanged } from "@/lib/analytics/billStatusAnalytics";
 import type { BillLifecycleRuntimeContext } from "./types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /**
  * Regional (state) bill-lifecycle walker: the `level: "regional"` counterpart
@@ -70,9 +71,10 @@ async function loadRegionalState(
 ): Promise<State | null> {
   const key = `${countryId ?? ""}:${stateId}`;
   if (cache.states.has(key)) return cache.states.get(key) ?? null;
-  const state = await db
-    .collection<State>("states")
-    .findOne({ _id: stateId, ...(countryId ? { countryId } : {}) });
+  const state = await statesCollection(db).findOne({
+    _id: stateId,
+    ...(countryId ? { countryId } : {}),
+  });
   cache.states.set(key, state);
   return state;
 }

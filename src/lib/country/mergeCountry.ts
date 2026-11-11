@@ -56,6 +56,7 @@ import {
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import type { Document } from "mongodb";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export interface MergeCountryArgs {
   /** The country being absorbed. Retired when this completes. */
@@ -107,8 +108,7 @@ export async function mergeCountry(db: Db, args: MergeCountryArgs): Promise<Merg
     return { ok: false, error: "The absorbing country has itself been dissolved.", ...empty };
   }
 
-  const regions = await db
-    .collection<State>("states")
+  const regions = await statesCollection(db)
     .find(
       { countryId: fromCountryId },
       { projection: { _id: 1, name: 1, region: 1, votingSystem: 1 } }

@@ -17,6 +17,7 @@ import { SENATE_CLASSES } from "@/lib/constants";
 import { subNationalChamberSeats } from "@/lib/constants/states";
 import { getGameStatePreset } from "@/lib/db/collections/gameState";
 import { errorResponse } from "@/lib/api/errors";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /** A region seat group as rendered/validated by the admin seat appointer. */
 interface SeatGroup {
@@ -64,7 +65,7 @@ export const GET = withAdminRoute(
     const db = await getDb();
 
     // Verify state exists
-    const state = await db.collection<State>("states").findOne({ _id: stateId, countryId });
+    const state = await statesCollection(db).findOne({ _id: stateId, countryId });
     if (!state) {
       return errorResponse(404, "State not found");
     }

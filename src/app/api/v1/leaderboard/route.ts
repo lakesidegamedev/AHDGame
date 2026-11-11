@@ -9,6 +9,7 @@ import { getAuthUser } from "@/lib/auth";
 import { getEnabledCountryIds } from "@/lib/countryAccess";
 import type { Character, NPP } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -170,8 +171,7 @@ export async function GET(request: Request) {
           { projection: { sequentialId: 1, name: 1, color: 1 } }
         )
         .toArray(),
-      db
-        .collection<{ _id: string; name: string }>("states")
+      statesCollection<{ _id: string; name: string }>(db)
         .find({ _id: { $in: stateIds } }, { projection: { name: 1 } })
         .toArray(),
     ]);

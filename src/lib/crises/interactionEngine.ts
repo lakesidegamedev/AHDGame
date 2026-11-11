@@ -47,6 +47,8 @@ import {
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
 
 /** Read a country's national treasury balance (the unified fiscal cash position). */
 async function getTreasuryBalance(db: Db, countryId: string): Promise<number> {
@@ -195,8 +197,7 @@ async function resolveCrisisScope(
   db: Db,
   crisis: Crisis
 ): Promise<{ targetStateIds: string[]; affectedCountries: string[] }> {
-  const allStates = await db
-    .collection("states")
+  const allStates = await statesCollection<Document>(db)
     .find({})
     .project({ _id: 1, countryId: 1 })
     .toArray();
@@ -292,8 +293,7 @@ async function applyEffectsForCountry(
   effects: CrisisEffect[]
 ): Promise<void> {
   if (effects.length === 0) return;
-  const states = await db
-    .collection<{ _id: string }>("states")
+  const states = await statesCollection<{ _id: string }>(db)
     .find({ countryId }, { projection: { _id: 1 } })
     .toArray();
   const targetStateIds = states.map((s) => s._id);

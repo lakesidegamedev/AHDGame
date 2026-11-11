@@ -5,6 +5,7 @@ import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import type { State, StateMetrics, GameState } from "@/lib/db/types";
 import type { RegionDemographics } from "@/lib/db/types/regionDemographics";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -26,7 +27,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const stateId = id;
     const db = await getDb();
 
-    const state = await db.collection<State>("states").findOne({ _id: stateId, countryId });
+    const state = await statesCollection(db).findOne({ _id: stateId, countryId });
     if (!state) {
       return errorResponse(404, "State not found");
     }

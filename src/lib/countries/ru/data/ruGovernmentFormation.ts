@@ -1,6 +1,7 @@
 import type { Db } from "mongodb";
 import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
 import type { ElectedOfficial, State } from "@/lib/db/types";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /*
  * RU seeds governmentFormations as FORMED (unlike CN's pending start): a Cold-War
@@ -16,8 +17,7 @@ export async function buildRuGovernmentFormation(
   now: Date,
   preset: string
 ): Promise<Omit<GovernmentFormation, "createdAt" | "updatedAt"> | null> {
-  const regions = await db
-    .collection<State>("states")
+  const regions = await statesCollection(db)
     .find({ countryId: "RU" }, { projection: { houseDistricts: 1 } })
     .toArray();
   if (regions.length === 0) return null; // RU not seeded in this preset

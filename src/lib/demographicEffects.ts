@@ -67,6 +67,7 @@ import type { ActivePolicy, LegislationTypeMap } from "./policyEffects";
 import type { ResetLawProgramDocument } from "@/lib/resetLegislation/program";
 import { regionalFamilyLeanPolicies } from "@/lib/resetLegislation/familyLeanEffects";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /**
  * Lean shift per turn at maximum policy strength (magnitude 1, state scope).
@@ -526,8 +527,7 @@ export async function processAllStateDemographics(
 ): Promise<number> {
   // Bulk-fetch ALL data upfront in parallel (eliminates per-state queries)
   const [states, allStatePolicies, allLegTypes, allDemographics, gameState] = await Promise.all([
-    db
-      .collection<State>("states")
+    statesCollection(db)
       .find({}, { projection: { _id: 1, countryId: 1 } })
       .toArray(),
     db
@@ -823,7 +823,7 @@ export async function processAllStateDemographics(
     await db.collection<StateDemographics>("stateDemographics").bulkWrite(bulkOps);
   }
   if (stateCacheOps.length > 0) {
-    await db.collection<State>("states").bulkWrite(stateCacheOps);
+    await statesCollection(db).bulkWrite(stateCacheOps);
   }
   if (defaultBulkOps.length > 0) {
     await db.collection<StateDemographics>("demographicDefaults").bulkWrite(defaultBulkOps);

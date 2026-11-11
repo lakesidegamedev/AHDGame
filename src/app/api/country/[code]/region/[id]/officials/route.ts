@@ -10,6 +10,7 @@ import {
 import { getRegionOfficialBuckets } from "@/lib/legislature/chamberOfficeType";
 import type { ElectedOfficial, State, User } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -33,7 +34,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const db = await getDb();
 
     // Verify state exists
-    const state = await db.collection<State>("states").findOne({ _id: stateId, countryId });
+    const state = await statesCollection(db).findOne({ _id: stateId, countryId });
     if (!state) {
       return errorResponse(404, "State not found");
     }

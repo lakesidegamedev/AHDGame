@@ -14,6 +14,7 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { getGameTime } from "@/lib/time/gameTime";
 import { primaryOpenFilter } from "@/lib/elections/electionDeadlineFilters";
 import { z } from "zod";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 const schema = z.object({
   method: z.union([z.literal("PR"), z.literal("WTA"), z.null()]),
@@ -54,7 +55,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const db = await getDb();
 
-    const state = await db.collection<State>("states").findOne({ _id: stateId, countryId });
+    const state = await statesCollection(db).findOne({ _id: stateId, countryId });
     if (!state) {
       return errorResponse(404, "State not found");
     }

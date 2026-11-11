@@ -24,6 +24,7 @@ import { BR_GEOGRAPHY } from "@/lib/countries/br/geography";
 import { SCO_GEOGRAPHY } from "@/lib/countries/sco/geography";
 import { WAL_GEOGRAPHY } from "@/lib/countries/wal/geography";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /**
  * Coerce a Mongo timestamp field to an ISO string for client serialization.
@@ -60,7 +61,7 @@ export const REGION_DEMOGRAPHIC_CATEGORY_IDS: Partial<Record<CountryId, string[]
 export async function getRegionState(stateId: string, countryId: CountryId): Promise<State | null> {
   try {
     const db = await getDb();
-    return db.collection<State>("states").findOne({ _id: stateId, countryId });
+    return statesCollection(db).findOne({ _id: stateId, countryId });
   } catch (error) {
     console.error("Error fetching region state:", error);
     return null;
@@ -74,7 +75,7 @@ export async function getUserData() {
   let homeStateName: string | undefined;
   if (authData.character?.homeState && authData.character.countryId) {
     const db = await getDb();
-    const homeState = await db.collection<State>("states").findOne({
+    const homeState = await statesCollection(db).findOne({
       _id: authData.character.homeState,
       countryId: authData.character.countryId,
     });

@@ -120,6 +120,7 @@ import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 const MIN_BASE_ACTIONS_PER_TURN = 4;
 
@@ -169,9 +170,7 @@ async function getCharacterData() {
     gameState,
     partyHistoryEvents,
   ] = await Promise.all([
-    db
-      .collection<State>("states")
-      .findOne({ _id: character.homeState, countryId: character.countryId }),
+    statesCollection(db).findOne({ _id: character.homeState, countryId: character.countryId }),
     db.collection<GameConfig>("gameConfig").findOne({ _id: "default" }),
     hasParty
       ? (async () => {

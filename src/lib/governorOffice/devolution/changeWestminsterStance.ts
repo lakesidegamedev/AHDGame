@@ -13,6 +13,7 @@ import {
   resolveWestminsterPolicy,
   westminsterStanceChangeError,
 } from "./rules";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export async function changeWestminsterStance(
   db: Db,
@@ -27,9 +28,10 @@ export async function changeWestminsterStance(
     collection.findOne(key),
     getCurrentTurn(db),
     loadWestminsterGovernment(db),
-    db
-      .collection<State>("states")
-      .findOne({ _id: input.stateId, countryId: "UK" }, { projection: { _id: 1 } }),
+    statesCollection(db).findOne(
+      { _id: input.stateId, countryId: "UK" },
+      { projection: { _id: 1 } }
+    ),
   ]);
   if (!region)
     return { status: 404, body: { error: "Region is no longer part of the United Kingdom." } };

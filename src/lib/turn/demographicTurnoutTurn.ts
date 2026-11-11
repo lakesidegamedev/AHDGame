@@ -76,6 +76,7 @@ import {
 } from "@/lib/parties/rules/registrationPresence";
 import { getPoliticalPartiesCollection } from "@/lib/db/collections/politicalParties";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 type StoredPartyBudget = PartyBudget & { countryId?: CountryId };
 
@@ -447,8 +448,7 @@ export async function processPartyGOTV(
             votingEligiblePopulation: s.votingEligiblePopulation,
           }))
         )
-      : db
-          .collection<State>("states")
+      : statesCollection(db)
           .find({}, { projection: { _id: 1, population: 1, gdp: 1, votingEligiblePopulation: 1 } })
           .toArray();
 

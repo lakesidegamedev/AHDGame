@@ -10,6 +10,7 @@ import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import { gdpToAnchor, loadWorldPreset } from "@/lib/currency/gdpAnchorRate";
 import { aggregateNationalGdp } from "@/lib/utils/nationalGdp";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /**
  * USD-normalized national GDP (millions) for the given countries. `state.gdp`
@@ -27,8 +28,9 @@ export async function loadUsdGdpByCountry(
   const result = new Map<CountryId, number>();
   if (countries.length === 0) return result;
   const activePreset = preset ?? (await loadWorldPreset(db));
-  const states = await db
-    .collection<{ countryId: CountryId; gdp?: number; population: number }>("states")
+  const states = await statesCollection<{ countryId: CountryId; gdp?: number; population: number }>(
+    db
+  )
     .find({ countryId: { $in: countries } })
     .project<{ countryId: CountryId; gdp?: number; population: number }>({
       countryId: 1,

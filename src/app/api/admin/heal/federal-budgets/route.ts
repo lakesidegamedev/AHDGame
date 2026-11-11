@@ -24,6 +24,7 @@ import type { FederalTaxRates } from "@/lib/db/types/budget";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 const FEDERAL_TAX_RATE_KEYS: ReadonlySet<keyof FederalTaxRates> = new Set([
   "incomeTax",
@@ -75,10 +76,7 @@ export async function GET() {
       const debtInterest = budget.debt.principal * budget.debt.interestRate;
       const recalcSpending = await calculateFederalSpending(db, budget, debtInterest);
 
-      const states = await db
-        .collection<State>("states")
-        .find({ countryId: budgetCountryId })
-        .toArray();
+      const states = await statesCollection(db).find({ countryId: budgetCountryId }).toArray();
       const population = states.reduce((sum, s) => sum + (s.population ?? 0), 0);
       const nationalMedianIncome = await resolveNationalMedianIncome(db, budgetCountryId);
 
@@ -160,7 +158,7 @@ export async function GET() {
 
     // ── Regional/state budget diagnostics ────────────────────────────────
     const stateBudgets = await db.collection<StateBudget>("stateBudgets").find({}).toArray();
-    const allStates = await db.collection<State>("states").find({}).toArray();
+    const allStates = await statesCollection(db).find({}).toArray();
     const stateMap = new Map(allStates.map((s) => [s._id, s]));
 
     // Build a map of countryId → national budget for federal grant calculation
@@ -426,7 +424,7 @@ export async function POST() {
 
     // ── Step 3: Heal regional/state budgets ──────────────────────────────
     const stateBudgets = await db.collection<StateBudget>("stateBudgets").find({}).toArray();
-    const allStates = await db.collection<State>("states").find({}).toArray();
+    const allStates = await statesCollection(db).find({}).toArray();
     const stateMap = new Map(allStates.map((s) => [s._id, s]));
     let regionalHealed = 0;
 

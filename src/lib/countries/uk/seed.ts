@@ -22,6 +22,8 @@ import { UK_REGIONAL_COUNCIL_SEATS } from "@/lib/constants";
 import { getSeatIdFromElection } from "@/lib/seats";
 import { electionToLarpYear } from "@/lib/utils/formatters";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
 
 export async function seedUKRegions(
   db: Db,
@@ -30,7 +32,7 @@ export async function seedUKRegions(
   preset: string
 ) {
   if (reset) {
-    await db.collection("states").deleteMany({ countryId: "UK" });
+    await statesCollection<Document>(db).deleteMany({ countryId: "UK" });
   }
   const { regionTableFor } = await import("@/lib/seeds/contract/regionTables");
   const { selectPresetBundle } = await import("@/lib/seeds/presetSelector");
@@ -45,8 +47,7 @@ export async function seedUKRegions(
       },
     };
   });
-  if (regionOps.length > 0)
-    await db.collection<State>("states").bulkWrite(regionOps, { ordered: false });
+  if (regionOps.length > 0) await statesCollection(db).bulkWrite(regionOps, { ordered: false });
   log(`Seeded ${bundle.length} UK regions (${preset})`);
 }
 
@@ -204,7 +205,7 @@ export async function seedUKDemographics(
       preset,
       demographicDefaults: sd,
     });
-    await db.collection<State>("states").updateOne(
+    await statesCollection(db).updateOne(
       { _id: sd._id },
       {
         $set: {
@@ -510,9 +511,10 @@ export async function seedUKRegionalCouncil(db: Db, reset: boolean, log: (msg: s
   // ── Step 1: Update seat counts ──────────────────────────────────────────
   let seatUpdates = 0;
   for (const [regionId, seats] of Object.entries(UK_REGIONAL_COUNCIL_SEATS)) {
-    const result = await db
-      .collection<State>("states")
-      .updateOne({ _id: regionId }, { $set: { stateSenateSeats: seats } });
+    const result = await statesCollection(db).updateOne(
+      { _id: regionId },
+      { $set: { stateSenateSeats: seats } }
+    );
     if (result.modifiedCount > 0 || result.upsertedCount > 0) seatUpdates++;
   }
   log(`Updated stateSenateSeats on ${seatUpdates} UK regions`);
@@ -582,7 +584,7 @@ export async function seedUKRegionalCouncil(db: Db, reset: boolean, log: (msg: s
 
   // ── Step 3: Populate NPP officials ──────────────────────────────────────
   // Load all UK regions to get parentRegionId for party lookups
-  const ukRegions = await db.collection<State>("states").find({ countryId: "UK" }).toArray();
+  const ukRegions = await statesCollection(db).find({ countryId: "UK" }).toArray();
   const regionMap = new Map(ukRegions.map((r) => [r._id, r]));
 
   // Cache for party slug → sequentialId lookups

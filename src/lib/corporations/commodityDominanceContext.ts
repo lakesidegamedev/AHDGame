@@ -32,6 +32,7 @@ import {
   controlGroupRootByCorpId,
 } from "@/lib/corporations/groups/controlGroups";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /** gameConfig.groupSizeCostsStage at which the commodity toll reads the whole control group. */
 export const GROUP_DOMINANCE_TOLL_STAGE = 2;
@@ -220,8 +221,7 @@ export async function loadCommodityDominanceContext(
     const countryStateIds =
       targetCountryId && commodities.some(isCountryBookCommodity)
         ? (
-            await db
-              .collection<State>("states")
+            await statesCollection(db)
               .find(
                 { countryId: targetCountryId as State["countryId"] },
                 { projection: { _id: 1 } }

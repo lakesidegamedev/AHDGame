@@ -72,6 +72,7 @@ import {
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /** Sector-type flow rows for the Production Flow panel: base tables plus strategies that add commodities not present in the base map. */
 function buildSectorFlowRows(
@@ -273,8 +274,7 @@ export async function getCommodityDetailData(
             ...(commodity === "advertising" ? { marketingBudget: 1, headquartersState: 1 } : {}),
           })
           .toArray(),
-        db
-          .collection<State>("states")
+        statesCollection(db)
           .find({}, { projection: { _id: 1, countryId: 1 } })
           .toArray(),
       ]);

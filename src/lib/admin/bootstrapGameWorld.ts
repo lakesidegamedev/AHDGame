@@ -227,6 +227,7 @@ import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import type { Document } from "mongodb";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 async function seedInitialBudgetSnapshots(db: Db, log: (msg: string) => void): Promise<void> {
   const budgets = await federalBudgetCollection(db).find({}).toArray();
@@ -1261,8 +1262,7 @@ export async function bootstrapGameWorld(options: BootstrapOptions) {
     await ensureJPCouncillorElections(now);
     log("Spawned JP Sangiin founding elections (both classes, cycle 0)");
   } else {
-    const jpRegions = await db
-      .collection("states")
+    const jpRegions = await statesCollection<Document>(db)
       .find({ countryId: "JP" }, { projection: { _id: 1 } })
       .toArray();
     const sangiinDur = DEFAULT_DURATIONS.sangiin;
@@ -1418,7 +1418,7 @@ export async function bootstrapGameWorld(options: BootstrapOptions) {
     partyBudgetCount,
     unownedSectorCount,
   ] = await Promise.all([
-    db.collection("states").countDocuments(),
+    statesCollection<Document>(db).countDocuments(),
     db.collection("seats").countDocuments(),
     db.collection("elections").countDocuments(),
     db.collection("electedOfficials").countDocuments(),

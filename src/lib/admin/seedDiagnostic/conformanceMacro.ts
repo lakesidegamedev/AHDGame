@@ -28,6 +28,7 @@ import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export async function checkNationalBudgets(
   db: Db,
@@ -77,8 +78,7 @@ export async function checkNationalBudgets(
 
   const useGdpInvariant = shouldReconcileStateGdpForPreset(expect.preset);
   const regionRows = useGdpInvariant
-    ? await db
-        .collection<{ _id: string; countryId: string; gdp?: number }>("states")
+    ? await statesCollection<{ _id: string; countryId: string; gdp?: number }>(db)
         .find({})
         .project({ _id: 1, countryId: 1, gdp: 1 })
         .toArray()

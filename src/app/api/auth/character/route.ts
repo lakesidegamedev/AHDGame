@@ -10,6 +10,7 @@ import { createCharacterSchema } from "@/lib/api/schemas/settings";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { createCharacterForAccount } from "@/lib/auth/characterCreation";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 // POST /api/auth/character — Creates a new character for the authenticated user with starting stats and referral bonuses.
 // Auth: requireBasicAuth
@@ -70,12 +71,10 @@ async function handleGET(request?: Request) {
     }
 
     // Only the economics the cost quotes read, projected out of the state doc.
-    const state = await db
-      .collection<State>("states")
-      .findOne(
-        { _id: character.homeState, countryId: character.countryId },
-        { projection: { gdp: 1, population: 1 } }
-      );
+    const state = await statesCollection(db).findOne(
+      { _id: character.homeState, countryId: character.countryId },
+      { projection: { gdp: 1, population: 1 } }
+    );
 
     return NextResponse.json({
       ...character,

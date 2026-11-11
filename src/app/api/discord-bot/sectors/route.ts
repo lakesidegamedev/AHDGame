@@ -29,6 +29,7 @@ import {
 import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 const PAGE_SIZE = 10;
 
@@ -85,8 +86,7 @@ export async function GET(request: Request) {
 
       // Compute unowned market per state for this sector type
       // 1. Get all states with GDP
-      const states = await db
-        .collection<State>("states")
+      const states = await statesCollection(db)
         .find({})
         .project<{
           _id: string;
@@ -244,8 +244,7 @@ export async function GET(request: Request) {
           liquidCurrencyCode: 1,
         })
         .toArray(),
-      db
-        .collection<State>("states")
+      statesCollection(db)
         .find({ _id: { $in: stateIds } })
         .project<{ _id: string; name: string }>({ _id: 1, name: 1 })
         .toArray(),

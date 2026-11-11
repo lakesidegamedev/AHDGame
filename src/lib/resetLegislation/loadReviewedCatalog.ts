@@ -15,6 +15,7 @@ import {
   resolveDepartmentDefinitionName,
 } from "@/lib/governmentFinance/departmentCatalog";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export interface ReviewedLawFamilyCatalog {
   familyId: string;
@@ -67,9 +68,10 @@ export async function loadReviewedLawCatalog(input: {
       ? federalBudgetCollection(db).findOne({ countryId: country }, { projection: { gdp: 1 } })
       : Promise.resolve(null),
     scope === "regional"
-      ? db
-          .collection<State>("states")
-          .findOne({ _id: regionId!, countryId: country }, { projection: { gdp: 1 } })
+      ? statesCollection(db).findOne(
+          { _id: regionId!, countryId: country },
+          { projection: { gdp: 1 } }
+        )
       : Promise.resolve(null),
     db
       .collection<ResetLawProgramDocument>("resetLawPrograms")

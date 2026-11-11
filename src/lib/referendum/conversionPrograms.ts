@@ -10,6 +10,7 @@ import { fundingSeatForLaw } from "@/lib/resetLegislation/fundingOwner";
 import type { ResetLawOpeningBoard } from "@/lib/resetLegislation/rules/openingBoard";
 import type { RegionalBudget } from "@/lib/db/types/regionalBudget";
 import { releasePromotedRegionalClaims } from "./secede/rules/lawSuccession";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export async function convertLawPrograms(
   db: Db,
@@ -30,15 +31,13 @@ export async function convertLawPrograms(
     })
     .toArray();
   if (!programs.length) return;
-  const regions = await db
-    .collection<State>("states")
+  const regions = await statesCollection(db)
     .find(independent ? { countryId } : { _id: regionId }, {
       projection: { _id: 1, population: 1, gdp: 1 },
     })
     .toArray();
   const rump = independent
-    ? await db
-        .collection<State>("states")
+    ? await statesCollection(db)
         .find({ countryId: "UK" }, { projection: { gdp: 1 } })
         .toArray()
     : [];

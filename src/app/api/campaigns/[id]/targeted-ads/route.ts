@@ -13,6 +13,7 @@ import {
   quoteTargetedAds,
 } from "@/lib/campaignTargeting/commands";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -44,8 +45,7 @@ export async function GET(request: NextRequest, { params }: Params) {
               { projection: { homeState: 1 } }
             )
           )?.homeState;
-    const regions = await db
-      .collection<State>("states")
+    const regions = await statesCollection(db)
       .find(
         {
           countryId: context.election.countryId,

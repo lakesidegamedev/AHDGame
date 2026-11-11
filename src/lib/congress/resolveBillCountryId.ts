@@ -4,6 +4,7 @@ import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { NATIONAL_SCOPE } from "@/lib/constants/nationalScope";
 import type { Bill } from "@/lib/db/types";
 import type { State } from "@/lib/db/types";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /**
  * Infer country from pseudo-state ids used for national-scope bills (federal, uk_national, ca_national, …).
@@ -36,9 +37,10 @@ export async function resolveBillCountryId(
     const inferred = inferCountryIdFromStateId(sid);
     if (inferred) return inferred;
 
-    const state = await db
-      .collection<State>("states")
-      .findOne({ _id: sid }, { projection: { countryId: 1 } });
+    const state = await statesCollection(db).findOne(
+      { _id: sid },
+      { projection: { countryId: 1 } }
+    );
     if (state?.countryId) return state.countryId;
   }
 

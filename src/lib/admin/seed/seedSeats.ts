@@ -28,6 +28,8 @@ import { IE_LOCAL_COUNCIL_SEATS } from "@/lib/countries/ie/data/ieLocalCouncilSe
 import { US_STATE_NAMES } from "@/lib/constants/usStateNames";
 import { CA_REGION_NAMES } from "@/lib/countries/ca/geographyFacts";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
 
 // State name lookup for display names
 const STATE_NAMES = US_STATE_NAMES;
@@ -277,8 +279,7 @@ export async function seedSeats(
   // live delegation size off the state docs. Without this a reset of a world
   // that admitted Alaska in 1959 would silently strip its seats back out.
   const admittedHouseSeats = new Map<string, number>();
-  const usStateDocs = (await db
-    .collection("states")
+  const usStateDocs = (await statesCollection<Document>(db)
     .find({ countryId: "US" }, { projection: { _id: 1, houseDistricts: 1, admittedYear: 1 } })
     .toArray()) as unknown as Array<{
     _id: string;

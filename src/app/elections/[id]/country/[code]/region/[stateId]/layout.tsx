@@ -8,6 +8,7 @@ import { canonicalRegionId } from "@/lib/constants/countries";
 import { getSiteUrl } from "@/lib/siteMetadata";
 import { redirect } from "next/navigation";
 import { downBallotRedirectTarget } from "@/lib/elections/downBallotRedirect";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -50,12 +51,10 @@ export async function generateMetadata({
   const countryId = code.toUpperCase();
   // `states._id` is globally unique across countries, so the id alone is a
   // sufficient (and Filter<State>-typed) lookup for the raw URL param.
-  const state = await db
-    .collection<State>("states")
-    .findOne(
-      { _id: canonicalRegionId(countryId, stateId.toUpperCase()) },
-      { projection: { name: 1 } }
-    );
+  const state = await statesCollection(db).findOne(
+    { _id: canonicalRegionId(countryId, stateId.toUpperCase()) },
+    { projection: { name: 1 } }
+  );
   const regionName = state?.name ?? stateId;
   const title = `${typeLabel} — ${regionName} | A House Divided`;
   const description = `Regional results for the ${typeLabel.toLowerCase()} in ${regionName}, ${countryId} — county / district breakdown.`;

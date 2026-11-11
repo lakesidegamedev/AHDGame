@@ -9,6 +9,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import { getAllCountryAccess } from "@/lib/countryAccess";
 import { generateNPP, type NPPGenerationContext } from "./generator";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /** Supply an unseated candidate bench for required modern default parties. */
 export async function seedModernPartyBench(
@@ -62,8 +63,7 @@ export async function seedModernPartyBench(
     return !(noParties && ["US", "UK", "JP"].includes(party.countryId));
   });
   if (required.length === 0) return 0;
-  const regions = await db
-    .collection<{ _id: string; countryId: CountryId }>("states")
+  const regions = await statesCollection<{ _id: string; countryId: CountryId }>(db)
     .find(
       { countryId: { $in: [...new Set(required.map((p) => p.countryId))] } },
       {

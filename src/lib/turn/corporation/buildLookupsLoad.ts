@@ -29,6 +29,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /** Issues the parallel reads the lookups are built from. */
 export async function loadCorporationLookupInputs({
@@ -250,8 +251,7 @@ export async function loadCorporationLookupInputs({
       .toArray(),
     db.collection<Tariff>("tariffs").find({}).toArray(),
     getActiveSubsidies(db),
-    db
-      .collection<State>("states")
+    statesCollection(db)
       .find(
         {},
         {

@@ -17,6 +17,7 @@ import {
   reserveSectorsForTransition,
   releaseConstructionPropertyTransition,
 } from "@/lib/corporations/securedConstructionProperty";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export interface NormalizedSectorSummary {
   sectorId: string;
@@ -45,8 +46,7 @@ export async function normalizeAndMergeCorporateSectors(
     .find({})
     .sort({ createdAt: 1 })
     .toArray();
-  const states = await db
-    .collection<State>("states")
+  const states = await statesCollection(db)
     .find({}, { projection: { _id: 1, countryId: 1 } })
     .toArray();
   const stateCountryByStateId = buildSectorStateCountryMap(states);

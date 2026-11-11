@@ -8,6 +8,7 @@ import type { SuccessionCustodyAsset } from "./rules/custody";
 import type { SuccessionRegion } from "./rules/territory";
 import { buildSourceRegionHierarchy } from "./sourceRegionHierarchy";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export interface LiveSuccessionInventory {
   sourceRegions: SuccessionRegion[];
@@ -23,8 +24,7 @@ export async function loadLiveSuccessionInventory(
   sourceCountryId: CountryId,
   session?: ClientSession
 ): Promise<LiveSuccessionInventory> {
-  const states = await db
-    .collection<State>("states")
+  const states = await statesCollection(db)
     .find({ countryId: sourceCountryId }, { session })
     .toArray();
   const { topLevel, topLevelFor } = buildSourceRegionHierarchy(states);

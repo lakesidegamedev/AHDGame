@@ -14,6 +14,7 @@ import {
 } from "./nationalMetrics/rules";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /**
  * Plausible range for the back-solved income-band index at world start. A seed
@@ -66,7 +67,7 @@ export async function computeNationalMetrics(db: Db, turn?: number): Promise<voi
   // computed nationally by the political pipeline, from the board, rather than
   // being averaged out of per-region legacy docs here.
   const [allStates, regionMetrics, federalBudgets, eraGameState] = await Promise.all([
-    db.collection<State>("states").find({}).toArray(),
+    statesCollection(db).find({}).toArray(),
     db.collection<StateMetrics>("macroMetrics").find({}).toArray(),
     federalBudgetCollection(db).find({}).toArray(),
     gameStateCollection(db).findOne(

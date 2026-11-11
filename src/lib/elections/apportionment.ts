@@ -12,6 +12,8 @@ import { getHouseSeats, type ElectoralVoteUnit } from "@/lib/constants/states";
 import { getStartingYearForPreset } from "@/lib/constants/turnTime";
 import { admittedStateIdsAsOf } from "./statehoodAdmission";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
 
 /** US senators per state (the +2 in EV = houseSeats + senators). */
 const SENATORS_PER_STATE = 2;
@@ -171,8 +173,7 @@ export async function loadApportionment(
   year?: number | null,
   houseSeatsOverride?: Readonly<Record<string, number>>
 ): Promise<Apportionment> {
-  const usStates = (await db
-    .collection("states")
+  const usStates = (await statesCollection<Document>(db)
     .find({ countryId: "US" }, { projection: { _id: 1, houseDistricts: 1, admittedYear: 1 } })
     .toArray()) as unknown as Array<{
     _id: string;

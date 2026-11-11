@@ -45,6 +45,7 @@ import {
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
 import { withFundedNationalBalances } from "@/lib/market/producerMarket/loadFundedCountryBooks";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export interface CountrySectorMixEntry {
   type: OperatingSectorType;
@@ -460,8 +461,7 @@ export async function aggregateCountrySectorMix(
 ): Promise<CountrySectorMixEntry[]> {
   const [states, sectors, fxByCurrency, preset, marketMode, worldState, storedPrices] =
     await Promise.all([
-      db
-        .collection<State>("states")
+      statesCollection(db)
         .find({ countryId })
         .project<Pick<State, "_id" | "name" | "gdp">>({ name: 1, gdp: 1 })
         .toArray(),

@@ -12,6 +12,8 @@ import { states2023 } from "@/lib/seeds/reference/states2023";
 import { states2027 } from "@/lib/seeds/reference/states2027";
 import { selectPresetBundle } from "@/lib/seeds/presetSelector";
 import type { SeedPresetId } from "@/lib/constants/turnTime";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
 
 /** US states per preset; also registered with the seed contract. */
 export const US_STATES_BY_PRESET = {
@@ -40,8 +42,7 @@ export async function seedStates(
   preset: string
 ) {
   if (reset)
-    await db
-      .collection("states")
+    await statesCollection<Document>(db)
       .drop()
       .catch((error) => {
         logWarning("Collection drop failed (may not exist)", {
@@ -56,6 +57,6 @@ export async function seedStates(
     const update = statePopulationUpdate(stateData, reset);
     return { updateOne: { filter: { _id }, update, upsert: true } };
   });
-  if (ops.length > 0) await db.collection<State>("states").bulkWrite(ops, { ordered: false });
+  if (ops.length > 0) await statesCollection(db).bulkWrite(ops, { ordered: false });
   log(`Seeded ${bundle.length} states (${preset})`);
 }

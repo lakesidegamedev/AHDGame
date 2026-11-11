@@ -39,6 +39,7 @@ import type { GameTimeContext } from "@/lib/time/gameTime";
 import { hasElectionStarted, isElectionEnded } from "@/lib/elections/phases";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /**
  * NG elections run once Nigeria is off "coming-soon". Gated on the RUNTIME
@@ -583,8 +584,7 @@ export async function ensurePerpetualElections(now: Date, currentTurn?: number):
 
   // Scope perpetual elections to US-only regions.
   // UK constituencies run under different electoral rules (see ensureUKElections).
-  const states = await db
-    .collection<State>("states")
+  const states = await statesCollection(db)
     .find(US_STATE_FILTER, { projection: { _id: 1, admittedYear: 1, stateSenateSeats: 1 } })
     .toArray();
   // Seat counts for the stateSenate spawn below; avoids a per-state findOne

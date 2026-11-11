@@ -29,6 +29,7 @@ import {
 import { COUNTRY_CONFIGS, getCountryConfig, type CountryId } from "@/lib/constants/countries";
 import { pickCanonicalVotingElectionPerKey } from "@/lib/elections/canonicalVotingElection";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /** Get position labels appropriate for the country (UK uses "Regional Chair") */
 function getPositionLabels(countryId: CountryId): Record<StatePartyElectionPosition, string> {
@@ -95,7 +96,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
 
     // Parallel: state, auth
     const [state, authUser] = await Promise.all([
-      db.collection<State>("states").findOne({ _id: stateId, countryId }),
+      statesCollection(db).findOne({ _id: stateId, countryId }),
       getAuthUserWithCharacter().catch(() => null),
     ]);
 

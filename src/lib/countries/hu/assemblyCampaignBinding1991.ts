@@ -16,6 +16,7 @@ import { scalePoolToRegistered } from "@/lib/elections/rules/registration";
 import { HU_1991_TERRITORIAL_DISTRICTS } from "./data/electoralDistricts1991";
 import { STATE_POPULATION_FIELDS } from "@/lib/db/collections/states";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export async function materializeHu1991CampaignBinding(input: {
   db: Db;
@@ -94,8 +95,7 @@ export async function materializeHu1991CampaignBinding(input: {
     country?.huElectoralLaw1994SinceTurn != null
       ? ("mixed-1994-v1" as const)
       : ("mixed-1989-v1" as const);
-  const states = await db
-    .collection<State>("states")
+  const states = await statesCollection(db)
     .find(
       { countryId: "HU" },
       {

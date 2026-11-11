@@ -62,6 +62,7 @@ import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 type Log = (message: string) => void;
 
@@ -411,9 +412,10 @@ async function phaseUnset(db: Db, plan: EconomyResetPlan): Promise<void> {
   await db
     .collection<Document>("gameConfig")
     .updateOne({ _id: "default" as never }, freshPlantsGameConfigUpdate() as never);
-  await db
-    .collection("states")
-    .updateMany({}, { $unset: Object.fromEntries(STATE_SECTOR_UNSET_FIELDS.map((f) => [f, ""])) });
+  await statesCollection<Document>(db).updateMany(
+    {},
+    { $unset: Object.fromEntries(STATE_SECTOR_UNSET_FIELDS.map((f) => [f, ""])) }
+  );
   await reseedOutputTrends(db);
   // Pension schemes survive but their unions are wiped; holders phase already
   // converted fund units to cash, so leaving an empty scheme pointing at a
@@ -451,8 +453,7 @@ async function phaseUnset(db: Db, plan: EconomyResetPlan): Promise<void> {
  * as a deep slump, which feeds unemployment, migration, inflation and rates.
  */
 async function reseedOutputTrends(db: Db): Promise<void> {
-  const states = await db
-    .collection<Document>("states")
+  const states = await statesCollection<Document>(db)
     .find({}, { projection: { _id: 1 } })
     .toArray();
   const metrics = await db

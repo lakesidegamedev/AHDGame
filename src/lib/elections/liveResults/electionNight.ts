@@ -24,6 +24,7 @@ import {
 } from "./computeResults";
 import { electionNightStyle, majorityThreshold } from "./electionNightChrome";
 import type { NationalParty, NationalRegion, NationalResults } from "./types";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export {
   CHAMBER_LABELS,
@@ -55,8 +56,7 @@ export interface ElectionNightPartyInfo {
 
 async function loadRegionNames(db: Db, regionIds: string[]): Promise<Map<string, string>> {
   if (regionIds.length === 0) return new Map();
-  const docs = await db
-    .collection<{ _id: string; name?: string }>("states")
+  const docs = await statesCollection<{ _id: string; name?: string }>(db)
     .find({ _id: { $in: regionIds } })
     .project<{ _id: string; name?: string }>({ name: 1 })
     .toArray();

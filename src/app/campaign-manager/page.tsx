@@ -14,6 +14,7 @@ import {
   type CountryRuntimeState,
 } from "@/lib/campaignManager/countryView";
 import CampaignManagerClient from "./CampaignManagerClient";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export const metadata: Metadata = { title: "Campaign Manager" };
 
@@ -51,8 +52,7 @@ export default async function CampaignManagerPage({
   const wanted = campaignManagerCountry(homeCountryId, linked, countryParam) as CountryId;
   const countryId = getCountryConfig(wanted) ? wanted : homeCountryId;
   const [regions, preset, countryState, nameOverrides] = await Promise.all([
-    db
-      .collection<State>("states")
+    statesCollection(db)
       .find({ countryId }, { projection: { _id: 1, name: 1 } })
       .toArray(),
     getGameStatePreset(db),

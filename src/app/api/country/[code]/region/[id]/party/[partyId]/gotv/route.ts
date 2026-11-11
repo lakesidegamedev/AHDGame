@@ -21,6 +21,7 @@ import {
 } from "@/lib/partyBudgetGuards";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
 import { isValidPartyTurnoutTarget } from "@/lib/demographics/partyTurnoutTargetResolver";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; partyId: string }>;
@@ -72,7 +73,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       }
     }
 
-    const state = await db.collection<State>("states").findOne({ _id: stateId, countryId });
+    const state = await statesCollection(db).findOne({ _id: stateId, countryId });
     if (!state) {
       return errorResponse(404, "State not found");
     }

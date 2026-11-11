@@ -27,6 +27,7 @@ import {
   justResolvedInSameTurn,
   sendBatchedElectionAnnouncements,
 } from "./engine";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /**
  * Config for one country's per-region multi-seat delegate election family.
@@ -159,8 +160,7 @@ export async function ensureRegionalDelegateElections(
   const { currentTurn: persistedTurn, currentYear, ctx } = await getCurrentTurnAndCtx(db);
   const currentTurn = inFlightTurn ?? persistedTurn;
 
-  const regions = await db
-    .collection<State>("states")
+  const regions = await statesCollection(db)
     .find(
       { countryId: spec.countryId },
       { projection: { _id: 1, population: 1, houseDistricts: 1, stateSenateSeats: 1 } }
@@ -401,8 +401,7 @@ export async function ensureSecededChamberElections(
   const { currentTurn: persistedTurn, ctx } = await getCurrentTurnAndCtx(db);
   const currentTurn = inFlightTurn ?? persistedTurn;
 
-  const regions = await db
-    .collection<State>("states")
+  const regions = await statesCollection(db)
     .find({ countryId }, { projection: { _id: 1, houseDistricts: 1 } })
     .toArray();
   const regionIds = regions.map((r) => r._id as string);
@@ -432,7 +431,7 @@ export async function ensureSecededChamberElections(
       })
     );
     if (seatSyncOps.length > 0) {
-      await db.collection<State>("states").bulkWrite(seatSyncOps, { ordered: false });
+      await statesCollection(db).bulkWrite(seatSyncOps, { ordered: false });
     }
   }
 
@@ -562,8 +561,7 @@ export async function ensureRegionalGovernorElections(
   const { currentTurn: persistedTurn, ctx } = await getCurrentTurnAndCtx(db);
   const currentTurn = inFlightTurn ?? persistedTurn;
 
-  const states = await db
-    .collection<State>("states")
+  const states = await statesCollection(db)
     .find({ countryId }, { projection: { _id: 1 } })
     .toArray();
   const stateIds = states

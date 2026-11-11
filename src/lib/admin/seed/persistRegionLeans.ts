@@ -1,6 +1,7 @@
 import type { AnyBulkWriteOperation, Db } from "mongodb";
 import type { State, StateDemographics } from "@/lib/db/types";
 import { censusCachedStateLean } from "@/lib/demographics/cachedStateLean";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /**
  * Writes each region's census lean onto its `states` document. Policy distance,
@@ -38,6 +39,6 @@ export async function persistRegionLeans(
   }
   if (ops.length === 0) return 0;
 
-  await db.collection<State>("states").bulkWrite(ops, { ordered: false });
+  await statesCollection(db).bulkWrite(ops, { ordered: false });
   return ops.length;
 }

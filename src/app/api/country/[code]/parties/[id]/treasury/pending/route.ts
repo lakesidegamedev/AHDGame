@@ -17,6 +17,7 @@ import { isLeadershipElectionFreezeActive } from "@/lib/parties/leadershipElecti
 import { getGameTime } from "@/lib/time/gameTime";
 import type { State } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -70,8 +71,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
             .toArray(),
       stateIds.size === 0
         ? Promise.resolve([] as Array<{ _id: string; name: string }>)
-        : db
-            .collection<State>("states")
+        : statesCollection(db)
             .find({ _id: { $in: Array.from(stateIds) }, countryId })
             .project<{ _id: string; name: string }>({ name: 1 })
             .toArray(),

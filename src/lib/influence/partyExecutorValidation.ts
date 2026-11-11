@@ -11,6 +11,7 @@ import { calculateRelocationCapacity } from "@/lib/npp/recruitment";
 import { getPartyFrontier, isInFrontier } from "@/lib/parties/partyFrontier";
 import { getRelocationTerritory, PARTY_TERRITORY_WARNING } from "@/lib/parties/relocationTerritory";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 function getNPPCountry(npp: NPP): CountryId {
   return npp.countryId as CountryId;
@@ -77,8 +78,7 @@ export async function getStatesWithoutPlayers(
     party: partyId,
     countryId,
   });
-  const allStates = await db
-    .collection<State>("states")
+  const allStates = await statesCollection(db)
     .find({ countryId })
     .project({ _id: 1 })
     .map((s) => s._id as unknown as string)
@@ -233,9 +233,7 @@ async function validateNppStateRelocationRequest(
     return { valid: false, error: "This NPP already lives in that state." };
   }
 
-  const targetState = await db
-    .collection<State>("states")
-    .findOne({ _id: targetStateId, countryId });
+  const targetState = await statesCollection(db).findOne({ _id: targetStateId, countryId });
   if (!targetState) {
     return { valid: false, error: "Target state not found in this country." };
   }
@@ -266,7 +264,7 @@ async function validateNppStateRelocationRequest(
       homeState: targetStateId,
       retiredAt: null,
     }),
-    db.collection<State>("states").countDocuments({ countryId }),
+    statesCollection(db).countDocuments({ countryId }),
     db.collection<NPP>("npps").countDocuments({ party: npp.party, retiredAt: null }),
   ]);
   // Relocation is net-zero nationally, so it is capped by the roster-aware

@@ -17,6 +17,7 @@ import { cycleAnchorContextFromGameState } from "@/lib/elections/cycleAnchorCont
 import { admittedStateIdsAsOf } from "@/lib/elections/statehoodAdmission";
 import { electionToLarpYear } from "@/lib/utils/formatters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export async function initializeOfficials(db: Db): Promise<{
   message: string;
@@ -54,7 +55,7 @@ export async function initializeOfficials(db: Db): Promise<{
   //     A territory admitted mid-game carries `admittedYear` and stays a state
   //     through a reset, so it is admitted to this roster too — otherwise a
   //     reset would hand it seats (seedSeats keeps them) but no officials.
-  const allUsStates = await db.collection<State>("states").find({ countryId: "US" }).toArray();
+  const allUsStates = await statesCollection(db).find({ countryId: "US" }).toArray();
   const admittedIds = new Set(
     admittedStateIdsAsOf(allUsStates, gameState?.currentYear ?? Number.POSITIVE_INFINITY)
   );

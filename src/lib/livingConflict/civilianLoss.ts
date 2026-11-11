@@ -16,6 +16,7 @@ import {
   type ConflictCivilianLossResult,
 } from "./rules/civilianLoss";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 const CONFLICT_CIVILIAN_LOSS_HISTORY = "conflictCivilianLossHistory";
 interface CivilianLossHistory extends ConflictCivilianLossResult {
@@ -66,8 +67,7 @@ export async function prepareConflictCivilianLossOrder(
         },
       }
     ),
-    db
-      .collection<State>("states")
+    statesCollection(db)
       .find(
         { countryId: spec.countryId as State["countryId"] },
         { projection: { _id: 1, population: 1 } }

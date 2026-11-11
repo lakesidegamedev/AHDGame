@@ -8,6 +8,7 @@ import { ATTRITION } from "@/lib/military/config";
 import type { MilitaryUnit } from "@/lib/db/types/militaryUnit";
 import { runWithOptionalTransaction } from "@/lib/db/runWithOptionalTransaction";
 import { allocateReinforcements } from "@/lib/military/rules/reinforcementAllocation";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /**
  * Per-turn replacement flow: regenerate the nation's manpower pool from its population
@@ -27,8 +28,7 @@ export async function applyReinforcement(
   // Population and the optional tick-wide unit snapshot are stable inputs. The live
   // manpower row is read inside the transaction below so another writer cannot slip
   // between replacement planning and the debit that pays for it.
-  const states = await db
-    .collection<{ population?: number }>("states")
+  const states = await statesCollection<{ population?: number }>(db)
     .find({ countryId: countryId as CountryId })
     .toArray();
   const population = states.reduce((a, s) => a + (s.population ?? 0), 0);

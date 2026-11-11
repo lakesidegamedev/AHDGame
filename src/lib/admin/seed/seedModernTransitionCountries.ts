@@ -16,6 +16,8 @@ import { resolveSeedPartyTier } from "@/lib/seeds/defaultPartyTiers";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
 import { withUniformMetricSet } from "@/lib/seeds/shared/uniformStateMetrics";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
 
 export type ModernTransitionCountryId = "PL" | "RO" | "RU" | "BG";
 
@@ -82,15 +84,14 @@ export async function seedModernTransitionRegions(
     return;
   }
   if (reset) {
-    await db.collection("states").deleteMany({ countryId });
+    await statesCollection<Document>(db).deleteMany({ countryId });
   }
   const bundle = await loadRegionBundle(countryId);
   const regionOps = bundle.map((region) => {
     const { _id, ...regionData } = region;
     return { updateOne: { filter: { _id }, update: { $set: regionData }, upsert: true } };
   });
-  if (regionOps.length > 0)
-    await db.collection<State>("states").bulkWrite(regionOps, { ordered: false });
+  if (regionOps.length > 0) await statesCollection(db).bulkWrite(regionOps, { ordered: false });
   log(`Seeded ${bundle.length} ${countryId} regions (${preset})`);
 }
 

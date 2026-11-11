@@ -17,6 +17,8 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
 
 export type { OverviewCounts } from "@/lib/country/overviewCounts";
 
@@ -130,8 +132,7 @@ async function resolveFiscalFigures(
         projection: { gdp: 1, gdpSmoothed: 1, "revenue.total": 1, "spending.total": 1 },
       }
     ),
-    db
-      .collection<State>("states")
+    statesCollection(db)
       .aggregate<{ _id: null; gdpMillions: number }>([
         { $match: { countryId } },
         { $group: { _id: null, gdpMillions: { $sum: "$gdp" } } },
@@ -198,7 +199,7 @@ async function assembleOverviewCounts(db: Db, countryId: CountryId): Promise<Ove
         status: { $nin: FINAL_BILL_STATUSES },
       })
     ),
-    orNull(db.collection("states").countDocuments({ countryId })),
+    orNull(statesCollection<Document>(db).countDocuments({ countryId })),
     orNull(
       centralBanksCollection(db)
         .findOne({ _id: getBankId(countryId) }, { projection: { primeRate: 1 } })

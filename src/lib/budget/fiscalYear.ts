@@ -78,6 +78,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import type { Document } from "mongodb";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 // The current turn engine still processes fiscal-year rollover as one shared phase.
 // Pulling the anchor from country-systems makes the rule source explicit now, while
@@ -171,7 +172,7 @@ export async function processFiscalYear(
   }
 
   const [states, allStateMetrics] = await Promise.all([
-    db.collection<State>("states").find({}).toArray(),
+    statesCollection(db).find({}).toArray(),
     db.collection<StateMetrics>("macroMetrics").find({}).toArray(),
   ]);
   const usResetRegionalPrograms =
@@ -1029,8 +1030,7 @@ export async function saveFiscalYearSnapshot(
 
   // State grants breakdown
   const [states, stateBudgets] = await Promise.all([
-    db
-      .collection<State>("states")
+    statesCollection(db)
       .find({ countryId } as Record<string, unknown>)
       .toArray(),
     // Scope the budget fetch to the same country so a cross-country state-ID

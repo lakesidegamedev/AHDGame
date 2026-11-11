@@ -20,6 +20,7 @@ import {
   type SubhourGrowthStateBase,
 } from "./stepBase";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 type GrowthState = Pick<State, "_id" | "countryId" | "gdp" | "outputGap" | "subhourStep"> & {
   subhourBase?: State["subhourBase"];
@@ -88,8 +89,7 @@ export async function runGrowthHalfStep(
   const stamp = subhourStepStamp(turn, fraction);
 
   const [states, metrics, budgets, liveCountries] = await Promise.all([
-    db
-      .collection<State>("states")
+    statesCollection(db)
       .find({})
       .project<GrowthState>({
         countryId: 1,
@@ -261,7 +261,7 @@ export async function runGrowthHalfStep(
 
   // Region stocks first: each state doc holds the start values the turn needs,
   // so a failure after this write leaves only display fields behind.
-  if (stateOps.length > 0) await db.collection<State>("states").bulkWrite(stateOps);
+  if (stateOps.length > 0) await statesCollection(db).bulkWrite(stateOps);
   if (metricOps.length > 0)
     await db.collection<StateMetrics>("macroMetrics").bulkWrite(metricOps, { ordered: false });
   if (budgetOps.length > 0)

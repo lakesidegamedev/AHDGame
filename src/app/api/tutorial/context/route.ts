@@ -16,6 +16,7 @@ import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { regionNoun } from "@/lib/onboarding/checklist";
 import type { TutorialFacts } from "@/lib/tutorial/facts";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /**
  * GET /api/tutorial/context — live world numbers for the tutorial coach.
@@ -57,12 +58,10 @@ async function handleGET() {
         db
           .collection<GameConfig>("gameConfig")
           .findOne({ _id: "default" }, { projection: { turnLengthMinutes: 1 } }),
-        db
-          .collection<State>("states")
-          .findOne(
-            { _id: character.homeState, countryId },
-            { projection: { name: 1, population: 1 } }
-          ),
+        statesCollection(db).findOne(
+          { _id: character.homeState, countryId },
+          { projection: { name: 1, population: 1 } }
+        ),
         // Unemployment lives on macroMetrics, keyed by region id.
         db
           .collection<StateMetrics>("macroMetrics")

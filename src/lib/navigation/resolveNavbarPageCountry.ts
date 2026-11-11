@@ -5,6 +5,7 @@ import type { CorporateSector } from "@/lib/db/types/corporation";
 import { corporationQueryFromParamId } from "@/lib/api/corporations/resolveQuery";
 import { toCountryId } from "./countryContext";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 function readQueryCountry(search?: string | null) {
   if (!search) return null;
@@ -47,9 +48,10 @@ export async function resolveNavbarPageCountry(args: { pathname: string; search?
 
   let corporationCountry = toCountryId(corporation.countryId);
   if (!corporationCountry && corporation.headquartersState) {
-    const hqState = await db
-      .collection<State>("states")
-      .findOne({ _id: corporation.headquartersState }, { projection: { countryId: 1 } });
+    const hqState = await statesCollection(db).findOne(
+      { _id: corporation.headquartersState },
+      { projection: { countryId: 1 } }
+    );
     corporationCountry = toCountryId(hqState?.countryId);
   }
 
@@ -73,9 +75,10 @@ export async function resolveNavbarPageCountry(args: { pathname: string; search?
   if (sectorCountry) return sectorCountry;
 
   if (sector?.stateId) {
-    const state = await db
-      .collection<State>("states")
-      .findOne({ _id: sector.stateId }, { projection: { countryId: 1 } });
+    const state = await statesCollection(db).findOne(
+      { _id: sector.stateId },
+      { projection: { countryId: 1 } }
+    );
     const stateCountry = toCountryId(state?.countryId);
     if (stateCountry) return stateCountry;
   }

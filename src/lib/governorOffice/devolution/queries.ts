@@ -27,6 +27,7 @@ import { resolveWestminsterPolicy } from "@/lib/governorOffice/devolution/rules"
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 // Pure surface (driver types + snapshot compute) lives in the domain layer;
 // re-exported here so existing importers keep working.
@@ -72,7 +73,7 @@ export async function loadIndependenceDesireSnapshots(
   // stateMetrics documents are not consistently tagged with countryId on UK
   // seeds — resolve UK state IDs via the `states` collection (same pattern
   // as snapshotApprovalHistory), then fetch metrics by _id.
-  const ukStateIds = await db.collection<State>("states").distinct("_id", { countryId: "UK" });
+  const ukStateIds = await statesCollection(db).distinct("_id", { countryId: "UK" });
   if (ukStateIds.length === 0) return [];
 
   // SP5: UK regions live on macroMetrics; merge back to the legacy doc shape.

@@ -28,6 +28,7 @@ import {
 import { emitTx } from "@/lib/financialTxLog/emit";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 const attackSectorSchema = z.object({ sectorId: z.string().length(24) });
 
@@ -76,7 +77,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
     const targetSectorId = new ObjectId(parsed.data.sectorId);
 
-    const state = await db.collection<State>("states").findOne({ _id: stateId, countryId });
+    const state = await statesCollection(db).findOne({ _id: stateId, countryId });
     if (!state) return errorResponse(404, "State not found");
 
     const blockedCountries = await loadCommandEconomyBlockedCountries(db, [countryId]);

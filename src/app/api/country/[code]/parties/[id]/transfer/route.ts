@@ -25,6 +25,7 @@ import {
   LEADERSHIP_FREEZE_MESSAGE,
 } from "@/lib/parties/leadershipElectionFreeze";
 import { getGameTime } from "@/lib/time/gameTime";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -87,7 +88,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     // Verify state exists and belongs to this country (prevents cross-country IDs).
-    const state = await db.collection<State>("states").findOne({
+    const state = await statesCollection(db).findOne({
       _id: upperStateId,
       countryId,
     });

@@ -63,6 +63,7 @@ import type {
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export type { PrimaryPartyDetail, PrimaryViewerCampaign };
 
@@ -218,8 +219,7 @@ export async function loadPrimaryPartyData(
   });
 
   const [statesDocs, demographicsDocs, enriched] = await Promise.all([
-    db
-      .collection<State>("states")
+    statesCollection(db)
       .find({ _id: { $in: TRAVEL_STATE_IDS } })
       .toArray(),
     db

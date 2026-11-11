@@ -6,6 +6,7 @@ import { findPartyBySequentialId } from "@/lib/db/partyLookup";
 import type { State } from "@/lib/db/types";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -63,8 +64,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     // Pull regions for this party's country directly from the states collection —
     // works uniformly for every country (US states, UK regions, JP prefectures,
     // DE Länder, …) without hardcoded per-country tables.
-    const regionDocs = await db
-      .collection<State>("states")
+    const regionDocs = await statesCollection(db)
       .find({ countryId: partyCountry })
       .project<{ _id: string; name?: string }>({ _id: 1, name: 1 })
       .toArray();

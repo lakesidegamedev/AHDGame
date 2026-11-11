@@ -59,6 +59,7 @@ import { clampRatio } from "@/lib/governmentFinance/rules/implementation";
 import { RESET_V2_COUNTRIES } from "@/lib/resetVersions/rules";
 import { incomeTaxEffectOptionId } from "@/lib/budget/rules/incomeTaxPolicy";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /**
  * Map of legislation type IDs to their documents
@@ -509,7 +510,7 @@ export async function processStatePolicyEffects(
   // Bulk-fetch ALL data upfront in parallel (eliminates per-state queries)
   const [states, allStatePolicies, allLegTypes, allStateMetrics, allStateBaselines] =
     await Promise.all([
-      db.collection<State>("states").find({}).toArray(),
+      statesCollection(db).find({}).toArray(),
       db.collection<StatePolicy>("statePolicies").find({}).toArray(),
       knownLegislationTypes
         ? Promise.resolve(knownLegislationTypes)

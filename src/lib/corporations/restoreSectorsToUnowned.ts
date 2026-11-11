@@ -18,6 +18,7 @@ import { revenuePerCapacityUnitForStrategy } from "@/lib/constants/capacityEcono
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
 import { reserveSectorsForRestore } from "@/lib/corporations/securedConstructionProperty";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 const RESTORE_IDEMPOTENCY_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -104,8 +105,7 @@ export async function restoreSectorsToUnowned(
       })
       .toArray(),
     loadFxRatesByCurrency(db),
-    db
-      .collection<{ _id: string; countryId: string }>("states")
+    statesCollection<{ _id: string; countryId: string }>(db)
       .find({ _id: { $in: [...new Set(sectors.map((sector) => sector.stateId))] } })
       .project<{ _id: string; countryId: string }>({ countryId: 1 })
       .toArray(),

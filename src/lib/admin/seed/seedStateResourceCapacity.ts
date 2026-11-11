@@ -5,6 +5,7 @@ import {
   getStateResourceCapacity,
   lookupStateResourceCapacity,
 } from "@/lib/seeds/reference/stateResourceCapacity";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /**
  * Seed the `stateResourceCapacity` collection.
@@ -34,8 +35,7 @@ export async function seedStateResourceCapacity(
       .catch(() => {});
   }
 
-  const states = await db
-    .collection<{ _id: string; countryId: CountryId }>("states")
+  const states = await statesCollection<{ _id: string; countryId: CountryId }>(db)
     .find({}, { projection: { _id: 1, countryId: 1 } })
     .toArray();
 

@@ -13,6 +13,7 @@ import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 interface ReadinessCheck {
   name: string;
@@ -40,8 +41,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     const checks: ReadinessCheck[] = [];
 
     // 1. Regions seeded (sub-national chamber gives us the expected count)
-    const regions = await db
-      .collection<{ _id: string }>("states")
+    const regions = await statesCollection<{ _id: string }>(db)
       .find({ countryId }, { projection: { _id: 1 } })
       .toArray();
     const regionCount = regions.length;

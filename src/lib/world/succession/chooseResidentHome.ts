@@ -15,6 +15,7 @@ import {
   type FederationRelocationRecord,
 } from "./relocationLedger";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export interface FederationResidentDestination {
   countryId: CountryId;
@@ -39,9 +40,10 @@ export async function chooseFederationResidentHome(input: {
     )
     .findOne({ _id: applicationId, status: "applied" }, { session });
   if (!application) throw new Error("Federation residence choice awaits settlement");
-  const state = await db
-    .collection<State>("states")
-    .findOne({ _id: destination.stateId, countryId: destination.countryId }, { session });
+  const state = await statesCollection(db).findOne(
+    { _id: destination.stateId, countryId: destination.countryId },
+    { session }
+  );
   const access = await getCountryAccessFromDb(db, destination.countryId);
   if (!state || !access.enabledForPlayers || !access.registered)
     throw new Error("Federation residence destination is not playable");

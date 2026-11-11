@@ -7,6 +7,7 @@ import type {
   PartyAnalyticsOrgSection,
   PartyAnalyticsStateMetric,
 } from "./types";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 interface StateOrgBudgetSummary {
   stateId: string;
@@ -70,8 +71,7 @@ export async function buildPartyOrgAnalytics(
 
   const stateIds = statePartyOrgs.map((org) => org.stateId);
   const [states, budgets] = await Promise.all([
-    db
-      .collection<State>("states")
+    statesCollection(db)
       .find({ _id: { $in: stateIds }, countryId })
       .toArray(),
     db
@@ -133,7 +133,7 @@ export async function buildStatePartyOrgAnalytics(
   if (!statePartyOrg) return null;
 
   const [state, budget] = await Promise.all([
-    db.collection<State>("states").findOne({ _id: stateId, countryId }),
+    statesCollection(db).findOne({ _id: stateId, countryId }),
     db.collection<PartyBudget>("partyBudget").findOne({
       countryId,
       partyId,

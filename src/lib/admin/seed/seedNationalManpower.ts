@@ -4,6 +4,7 @@ import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
 import { getNationalManpowerCollection } from "@/lib/db/collections/nationalManpower";
 import { resolveConscriptionStanceFor } from "@/lib/military/conscriptionLaw";
 import { initialManpowerPool } from "@/lib/military/manpower";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /**
  * Seed every nation's replacement-manpower pool.
@@ -37,8 +38,7 @@ export async function seedNationalManpower(
   // One grouped read instead of a states scan per country.
   const populations = new Map<string, number>(
     (
-      await db
-        .collection<{ countryId?: string; population?: number }>("states")
+      await statesCollection<{ countryId?: string; population?: number }>(db)
         .aggregate<{ _id: string; population: number }>([
           { $group: { _id: "$countryId", population: { $sum: "$population" } } },
         ])

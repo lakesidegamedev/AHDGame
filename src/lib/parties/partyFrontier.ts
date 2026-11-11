@@ -30,6 +30,7 @@ import { connectedGrowthFrontier, type TerritoryAdjacency } from "./rules/territ
 import { reentryRegions } from "./rules/partyRenewal";
 import { getPartyRenewalStatesCollection } from "@/lib/db/collections/partyRenewalStates";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /** Keep paths inside the country's current region set, including transferred regions. */
 export function getTerritoryAdjacency(
@@ -100,8 +101,7 @@ export function isInFrontier(
 
 /** Every region `_id` belonging to `countryId`. */
 export async function getCountryRegionIds(db: Db, countryId: CountryId): Promise<string[]> {
-  const rows = await db
-    .collection<State>("states")
+  const rows = await statesCollection(db)
     .find({ countryId }, { projection: { _id: 1 } })
     .toArray();
   return rows.map((r) => r._id);

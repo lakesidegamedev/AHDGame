@@ -19,6 +19,7 @@ import { buildHuModernAssembly } from "./rules/modernAssembly2011";
 import type { Hu1991AssemblyRecord } from "./assemblyCount1991";
 import type { Hu1991InstalledMandates } from "./rules/mandates1991";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 export const HU_2011_COUNTS_COLLECTION = "hu2011AssemblyCounts";
 export interface Hu2011AssemblyRecord {
   _id: string;
@@ -89,8 +90,7 @@ async function materializeHu2011Count(input: {
     )
   )
     return null;
-  const regions = await db
-    .collection<State>("states")
+  const regions = await statesCollection(db)
     .find({ countryId: "HU" }, { session, projection: { _id: 1, population: 1 } })
     .toArray();
   const candidates = await db

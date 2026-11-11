@@ -38,6 +38,7 @@ import { StateOrganizationPanel } from "./StateOrganizationPanel";
 import { NppAbbr } from "@/components/elections/NppAbbr";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 // This page is a live view over turn-processed delegate awards and per-state
 // projections. It must render from current DB state every request so its
@@ -54,9 +55,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { partyId, stateId } = await params;
   const db = await getDb();
   const party = await findParty(db, partyId);
-  const state = await db
-    .collection<State>("states")
-    .findOne({ _id: stateId.toUpperCase() }, { projection: { name: 1 } });
+  const state = await statesCollection(db).findOne(
+    { _id: stateId.toUpperCase() },
+    { projection: { name: 1 } }
+  );
   if (!party || !state) return {};
   const title = `${state.name} — ${party.name} Presidential Primary | A House Divided`;
   const description = `${state.name} results, delegate allocation, and projection for the ${party.name} presidential primary.`;
@@ -94,7 +96,7 @@ export default async function PartyPrimaryStatePage({ params }: PageProps) {
   const [party, state, election] = await Promise.all([
     findParty(db, partyId),
     // Presidential primaries are US-only.
-    db.collection<State>("states").findOne({ _id: stateId, countryId: "US" }),
+    statesCollection(db).findOne({ _id: stateId, countryId: "US" }),
     db.collection<Election>("elections").findOne({
       electionType: "president",
       countryId: "US",
@@ -190,8 +192,7 @@ export default async function PartyPrimaryStatePage({ params }: PageProps) {
   });
 
   const [stateDoc, demographicsDoc, enriched, apportionmentPreset] = await Promise.all([
-    db
-      .collection<State>("states")
+    statesCollection(db)
       .find({ _id: { $in: ALL_STATE_IDS } })
       .toArray(),
     db

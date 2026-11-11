@@ -15,6 +15,7 @@ import { withdrawFromPartyLeadershipElections } from "@/lib/elections/withdrawFr
 import { cleanupCaucusParticipationForCharacters } from "@/lib/caucus/cleanupCaucusParticipationForCharacters";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /**
  * Internal helper called by `signCharter` once the 3-of-3 threshold is hit.
@@ -177,8 +178,7 @@ export async function ratifyCharter(
   // provisioning but starts every state at 0% org with the chair's home
   // state flagged `hasPresence: true`.
   const homeState = anchorFounder?.homeState ?? null;
-  const states = await db
-    .collection<State>("states")
+  const states = await statesCollection(db)
     .find({ countryId: charter.countryId })
     .project<{ _id: string }>({ _id: 1 })
     .toArray();

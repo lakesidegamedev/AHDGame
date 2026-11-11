@@ -72,6 +72,7 @@ import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 type PlayerCharacter = Pick<
   Character,
@@ -374,8 +375,7 @@ async function loadStateApprovals(
       .collection<StateApprovalHistory>("stateApprovalHistory")
       .find({ _id: { $in: stateIds } }, { projection: { _id: 1, countryId: 1, approvalRating: 1 } })
       .toArray(),
-    db
-      .collection<State>("states")
+    statesCollection(db)
       .find({ _id: { $in: stateIds } }, { projection: { _id: 1, name: 1 } })
       .toArray(),
   ]);

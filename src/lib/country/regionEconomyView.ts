@@ -68,6 +68,7 @@ import { calculatePlantSectorSplit } from "@/lib/corporations/plantSectorSplit";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 type AuthedViewer = Awaited<ReturnType<typeof getAuthUser>>;
 
@@ -160,7 +161,7 @@ export async function buildRegionEconomyResponse({
   }
 
   const [state, stateMetricsDoc, stateTariffs, stateCapDoc, activeFtaPairs] = await Promise.all([
-    db.collection<State>("states").findOne({ _id: stateId, countryId }),
+    statesCollection(db).findOne({ _id: stateId, countryId }),
     // SP5: workforce skill spans both pipelines: shared loader.
     loadWorkforceSkillByState(db, [stateId]).then((m) => {
       const value = m.get(stateId);

@@ -25,6 +25,7 @@ import type { FederalBudget, State } from "@/lib/db/types";
 
 import { shiftNumericMap } from "./rules/fiscalCurrency";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { statesCollection } from "@/lib/db/repositories/states";
 type NumMap = Record<string, number>;
 
 export async function reapportionNationalBudget(
@@ -45,16 +46,13 @@ export async function reapportionNationalBudget(
   sourceDissolving = false,
   currencyScale = 1
 ): Promise<void> {
-  const region = await db
-    .collection<State>("states")
-    .findOne({ _id: regionId }, { projection: { gdp: 1 } });
+  const region = await statesCollection(db).findOne({ _id: regionId }, { projection: { gdp: 1 } });
   const regionGdp = region?.gdp ?? 0;
   if (regionGdp <= 0) return;
 
   // Source country's pre-transfer GDP = its remaining regions + this one (the
   // region's `countryId` has already flipped to the target by this point).
-  const remaining = await db
-    .collection<State>("states")
+  const remaining = await statesCollection(db)
     .find({ countryId: fromCountryId })
     .project<{ gdp?: number }>({ gdp: 1 })
     .toArray();

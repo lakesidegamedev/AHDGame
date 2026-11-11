@@ -31,6 +31,8 @@ import { getNationalArsenal, drawLots, returnLots } from "@/lib/db/collections/n
 import { lotsRequired, equipUnit } from "@/lib/military/arsenal";
 import { ensureFederalBudget } from "@/lib/turn/ensureFederalBudget";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
 
 /** Turns before a newly-recruited unit reaches operational readiness. */
 const BUILD_TURNS = 6;
@@ -121,7 +123,10 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(400, "No ministerial actions remaining");
     }
 
-    const region = await db.collection("states").findOne({ countryId }, { projection: { _id: 1 } });
+    const region = await statesCollection<Document>(db).findOne(
+      { countryId },
+      { projection: { _id: 1 } }
+    );
     if (!region) {
       return errorResponse(400, "No region available to station the unit");
     }

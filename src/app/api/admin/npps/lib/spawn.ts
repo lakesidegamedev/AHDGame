@@ -7,6 +7,7 @@ import type { NPP, StatePartyOrg, State, PoliticalParty } from "@/lib/db/types";
 import type { Db } from "@/lib/mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import { errorResponse } from "@/lib/api/errors";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export async function handleSpawnNPPs(
   db: Db,
@@ -26,7 +27,7 @@ export async function handleSpawnNPPs(
     return errorResponse(400, "party is required.");
   }
 
-  const allStatesRaw = await db.collection<State>("states").find({}).toArray();
+  const allStatesRaw = await statesCollection(db).find({}).toArray();
 
   // Look up party by sequentialId and countryId for precise matching
   let partyDoc: PoliticalParty | null = null;

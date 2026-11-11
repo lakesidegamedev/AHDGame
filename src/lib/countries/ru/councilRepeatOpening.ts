@@ -31,6 +31,7 @@ import { hasAuthorizedPostSovietTransition } from "./rules/postSovietTransition"
 import { GAME_STATE_PRE_ITERATION_FIELDS } from "@/lib/db/collections/gameState";
 import { STATE_POPULATION_FIELDS } from "@/lib/db/collections/states";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export async function materializeRussianCouncilRepeatOpening(input: {
   db: Db;
@@ -162,8 +163,7 @@ export async function materializeRussianCouncilRepeatOpening(input: {
     electionIds.some((id) => previous.ballots.some((row) => row.id === id.toHexString()))
   )
     throw new Error("Council repeats need distinct new ballot identities");
-  const regions = await db
-    .collection<State>("states")
+  const regions = await statesCollection(db)
     .find({ countryId: "RU" }, { session, projection: STATE_POPULATION_FIELDS })
     .toArray();
   const pools = await db

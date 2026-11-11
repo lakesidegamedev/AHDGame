@@ -20,6 +20,7 @@ import {
 } from "@/lib/currency/corporationCapital";
 import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
 import { computeMarketSharePercent } from "./marketShare";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /** The focal corporation's market position in one industry (home country). */
 export interface CorpMarketSharePosition {
@@ -64,8 +65,7 @@ export async function loadIndustryBasis(
   const out = new Map<CorporationType, IndustryBasis>();
   if (types.length === 0) return out;
 
-  const states = await db
-    .collection<State>("states")
+  const states = await statesCollection(db)
     .find({ countryId })
     .project<{ _id: string; countryId: CountryId }>({ _id: 1, countryId: 1 })
     .toArray();

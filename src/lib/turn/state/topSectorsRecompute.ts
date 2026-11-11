@@ -18,6 +18,7 @@ import type { Db } from "mongodb";
 import type { CorporationType } from "@/lib/constants/corporations";
 import type { State } from "@/lib/db/types";
 import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /** How many top sectors to surface per state. */
 const TOP_N = 3;
@@ -93,8 +94,7 @@ export async function processTopSectorsRecompute(
   // every state that has at least one active sector. States without
   // activity keep their existing cache (or no cache) — the Overview
   // fallback handles those.
-  const states = await db
-    .collection<State>("states")
+  const states = await statesCollection(db)
     .find({}, { projection: { _id: 1, sectorSpecializations: 1 } })
     .toArray();
 
@@ -145,7 +145,7 @@ export async function processTopSectorsRecompute(
   }
 
   if (ops.length > 0) {
-    await db.collection<State>("states").bulkWrite(ops, { ordered: false });
+    await statesCollection(db).bulkWrite(ops, { ordered: false });
   }
 
   return result;

@@ -21,6 +21,7 @@ import type { ExtractableResource } from "@/lib/constants/commodities";
 import { extractionDesiredUnits } from "@/lib/extraction/capacityHaircut";
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
 import { getExtractionOutputScaleEnabled } from "@/lib/market/featureFlag";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export interface OpportunityState {
   stateId: string;
@@ -62,8 +63,7 @@ export async function computeResourceOpportunities(
         { projection: { stateId: 1, revenue: 1, strategyId: 1, corporationId: 1, countryId: 1 } }
       )
       .toArray(),
-    db
-      .collection<{ _id: string; countryId: string }>("states")
+    statesCollection<{ _id: string; countryId: string }>(db)
       .find({}, { projection: { _id: 1, countryId: 1 } })
       .toArray(),
     loadWorldEraUnitScale(db),

@@ -4,6 +4,7 @@ import type { Election, State, Seat, GameState } from "@/lib/db/types";
 import { buildStandupElections } from "./rules/standupElections";
 import type { SecedingCountryId } from "./subRegions";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export async function standupElections(
   db: Db,
@@ -15,7 +16,7 @@ export async function standupElections(
     { _id: "current" },
     { projection: { startingYear: 1, preset: 1 } }
   );
-  const regions = await db.collection<State>("states").find({ countryId }).toArray();
+  const regions = await statesCollection(db).find({ countryId }).toArray();
   const { rows, councils } = buildStandupElections({
     countryId,
     regions,
@@ -28,7 +29,7 @@ export async function standupElections(
   await db
     .collection<Election>("elections")
     .insertMany(rows.map((row) => ({ ...row, _id: new ObjectId(row._id) })));
-  await db.collection<State>("states").bulkWrite(
+  await statesCollection(db).bulkWrite(
     regions.map((region) => ({
       updateOne: {
         filter: { _id: region._id },

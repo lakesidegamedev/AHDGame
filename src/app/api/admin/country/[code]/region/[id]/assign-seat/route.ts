@@ -22,6 +22,7 @@ import type { ElectedOfficial, NPP, State } from "@/lib/db/types";
 import { errorResponse } from "@/lib/api/errors";
 import type { Db } from "mongodb";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /** Seat total for a multi-seat group, read from the resolved State field. */
 function totalForSpec(
@@ -93,7 +94,7 @@ export const POST = withAdminRoute(
     const now = new Date();
 
     // Verify state exists
-    const state = await db.collection<State>("states").findOne({ _id: stateId, countryId });
+    const state = await statesCollection(db).findOne({ _id: stateId, countryId });
     if (!state) {
       return errorResponse(404, "State not found");
     }

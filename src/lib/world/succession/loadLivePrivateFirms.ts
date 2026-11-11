@@ -8,6 +8,7 @@ import { sectorBookValueAnchor } from "@/lib/corporations/sectorProfitBasis";
 import type { PrivateSuccessionFirm } from "./rules/privateFacilities";
 import { buildSourceRegionHierarchy } from "./sourceRegionHierarchy";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /** Snapshot the current private corporations and paid facility basis. The
  * settlement writer must refresh this before applying any claim. */
@@ -20,8 +21,7 @@ export async function loadLivePrivateSuccessionFirms(
 ): Promise<PrivateSuccessionFirm[]> {
   if (!Number.isFinite(currentYear) || !Number.isFinite(eraUnitScale) || eraUnitScale <= 0)
     throw new Error("Private firm inventory needs a valid era valuation basis");
-  const states = await db
-    .collection<State>("states")
+  const states = await statesCollection(db)
     .find({ countryId: sourceCountryId }, { session })
     .toArray();
   const { topLevelFor } = buildSourceRegionHierarchy(states);

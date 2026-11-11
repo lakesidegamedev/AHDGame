@@ -66,6 +66,7 @@ import {
   loadRegionalDeliveryMultipliersByRegion,
 } from "@/lib/governmentFinance/deliveryMultipliers";
 import { getGameStateCollection } from "@/lib/db/collections/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 // Defined in politicalMetrics/historyCadence so a client component can read the
 // cadence without importing this module (and with it the whole turn engine).
@@ -462,8 +463,7 @@ export async function processPoliticalMetricsDynamics(
 
       // §5 trend history: national aggregate snapshot on cadence.
       if (turnNumber % HISTORY_CADENCE_TURNS === 0) {
-        const states = await db
-          .collection<State>("states")
+        const states = await statesCollection(db)
           .find({ countryId: countryId as State["countryId"] }, { projection: { population: 1 } })
           .toArray();
         const populationByRegion = new Map(states.map((s) => [s._id, s.population ?? 0]));

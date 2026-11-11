@@ -29,6 +29,7 @@ import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export { PERSONS_PER_HOUSEHOLD, HOUSEHOLD_LIQUID_RATIO, HOUSEHOLD_SAVINGS_RATIO };
 
@@ -158,8 +159,7 @@ export async function snapshotMoneySupply(db: Db, turn: number): Promise<number>
     bondsCollection(db)
       .find({ issuerType: "sovereign", matured: false, defaulted: false })
       .toArray(),
-    db
-      .collection<{ _id: string; countryId?: string; population?: number }>("states")
+    statesCollection<{ _id: string; countryId?: string; population?: number }>(db)
       .find({}, { projection: { countryId: 1, population: 1 } })
       .toArray(),
     // State-level + national-scope rows. Restricting to NATIONAL_SCOPE alone

@@ -97,6 +97,7 @@ import {
 } from "./conscription";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import type { Document } from "mongodb";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /** Per-region net internal-migration change capped per turn (circuit-breaker). */
 const MAX_INTERNAL_CHANGE_FRACTION = 0.05;
@@ -258,7 +259,7 @@ export async function runDemographicFlows(
   const [demos, states, macroMetrics, gameState, labourConfig, politicalInputs, euMemberships] =
     await Promise.all([
       db.collection<RegionDemographics>("regionDemographics").find({}).toArray(),
-      db.collection<State>("states").find({}).toArray(),
+      statesCollection(db).find({}).toArray(),
       db.collection("macroMetrics").find({}).project<MetricsDoc>(METRICS_PROJECTION).toArray(),
       gameStateCollection<Document>(db).findOne<
         {

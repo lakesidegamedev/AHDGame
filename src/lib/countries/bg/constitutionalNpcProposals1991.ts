@@ -10,6 +10,8 @@ import {
 import { calendarTurn } from "@/lib/utils/gameDate";
 import { bg1991DecisionAvailability } from "./rules/constitutionalDecision1991";
 import { canBg1991NpcGovernmentIntroduce } from "./rules/constitutionalExecutive1991";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
 export async function processBg1991ConstitutionalNpcProposal(
   db: Db,
   game: GameState,
@@ -42,8 +44,7 @@ export async function processBg1991ConstitutionalNpcProposal(
         { projection: { characterId: 1, nppId: 1, seatsHeld: 1 } }
       )
       .toArray(),
-    db
-      .collection("states")
+    statesCollection<Document>(db)
       .find({ countryId: "BG" }, { projection: { houseDistricts: 1 } })
       .toArray(),
   ]);

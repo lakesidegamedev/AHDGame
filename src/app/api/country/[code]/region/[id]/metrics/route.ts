@@ -29,6 +29,7 @@ import {
   getNationalDocId,
 } from "@/lib/constants/nationalScope";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 // GET /api/country/[code]/region/[id]/metrics — Return all state metrics including government approval and tick rates
 // Auth: public
@@ -57,7 +58,7 @@ export async function GET(
     const [state, metrics, budgetDoc] = await Promise.all([
       isNational
         ? Promise.resolve(null)
-        : db.collection<State>("states").findOne({ _id: stateId, countryId }),
+        : statesCollection(db).findOne({ _id: stateId, countryId }),
       // SP5: merged two-store view.
       isNational
         ? findMergedRegionMetrics(db, { _id: stateId })

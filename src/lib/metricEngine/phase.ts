@@ -130,6 +130,7 @@ import { fundingResponse } from "./spendingChannel";
 import { EDU_SPEND_HALF_SAT } from "./registry/education";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /** Default unemployment when a state has no prior reading (matches gdpGrowth.ts `?? 4.5`). */
 const DEFAULT_UNEMPLOYMENT = 4.5;
@@ -366,7 +367,7 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
     warDamageByCountryId,
     capacityObligations,
   ] = await Promise.all([
-    db.collection<State>("states").find({}).toArray(),
+    statesCollection(db).find({}).toArray(),
     db
       .collection<StateMetrics>("macroMetrics")
       .find({})
@@ -1412,7 +1413,7 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
     await db.collection<StateMetrics>("macroMetrics").bulkWrite(macroOps);
   }
   if (stateOps.length > 0) {
-    await db.collection<State>("states").bulkWrite(stateOps);
+    await statesCollection(db).bulkWrite(stateOps);
   }
   await settleCapacityObligations(db, settledCapacityIds);
   if (priceLevelEnabled) {

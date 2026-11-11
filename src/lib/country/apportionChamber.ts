@@ -23,6 +23,7 @@
 import type { Db, ObjectId } from "mongodb";
 import type { State } from "@/lib/db/types";
 import { apportionSeats } from "./seatApportionment";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /** One official as the apportionment reads it. */
 export interface ChamberOfficial {
@@ -77,9 +78,10 @@ export async function apportionOfficialsToChamber(
   // case would invent a seat count for something that is not a seat.
   const carriesSeats = officials.some((o) => (o.seatsHeld ?? 0) > 0);
   if (sizeField && carriesSeats) {
-    const region = await db
-      .collection<State>("states")
-      .findOne({ _id: regionId }, { projection: { houseDistricts: 1, stateSenateSeats: 1 } });
+    const region = await statesCollection(db).findOne(
+      { _id: regionId },
+      { projection: { houseDistricts: 1, stateSenateSeats: 1 } }
+    );
     const total = (region as Record<string, unknown> | null)?.[sizeField];
     if (typeof total === "number" && total > 0) {
       const sourceByParty: Record<string, number> = {};

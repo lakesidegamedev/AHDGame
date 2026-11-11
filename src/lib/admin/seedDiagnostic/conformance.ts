@@ -59,6 +59,7 @@ import { isBackgroundInPreset } from "@/lib/world/eraRoster";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import type { Document } from "mongodb";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /** Readiness check names that are expected-empty pre-founding / pre-seat. */
 const PRE_FOUNDING_READINESS = new Set(["NPPs", "ElectedOfficials", "GovernmentFormation"]);
@@ -455,7 +456,7 @@ async function checkRegions(db: Db, expect: SeedExpectations): Promise<SeedDiagn
   const checks: SeedDiagnosticCheck[] = [];
   // Structural region checks for every seeded country (not just readiness set).
   for (const countryId of expect.seededCountryIds) {
-    const regionCount = await db.collection("states").countDocuments({ countryId });
+    const regionCount = await statesCollection<Document>(db).countDocuments({ countryId });
     const expectedCount = expectedRegionCount(countryId, expect.preset);
 
     if (expectedCount != null) {
@@ -500,8 +501,7 @@ async function checkRegions(db: Db, expect: SeedExpectations): Promise<SeedDiagn
       );
     }
 
-    const states = await db
-      .collection<{ _id: string; population?: number }>("states")
+    const states = await statesCollection<{ _id: string; population?: number }>(db)
       .find({ countryId })
       .project({ _id: 1, population: 1 })
       .toArray();
@@ -748,7 +748,7 @@ async function checkDemographics(db: Db, expect: SeedExpectations): Promise<Seed
   );
 
   for (const countryId of expect.seededCountryIds) {
-    const regionCount = await db.collection("states").countDocuments({ countryId });
+    const regionCount = await statesCollection<Document>(db).countDocuments({ countryId });
     const expectedDemo = expectedRegionCount(countryId, expect.preset) ?? regionCount;
     const demoCount = await db.collection("stateDemographics").countDocuments({ countryId });
 

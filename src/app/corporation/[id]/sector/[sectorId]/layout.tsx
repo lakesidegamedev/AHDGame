@@ -11,6 +11,7 @@ import {
 } from "@/lib/api/corporations/resolveQuery";
 import { PageCountryOverrideBridge } from "@/components/navbar/PageCountryOverrideBridge";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -80,9 +81,10 @@ export default async function SectorLayout({ children, params }: LayoutProps) {
       if (sector?.countryId) {
         pageCountryId = sector.countryId;
       } else if (sector?.stateId) {
-        const state = await db
-          .collection<State>("states")
-          .findOne({ _id: sector.stateId }, { projection: { countryId: 1 } });
+        const state = await statesCollection(db).findOne(
+          { _id: sector.stateId },
+          { projection: { countryId: 1 } }
+        );
         pageCountryId = state?.countryId ?? pageCountryId;
       }
     }

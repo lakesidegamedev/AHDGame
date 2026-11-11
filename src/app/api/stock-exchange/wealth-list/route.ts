@@ -22,6 +22,7 @@ import {
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 function resolveCountryId(character: Pick<Character, "countryId">): CountryId {
   return character.countryId as CountryId;
@@ -119,8 +120,7 @@ async function computeWealthListFallback(
   // shareholder would be ranked against a JP shareholder as if both
   // currencies were identical to ₳.
   const [states, corporations, bonds, fxByCurrency] = await Promise.all([
-    db
-      .collection<State>("states")
+    statesCollection(db)
       .find({ _id: { $in: [...new Set(activeCharacters.map((c) => c.homeState))] } })
       .project<Pick<State, "_id" | "name">>({ _id: 1, name: 1 })
       .toArray(),

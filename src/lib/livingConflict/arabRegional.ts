@@ -9,6 +9,7 @@ import {
   type ArabOriginSignal,
 } from "./rules/arabOrigins";
 import { projectArabRegion, migrateLegacyArabOrigin } from "./rules/arabProjection";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /** Four bounded, projected batch reads, only at initialization or quarterly
  * pressure ticks. Background stability is explicitly an estimate of legitimacy;
@@ -39,8 +40,7 @@ export async function advanceArabRegionalTurn(
         }
       )
       .toArray(),
-    db
-      .collection<{ _id: string; countryId: string; population: number }>("states")
+    statesCollection<{ _id: string; countryId: string; population: number }>(db)
       .find({ countryId: { $in: ids } }, { projection: { _id: 1, countryId: 1, population: 1 } })
       .toArray(),
     db

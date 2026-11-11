@@ -27,6 +27,7 @@ import {
 } from "./relocationLedger";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export interface ChosenFederationHeadquarters {
   countryId: CountryId;
@@ -140,9 +141,10 @@ export async function chooseFederationFirmHeadquarters(input: {
     )
     .findOne({ _id: applicationId, status: "applied" });
   if (!application) throw new Error("Federation headquarters choice awaits settlement");
-  const state = await db
-    .collection<State>("states")
-    .findOne({ _id: destination.stateId, countryId: destination.countryId });
+  const state = await statesCollection(db).findOne({
+    _id: destination.stateId,
+    countryId: destination.countryId,
+  });
   if (!state || !(await getRegisteredCountryIds(db)).includes(destination.countryId))
     throw new Error("Federation headquarters destination is not playable");
   const holdCollection = db.collection<FederationPrivateFirmHold>(

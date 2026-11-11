@@ -45,6 +45,7 @@ import { captureElectionWon } from "@/lib/analytics/electionAnalytics";
 import { captureOfficeTransition } from "@/lib/analytics/officeTransitionAnalytics";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 const LANDTAG_THRESHOLD = 0.05;
 
@@ -99,8 +100,7 @@ export async function ensureDEMinisterPresidentElections(
   const { currentTurn: persistedTurn, ctx, preset } = await getCurrentTurnAndCtx(db);
   const currentTurn = inFlightTurn ?? persistedTurn;
 
-  const deLaender = await db
-    .collection<State>("states")
+  const deLaender = await statesCollection(db)
     .find({ countryId: "DE" }, { projection: { _id: 1 } })
     .toArray();
   if (deLaender.length === 0) return;

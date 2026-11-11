@@ -5,6 +5,7 @@ import type { State } from "@/lib/db/types";
 import { errorResponse } from "@/lib/api/errors";
 import { directingParentCorporationId } from "@/lib/corporations/subsidiaries/authorization";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /**
  * Returns the canonical URL path segment for a corporation document.
@@ -62,9 +63,10 @@ export async function resolveCorporation(
 
   // Backfill countryId from HQ state for pre-migration corporations
   if (!corporation.countryId && corporation.headquartersState) {
-    const hqState = await db
-      .collection<State>("states")
-      .findOne({ _id: corporation.headquartersState }, { projection: { countryId: 1 } });
+    const hqState = await statesCollection(db).findOne(
+      { _id: corporation.headquartersState },
+      { projection: { countryId: 1 } }
+    );
     if (hqState?.countryId) {
       corporation.countryId = hqState.countryId;
     }

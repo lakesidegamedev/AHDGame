@@ -20,6 +20,7 @@ import type { WireItem } from "@/lib/news/types";
 import { withPublicNewsVisibility } from "@/lib/news/publicModeration";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 // Re-export for any consumer that still imports types from the route file.
 // New consumers should import from "@/lib/news/types".
@@ -80,8 +81,7 @@ export async function GET() {
 
     // Only use collection-based fallback if wireEvents is sparse (bootstrapping)
     if (wireEventCount < 5) {
-      const stateRows = await db
-        .collection<State>("states")
+      const stateRows = await statesCollection(db)
         .find({})
         .project<Pick<State, "_id" | "name">>({ _id: 1, name: 1 })
         .toArray();

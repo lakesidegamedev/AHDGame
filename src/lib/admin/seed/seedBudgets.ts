@@ -5,6 +5,8 @@ import type { EnactedLaw, StateBudget, FormulaGrant } from "@/lib/db/types/budge
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
 
 /**
  * Seeds US-only budget data: federal budget, US enacted laws, US state budgets,
@@ -24,7 +26,7 @@ export async function seedBudgets(
     // Only delete US-specific budget data, not UK/JP
     await federalBudgetCollection(db).deleteMany({ countryId: "US" });
     const usStateIds = (
-      await db.collection("states").find({ countryId: "US" }).project({ _id: 1 }).toArray()
+      await statesCollection<Document>(db).find({ countryId: "US" }).project({ _id: 1 }).toArray()
     ).map((s) => s._id as string);
     if (usStateIds.length > 0) {
       await db
@@ -74,7 +76,7 @@ export async function seedBudgets(
   log(`Seeded ${usNationalBudgets.length} US national budget(s)`);
 
   // Get US states for generating state budgets (UK handled by seedUkBudgets, JP by seedJpBudgets)
-  const states = await db.collection<State>("states").find({ countryId: "US" }).toArray();
+  const states = await statesCollection(db).find({ countryId: "US" }).toArray();
   const statesForBudgets = states.map((s) => ({
     id: s._id,
     population: s.population,

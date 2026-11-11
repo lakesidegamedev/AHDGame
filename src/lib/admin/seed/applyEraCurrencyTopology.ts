@@ -18,6 +18,7 @@ import { convertCorpCurrency } from "@/lib/corporations/convertCorpCurrency";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 type AnyDoc = Document & { _id: ObjectId | string; countryId: string };
 
@@ -90,7 +91,7 @@ export async function applyEraCurrencyTopology(
           },
         }))
       );
-      await db.collection("states").updateMany({ countryId }, { $mul: { gdp: scale } });
+      await statesCollection<Document>(db).updateMany({ countryId }, { $mul: { gdp: scale } });
     }
 
     if (needsFiscalConversion) {

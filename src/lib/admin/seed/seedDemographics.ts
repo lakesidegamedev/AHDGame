@@ -4,6 +4,7 @@ import { stateDemographics } from "@/lib/seeds/stateDemographics";
 import { calculateStateLeanForCache } from "@/lib/demographics/cachedStateLean";
 import { STATE_IDS } from "@/lib/constants/states";
 import { DEMOGRAPHIC_TURNOUT_RATES } from "@/lib/seeds/demographicCategories";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /** The static US bundle seeded here is the 2019 census. */
 const US_STATIC_PRESET = "2019-default";
@@ -60,7 +61,7 @@ export async function seedDemographics(db: Db, reset: boolean, log: (msg: string
     await db
       .collection<StateDemographics>("demographicDefaults")
       .bulkWrite(stateDemoUpserts, { ordered: false });
-    await db.collection<State>("states").bulkWrite(stateLeanOps, { ordered: false });
+    await statesCollection(db).bulkWrite(stateLeanOps, { ordered: false });
   }
 
   // US stateDemographicTurnout (required for Turnout tab; not dropped for UK)

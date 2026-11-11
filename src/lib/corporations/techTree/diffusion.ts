@@ -22,6 +22,7 @@ import {
   type TechDiffusionSnapshot,
 } from "@/lib/constants/techTree/diffusion";
 import type { StrategyDiffusionWorld } from "@/lib/constants/techTree/strategyAvailability";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /** Every method with a tier: the only ones diffusion can delay. */
 const TIERED_STRATEGY_IDS: readonly string[] = [
@@ -41,8 +42,7 @@ export async function loadTechDiffusionSnapshot(
 ): Promise<TechDiffusionSnapshot> {
   const countryFilter = options.countryIds ? { countryId: { $in: [...options.countryIds] } } : {};
   const [states, metrics, energy, operatorRows] = await Promise.all([
-    db
-      .collection<State>("states")
+    statesCollection(db)
       .find(countryFilter as Filter<State>, { projection: { countryId: 1, population: 1 } })
       .toArray(),
     db

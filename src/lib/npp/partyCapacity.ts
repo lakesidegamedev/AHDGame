@@ -2,6 +2,8 @@ import type { Db, ObjectId } from "mongodb";
 import type { ActivityLog, Character, User } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
 
 /**
  * NPP slots each active member adds, with gentle diminishing returns. Small
@@ -70,7 +72,7 @@ export async function getPartyNppCapacity(
       .find({ countryId, party: partyId }, { projection: { userId: 1 } })
       .project<Pick<Character, "userId">>({ userId: 1 })
       .toArray(),
-    db.collection("states").countDocuments({ countryId }),
+    statesCollection<Document>(db).countDocuments({ countryId }),
   ]);
   const ceiling = calculateNppCeiling(regionCount);
 

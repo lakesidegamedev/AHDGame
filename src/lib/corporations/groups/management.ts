@@ -23,6 +23,7 @@ import type { GroupManagementCommand } from "./managementSchema";
 import type { GroupManagement } from "./managementTypes";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export const defaultGroupManagement = (root: Corporation): GroupManagement => ({
   name: root.name,
@@ -79,8 +80,7 @@ export async function loadGroupManagement(db: Db, corporation: Corporation, user
         },
       }
     ),
-    db
-      .collection<State>("states")
+    statesCollection(db)
       .find({}, { projection: { name: 1, countryId: 1 } })
       .toArray(),
   ]);

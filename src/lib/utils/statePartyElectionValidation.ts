@@ -13,6 +13,7 @@ import type {
   Character,
 } from "@/lib/db/types";
 import { errorResponse } from "@/lib/api/errors";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 interface ValidationResult {
   success: true;
@@ -55,7 +56,7 @@ export async function validateStatePartyElectionAccess(
 
   const db = await getDb();
 
-  const state = await db.collection<State>("states").findOne({ _id: stateId, countryId });
+  const state = await statesCollection(db).findOne({ _id: stateId, countryId });
   if (!state) {
     return {
       success: false,

@@ -44,6 +44,7 @@ import { getGameTime } from "@/lib/time/gameTime";
 import { primaryOpenFilter } from "@/lib/elections/electionDeadlineFilters";
 import { archiveCampaignsForCandidates } from "@/lib/campaigns/archiveWithdrawnCampaigns";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export async function POST(request: Request, { params }: { params: Promise<{ code: string }> }) {
   try {
@@ -166,9 +167,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
       if (!isPresident && election.seatId) {
         const localRegionId = parseSeatId(election.seatId).localRegionId;
         if (localRegionId) {
-          const stateDoc = await db
-            .collection<State>("states")
-            .findOne({ _id: localRegionId, countryId: electionCountryId });
+          const stateDoc = await statesCollection(db).findOne({
+            _id: localRegionId,
+            countryId: electionCountryId,
+          });
           if (
             stateDoc &&
             typeof stateDoc.cachedEconomicLean === "number" &&

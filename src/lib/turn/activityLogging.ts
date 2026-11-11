@@ -7,6 +7,8 @@ import { ObjectId, type Db } from "mongodb";
 import type { ActionLog, GameConfig } from "@/lib/db/types";
 import type { ActivityAction, ActivityLogTurnSummary } from "@/lib/db/types/activityLog";
 import { getCharactersCollection } from "@/lib/db/collections/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
 
 export interface ActivityLoggingResult {
   summariesInserted: number;
@@ -71,7 +73,7 @@ export async function processActivityLogging(
   if (targetStateIds.length > 0) {
     // State _id values are strings (e.g. "CA", "TX"), not ObjectIds
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const states = (await (db.collection("states") as any)
+    const states = (await (statesCollection<Document>(db) as any)
       .find({ _id: { $in: targetStateIds } }, { projection: { _id: 1, name: 1 } })
       .toArray()) as Array<{ _id: string; name: string }>;
     for (const s of states) {

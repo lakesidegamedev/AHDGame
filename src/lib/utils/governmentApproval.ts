@@ -70,6 +70,7 @@ import {
 } from "@/lib/politicalLegislation/politicalApprovalProvider";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /**
  * The cabinet's own drag on national approval, as modifiers.
@@ -708,7 +709,7 @@ export async function snapshotApprovalHistory(
   telemetryCtx?: LongHorizonContext,
   bankFailureMods: ActiveModifier[] = []
 ): Promise<void> {
-  const statesCol = db.collection<State>("states");
+  const statesCol = statesCollection(db);
 
   // Score approval with the live era's ruleset. Omitting this silently used the
   // 2019 excluded-metric set + 2019 named modifiers, so the stored snapshot (which

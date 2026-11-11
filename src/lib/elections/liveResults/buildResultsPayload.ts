@@ -50,6 +50,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import type { Election, ElectionCandidate, ElectionVoteTally, GameState } from "@/lib/db/types";
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 const ENDED_STATUSES = new Set(["completed", "resolved", "cancelled"]);
 const INDEPENDENT_COLOR = "#9CA3AF";
@@ -89,8 +90,7 @@ function partyInfo(
 
 async function loadRegionNames(db: Db, regionIds: string[]): Promise<Map<string, string>> {
   if (regionIds.length === 0) return new Map();
-  const docs = await db
-    .collection<{ _id: string; name?: string }>("states")
+  const docs = await statesCollection<{ _id: string; name?: string }>(db)
     .find({ _id: { $in: regionIds } })
     .project<{ _id: string; name?: string }>({ name: 1 })
     .toArray();
@@ -206,8 +206,7 @@ export async function buildResultsPayload(
       // Non-US presidents: popular vote per region. The tally may carry
       // vestigial all-zero US unit keys from init — scope to the country's
       // own regions plus any tally key that actually holds votes.
-      const regionDocs = await db
-        .collection<{ _id: string; name?: string }>("states")
+      const regionDocs = await statesCollection<{ _id: string; name?: string }>(db)
         .find({ countryId: election.countryId })
         .project<{ _id: string; name?: string }>({ name: 1 })
         .toArray();

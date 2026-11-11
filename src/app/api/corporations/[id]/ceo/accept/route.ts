@@ -13,6 +13,7 @@ import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { holdsAnyBondsInCorp } from "@/lib/bonds/ceoBondConflict";
 import { characterCeoResidencyFailure } from "@/lib/corporations/ceoEligibilityRules";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -74,9 +75,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
     if (residencyFailure === "headquarters-state") {
       // Enforce CEO must reside in HQ state
       // Look up HQ state name for a friendly error message
-      const hqState = await db
-        .collection<State>("states")
-        .findOne({ _id: corporation.headquartersState });
+      const hqState = await statesCollection(db).findOne({ _id: corporation.headquartersState });
       const hqName = hqState?.name ?? corporation.headquartersState;
       return errorResponse(
         400,

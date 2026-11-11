@@ -29,6 +29,7 @@ import { loadWorldPreset } from "@/lib/currency/gdpAnchorRate";
 import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export type SectorView = "unowned" | "owned" | "forSale";
 export type SectorSort = "revenue" | "type" | "state" | "country" | "margin" | "growth";
@@ -85,8 +86,7 @@ export async function GET(request: Request) {
     const db = await getDb();
 
     // Load states for name resolution
-    const states = await db
-      .collection<State>("states")
+    const states = await statesCollection(db)
       .find({})
       .project<{ _id: string; name: string; countryId: CountryId }>({
         _id: 1,

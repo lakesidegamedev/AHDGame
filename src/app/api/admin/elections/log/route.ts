@@ -45,6 +45,8 @@ export type {
   ElectionLogEntry,
 } from "@/lib/elections/electionResponseTypes";
 import { countedTurns } from "@/lib/elections/snapshotTurns";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
 
 // ─── Route handler ────────────────────────────────────────────────────────────
 
@@ -101,8 +103,7 @@ export async function GET(request: Request) {
           ])
           .toArray(),
         db.collection("politicalParties").find({}).toArray(),
-        db
-          .collection("states")
+        statesCollection<Document>(db)
           .find({}, { projection: { _id: 1, name: 1 } })
           .toArray(),
       ]);

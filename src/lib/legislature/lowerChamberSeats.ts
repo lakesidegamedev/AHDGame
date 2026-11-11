@@ -31,6 +31,7 @@ import {
 import { japanShugiinCurrentChamberCapacity } from "@/lib/countries/jp/rules/shugiinElectoralLaw";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /** Active world preset, when present — drives era-conditional chamber sizes. */
 async function readActivePreset(db: Db): Promise<string | undefined> {
@@ -55,8 +56,7 @@ export async function getLiveLowerChamberSeats(db: Db, countryId: CountryId): Pr
       db
     ).findOne({ _id: "current" }, { projection: { huAssemblyReformedAtYear: 1 } });
     if (reform?.huAssemblyReformedAtYear) {
-      const regions = await db
-        .collection<State>("states")
+      const regions = await statesCollection(db)
         .find({ countryId }, { projection: { houseDistricts: 1 } })
         .toArray();
       const seats = regions.reduce((sum, region) => sum + (region.houseDistricts ?? 0), 0);
@@ -90,8 +90,7 @@ export async function getLiveLowerChamberSeats(db: Db, countryId: CountryId): Pr
       .collection<CountryGameState>("countryGameStates")
       .findOne({ _id: "RO" }, { projection: { roParliament1992SinceTurn: 1 } });
     if (countryState?.roParliament1992SinceTurn != null) {
-      const regions = await db
-        .collection<State>("states")
+      const regions = await statesCollection(db)
         .find({ countryId })
         .project<{ houseDistricts?: number }>({ houseDistricts: 1 })
         .toArray();
@@ -128,8 +127,7 @@ export async function getLiveLowerChamberSeats(db: Db, countryId: CountryId): Pr
   if (isListTierMethod(config.electionSystems.lowerChamber)) {
     return config.legislature.lowerChamber.seats;
   }
-  const regions = await db
-    .collection<State>("states")
+  const regions = await statesCollection(db)
     .find({ countryId })
     .project<{ houseDistricts?: number }>({ houseDistricts: 1 })
     .toArray();
@@ -198,8 +196,7 @@ export async function getLiveUpperChamberSeats(db: Db, countryId: CountryId): Pr
       .collection<CountryGameState>("countryGameStates")
       .findOne({ _id: "RO" }, { projection: { roParliament1992SinceTurn: 1 } });
     if (countryState?.roParliament1992SinceTurn != null) {
-      const regions = await db
-        .collection<State>("states")
+      const regions = await statesCollection(db)
         .find({ countryId })
         .project<{ stateSenateSeats?: number }>({ stateSenateSeats: 1 })
         .toArray();
@@ -217,8 +214,7 @@ export async function getLiveUpperChamberSeats(db: Db, countryId: CountryId): Pr
   const upper = config.legislature.upperChamber;
   if (!upper) return 0;
   if (!isUpperChamberRegionApportioned(countryId, preset)) return upper.seats;
-  const regions = await db
-    .collection<State>("states")
+  const regions = await statesCollection(db)
     .find({ countryId })
     .project<{ stateSenateSeats?: number }>({ stateSenateSeats: 1 })
     .toArray();

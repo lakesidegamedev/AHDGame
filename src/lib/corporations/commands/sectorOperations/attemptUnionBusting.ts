@@ -26,6 +26,7 @@ import { notifyUnionOfBustingAttempt } from "@/lib/unions/unionBustingNotice";
 import { emitTx } from "@/lib/financialTxLog/emit";
 import { resolveCorpLiquidCurrencyCode } from "@/lib/currency/corporationCapital";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export type AttemptUnionBustingResult =
   | {
@@ -97,9 +98,10 @@ export async function attemptUnionBusting(
   // two answers: on a plant whose stored country went stale when its region
   // changed hands, the gate would clear a bust under the old country's law and
   // then fire the backlash at the new one.
-  const bustingState = await db
-    .collection<State>("states")
-    .findOne({ _id: sector.stateId }, { projection: { countryId: 1 } });
+  const bustingState = await statesCollection(db).findOne(
+    { _id: sector.stateId },
+    { projection: { countryId: 1 } }
+  );
   const countryId = bustingState?.countryId ?? sector.countryId ?? corporation.countryId;
 
   // Union ban: busting is moot while unions are

@@ -9,6 +9,7 @@ import {
   regionalDefaultLaws,
 } from "@/lib/politicalLegislation/regionalDefaults";
 import { ObjectId } from "mongodb";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 // GET /api/game/current-policies — Returns current policy option indices for a given state or federal level.
 // Auth: public
@@ -75,9 +76,10 @@ export async function GET(request: Request) {
     // NATIONAL_SCOPE_IDS rather than paying for a `states` lookup that would
     // miss anyway, and a genuine miss (unknown region) fills in nothing.
     if (!NATIONAL_SCOPE_IDS.has(stateId)) {
-      const region = await db
-        .collection<{ _id: string; countryId?: string }>("states")
-        .findOne({ _id: stateId }, { projection: { countryId: 1 } });
+      const region = await statesCollection<{ _id: string; countryId?: string }>(db).findOne(
+        { _id: stateId },
+        { projection: { countryId: 1 } }
+      );
       for (const law of regionalDefaultLaws(region?.countryId ?? "")) {
         policyMap[law.id] ??= REGIONAL_DEFAULT_LEVEL;
       }

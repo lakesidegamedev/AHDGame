@@ -6,6 +6,8 @@ import {
 } from "@/lib/constants/countryReadinessExpectations";
 import { getReadinessExpectations } from "@/lib/constants/readinessExpectations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
 
 /** Best-effort preset lookup; null when the world has no gameState yet. */
 async function readPreset(db: Db): Promise<string | null> {
@@ -75,7 +77,7 @@ export async function buildCountryReadinessReport(
   const checks: ReadinessCheck[] = [];
 
   const expectedRegions = expect.regionCount;
-  const regionCount = await db.collection("states").countDocuments({ countryId });
+  const regionCount = await statesCollection<Document>(db).countDocuments({ countryId });
   checks.push({
     name: "Regions",
     status: regionCount === expectedRegions ? "ok" : regionCount > 0 ? "warning" : "missing",

@@ -62,6 +62,8 @@ import { ObjectId, type Db } from "mongodb";
 import { loadOppositionTargets } from "@/lib/campaigns/oppositionTargets";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
 
 export interface CampaignListItem {
   id: string;
@@ -685,8 +687,7 @@ async function buildBriefing(args: {
 
       if (isGeneralPhase) {
         const { electoralVoteUnits } = await loadApportionment(db, preset, gameState?.currentYear);
-        const stateDocs = await db
-          .collection("states")
+        const stateDocs = await statesCollection<Document>(db)
           .find<{ _id: string; name: string }>(
             { countryId: election.countryId ?? "US" },
             { projection: { _id: 1, name: 1 } }

@@ -29,6 +29,7 @@ import {
 import { resolveNationalGdpPerCapita, resolveNationalMedianIncome } from "./spending";
 import { getEraContext } from "@/lib/era/context";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /** Era year for the cost basis; defensive so a mock db (no gameState) ⇒ flag off. */
 async function resolveEraYear(db: Db): Promise<number | null> {
@@ -74,7 +75,7 @@ function getBillSelections(
 }
 
 async function getCountryPopulation(db: Db, countryId: CountryId): Promise<number> {
-  const states = await db.collection<State>("states").find({ countryId }).toArray();
+  const states = await statesCollection(db).find({ countryId }).toArray();
   return states.reduce((sum, state) => sum + (state.population ?? 0), 0);
 }
 
@@ -205,7 +206,7 @@ export async function validateStateBudgetImpact(
     return { allowed: true, costAmount: 0, newTotalSpending: 0 };
   }
 
-  const state = await db.collection<State>("states").findOne({ _id: stateId, countryId });
+  const state = await statesCollection(db).findOne({ _id: stateId, countryId });
   const budgetCapacity = regionalBudget?.totalBudget ?? stateBudget?.revenue.total ?? 0;
   const currentSpending = regionalBudget
     ? regionalBudget.totalBudget - regionalBudget.surplus

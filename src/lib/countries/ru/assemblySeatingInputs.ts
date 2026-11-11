@@ -34,6 +34,7 @@ import {
 import { GAME_STATE_PRE_ITERATION_FIELDS } from "@/lib/db/collections/gameState";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 function currentOfficeType(office: NPP["currentOffice"] | string) {
   return typeof office === "string" ? office : office?.type;
 }
@@ -372,8 +373,7 @@ export async function loadRussianAssemblySeatingInputs(
   const allocation: Record<string, number> = {};
   for (const row of duma.ballots.filter((row) => row.tier === "constituency"))
     allocation[row.regionId] = (allocation[row.regionId] ?? 0) + 1;
-  const regions = await db
-    .collection<State>("states")
+  const regions = await statesCollection(db)
     .find({ countryId: "RU" }, { session, batchSize: 1000, projection: { _id: 1 } })
     .toArray();
   if (

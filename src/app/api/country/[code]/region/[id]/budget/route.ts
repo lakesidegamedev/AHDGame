@@ -23,6 +23,7 @@ import { buildRegionalRevenueShape } from "@/lib/budget/regionalRevenueShape";
 import { calculateFiscalYear } from "@/lib/budget/fiscalYear";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import type { Document } from "mongodb";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export async function GET(
   request: Request,
@@ -89,7 +90,7 @@ async function serveRegionalBudget(
       countryId,
     });
     if (!fallbackStateBudget) {
-      const state = await db.collection<State>("states").findOne({ _id: stateId, countryId });
+      const state = await statesCollection(db).findOne({ _id: stateId, countryId });
       if (state) {
         const { generateStateBudgets } = await import("@/lib/seeds/reference/budgets");
         fallbackStateBudget =
@@ -130,7 +131,7 @@ async function serveRegionalBudget(
   }
 
   // Fetch state for the region's fiscal base (population + GDP)
-  const state = await db.collection<State>("states").findOne({ _id: stateId, countryId });
+  const state = await statesCollection(db).findOne({ _id: stateId, countryId });
   const population = state?.population ?? 0;
 
   // Compute spending by category from enacted regional policies

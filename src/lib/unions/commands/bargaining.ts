@@ -52,6 +52,7 @@ import { rejectIfTurnProcessing, resolveOwnedUnion, type UnionActionResult } fro
 import { openSettlementRatification } from "./ratifySettlement";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 function campaignResult(campaign: BargainingCampaign): Extract<UnionActionResult, { ok: true }> {
   return {
@@ -119,8 +120,7 @@ export async function bargainingMacroInputs(db: Db, countryId: Union["countryId"
       { _id: getNationalBudgetId(countryId) },
       { projection: { unionLawBias: 1 } }
     ),
-    db
-      .collection<State>("states")
+    statesCollection(db)
       .find({ countryId }, { projection: { _id: 1 } })
       .toArray(),
     db

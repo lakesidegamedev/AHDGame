@@ -27,6 +27,7 @@ import { planPartyRemap, type RegionParty } from "./partyRemap";
 import { remapRecruitmentSlates } from "./remapRecruitmentSlates";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import type { Document } from "mongodb";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /** Region-party ledger collections dissolved on secession (the new country reseeds). */
 const REGION_PARTY_LEDGERS = [
@@ -122,10 +123,7 @@ export async function splitParties(
   if (!plan.wholesale.length && !plan.independentized.length)
     return { wholesale: 0, independentized: 0, idMap: {} };
 
-  const successorStates = await db
-    .collection<State>("states")
-    .find({ countryId: toCountryId })
-    .toArray();
+  const successorStates = await statesCollection(db).find({ countryId: toCountryId }).toArray();
   const regions = successorStates.length ? successorStates : SUB_REGION_SEEDS[toCountryId];
   const shares = populationWeights(regions);
 

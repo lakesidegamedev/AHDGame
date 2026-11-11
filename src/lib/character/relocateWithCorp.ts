@@ -67,6 +67,7 @@ import {
 } from "@/lib/elections/usPoliticalHome";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 class RelocationUnderwritingLeaseConflict extends Error {}
 
@@ -114,9 +115,10 @@ export async function handleRelocateWithCorp(request: Request) {
       db,
       [{ countryId: auth.character.countryId ?? "US", partyId: auth.character.party }],
       async () => {
-        const targetState = await db
-          .collection<State>("states")
-          .findOne({ _id: normalizedTarget, countryId: resolvedTargetCountryId });
+        const targetState = await statesCollection(db).findOne({
+          _id: normalizedTarget,
+          countryId: resolvedTargetCountryId,
+        });
         if (!targetState) {
           return errorResponse(400, "Invalid target state or region");
         }

@@ -13,6 +13,7 @@ import type {
 import { canPostBillDiscussion } from "./discussionEligibility";
 import { serializeBillDiscussion } from "./dto/discussionView";
 import type { BillDiscussionScope, BillDiscussionView } from "./types";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 interface CreateInput {
   scope: BillDiscussionScope;
@@ -55,9 +56,10 @@ export async function createBillDiscussion(
         );
 
   // Resolve region display label.
-  const state = await db
-    .collection<State>("states")
-    .findOne({ _id: character.homeState, countryId: scope.countryId }, { projection: { name: 1 } });
+  const state = await statesCollection(db).findOne(
+    { _id: character.homeState, countryId: scope.countryId },
+    { projection: { name: 1 } }
+  );
 
   const doc: BillDiscussion = {
     _id: new ObjectId(),

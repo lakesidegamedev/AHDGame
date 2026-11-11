@@ -42,6 +42,7 @@ import { ensureIrelandResetV2ForReunification } from "@/lib/countries/ie/resetV2
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import type { Document } from "mongodb";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export interface TransferRegionArgs {
   regionId: string;
@@ -120,7 +121,7 @@ async function transferRegionInTransaction(
   } = args;
 
   // Idempotency: bail if the region doesn't exist or already belongs to target.
-  const region = await db.collection<State>("states").findOne({ _id: regionId });
+  const region = await statesCollection(db).findOne({ _id: regionId });
   if (!region) return { ok: false, skipped: "region-not-found" };
   if (region.countryId === toCountryId) {
     if (countryHasFeature("ukLib", fromCountryId) && countryHasFeature("ieLib", toCountryId)) {

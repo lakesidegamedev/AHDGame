@@ -27,6 +27,7 @@ import { ensureImfInstitutionPlaceholder } from "@/lib/imf/ensureImfInstitutionP
 import type { ResetGameWorldResult } from "@/lib/admin/resetGameWorld";
 import { backfillMissingRegionLeans } from "./seed/backfillMissingRegionLeans";
 import { purgeAbsentCountryRegions } from "./seed/purgeAbsentCountryRegions";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export interface FinalizeResetOptions {
   /** 1991 only: leave political offices vacant for player-created parties. */
@@ -408,8 +409,7 @@ export async function finalizeResetGameWorld(
     );
   }
   const seededStateIds = (
-    await db
-      .collection<{ _id: string }>("states")
+    await statesCollection<{ _id: string }>(db)
       .find({}, { projection: { _id: 1 } })
       .toArray()
   ).map((s) => s._id as string);

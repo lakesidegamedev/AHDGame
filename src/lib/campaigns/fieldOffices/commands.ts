@@ -31,6 +31,7 @@ import {
   type FieldOfficeScopeRules,
 } from "./rules";
 import { loadFieldOfficeRegionMap } from "./subdivisions";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export const FIELD_OFFICES_COLLECTION = "campaignFieldOffices";
 
@@ -48,8 +49,7 @@ export async function loadFieldOfficeRegions(
 ): Promise<Pick<State, "_id" | "name">[]> {
   // Leaf regions only: UK regions carry a parent (ENG, GBN) that is not
   // itself an election region, so filter out parents rather than children.
-  const all = await db
-    .collection<State>("states")
+  const all = await statesCollection(db)
     .find({ countryId: election.countryId }, { projection: { _id: 1, name: 1, parentRegionId: 1 } })
     .sort({ name: 1 })
     .toArray();

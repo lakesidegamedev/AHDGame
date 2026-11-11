@@ -53,6 +53,7 @@ import { officePoolTopUpStatus } from "@/lib/actions/officePoolTopUpRules";
 import { resolveRegionOfficeBannerImage } from "@/lib/constants/regionBanner";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 interface Props {
   params: Promise<{ code: string; id: string }>;
@@ -64,9 +65,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const countryId = code.toUpperCase() as CountryId;
   if (!COUNTRY_CONFIGS[countryId]) return {};
   const db = await getDb();
-  const state = await db
-    .collection<State>("states")
-    .findOne({ _id: id.toUpperCase(), countryId: countryId });
+  const state = await statesCollection(db).findOne({ _id: id.toUpperCase(), countryId: countryId });
   if (!state) return {};
   return {
     title: `${getRegionalBillAssentTitleForState(countryId, state._id)}'s Office · ${state.name} · A House Divided`,
@@ -87,7 +86,7 @@ export default async function GovernorOfficePage({ params }: Props) {
   // Neither read depends on the other: the state document names the office, and
   // office access is resolved from (country, state, viewer).
   const [state, access] = await Promise.all([
-    db.collection<State>("states").findOne({ _id: stateId, countryId: countryId }),
+    statesCollection(db).findOne({ _id: stateId, countryId: countryId }),
     resolveOfficeAccess(db, countryId, stateId, auth.character._id),
   ]);
   if (!state) notFound();

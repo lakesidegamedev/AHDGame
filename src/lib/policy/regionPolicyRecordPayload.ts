@@ -30,6 +30,7 @@ import { resolveExecutiveOffice } from "@/lib/states/regionalExecutive";
 import { loadResetLawProvenance } from "@/lib/policy/resetLawPolicyRecords";
 import type { PolicyProvenance } from "@/lib/policy/policyRecordPayload";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /**
  * "<Surname> administration", from whichever office actually governs this
@@ -77,9 +78,7 @@ export async function loadRegionPolicyRecordPayload(
       .find({ scope: "state", stateId: regionId, repealedAt: { $exists: false } })
       .sort({ enactedAt: 1 })
       .toArray(),
-    db
-      .collection<State>("states")
-      .findOne({ _id: regionId }, { projection: { population: 1, gdp: 1 } }),
+    statesCollection(db).findOne({ _id: regionId }, { projection: { population: 1, gdp: 1 } }),
     db.collection<StateBudget>("stateBudgets").findOne({ _id: regionId }),
     resolveRegionalEra(db, countryId, regionId),
   ]);

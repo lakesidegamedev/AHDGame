@@ -31,6 +31,7 @@ import { SPAWN_PRIORITY } from "./v2/spawnBudget";
 import { legacyDefinitionFor } from "@/lib/turn/crisisV2/legacyContent";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 interface ResilienceRow {
   _id: string;
@@ -206,8 +207,7 @@ export async function processAutoDisasterSpawn(
   // Province/state/region-scale areas only. Constituencies are excluded: they
   // are sub-regional (e.g. single UK seats) and too small to host a
   // nation-scale natural disaster; "nation" is the country-level pseudo-region.
-  const regions = await db
-    .collection<State>("states")
+  const regions = await statesCollection(db)
     .find({ countryId, regionType: { $nin: [null, "nation", "constituency"] } } as never)
     .toArray();
   if (regions.length === 0) return;

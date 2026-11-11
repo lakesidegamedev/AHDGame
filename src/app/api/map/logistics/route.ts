@@ -13,6 +13,7 @@ import { ZOD_COUNTRY_ENUM, type CountryId } from "@/lib/constants/countries";
 import type { SourcingNetworkDoc } from "@/lib/logistics/sourcingLedger";
 import type { FreightDemandEntry, FreightDemandResponse } from "@/lib/logistics/types";
 import type { CommodityPrice } from "@/lib/db/types/commodityPrice";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 const countryIdSchema = z.enum(ZOD_COUNTRY_ENUM);
 
@@ -36,8 +37,7 @@ export async function GET(request: Request) {
         .sort({ turn: -1 })
         .limit(1)
         .toArray(),
-      db
-        .collection<{ _id: string }>("states")
+      statesCollection<{ _id: string }>(db)
         .find({ countryId }, { projection: { _id: 1 } })
         .toArray(),
       db.collection<CommodityPrice>("commodityPrices").findOne({ commodity: "freight" }),

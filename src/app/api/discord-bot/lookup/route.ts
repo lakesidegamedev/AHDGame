@@ -21,6 +21,7 @@ import type {
 import type { CountryId } from "@/lib/constants/countries";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -110,8 +111,7 @@ export async function GET(request: Request) {
             })
             .toArray()
         : Promise.resolve([]),
-      db
-        .collection<State>("states")
+      statesCollection(db)
         .find({ _id: { $in: stateIds } })
         .toArray(),
       db

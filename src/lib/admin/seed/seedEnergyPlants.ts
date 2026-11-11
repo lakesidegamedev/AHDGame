@@ -6,6 +6,8 @@ import { ENERGY_POSITION_BY_COUNTRY, ENERGY_SOURCES } from "@/lib/constants/cabi
 import { getEnergyPlantsCollection } from "@/lib/db/collections/energyPlants";
 import type { EnergyPlant } from "@/lib/db/types/energyPlant";
 import { strictEraForPreset } from "@/lib/seeds/presetSelector";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
 
 /**
  * Energy sources available by era. Gates anachronistic generation from appearing
@@ -85,7 +87,10 @@ export async function seedEnergyPlants(db: Db, preset: string): Promise<void> {
     if (!positionId) continue;
     const existing = await col.countDocuments({ countryId, positionId });
     if (existing > 0) continue;
-    const regions = await db.collection("states").find({ countryId }).project({ _id: 1 }).toArray();
+    const regions = await statesCollection<Document>(db)
+      .find({ countryId })
+      .project({ _id: 1 })
+      .toArray();
     const regionIds = regions.map((s) => String(s._id));
     const fleet = buildCountryFleet(countryId, positionId, regionIds, 1, era);
     if (fleet.length === 0) continue;

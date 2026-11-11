@@ -37,6 +37,7 @@ import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /** One point on the fiscal-year trend series (stat strip compare + debt sparkline). */
 export interface FyHistoryPoint {
@@ -415,10 +416,7 @@ export async function loadFederalBudgetDetail(params: {
     };
   }
 
-  const states = await db
-    .collection<State>("states")
-    .find({ countryId: budgetCountryId })
-    .toArray();
+  const states = await statesCollection(db).find({ countryId: budgetCountryId }).toArray();
   // A1 SSOT: national GDP is the live sum of regional gdp, not the fiscal-close
   // snapshot in `budget.gdp`, which runs up to 6.5% behind between rollovers.
   // See lib/budget/gdpDenominator.

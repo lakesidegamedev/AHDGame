@@ -32,6 +32,7 @@ import type {
 } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -94,8 +95,7 @@ export async function GET(request: Request) {
           .toArray();
 
         const stateIds = [...new Set(elections.map((e) => e.state))];
-        const states = await db
-          .collection<State>("states")
+        const states = await statesCollection(db)
           .find({ _id: { $in: stateIds } })
           .toArray();
         const stateMap = new Map(states.map((s) => [s._id, s.name]));
@@ -188,9 +188,7 @@ export async function GET(request: Request) {
         .find({ electionId: electionOid }, { projection: { _id: 1, candidateId: 1, funds: 1 } })
         .toArray(),
       gameStateCollection(db).findOne({ _id: "current" }),
-      db
-        .collection<State>("states")
-        .findOne({ _id: election.state, countryId: election.countryId }),
+      statesCollection(db).findOne({ _id: election.state, countryId: election.countryId }),
     ]);
 
     // Enrich candidates

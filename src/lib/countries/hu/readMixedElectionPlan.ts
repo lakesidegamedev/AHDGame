@@ -1,12 +1,12 @@
 import type { Db } from "mongodb";
 import type { Election, ElectionVoteTally, State } from "@/lib/db/types";
 import { buildHuMixedPlan, type HuMixedPlan } from "./rules/mixedElectionPlan";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /** Return null until every regional race has finished and has a valid tally. */
 export async function readHuMixedElectionPlan(db: Db, cycle: number): Promise<HuMixedPlan | null> {
   const [regions, elections] = await Promise.all([
-    db
-      .collection<State>("states")
+    statesCollection(db)
       .find({ countryId: "HU" }, { projection: { _id: 1, population: 1 } })
       .toArray(),
     db

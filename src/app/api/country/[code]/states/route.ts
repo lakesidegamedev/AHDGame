@@ -7,6 +7,7 @@ import { getDb } from "@/lib/mongodb";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import type { State } from "@/lib/db/types";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 // GET /api/country/[code]/states — Return all states/regions for a country
 // Auth: public
@@ -21,8 +22,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     }
 
     const db = await getDb();
-    const states = await db
-      .collection<State>("states")
+    const states = await statesCollection(db)
       .find({ countryId })
       .project<{ _id: string; name: string }>({ _id: 1, name: 1 })
       .toArray();

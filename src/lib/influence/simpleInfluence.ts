@@ -18,6 +18,7 @@ import { resolveCampaignPriceLevel } from "@/lib/campaigns/rules/priceLevel";
 import { NEUTRAL_STAT } from "@/lib/stats/statsConstants";
 import { EXTERNAL_ATTACK_PREMIUM, priceExternalBoost, quoteSelfActionsForGain } from "./rules";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /**
  * Maximum NET favorability any one target can be moved by player support/attack
@@ -121,12 +122,10 @@ async function getSimpleInfluencePrices(
   barnstormTargetGain?: number
 ): Promise<{ prices?: SimpleInfluencePrices; error?: string }> {
   const targetCountryId = target.countryId ?? actor.countryId;
-  const state = await db
-    .collection<State>("states")
-    .findOne(
-      { _id: target.homeState, countryId: targetCountryId },
-      { projection: { gdp: 1, population: 1 } }
-    );
+  const state = await statesCollection(db).findOne(
+    { _id: target.homeState, countryId: targetCountryId },
+    { projection: { gdp: 1, population: 1 } }
+  );
   if (!state || !Number.isFinite(state.gdp) || !Number.isFinite(state.population)) {
     return {
       error:

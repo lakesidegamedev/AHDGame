@@ -14,6 +14,7 @@ import { escapeRegex } from "@/lib/utils/escapeRegex";
 import type { NPP, ElectedOfficial, OfficeType, PoliticalParty, State } from "@/lib/db/types";
 import { getPresetSeats, type HistoricalSeat } from "@/lib/constants/historicalSeats";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /**
  * Slug → party-name lookup used at resolve time. Exported so tests can
@@ -514,8 +515,7 @@ export async function seedFromSeats(
   const now = new Date();
 
   // Build state → countryId lookup
-  const allStates = await db
-    .collection<State>("states")
+  const allStates = await statesCollection(db)
     .find({})
     .project<{ _id: string; countryId: CountryId }>({ _id: 1, countryId: 1 })
     .toArray();

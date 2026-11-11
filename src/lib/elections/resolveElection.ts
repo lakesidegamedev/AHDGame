@@ -57,6 +57,7 @@ import {
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export type {
   PollingData,
@@ -569,7 +570,7 @@ export async function resolveElections(
   const [sharedApportionment, localRegionStates, houseDistricts] = await Promise.all([
     loadApportionment(db, gameState?.preset, gameState?.currentYear),
     regionFilters.length
-      ? db.collection<State>("states").find({ $or: regionFilters }).toArray()
+      ? statesCollection(db).find({ $or: regionFilters }).toArray()
       : Promise.resolve([] as State[]),
     shouldBatchHouseDistricts && houseStates.length
       ? db
@@ -610,8 +611,7 @@ export async function resolveElections(
   const campaignCellsByRegion = advertisedRegions.length
     ? await loadRegionalCampaignCells(
         db,
-        await db
-          .collection<State>("states")
+        await statesCollection(db)
           .find({
             countryId: { $in: uniqueCountryIds },
             $or: [

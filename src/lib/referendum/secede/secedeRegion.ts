@@ -36,6 +36,7 @@ import { splitParties } from "./splitParties";
 import { carryOverOfficials } from "./carryOverOfficials";
 import { promoteResetV2ForIndependence } from "./promoteResetV2";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export interface SecedeRegionArgs {
   regionId: string;
@@ -73,10 +74,8 @@ async function secedeRegionInTransaction(
   const toCountryId = regionId;
 
   // Guard: the region's aggregate states doc must exist; bail if already expanded.
-  const aggregate = await db.collection<State>("states").findOne({ _id: regionId });
-  const capital = await db
-    .collection<State>("states")
-    .findOne({ _id: CAPITAL_SUBREGION[toCountryId] });
+  const aggregate = await statesCollection(db).findOne({ _id: regionId });
+  const capital = await statesCollection(db).findOne({ _id: CAPITAL_SUBREGION[toCountryId] });
   if (capital) {
     await promoteResetV2ForIndependence(db, toCountryId, currentTurn);
     return { ok: true, skipped: "already-seceded" };

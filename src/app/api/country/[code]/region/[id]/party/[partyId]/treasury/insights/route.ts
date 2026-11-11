@@ -6,6 +6,7 @@ import { findPartyBySequentialId, getStatePartyOrgDocumentId } from "@/lib/db/pa
 import type { State, StatePartyOrg } from "@/lib/db/types";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { buildStateTreasuryInsights } from "@/lib/treasury/partyTreasuryInsights";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 // GET /api/country/[code]/region/[id]/party/[partyId]/treasury/insights â€” Leadership-only override history for a state party treasury
 // Auth: requireAuthWithCharacter
@@ -25,7 +26,7 @@ export async function GET(
     if (!auth.ok) return auth.response;
 
     const db = await getDb();
-    const state = await db.collection<State>("states").findOne({ _id: id, countryId });
+    const state = await statesCollection(db).findOne({ _id: id, countryId });
     if (!state) {
       return errorResponse(404, "State not found");
     }

@@ -22,6 +22,7 @@ import { planSectorFanout } from "./planSectorFanout";
 import { migrateProducerWallets } from "./migrateProducerWallets";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export interface ExpandToSubRegionsResult {
   inserted: number;
@@ -37,16 +38,16 @@ export async function expandToSubRegions(
   const capital = CAPITAL_SUBREGION[countryId];
 
   // Idempotency: if the capital sub-region already exists, the region was expanded.
-  const already = await db.collection<State>("states").findOne({ _id: capital });
+  const already = await statesCollection(db).findOne({ _id: capital });
   if (already) return { inserted: 0, skipped: "already-expanded", fannedOut: [] };
 
-  const aggregate = await db.collection<State>("states").findOne({ _id: countryId });
+  const aggregate = await statesCollection(db).findOne({ _id: countryId });
   if (!aggregate) throw new Error(`${countryId} live aggregate is missing`);
   const liveRegions = expandLiveRegions(aggregate, seeds);
   const now = new Date();
-  await db
-    .collection<State>("states")
-    .insertMany(liveRegions.map((s) => ({ ...s, countryId, updatedAt: now }) as State));
+  await statesCollection(db).insertMany(
+    liveRegions.map((s) => ({ ...s, countryId, updatedAt: now }) as State)
+  );
 
   // Fan the aggregate's dynamic per-region data out across the sub-regions.
   // The reset preset selects the era demographic pattern (1991 vs 2019).
@@ -100,7 +101,7 @@ export async function expandToSubRegions(
   await db.collection("counties").deleteMany({ countryId: "UK", stateId: countryId });
 
   // Drop the single-region aggregate once its sub-regions exist.
-  await db.collection<State>("states").deleteOne({ _id: countryId });
+  await statesCollection(db).deleteOne({ _id: countryId });
 
   return { inserted: seeds.length, fannedOut };
 }

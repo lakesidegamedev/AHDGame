@@ -10,6 +10,7 @@ import { MS_PER_TURN, SENATE_STAGGER_TURNS } from "@/lib/constants/turnTime";
 import { cycleAnchorContextFromGameState } from "@/lib/elections/cycleAnchorContext";
 import { electionToLarpYear } from "@/lib/utils/formatters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 // POST /api/admin/officials/init — Initializes elected official positions and cycle-1 elections for senate, house, or executive offices.
 // Auth: requireAdmin
@@ -88,7 +89,7 @@ export async function POST(request: Request) {
     // officials for pre-statehood territories (Alaska/Hawaii before 1959) that
     // `seedSeats` gives no seat — the same era gate `initializeOfficials` and
     // `seedSeats` apply. Keep all three in step.
-    const states = (await db.collection<State>("states").find({}).toArray()).filter(
+    const states = (await statesCollection(db).find({}).toArray()).filter(
       (s) => isUsElectoralState(s._id) && presetHouseSeats[s._id] != null
     );
 

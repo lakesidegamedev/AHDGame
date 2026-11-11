@@ -119,6 +119,7 @@ import {
 } from "@/lib/campaigns/endorsementActivation";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /** Vote multiplier applied in a state when its sitting governor has endorsed
  *  the candidate. Half of the VP-home-state effect — a real in-state lift
@@ -221,8 +222,7 @@ export async function initPresidentVoteTally(
   } else {
     // Non-US presidential races accumulate per region/zone keyed by the
     // country's own `states` doc ids (see accumulateNGPresidentVoteTurn).
-    const countryStates = await db
-      .collection<State>("states")
+    const countryStates = await statesCollection(db)
       .find({ countryId }, { projection: { _id: 1 } })
       .toArray();
     unitIds = countryStates.map((s) => s._id as string);
@@ -410,8 +410,7 @@ export async function accumulatePresidentVoteTurn(
 
   const [states, demographics, statePartyOrgs, turnoutDocs, registrationPools, approvalMap] =
     await Promise.all([
-      db
-        .collection<State>("states")
+      statesCollection(db)
         .find({ _id: { $in: uniqueStateIds } })
         .toArray(),
       db

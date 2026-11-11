@@ -38,6 +38,7 @@ import { severeConflictLoad, type SevereMembership } from "./rules/futureConflic
 import { loadActiveSevereCrisisRows } from "@/lib/crises/severeCrisisLoad";
 import { syncCampaignCrises, type CampaignTurnState } from "./campaignCrisis";
 import { mergeSevereLoads, severeLoadByCountry } from "@/lib/crises/rules/severeLoad";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 function roleMapForEvent(
   def: ReturnType<typeof allLivingConflictDefs>[number],
@@ -197,8 +198,7 @@ export async function processLivingConflictsTurn(
     getConflictsCollection(db).find({ status: "active" }).toArray(),
   ]);
   const [countryRows, macroCountries] = await Promise.all([
-    db
-      .collection<{ countryId?: string }>("states")
+    statesCollection<{ countryId?: string }>(db)
       .find({}, { projection: { countryId: 1, _id: 0 } })
       .toArray(),
     getMacroCountriesCollection(db).then((collection) =>

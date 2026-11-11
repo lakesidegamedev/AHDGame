@@ -36,6 +36,7 @@ import { loadCharacterByUrlId } from "./characterLoaders";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 interface CandidateElection {
   election: Election;
@@ -197,9 +198,7 @@ export async function getCharacterById(characterId: string) {
       gameState,
       partyHistoryEvents,
     ] = await Promise.all([
-      db
-        .collection<State>("states")
-        .findOne({ _id: character.homeState, countryId: character.countryId }),
+      statesCollection(db).findOne({ _id: character.homeState, countryId: character.countryId }),
       db.collection<GameConfig>("gameConfig").findOne({ _id: "default" }),
       charactersCollection(db)
         .find({ isBanned: { $ne: true }, ...npiCountryMatch })

@@ -28,6 +28,7 @@ import {
 } from "@/lib/politicalLegislation/politicalApprovalProvider";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export interface MapRegionLean {
   regionId: string;
@@ -78,7 +79,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     const db = await getDb();
 
     const [allStates, allDemographics] = await Promise.all([
-      db.collection<State>("states").find({ countryId }).toArray(),
+      statesCollection(db).find({ countryId }).toArray(),
       db.collection<StateDemographics>("stateDemographics").find({ countryId }).toArray(),
     ]);
 

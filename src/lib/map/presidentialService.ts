@@ -10,6 +10,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import {} from "@/lib/constants";
 import { loadApportionment } from "@/lib/elections/apportionment";
 import { getGameStateCollection } from "@/lib/db/collections";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export interface MapPresidentialState {
   leadingParty: string;
@@ -50,7 +51,7 @@ export async function computePresidentialMap(
 }> {
   const [parties, allStates] = await Promise.all([
     db.collection<PoliticalParty>("politicalParties").find({ countryId }).toArray(),
-    db.collection<State>("states").find({ countryId }).toArray(),
+    statesCollection(db).find({ countryId }).toArray(),
   ]);
 
   const partyColorMap = new Map(

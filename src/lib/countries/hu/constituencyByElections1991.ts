@@ -35,6 +35,7 @@ import {
 import { TALLY_WITH_LATEST_SNAPSHOT_ONLY } from "@/lib/elections/engine/tallyProjections";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 export const HU_1991_BY_ELECTIONS_COLLECTION = "hu1991ConstituencyByElections";
 export interface Hu1991ByElectionRecord {
   _id: string;
@@ -211,8 +212,7 @@ async function materializeHu1991ByElectionOpening(input: {
       districtIds.map((id) => HU_1991_CONSTITUENCIES.find((row) => row.id === id)!.regionId)
     ),
   ];
-  const states = await db
-    .collection<State>("states")
+  const states = await statesCollection(db)
     .find(
       { countryId: "HU" },
       { session, projection: { population: 1, votingEligiblePopulation: 1 } }

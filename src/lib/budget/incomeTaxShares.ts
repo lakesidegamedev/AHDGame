@@ -20,6 +20,7 @@ import {
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 function regionIncomePopulation(
   state: Pick<State, "_id" | "countryId">,
@@ -55,8 +56,7 @@ export async function refreshIncomeTaxShares(db: Db): Promise<void> {
       { _id: "current" },
       { projection: { preset: 1, currentYear: 1, currentTurn: 1, startingYear: 1 } }
     ),
-    db
-      .collection<State>("states")
+    statesCollection(db)
       .find({}, { projection: { countryId: 1, population: 1, parentRegionId: 1 } })
       .toArray(),
     federalBudgetCollection(db)

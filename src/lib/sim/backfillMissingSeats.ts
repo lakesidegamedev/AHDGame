@@ -13,6 +13,7 @@ import {
 } from "@/lib/constants/states";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /**
  * True when `stateId` is eligible for US federal seat backfill (House,
@@ -265,8 +266,7 @@ async function backfillSubNationalChamber(
   const { officeType, seatsForState } = spec;
 
   const states = (
-    await db
-      .collection<State>("states")
+    await statesCollection(db)
       .find({ countryId }, { projection: { _id: 1, stateSenateSeats: 1 } })
       .toArray()
   ).filter(
@@ -413,8 +413,7 @@ async function backfillChamber(
   // apportionment below — see `isUsBackfillEligibleState`. Every other country
   // passes through unfiltered.
   const states = (
-    await db
-      .collection<State>("states")
+    await statesCollection(db)
       .find({ countryId }, { projection: { _id: 1, population: 1 } })
       .toArray()
   ).filter(
