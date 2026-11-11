@@ -21,6 +21,7 @@ import {
 } from "./rules/crisisV2";
 import type { LivingConflictDef, LivingConflictState } from "./types";
 import { vietnamWorldPressure, type ActiveWarSnapshot } from "./worldPressure";
+import { isLiveWorldSwitchOn } from "@/lib/gameConfig/liveWorldSwitches";
 import { crisesCollection } from "@/lib/db/repositories/crises";
 import { livingConflictsCollection } from "@/lib/db/repositories/livingConflicts";
 import { coldWarTensionCollection } from "@/lib/db/repositories/coldWarTension";
@@ -101,6 +102,8 @@ export async function syncCampaignCrises(
   ensureCampaignCrisisContent();
   const ids = campaigns.map(({ def }) => campaignDefinitionId(def.key));
   if (ids.length === 0) return { opened: 0, closed: 0 };
+  // A world on the legacy crisis engine has no mirror crises to open or close.
+  if (!(await isLiveWorldSwitchOn(db, "crisisV2StagesEnabled"))) return { opened: 0, closed: 0 };
   const existing = await crisesCollection(db)
     .find({ "v2.definitionId": { $in: ids } }, { projection: { status: 1, "v2.definitionId": 1 } })
     .toArray();

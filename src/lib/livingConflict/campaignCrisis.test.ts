@@ -243,11 +243,21 @@ describe("campaign mirror crises", () => {
   const state = (status: string, hasOpened = true) =>
     ({ defKey: def.key, hasOpened, status, phaseLevel: 1, intensity: 40 }) as never;
 
-  function dbWith(existing: unknown[]) {
+  function dbWith(existing: unknown[], stages = true) {
     const db = createMockDb();
     db.collection("crises").find.mockReturnValue({ toArray: async () => existing });
+    db.collection("gameConfig").findOne.mockResolvedValue({ crisisV2StagesEnabled: stages });
     return db;
   }
+
+  it("mirrors nothing on a world still on the legacy crisis engine", async () => {
+    const db = dbWith([], false);
+    const out = await syncCampaignCrises(db as unknown as Db, 50, [
+      { def, state: state("active"), participants },
+    ]);
+    expect(out).toEqual({ opened: 0, closed: 0 });
+    expect(db.collectionMocks.crises.insertMany).not.toHaveBeenCalled();
+  });
 
   it("opens one v2 crisis when the campaign opens", async () => {
     const db = dbWith([]);

@@ -413,6 +413,43 @@ export function nationalGdpPerCapitaIndex(
   return index;
 }
 
+/** Which figure campaign money measures regions against. */
+export interface CampaignGdpBasis {
+  /** True: live national GDP per capita. False: the era table. */
+  live: boolean;
+  preset?: string;
+}
+
+/**
+ * Era-table baselines in the shape of a live index, for worlds whose campaign
+ * money still measures against the era table. Countries with no table row (or
+ * no usable cell) are left out, so `requireNationalGdpPerCapita` throws only if
+ * one of them is priced, as the era table itself does.
+ */
+export function eraGdpPerCapitaIndex(
+  countryIds: Iterable<string>,
+  preset?: string
+): Map<string, number> {
+  const index = new Map<string, number>();
+  for (const countryId of countryIds) {
+    if (index.has(countryId) || !hasGdpBaseline(countryId)) continue;
+    const baseline = gdpBaselinePerCapita(countryId, preset);
+    if (Number.isFinite(baseline) && baseline > 0) index.set(countryId, baseline);
+  }
+  return index;
+}
+
+/** The per-country figure campaign money measures against, live or from the era table. */
+export function campaignGdpPerCapitaIndex(
+  states: Iterable<{ countryId?: string; gdp?: number; population: number }>,
+  basis: CampaignGdpBasis
+): Map<string, number> {
+  if (basis.live) return nationalGdpPerCapitaIndex(states);
+  const countryIds = new Set<string>();
+  for (const s of states) countryIds.add(s.countryId ?? "US");
+  return eraGdpPerCapitaIndex(countryIds, basis.preset);
+}
+
 /**
  * Read one country from a `nationalGdpPerCapitaIndex`.
  *

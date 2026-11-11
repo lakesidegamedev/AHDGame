@@ -7,15 +7,30 @@
 
 import type { Db } from "mongodb";
 import { getStatesCollection } from "@/lib/db/collections/states";
-import { nationalGdpPerCapitaIndex, requireNationalGdpPerCapita } from "./rules/gdpBaseline";
+import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
+import { isLiveWorldSwitchOn } from "@/lib/gameConfig/liveWorldSwitches";
+import {
+  campaignGdpPerCapitaIndex,
+  requireNationalGdpPerCapita,
+  type CampaignGdpBasis,
+} from "./rules/gdpBaseline";
+
+/** Whether this world's campaign money follows live GDP, and the era preset for the table. */
+export async function loadCampaignGdpBasis(db: Db): Promise<CampaignGdpBasis> {
+  const [live, preset] = await Promise.all([
+    isLiveWorldSwitchOn(db, "campaignLiveGdpBasisEnabled"),
+    getGameStatePresetOrDefault(db),
+  ]);
+  return { live, preset };
+}
 
 /**
- * Load live national GDP per capita for every country in one grouped read.
- * Campaign income and cost scalars measure a region against this figure, so
- * they follow the economy instead of a start-of-world number. Countries with
- * no usable regional GDP are absent from the map.
+ * Load the figure campaign money measures regions against, for every country
+ * in one grouped read: live national GDP per capita when the world's switch is
+ * on, the era table otherwise. Countries with no usable figure are absent.
  */
 export async function loadNationalGdpPerCapitaIndex(db: Db): Promise<Map<string, number>> {
+  const basis = await loadCampaignGdpBasis(db);
   const rows = await (
     await getStatesCollection(db)
   )
@@ -29,8 +44,9 @@ export async function loadNationalGdpPerCapitaIndex(db: Db): Promise<Map<string,
       },
     ])
     .toArray();
-  return nationalGdpPerCapitaIndex(
-    rows.map((r) => ({ countryId: r._id ?? "US", gdp: r.gdp, population: r.population }))
+  return campaignGdpPerCapitaIndex(
+    rows.map((r) => ({ countryId: r._id ?? "US", gdp: r.gdp, population: r.population })),
+    basis
   );
 }
 

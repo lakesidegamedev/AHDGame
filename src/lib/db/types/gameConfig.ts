@@ -380,6 +380,32 @@ export interface GameConfig {
    */
   crisisV2EmergentEnabled?: boolean;
   /**
+   * Operational switch for the Crisis v2 engine on new crises. True attaches a
+   * v2 instance (stages, blame, scars, forced events) to every crisis a
+   * template or disaster spawns, and mirrors living conflicts as v2 crises.
+   * Fresh worlds seed true; absent or false spawns crises on the legacy engine.
+   */
+  crisisV2StagesEnabled?: boolean;
+  /**
+   * Operational switch for the succession watcher: vacancy records for every
+   * executive office, deputy promotion outside the US, special elections and
+   * generated fills. Fresh worlds seed true; absent or false keeps only the US
+   * President-to-VP succession.
+   */
+  executiveSuccessionEnabled?: boolean;
+  /**
+   * Operational switch for leader legacies. True scores and stores a legacy
+   * when a head of government leaves office, which election swing and party
+   * renewal read. Fresh worlds seed true; absent or false records none.
+   */
+  leaderLegacyEnabled?: boolean;
+  /**
+   * Operational switch for the campaign money basis. True measures campaign
+   * income and costs against live national GDP per capita; absent or false
+   * keeps the era table. Fresh worlds seed true.
+   */
+  campaignLiveGdpBasisEnabled?: boolean;
+  /**
    * Funded producer market: >= 1 judges whether a cash-short company's run
    * pays for itself (the sales advance) with its inputs at last turn's
    * clearing price, never above the bid ceiling, instead of at the ceiling.

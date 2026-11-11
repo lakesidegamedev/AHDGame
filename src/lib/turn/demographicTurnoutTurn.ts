@@ -5,7 +5,7 @@
  */
 import { resolveCampaignPriceLevel } from "@/lib/campaigns/rules/priceLevel";
 import {
-  nationalGdpPerCapitaIndex,
+  campaignGdpPerCapitaIndex,
   requireNationalGdpPerCapita,
 } from "@/lib/campaigns/rules/gdpBaseline";
 import {
@@ -551,7 +551,10 @@ export async function processPartyGOTV(
       // the revenue estimate uses the same base.
       statePopMap: new Map(allStates.map((s) => [s._id, s.population])),
       stateGdpMap: new Map(allStates.map((s) => [s._id, s.gdp])),
-      nationalGdpIndex: nationalGdpPerCapitaIndex(allStates),
+      nationalGdpIndex: campaignGdpPerCapitaIndex(allStates, {
+        live: gameConfig?.campaignLiveGdpBasisEnabled === true,
+        preset,
+      }),
       nppEconomyEnabled,
       charactersByParty,
       charactersByPartyState,

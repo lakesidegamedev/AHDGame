@@ -123,7 +123,15 @@ describe("fresh-world flag policy", () => {
   });
 
   it("seeds the operational switches on for fresh worlds and only on insert for top-ups", () => {
-    const switches = ["priceLevelEnabled", "fiscalStabilizerEnabled", "crisisV2EmergentEnabled"];
+    const switches = [
+      "priceLevelEnabled",
+      "fiscalStabilizerEnabled",
+      "crisisV2EmergentEnabled",
+      "crisisV2StagesEnabled",
+      "executiveSuccessionEnabled",
+      "leaderLegacyEnabled",
+      "campaignLiveGdpBasisEnabled",
+    ];
     const { settings, flags } = splitFreshWorldGameConfigFlags(referenceGameConfig);
     for (const key of switches) {
       expect(FRESH_WORLD_GAME_CONFIG_FLAGS).toHaveProperty(key, true);
