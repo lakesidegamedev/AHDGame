@@ -53,6 +53,7 @@ import type {
 } from "./types";
 import { captureBillStatusChanged } from "@/lib/analytics/billStatusAnalytics";
 import { resolveRevisionDelay } from "./rules";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export interface BillLifecycleResult {
   billsProcessed: number;
@@ -164,8 +165,8 @@ async function loadVoteOfficials(
 
 /** Preserve recognized legacy country scopes without sharing joint ballots. */
 function billCountryScope(config: BillLifecycleConfig): Record<string, unknown> {
-  if (config.country === "UK") return buildNationalBillCountryScopeFilter("UK");
-  if (config.country === "US")
+  if (countryHasFeature("ukTurn", config.country)) return buildNationalBillCountryScopeFilter("UK");
+  if (countryHasFeature("usTurn", config.country))
     return {
       $or: [
         { countryId: "US" },

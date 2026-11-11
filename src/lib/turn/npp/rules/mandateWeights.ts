@@ -4,13 +4,14 @@
  * deduplicating physical identities and retaining legacy single-row weights.
  */
 import type { BillVoteField } from "@/lib/congress/billVoteField";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 export function russianAssemblyIndividualMandate(input: {
   id: string;
   countryId: string;
   officeType: string;
   seatId?: string;
 }) {
-  return input.countryId === "RU" &&
+  return countryHasFeature("ruTurn", input.countryId) &&
     ((input.officeType === "dumaDeputy" && input.seatId?.startsWith("RU-duma-")) ||
       (input.officeType === "federationCouncilMember" && input.seatId?.startsWith("RU-council-")))
     ? input.id

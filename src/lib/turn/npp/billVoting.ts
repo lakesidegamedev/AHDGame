@@ -74,6 +74,7 @@ import {
 import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { oppositionBlocWorthwhile } from "@/lib/nppAutonomy/v6/rules/oppositionBattles";
 import type { Corporation, CorporateSector } from "@/lib/db/types";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export async function processBillVoting(ctx: NPPContext): Promise<number> {
   const {
@@ -153,7 +154,7 @@ export async function processBillVoting(ctx: NPPContext): Promise<number> {
   // Standalone callers share the same one-read snapshot as the context loader.
   if (
     ctx.preset === "1991-default" &&
-    activeBills.some((bill) => bill.countryId === "RU") &&
+    activeBills.some((bill) => countryHasFeature("ruTurn", bill.countryId)) &&
     !runtimeCountryOffices.has("RU")
   ) {
     runtimeCountryOffices.set("RU", await loadRuntimeCountryOffices(db, "RU", ctx.preset));

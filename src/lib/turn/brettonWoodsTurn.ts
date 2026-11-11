@@ -39,6 +39,7 @@ import {
 } from "@/lib/monetary/brettonWoods";
 import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export interface BrettonWoodsTurnResult {
   /** Always true: the phase runs every turn. Kept for the phase telemetry shape. */
@@ -95,7 +96,7 @@ export async function processBrettonWoodsTurn(
     .toArray();
   if (rateDocs.length === 0) return { ...empty, enabled: true };
 
-  const usDoc = rateDocs.find((doc) => doc.countryId === "US");
+  const usDoc = rateDocs.find((doc) => countryHasFeature("usTurn", doc.countryId));
   const usdRate = usDoc && finiteOr(usDoc.rate, NaN) > 0 ? (usDoc.rate as number) : NaN;
   const toInternal = (faceUsd: number): number =>
     Number.isFinite(usdRate) && usdRate > 0 ? faceUsd / (usdRate as number) : 0;
@@ -120,7 +121,7 @@ export async function processBrettonWoodsTurn(
   let usReservesFace = 0;
   for (const bank of banks) {
     const usdHeld = finiteOr(bank.spreadFeeReserveBalances?.["USD" as CurrencyCode], 0);
-    if (bank.countryId === "US") {
+    if (countryHasFeature("usTurn", bank.countryId)) {
       usReservesFace = finiteOr(bank.reserveBalance, 0) + finiteOr(bank.forexRevenue, 0);
     } else if (usdHeld > 0) {
       foreignClaims += toInternal(usdHeld);

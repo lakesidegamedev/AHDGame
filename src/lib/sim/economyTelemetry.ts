@@ -18,6 +18,7 @@ import {
 import { getGdpBaseline } from "@/lib/utils/fundGeneration";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /**
  * Post-run economy telemetry.
@@ -685,7 +686,11 @@ async function collectCoverage(db: Db): Promise<CoverageTelemetry> {
   if (sectors.length === 0) return { ...base, entryRejectionFunnel };
   const present = new Set<string>();
   for (const s of sectors) {
-    if (s.countryId === "US" && typeof s.stateId === "string" && typeof s.sectorType === "string") {
+    if (
+      countryHasFeature("usTurn", s.countryId) &&
+      typeof s.stateId === "string" &&
+      typeof s.sectorType === "string"
+    ) {
       present.add(
         `${s.stateId}:${getOperatingSectorType(s.sectorType, s.industryModel, s.mediaDiscriminator)}`
       );
@@ -704,7 +709,7 @@ async function collectCoverage(db: Db): Promise<CoverageTelemetry> {
   // Same US-only population as presence/empty combos above: non-US rows
   // carry different market structures and must not move the US mean.
   const usFractions = sectors
-    .filter((s) => s.countryId === "US")
+    .filter((s) => countryHasFeature("usTurn", s.countryId))
     .map((s) => s.soldFraction)
     .filter((v): v is number => typeof v === "number");
   const meanSold = usFractions.length

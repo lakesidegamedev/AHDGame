@@ -73,6 +73,7 @@ import {
   HU_2011_PROPOSALS_COLLECTION,
   type Hu2011ElectoralProposal,
 } from "@/lib/countries/hu/electoralProposals2011";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 const DEMOCRATIC_1991_COUNTRIES: readonly CountryId[] = ["PL", "CS", "HU", "RO", "BG", "YU"];
 
@@ -107,7 +108,7 @@ export async function processOnePartyBillLifecycleForCountry(
         .findOne({ _id: countryId }, { projection: { dissolvedTurn: 1 } });
       if (state?.dissolvedTurn != null) return { enacted: 0, failed: 0 };
       const lifecycle = buildConfiguredCountryBillLifecycle(countryId, preset);
-      if (countryId === "HU") {
+      if (countryHasFeature("huTurn", countryId)) {
         const proposals = await Promise.all([
           db
             .collection<Hu1994ElectoralProposal>(HU_1994_PROPOSALS_COLLECTION)
@@ -139,7 +140,7 @@ export async function processOnePartyBillLifecycleForCountry(
           };
         }
       }
-      if (countryId === "BG") {
+      if (countryHasFeature("bgTurn", countryId)) {
         const proposals = await db
           .collection<Bg1991ConstitutionalProposal>(BG_1991_PROPOSALS_COLLECTION)
           .find(
@@ -178,7 +179,7 @@ export async function processOnePartyBillLifecycleForCountry(
                     passesBgConstitution1991(totals, 400);
             };
       }
-      if (countryId === "RO") {
+      if (countryHasFeature("roTurn", countryId)) {
         const proposal = await db
           .collection<Ro1992ElectoralProposal>(RO_1992_PROPOSALS_COLLECTION)
           .findOne(

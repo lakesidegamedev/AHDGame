@@ -8,6 +8,7 @@ import {
 } from "@/lib/db/partyLookup";
 import { isUsPartyOrganizationJurisdiction } from "@/lib/constants/states";
 import { loadUsPoliticalStateIds } from "@/lib/elections/usPoliticalHome";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export interface EnsureStatePartyOrgRowArgs {
   countryId: CountryId;
@@ -35,7 +36,7 @@ export async function ensureStatePartyOrgRow(
 ): Promise<StatePartyOrg> {
   // DC is organizable even though it elects no state or congressional offices.
   // Alaska and Hawaii also have party chapters before admission.
-  if (args.countryId === "US") {
+  if (countryHasFeature("usTurn", args.countryId)) {
     if (!isUsPartyOrganizationJurisdiction(args.stateId)) {
       throw new Error(
         `Cannot create a state party org for unsupported US region "${args.stateId}".`
