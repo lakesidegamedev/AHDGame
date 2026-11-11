@@ -2,14 +2,17 @@ import type { CountryId } from "@/lib/constants/countriesCore";
 import type { State } from "@/lib/db/types";
 import { scoRegions } from "@/lib/seeds/sco/scoRegions";
 import { walRegions } from "@/lib/seeds/wal/walRegions";
+import { QC_CAPITAL_REGION, qcRegions } from "@/lib/countries/qc/data/qcRegions";
 import { sovereigntyRegionForSuccessor } from "../rules/sovereigntyRegions";
+import { isResetV2Country, type ResetV2Country } from "@/lib/resetVersions/rules";
 
-export type SecedingCountryId = "SCO" | "WAL";
+export type SecedingCountryId = "SCO" | "WAL" | "QC";
 
 /** Latent sub-region seed maps, keyed by seceding country. */
 export const SUB_REGION_SEEDS: Record<SecedingCountryId, State[]> = {
   SCO: scoRegions,
   WAL: walRegions,
+  QC: qcRegions,
 };
 
 /**
@@ -20,6 +23,7 @@ export const SUB_REGION_SEEDS: Record<SecedingCountryId, State[]> = {
 export const CAPITAL_SUBREGION: Record<SecedingCountryId, string> = {
   SCO: "LOT", // Edinburgh & the Lothians
   WAL: "CDF", // Cardiff & South East
+  QC: QC_CAPITAL_REGION,
 };
 
 /** Where a successor country comes from: the parent country and the region it leaves as. */
@@ -42,4 +46,11 @@ export function secessionSource(successorId: SecedingCountryId): SecessionSource
 
 export function isSecedingCountryId(id: string | null | undefined): id is SecedingCountryId {
   return id != null && Object.hasOwn(SUB_REGION_SEEDS, id);
+}
+
+/** Successors whose reviewed v2 boards exist; the rest never hold v2 state. */
+export type ResetV2Successor = Extract<SecedingCountryId, ResetV2Country>;
+
+export function isResetV2Successor(id: SecedingCountryId): id is ResetV2Successor {
+  return isResetV2Country(id);
 }

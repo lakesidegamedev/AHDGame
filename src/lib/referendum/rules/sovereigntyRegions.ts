@@ -19,6 +19,10 @@ export interface SovereigntyRegion {
   readonly executiveTitle: string;
   /** How copy names the national government the region would leave. */
   readonly nationalGovernmentName: string;
+  /** The parent country as written mid-sentence ("the United Kingdom"). */
+  readonly parentName: string;
+  /** Who sponsors the parent parliament's consent bill. */
+  readonly consentSponsor: string;
   /**
    * Party slugs the region's mood moves votes between at elections: toward
    * the separatist parties and away from their main unionist rivals.
@@ -44,6 +48,8 @@ export const SOVEREIGNTY_REGIONS: readonly SovereigntyRegion[] = [
     successorCountryId: "SCO",
     executiveTitle: "First Minister",
     nationalGovernmentName: "Westminster",
+    parentName: "the United Kingdom",
+    consentSponsor: "His Majesty's Government",
     electionParties: { separatist: ["uk_snp"], rivals: ["uk_conservative"] },
     actuates: true,
   },
@@ -55,6 +61,8 @@ export const SOVEREIGNTY_REGIONS: readonly SovereigntyRegion[] = [
     successorCountryId: "WAL",
     executiveTitle: "First Minister",
     nationalGovernmentName: "Westminster",
+    parentName: "the United Kingdom",
+    consentSponsor: "His Majesty's Government",
     electionParties: { separatist: ["uk_plaid"], rivals: ["uk_conservative"] },
     actuates: true,
   },
@@ -66,6 +74,8 @@ export const SOVEREIGNTY_REGIONS: readonly SovereigntyRegion[] = [
     successorCountryId: null,
     executiveTitle: "First Minister",
     nationalGovernmentName: "Westminster",
+    parentName: "the United Kingdom",
+    consentSponsor: "His Majesty's Government",
     electionParties: { separatist: ["uk_sf"], rivals: ["uk_dup", "uk_uup"] },
     actuates: true,
   },
@@ -74,9 +84,11 @@ export const SOVEREIGNTY_REGIONS: readonly SovereigntyRegion[] = [
     regionId: "CA_QC",
     kind: "independence",
     targetCountryId: null,
-    successorCountryId: null,
+    successorCountryId: "QC",
     executiveTitle: "Premier",
     nationalGovernmentName: "Ottawa",
+    parentName: "Canada",
+    consentSponsor: "Government of Canada",
     electionParties: {
       separatist: ["ca_laurentian"],
       rivals: ["ca_federal_unity", "ca_national_prosperity"],
@@ -117,6 +129,21 @@ export function sovereigntyCountryIds(): CountryId[] {
 /** True when the country hosts the referendum process at all. */
 export function hostsSovereigntyReferendums(countryId: string | null | undefined): boolean {
   return SOVEREIGNTY_REGIONS.some((entry) => entry.countryId === countryId);
+}
+
+/** Copy for a region's independence: its successor name and its parent's. */
+export function independenceCopy(
+  regionId: string,
+  successorName: (countryId: string) => string | undefined
+): { region: string; parent: string; national: string; sponsor: string } {
+  const entry = sovereigntyRegion(regionId);
+  const successor = entry?.successorCountryId ?? regionId;
+  return {
+    region: successorName(successor) ?? regionId,
+    parent: entry?.parentName ?? "the United Kingdom",
+    national: entry?.nationalGovernmentName ?? "Westminster",
+    sponsor: entry?.consentSponsor ?? "His Majesty's Government",
+  };
 }
 
 /** Names for the two governments in a region's devolution copy. */

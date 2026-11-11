@@ -17,6 +17,7 @@ import { getCountryConfig, type CountryId } from "@/lib/constants/countries";
 import { CONVERSION_WINDOW_TURNS } from "@/lib/constants/referendum";
 import { isCountryEnabledForPlayers } from "@/lib/countryAccess";
 import { billsCollection } from "@/lib/db/repositories/bills";
+import { independenceCopy } from "./rules/sovereigntyRegions";
 
 /** Display-only votingEndsAt offset; turn-based resolution uses votingEndsOnTurn. */
 const APPROX_TURN_MS = 3_600_000;
@@ -114,25 +115,25 @@ export async function createReunificationConsentBills(
 }
 
 /**
- * Create the SINGLE Westminster consent bill for a passed independence
- * referendum — the UK Commons must consent to release the region as a new
- * sovereign country. No counterpart bill (there is no admitting parliament).
+ * Create the single consent bill for a passed independence referendum: the
+ * parent's lower house must consent to release the region as a new sovereign
+ * country. There is no admitting parliament, so no counterpart bill.
  */
 export async function createIndependenceConsentBill(
   db: Db,
   ref: Referendum,
   currentTurn: number
 ): Promise<{ westminsterBillId: ObjectId }> {
-  const regionName = getCountryConfig(ref.regionId as CountryId)?.name ?? ref.regionId;
+  const copy = independenceCopy(ref.regionId, (id) => getCountryConfig(id as CountryId)?.name);
   const westminsterBillId = await createConsentBill(db, {
     ref,
-    countryId: ref.countryId, // UK (releasing)
-    title: `${regionName} (Independence) Bill`,
+    countryId: ref.countryId,
+    title: `${copy.region} (Independence) Bill`,
     summary:
-      `A bill for the United Kingdom to release ${regionName} as an independent sovereign ` +
+      `A bill for ${copy.parent} to release ${copy.region} as an independent sovereign ` +
       "country following its independence referendum. The Commons must consent for independence " +
       "to take effect.",
-    sponsorName: "His Majesty's Government",
+    sponsorName: copy.sponsor,
     currentTurn,
     category: "independence",
   });

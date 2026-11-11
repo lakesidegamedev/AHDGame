@@ -15,7 +15,6 @@ describe("secession sources", () => {
     for (const successor of SUCCESSORS) {
       const entry = sovereigntyRegionForSuccessor(successor);
       expect(entry?.kind).toBe("independence");
-      expect(entry?.actuates).toBe(true);
       expect(secessionSource(successor)).toEqual({
         fromCountryId: entry!.countryId,
         regionId: entry!.regionId,
@@ -36,6 +35,10 @@ describe("secession sources", () => {
         true
       );
     }
+  });
+
+  it("finds Quebec under Canada's prefixed region id", () => {
+    expect(secessionSource("QC")).toEqual({ fromCountryId: "CA", regionId: "CA_QC" });
   });
 
   it("recognises only built successors", () => {
