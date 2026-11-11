@@ -556,6 +556,9 @@ export function singleCountryFiles(): Owned[] {
       // which is where every data module actually is.
       if (/^src\/app\//.test(file) || /^src\/components\//.test(file)) continue;
       if (/^scripts\//.test(file)) continue;
+      // Collection handles name a collection, not a fact about its country, and
+      // the data access ratchet requires every handle to live in this directory.
+      if (/^src\/lib\/db\/repositories\//.test(file)) continue;
       const source = readFileSync(file, "utf8");
       // A forwarder holds no copy, so it is not the country's data by
       // definition -- it is the absence of a second one.
