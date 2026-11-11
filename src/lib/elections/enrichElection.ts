@@ -403,14 +403,10 @@ export async function _enrichElection(
     });
   }
 
-  // A finished election is a historical record: it must render the same field
-  // forever, even after a contestant's character or NPP is deleted. The
-  // turn-651 Liberal/SDP merge removed every Liberal NPP along with their
-  // candidacy rows, and Scotland's published count silently fell from 2,498,473
-  // votes to 2,177,563 with every share recomputed on the smaller denominator.
-  // The tally still holds their name, party and votes, so the row is rebuilt
-  // from it. Gated on `isEnded` — while a race is live a missing candidacy
-  // means a genuine withdrawal and must NOT be shown.
+  // A finished election must render the same field forever, even after a
+  // contestant's character, NPP or candidacy row is deleted (a party merge does
+  // this), so missing rows are rebuilt from the tally's name, party and votes.
+  // Only when ended: in a live race a missing candidacy is a real withdrawal.
   if (isEnded) {
     displayCandidates = appendHistoricalTallyCandidates(displayCandidates, tally, (partyId) => {
       const partyObj = partyMap.get(partyId);

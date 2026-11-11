@@ -137,6 +137,7 @@ export interface CountryBillPhaseEntry {
   phaseName:
     | "scoBillLifecycle"
     | "walBillLifecycle"
+    | "caBillLifecycle"
     | "ukBillLifecycle"
     | "jpBillLifecycle"
     | "ieBillLifecycle"
