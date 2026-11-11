@@ -303,6 +303,25 @@ export const COUNTRY_READINESS_EXPECTATIONS: Partial<
     legislationTypesMin: 50, // 54 ng-scoped types authored (ngLegislationTypes.ts)
     extras: [(db) => checkGovernmentFormation("NG", db)],
   },
+  CA: {
+    regionCount: 13,
+    partyMin: 5,
+    partyRoster: "FUP, NPA, LCP, AL, GHP",
+    // Every party is organized in all 13 provinces and territories; the Quebec
+    // party sits at the floor outside Quebec.
+    statePartyOrgMin: 65,
+    seatMin: 343,
+    seatNote: "Expected ≥343 (House of Commons)",
+    // Bloc rows, one NPP each, as for the UK.
+    nppMin: 20,
+    nppNote: "Expected ≥20 Commons party blocs (one NPP each, not one per seat)",
+    officialMin: 320,
+    demographicsCount: 13,
+    stateMetricsFilter: { countryId: "CA" },
+    stateMetricsCount: 13,
+    legislationTypesMin: 1,
+    extras: [(db) => checkGovernmentFormation("CA", db)],
+  },
   // Eastern bloc Tier-1 (1953/1979 Cold-War presets) — one-party planned economies
   // promoted to full-autonomous economy-preview (product decision 2026-07-25).
   PL: {

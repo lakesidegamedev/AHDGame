@@ -305,6 +305,9 @@ export const INITIAL_RATES: Partial<Record<CountryId, number>> = {
   FI: 3.9, // FIM per USD (1979-continuity game unit)
   SCO: 0.75, // GBP — shares UK's sterling rate (not forex-active)
   WAL: 0.75, // GBP — shares UK's sterling rate (not forex-active)
+  // CAD at the 2019 Bank of Canada annual average. Canada trades only where a
+  // preset's roster includes it; this row values CAD everywhere else.
+  CA: 1.3269,
 };
 
 /**
@@ -528,6 +531,8 @@ export const INITIAL_RATES_2027: Partial<Record<CountryId, number>> = {
   RO: 4.5984,
   BG: BGN_PER_EUR * 0.92,
   HU: 353.2,
+  // WDI PA.NUS.FCRF 2024 average, matching the CAD figures in Canada's 2027 data.
+  CA: 1.3698,
 };
 
 /**
