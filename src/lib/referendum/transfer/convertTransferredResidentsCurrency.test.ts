@@ -1,3 +1,6 @@
+vi.mock("@/lib/savings/redenominateTransferredSavings", () => ({
+  redenominateTransferredSavings: vi.fn().mockResolvedValue(undefined),
+}));
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { type Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";

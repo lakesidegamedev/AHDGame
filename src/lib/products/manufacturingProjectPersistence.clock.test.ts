@@ -304,7 +304,13 @@ describe("manufacturing completed-turn lifecycle persistence", () => {
           },
         }
       );
-      return { matchedCount: 0, modifiedCount: 0, upsertedCount: 0, upsertedIds: {} };
+      return {
+        insertedCount: 0,
+        matchedCount: 0,
+        modifiedCount: 0,
+        upsertedCount: 0,
+        upsertedIds: {},
+      };
     });
     await tick(11);
     expect(corporation.manufacturingProductDevelopmentReceiptV2).toEqual(receipt);
