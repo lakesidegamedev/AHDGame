@@ -106,15 +106,6 @@ describe("country coverage: China seed completeness", () => {
     expect(ccp!.countryId).toBe("CN");
   });
 
-  it("CN: legislation types are non-empty and scoped to cn", async () => {
-    const { cnLegislationTypes } = await import("@/lib/seeds/cn/cnLegislationTypes");
-    expect(cnLegislationTypes.length).toBeGreaterThan(0);
-    for (const lt of cnLegislationTypes) {
-      expect(lt.countryScope).toBe("cn");
-      expect(lt._id).toBeTruthy();
-    }
-  });
-
   it("CN: state party org calculator produces 21 entries (7 regions x 3 parties)", async () => {
     const { seedCnStatePartyOrg } = await import("@/lib/admin/seed/seedCnStatePartyOrg");
     // We can't run the seeder without a DB, but we can verify the module exports

@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { LegislationType } from "@/lib/db/types";
 import { legislationTypes } from "./legislationTypes";
-import { cnLegislationTypes } from "../cn/cnLegislationTypes";
 import { ieLegislationTypes } from "../ie/ieLegislationTypes";
 
 /**
@@ -49,7 +48,6 @@ const MECHANISM_KEEP_LIST = new Set<string>([
   "uk_regional_housing_support",
   "jp_pension",
   // STRUCTURE / PRICE / COMPOSITION mechanisms (not budget-driven):
-  "cn_common_prosperity", // redistribution structure → inequality
   "jp_gender_equality", // pay-equity price mechanism → medianIncome
 ]);
 
@@ -89,7 +87,7 @@ function clusterHits(lt: LegislationType): string[] {
 }
 
 describe("§4.7 social spending sweep (income/poverty cluster)", () => {
-  const all = [...legislationTypes, ...cnLegislationTypes, ...ieLegislationTypes];
+  const all = [...legislationTypes, ...ieLegislationTypes];
 
   it("no social-budget FUNDING law targets a cluster readout", () => {
     const offenders: string[] = [];

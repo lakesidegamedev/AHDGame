@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { LegislationType } from "@/lib/db/types";
 import { legislationTypes } from "./legislationTypes";
-import { cnLegislationTypes } from "../cn/cnLegislationTypes";
 import { ieLegislationTypes } from "../ie/ieLegislationTypes";
 
 /**
@@ -44,7 +43,7 @@ function productivityHits(lt: LegislationType): string[] {
 }
 
 describe("§4.7 productivityGrowth sweep", () => {
-  const all = [...legislationTypes, ...cnLegislationTypes, ...ieLegislationTypes];
+  const all = [...legislationTypes, ...ieLegislationTypes];
 
   it("only non-basket-mechanism laws may target productivityGrowth", () => {
     const offenders: string[] = [];

@@ -52,12 +52,5 @@ export const JP_NATIONAL_BUDGET_1979: NationalBudgetSeedConfig = {
     tariffs: 0,
     salesTax: 10,
   },
-  taxPolicyIds: {
-    incomeTax: "jp_income_tax_rate",
-    domesticCorporateTax: "jp_domestic_corporation_tax",
-    foreignCorporateTax: "jp_foreign_corporation_tax",
-    payrollTax: "jp_social_insurance",
-    tariffs: "jp_customs_tariff",
-    salesTax: "jp_consumption_tax",
-  },
+  taxPolicyIds: {},
 };

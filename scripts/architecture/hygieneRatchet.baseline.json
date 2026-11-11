@@ -746,7 +746,6 @@
       "src/lib/seeds/cn/cnCorporations.ts": 1,
       "src/lib/seeds/cn/cnDemographicTurnout.ts": 1,
       "src/lib/seeds/cn/cnGovernmentFormation.ts": 1,
-      "src/lib/seeds/cn/cnLegislationTypes.ts": 1,
       "src/lib/seeds/cn/cnMetricPresets.ts": 1,
       "src/lib/seeds/cn/cnMetricPresets1953.ts": 1,
       "src/lib/seeds/cn/cnMetricPresets1979.ts": 1,

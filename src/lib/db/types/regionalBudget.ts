@@ -34,7 +34,7 @@ export interface RegionalBudget {
   tradeTaxRevenue?: number;
 
   // Revenue sources — CN (optional, only set for CN regions)
-  /** CN Enterprise Income Tax local share (40% of EIT collected in-region, from cn_enterprise_income_tax) */
+  /** CN Enterprise Income Tax local share (40% of EIT collected in-region, from the enacted corporate tax) */
   eitShare?: number;
   /** CN central transfer grant from national government (Finance Minister allocation or equal split) */
   centralTransferGrant?: number;

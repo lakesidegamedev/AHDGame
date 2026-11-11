@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { LegislationType } from "@/lib/db/types";
 import { legislationTypes } from "./legislationTypes";
-import { cnLegislationTypes } from "../cn/cnLegislationTypes";
 import { ieLegislationTypes } from "../ie/ieLegislationTypes";
 
 /**
@@ -61,7 +60,7 @@ function readoutHits(lt: LegislationType): string[] {
 }
 
 describe("§4.7 education spending sweep", () => {
-  const all = [...legislationTypes, ...cnLegislationTypes, ...ieLegislationTypes];
+  const all = [...legislationTypes, ...ieLegislationTypes];
 
   it("no education-FUNDING law targets a spend-driven education readout", () => {
     const offenders: string[] = [];
@@ -76,9 +75,7 @@ describe("§4.7 education spending sweep", () => {
       //
       // `budgetCategory` is checked with the same fallback the runtime uses
       // (enactedLaws.ts: `legislationType.budgetCategory || policyDomain`) —
-      // ticket #826 item 14 found `us_state_education_funding` and
-      // `cn_provincial_education` slipped through the sweep specifically
-      // because they rely on that fallback instead of an explicit field.
+      // some laws rely on that fallback instead of an explicit field.
       const effectiveBudgetCategory = lt.budgetCategory || lt.policyDomain;
       if (effectiveBudgetCategory !== "education") continue;
       if (lt.effectTarget?.metricCategoryId !== "education") continue;
@@ -94,23 +91,6 @@ describe("§4.7 education spending sweep", () => {
       const lt = all.find((l) => l._id === id);
       if (!lt) continue; // country file absence is fine
       expect(readoutHits(lt).length, `${id} should keep its regulatory effect`).toBeGreaterThan(0);
-    }
-  });
-
-  it("no longer double-counts on the two funding laws found via the policyDomain fallback (ticket #826 item 14)", () => {
-    // us_state_education_funding and cn_provincial_education both slipped
-    // through the original budgetCategory-only check because neither set an
-    // explicit budgetCategory field — they relied on the runtime fallback
-    // (enactedLaws.ts: budgetCategory || policyDomain). Both now set the
-    // field explicitly (matching us_federal_education_funding) AND have had
-    // their double-counting secondaries trimmed; the widened gate above
-    // covers the fallback case regardless for any bill that doesn't.
-    for (const id of ["cn_provincial_education"]) {
-      const lt = all.find((l) => l._id === id);
-      expect(lt, `${id} should exist`).toBeDefined();
-      expect(lt!.budgetCategory).toBe("education");
-      expect(lt!.effectTarget?.metricId).toBe("educationSpending");
-      expect(readoutHits(lt!), `${id} should have no spend-driven readout hits`).toEqual([]);
     }
   });
 

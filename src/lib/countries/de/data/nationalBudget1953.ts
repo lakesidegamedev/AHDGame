@@ -48,13 +48,5 @@ export const DE_NATIONAL_BUDGET_1953: NationalBudgetSeedConfig = {
   policyDefaults: COUNTRY_POLICY_CONFIGS_1953.de.defaults,
   policyOptionOverrides: COUNTRY_POLICY_CONFIGS_1953.de.optionIndexes,
   seedTaxRatesOverride: SEED_TAX_RATES_1953.DE,
-  taxPolicyIds: {
-    incomeTax: "de_income_tax_rate",
-    domesticCorporateTax: "de_domestic_corporate_tax_rate",
-    foreignCorporateTax: "de_foreign_corporate_tax_rate",
-    payrollTax: "de_payroll_social_insurance",
-    tariffs: "de_customs_tariff_rate",
-    salesTax: "de_vat_rate",
-    solidaritySurcharge: "de_solidarity_surcharge",
-  },
+  taxPolicyIds: {},
 };

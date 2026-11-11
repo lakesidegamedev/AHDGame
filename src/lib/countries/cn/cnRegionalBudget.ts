@@ -4,7 +4,7 @@
  * Calculates each CN macro-region's budget from:
  *
  *   1. EIT local share (企业所得税地方分成): 40% of Enterprise Income Tax
- *      collected in-territory, from enacted cn_enterprise_income_tax rate ×
+ *      collected in-territory, from enacted corporate tax rate ×
  *      regional GDP × corporate profit ratio.
  *   2. Central transfer grant (中央转移支付): Finance Minister-controlled
  *      redistribution from a national pool, or an equal 1/7th split by default.

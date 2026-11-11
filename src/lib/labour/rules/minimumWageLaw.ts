@@ -64,11 +64,10 @@ export const MINIMUM_WAGE_LAW_SCALES: Readonly<Record<string, MinimumWageLawScal
     referenceMedianWage: 2200,
     optionRates: [0, 800, 1000, 1250, 1500],
   },
-  // Monthly floors from the option text (CNY 2,700, 2,200, 1,900, a moderate
-  // floor of about 1,500) over an urban median near CNY 5,500 a month. The
-  // last three options remove the national floor.
-  cn_minimum_wage: {
-    optionKaitz: [0.49, 0.4, 0.35, 0.27, 0, 0, 0],
+  // Levels 0 to 4. Monthly floors (CNY 1,500 to 2,700) over an urban median near
+  // CNY 5,500 a month; level 0 removes the national floor.
+  "cn.economy.workerSecurity.primary": {
+    optionKaitz: [0, 0.27, 0.35, 0.4, 0.49],
   },
   // No amounts on the options: living wage, raised floor, statutory, frozen,
   // minimal.

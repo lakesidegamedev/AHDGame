@@ -406,7 +406,7 @@ export const CN_CONFIG: CountryConfig = {
     corporateProfitRatio: 0.06,
     centralTransferPerCapita: 35,
     defaultTaxRate: 25,
-    primaryTaxLegislationKey: "cn_enterprise_income_tax",
+    primaryTaxLegislationKey: "cn.tax.domesticCorporateTax",
     resourceTaxLegislationKey: "cn_provincial_resource_tax",
     resourceExtractionRatio: 0.03,
     businessTaxConsumptionRatio: 0.5,

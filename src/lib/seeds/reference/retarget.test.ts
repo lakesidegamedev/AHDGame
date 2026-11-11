@@ -5,21 +5,11 @@ import { LEGISLATION_ERA } from "@/lib/era/legislationCatalog";
 
 const byId = new Map(legislationTypes.map((t) => [t._id, t]));
 
-/**
- * RETARGET types re-pointed in Spec B (8 of the 11 flagged). The three CN
- * pension/internet-governance flags were considered and REVERTED in the audit:
- * rentenStabilitaet is the functionally-correct structural pension metric (any
- * income/poverty cluster target double-counts the spending channel — §4.7), and
- * cn_internet_governance is designed to co-drive socialCreditCoverage (its window
- * is handled by Spec A's WAIVER). Name-only smells, kept as-is.
- */
+/** Types re-pointed in Spec B. */
 const RETARGETED: Record<string, string> = {
   ie_immigration_asylum: "migrationRate",
   ie_regional_health: "physicianRate",
   ie_peat_bog_policy: "protectedLand",
-  cn_un_security_council_posture: "nationalPride",
-  cn_diaspora_engagement: "nationalPride",
-  cn_provincial_environmental_policy: "airQuality",
 };
 
 describe("RETARGET (Spec B clean subset)", () => {

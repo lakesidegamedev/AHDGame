@@ -42,12 +42,6 @@ const ANACHRONISM_PATTERNS: Array<[string, RegExp]> = [
 const TOLERATED: Record<string, string> = {
   ie_rural_development: "type is era-valid; broadband appears in a list of modern schemes",
   ng_telecommunications: "telecoms policy is era-valid post-independence; copy is broadband-led",
-  // Chinese-language policy copy naming real modern institutions
-  // (网信办 / Cyberspace Administration) and current technology disputes.
-  // Rewriting it is a content decision for a Chinese-reading owner, not a lint fix.
-  cn_us_china_relations: "copy references current technology disputes",
-  cn_public_security: "copy references modern surveillance technology",
-  cn_press_freedom: "copy names the Cyberspace Administration, a real modern body",
 };
 
 function copyOf(t: Record<string, unknown>): string {
