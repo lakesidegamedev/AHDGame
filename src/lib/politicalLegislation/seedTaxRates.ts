@@ -73,6 +73,14 @@ export const SEED_TAX_RATES_1953: Record<LawCountryId, Record<SeedTaxType, numbe
     salesTax: 9,
     tariffs: 1,
   },
+  JP: {
+    incomeTax: 33,
+    domesticCorporateTax: 30,
+    foreignCorporateTax: 30,
+    payrollTax: 15,
+    salesTax: 10,
+    tariffs: 0,
+  },
 };
 
 /**

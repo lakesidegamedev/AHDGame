@@ -215,4 +215,6 @@ export const REGIONAL_MODIFIERS_1953: Record<
   },
   // No hand-authored modifiers: Germany's regional texture is derived from its Land seeds.
   DE: {},
+  // Japan's regional texture is derived from its region seeds.
+  JP: {},
 };

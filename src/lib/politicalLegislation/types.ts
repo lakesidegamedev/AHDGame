@@ -13,7 +13,7 @@ import type { PoliticalMetricCategoryId, PoliticalMetricId } from "../politicalM
  * instead. Deriving the union from the list means a new member is one edit, and
  * the tables demand their row at the same moment.
  */
-export const LAW_COUNTRY_IDS = ["US", "UK", "RU", "DD", "DE", "CA"] as const;
+export const LAW_COUNTRY_IDS = ["US", "UK", "RU", "DD", "DE", "CA", "JP"] as const;
 export type LawCountryId = (typeof LAW_COUNTRY_IDS)[number];
 
 /**

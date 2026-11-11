@@ -23,7 +23,7 @@ const OUT_PATH = "src/data/political-metrics/regional-texture-1953.json";
 
 function serialize(texture: PlayableTexture): string {
   const sorted = Object.fromEntries(
-    (["US", "UK", "RU", "DD", "DE"] as const).map((countryId) => [
+    (["US", "UK", "RU", "DD", "DE", "JP"] as const).map((countryId) => [
       countryId,
       Object.fromEntries(
         Object.keys(texture[countryId])

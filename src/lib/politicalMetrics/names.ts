@@ -284,6 +284,7 @@ const NAMES_BY_COUNTRY: Record<PoliticalMetricsCountryId, Record<PoliticalMetric
   RU: RU_METRIC_NAMES,
   DD: DD_METRIC_NAMES,
   DE: US_METRIC_NAMES,
+  JP: US_METRIC_NAMES,
 };
 
 export function getMetricDisplayName(
@@ -314,6 +315,7 @@ const CATEGORY_NAMES_BY_COUNTRY: Record<
   RU: baseCategoryNames(),
   DD: baseCategoryNames(),
   DE: baseCategoryNames(),
+  JP: baseCategoryNames(),
 };
 
 export function getCategoryDisplayName(
@@ -354,5 +356,10 @@ export const COUNTRY_CHROME: Record<
     registry: "Federal Chancellery · Federal Statistical Office",
     seal: "STATISTISCHES BUNDESAMT",
     glyph: "DE",
+  },
+  JP: {
+    registry: "Cabinet Office · Statistics Bureau of Japan",
+    seal: "STATISTICS BUREAU OF JAPAN",
+    glyph: "JP",
   },
 };

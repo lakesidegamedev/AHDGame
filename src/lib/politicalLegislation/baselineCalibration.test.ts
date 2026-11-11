@@ -12,8 +12,8 @@ import { computeLawCost, type FiscalBase } from "./costEngine";
 import { getCatalog } from "./catalog";
 import type { LawCountryId } from "./types";
 
-/** The goldens come from the 1953 catalog documents; the DE book opens in a later era. */
-type CalibratedCountryId = Exclude<LawCountryId, "DE">;
+/** The goldens come from the 1953 catalog documents; the DE and JP books open in a later era. */
+type CalibratedCountryId = Exclude<LawCountryId, "DE" | "JP">;
 
 const BASES: Record<CalibratedCountryId, FiscalBase> = {
   US: { gdp: 397_100_000_000, population: 151_300_000 },

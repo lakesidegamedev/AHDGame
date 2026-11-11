@@ -19,7 +19,6 @@ const EXPECTED_COUNTRIES = [
   "GR",
   "IE",
   "IT",
-  "JP",
   "NG",
   "SE",
   "TR",
@@ -60,7 +59,7 @@ describe("DEFENSE_BOARDS_1953", () => {
   });
 
   it("never contains playable countries — they have authored anchors already", () => {
-    for (const playable of ["US", "UK", "RU", "DD", "DE"]) {
+    for (const playable of ["US", "UK", "RU", "DD", "DE", "JP"]) {
       expect(DEFENSE_BOARDS_1953[playable], playable).toBeUndefined();
     }
   });
@@ -86,8 +85,6 @@ describe("DEFENSE_BOARDS_1953", () => {
   });
 
   it("reflects the 1953 postures the authoring rules call out", () => {
-    // Japan under Article 9, SDF barely forming.
-    expect(DEFENSE_BOARDS_1953.JP["defense.projection"]).toBeLessThan(15);
     // Nigeria is still a British colony — no independent defense at all.
     expect(DEFENSE_BOARDS_1953.NG["defense.projection"]).toBeLessThan(10);
     // Spain is excluded from the UN until 1955 despite Western alignment.
@@ -110,7 +107,7 @@ describe("DEFENSE_BOARDS_1953", () => {
 
 describe("defenseBoardFor", () => {
   it("returns a board for a known country and null otherwise", () => {
-    expect(defenseBoardFor("JP")).toBeTruthy();
+    expect(defenseBoardFor("FR")).toBeTruthy();
     expect(defenseBoardFor("US")).toBeNull();
     expect(defenseBoardFor("ZZ")).toBeNull();
   });
@@ -120,7 +117,7 @@ describe("defenseBoardFor", () => {
     expect(getDefenseEraSubstitutions()).toEqual([]);
 
     // 1953 is authored, so asking for it must NOT count as a substitution.
-    expect(defenseBoardFor("JP", 1953)).toEqual(DEFENSE_BOARDS_1953.JP);
+    expect(defenseBoardFor("FR", 1953)).toEqual(DEFENSE_BOARDS_1953.FR);
     expect(getDefenseEraSubstitutions()).toEqual([]);
 
     // Every other era falls back AND says so. This is the whole point: a 2019

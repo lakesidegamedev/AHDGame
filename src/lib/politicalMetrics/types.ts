@@ -4,7 +4,7 @@
  * Spec: docs/superpowers/specs/2026-07-16-political-metrics-catalog-design.md
  */
 
-export const POLITICAL_METRIC_COUNTRY_IDS = ["US", "UK", "RU", "DD", "DE"] as const;
+export const POLITICAL_METRIC_COUNTRY_IDS = ["US", "UK", "RU", "DD", "DE", "JP"] as const;
 export type PoliticalMetricsCountryId = (typeof POLITICAL_METRIC_COUNTRY_IDS)[number];
 
 /** Accepts a country id ("US") or a legislation `countryScope` ("us"). */

@@ -150,7 +150,7 @@ describe("seedPoliticalLegislationBaseline", () => {
     // + one level-0 regional default per `both` law per region (US/UK/RU have
     // one region each in the mock, DD six). Derived rather than hardcoded so
     // adding a law to a catalog updates the expectation with it.
-    const regionCount: Record<string, number> = { US: 1, UK: 1, RU: 1, DD: 6, DE: 1, CA: 1 };
+    const regionCount: Record<string, number> = { US: 1, UK: 1, RU: 1, DD: 6, DE: 1, CA: 1, JP: 1 };
     const regionalDefaults = LAW_COUNTRY_IDS.reduce(
       (sum, cc) => sum + regionalDefaultLaws(cc, 1953).length * regionCount[cc],
       0
@@ -188,6 +188,7 @@ describe("seedPoliticalLegislationBaseline", () => {
       UK: ["UK-1"],
       RU: ["RU-1"],
       DE: ["DE-1"],
+      JP: ["JP-1"],
       DD: ["BEO", "MV", "BB", "ST", "SN", "TH"],
       CA: ["CA-1"],
     };
@@ -259,6 +260,7 @@ describe("seedPoliticalLegislationBaseline", () => {
       "DD",
       "DE",
       "CA",
+      "JP",
     ]);
   });
 });

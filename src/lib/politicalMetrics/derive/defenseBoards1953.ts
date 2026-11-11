@@ -101,12 +101,6 @@ export const DEFENSE_BOARDS_1953: Record<string, DefenseBoard> = {
 
   // ── Asia ──────────────────────────────────────────────────────────────────
   /**
-   * Japan: Article 9 pacifism, occupation only just ended, and the Self-Defense
-   * Forces barely forming. Security is outsourced to the American alliance, so
-   * armed forces and projection sit near the floor despite a large economy.
-   */
-  JP: board(65, 32, 42, 38, 22, 15, 5),
-  /**
    * PRC: fresh from fighting the United Nations to a standstill in Korea with a
    * vast, hard, lightly-equipped army. The UN seat is held by Taipei, so standing
    * is near-zero regardless of real power — rule 4 in action.

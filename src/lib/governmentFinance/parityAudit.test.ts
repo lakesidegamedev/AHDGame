@@ -17,7 +17,7 @@ describe("legislative parity audit", () => {
       ["US", 168],
       ["UK", 154],
       // Includes the thirty-two 2027 to 2050 laws.
-      ["JP", 105],
+      ["JP", 221],
     ]);
     expect(audit.countries.every((country) => country.missingAdministration.length === 0)).toBe(
       true
@@ -28,6 +28,6 @@ describe("legislative parity audit", () => {
     expect(
       audit.countries.find((country) => country.countryId === "JP")
         ?.authoredPoliticalBaselineAvailable
-    ).toBe(false);
+    ).toBe(true);
   });
 });
