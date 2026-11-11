@@ -13,6 +13,7 @@ import {
   type AlertRecipient,
 } from "@/lib/crises/rules/alertRules";
 import { crisesCollection } from "@/lib/db/repositories/crises";
+import { crisisAlertStateCollection } from "@/lib/db/repositories/crisisAlertState";
 
 interface AlertStateRow {
   _id: string;
@@ -59,7 +60,7 @@ export async function notifyCrisisChanges(db: Db, turn: number): Promise<number>
     db,
     crises.map((c) => c._id)
   );
-  const states = db.collection<AlertStateRow>("crisisAlertState");
+  const states = crisisAlertStateCollection<AlertStateRow>(db);
   const previous = new Map(
     (await states.find({ _id: { $in: crises.map((c) => c._id.toString()) } }).toArray()).map(
       (row) => [row._id, row]

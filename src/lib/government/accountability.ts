@@ -26,6 +26,8 @@ import { governmentFormationsCollection } from "@/lib/db/repositories/government
 import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
 import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
 import { countryStateCollection } from "@/lib/db/repositories/countryState";
+import { stateApprovalHistoryCollection } from "@/lib/db/repositories/stateApprovalHistory";
+import { governmentAccountabilityCollection } from "@/lib/db/repositories/governmentAccountability";
 
 /** The party holding a country's national executive, with that government's approval. */
 export interface NationalExecutiveParty {
@@ -84,11 +86,10 @@ export async function observeGovernmentAccountability(
       governmentApprovalsCollection<{ _id: CountryId; approvalRating: number }>(db)
         .find({}, { projection: { approvalRating: 1 } })
         .toArray(),
-      db
-        .collection<StateApprovalHistory>("stateApprovalHistory")
+      stateApprovalHistoryCollection(db)
         .find({}, { projection: { countryId: 1, stateId: 1, approvalRating: 1 } })
         .toArray(),
-      db.collection<GovernmentAccountability>("governmentAccountability").find({}).toArray(),
+      governmentAccountabilityCollection(db).find({}).toArray(),
       statesCollection(db)
         .find({}, { projection: { countryId: 1, stateSenateSeats: 1 } })
         .toArray(),
@@ -299,7 +300,7 @@ export async function observeGovernmentAccountability(
     );
   }
   if (observations.length)
-    await db.collection<GovernmentAccountability>("governmentAccountability").bulkWrite(
+    await governmentAccountabilityCollection(db).bulkWrite(
       observations.map((doc) => ({
         updateOne: { filter: { _id: doc._id }, update: { $set: doc }, upsert: true },
       }))

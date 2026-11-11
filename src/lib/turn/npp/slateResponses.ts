@@ -43,6 +43,7 @@ import { electionCandidatesCollection } from "@/lib/db/repositories/electionCand
 import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 import type { Document } from "mongodb";
 import { slateCandidatesCollection } from "@/lib/db/repositories/slateCandidates";
+import { recruitmentSlatesCollection } from "@/lib/db/repositories/recruitmentSlates";
 
 interface SlateResponseSummary {
   rowsConsidered: number;
@@ -87,8 +88,7 @@ export async function syncPersistentSlateAssignments(ctx: NPPContext): Promise<n
     (id) => new ObjectId(id)
   );
   const partyIds = Array.from(new Set(pairs.map((p) => String(p.party.sequentialId))));
-  const existingSlates = await db
-    .collection<RecruitmentSlate>("recruitmentSlates")
+  const existingSlates = await recruitmentSlatesCollection(db)
     .find({
       electionId: { $in: electionIds },
       partyId: { $in: partyIds },
@@ -132,8 +132,7 @@ export async function syncPersistentSlateAssignments(ctx: NPPContext): Promise<n
   ) => `${countryId}:${partyId}:${state ?? ""}:${electionType}`;
   const slateCountries = Array.from(new Set(pairs.map((p) => p.election.countryId ?? "US")));
   const tuplesWithSlate = new Set<string>();
-  const slatesForTemplates = await db
-    .collection<RecruitmentSlate>("recruitmentSlates")
+  const slatesForTemplates = await recruitmentSlatesCollection(db)
     .find(
       { countryId: { $in: slateCountries as RecruitmentSlate["countryId"][] } },
       { projection: { countryId: 1, partyId: 1, state: 1, electionType: 1 } }
@@ -201,8 +200,7 @@ export async function processSlateResponses(ctx: NPPContext): Promise<SlateRespo
   const slateIds = Array.from(new Set(invitedRows.map((r) => r.slateId.toString()))).map(
     (id) => new ObjectId(id)
   );
-  const slates = await db
-    .collection<RecruitmentSlate>("recruitmentSlates")
+  const slates = await recruitmentSlatesCollection(db)
     .find({ _id: { $in: slateIds } })
     .toArray();
   const slateById = new Map(slates.map((s) => [s._id.toString(), s]));

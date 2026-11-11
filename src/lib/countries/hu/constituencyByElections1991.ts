@@ -46,6 +46,7 @@ import type { Document } from "mongodb";
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 import { notificationsCollection } from "@/lib/db/repositories/notifications";
 import { stateRegistrationPoolCollection } from "@/lib/db/repositories/stateRegistrationPool";
+import { hu1991AssemblyOfficeArchivesCollection } from "@/lib/db/repositories/hu1991AssemblyOfficeArchives";
 export const HU_1991_BY_ELECTIONS_COLLECTION = "hu1991ConstituencyByElections";
 export interface Hu1991ByElectionRecord {
   _id: string;
@@ -750,24 +751,22 @@ async function materializeHu1991ByElectionResolution(input: {
     const originals = await electedOfficialsCollection(db)
       .find({ _id: { $in: tombstones.map((row) => row._id) } }, { session })
       .toArray();
-    await db
-      .collection<{
-        _id: string;
-        receiptId: string;
-        countryId: "HU";
-        turn: number;
-        official: ElectedOfficial;
-      }>("hu1991AssemblyOfficeArchives")
-      .insertMany(
-        originals.map((official) => ({
-          _id: `${job._id}:vacancy:${official._id.toHexString()}`,
-          receiptId: job._id,
-          countryId: "HU",
-          turn,
-          official,
-        })),
-        { session }
-      );
+    await hu1991AssemblyOfficeArchivesCollection<{
+      _id: string;
+      receiptId: string;
+      countryId: "HU";
+      turn: number;
+      official: ElectedOfficial;
+    }>(db).insertMany(
+      originals.map((official) => ({
+        _id: `${job._id}:vacancy:${official._id.toHexString()}`,
+        receiptId: job._id,
+        countryId: "HU",
+        turn,
+        official,
+      })),
+      { session }
+    );
     await electedOfficialsCollection(db).deleteMany(
       { _id: { $in: tombstones.map((row) => row._id) }, characterId: null, nppId: null },
       { session }

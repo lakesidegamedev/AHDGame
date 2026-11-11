@@ -13,6 +13,8 @@ import {
 import { loadTransitionPolicies } from "@/lib/energyTransition/policies";
 import { NO_TRANSITION_POLICY, policyEmissionsCut } from "@/lib/energyTransition/rules";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { stateMetricsCollection } from "@/lib/db/repositories/stateMetrics";
+import { climateFeedbackStateCollection } from "@/lib/db/repositories/climateFeedbackState";
 
 export interface ClimateFeedbackState {
   _id: "world";
@@ -40,7 +42,7 @@ export async function processClimateFeedbackTurn(
   opts?: { startingYear?: number }
 ): Promise<number> {
   const profile = climateProfileForStartingYear(opts?.startingYear);
-  const collection = db.collection<ClimateFeedbackState>("climateFeedbackState");
+  const collection = climateFeedbackStateCollection<ClimateFeedbackState>(db);
   const prior = await collection.findOne({ _id: "world" });
   // A world that opts in opens on its seeded pressure until the first sample.
   const oldPressure = prior?.pressure ?? profile.startingPressure;
@@ -55,8 +57,7 @@ export async function processClimateFeedbackTurn(
         }
       )
       .toArray(),
-    db
-      .collection<EmissionsRow>("stateMetrics")
+    stateMetricsCollection<EmissionsRow>(db)
       .find({}, { projection: { _id: 1, "environment.carbonEmissions.value": 1 } })
       .toArray(),
     spendingProvider(db),

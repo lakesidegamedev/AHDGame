@@ -5,6 +5,7 @@ import type { State } from "@/lib/db/types/state";
 import type { CountryId } from "@/lib/constants/countries";
 import { RESET_V2_SEED_REVISION, type ResetSystemSeedReceipt } from "@/lib/resetVersions/rules";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { regionDemographicsCollection } from "@/lib/db/repositories/regionDemographics";
 
 const OPENING_COUNTRIES = ["US", "UK", "JP"] as const;
 
@@ -27,8 +28,7 @@ export async function verifyDemographicsV2Opening(
   countries: readonly CountryId[] = OPENING_COUNTRIES
 ): Promise<ResetSystemSeedReceipt> {
   const [docs, populatedRegions] = await Promise.all([
-    db
-      .collection<RegionDemographics>("regionDemographics")
+    regionDemographicsCollection(db)
       .find(
         { countryId: { $in: [...countries] } },
         { projection: { _id: 1, countryId: 1, ages: 1, lastUpdated: 1 } }

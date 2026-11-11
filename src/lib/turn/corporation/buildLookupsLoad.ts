@@ -39,6 +39,7 @@ import { stateResourceCapacityCollection } from "@/lib/db/repositories/stateReso
 import { organizationMembershipsCollection } from "@/lib/db/repositories/organizationMemberships";
 import { tariffsCollection } from "@/lib/db/repositories/tariffs";
 import { tradeFlowSnapshotsCollection } from "@/lib/db/repositories/tradeFlowSnapshots";
+import { tradeEmbargoesCollection } from "@/lib/db/repositories/tradeEmbargoes";
 
 /** Issues the parallel reads the lookups are built from. */
 export async function loadCorporationLookupInputs({
@@ -293,8 +294,7 @@ export async function loadCorporationLookupInputs({
     organizationMembershipsCollection(db)
       .find({}, { projection: { countryId: 1, organizationId: 1 } })
       .toArray(),
-    db
-      .collection<TradeEmbargo>("tradeEmbargoes")
+    tradeEmbargoesCollection(db)
       .find({
         $or: [{ expiresTurn: { $exists: false } }, { expiresTurn: { $gte: embargoTurn } }],
       })

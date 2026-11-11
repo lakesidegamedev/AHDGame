@@ -18,6 +18,7 @@ import { cleanupCaucusParticipationForCharacters } from "@/lib/caucus/cleanupCau
 import type { Caucus, CaucusMembership } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { caucusesCollection } from "@/lib/db/repositories/caucuses";
+import { caucusMembershipsCollection } from "@/lib/db/repositories/caucusMemberships";
 
 // GET /api/country/[code]/parties/[id]/caucuses — List caucuses for a party with member counts
 // Auth: requireAuth
@@ -269,7 +270,7 @@ export async function POST(
     await reclaimSlug(db, countryId, partyId, slug, caucusId);
 
     // Add the founder as the chair-role member and stamp factionId on the Character.
-    await db.collection<CaucusMembership>("caucusMemberships").insertOne({
+    await caucusMembershipsCollection(db).insertOne({
       _id: new ObjectId(),
       caucusId,
       countryId,

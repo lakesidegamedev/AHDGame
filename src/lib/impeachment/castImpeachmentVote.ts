@@ -12,6 +12,7 @@ import { getGameState } from "@/lib/gameState";
 import { badRequest, forbidden, notFound } from "@/lib/api/errors";
 import { clearWhippedFromVote } from "@/lib/congress/clearWhippedVote";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { impeachmentsCollection } from "@/lib/db/repositories/impeachments";
 
 /**
  * Cast (or change) a vote on an active impeachment. Only sitting members of the
@@ -27,9 +28,9 @@ export async function castImpeachmentVote(
 ): Promise<{ success: true; stage: "house" | "senate" }> {
   if (!ObjectId.isValid(impeachmentId)) throw badRequest("Invalid impeachment id");
 
-  const impeachment = await db
-    .collection<Impeachment>("impeachments")
-    .findOne({ _id: new ObjectId(impeachmentId) });
+  const impeachment = await impeachmentsCollection(db).findOne({
+    _id: new ObjectId(impeachmentId),
+  });
   if (!impeachment) throw notFound("Impeachment not found");
   if (impeachment.stage !== "house" && impeachment.stage !== "senate") {
     throw badRequest("This impeachment is no longer open for voting.");
@@ -94,9 +95,7 @@ export async function castImpeachmentVote(
 
   // Guard on stage so a vote landing during resolution cannot mutate a
   // just-advanced case.
-  await db
-    .collection<Impeachment>("impeachments")
-    .updateOne({ _id: impeachment._id, stage }, pipeline);
+  await impeachmentsCollection(db).updateOne({ _id: impeachment._id, stage }, pipeline);
 
   // Choosing a vote clears the Player Whip snapshot, so the "Whipped by Party"
   // badge disappears once the member has voted for themselves.

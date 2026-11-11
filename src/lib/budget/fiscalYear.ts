@@ -86,6 +86,7 @@ import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
 import { federalBudgetSnapshotsCollection } from "@/lib/db/repositories/federalBudgetSnapshots";
 import { macroCountriesCollection } from "@/lib/db/repositories/macroCountries";
+import { resetLawProgramsCollection } from "@/lib/db/repositories/resetLawPrograms";
 
 // The current turn engine still processes fiscal-year rollover as one shared phase.
 // Pulling the anchor from country-systems makes the rule source explicit now, while
@@ -183,8 +184,7 @@ export async function processFiscalYear(
   ]);
   const usResetRegionalPrograms =
     usResetLegislationV2 && financeState?.resetWorldId
-      ? await db
-          .collection<ResetLawProgramDocument>("resetLawPrograms")
+      ? await resetLawProgramsCollection<ResetLawProgramDocument>(db)
           .find(
             { country: "US", scope: "regional", worldId: financeState.resetWorldId },
             {

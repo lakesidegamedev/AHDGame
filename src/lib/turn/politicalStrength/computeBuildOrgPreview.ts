@@ -18,6 +18,7 @@ import { resolveOrgBuildSizeMultiplier } from "@/lib/politicalStrength/orgBuildS
 import { applyOrganizationBuild } from "@/lib/parties/rules/organizationBucket";
 import { ORG_BUILD_UNITS_PER_CLICK } from "@/lib/constants/partyOrg";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { partyStrengthPressureCollection } from "@/lib/db/repositories/partyStrengthPressure";
 
 /**
  * Canonical Build Org projection, shared by the
@@ -165,9 +166,9 @@ export async function computeBuildOrgPreview(
   const scope = resolveSpenderScope(spenderParty, spenderRow, authUser, preferredScope);
   const eligibleScopes = resolveSpenderScopeEligibility(spenderParty, spenderRow, authUser);
 
-  const pressureRow = await db
-    .collection<PartyStrengthPressure>("partyStrengthPressure")
-    .findOne({ _id: `${countryId}_${spenderParty.sequentialId}_${upperRegionId}` });
+  const pressureRow = await partyStrengthPressureCollection(db).findOne({
+    _id: `${countryId}_${spenderParty.sequentialId}_${upperRegionId}`,
+  });
   const pressureValue = pressureRow?.value ?? 0;
   const effectiveCost = effectivePsCost(BUILD_ORG_BASE_PS_COST, pressureValue);
 

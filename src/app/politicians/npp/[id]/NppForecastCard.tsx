@@ -4,6 +4,7 @@ import { getDb } from "@/lib/mongodb";
 import { CrossPressureForceBar } from "@/components/CrossPressureForceBar";
 import { billsCollection } from "@/lib/db/repositories/bills";
 import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
+import { nppVotePredictionsCollection } from "@/lib/db/repositories/nppVotePredictions";
 
 /**
  * Server component — loads the most recent cross-pressure prediction this NPP
@@ -20,9 +21,10 @@ async function loadLatestPrediction(nppId: ObjectId): Promise<{
     | Pick<StateBill, "_id" | "title" | "status">;
 } | null> {
   const db = await getDb();
-  const prediction = await db
-    .collection<NPPVotePrediction>("nppVotePredictions")
-    .findOne({ nppId }, { sort: { computedAtTurn: -1, updatedAt: -1 } });
+  const prediction = await nppVotePredictionsCollection(db).findOne(
+    { nppId },
+    { sort: { computedAtTurn: -1, updatedAt: -1 } }
+  );
   if (!prediction) return null;
 
   const bill = prediction.billId

@@ -10,6 +10,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
+import { regionalBudgetsCollection } from "@/lib/db/repositories/regionalBudgets";
 
 export interface DepartmentDeliveryMultiplierInput {
   currentTurn: number;
@@ -191,8 +192,7 @@ export async function loadRegionalDeliveryMultipliersByRegion(
   if (!enabled) return new Map();
   const filter = regionIds?.length ? { _id: { $in: [...regionIds] } } : {};
   const [regionalBudgets, stateBudgets] = await Promise.all([
-    db
-      .collection<RegionalBudget>("regionalBudgets")
+    regionalBudgetsCollection(db)
       .find(filter, { projection: { programSettlements: 1 } })
       .toArray(),
     stateBudgetsCollection(db)

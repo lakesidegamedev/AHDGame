@@ -19,6 +19,7 @@
 import type { Db } from "mongodb";
 import { randomUUID } from "node:crypto";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { turnWorkerControlCollection } from "@/lib/db/repositories/turnWorkerControl";
 
 type Env = Record<string, string | undefined>;
 
@@ -91,7 +92,7 @@ export function isOpenRequest(request: TurnRequest | null | undefined): request 
   return !!request && request.completedAt === null;
 }
 
-const control = (db: Db) => db.collection<TurnWorkerControl>("turnWorkerControl");
+const control = (db: Db) => turnWorkerControlCollection<TurnWorkerControl>(db);
 
 export async function getTurnWorkerStatus(db: Db, now = new Date()) {
   const doc = await control(db).findOne({ _id: TURN_WORKER_CONTROL_ID });

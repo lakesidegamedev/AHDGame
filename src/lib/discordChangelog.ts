@@ -18,6 +18,7 @@ import { getCanonicalUrl, getWikiCanonicalUrl } from "@/lib/siteMetadata";
 import crypto from "crypto";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { changelogSentHistoryCollection } from "@/lib/db/repositories/changelogSentHistory";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -396,7 +397,7 @@ export async function postChangelogUpdates(webhookUrl?: string): Promise<{
 
   const posts = loadPublicPosts();
   const db = await getDb();
-  const sentCol = db.collection<ChangelogSentRecord>("changelogSentHistory");
+  const sentCol = changelogSentHistoryCollection<ChangelogSentRecord>(db);
 
   const sent: { version: string; type: "new" | "update"; embeds: number }[] = [];
   const skipped: string[] = [];

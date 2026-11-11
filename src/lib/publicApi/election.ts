@@ -19,6 +19,7 @@ import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { primarySnapshotsCollection } from "@/lib/db/repositories/primarySnapshots";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -399,8 +400,7 @@ export async function queryElectionDetail(db: Db, electionId: string) {
   const [allCandidateRows, tally, snapshots] = await Promise.all([
     electionCandidatesCollection(db).find({ electionId: electionOid }).toArray(),
     electionVoteTalliesCollection(db).findOne({ electionId: electionOid }),
-    db
-      .collection<PrimarySnapshot>("primarySnapshots")
+    primarySnapshotsCollection(db)
       .find({ electionId: electionOid })
       .sort({ recordedAt: 1 })
       .limit(144)

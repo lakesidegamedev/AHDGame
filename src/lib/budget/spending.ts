@@ -47,6 +47,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
+import { regionalBudgetsCollection } from "@/lib/db/repositories/regionalBudgets";
 
 // Re-exported so existing importers of `./spending` keep working.
 export { keepLatestActiveLawPerType } from "./keepLatestActiveLawPerType";
@@ -344,8 +345,7 @@ export async function calculateFederalSpending(
         .find({ countryId: budgetCountryId }, { projection: { _id: 1 } })
         .toArray()
     ).map((s) => s._id);
-    const regionalBudgets = await db
-      .collection<RegionalBudget>("regionalBudgets")
+    const regionalBudgets = await regionalBudgetsCollection(db)
       .find({ _id: { $in: stateIds } })
       .toArray();
     // A PLANNED economy allocates rather than disburses: an allocation a

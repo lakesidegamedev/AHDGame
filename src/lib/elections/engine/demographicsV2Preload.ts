@@ -7,6 +7,7 @@ import type { State } from "@/lib/db/types/state";
 import { RESET_V2_READY } from "@/lib/resetVersions/availability";
 import { resetSystemVersionsForCountry } from "@/lib/resetVersions/rules";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { regionDemographicsCollection } from "@/lib/db/repositories/regionDemographics";
 
 export interface DemographicsV2Preload {
   regionDemographicsByState: Map<string, RegionDemographics>;
@@ -68,7 +69,7 @@ export async function loadElectionRegionDemographicsV2(input: {
     return null;
   }
 
-  const collection = input.db.collection<RegionDemographics>("regionDemographics");
+  const collection = regionDemographicsCollection(input.db);
   if (input.stateId !== input.countryId) {
     return collection.findOne(
       { _id: input.stateId, countryId: input.countryId },
@@ -120,8 +121,7 @@ export async function loadDemographicsV2Preload(input: {
   );
   const regionRows =
     demographicsV2Countries.size > 0
-      ? await input.db
-          .collection<RegionDemographics>("regionDemographics")
+      ? await regionDemographicsCollection(input.db)
           .find(
             {
               $and: [

@@ -36,6 +36,7 @@ import type { Document } from "mongodb";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
 import { demographicDefaultsCollection } from "@/lib/db/repositories/demographicDefaults";
+import { stateDemographicsBackupCollection } from "@/lib/db/repositories/stateDemographicsBackup";
 
 const VALID_ERAS = SEED_ERA_IDS;
 
@@ -240,7 +241,7 @@ async function takeSnapshot(
     .toArray();
 
   const snapshotId = `${countryId}:${era}:${Date.now()}`;
-  await db.collection<SnapshotDoc>("stateDemographicsBackup").insertOne({
+  await stateDemographicsBackupCollection<SnapshotDoc>(db).insertOne({
     _id: snapshotId,
     countryId,
     era,
@@ -250,16 +251,13 @@ async function takeSnapshot(
   });
 
   // Prune: keep last 3 snapshots per country+era
-  const all = await db
-    .collection<SnapshotDoc>("stateDemographicsBackup")
+  const all = await stateDemographicsBackupCollection<SnapshotDoc>(db)
     .find({ countryId, era })
     .sort({ snapshotAt: -1 })
     .toArray();
   if (all.length > 3) {
     const toDelete = all.slice(3).map((s) => s._id);
-    await db
-      .collection<SnapshotDoc>("stateDemographicsBackup")
-      .deleteMany({ _id: { $in: toDelete } });
+    await stateDemographicsBackupCollection<SnapshotDoc>(db).deleteMany({ _id: { $in: toDelete } });
   }
 
   return snapshotId;

@@ -19,6 +19,7 @@ import {
   cabinetApprovalResponse,
   cabinetEffectsForRegion,
 } from "@/lib/resetCabinet/rules/gameplay";
+import { resetMetricSnapshotsCollection } from "@/lib/db/repositories/resetMetricSnapshots";
 
 /** Approval needs current observations, never their notes or retained history. */
 export const RESET_APPROVAL_BOARD_PROJECTION = {
@@ -65,8 +66,7 @@ export async function loadResetApprovalModifiers(
     return null;
   const boards =
     prefetchedBoards ??
-    (await db
-      .collection<ResetMetricSnapshot>("resetMetricSnapshots")
+    (await resetMetricSnapshotsCollection<ResetMetricSnapshot>(db)
       .find(
         { worldId: gameState!.resetWorldId, countryId },
         {

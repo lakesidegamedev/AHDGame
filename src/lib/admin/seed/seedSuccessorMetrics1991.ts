@@ -8,6 +8,7 @@ import { SUCCESSOR_STATE_METRICS_1991 } from "@/lib/seeds/reference/successorMet
 import { NATIONAL_SCOPE_IDS } from "@/lib/constants/nationalScope";
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 import { stateBaselinesCollection } from "@/lib/db/repositories/stateBaselines";
+import { stateMetricsCollection } from "@/lib/db/repositories/stateMetrics";
 
 /** Obsolete regional rows left by earlier seed passes, excluding national summaries. */
 function obsoleteSuccessorMetricFilter1991(): Filter<MacroMetricsDoc> {
@@ -32,7 +33,7 @@ export async function seedSuccessorMetrics1991(
   const ids = SUCCESSOR_STATE_METRICS_1991.map((metric) => metric._id);
   if (reset) {
     await macroMetricsCollection<MacroMetricsDoc>(db).deleteMany({ _id: { $in: ids } });
-    await db.collection<StateMetrics>("stateMetrics").deleteMany({ _id: { $in: ids } });
+    await stateMetricsCollection(db).deleteMany({ _id: { $in: ids } });
     await stateBaselinesCollection(db).deleteMany({ _id: { $in: ids } });
   }
   await writeSplitMetricsBulk(db, SUCCESSOR_STATE_METRICS_1991);

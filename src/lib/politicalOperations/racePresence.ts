@@ -2,6 +2,7 @@ import type { Db, ObjectId } from "mongodb";
 import type { CharacterStateOrg, Election, ElectionCandidate } from "@/lib/db/types";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { characterStateOrgCollection } from "@/lib/db/repositories/characterStateOrg";
 
 /**
  * One candidate in the live presidential race, with their Campaign Presence
@@ -44,8 +45,7 @@ export async function loadRacePresence(db: Db, viewerId: ObjectId): Promise<Race
   const runnerIds = runners.map((r) => r.characterId).filter(Boolean);
   if (runnerIds.length === 0) return [];
 
-  const orgRows = await db
-    .collection<CharacterStateOrg>("characterStateOrg")
+  const orgRows = await characterStateOrgCollection(db)
     .find(
       { characterId: { $in: runnerIds } },
       { projection: { characterId: 1, stateId: 1, level: 1 } }

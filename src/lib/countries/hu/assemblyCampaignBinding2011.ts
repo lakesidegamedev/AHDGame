@@ -24,6 +24,7 @@ import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 import { stateRegistrationPoolCollection } from "@/lib/db/repositories/stateRegistrationPool";
+import { hu1991AssemblyCountsCollection } from "@/lib/db/repositories/hu1991AssemblyCounts";
 
 export async function bindHu2011Campaigns(db: Db, game: GameState, turn: number, now: Date) {
   if (game.preset !== "1991-default") return false;
@@ -120,8 +121,7 @@ async function materializeHu2011PrimaryCohorts(
       : [];
   });
   if (!candidates.length) return;
-  const receipts = await db
-    .collection<{ _id: string }>("hu1991AssemblyCounts")
+  const receipts = await hu1991AssemblyCountsCollection<{ _id: string }>(db)
     .find(
       {
         _id: {

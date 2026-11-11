@@ -46,6 +46,7 @@ import {
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { nationalizationAuctionsCollection } from "@/lib/db/repositories/nationalizationAuctions";
 
 /**
  * Witness escrow cash that landed on a bidder: a bid moves it into escrow, and a
@@ -101,7 +102,7 @@ export interface PlaceBidParams {
  * escrow per bidder. Throws on any rejection (the route maps it to a 400).
  */
 export async function placeAuctionBid(db: Db, params: PlaceBidParams): Promise<void> {
-  const auctions = db.collection<NationalizationAuction>("nationalizationAuctions");
+  const auctions = nationalizationAuctionsCollection(db);
   const auction = await auctions.findOne({ _id: params.auctionId });
   if (!auction || auction.status !== "open") throw new Error("Auction is not open");
   if (params.turn > auction.closesAtTurn) throw new Error("Auction has closed");
@@ -418,7 +419,7 @@ export async function resolveNationalizationAuction(
   auction: NationalizationAuction,
   turn: number
 ): Promise<"sold" | "passedIn"> {
-  const auctions = db.collection<NationalizationAuction>("nationalizationAuctions");
+  const auctions = nationalizationAuctionsCollection(db);
   const corps = corporationsCollection(db);
   const now = new Date();
   const forexEnabled = await isForexEnabled();
@@ -610,8 +611,7 @@ export async function processNationalizationAuctions(
   db: Db,
   currentTurn: number
 ): Promise<{ sold: number; passedIn: number }> {
-  const due = await db
-    .collection<NationalizationAuction>("nationalizationAuctions")
+  const due = await nationalizationAuctionsCollection(db)
     .find({ status: "open", closesAtTurn: { $lte: currentTurn } })
     .toArray();
   let sold = 0;

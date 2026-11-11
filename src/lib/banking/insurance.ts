@@ -39,6 +39,7 @@ export {
 } from "@/lib/banking/rules/insurance";
 import { INSURED_CAP_REFERENCE_USD } from "@/lib/banking/rules/insurance";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { depositInsuranceFundsCollection } from "@/lib/db/repositories/depositInsuranceFunds";
 
 /** Federal budget spending.byCategory key for Treasury insurance backstop. */
 export { DEPOSIT_INSURANCE_SPENDING_KEY } from "@/lib/banking/depositBookReturn";
@@ -87,7 +88,7 @@ export async function getInsuredCap(db: Db, currency: CurrencyCode): Promise<num
  */
 export async function ensureFund(db: Db, currency: CurrencyCode): Promise<DepositInsuranceFund> {
   const insuredCap = await getInsuredCap(db, currency);
-  const col = db.collection<DepositInsuranceFund>("depositInsuranceFunds");
+  const col = depositInsuranceFundsCollection(db);
   await col.updateOne(
     { _id: currency },
     {

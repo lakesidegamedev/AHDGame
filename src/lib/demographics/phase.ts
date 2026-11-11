@@ -101,6 +101,8 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 import { organizationMembershipsCollection } from "@/lib/db/repositories/organizationMemberships";
+import { resetMetricSnapshotsCollection } from "@/lib/db/repositories/resetMetricSnapshots";
+import { regionDemographicsCollection } from "@/lib/db/repositories/regionDemographics";
 
 /** Per-region net internal-migration change capped per turn (circuit-breaker). */
 const MAX_INTERNAL_CHANGE_FRACTION = 0.05;
@@ -261,7 +263,7 @@ export async function runDemographicFlows(
   } as Record<string, 1>;
   const [demos, states, macroMetrics, gameState, labourConfig, politicalInputs, euMemberships] =
     await Promise.all([
-      db.collection<RegionDemographics>("regionDemographics").find({}).toArray(),
+      regionDemographicsCollection(db).find({}).toArray(),
       statesCollection(db).find({}).toArray(),
       macroMetricsCollection<Document>(db)
         .find({})
@@ -332,8 +334,7 @@ export async function runDemographicFlows(
   const v2HealthByRegion = new Map<string, ResetMetricSnapshot>();
   if (v2Countries.size > 0) {
     if (!gameState?.resetWorldId) throw new Error("V2 cohorts lack their reset world identity");
-    const healthBoards = await db
-      .collection<ResetMetricSnapshot>("resetMetricSnapshots")
+    const healthBoards = await resetMetricSnapshotsCollection<ResetMetricSnapshot>(db)
       .find(
         {
           worldId: gameState.resetWorldId,

@@ -28,6 +28,7 @@ import {
 } from "@/lib/cyber/runCyberOperation";
 import { scriptedRoll } from "@/lib/world/macro/backgroundCyber";
 import { rivalLeaderOf } from "@/lib/world/macro/rules/foreignPolicy";
+import { countryAlignmentsCollection } from "@/lib/db/repositories/countryAlignments";
 
 const INTELLIGENCE_POSITION_ID = "director_of_intelligence";
 const DEFAULT_TRADECRAFT = 3;
@@ -51,9 +52,10 @@ export async function processAutonomousCyber(
   });
   if (director?.characterId) return "none";
 
-  const alignment = await db
-    .collection<CountryAlignment>("countryAlignments")
-    .findOne({ entityId: countryId }, { projection: { entityId: 1, shares: 1, nonAligned: 1 } });
+  const alignment = await countryAlignmentsCollection(db).findOne(
+    { entityId: countryId },
+    { projection: { entityId: 1, shares: 1, nonAligned: 1 } }
+  );
   const targetId = rivalLeaderOf(blocOfAlignment(countryId, alignment ?? undefined), countryId);
   if (!targetId) return "none";
 

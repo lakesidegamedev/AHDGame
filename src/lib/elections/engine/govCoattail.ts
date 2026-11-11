@@ -19,6 +19,7 @@ import {
 import { approvalCoattailMultiplier, coattailMultiplierMapToPct } from "./coattailMagnitude";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { stateApprovalHistoryCollection } from "@/lib/db/repositories/stateApprovalHistory";
 
 /**
  * A down-ballot general qualifies for the governor coattail when:
@@ -109,9 +110,10 @@ export async function resolveGovExecutiveApproval(
   if (!exec?.partyId) return null;
 
   // Prefer the stored per-turn snapshot, damped at APPROVAL_MAX_STEP_PER_TURN points/turn so coattail magnitudes glide instead of jumping. Falls back to live computation when no snapshot exists yet (fresh seed).
-  const snapshot = await db
-    .collection<StateApprovalHistory>("stateApprovalHistory")
-    .findOne({ _id: stateId.toUpperCase(), countryId }, { projection: { approvalRating: 1 } });
+  const snapshot = await stateApprovalHistoryCollection(db).findOne(
+    { _id: stateId.toUpperCase(), countryId },
+    { projection: { approvalRating: 1 } }
+  );
   if (snapshot && Number.isFinite(snapshot.approvalRating)) {
     return { partyId: exec.partyId, approval: snapshot.approvalRating };
   }

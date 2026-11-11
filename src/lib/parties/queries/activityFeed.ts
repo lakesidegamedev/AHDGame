@@ -6,6 +6,7 @@ import { SLATE_REFUSAL_LABEL, isSlateFilingFailure } from "@/lib/slateRefusalRea
 import type { Db } from "mongodb";
 import { slateCandidatesCollection } from "@/lib/db/repositories/slateCandidates";
 import { treasuryTransactionsCollection } from "@/lib/db/repositories/treasuryTransactions";
+import { recruitmentSlatesCollection } from "@/lib/db/repositories/recruitmentSlates";
 
 const HIDDEN_OVERVIEW_TREASURY_CATEGORIES = new Set(["gotv", "suppression", "fund_generation"]);
 
@@ -82,8 +83,7 @@ export async function getPartyActivityFeed(
   const slates =
     slateRows.length === 0
       ? []
-      : await db
-          .collection<RecruitmentSlate>("recruitmentSlates")
+      : await recruitmentSlatesCollection(db)
           .find({ _id: { $in: slateRows.map((row) => row.slateId) } })
           .toArray();
   const slateById = new Map(slates.map((slate) => [slate._id.toString(), slate]));

@@ -45,6 +45,7 @@ import { electionCandidatesCollection } from "@/lib/db/repositories/electionCand
 import type { Document } from "mongodb";
 import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 import { seatsCollection } from "@/lib/db/repositories/seats";
+import { bgFoundingAssemblyCountsCollection } from "@/lib/db/repositories/bgFoundingAssemblyCounts";
 
 /**
  * NG elections run once Nigeria is off "coming-soon". Gated on the RUNTIME
@@ -936,10 +937,10 @@ export async function cleanupStaleElectionCandidates(now: Date): Promise<void> {
   // count never settles and the founding phase never ends.
   // Collection name mirrors BG_FOUNDING_COUNTS_COLLECTION; importing it would pull
   // the Bulgarian count code into this module's client-reachable import graph.
-  const unseatedBgFounding = await db
-    .collection<{ electionIds?: string[]; runoffElectionIds?: string[] }>(
-      "bgFoundingAssemblyCounts"
-    )
+  const unseatedBgFounding = await bgFoundingAssemblyCountsCollection<{
+    electionIds?: string[];
+    runoffElectionIds?: string[];
+  }>(db)
     .find({ seatedAtTurn: null }, { projection: { electionIds: 1, runoffElectionIds: 1 } })
     .toArray();
   const heldBgIds = new Set(

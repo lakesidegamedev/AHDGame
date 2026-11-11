@@ -3,6 +3,7 @@ import type { Defect, DetectResult, HealPlan, HealResult, VerifyResult } from ".
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { militaryUnitsCollection } from "@/lib/db/repositories/militaryUnits";
 import { defenceContractsCollection } from "@/lib/db/repositories/defenceContracts";
+import { nationalArsenalCollection } from "@/lib/db/repositories/nationalArsenal";
 
 export const DEFECT_ID = "AHD-1171-us-marine-lot-progress";
 export const CONTRACT_ID = "6a888f0a7badf9bb53c3971f";
@@ -44,7 +45,7 @@ async function survey(db: Db): Promise<Survey> {
   const [contract, unit, arsenal] = await Promise.all([
     defenceContractsCollection<ContractEvidence>(db).findOne({ _id: new ObjectId(CONTRACT_ID) }),
     militaryUnitsCollection<UnitEvidence>(db).findOne({ _id: new ObjectId(UNIT_ID) }),
-    db.collection<ArsenalEvidence>("nationalArsenal").findOne({ countryId: "US" }),
+    nationalArsenalCollection<ArsenalEvidence>(db).findOne({ countryId: "US" }),
   ]);
   const contractProvesDelivery =
     countryHasFeature("usLib", contract?.countryId) &&

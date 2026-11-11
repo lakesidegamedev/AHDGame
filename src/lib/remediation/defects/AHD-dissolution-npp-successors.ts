@@ -68,6 +68,7 @@ import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSecto
 import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 import type { Document } from "mongodb";
 import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
+import { corporationExitsCollection } from "@/lib/db/repositories/corporationExits";
 
 export const DEFECT_ID = "AHD-dissolution-npp-successors";
 
@@ -310,8 +311,7 @@ async function buildPlan(db: Db): Promise<{ events: PlannedEvent[]; notes: strin
   const pools = unownedSectorsCollection<PoolDoc>(db);
   const history = corporationHistoryCollection<HistoryRow>(db);
 
-  const exits = await db
-    .collection<CorporationExit>("corporationExits")
+  const exits = await corporationExitsCollection(db)
     .find({ reason: { $in: [...DISSOLUTION_REASONS] } })
     .sort({ createdAt: 1, _id: 1 })
     .toArray();
@@ -544,12 +544,10 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
       updated += 1;
     }
     if (event.exitId && recipients.size > 0) {
-      await db
-        .collection<CorporationExit>("corporationExits")
-        .updateOne(
-          { _id: new ObjectId(event.exitId) },
-          { $set: { successorIds: [...recipients.values()] } }
-        );
+      await corporationExitsCollection(db).updateOne(
+        { _id: new ObjectId(event.exitId) },
+        { $set: { successorIds: [...recipients.values()] } }
+      );
     }
   }
 

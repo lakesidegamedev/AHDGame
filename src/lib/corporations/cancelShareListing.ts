@@ -20,6 +20,7 @@ import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { shareListingsCollection } from "@/lib/db/repositories/shareListings";
+import { shareOffersCollection } from "@/lib/db/repositories/shareOffers";
 
 export interface CancelListingResult {
   ok: true;
@@ -51,12 +52,10 @@ async function restoreListingOpen(db: Db, listingId: ShareListing["_id"], now: D
 }
 
 async function restoreOfferPending(db: Db, offerId: ShareOffer["_id"], now: Date) {
-  await db
-    .collection<ShareOffer>("shareOffers")
-    .updateOne(
-      { _id: offerId, status: "cancelled" },
-      { $set: { status: "pending", updatedAt: now } }
-    );
+  await shareOffersCollection(db).updateOne(
+    { _id: offerId, status: "cancelled" },
+    { $set: { status: "pending", updatedAt: now } }
+  );
 }
 
 /**
@@ -92,8 +91,7 @@ export async function cancelShareListingAndRefund(
     return { ok: false, error: "Listing is not open" };
   }
 
-  const pendingOffers = await db
-    .collection<ShareOffer>("shareOffers")
+  const pendingOffers = await shareOffersCollection(db)
     .find({ listingId: listing._id, status: "pending" })
     .toArray();
 
@@ -194,12 +192,10 @@ export async function cancelShareListingAndRefund(
   let sharesReturned = 0;
   try {
     for (const refund of preparedRefunds) {
-      const offerClaim = await db
-        .collection<ShareOffer>("shareOffers")
-        .updateOne(
-          { _id: refund.offer._id, status: "pending" },
-          { $set: { status: "cancelled", updatedAt: now } }
-        );
+      const offerClaim = await shareOffersCollection(db).updateOne(
+        { _id: refund.offer._id, status: "pending" },
+        { $set: { status: "cancelled", updatedAt: now } }
+      );
       if (offerClaim.matchedCount === 0) {
         continue;
       }

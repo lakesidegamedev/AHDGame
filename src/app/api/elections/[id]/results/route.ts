@@ -16,6 +16,7 @@ import {
 import type { Election, GameState } from "@/lib/db/types";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionResultSnapshotsCollection } from "@/lib/db/repositories/electionResultSnapshots";
 
 const ENDED_STATUSES = new Set(["completed", "resolved", "cancelled"]);
 
@@ -65,9 +66,9 @@ async function handleGet(
     // A snapshot whose schemaVersion this build does not recognise falls
     // through to live computation rather than rendering a shape it cannot read.
     if (ENDED_STATUSES.has(election.status)) {
-      const snapshot = await db
-        .collection<ElectionResultSnapshot>("electionResultSnapshots")
-        .findOne({ electionId: election._id });
+      const snapshot = await electionResultSnapshotsCollection(db).findOne({
+        electionId: election._id,
+      });
       if (snapshot && snapshot.schemaVersion === ELECTION_RESULT_SNAPSHOT_VERSION) {
         return conditionalJson(
           request,

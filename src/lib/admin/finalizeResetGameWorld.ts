@@ -35,6 +35,7 @@ import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 import { partyChartersCollection } from "@/lib/db/repositories/partyCharters";
 import { partyBudgetCollection } from "@/lib/db/repositories/partyBudget";
 import { demographicDefaultsCollection } from "@/lib/db/repositories/demographicDefaults";
+import { regionDemographicsCollection } from "@/lib/db/repositories/regionDemographics";
 
 export interface FinalizeResetOptions {
   /** 1991 only: leave political offices vacant for player-created parties. */
@@ -422,9 +423,9 @@ export async function finalizeResetGameWorld(
       // Typed on `_id: string` — this collection keys on the region id, not the
       // default ObjectId, so an untyped handle rejects the string `$nin`.
       (
-        await db
-          .collection<{ _id: string }>("regionDemographics")
-          .deleteMany({ _id: { $nin: seededStateIds } })
+        await regionDemographicsCollection<{ _id: string }>(db).deleteMany({
+          _id: { $nin: seededStateIds },
+        })
       ).deletedCount;
     if (orphanUnownedSectorsDeleted > 0 || orphanRegionDemographicsDeleted > 0) {
       logCollector(

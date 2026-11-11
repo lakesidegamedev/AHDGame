@@ -31,6 +31,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
 import { governorAddressesCollection } from "@/lib/db/repositories/governorAddresses";
 import { governorOfficeStateCollection } from "@/lib/db/repositories/governorOfficeState";
+import { partyGroupFavorabilityCollection } from "@/lib/db/repositories/partyGroupFavorability";
 
 export interface DeliverAddressInput {
   countryId: CountryId;
@@ -300,7 +301,7 @@ export async function deliverAddress(
         expiresAtTurn: currentTurn + ADDRESS_DEMOGRAPHIC_DURATION_TURNS,
         createdAt: now,
       };
-      await db.collection<PartyGroupFavorability>("partyGroupFavorability").insertOne(pgf);
+      await partyGroupFavorabilityCollection(db).insertOne(pgf);
     } catch {
       // Non-critical: the address is still delivered; vote distribution
       // simply won't get the per-group bonus this cycle.

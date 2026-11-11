@@ -42,6 +42,7 @@ import {
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalMetricsCollection } from "@/lib/db/repositories/politicalMetrics";
+import { politicalMetricsHistoryCollection } from "@/lib/db/repositories/politicalMetricsHistory";
 
 export interface CountryPoliticalMetricsResponse {
   /** Which registry this is; the views branch display on it. */
@@ -171,9 +172,10 @@ export async function loadCountryPoliticalMetrics(
   // entries; SERVE only the most recent 180 (≈6 real months) so the payload
   // stays bounded (63 metrics × entries — a full year would push ~1MB).
   const SERVED_HISTORY_ENTRIES = 180;
-  const historyDoc = await db
-    .collection<PoliticalMetricsHistoryDoc>("politicalMetricsHistory")
-    .findOne({ _id: countryId }, { projection: { entries: { $slice: -SERVED_HISTORY_ENTRIES } } });
+  const historyDoc = await politicalMetricsHistoryCollection(db).findOne(
+    { _id: countryId },
+    { projection: { entries: { $slice: -SERVED_HISTORY_ENTRIES } } }
+  );
   const nationalLawPoints = lawTargets(countryId, enactedLevels, nationalContributionMultipliers);
   const totalPopulation = states.reduce((sum, s) => sum + (s.population ?? 0), 0);
   const meanResidual = (metricId: PoliticalMetricId): number => {

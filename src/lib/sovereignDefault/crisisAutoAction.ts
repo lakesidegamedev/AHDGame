@@ -12,6 +12,7 @@ import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import { applyRepudiateResolution } from "./resolution/repudiate";
 import type { CountryId } from "@/lib/constants/countries";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { sovereignCrisisDecisionsCollection } from "@/lib/db/repositories/sovereignCrisisDecisions";
 
 export interface CrisisAutoActionReport {
   countriesChecked: number;
@@ -59,9 +60,10 @@ export async function processCrisisAutoActions(
     const countryCode = budget.countryId as CountryId;
 
     // Find the open SovereignCrisisDecision for this country.
-    const decision = await db
-      .collection<SovereignCrisisDecision>("sovereignCrisisDecisions")
-      .findOne({ countryCode, state: "open" });
+    const decision = await sovereignCrisisDecisionsCollection(db).findOne({
+      countryCode,
+      state: "open",
+    });
 
     if (!decision) {
       // Decision row is missing or already in a terminal state — clear the timer

@@ -32,6 +32,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { regionalBudgetsCollection } from "@/lib/db/repositories/regionalBudgets";
 
 /** Era year for the cost basis; defensive so a mock db (no gameState) ⇒ flag off. */
 async function resolveEraYear(db: Db): Promise<number | null> {
@@ -198,7 +199,7 @@ export async function validateStateBudgetImpact(
   // stateBudgets row here can reject a bill while the region page shows ample
   // funding from the live regional budget.
   const regionalBudget = isParliamentarySystem(getCountryConfig(countryId))
-    ? await db.collection<RegionalBudget>("regionalBudgets").findOne({ _id: stateId, countryId })
+    ? await regionalBudgetsCollection(db).findOne({ _id: stateId, countryId })
     : null;
   const stateBudget = regionalBudget
     ? null

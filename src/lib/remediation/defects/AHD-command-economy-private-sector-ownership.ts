@@ -27,6 +27,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { nationalizationAuctionsCollection } from "@/lib/db/repositories/nationalizationAuctions";
 
 export const DEFECT_ID = "AHD-command-economy-private-sector-ownership";
 
@@ -314,8 +315,7 @@ async function survey(db: Db): Promise<Survey> {
       .find({ countryId: { $in: ["RU", "UKR"] } })
       .toArray(),
     gameStateCollection<{ _id: string; currentTurn?: number }>(db).findOne({ _id: "current" }),
-    db
-      .collection<NationalizationAuction>("nationalizationAuctions")
+    nationalizationAuctionsCollection(db)
       .find({ corporationId: new ObjectId(DD_SOURCE_CORPORATION_ID), status: "open" })
       .toArray(),
   ]);
@@ -636,23 +636,21 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
 
   for (const row of result.auctionRefunds) updated += await applyAuctionRefund(db, row, ctx);
   if (result.auctionId) {
-    const auction = await db
-      .collection<NationalizationAuction>("nationalizationAuctions")
-      .updateOne(
-        { _id: new ObjectId(result.auctionId), status: "open" },
-        {
-          $set: {
-            status: "cancelled",
-            resolvedAtTurn: result.currentTurn,
-            updatedAt: ctx.now,
-            [`remediation.${DEFECT_ID}`]: {
-              runId: ctx.runId,
-              reason: "invalid private shell reabsorbed by administrative ownership repair",
-              cancelledAt: ctx.now,
-            },
+    const auction = await nationalizationAuctionsCollection(db).updateOne(
+      { _id: new ObjectId(result.auctionId), status: "open" },
+      {
+        $set: {
+          status: "cancelled",
+          resolvedAtTurn: result.currentTurn,
+          updatedAt: ctx.now,
+          [`remediation.${DEFECT_ID}`]: {
+            runId: ctx.runId,
+            reason: "invalid private shell reabsorbed by administrative ownership repair",
+            cancelledAt: ctx.now,
           },
-        }
-      );
+        },
+      }
+    );
     updated += auction.modifiedCount;
   }
 
@@ -683,9 +681,10 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
   }
 
   if (result.ddSourceExists) {
-    const openAuctionCount = await db
-      .collection<NationalizationAuction>("nationalizationAuctions")
-      .countDocuments({ corporationId: new ObjectId(DD_SOURCE_CORPORATION_ID), status: "open" });
+    const openAuctionCount = await nationalizationAuctionsCollection(db).countDocuments({
+      corporationId: new ObjectId(DD_SOURCE_CORPORATION_ID),
+      status: "open",
+    });
     if (openAuctionCount !== 0) throw new Error("East German shell still has an open auction");
     const remaining = await corporateSectorsCollection(db).countDocuments({
       corporationId: new ObjectId(DD_SOURCE_CORPORATION_ID),

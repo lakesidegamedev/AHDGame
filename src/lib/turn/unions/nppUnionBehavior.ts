@@ -42,6 +42,8 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { unionsCollection } from "@/lib/db/repositories/unions";
+import { bargainingCampaignsCollection } from "@/lib/db/repositories/bargainingCampaigns";
+import { collectiveAgreementsCollection } from "@/lib/db/repositories/collectiveAgreements";
 
 /**
  * Minimum worker-weighted `unionization` (0-100) across an NPP union's scope
@@ -279,12 +281,10 @@ export async function processNppUnionBehavior(
         { projection: { _id: 1, ceoId: 1, ceoType: 1, caretakerCeo: 1 } }
       )
       .toArray(),
-    db
-      .collection<BargainingCampaign>("bargainingCampaigns")
+    bargainingCampaignsCollection(db)
       .find({ status: { $in: ["negotiating", "dispute"] } })
       .toArray(),
-    db
-      .collection<CollectiveAgreement>("collectiveAgreements")
+    collectiveAgreementsCollection(db)
       .find({
         ...activeCollectiveAgreementFilter(currentTurn),
       })

@@ -22,6 +22,7 @@ import {
 } from "@/lib/constants/impeachment";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { impeachmentsCollection } from "@/lib/db/repositories/impeachments";
 
 export interface FileImpeachmentOpts {
   /** "president" = national two-chamber; "governor" = single state-legislature vote. */
@@ -163,16 +164,17 @@ export async function fileArticlesOfImpeachment(
   }
 
   // One active impeachment per target.
-  const active = await db
-    .collection<Impeachment>("impeachments")
-    .findOne({ countryId, targetCharacterId, stage: { $in: ["house", "senate"] } });
+  const active = await impeachmentsCollection(db).findOne({
+    countryId,
+    targetCharacterId,
+    stage: { $in: ["house", "senate"] },
+  });
   if (active) {
     throw badRequest("An impeachment against this official is already in progress.");
   }
 
   // Per-target cooldown against re-filing.
-  const lastAttempt = await db
-    .collection<Impeachment>("impeachments")
+  const lastAttempt = await impeachmentsCollection(db)
     .find({ countryId, targetCharacterId })
     .sort({ turnFiled: -1 })
     .limit(1)
@@ -223,7 +225,7 @@ export async function fileArticlesOfImpeachment(
     createdAt: now,
     updatedAt: now,
   };
-  await db.collection<Impeachment>("impeachments").insertOne(doc);
+  await impeachmentsCollection(db).insertOne(doc);
 
   return { impeachmentId: doc._id.toString() };
 }

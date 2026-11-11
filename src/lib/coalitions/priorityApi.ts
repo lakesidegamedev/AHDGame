@@ -15,6 +15,7 @@ import {
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
+import { legislationCollection } from "@/lib/db/repositories/legislation";
 
 const LIVE_PRIORITY_BILL_STATUSES: ReadonlySet<Bill["status"]> = new Set([
   "active",
@@ -94,8 +95,7 @@ export async function loadCoalitionPriorityContext(
         .toArray()
     : [];
 
-  const liveBills = await db
-    .collection<Bill>("legislation")
+  const liveBills = await legislationCollection(db)
     .find(
       { countryId, status: { $in: [...LIVE_PRIORITY_BILL_STATUSES] } },
       {

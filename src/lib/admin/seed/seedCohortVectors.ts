@@ -10,6 +10,7 @@ import { synthesizeAgeSexVector } from "@/lib/demographics/seedSynthesis";
 import { sexRatioFromVector, dependencyRatio } from "@/lib/demographics/cohortVector";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { regionDemographicsCollection } from "@/lib/db/repositories/regionDemographics";
 
 /**
  * Stand up the per-region single-year age×sex cohort vector (`regionDemographics.ages`)
@@ -92,8 +93,7 @@ export async function seedCohortVectors(
   const existingDemographicIds = onlyMissing
     ? new Set(
         (
-          await db
-            .collection<Pick<RegionDemographics, "_id">>("regionDemographics")
+          await regionDemographicsCollection<Pick<RegionDemographics, "_id">>(db)
             .find(
               { _id: { $in: realStates.map((state) => String(state._id)) } },
               { projection: { _id: 1 } }
@@ -218,16 +218,12 @@ export async function seedCohortVectors(
   }
 
   if (apply && opts.replace) {
-    const stale = await db
-      .collection<RegionDemographics>("regionDemographics")
-      .deleteMany({ _id: { $nin: coveredIds } });
+    const stale = await regionDemographicsCollection(db).deleteMany({ _id: { $nin: coveredIds } });
     if (stale.deletedCount > 0) log(`Removed ${stale.deletedCount} stale region cohort vectors`);
   }
 
   if (demoOps.length > 0) {
-    await db
-      .collection<RegionDemographics>("regionDemographics")
-      .bulkWrite(demoOps, { ordered: true });
+    await regionDemographicsCollection(db).bulkWrite(demoOps, { ordered: true });
   }
   if (metricOps.length > 0) {
     await macroMetricsCollection(db).bulkWrite(metricOps, { ordered: true });

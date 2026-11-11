@@ -28,6 +28,7 @@ import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
 import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
+import { regionalBudgetsCollection } from "@/lib/db/repositories/regionalBudgets";
 
 export async function GET(
   request: Request,
@@ -84,9 +85,7 @@ async function serveRegionalBudget(
     (gameState as { currentTurn?: number } | null)?.currentTurn ?? 1
   );
 
-  const regionalBudget = await db
-    .collection<RegionalBudget>("regionalBudgets")
-    .findOne({ _id: stateId, countryId });
+  const regionalBudget = await regionalBudgetsCollection(db).findOne({ _id: stateId, countryId });
 
   if (!regionalBudget) {
     let fallbackStateBudget = await stateBudgetsCollection(db).findOne({

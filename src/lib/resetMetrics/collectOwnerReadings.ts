@@ -61,6 +61,7 @@ import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
 import { militaryUnitsCollection } from "@/lib/db/repositories/militaryUnits";
 import { tradeFlowSnapshotsCollection } from "@/lib/db/repositories/tradeFlowSnapshots";
+import { regionalBudgetsCollection } from "@/lib/db/repositories/regionalBudgets";
 
 let openingCalibrationCache: {
   gross: ReturnType<typeof openingGrossPurchasingInputs1991>;
@@ -295,8 +296,7 @@ export async function collectResetMetricOwnerReadings(
   const taxesByRegion = new Map(modeledRegionalTaxes.map((r) => [r._id, r]));
   // UK and JP regional tax owners publish annual assessments, not StateBudget rates.
   const cohortRegionalBudgets = automaticCountries.some((c) => !countryHasFeature("usSeeds", c))
-    ? await db
-        .collection<RegionalBudget>("regionalBudgets")
+    ? await regionalBudgetsCollection(db)
         .find(
           {
             _id: { $in: regionalIds },

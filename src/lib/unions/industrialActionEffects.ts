@@ -1,11 +1,11 @@
 import type { Db } from "mongodb";
 import type { BargainingCampaign } from "@/lib/db/types";
 import { OVERTIME_BAN_OUTPUT_FACTOR } from "@/lib/unions/bargaining";
+import { bargainingCampaignsCollection } from "@/lib/db/repositories/bargainingCampaigns";
 
 /** Load non-strike industrial action once for the corporation turn. */
 export async function loadIndustrialActionOutputFactors(db: Db): Promise<Map<string, number>> {
-  const campaigns = await db
-    .collection<BargainingCampaign>("bargainingCampaigns")
+  const campaigns = await bargainingCampaignsCollection(db)
     .find({ status: "dispute", escalationLevel: "overtime_ban" }, { projection: { sectorIds: 1 } })
     .toArray();
 

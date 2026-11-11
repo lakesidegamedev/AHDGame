@@ -26,6 +26,8 @@ import { legislationTypesCollection } from "@/lib/db/repositories/legislationTyp
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
 import { cabinetSettingsCollection } from "@/lib/db/repositories/cabinetSettings";
+import { regionalBudgetsCollection } from "@/lib/db/repositories/regionalBudgets";
+import { resetLawProgramsCollection } from "@/lib/db/repositories/resetLawPrograms";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -136,8 +138,7 @@ export async function processJPRegionalBudgets(
     .toArray();
   const resetPrograms =
     resetLegislationV2Enabled && resetWorldId
-      ? await db
-          .collection<ResetLawProgramDocument>("resetLawPrograms")
+      ? await resetLawProgramsCollection<ResetLawProgramDocument>(db)
           .find(
             {
               country: "JP",
@@ -221,8 +222,7 @@ export async function processJPRegionalBudgets(
   }
 
   // Fetch existing budget documents
-  const existingBudgets = await db
-    .collection<RegionalBudget>("regionalBudgets")
+  const existingBudgets = await regionalBudgetsCollection(db)
     .find({ _id: { $in: regionIds } })
     .toArray();
   const budgetMap = new Map(existingBudgets.map((b) => [b._id, b]));
@@ -431,7 +431,7 @@ export async function processJPRegionalBudgets(
     await statePoliciesCollection(db).bulkWrite(statePolicyOps);
   }
   if (regionalBudgetOps.length > 0) {
-    await db.collection<RegionalBudget>("regionalBudgets").bulkWrite(regionalBudgetOps);
+    await regionalBudgetsCollection(db).bulkWrite(regionalBudgetOps);
   }
 
   return { regionsProcessed };

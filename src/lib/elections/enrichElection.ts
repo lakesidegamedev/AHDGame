@@ -153,6 +153,7 @@ import { nppEndorsementsCollection } from "@/lib/db/repositories/nppEndorsements
 import { demographicDefaultsCollection } from "@/lib/db/repositories/demographicDefaults";
 import { stateRegistrationPoolCollection } from "@/lib/db/repositories/stateRegistrationPool";
 import { congressionalDistrictsCollection } from "@/lib/db/repositories/congressionalDistricts";
+import { primarySnapshotsCollection } from "@/lib/db/repositories/primarySnapshots";
 
 export async function _enrichElection(
   election: Election,
@@ -1455,8 +1456,7 @@ export async function fetchDepsForElection(
       ? playerEndorsementsCollection(db).find({ electionId: electionOid, isActive: true }).toArray()
       : Promise.resolve([] as PlayerEndorsement[]),
     isFull
-      ? db
-          .collection<PrimarySnapshot>("primarySnapshots")
+      ? primarySnapshotsCollection(db)
           .find({ electionId: electionOid })
           .sort({ recordedAt: 1 })
           .limit(144)
@@ -1494,8 +1494,7 @@ export async function fetchDepsForElection(
     latestPrimarySnapshot = snapshots[snapshots.length - 1];
   } else {
     // summary mode (snapshots array is empty) — fetch the single latest
-    const latest = await db
-      .collection<PrimarySnapshot>("primarySnapshots")
+    const latest = await primarySnapshotsCollection(db)
       .find({ electionId: electionOid })
       .sort({ recordedAt: -1 })
       .limit(1)

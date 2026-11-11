@@ -16,6 +16,10 @@ import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParti
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { hu1991AssemblyCountsCollection } from "@/lib/db/repositories/hu1991AssemblyCounts";
+import { hu2011ConstituencyByElectionsCollection } from "@/lib/db/repositories/hu2011ConstituencyByElections";
+import { hu2011AssemblyCountsCollection } from "@/lib/db/repositories/hu2011AssemblyCounts";
+import { hu1991ConstituencyByElectionsCollection } from "@/lib/db/repositories/hu1991ConstituencyByElections";
 export const HU_1991_FILING_LOCKS_COLLECTION = "hu1991AssemblyFilingLocks";
 export type Hu1991FilingFailure =
   | "invalid-ballot"
@@ -153,17 +157,15 @@ export async function materializeHu1991PlayerFiling(input: {
   const receiptId = modern?.receiptId ?? election.hungarianAssemblyRound!.receiptId;
   let byElection = election.hungarianAssemblyRound?.byElection;
   if (modern) {
-    const job = await db
-      .collection<import("./constituencyByElections2011").HuModernByElectionRecord>(
-        "hu2011ConstituencyByElections"
-      )
-      .findOne({ _id: receiptId }, { session });
-    const parent = await db
-      .collection<import("./assemblyCount2011").Hu2011AssemblyRecord>("hu2011AssemblyCounts")
-      .findOne(
-        { seatedAtTurn: { $exists: true } },
-        { session, sort: { seatedAtTurn: -1 }, projection: { _id: 1 } }
-      );
+    const job = await hu2011ConstituencyByElectionsCollection<
+      import("./constituencyByElections2011").HuModernByElectionRecord
+    >(db).findOne({ _id: receiptId }, { session });
+    const parent = await hu2011AssemblyCountsCollection<
+      import("./assemblyCount2011").Hu2011AssemblyRecord
+    >(db).findOne(
+      { seatedAtTurn: { $exists: true } },
+      { session, sort: { seatedAtTurn: -1 }, projection: { _id: 1 } }
+    );
     if (
       !job ||
       game.huAssemblyReformedAtYear == null ||
@@ -199,17 +201,15 @@ export async function materializeHu1991PlayerFiling(input: {
     )
       return reject("invalid-ballot");
     if (byElection) {
-      const job = await db
-        .collection<import("./constituencyByElections1991").Hu1991ByElectionRecord>(
-          "hu1991ConstituencyByElections"
-        )
-        .findOne({ _id: receiptId }, { session });
-      const parent = await db
-        .collection<import("./assemblyCount1991").Hu1991AssemblyRecord>("hu1991AssemblyCounts")
-        .findOne(
-          { seatedAtTurn: { $exists: true } },
-          { session, sort: { seatedAtTurn: -1 }, projection: { _id: 1 } }
-        );
+      const job = await hu1991ConstituencyByElectionsCollection<
+        import("./constituencyByElections1991").Hu1991ByElectionRecord
+      >(db).findOne({ _id: receiptId }, { session });
+      const parent = await hu1991AssemblyCountsCollection<
+        import("./assemblyCount1991").Hu1991AssemblyRecord
+      >(db).findOne(
+        { seatedAtTurn: { $exists: true } },
+        { session, sort: { seatedAtTurn: -1 }, projection: { _id: 1 } }
+      );
       if (
         !job ||
         job.round !== 1 ||

@@ -9,6 +9,7 @@ import { NATIONAL_TERMINAL_STATUSES } from "@/lib/congress/billProposalLimits";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { billsCollection } from "@/lib/db/repositories/bills";
 import { tariffsCollection } from "@/lib/db/repositories/tariffs";
+import { tradeEmbargoesCollection } from "@/lib/db/repositories/tradeEmbargoes";
 
 export const PUBLIC_TARIFF_SCOPES = [
   "economy_wide",
@@ -89,8 +90,7 @@ export async function queryTradeEmbargoes(
   const countryFilter = params.country
     ? [{ $or: [{ sourceCountry: params.country }, { targetCountry: params.country }] }]
     : [];
-  const stored = await db
-    .collection<TradeEmbargo>("tradeEmbargoes")
+  const stored = await tradeEmbargoesCollection(db)
     .find({
       origin: { $in: ["minister", "organization"] },
       $and: [

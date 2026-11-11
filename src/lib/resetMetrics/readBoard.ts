@@ -4,6 +4,7 @@ import { RESET_V2_READY } from "@/lib/resetVersions/availability";
 import { resetSystemVersionsForCountry, type ResetV2Readiness } from "@/lib/resetVersions/rules";
 import { buildResetMetricSnapshot, type ResetMetricSnapshot } from "./rules/snapshot";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { resetMetricSnapshotsCollection } from "@/lib/db/repositories/resetMetricSnapshots";
 
 export type ResetMetricBoardRead =
   | { status: "not_enabled" }
@@ -34,7 +35,7 @@ export async function readResetMetricBoard(
   const worldId = gameState?.resetWorldId;
   if (typeof worldId !== "string") return { status: "missing" };
   const id = `${countryId}:${regionId ?? "national"}`;
-  const board = await db.collection<ResetMetricSnapshot>("resetMetricSnapshots").findOne(
+  const board = await resetMetricSnapshotsCollection<ResetMetricSnapshot>(db).findOne(
     { _id: id, worldId },
     {
       projection: {

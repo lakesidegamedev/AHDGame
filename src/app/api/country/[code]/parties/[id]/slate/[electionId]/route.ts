@@ -23,6 +23,7 @@ import { getSlateAssignerRoleLabel, resolveSlateAuthority } from "@/lib/slateAut
 import { countSlateAssignmentUsage } from "@/lib/slateAssignmentCap";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { recruitmentSlatesCollection } from "@/lib/db/repositories/recruitmentSlates";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; electionId: string }>;
@@ -250,9 +251,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     if (parsed.data.priority !== undefined) setFields.priority = parsed.data.priority;
     if (parsed.data.notes !== undefined) setFields.notes = parsed.data.notes;
 
-    await db
-      .collection<RecruitmentSlate>("recruitmentSlates")
-      .updateOne({ _id: slate._id }, { $set: setFields });
+    await recruitmentSlatesCollection(db).updateOne({ _id: slate._id }, { $set: setFields });
 
     return NextResponse.json({ success: true, id: slate._id.toString() });
   } catch (error) {

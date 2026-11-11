@@ -51,6 +51,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { notificationsCollection } from "@/lib/db/repositories/notifications";
 import { shareListingsCollection } from "@/lib/db/repositories/shareListings";
+import { shareOffersCollection } from "@/lib/db/repositories/shareOffers";
 
 interface RouteParams {
   params: Promise<{ id: string; listingId: string }>;
@@ -183,9 +184,11 @@ export async function submitShareOffer(request: Request, { params }: RouteParams
     }
 
     // One pending offer per buyer per listing
-    const existingOffer = await db
-      .collection<ShareOffer>("shareOffers")
-      .findOne({ listingId: listing._id, buyerCharacterId: character._id, status: "pending" });
+    const existingOffer = await shareOffersCollection(db).findOne({
+      listingId: listing._id,
+      buyerCharacterId: character._id,
+      status: "pending",
+    });
     if (existingOffer) {
       return errorResponse(400, "You already have a pending offer on this listing");
     }
@@ -302,7 +305,7 @@ export async function submitShareOffer(request: Request, { params }: RouteParams
 
       let offerId: ObjectId;
       try {
-        const insertResult = await db.collection<Omit<ShareOffer, "_id">>("shareOffers").insertOne({
+        const insertResult = await shareOffersCollection<Omit<ShareOffer, "_id">>(db).insertOne({
           listingId: listing._id,
           corporationId: listing.corporationId,
           buyerCharacterId: character._id,
@@ -343,7 +346,7 @@ export async function submitShareOffer(request: Request, { params }: RouteParams
         });
       } catch (err) {
         await Promise.all([
-          db.collection<ShareOffer>("shareOffers").deleteOne({ _id: offerId, status: "pending" }),
+          shareOffersCollection(db).deleteOne({ _id: offerId, status: "pending" }),
           refundCorpLiquidCapital(db, placerCorp._id, escrowInPlacerCapital),
         ]);
         throw err;
@@ -390,7 +393,7 @@ export async function submitShareOffer(request: Request, { params }: RouteParams
 
       let offerId: ObjectId;
       try {
-        const insertResult = await db.collection<Omit<ShareOffer, "_id">>("shareOffers").insertOne({
+        const insertResult = await shareOffersCollection<Omit<ShareOffer, "_id">>(db).insertOne({
           listingId: listing._id,
           corporationId: listing.corporationId,
           buyerCharacterId: character._id,
@@ -431,7 +434,7 @@ export async function submitShareOffer(request: Request, { params }: RouteParams
         });
       } catch (err) {
         await Promise.all([
-          db.collection<ShareOffer>("shareOffers").deleteOne({ _id: offerId, status: "pending" }),
+          shareOffersCollection(db).deleteOne({ _id: offerId, status: "pending" }),
           refundCharacterCash(db, character._id, homeCurrency, escrowInHome, forexEnabled),
         ]);
         throw err;
@@ -440,7 +443,7 @@ export async function submitShareOffer(request: Request, { params }: RouteParams
 
     if (negotiated) {
       const placed = placedOfferId
-        ? await db.collection<ShareOffer>("shareOffers").findOne({ _id: placedOfferId })
+        ? await shareOffersCollection(db).findOne({ _id: placedOfferId })
         : null;
       if (!placed) return errorResponse(500, "Negotiated sale payment was not recorded");
       const settled = await settleListingOffer(db, {

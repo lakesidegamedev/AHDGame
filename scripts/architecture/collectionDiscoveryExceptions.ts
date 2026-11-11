@@ -16,6 +16,15 @@ export interface LegacyDynamicCollectionSite {
 
 export const LEGACY_DYNAMIC_COLLECTION_SITES: readonly LegacyDynamicCollectionSite[] = [
   {
+    file: "src/lib/congress/clearWhippedVote.ts",
+    owner: "clearWhippedFromVote",
+    argument: "collectionName",
+    scopeHash: "11456fe5a61b8d3405277ac31293d415623d156b5a24d4cafbdbd49d02aa6da2",
+    count: 1,
+    reason:
+      "Callers pass the voting collection name for the whipped-vote badge reset; every caller supplies a name already scanned at its own repository.",
+  },
+  {
     file: "src/app/api/admin/leadership-elections/route.ts",
     owner: "handleUSCancel",
     argument: "electionsCollection",
@@ -75,7 +84,7 @@ export const LEGACY_DYNAMIC_COLLECTION_SITES: readonly LegacyDynamicCollectionSi
     file: "src/app/api/admin/migrations/create-indexes/route.ts",
     owner: "POST",
     argument: "collection",
-    scopeHash: "060a0850e4d9910e028aeba666c0eb23def46e72ca17dcc52cf0785bc80d17b7",
+    scopeHash: "d59a859449ea90946113115524f485d6dcb1588a7288e4e0381bdf59b7d0f9c5",
     count: 1,
     reason: "The admin route selects from the repository-owned election or index configuration.",
   },
@@ -206,7 +215,7 @@ export const LEGACY_DYNAMIC_COLLECTION_SITES: readonly LegacyDynamicCollectionSi
     file: "src/lib/banking/fundedSovereignCoupons.ts",
     owner: "loadCouponTargetReadiness",
     argument: "collection",
-    scopeHash: "9dcec757a0d109afa8c822670edae8ac56cff606c8cb2faca65866bda627157b",
+    scopeHash: "9eb086542e872472efafef81247814572a5899098eaba64a0a9e58b1716eb11c",
     count: 1,
     reason: "The persisted transaction or recovery record carries its destination collection.",
   },

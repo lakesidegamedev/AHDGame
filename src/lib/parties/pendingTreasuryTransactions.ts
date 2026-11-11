@@ -27,6 +27,7 @@ import type { Db, ObjectId } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { PendingTreasuryTransaction, PoliticalParty } from "@/lib/db/types";
 import { PENDING_TXN_EXPIRY_TURNS } from "./proposalConstants";
+import { pendingTreasuryTransactionsCollection } from "@/lib/db/repositories/pendingTreasuryTransactions";
 
 // ─── Slot model ──────────────────────────────────────────────────────────────
 
@@ -327,9 +328,9 @@ export async function createPendingTransaction(
     status: "open",
   };
 
-  const result = await db
-    .collection<PendingTreasuryTransaction>("pendingTreasuryTransactions")
-    .insertOne(doc as PendingTreasuryTransaction);
+  const result = await pendingTreasuryTransactionsCollection(db).insertOne(
+    doc as PendingTreasuryTransaction
+  );
 
   return { ...(doc as PendingTreasuryTransaction), _id: result.insertedId };
 }
@@ -345,12 +346,10 @@ export async function cancelPendingTransaction(
   txnId: ObjectId,
   cancellerCharacterId: ObjectId
 ): Promise<boolean> {
-  const result = await db
-    .collection<PendingTreasuryTransaction>("pendingTreasuryTransactions")
-    .updateOne(
-      { _id: txnId, status: "open", proposedBy: cancellerCharacterId },
-      { $set: { status: "cancelled", resolvedAt: new Date() } }
-    );
+  const result = await pendingTreasuryTransactionsCollection(db).updateOne(
+    { _id: txnId, status: "open", proposedBy: cancellerCharacterId },
+    { $set: { status: "cancelled", resolvedAt: new Date() } }
+  );
   return result.matchedCount === 1;
 }
 
@@ -366,12 +365,10 @@ export async function cancelPendingTransaction(
  */
 export async function expirePendingTransactions(db: Db, currentTurn: number): Promise<number> {
   const now = new Date();
-  const result = await db
-    .collection<PendingTreasuryTransaction>("pendingTreasuryTransactions")
-    .updateMany(
-      { status: "open", expiresAtTurn: { $lte: currentTurn } },
-      { $set: { status: "expired", resolvedAt: now, resolvedAtTurn: currentTurn } }
-    );
+  const result = await pendingTreasuryTransactionsCollection(db).updateMany(
+    { status: "open", expiresAtTurn: { $lte: currentTurn } },
+    { $set: { status: "expired", resolvedAt: now, resolvedAtTurn: currentTurn } }
+  );
   return result.modifiedCount;
 }
 
@@ -386,8 +383,7 @@ export async function listOpenPendingTransactions(
   partyId: ObjectId,
   countryId: CountryId
 ): Promise<PendingTreasuryTransaction[]> {
-  return db
-    .collection<PendingTreasuryTransaction>("pendingTreasuryTransactions")
+  return pendingTreasuryTransactionsCollection(db)
     .find({ partyId, countryId, status: "open" })
     .sort({ proposedAt: -1 })
     .toArray();

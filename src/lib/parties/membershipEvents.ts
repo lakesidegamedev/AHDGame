@@ -3,6 +3,7 @@ import type { Character, GameState, PartyMembershipEvent, PoliticalParty } from 
 import type { CountryId } from "@/lib/constants/countries";
 import { recordAudit } from "@/lib/audit/recordAudit";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { partyMembershipEventsCollection } from "@/lib/db/repositories/partyMembershipEvents";
 
 export interface PartyEventSnapshots {
   oldPartyCountryId: CountryId | null;
@@ -86,9 +87,7 @@ export async function emitPartyMembershipEvent(
       ...(args.snapshots ?? {}),
     };
 
-    const insertResult = await args.db
-      .collection<PartyMembershipEvent>("partyMembershipEvents")
-      .insertOne(doc);
+    const insertResult = await partyMembershipEventsCollection(args.db).insertOne(doc);
 
     // Central seam for party join/leave/purge/admin/cleanup — one call site
     // covers all of them (§P4 breadth). `subject` is the affected character;

@@ -26,6 +26,7 @@ import { createNotification } from "@/lib/notifications";
 import type { Corporation, CorporationShareInvite, User } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { usersCollection } from "@/lib/db/repositories/users";
+import { corporationShareInvitesCollection } from "@/lib/db/repositories/corporationShareInvites";
 
 const INVITE_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
@@ -73,8 +74,7 @@ async function handleGET(_request: Request, { params }: RouteParams) {
       characterFilter.invitedCharacterId = characterId;
     }
 
-    const invites = await db
-      .collection<CorporationShareInvite>("corporationShareInvites")
+    const invites = await corporationShareInvitesCollection(db)
       .find(characterFilter)
       .sort({ createdAt: -1 })
       .toArray();
@@ -165,13 +165,11 @@ export async function POST(request: Request, { params }: RouteParams) {
     const now = new Date();
     // Count current shareholders plus any outstanding pending invites — both
     // consume the cap. A pending invite that's accepted will land a new holder.
-    const pendingInviteCount = await db
-      .collection<CorporationShareInvite>("corporationShareInvites")
-      .countDocuments({
-        corporationId: corporation._id,
-        status: "pending",
-        expiresAt: { $gt: now },
-      });
+    const pendingInviteCount = await corporationShareInvitesCollection(db).countDocuments({
+      corporationId: corporation._id,
+      status: "pending",
+      expiresAt: { $gt: now },
+    });
     const projected = shareholderCount(corporation) + pendingInviteCount + 1;
     if (projected > maxShareholders) {
       return errorResponse(
@@ -193,8 +191,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     // Outstanding pending invites reserve unissued capacity to prevent over-
     // promising the same pool.
-    const reservedByInvites = await db
-      .collection<CorporationShareInvite>("corporationShareInvites")
+    const reservedByInvites = await corporationShareInvitesCollection(db)
       .aggregate<{ total: number }>([
         {
           $match: {
@@ -238,7 +235,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       updatedAt: now,
     };
 
-    await db.collection<CorporationShareInvite>("corporationShareInvites").insertOne(invite);
+    await corporationShareInvitesCollection(db).insertOne(invite);
 
     await createNotification({
       userId: invitee.userId,

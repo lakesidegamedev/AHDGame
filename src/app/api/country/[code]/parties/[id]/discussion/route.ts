@@ -9,6 +9,7 @@ import { findPartyBySequentialId } from "@/lib/db/partyLookup";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import type { PartyDiscussionPost } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { partyDiscussionPostsCollection } from "@/lib/db/repositories/partyDiscussionPosts";
 
 // GET /api/country/[code]/parties/[id]/discussion
 // POST /api/country/[code]/parties/[id]/discussion
@@ -56,7 +57,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1", 10));
     const skip = (page - 1) * PAGE_SIZE;
 
-    const col = db.collection<PartyDiscussionPost>("partyDiscussionPosts");
+    const col = partyDiscussionPostsCollection(db);
     const query = { partyId, countryId, scope: "national" as const };
     const [rawPosts, total] = await Promise.all([
       col.find(query).sort({ createdAt: -1 }).skip(skip).limit(PAGE_SIZE).toArray(),
@@ -129,7 +130,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     const now = new Date();
-    const col = db.collection<PartyDiscussionPost>("partyDiscussionPosts");
+    const col = partyDiscussionPostsCollection(db);
     const newPost: Omit<PartyDiscussionPost, "_id"> = {
       partyId,
       countryId,

@@ -41,6 +41,7 @@ import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { playerEndorsementsCollection } from "@/lib/db/repositories/playerEndorsements";
 import { nppEndorsementsCollection } from "@/lib/db/repositories/nppEndorsements";
+import { primarySnapshotsCollection } from "@/lib/db/repositories/primarySnapshots";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -170,8 +171,7 @@ export async function GET(request: Request) {
         .find(buildActiveVisibleNppEndorsementFilter({ electionId: electionOid }))
         .toArray(),
       playerEndorsementsCollection(db).find({ electionId: electionOid, isActive: true }).toArray(),
-      db
-        .collection<PrimarySnapshot>("primarySnapshots")
+      primarySnapshotsCollection(db)
         .find({ electionId: electionOid })
         .sort({ recordedAt: 1 })
         .limit(144)

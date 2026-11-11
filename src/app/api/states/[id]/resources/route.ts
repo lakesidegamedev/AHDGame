@@ -19,6 +19,7 @@ import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
 import { stateResourceCapacityCollection } from "@/lib/db/repositories/stateResourceCapacity";
 import { extractionContractsCollection } from "@/lib/db/repositories/extractionContracts";
+import { governmentTendersCollection } from "@/lib/db/repositories/governmentTenders";
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -32,8 +33,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     const stateSupplyKey = `stateSupply.${stateId}` as const;
 
     // Read tender reservations before contracts so an award cannot disappear between reads.
-    const reservations = await db
-      .collection<import("@/lib/governmentContracts/types").GovernmentTender>("governmentTenders")
+    const reservations = await governmentTendersCollection<
+      import("@/lib/governmentContracts/types").GovernmentTender
+    >(db)
       .find(
         {
           "terms.type": "extraction",

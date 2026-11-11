@@ -31,6 +31,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 import { activityLogCollection } from "@/lib/db/repositories/activityLog";
 import type { Document } from "mongodb";
+import { characterStateOrgCollection } from "@/lib/db/repositories/characterStateOrg";
 
 const VALID_US_STATES = new Set(ELECTORAL_VOTE_UNITS.map((u) => u.stateId));
 
@@ -175,8 +176,7 @@ export async function POST(request: Request) {
     // Price the NEXT level off the current one — presence escalates, so the
     // cost is read before the gate and re-asserted inside the atomic update so
     // a racing build cannot buy a level at a stale (cheaper) price.
-    const existing = await db
-      .collection<CharacterStateOrg>("characterStateOrg")
+    const existing = await characterStateOrgCollection(db)
       .findOne({ characterId: ownerId, stateId }, { projection: { level: 1 } });
     const currentLevel = existing?.level ?? 0;
     const costFundsAnchor = stateOrgLevelCost(currentLevel);
@@ -231,8 +231,7 @@ export async function POST(request: Request) {
 
           let orgUpdate;
           try {
-            orgUpdate = await db
-              .collection<CharacterStateOrg>("characterStateOrg")
+            orgUpdate = await characterStateOrgCollection(db)
               .findOneAndUpdate(
                 {
                   characterId: ownerId,
@@ -284,8 +283,7 @@ export async function POST(request: Request) {
           if (debitResult.modifiedCount === 0) throw new Error("INSUFFICIENT_RESOURCES");
 
           try {
-            const orgUpdate = await db
-              .collection<CharacterStateOrg>("characterStateOrg")
+            const orgUpdate = await characterStateOrgCollection(db)
               .findOneAndUpdate(
                 {
                   characterId: ownerId,
@@ -389,8 +387,7 @@ export async function POST(request: Request) {
     // close-over the value from inside runWithOptionalTransaction, so the
     // returned shape is sourced from a fresh findOne — single round trip
     // and avoids transaction-vs-callback bookkeeping.
-    const final = await db
-      .collection<CharacterStateOrg>("characterStateOrg")
+    const final = await characterStateOrgCollection(db)
       .findOne(
         { characterId: ownerId, stateId },
         { projection: { level: 1, totalInvested: 1 } }

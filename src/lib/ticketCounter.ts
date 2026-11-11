@@ -1,5 +1,6 @@
 import { getDb } from "@/lib/mongodb";
 import { countersCollection } from "@/lib/db/repositories/counters";
+import { ticketsCollection } from "@/lib/db/repositories/tickets";
 
 /**
  * Next display ticket number for the Discord support tickets (`tickets` collection).
@@ -10,9 +11,10 @@ import { countersCollection } from "@/lib/db/repositories/counters";
 export async function getNextTicketNumber(discordFloor = 0): Promise<number> {
   const db = await getDb();
 
-  const maxDoc = await db
-    .collection<{ ticketNumber?: number }>("tickets")
-    .findOne({ ticketNumber: { $exists: true } }, { sort: { ticketNumber: -1 } });
+  const maxDoc = await ticketsCollection<{ ticketNumber?: number }>(db).findOne(
+    { ticketNumber: { $exists: true } },
+    { sort: { ticketNumber: -1 } }
+  );
   const maxExisting = Math.max(maxDoc?.ticketNumber ?? 0, discordFloor);
 
   const result = await countersCollection<{ _id: string; seq: number }>(db).findOneAndUpdate(

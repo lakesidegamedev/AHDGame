@@ -13,6 +13,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { impeachmentsCollection } from "@/lib/db/repositories/impeachments";
 
 /**
  * Per-axis stance distance (on the shared -5..+5 economic/social axes) within
@@ -271,7 +272,7 @@ export async function autoVoteNppsForImpeachmentStage(
     });
     const tallyField =
       choice === "aye" ? votesForField : choice === "nay" ? votesAgainstField : votesAbstainField;
-    const result = await db.collection<Impeachment>("impeachments").updateOne(
+    const result = await impeachmentsCollection(db).updateOne(
       {
         _id: impeachment._id,
         stage: impeachment.stage,

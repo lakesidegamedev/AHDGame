@@ -14,6 +14,7 @@ import {
   russianDumaConvocationTermEnd,
   validateRussianDumaConvocationClock,
 } from "./rules/dumaConvocation";
+import { russianAssemblySeatingsCollection } from "@/lib/db/repositories/russianAssemblySeatings";
 
 export const RUSSIAN_DUMA_CONVOCATIONS_COLLECTION = "russianDumaConvocations";
 export interface RussianDumaConvocationRecord {
@@ -147,21 +148,21 @@ export async function loadCurrentRussianDumaClock(input: {
       !row.resultId
     )
       throw new Error("Current Duma has no actual certified seating");
-    const seating = await db
-      .collection<RussianAssemblySeatingRecord>("russianAssemblySeatings")
-      .findOne(
-        { _id: `${current.toHexString()}:duma` },
-        {
-          session,
-          projection: {
-            countryId: 1,
-            preset: 1,
-            dumaRootCohortId: 1,
-            seatedOnTurn: 1,
-            dumaTermEndTurn: 1,
-          },
-        }
-      );
+    const seating = await russianAssemblySeatingsCollection<RussianAssemblySeatingRecord>(
+      db
+    ).findOne(
+      { _id: `${current.toHexString()}:duma` },
+      {
+        session,
+        projection: {
+          countryId: 1,
+          preset: 1,
+          dumaRootCohortId: 1,
+          seatedOnTurn: 1,
+          dumaTermEndTurn: 1,
+        },
+      }
+    );
     if (
       !seating ||
       seating.countryId !== "RU" ||
@@ -178,24 +179,22 @@ export async function loadCurrentRussianDumaClock(input: {
       termEndTurn: row.termEndTurn,
     });
   }
-  const first = await db
-    .collection<RussianAssemblySeatingRecord>("russianAssemblySeatings")
-    .findOne(
-      {
-        _id: `${country.ruFirstDumaElectionCohortId.toHexString()}:${country.ruFirstCouncilElectionCohortId.toHexString()}`,
+  const first = await russianAssemblySeatingsCollection<RussianAssemblySeatingRecord>(db).findOne(
+    {
+      _id: `${country.ruFirstDumaElectionCohortId.toHexString()}:${country.ruFirstCouncilElectionCohortId.toHexString()}`,
+    },
+    {
+      session,
+      projection: {
+        countryId: 1,
+        preset: 1,
+        dumaRootCohortId: 1,
+        councilRootCohortId: 1,
+        seatedOnTurn: 1,
+        dumaTermEndTurn: 1,
       },
-      {
-        session,
-        projection: {
-          countryId: 1,
-          preset: 1,
-          dumaRootCohortId: 1,
-          councilRootCohortId: 1,
-          seatedOnTurn: 1,
-          dumaTermEndTurn: 1,
-        },
-      }
-    );
+    }
+  );
   if (
     !first ||
     first.countryId !== "RU" ||

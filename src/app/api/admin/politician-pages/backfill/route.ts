@@ -23,6 +23,7 @@ import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
+import { politicianOverridesCollection } from "@/lib/db/repositories/politicianOverrides";
 
 export async function POST() {
   try {
@@ -139,9 +140,7 @@ export async function POST() {
 
       const hasHeldCongressLeadership = characterIdsInLeadership.has(id);
 
-      const existing = await db
-        .collection<PoliticianOverride>("politicianOverrides")
-        .findOne({ politicianId: id });
+      const existing = await politicianOverridesCollection(db).findOne({ politicianId: id });
 
       const doc: Omit<PoliticianOverride, "_id"> = {
         politicianId: id,
@@ -155,7 +154,7 @@ export async function POST() {
       };
 
       if (existing) {
-        await db.collection<PoliticianOverride>("politicianOverrides").updateOne(
+        await politicianOverridesCollection(db).updateOne(
           { politicianId: id },
           {
             $set: {
@@ -168,9 +167,7 @@ export async function POST() {
           }
         );
       } else {
-        await db
-          .collection<PoliticianOverride>("politicianOverrides")
-          .insertOne(doc as PoliticianOverride);
+        await politicianOverridesCollection(db).insertOne(doc as PoliticianOverride);
       }
 
       generated++;

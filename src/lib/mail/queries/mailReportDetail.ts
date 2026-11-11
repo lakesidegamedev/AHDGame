@@ -3,6 +3,7 @@ import type { PlayerMail, PlayerMailReport, User } from "@/lib/db/types";
 import { normalizeMailSubject } from "@/lib/inbox/mailThreads";
 import { usersCollection } from "@/lib/db/repositories/users";
 import { playerMailCollection } from "@/lib/db/repositories/playerMail";
+import { playerMailReportsCollection } from "@/lib/db/repositories/playerMailReports";
 
 export type MailReportMessageView = {
   id: string;
@@ -55,9 +56,7 @@ export async function getMailReportDetail(
   db: Db,
   reportId: ObjectId
 ): Promise<MailReportDetailView | null> {
-  const report = await db
-    .collection<PlayerMailReport>("playerMailReports")
-    .findOne({ _id: reportId });
+  const report = await playerMailReportsCollection(db).findOne({ _id: reportId });
   if (!report) return null;
 
   const reporter = await usersCollection(db).findOne(

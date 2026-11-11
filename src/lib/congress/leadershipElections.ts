@@ -39,6 +39,14 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
 import { speakerElectionsCollection } from "@/lib/db/repositories/speakerElections";
+import { speakerNominationsCollection } from "@/lib/db/repositories/speakerNominations";
+import { houseLeadershipNominationsCollection } from "@/lib/db/repositories/houseLeadershipNominations";
+import { senateLeadershipNominationsCollection } from "@/lib/db/repositories/senateLeadershipNominations";
+import { bundestagspraesidentElectionsCollection } from "@/lib/db/repositories/bundestagspraesidentElections";
+import { cppccChairElectionsCollection } from "@/lib/db/repositories/cppccChairElections";
+import { npcscChairElectionsCollection } from "@/lib/db/repositories/npcscChairElections";
+import { houseLeadershipElectionsCollection } from "@/lib/db/repositories/houseLeadershipElections";
+import { senateLeadershipElectionsCollection } from "@/lib/db/repositories/senateLeadershipElections";
 
 const LEADERSHIP_ELECTION_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -387,17 +395,17 @@ export async function clearIneligibleHouseLeadershipNominations(
   for (const role of roles) {
     const policy = POLICY_BY_ROLE[houseElectionRoleToLeader(role)];
     if (policy.kind === "any-seated") continue; // no party can be ineligible
-    const noms = await db
-      .collection<HouseLeadershipNomination>("houseLeadershipNominations")
+    const noms = await houseLeadershipNominationsCollection(db)
       .find({ role, status: { $in: ["open", "voting"] } })
       .toArray();
     const toFail = noms
       .filter((n) => !isPartyEligible(policy, n.nomineeParty ?? null, ctx))
       .map((n) => n._id);
     if (toFail.length > 0) {
-      await db
-        .collection<HouseLeadershipNomination>("houseLeadershipNominations")
-        .updateMany({ _id: { $in: toFail } }, { $set: { status: "failed", updatedAt: now } });
+      await houseLeadershipNominationsCollection(db).updateMany(
+        { _id: { $in: toFail } },
+        { $set: { status: "failed", updatedAt: now } }
+      );
     }
   }
 }
@@ -471,19 +479,15 @@ export async function triggerLeadershipElectionsAfterChamberVote(
           : house.minorityParty;
       if (!(await hasControllingPartyChanged(db, leaderRole, expectedParty))) continue;
 
-      const existing = await db
-        .collection<HouseLeadershipElection>("houseLeadershipElections")
-        .findOne({ _id: role });
+      const existing = await houseLeadershipElectionsCollection(db).findOne({ _id: role });
       if (existing?.status === "voting" && !isLeadershipElectionClosed(existing, currentTurn, now))
         continue;
 
-      await db
-        .collection<HouseLeadershipNomination>("houseLeadershipNominations")
-        .updateMany(
-          { role, status: { $in: ["open", "voting"] } },
-          { $set: { status: "failed", updatedAt: now } }
-        );
-      await db.collection<HouseLeadershipElection>("houseLeadershipElections").updateOne(
+      await houseLeadershipNominationsCollection(db).updateMany(
+        { role, status: { $in: ["open", "voting"] } },
+        { $set: { status: "failed", updatedAt: now } }
+      );
+      await houseLeadershipElectionsCollection(db).updateOne(
         { _id: role },
         {
           $set: { _id: role, status: "voting", startedAt: now, endsAt, endsOnTurn, updatedAt: now },
@@ -511,12 +515,10 @@ export async function triggerLeadershipElectionsAfterChamberVote(
         !isLeadershipElectionClosed(speakerExisting, currentTurn, now)
       )
     ) {
-      await db
-        .collection<SpeakerNomination>("speakerNominations")
-        .updateMany(
-          { status: { $in: ["open", "voting"] } },
-          { $set: { status: "failed", updatedAt: now } }
-        );
+      await speakerNominationsCollection(db).updateMany(
+        { status: { $in: ["open", "voting"] } },
+        { $set: { status: "failed", updatedAt: now } }
+      );
       await speakerElectionsCollection(db).updateOne(
         { _id: "current" },
         {
@@ -579,19 +581,15 @@ export async function triggerLeadershipElectionsAfterChamberVote(
       if (!(await hasControllingPartyChanged(db, leaderRole, expectedParty))) continue;
 
       const policy = POLICY_BY_ROLE[leaderRole];
-      const existing = await db
-        .collection<SenateLeadershipElection>("senateLeadershipElections")
-        .findOne({ _id: role });
+      const existing = await senateLeadershipElectionsCollection(db).findOne({ _id: role });
       if (existing?.status === "voting" && !isLeadershipElectionClosed(existing, currentTurn, now))
         continue;
 
-      await db
-        .collection<SenateLeadershipNomination>("senateLeadershipNominations")
-        .updateMany(
-          { role, status: { $in: ["open", "voting"] } },
-          { $set: { status: "failed", updatedAt: now } }
-        );
-      await db.collection<SenateLeadershipElection>("senateLeadershipElections").updateOne(
+      await senateLeadershipNominationsCollection(db).updateMany(
+        { role, status: { $in: ["open", "voting"] } },
+        { $set: { status: "failed", updatedAt: now } }
+      );
+      await senateLeadershipElectionsCollection(db).updateOne(
         { _id: role },
         {
           $set: { _id: role, status: "voting", startedAt: now, endsAt, endsOnTurn, updatedAt: now },
@@ -639,9 +637,7 @@ export async function resolveExpiredLeadershipElections(db: Db): Promise<void> {
     minority_whip: "minority_whip_house",
   };
   for (const role of Object.keys(houseRoleToLeader) as HouseLeadershipElectionRole[]) {
-    const el = await db
-      .collection<HouseLeadershipElection>("houseLeadershipElections")
-      .findOne({ _id: role });
+    const el = await houseLeadershipElectionsCollection(db).findOne({ _id: role });
     if (el?.status === "voting" && isLeadershipElectionClosed(el, currentTurn, now)) {
       await resolveLeadershipElection(db, role, houseRoleToLeader[role], "house", true);
       console.log(`[Turn] Auto-resolved house ${role} leadership election`);
@@ -657,9 +653,7 @@ export async function resolveExpiredLeadershipElections(db: Db): Promise<void> {
     minority_whip: "minority_whip_senate",
   };
   for (const role of Object.keys(senateRoleToLeader) as SenateLeadershipElectionRole[]) {
-    const el = await db
-      .collection<SenateLeadershipElection>("senateLeadershipElections")
-      .findOne({ _id: role });
+    const el = await senateLeadershipElectionsCollection(db).findOne({ _id: role });
     if (el?.status === "voting" && isLeadershipElectionClosed(el, currentTurn, now)) {
       await resolveLeadershipElection(db, role, senateRoleToLeader[role], "senate", true);
       console.log(`[Turn] Auto-resolved senate ${role} leadership election`);
@@ -678,9 +672,9 @@ export async function resolveExpiredLeadershipElections(db: Db): Promise<void> {
 
   // Bundestagspräsident (DE) — same auto-resolve pattern. Imported lazily
   // to keep the per-turn resolution path lean when no DE election is open.
-  const bundestagspraesidentEl = await db
-    .collection<BundestagspraesidentElection>("bundestagspraesidentElections")
-    .findOne({ _id: "current" });
+  const bundestagspraesidentEl = await bundestagspraesidentElectionsCollection(db).findOne({
+    _id: "current",
+  });
   if (
     bundestagspraesidentEl?.status === "voting" &&
     isLeadershipElectionClosed(bundestagspraesidentEl, currentTurn, now)
@@ -694,9 +688,7 @@ export async function resolveExpiredLeadershipElections(db: Db): Promise<void> {
 
   // NPC Standing Committee Chairman (CN) — same auto-resolve pattern. Imported
   // lazily to keep the per-turn resolution path lean when no CN election is open.
-  const npcscChairEl = await db
-    .collection<NpcscChairElection>("npcscChairElections")
-    .findOne({ _id: "current" });
+  const npcscChairEl = await npcscChairElectionsCollection(db).findOne({ _id: "current" });
   if (
     npcscChairEl?.status === "voting" &&
     isLeadershipElectionClosed(npcscChairEl, currentTurn, now)
@@ -708,9 +700,7 @@ export async function resolveExpiredLeadershipElections(db: Db): Promise<void> {
   }
 
   // CPPCC Chairman (CN) — same auto-resolve pattern.
-  const cppccChairEl = await db
-    .collection<CppccChairElection>("cppccChairElections")
-    .findOne({ _id: "current" });
+  const cppccChairEl = await cppccChairElectionsCollection(db).findOne({ _id: "current" });
   if (
     cppccChairEl?.status === "voting" &&
     isLeadershipElectionClosed(cppccChairEl, currentTurn, now)

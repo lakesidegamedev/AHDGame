@@ -4,6 +4,7 @@ import type { ElectionResultSnapshot } from "@/lib/db/types/electionResultSnapsh
 import { logger } from "@/lib/observability/logger";
 import { buildResultsPayload, snapshotFromPayload } from "./buildResultsPayload";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electionResultSnapshotsCollection } from "@/lib/db/repositories/electionResultSnapshots";
 
 /**
  * Freeze a finalized election result without making snapshot availability a
@@ -33,9 +34,11 @@ export async function captureElectionResultSnapshot(
       _id: new ObjectId(),
       ...snapshotFromPayload(payload, election, gameState?.currentTurn ?? 0, now),
     };
-    await db
-      .collection<ElectionResultSnapshot>("electionResultSnapshots")
-      .updateOne({ electionId: election._id }, { $setOnInsert: snapshot }, { upsert: true });
+    await electionResultSnapshotsCollection(db).updateOne(
+      { electionId: election._id },
+      { $setOnInsert: snapshot },
+      { upsert: true }
+    );
   } catch (err) {
     logger.error(
       "elections",

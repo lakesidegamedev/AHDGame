@@ -7,6 +7,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { nationalizationAuctionsCollection } from "@/lib/db/repositories/nationalizationAuctions";
 
 /**
  * Enriched, display-ready view of one open privatization auction (spec §13.3).
@@ -88,10 +89,7 @@ export async function buildAuctionListings(
   const filter: Record<string, unknown> = { status: "open" };
   if (opts.countryId) filter.countryId = opts.countryId;
 
-  const auctions = await db
-    .collection<NationalizationAuction>("nationalizationAuctions")
-    .find(filter)
-    .toArray();
+  const auctions = await nationalizationAuctionsCollection(db).find(filter).toArray();
   if (auctions.length === 0) return [];
 
   const corpIds = auctions.map((a) => a.corporationId);

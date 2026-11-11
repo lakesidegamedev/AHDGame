@@ -21,6 +21,7 @@ import { chooseResolution } from "./chooseResolution";
 import { getExecutiveLeaderProfile } from "./getExecutiveLeaderProfile";
 import type { NpcCountryState } from "./types";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { sovereignCrisisDecisionsCollection } from "@/lib/db/repositories/sovereignCrisisDecisions";
 
 const RESERVE_CURRENCY_CODES = new Set(["USD", "EUR", "JPY", "GBP", "CHF"]);
 
@@ -75,7 +76,7 @@ export async function npcExecutiveAutoPropose(
   // transition the budget into "crisisResolving". Constrain on state="open"
   // so a parallel evaluation (next turn) can't double-fire.
   const phases = buildInitialLegislativePhases(countryCode, realtimeMs, input.currentTurn);
-  const result = await db.collection<SovereignCrisisDecision>("sovereignCrisisDecisions").updateOne(
+  const result = await sovereignCrisisDecisionsCollection(db).updateOne(
     { _id: decisionId, state: "open" },
     {
       $set: {

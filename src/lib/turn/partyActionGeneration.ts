@@ -26,6 +26,7 @@ import {
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { partyPoliticalStrengthLedgerCollection } from "@/lib/db/repositories/partyPoliticalStrengthLedger";
 
 // Per-turn Political Strength for national and state parties:
 // - Flat passive: NATIONAL_PASSIVE_PS_PER_TURN (20) / STATE_PASSIVE_PS_PER_TURN (5),
@@ -412,9 +413,9 @@ export async function processPartyActionGeneration(
 
   const allLedgerRows = [...nationalLedgerRows, ...stateLedgerRows];
   if (allLedgerRows.length > 0) {
-    await db
-      .collection<PartyPoliticalStrengthLedgerRow>("partyPoliticalStrengthLedger")
-      .insertMany(allLedgerRows.map((r) => ({ ...r, _id: new ObjectId() })));
+    await partyPoliticalStrengthLedgerCollection(db).insertMany(
+      allLedgerRows.map((r) => ({ ...r, _id: new ObjectId() }))
+    );
   }
 
   return result;

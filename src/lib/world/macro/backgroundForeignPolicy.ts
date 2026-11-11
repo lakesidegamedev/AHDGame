@@ -47,6 +47,9 @@ import { crisisInteractionsCollection } from "@/lib/db/repositories/crisisIntera
 import { organizationMembershipsCollection } from "@/lib/db/repositories/organizationMemberships";
 import { tariffsCollection } from "@/lib/db/repositories/tariffs";
 import { conflictsCollection } from "@/lib/db/repositories/conflicts";
+import { tradeEmbargoesCollection } from "@/lib/db/repositories/tradeEmbargoes";
+import { countryAlignmentsCollection } from "@/lib/db/repositories/countryAlignments";
+import { organizationLegislationCollection } from "@/lib/db/repositories/organizationLegislation";
 
 export type { MacroForeignPolicyState } from "./rules/foreignPolicy";
 
@@ -125,8 +128,7 @@ export async function loadBackgroundForeignContext(
   const actors = ids.map(backgroundGovernmentActorId);
   const [alignments, memberships, conflicts, joinCalls, tariffs, embargoes, crises] =
     await Promise.all([
-      db
-        .collection<CountryAlignment>("countryAlignments")
+      countryAlignmentsCollection(db)
         .find({}, { projection: { entityId: 1, shares: 1, nonAligned: 1 } })
         .toArray(),
       organizationMembershipsCollection<{ countryId: string; organizationId: string }>(db)
@@ -148,8 +150,7 @@ export async function loadBackgroundForeignContext(
           },
         })
         .toArray(),
-      db
-        .collection<OrganizationLegislation>("organizationLegislation")
+      organizationLegislationCollection(db)
         .find({ type: "join_conflict", status: "active" } as never, {
           projection: {
             organizationId: 1,
@@ -165,8 +166,7 @@ export async function loadBackgroundForeignContext(
           { projection: { countryId: 1, scopeType: 1, targetOriginCountryId: 1, rate: 1 } }
         )
         .toArray(),
-      db
-        .collection<TradeEmbargo>("tradeEmbargoes")
+      tradeEmbargoesCollection(db)
         .find({ createdBy: { $in: actors }, expiresTurn: { $gte: turn } } as never, {
           projection: { sourceCountry: 1, targetCountry: 1, commodity: 1, expiresTurn: 1 },
         })
@@ -618,7 +618,7 @@ export async function applyBackgroundForeignPolicy(
   await Promise.all([
     tariffOps.length > 0 ? tariffsCollection(db).bulkWrite(tariffOps, { ordered: false }) : null,
     embargoOps.length > 0
-      ? db.collection<TradeEmbargo>("tradeEmbargoes").bulkWrite(embargoOps, { ordered: false })
+      ? tradeEmbargoesCollection(db).bulkWrite(embargoOps, { ordered: false })
       : null,
     bankOps.length > 0 ? centralBanksCollection(db).bulkWrite(bankOps, { ordered: false }) : null,
   ]);

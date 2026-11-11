@@ -27,12 +27,13 @@ import type { Document } from "mongodb";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
 import { governorOfficeStateCollection } from "@/lib/db/repositories/governorOfficeState";
+import { ukDevolutionCollection } from "@/lib/db/repositories/ukDevolution";
 
 export async function readUKDevolutionState(
   db: Db,
   startingYear: number
 ): Promise<UKDevolutionState> {
-  const stored = await db.collection<UKDevolutionState>("ukDevolution").findOne({ _id: "UK" });
+  const stored = await ukDevolutionCollection<UKDevolutionState>(db).findOne({ _id: "UK" });
   if (stored) return stored;
   return initialStatePreservingLeaders(db, startingYear);
 }
@@ -64,7 +65,7 @@ export async function reconcileUKDevolution(
   now: Date
 ): Promise<UKDevolutionState> {
   const [stored, policy] = await Promise.all([
-    db.collection<UKDevolutionState>("ukDevolution").findOne({ _id: "UK" }),
+    ukDevolutionCollection<UKDevolutionState>(db).findOne({ _id: "UK" }),
     statePoliciesCollection(db).findOne(
       { stateId: "uk_national", legislationTypeId: "uk_devolution_local_powers" },
       { projection: { policyOptionIndex: 1, enactedTurn: 1, enactedByBillId: 1, enactedBy: 1 } }
@@ -93,9 +94,11 @@ export async function reconcileUKDevolution(
   const inactive = UK_EXECUTIVE_REGIONS.filter((region) => !next.regions[region].active);
   await vacateUKRegionalExecutives(db, inactive, now);
 
-  await db
-    .collection<UKDevolutionState>("ukDevolution")
-    .updateOne({ _id: "UK" }, { $set: next }, { upsert: true });
+  await ukDevolutionCollection<UKDevolutionState>(db).updateOne(
+    { _id: "UK" },
+    { $set: next },
+    { upsert: true }
+  );
   return next;
 }
 
@@ -123,7 +126,7 @@ export async function reconcileEnactedUKDevolution(db: Db, now: Date): Promise<v
 
 export async function isUKRegionalExecutiveActive(db: Db, stateId: string): Promise<boolean> {
   if (!UK_EXECUTIVE_REGIONS.includes(stateId as UKExecutiveRegion)) return false;
-  const stored = await db.collection<UKDevolutionState>("ukDevolution").findOne({ _id: "UK" });
+  const stored = await ukDevolutionCollection<UKDevolutionState>(db).findOne({ _id: "UK" });
   if (stored) return stored.regions[stateId as UKExecutiveRegion].active;
   const gameState = await gameStateCollection(db).findOne(
     { _id: "current" },

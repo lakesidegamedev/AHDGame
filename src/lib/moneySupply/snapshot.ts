@@ -39,6 +39,10 @@ import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 import { producerEconomyAccountsCollection } from "@/lib/db/repositories/producerEconomyAccounts";
+import { bondMarketPoolsCollection } from "@/lib/db/repositories/bondMarketPools";
+import { organizationFundsCollection } from "@/lib/db/repositories/organizationFunds";
+import { equityMarketPoolsCollection } from "@/lib/db/repositories/equityMarketPools";
+import { productAdvertisingClearingCollection } from "@/lib/db/repositories/productAdvertisingClearing";
 
 export { PERSONS_PER_HOUSEHOLD, HOUSEHOLD_LIQUID_RATIO, HOUSEHOLD_SAVINGS_RATIO };
 
@@ -159,8 +163,7 @@ export async function snapshotMoneySupply(db: Db, turn: number): Promise<number>
         }
       )
       .toArray(),
-    db
-      .collection<OrganizationFund>("organizationFunds")
+    organizationFundsCollection(db)
       .find({}, { projection: { currencyCountryId: 1, balanceLocal: 1 } })
       .toArray(),
     bondsCollection(db)
@@ -184,16 +187,14 @@ export async function snapshotMoneySupply(db: Db, turn: number): Promise<number>
     exchangeRatesCollection<{ currencyCode: string; rate: number }>(db)
       .find({}, { projection: { currencyCode: 1, rate: 1 } })
       .toArray(),
-    db
-      .collection<{
-        _id: string;
-        cashLocal?: number;
-        lifetime?: { qeIn?: number; qtOut?: number };
-      }>("bondMarketPools")
+    bondMarketPoolsCollection<{
+      _id: string;
+      cashLocal?: number;
+      lifetime?: { qeIn?: number; qtOut?: number };
+    }>(db)
       .find({}, { projection: { cashLocal: 1, lifetime: 1 } })
       .toArray(),
-    db
-      .collection<{ _id: string; cashLocal?: number }>("equityMarketPools")
+    equityMarketPoolsCollection<{ _id: string; cashLocal?: number }>(db)
       .find({}, { projection: { cashLocal: 1 } })
       .toArray(),
     producerEconomyAccountsCollection(db)
@@ -349,11 +350,10 @@ export async function snapshotMoneySupply(db: Db, turn: number): Promise<number>
   // Funded advertising orders owed to sellers sit in the clearing pool between
   // the buyer debit and the seller credit. It is corporate cash in transit,
   // normally zero at turn end, counted so an in-flight clearing is not missing money.
-  const advertisingClearingPools = await db
-    .collection<{ currencyCode?: string; cashLocal?: number }>(
-      // PRODUCT_ADVERTISING_CLEARING_COLLECTION, kept literal to avoid importing the settlement shell.
-      "productAdvertisingClearing"
-    )
+  const advertisingClearingPools = await productAdvertisingClearingCollection<{
+    currencyCode?: string;
+    cashLocal?: number;
+  }>(db)
     .find({}, { projection: { currencyCode: 1, cashLocal: 1 } })
     .toArray();
   for (const pool of advertisingClearingPools)

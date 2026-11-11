@@ -34,6 +34,7 @@ import { rejectIfTurnProcessing, type UnionActionResult } from "./unionActions";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { unionsCollection } from "@/lib/db/repositories/unions";
+import { bargainingCampaignsCollection } from "@/lib/db/repositories/bargainingCampaigns";
 
 export const RATIFICATION_BALLOTS = "bargainingRatificationBallots";
 
@@ -81,7 +82,7 @@ export async function openSettlementRatification(
   });
   if (!ratification) return null;
 
-  const result = await db.collection<BargainingCampaign>("bargainingCampaigns").updateOne(
+  const result = await bargainingCampaignsCollection(db).updateOne(
     {
       _id: campaign._id,
       status: campaign.status,
@@ -182,9 +183,9 @@ export async function castRatificationBallot(
   if (!ObjectId.isValid(campaignId) || !ObjectId.isValid(unionRouteId)) {
     return { ok: false, status: 400, error: "Invalid campaign ID." };
   }
-  const campaign = await db
-    .collection<BargainingCampaign>("bargainingCampaigns")
-    .findOne({ _id: new ObjectId(campaignId) });
+  const campaign = await bargainingCampaignsCollection(db).findOne({
+    _id: new ObjectId(campaignId),
+  });
   if (!campaign || !campaign.unionId.equals(new ObjectId(unionRouteId))) {
     return { ok: false, status: 404, error: "Bargaining campaign not found for this union." };
   }
@@ -289,7 +290,7 @@ export async function closeRatificationVote(
     return { outcome: null, campaignStatus: campaign.status };
   }
 
-  const campaigns = db.collection<BargainingCampaign>("bargainingCampaigns");
+  const campaigns = bargainingCampaignsCollection(db);
   const now = new Date();
   const ballotFilter = {
     _id: campaign._id,
@@ -457,8 +458,7 @@ export async function closeDueRatificationVotes(
   currentTurn: number
 ): Promise<{ ratified: number; rejected: number; voided: number }> {
   const counts = { ratified: 0, rejected: 0, voided: 0 };
-  const due = await db
-    .collection<BargainingCampaign>("bargainingCampaigns")
+  const due = await bargainingCampaignsCollection(db)
     .find({ "ratification.status": "open", "ratification.closesAtTurn": { $lte: currentTurn } })
     .toArray();
   for (const campaign of due) {

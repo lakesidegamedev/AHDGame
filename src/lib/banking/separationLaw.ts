@@ -11,6 +11,7 @@ import {
 } from "./rules/charterAccess";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { bankingLawsCollection } from "@/lib/db/repositories/bankingLaws";
 
 /**
  * Banking charter separation is a per-country law, not a world switch. Any
@@ -50,9 +51,10 @@ export async function getBankingSeparationPolicy(
   db: Db,
   countryId: CountryId
 ): Promise<BankingSeparationPolicy> {
-  const law = await db
-    .collection<BankingLawDoc>("bankingLaws")
-    .findOne({ _id: countryId }, { projection: { separation: 1 } });
+  const law = await bankingLawsCollection<BankingLawDoc>(db).findOne(
+    { _id: countryId },
+    { projection: { separation: 1 } }
+  );
   if (law?.separation) {
     return law.separation;
   }
@@ -116,8 +118,7 @@ export async function loadLegalCharterTypesForCountries(
         projection: { commandEconomyEnabled: 1 },
       }
     ),
-    db
-      .collection<BankingLawDoc>("bankingLaws")
+    bankingLawsCollection<BankingLawDoc>(db)
       .find(
         { _id: { $in: [...countries] } },
         {

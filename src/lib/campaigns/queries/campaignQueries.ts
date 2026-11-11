@@ -75,6 +75,7 @@ import { playerEndorsementsCollection } from "@/lib/db/repositories/playerEndors
 import { nppEndorsementsCollection } from "@/lib/db/repositories/nppEndorsements";
 import { governorEndorsementsCollection } from "@/lib/db/repositories/governorEndorsements";
 import { executiveEndorsementsCollection } from "@/lib/db/repositories/executiveEndorsements";
+import { campaignFieldOfficesCollection } from "@/lib/db/repositories/campaignFieldOffices";
 
 export interface CampaignListItem {
   id: string;
@@ -559,8 +560,7 @@ export async function getCampaignDetail(
   // are presidential concepts; cash runway applies to any race. Regular flows
   // stop while archived or suspended; office upkeep can still charge suspended.
   const accruesNothing = campaign.status === "archived" || campaignSuspended;
-  const offices = await db
-    .collection<CampaignFieldOffice>("campaignFieldOffices")
+  const offices = await campaignFieldOfficesCollection(db)
     .find({ campaignId, electionId: campaign.electionId }, { projection: { _id: 1 } })
     .toArray();
   const preview = buildCampaignBudgetPreview(

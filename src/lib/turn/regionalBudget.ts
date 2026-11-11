@@ -41,6 +41,8 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
 import { cabinetSettingsCollection } from "@/lib/db/repositories/cabinetSettings";
+import { regionalBudgetsCollection } from "@/lib/db/repositories/regionalBudgets";
+import { resetLawProgramsCollection } from "@/lib/db/repositories/resetLawPrograms";
 
 // ── Pure calculation types ───────────────────────────────────────────────────
 
@@ -286,8 +288,7 @@ export async function processRegionalBudgets(
     .toArray();
   const resetPrograms =
     resetLegislationV2Enabled && resetWorldId
-      ? await db
-          .collection<ResetLawProgramDocument>("resetLawPrograms")
+      ? await resetLawProgramsCollection<ResetLawProgramDocument>(db)
           .find(
             {
               country: countryId,
@@ -367,8 +368,7 @@ export async function processRegionalBudgets(
 
   // 5. Fetch existing budget documents for all regions
   const regionIds = ukRegions.map((r) => r._id);
-  const existingBudgets = await db
-    .collection<RegionalBudget>("regionalBudgets")
+  const existingBudgets = await regionalBudgetsCollection(db)
     .find({ _id: { $in: regionIds } })
     .toArray();
   const budgetMap = new Map(existingBudgets.map((b) => [b._id, b]));
@@ -597,7 +597,7 @@ export async function processRegionalBudgets(
     await statePoliciesCollection(db).bulkWrite(statePolicyOps);
   }
   if (regionalBudgetOps.length > 0) {
-    await db.collection<RegionalBudget>("regionalBudgets").bulkWrite(regionalBudgetOps);
+    await regionalBudgetsCollection(db).bulkWrite(regionalBudgetOps);
   }
 
   return { regionsProcessed };

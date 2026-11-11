@@ -17,6 +17,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
+import { governorLegislationQueueCollection } from "@/lib/db/repositories/governorLegislationQueue";
 
 export interface QueueBillInput {
   countryId: CountryId;
@@ -64,7 +65,7 @@ export async function queueBill(
   } = input;
 
   // One pending queue per state.
-  const pending = await db.collection<GovernorQueuedBill>("governorLegislationQueue").findOne({
+  const pending = await governorLegislationQueueCollection(db).findOne({
     countryId,
     stateId,
     status: "pending",
@@ -162,6 +163,6 @@ export async function queueBill(
     createdAt: new Date(),
     updatedAt: new Date(),
   };
-  await db.collection<GovernorQueuedBill>("governorLegislationQueue").insertOne(doc);
+  await governorLegislationQueueCollection(db).insertOne(doc);
   return { status: 200, body: { queueId: id.toString() } };
 }

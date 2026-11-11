@@ -2,6 +2,7 @@ import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { authConfig } from "@/lib/config/auth";
+import { unifiedOidcFlowsCollection } from "@/lib/db/repositories/unifiedOidcFlows";
 
 export async function GET() {
   if (!authConfig.unifiedOidcEnabled()) return new NextResponse(null, { status: 404 });
@@ -15,13 +16,13 @@ export async function GET() {
   const challenge = createHash("sha256").update(verifier).digest("base64url");
   const expiresAt = new Date(Date.now() + 5 * 60_000);
   const db = await getDb();
-  const flows = db.collection<{
+  const flows = unifiedOidcFlowsCollection<{
     _id: string;
     state: string;
     nonce: string;
     verifier: string;
     expiresAt: Date;
-  }>("unifiedOidcFlows");
+  }>(db);
   await flows.insertOne({ _id: randomUUID(), state, nonce, verifier, expiresAt });
   await flows.createIndex({ state: 1 }, { unique: true });
   await flows.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });

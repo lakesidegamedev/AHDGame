@@ -14,6 +14,7 @@ import { electionCandidatesCollection } from "@/lib/db/repositories/electionCand
 import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 import type { Document } from "mongodb";
 import { slateCandidatesCollection } from "@/lib/db/repositories/slateCandidates";
+import { recruitmentSlatesCollection } from "@/lib/db/repositories/recruitmentSlates";
 
 export interface SlateOverrideMaps {
   /** `${partyId}:${electionId}` for every race a chair is actively slating. */
@@ -43,8 +44,7 @@ export async function buildSlateOverrideMaps(
   const openElectionIds = openPrimaries.map((p) => p._id);
   if (openElectionIds.length === 0) return EMPTY_MAPS;
 
-  const slates = await db
-    .collection<RecruitmentSlate>("recruitmentSlates")
+  const slates = await recruitmentSlatesCollection(db)
     .find({ electionId: { $in: openElectionIds } }, { projection: { electionId: 1, partyId: 1 } })
     .toArray();
   if (slates.length === 0) return EMPTY_MAPS;

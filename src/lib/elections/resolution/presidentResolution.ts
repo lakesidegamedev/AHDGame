@@ -52,6 +52,7 @@ import { electionCandidatesCollection } from "@/lib/db/repositories/electionCand
 import type { Document } from "mongodb";
 import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { characterStateOrgCollection } from "@/lib/db/repositories/characterStateOrg";
 
 function recoverUnitVotesFromSnapshots(
   unitTurnSnapshots: ElectionVoteTally["unitTurnSnapshots"],
@@ -273,16 +274,14 @@ async function runPostFinalizeCleanup(
 
   // Half-up rounding via floor(x + 0.5) to match the previous Math.round behavior
   // ($round would use banker's rounding).
-  const orgReset = await db
-    .collection<CharacterStateOrg>("characterStateOrg")
-    .updateMany({ level: { $gt: 0 } }, [
-      {
-        $set: {
-          level: { $floor: { $add: [{ $multiply: ["$level", 0.25] }, 0.5] } },
-          updatedAt: now,
-        },
+  const orgReset = await characterStateOrgCollection(db).updateMany({ level: { $gt: 0 } }, [
+    {
+      $set: {
+        level: { $floor: { $add: [{ $multiply: ["$level", 0.25] }, 0.5] } },
+        updatedAt: now,
       },
-    ]);
+    },
+  ]);
   if (orgReset.modifiedCount > 0) {
     console.log(
       `[Turn] President election ${election._id}: partial-25% state-org reset applied to ${orgReset.modifiedCount} row(s)`

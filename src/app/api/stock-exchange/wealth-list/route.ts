@@ -26,6 +26,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 import { usersCollection } from "@/lib/db/repositories/users";
 import { wealthListHistoryCollection } from "@/lib/db/repositories/wealthListHistory";
+import { wealthListSnapshotsCollection } from "@/lib/db/repositories/wealthListSnapshots";
 
 function resolveCountryId(character: Pick<Character, "countryId">): CountryId {
   return character.countryId as CountryId;
@@ -265,9 +266,7 @@ export async function GET(request: Request) {
     const db = await getDb();
 
     // Read the live snapshot
-    const snapshot = await db
-      .collection<WealthListSnapshot>("wealthListSnapshots")
-      .findOne({ _id: exchange });
+    const snapshot = await wealthListSnapshotsCollection(db).findOne({ _id: exchange });
 
     if (!snapshot || snapshot.entries.length === 0) {
       // No snapshot yet — compute on the fly with placeholder change data

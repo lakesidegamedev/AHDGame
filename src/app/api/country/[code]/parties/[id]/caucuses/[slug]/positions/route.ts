@@ -10,6 +10,7 @@ import { findCaucusBySlug, listCaucusPositions } from "@/lib/db/caucusLookup";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import type { CaucusPolicyPosition } from "@/lib/db/types";
 import { isSameCountry } from "@/lib/api/sameCountry";
+import { caucusPolicyPositionsCollection } from "@/lib/db/repositories/caucusPolicyPositions";
 
 const createSchema = z.object({
   topic: z.string().trim().min(2).max(80),
@@ -69,7 +70,7 @@ export async function POST(
 
     const now = new Date();
     const positionId = new ObjectId();
-    await db.collection<CaucusPolicyPosition>("caucusPolicyPositions").insertOne({
+    await caucusPolicyPositionsCollection(db).insertOne({
       _id: positionId,
       caucusId: caucus._id,
       topic: parsed.data.topic,

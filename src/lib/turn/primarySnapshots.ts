@@ -77,6 +77,7 @@ import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
 import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
 import { demographicDefaultsCollection } from "@/lib/db/repositories/demographicDefaults";
+import { primarySnapshotsCollection } from "@/lib/db/repositories/primarySnapshots";
 
 /**
  * Record a primary standings snapshot for every election currently in primary phase.
@@ -354,8 +355,7 @@ export async function recordPrimarySnapshots(
   const recordedParts = new Map<string, (TurnSlicePart | undefined)[]>();
   // The { electionId, turn } index makes this an equality lookup; keep it
   // that way to avoid fetching and filtering prior turns in memory.
-  const sameTurnSnapshots = await db
-    .collection<PrimarySnapshot>("primarySnapshots")
+  const sameTurnSnapshots = await primarySnapshotsCollection(db)
     .find(
       {
         electionId: { $in: activeElections.map((e) => e._id as ObjectId) },
@@ -702,7 +702,7 @@ export async function recordPrimarySnapshots(
   }
 
   if (snapshots.length > 0) {
-    await db.collection<PrimarySnapshot>("primarySnapshots").insertMany(snapshots);
+    await primarySnapshotsCollection(db).insertMany(snapshots);
   }
   if (ballotTallyOps.length > 0) {
     await electionVoteTalliesCollection(db).bulkWrite(ballotTallyOps);

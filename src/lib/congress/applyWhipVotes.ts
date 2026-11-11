@@ -44,6 +44,9 @@ import {
 } from "@/lib/resetCabinet/loadDiscipline";
 import { billsCollection } from "@/lib/db/repositories/bills";
 import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
+import { impeachmentsCollection } from "@/lib/db/repositories/impeachments";
+import { speakerVacateMotionsCollection } from "@/lib/db/repositories/speakerVacateMotions";
+import { nppVotePredictionsCollection } from "@/lib/db/repositories/nppVotePredictions";
 
 interface ApplyWhipResult {
   fellInLine: number;
@@ -356,7 +359,7 @@ export async function applyWhipVotesToBill(
   // reflects the post-whip state. One upsert per NPP per bill.
   if (predictionOps.length > 0) {
     const now = new Date();
-    await db.collection<NPPVotePrediction>("nppVotePredictions").bulkWrite(
+    await nppVotePredictionsCollection(db).bulkWrite(
       predictionOps.map((op) => ({
         updateOne: {
           filter: { nppId: op.nppId, billId: bill._id },
@@ -522,7 +525,7 @@ export async function applyWhipVotesToStateBill(
 
   if (predictionOps.length > 0) {
     const now = new Date();
-    await db.collection<NPPVotePrediction>("nppVotePredictions").bulkWrite(
+    await nppVotePredictionsCollection(db).bulkWrite(
       predictionOps.map((op) => ({
         updateOne: {
           filter: { nppId: op.nppId, stateBillId: bill._id },
@@ -794,7 +797,7 @@ export async function applyWhipVotesToVacateMotion(
   mode: NppWhipMode = "hard",
   statecraftBonus = 0
 ): Promise<ApplyWhipResult> {
-  const motions = db.collection<SpeakerVacateMotion>("speakerVacateMotions");
+  const motions = speakerVacateMotionsCollection(db);
   const motion = await motions.findOne({ _id: "current" });
   if (!motion || motion.status !== "voting") return { fellInLine: 0, ignored: 0 };
 
@@ -872,7 +875,7 @@ export async function applyWhipVotesToImpeachment(
   mode: NppWhipMode = "hard",
   statecraftBonus = 0
 ): Promise<ApplyWhipResult> {
-  const impeachments = db.collection<Impeachment>("impeachments");
+  const impeachments = impeachmentsCollection(db);
   const impeachment = await impeachments.findOne({ _id: impeachmentId });
   if (!impeachment || (impeachment.stage !== "house" && impeachment.stage !== "senate")) {
     return { fellInLine: 0, ignored: 0 };

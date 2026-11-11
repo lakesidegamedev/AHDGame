@@ -34,6 +34,8 @@ import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficia
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
 import { speakerElectionsCollection } from "@/lib/db/repositories/speakerElections";
+import { speakerNominationsCollection } from "@/lib/db/repositories/speakerNominations";
+import { speakerVacateMotionsCollection } from "@/lib/db/repositories/speakerVacateMotions";
 
 export interface BuildSpeakerResponseInput {
   db: Db;
@@ -109,8 +111,7 @@ export async function buildSpeakerResponse(
     };
   }
 
-  const nomDocs = await db
-    .collection<SpeakerNomination>("speakerNominations")
+  const nomDocs = await speakerNominationsCollection(db)
     .find(isVoting ? { status: { $in: ["open", "voting"] } } : { status: "confirmed" })
     .sort({ votesFor: -1, createdAt: 1 })
     .toArray();
@@ -208,9 +209,7 @@ export async function buildSpeakerResponse(
 
   // Motion to vacate the chair. Open only when a Speaker is seated and the
   // window hasn't closed; any seated House member may file/vote.
-  const motionDoc = await db
-    .collection<SpeakerVacateMotion>("speakerVacateMotions")
-    .findOne({ _id: "current" });
+  const motionDoc = await speakerVacateMotionsCollection(db).findOne({ _id: "current" });
   const motionOpen =
     motionDoc?.status === "voting" &&
     !isLeadershipElectionClosed(motionDoc, gameTime.currentTurn, gameTime.effectiveNow);

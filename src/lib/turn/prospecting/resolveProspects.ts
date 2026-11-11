@@ -26,6 +26,7 @@ import {
   PROSPECT_FINDER_RIGHTS_GRANTOR,
 } from "@/lib/constants/prospecting";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { governmentTendersCollection } from "@/lib/db/repositories/governmentTenders";
 
 export interface ResolveProspectsResult {
   surveysResolved: number;
@@ -242,8 +243,7 @@ async function grantFinderRights(
         { projection: { stateId: 1, countryId: 1, resource: 1, share: 1, tenderId: 1 } }
       )
       .toArray(),
-    db
-      .collection<GovernmentTender>("governmentTenders")
+    governmentTendersCollection<GovernmentTender>(db)
       .find(
         {
           "terms.type": "extraction",

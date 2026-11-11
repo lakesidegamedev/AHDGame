@@ -37,6 +37,7 @@ import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 import { playerIncomeTaxAssessmentsCollection } from "@/lib/db/repositories/playerIncomeTaxAssessments";
+import { playerIncomeTaxBatchesCollection } from "@/lib/db/repositories/playerIncomeTaxBatches";
 
 export interface IncomeCredit {
   characterId: ObjectId;
@@ -93,7 +94,7 @@ export async function creditIncomeAfterTax(
       );
       const worldId = state?.resetWorldId ?? "legacy";
       const key = `income-payout:${worldId}:${turn}:${source}`;
-      const receipts = db.collection<PayoutReceipt>("playerIncomeTaxBatches");
+      const receipts = playerIncomeTaxBatchesCollection<PayoutReceipt>(db);
       const receiptId = `income-payout:${worldId}:${source}`;
       const previous = await receipts.findOne({ _id: receiptId }, { session });
       if (previous && previous.turn > turn)

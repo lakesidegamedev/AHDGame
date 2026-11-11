@@ -26,6 +26,9 @@ import type { Document } from "mongodb";
 import { nationalPartyElectionsCollection } from "@/lib/db/repositories/nationalPartyElections";
 import { caucusesCollection } from "@/lib/db/repositories/caucuses";
 import { caucusChairVotesCollection } from "@/lib/db/repositories/caucusChairVotes";
+import { caucusMembershipsCollection } from "@/lib/db/repositories/caucusMemberships";
+import { caucusChairElectionsCollection } from "@/lib/db/repositories/caucusChairElections";
+import { caucusChairCandidatesCollection } from "@/lib/db/repositories/caucusChairCandidates";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; slug: string }>;
@@ -68,19 +71,17 @@ export async function GET(_request: Request, { params }: RouteParams) {
       return errorResponse(403, "Only party members may view caucus elections.");
     }
 
-    let activeElection = await db.collection<CaucusChairElection>("caucusChairElections").findOne({
+    let activeElection = await caucusChairElectionsCollection(db).findOne({
       caucusId: caucus._id,
       status: "voting",
     });
     const [latestElection, memberships] = await Promise.all([
-      db
-        .collection<CaucusChairElection>("caucusChairElections")
+      caucusChairElectionsCollection(db)
         .find({ caucusId: caucus._id, status: { $in: ["completed", "cancelled"] } })
         .sort({ endTime: -1 })
         .limit(1)
         .toArray(),
-      db
-        .collection<CaucusMembership>("caucusMemberships")
+      caucusMembershipsCollection(db)
         .find({ caucusId: caucus._id, memberType: "character", status: "active" })
         .toArray(),
     ]);
@@ -120,7 +121,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
         updatedAt: new Date(),
       };
       await Promise.all([
-        db.collection<CaucusChairElection>("caucusChairElections").insertOne(inserted),
+        caucusChairElectionsCollection(db).insertOne(inserted),
         caucusesCollection<Document>(db).updateOne(
           { _id: caucus._id },
           { $set: { nextElectionTurn: endTurn, updatedAt: new Date() } }
@@ -176,8 +177,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     }
 
     const [allCandidatesRaw, voteCounts, userVote] = await Promise.all([
-      db
-        .collection<CaucusChairCandidate>("caucusChairCandidates")
+      caucusChairCandidatesCollection(db)
         .find({ electionId: election._id, status: "active" })
         .toArray(),
       caucusChairVotesCollection(db)

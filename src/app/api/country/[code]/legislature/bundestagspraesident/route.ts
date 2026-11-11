@@ -44,6 +44,8 @@ import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
+import { bundestagspraesidentNominationsCollection } from "@/lib/db/repositories/bundestagspraesidentNominations";
+import { bundestagspraesidentElectionsCollection } from "@/lib/db/repositories/bundestagspraesidentElections";
 
 const bundestagspraesidentActionSchema = z.object({
   action: z.enum(["declare", "withdraw", "vote", "start_election", "force_end"]),
@@ -86,9 +88,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     }
 
     // Auto-resolve an expired election before responding (parity with US Speaker GET).
-    const electionDoc = await db
-      .collection<BundestagspraesidentElection>("bundestagspraesidentElections")
-      .findOne({ _id: "current" });
+    const electionDoc = await bundestagspraesidentElectionsCollection(db).findOne({
+      _id: "current",
+    });
     if (electionDoc?.status === "voting") {
       const gameTime = await getGameTime();
       if (isLeadershipElectionClosed(electionDoc, gameTime.currentTurn, gameTime.effectiveNow)) {
@@ -98,11 +100,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
 
     const [leader, election, nominations] = await Promise.all([
       congressLeadersCollection(db).findOne({ role: "speaker_of_the_bundestag" }),
-      db
-        .collection<BundestagspraesidentElection>("bundestagspraesidentElections")
-        .findOne({ _id: "current" }),
-      db
-        .collection<BundestagspraesidentNomination>("bundestagspraesidentNominations")
+      bundestagspraesidentElectionsCollection(db).findOne({ _id: "current" }),
+      bundestagspraesidentNominationsCollection(db)
         .find({ status: { $in: ["open", "voting"] } })
         .sort({ votesFor: -1 })
         .toArray(),

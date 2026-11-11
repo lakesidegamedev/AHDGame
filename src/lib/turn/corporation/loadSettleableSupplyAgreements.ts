@@ -23,6 +23,7 @@ import type { SettleableSupplyAgreement } from "./settleSupplyAgreements";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { supplyAgreementsCollection } from "@/lib/db/repositories/supplyAgreements";
 import type { Document } from "mongodb";
+import { corporationExitsCollection } from "@/lib/db/repositories/corporationExits";
 
 /**
  * Keys a located sector's output is credited under for contract settlement:
@@ -179,8 +180,7 @@ export async function loadSettleableSupplyAgreements(args: {
   }
   const exits =
     counterparties.size > 0
-      ? await db
-          .collection<CorporationExit>("corporationExits")
+      ? await corporationExitsCollection(db)
           .find({ _id: { $in: [...counterparties.values()] } }, { projection: { _id: 1 } })
           .toArray()
       : [];

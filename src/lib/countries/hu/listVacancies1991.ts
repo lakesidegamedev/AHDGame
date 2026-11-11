@@ -21,6 +21,7 @@ import { nppsCollection } from "@/lib/db/repositories/npps";
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 import { notificationsCollection } from "@/lib/db/repositories/notifications";
 import type { Document } from "mongodb";
+import { hu1991AssemblyOfficeArchivesCollection } from "@/lib/db/repositories/hu1991AssemblyOfficeArchives";
 
 export const HU_1991_LIST_REPLACEMENTS_COLLECTION = "hu1991ListReplacements";
 interface ReplacementReceipt {
@@ -241,18 +242,16 @@ export async function designateHu1991ListDeputy(input: {
     if (original?.characterId || original?.nppId)
       throw new Error("Hungarian list vacancy is occupied");
     if (original) {
-      await db
-        .collection<{
-          _id: string;
-          countryId: "HU";
-          receiptId: string;
-          turn: number;
-          official: ElectedOfficial;
-        }>("hu1991AssemblyOfficeArchives")
-        .insertOne(
-          { _id: `${id}:departed`, countryId: "HU", receiptId: id, turn, official: original },
-          { session }
-        );
+      await hu1991AssemblyOfficeArchivesCollection<{
+        _id: string;
+        countryId: "HU";
+        receiptId: string;
+        turn: number;
+        official: ElectedOfficial;
+      }>(db).insertOne(
+        { _id: `${id}:departed`, countryId: "HU", receiptId: id, turn, official: original },
+        { session }
+      );
       await electedOfficialsCollection(db).deleteOne(
         { _id: officialId, characterId: null, nppId: null },
         { session }

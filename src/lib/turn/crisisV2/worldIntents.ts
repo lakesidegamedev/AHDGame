@@ -14,6 +14,7 @@ import {
   MAX_REGION_CAPITAL_SHARE,
   MAX_REPAIR_TURNS,
 } from "@/lib/livingConflict/rules/capacityDestruction";
+import { tradeEmbargoesCollection } from "@/lib/db/repositories/tradeEmbargoes";
 
 export interface WorldIntentTargets {
   stateIds: string[];
@@ -130,7 +131,7 @@ async function writeTradeRestrictions(
     }
   }
   if (ops.length === 0) return 0;
-  await db.collection<TradeEmbargo>("tradeEmbargoes").bulkWrite(
+  await tradeEmbargoesCollection(db).bulkWrite(
     ops.map(({ _id, doc }) => ({
       updateOne: { filter: { _id }, update: { $setOnInsert: doc }, upsert: true },
     })),

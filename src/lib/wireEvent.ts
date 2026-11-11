@@ -1,5 +1,6 @@
 import { getDb } from "@/lib/mongodb";
 import { formatFundsCompact } from "@/lib/utils/formatters";
+import { wireEventsCollection } from "@/lib/db/repositories/wireEvents";
 
 export type WireEventType =
   | "sector_attack"
@@ -308,7 +309,7 @@ export async function logWireEvent(
 ): Promise<void> {
   try {
     const db = await getDb();
-    const col = db.collection<WireEvent>("wireEvents");
+    const col = wireEventsCollection<WireEvent>(db);
 
     // Ensure indexes once per process lifetime
     if (!ttlIndexEnsured) {

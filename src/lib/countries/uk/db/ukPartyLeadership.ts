@@ -3,13 +3,15 @@ import type {
   UKPartyLeadership,
   LeadershipChallenge,
 } from "@/lib/countries/uk/leadership/leadershipTypes";
+import { ukPartyLeadershipCollection } from "@/lib/db/repositories/ukPartyLeadership";
+import { ukLeadershipChallengesCollection } from "@/lib/db/repositories/ukLeadershipChallenges";
 
 /** Per-party UK leadership-removal state (ticket #861). */
 export function getUKPartyLeadershipCollection(db: Db) {
-  return db.collection<UKPartyLeadership>("ukPartyLeadership");
+  return ukPartyLeadershipCollection<UKPartyLeadership>(db);
 }
 
 /** Leadership challenges (letters/nominations + ballots) for UK parties. */
 export function getUKLeadershipChallengesCollection(db: Db) {
-  return db.collection<LeadershipChallenge>("ukLeadershipChallenges");
+  return ukLeadershipChallengesCollection<LeadershipChallenge>(db);
 }

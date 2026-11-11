@@ -13,6 +13,7 @@ import type { NationalizationAuction } from "@/lib/db/types";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { placeAuctionBid } from "@/lib/nationalization/privatizationAuction";
 import { auctionBidSchema } from "@/lib/api/schemas/nationalization";
+import { nationalizationAuctionsCollection } from "@/lib/db/repositories/nationalizationAuctions";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -43,9 +44,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     const db = await getDb();
-    const auction = await db
-      .collection<NationalizationAuction>("nationalizationAuctions")
-      .findOne({ corporationId: new ObjectId(id), status: "open" });
+    const auction = await nationalizationAuctionsCollection(db).findOne({
+      corporationId: new ObjectId(id),
+      status: "open",
+    });
     if (!auction) {
       return errorResponse(404, "No open auction for this corporation.");
     }

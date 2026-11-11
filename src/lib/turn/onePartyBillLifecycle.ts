@@ -75,6 +75,7 @@ import {
 } from "@/lib/countries/hu/electoralProposals2011";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { rulingPartyPurgeEventsCollection } from "@/lib/db/repositories/rulingPartyPurgeEvents";
 
 const DEMOCRATIC_1991_COUNTRIES: readonly CountryId[] = ["PL", "CS", "HU", "RO", "BG", "YU"];
 
@@ -387,7 +388,7 @@ async function processCountryPopularDrift(
   const leader = governmentLeaderReference(gov);
   if (!leader) return;
 
-  const purgeColl = db.collection<PurgeEvent>("rulingPartyPurgeEvents");
+  const purgeColl = rulingPartyPurgeEventsCollection<PurgeEvent>(db);
   const pendingPurges = await purgeColl.find({ countryId, processed: false }).toArray();
 
   const [economic, election, internalRepression] = await Promise.all([
@@ -421,7 +422,7 @@ async function processCountryConfidenceDrift(
   currentTurn: number,
   policyCategories: string[]
 ): Promise<void> {
-  const purgeColl = db.collection<PurgeEvent>("rulingPartyPurgeEvents");
+  const purgeColl = rulingPartyPurgeEventsCollection<PurgeEvent>(db);
   const pendingPurges = await purgeColl.find({ countryId, processed: false }).toArray();
 
   const result = await processRulingPartyConfidenceTurn(

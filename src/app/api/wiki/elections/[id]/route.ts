@@ -23,6 +23,7 @@ import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParti
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { primarySnapshotsCollection } from "@/lib/db/repositories/primarySnapshots";
 
 const ELECTION_TYPE_LABELS: Record<string, string> = {
   president: "President",
@@ -113,8 +114,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
 
     // Fetch primary snapshots: full history for trend chart + latest for results fallback
     const [allPrimarySnapshots] = await Promise.all([
-      db
-        .collection<PrimarySnapshot>("primarySnapshots")
+      primarySnapshotsCollection(db)
         .find({ electionId }, { sort: { recordedAt: 1 } })
         .limit(96)
         .project<Pick<PrimarySnapshot, "recordedAt" | "byParty" | "turn" | "slicePart">>({

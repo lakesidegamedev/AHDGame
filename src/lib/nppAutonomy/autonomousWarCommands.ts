@@ -21,6 +21,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
 import { militaryUnitsCollection } from "@/lib/db/repositories/militaryUnits";
+import { battleDeclarationsCollection } from "@/lib/db/repositories/battleDeclarations";
 
 export interface AutonomousWarCommandResult {
   acted: boolean;
@@ -249,7 +250,7 @@ async function conductWar(
   const target = enemySide.factionEntity ?? enemySide.countries[0];
   if (!target) return { acted: false, note: "The opposing side has no targetable belligerent." };
 
-  const pending = await db.collection<BattleDeclarationDoc>("battleDeclarations").findOne({
+  const pending = await battleDeclarationsCollection(db).findOne({
     declarerCountry: countryId,
     theaterId: conflict._id,
     status: "pending",
@@ -274,9 +275,10 @@ async function conductWar(
     declaredTurn: currentTurn,
     status: "pending",
   };
-  const result = await db
-    .collection<Omit<BattleDeclarationDoc, "_id">>("battleDeclarations")
-    .insertOne(declaration);
+  const result =
+    await battleDeclarationsCollection<Omit<BattleDeclarationDoc, "_id">>(db).insertOne(
+      declaration
+    );
   return { acted: true, note: `Queued offensive ${result.insertedId.toString()}.` };
 }
 

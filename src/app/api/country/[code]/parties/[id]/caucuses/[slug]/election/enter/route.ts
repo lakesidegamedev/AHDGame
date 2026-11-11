@@ -14,6 +14,9 @@ import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import type { CaucusChairCandidate, CaucusChairElection, CaucusMembership } from "@/lib/db/types";
 import { usersCollection } from "@/lib/db/repositories/users";
 import type { Document } from "mongodb";
+import { caucusMembershipsCollection } from "@/lib/db/repositories/caucusMemberships";
+import { caucusChairElectionsCollection } from "@/lib/db/repositories/caucusChairElections";
+import { caucusChairCandidatesCollection } from "@/lib/db/repositories/caucusChairCandidates";
 
 const bodySchema = z.object({
   withdraw: z.boolean().optional(),
@@ -53,7 +56,7 @@ export async function POST(
     }
     const { caucus } = resolved;
 
-    const membership = await db.collection<CaucusMembership>("caucusMemberships").findOne({
+    const membership = await caucusMembershipsCollection(db).findOne({
       caucusId: caucus._id,
       memberType: "character",
       memberId: auth.user.character._id,
@@ -63,7 +66,7 @@ export async function POST(
       return errorResponse(403, "Only active caucus members may run for chair.");
     }
 
-    const election = await db.collection<CaucusChairElection>("caucusChairElections").findOne({
+    const election = await caucusChairElectionsCollection(db).findOne({
       caucusId: caucus._id,
       status: "voting",
     });
@@ -107,7 +110,7 @@ export async function POST(
     }
 
     const now = new Date();
-    const existing = await db.collection<CaucusChairCandidate>("caucusChairCandidates").findOne({
+    const existing = await caucusChairCandidatesCollection(db).findOne({
       electionId: election._id,
       characterId: auth.user.character._id,
       status: "active",
@@ -117,9 +120,10 @@ export async function POST(
       if (!existing) {
         return errorResponse(404, "You are not currently a candidate in this election.");
       }
-      await db
-        .collection<CaucusChairCandidate>("caucusChairCandidates")
-        .updateOne({ _id: existing._id }, { $set: { status: "withdrawn" } });
+      await caucusChairCandidatesCollection(db).updateOne(
+        { _id: existing._id },
+        { $set: { status: "withdrawn" } }
+      );
       return NextResponse.json({
         success: true,
         message: "Withdrew from the caucus chair election.",
@@ -130,7 +134,7 @@ export async function POST(
       return errorResponse(409, "You are already a candidate in this election.");
     }
 
-    await db.collection<CaucusChairCandidate>("caucusChairCandidates").insertOne({
+    await caucusChairCandidatesCollection(db).insertOne({
       _id: new ObjectId(),
       electionId: election._id,
       caucusId: caucus._id,

@@ -21,6 +21,7 @@ import { triggerSystemNoConfidence } from "../political/triggerSystemNoConfidenc
 import { emitCivilUnrestEvents } from "../political/civilUnrestEvents";
 import { MONETIZE_GATE_INFLATION, INFLATION_SHOCK_MULTIPLIER } from "../constants";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { sovereignCrisisDecisionsCollection } from "@/lib/db/repositories/sovereignCrisisDecisions";
 
 const MONETIZE_FX_COUPLING = 0.4;
 
@@ -114,18 +115,17 @@ export async function applyMonetizeResolution(
       resolvedAt: new Date(realtimeMs),
       resolvedReason: "Sovereign debt monetized (phase 6 auto-ratify)",
     };
-    await db
-      .collection<SovereignCrisisDecision>("sovereignCrisisDecisions")
-      .updateOne({ _id: decisionId }, { $set: decisionUpdate });
+    await sovereignCrisisDecisionsCollection(db).updateOne(
+      { _id: decisionId },
+      { $set: decisionUpdate }
+    );
   }
 
   await emitMonetizedNews(countryCode, currentTurn, printedAmount, inflationShockPp);
 
   // Phase 11b: executive personal political impact (inflation always wrecks
   // incumbents).
-  const decision = await db
-    .collection<SovereignCrisisDecision>("sovereignCrisisDecisions")
-    .findOne({ _id: decisionId });
+  const decision = await sovereignCrisisDecisionsCollection(db).findOne({ _id: decisionId });
   await applyExecutivePoliticalImpact(db, decision?.proposingCharacterId ?? null, "monetize");
 
   // Phase 11b: parliamentary countries auto-trigger no-confidence after Monetize.

@@ -5,6 +5,7 @@ import {
   type PrioritySelectionLike,
 } from "@/lib/legislation/oldBookMapping";
 import type { Migration, MigrationResult } from "../types";
+import { electoratePriorityOverridesCollection } from "@/lib/db/repositories/electoratePriorityOverrides";
 
 /**
  * Admin-saved electorate priorities for the US and UK named retired law types.
@@ -13,7 +14,7 @@ import type { Migration, MigrationResult } from "../types";
  * region pages already ignore such a request and show the authored default.
  */
 async function repointPriorityOverrides(db: Db, dryRun: boolean): Promise<MigrationResult> {
-  const collection = db.collection<ElectoratePriorityOverride>("electoratePriorityOverrides");
+  const collection = electoratePriorityOverridesCollection(db);
   const rows = await collection
     .find({ countryId: { $in: ["US", "UK"] } }, { projection: { _id: 1, priorities: 1 } })
     .toArray();

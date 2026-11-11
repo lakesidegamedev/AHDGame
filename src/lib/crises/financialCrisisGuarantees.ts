@@ -13,6 +13,7 @@ import { resolveCountryCurrencyCode } from "@/lib/currency/govBudgetFields";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
+import { bankGuaranteesCollection } from "@/lib/db/repositories/bankGuarantees";
 
 interface FundedGuarantee {
   _id: string;
@@ -90,8 +91,7 @@ export async function processFinancialCrisisGuarantees(
       throw new Error(result.error ?? "Financial intervention recovery is incomplete");
   }
 
-  const guarantees = await db
-    .collection<FundedGuarantee>("bankGuarantees")
+  const guarantees = await bankGuaranteesCollection<FundedGuarantee>(db)
     .find({
       status: "active",
       escrowBalance: { $gt: 0 },

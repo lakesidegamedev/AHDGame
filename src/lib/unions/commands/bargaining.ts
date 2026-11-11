@@ -57,6 +57,8 @@ import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSecto
 import { unionsCollection } from "@/lib/db/repositories/unions";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { bargainingCampaignsCollection } from "@/lib/db/repositories/bargainingCampaigns";
+import { collectiveAgreementsCollection } from "@/lib/db/repositories/collectiveAgreements";
 
 function campaignResult(campaign: BargainingCampaign): Extract<UnionActionResult, { ok: true }> {
   return {
@@ -232,8 +234,7 @@ export async function loadBargainingLastEnded(
 ): Promise<Map<string, number>> {
   const out = new Map<string, number>();
   if (unionIds.length === 0) return out;
-  const rows = await db
-    .collection<BargainingCampaign>("bargainingCampaigns")
+  const rows = await bargainingCampaignsCollection(db)
     .aggregate<{
       _id: { unionId: ObjectId; employerCorporationId: ObjectId };
       endedAtTurn: number;
@@ -362,7 +363,7 @@ export async function openBargainingCampaignFromLiveConditions(
       .toArray(),
     preloaded?.noActiveAgreement
       ? Promise.resolve(null)
-      : db.collection<CollectiveAgreement>("collectiveAgreements").findOne({
+      : collectiveAgreementsCollection(db).findOne({
           unionId: union._id,
           employerCorporationId: employerId,
           status: "active",
@@ -375,8 +376,7 @@ export async function openBargainingCampaignFromLiveConditions(
       ? Promise.resolve(
           preloaded.lastEndedAtTurn.get(bargainingPairKey(union._id, employerId)) ?? null
         )
-      : db
-          .collection<BargainingCampaign>("bargainingCampaigns")
+      : bargainingCampaignsCollection(db)
           .findOne(
             {
               unionId: union._id,
@@ -437,7 +437,7 @@ export async function openBargainingCampaignFromLiveConditions(
   campaign.mandateUpdatedAtTurn = currentTurn;
 
   try {
-    await db.collection<BargainingCampaign>("bargainingCampaigns").insertOne(campaign);
+    await bargainingCampaignsCollection(db).insertOne(campaign);
   } catch (error) {
     if (isDuplicateKeyError(error)) {
       return {
@@ -488,7 +488,7 @@ export async function persistBargainingCounter(
     now: new Date(),
   });
   if ("ok" in next) return { ...next, status: 400 };
-  const result = await db.collection<BargainingCampaign>("bargainingCampaigns").updateOne(
+  const result = await bargainingCampaignsCollection(db).updateOne(
     {
       _id: campaign._id,
       status: campaign.status,
@@ -524,7 +524,7 @@ async function persistBargainingDispute(
 ): Promise<UnionActionResult> {
   const next = moveCampaignToDispute(campaign, currentTurn, new Date());
   if ("ok" in next) return { ...next, status: 400 };
-  const result = await db.collection<BargainingCampaign>("bargainingCampaigns").updateOne(
+  const result = await bargainingCampaignsCollection(db).updateOne(
     { _id: campaign._id, status: campaign.status },
     {
       $set: {
@@ -580,7 +580,7 @@ async function persistSettlementOutcome(
   currentTurn: number
 ): Promise<UnionActionResult> {
   const claimCampaign = async (session?: ClientSession) => {
-    const result = await db.collection<BargainingCampaign>("bargainingCampaigns").updateOne(
+    const result = await bargainingCampaignsCollection(db).updateOne(
       {
         _id: campaign._id,
         status: campaign.status,
@@ -602,9 +602,7 @@ async function persistSettlementOutcome(
     if (result.modifiedCount === 0) throw new Error("CAMPAIGN_CHANGED");
   };
   const insertAgreement = (session?: ClientSession) =>
-    db
-      .collection<CollectiveAgreement>("collectiveAgreements")
-      .insertOne(settled.agreement, { session });
+    collectiveAgreementsCollection(db).insertOne(settled.agreement, { session });
   // The agreement is the wage floor; it is NOT written into `sector.wageLevel`.
   // Writing it there makes the raise permanent, because nothing lowers the
   // field again when the agreement expires — the union would ratchet pay up
@@ -624,10 +622,8 @@ async function persistSettlementOutcome(
         try {
           await insertAgreement();
         } catch (error) {
-          await db
-            .collection<CollectiveAgreement>("collectiveAgreements")
-            .deleteOne({ _id: settled.agreement._id });
-          await db.collection<BargainingCampaign>("bargainingCampaigns").updateOne(
+          await collectiveAgreementsCollection(db).deleteOne({ _id: settled.agreement._id });
+          await bargainingCampaignsCollection(db).updateOne(
             { _id: campaign._id, settledAgreementId: settled.agreement._id },
             {
               $set: {
@@ -705,7 +701,7 @@ export async function persistBargainingMediationAction(
   const mediationFilter = campaign.mediation
     ? { "mediation.updatedAt": campaign.mediation.updatedAt }
     : { mediation: { $exists: false } };
-  const result = await db.collection<BargainingCampaign>("bargainingCampaigns").updateOne(
+  const result = await bargainingCampaignsCollection(db).updateOne(
     {
       _id: campaign._id,
       status: "dispute",
@@ -787,7 +783,7 @@ export async function persistUnionBargainingEscalation(
   }
   const cost = plan.cashCost;
 
-  const campaignCollection = db.collection<BargainingCampaign>("bargainingCampaigns");
+  const campaignCollection = bargainingCampaignsCollection(db);
   const unionCollection = unionsCollection(db);
   const sectorCollection = corporateSectorsCollection(db);
   const claimCampaign = async (session?: ClientSession) => {
@@ -999,9 +995,9 @@ export async function actOnBargainingCampaignAsUnion(
   if (!ObjectId.isValid(campaignId)) {
     return { ok: false, status: 400, error: "Invalid campaign ID." };
   }
-  const campaign = await db
-    .collection<BargainingCampaign>("bargainingCampaigns")
-    .findOne({ _id: new ObjectId(campaignId) });
+  const campaign = await bargainingCampaignsCollection(db).findOne({
+    _id: new ObjectId(campaignId),
+  });
   if (!campaign) return { ok: false, status: 404, error: "Bargaining campaign not found." };
   if (!ObjectId.isValid(unionRouteId) || !campaign.unionId.equals(new ObjectId(unionRouteId))) {
     return { ok: false, status: 404, error: "Bargaining campaign not found for this union." };
@@ -1035,7 +1031,7 @@ export async function actOnBargainingCampaignAsUnion(
   if (campaign.status !== "negotiating" && campaign.status !== "dispute") {
     return { ok: false, status: 400, error: "This campaign can no longer be withdrawn." };
   }
-  const result = await db.collection<BargainingCampaign>("bargainingCampaigns").updateOne(
+  const result = await bargainingCampaignsCollection(db).updateOne(
     { _id: campaign._id, status: campaign.status },
     {
       $set: {
@@ -1077,9 +1073,9 @@ export async function actOnBargainingCampaignAsEmployer(
   if (!ObjectId.isValid(campaignId)) {
     return { ok: false, status: 400, error: "Invalid campaign ID." };
   }
-  const campaign = await db
-    .collection<BargainingCampaign>("bargainingCampaigns")
-    .findOne({ _id: new ObjectId(campaignId) });
+  const campaign = await bargainingCampaignsCollection(db).findOne({
+    _id: new ObjectId(campaignId),
+  });
   if (!campaign) return { ok: false, status: 404, error: "Bargaining campaign not found." };
   const employerRouteQuery = corporationQueryFromParamId(employerRouteId);
   if (!employerRouteQuery) {

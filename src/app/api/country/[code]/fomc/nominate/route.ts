@@ -24,6 +24,7 @@ import { FOMC_VOTE_WINDOW_TURNS, FOMC_PLAYER_VOTE_WINDOW_MS } from "@/lib/db/typ
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { fomcNominationsCollection } from "@/lib/db/repositories/fomcNominations";
 
 interface RouteContext {
   params: Promise<{ code: string }>;
@@ -81,9 +82,11 @@ export async function POST(request: Request, context: RouteContext) {
       return NextResponse.json(badRequest("Unknown seat").toJson(), { status: 400 });
 
     // One active nomination per seat at a time.
-    const existing = await db
-      .collection<FomcNomination>("fomcNominations")
-      .findOne({ bankId, seatId: body.seatId, status: "active" });
+    const existing = await fomcNominationsCollection(db).findOne({
+      bankId,
+      seatId: body.seatId,
+      status: "active",
+    });
     if (existing)
       return NextResponse.json(
         badRequest("A nomination for this seat is already before the Senate").toJson(),
@@ -160,9 +163,10 @@ export async function POST(request: Request, context: RouteContext) {
       updatedAt: now,
     };
 
-    const insert = await db
-      .collection<FomcNomination>("fomcNominations")
-      .insertOne({ _id: new ObjectId(), ...nomination } as FomcNomination);
+    const insert = await fomcNominationsCollection(db).insertOne({
+      _id: new ObjectId(),
+      ...nomination,
+    } as FomcNomination);
 
     return NextResponse.json({
       ok: true,

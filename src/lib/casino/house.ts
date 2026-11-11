@@ -13,6 +13,7 @@ import { emitTx } from "@/lib/financialTxLog/emit";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { usersCollection } from "@/lib/db/repositories/users";
+import { discordBotFundsCollection } from "@/lib/db/repositories/discordBotFunds";
 
 /**
  * The casino house bank.
@@ -90,7 +91,7 @@ export function toLocal(anchorAmount: number, rate: number): number {
  * from the legacy per-currency buckets the first time a new game touches it.
  */
 export async function loadHouse(db: Db): Promise<DiscordBotFund & { anchorBalance: number }> {
-  const funds = db.collection<DiscordBotFund>("discordBotFunds");
+  const funds = discordBotFundsCollection(db);
   let fund = await funds.findOne({ name: CASINO_FUND_NAME });
   if (!fund) {
     const now = new Date();
@@ -250,7 +251,7 @@ export async function applyHouseResult(
   const net = stakeAnchor - paidAnchor;
   const filter: Record<string, unknown> = { name: CASINO_FUND_NAME };
   if (net < 0) filter.anchorBalance = { $gte: -net };
-  const result = await db.collection<DiscordBotFund>("discordBotFunds").updateOne(filter, {
+  const result = await discordBotFundsCollection(db).updateOne(filter, {
     $inc: { anchorBalance: net, ...statsInc(game, stakeAnchor, paidAnchor, plays) },
     $set: { updatedAt: new Date() },
   });
@@ -265,8 +266,7 @@ export async function reverseHouseResult(
   paidAnchor: number,
   plays = 1
 ): Promise<void> {
-  await db
-    .collection<DiscordBotFund>("discordBotFunds")
+  await discordBotFundsCollection(db)
     .updateOne(
       { name: CASINO_FUND_NAME },
       {

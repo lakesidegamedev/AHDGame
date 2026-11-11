@@ -11,6 +11,7 @@ import { snapshotPolicyProvisionsInPlace } from "@/lib/legislature/provisionEnri
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
+import { governorLegislationQueueCollection } from "@/lib/db/repositories/governorLegislationQueue";
 
 const VOTING_DURATION_HOURS = 24;
 
@@ -27,8 +28,7 @@ export async function processGovernorLegislationQueue(
   db: Db,
   currentTurn: number
 ): Promise<{ fired: number; cancelled: number }> {
-  const pending = await db
-    .collection<GovernorQueuedBill>("governorLegislationQueue")
+  const pending = await governorLegislationQueueCollection(db)
     .find({ status: "pending", queuedAtTurn: { $lt: currentTurn } })
     .toArray();
   let fired = 0;
@@ -205,7 +205,7 @@ export async function processGovernorLegislationQueue(
     await stateBillsCollection(db).insertOne(bill);
     for (const key of lawFamilyKeys) activeResetFamilies.add(key);
 
-    await db.collection<GovernorQueuedBill>("governorLegislationQueue").updateOne(
+    await governorLegislationQueueCollection(db).updateOne(
       { _id: q._id, status: "pending" },
       {
         $set: {

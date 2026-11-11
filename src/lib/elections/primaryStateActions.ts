@@ -13,6 +13,7 @@
 
 import type { Db, Filter, ObjectId } from "mongodb";
 import type { PrimaryStateAction } from "@/lib/db/types";
+import { primaryStateActionsCollection } from "@/lib/db/repositories/primaryStateActions";
 
 /**
  * Rows still in force this turn.
@@ -31,8 +32,7 @@ export async function loadLiveStateActions(
   db: Db,
   args: { electionId: ObjectId; currentTurn: number }
 ): Promise<PrimaryStateAction[]> {
-  return db
-    .collection<PrimaryStateAction>("primaryStateActions")
+  return primaryStateActionsCollection(db)
     .find(liveActionFilter(args.electionId, args.currentTurn))
     .toArray();
 }

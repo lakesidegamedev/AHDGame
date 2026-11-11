@@ -68,6 +68,7 @@ import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { playerEndorsementsCollection } from "@/lib/db/repositories/playerEndorsements";
 import { nppEndorsementsCollection } from "@/lib/db/repositories/nppEndorsements";
 import { congressionalDistrictsCollection } from "@/lib/db/repositories/congressionalDistricts";
+import { primarySnapshotsCollection } from "@/lib/db/repositories/primarySnapshots";
 
 export type {
   PollingData,
@@ -429,8 +430,7 @@ export async function resolveElections(
       // One index-bounded read per election: a $group over the $in match
       // loaded every snapshot of every listed race before slicing.
       perElectionInBatches(electionIds, (electionId) =>
-        db
-          .collection<PrimarySnapshot>("primarySnapshots")
+        primarySnapshotsCollection(db)
           .find({ electionId })
           .sort({ recordedAt: -1 })
           .limit(144)
@@ -510,12 +510,7 @@ export async function resolveElections(
     // The newest row per election straight off the { electionId, recordedAt }
     // index. Sorting the whole $in match and grouping read every snapshot.
     const latestRows = await perElectionInBatches(electionIds, (electionId) =>
-      db
-        .collection<PrimarySnapshot>("primarySnapshots")
-        .find({ electionId })
-        .sort({ recordedAt: -1 })
-        .limit(1)
-        .next()
+      primarySnapshotsCollection(db).find({ electionId }).sort({ recordedAt: -1 }).limit(1).next()
     );
     for (const doc of latestRows) {
       if (doc) latestSnapshotByElection.set(doc.electionId.toString(), doc);

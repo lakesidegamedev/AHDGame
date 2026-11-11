@@ -25,6 +25,8 @@ import type { Document } from "mongodb";
 import { nationalDoctrineCollection } from "@/lib/db/repositories/nationalDoctrine";
 import { livingConflictsCollection } from "@/lib/db/repositories/livingConflicts";
 import { macroCountriesCollection } from "@/lib/db/repositories/macroCountries";
+import { coldWarTensionCollection } from "@/lib/db/repositories/coldWarTension";
+import { nuclearProgramsCollection } from "@/lib/db/repositories/nuclearPrograms";
 
 const NUCLEAR_DELIVERY_DOCTRINE_KEY = keyOf("strat", 5);
 
@@ -71,8 +73,7 @@ export async function seedColdWarFoundations(
 ): Promise<ColdWarFoundationResult> {
   const baselines = nuclearProgramBaselines(year);
   const programIds = baselines.map((program) => program._id);
-  const existingPrograms = await db
-    .collection<NuclearProgram>("nuclearPrograms")
+  const existingPrograms = await nuclearProgramsCollection(db)
     .find({}, { projection: { _id: 1, adopted: 1, warheads: 1 } })
     .toArray();
   const existingProgramByCountry = new Map(
@@ -95,9 +96,10 @@ export async function seedColdWarFoundations(
     (definition) => !existingConflictKeys.has(definition.key)
   );
   const tensionExists =
-    (await db
-      .collection<TensionSeedDocument>("coldWarTension")
-      .findOne({ _id: "current" }, { projection: { _id: 1 } })) != null;
+    (await coldWarTensionCollection<TensionSeedDocument>(db).findOne(
+      { _id: "current" },
+      { projection: { _id: 1 } }
+    )) != null;
   const existingDoctrines = await nationalDoctrineCollection<Document>(db)
     .find({ countryId: { $in: programIds } }, { projection: { countryId: 1, adopted: 1 } })
     .toArray();
@@ -219,7 +221,7 @@ export async function seedColdWarFoundations(
       conflicts: conflictWars.map(conflictWarPressureInput),
     });
     const pressureFloor = tensionPressureBreakdown(pressureSnapshot.pressures).floor;
-    await db.collection<TensionSeedDocument>("coldWarTension").updateOne(
+    await coldWarTensionCollection<TensionSeedDocument>(db).updateOne(
       { _id: "current" },
       {
         $setOnInsert: {

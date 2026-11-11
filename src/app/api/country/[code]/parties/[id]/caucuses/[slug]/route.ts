@@ -21,6 +21,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import type { Document } from "mongodb";
 import { caucusesCollection } from "@/lib/db/repositories/caucuses";
+import { caucusMembershipsCollection } from "@/lib/db/repositories/caucusMemberships";
 
 // GET /api/country/[code]/parties/[id]/caucuses/[slug] — Detail view of a single caucus including policy positions
 // Auth: requireAuth
@@ -292,17 +293,14 @@ export async function DELETE(
     );
 
     // Mark all active memberships as removed and clear factionId on player members.
-    const activeMemberships = await db
-      .collection<CaucusMembership>("caucusMemberships")
+    const activeMemberships = await caucusMembershipsCollection(db)
       .find({ caucusId: caucus._id, status: "active" })
       .toArray();
     if (activeMemberships.length > 0) {
-      await db
-        .collection<CaucusMembership>("caucusMemberships")
-        .updateMany(
-          { caucusId: caucus._id, status: "active" },
-          { $set: { status: "removed", leftAt: now, updatedAt: now } }
-        );
+      await caucusMembershipsCollection(db).updateMany(
+        { caucusId: caucus._id, status: "active" },
+        { $set: { status: "removed", leftAt: now, updatedAt: now } }
+      );
       const characterIds = activeMemberships
         .filter((m) => m.memberType === "character")
         .map((m) => m.memberId);

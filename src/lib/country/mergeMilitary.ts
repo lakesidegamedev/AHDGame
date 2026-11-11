@@ -37,6 +37,8 @@ import { getMilitaryCommandsCollection } from "@/lib/db/collections/militaryComm
 import { getMilitaryFormationsCollection } from "@/lib/db/collections/militaryFormations";
 import { nationalDoctrineCollection } from "@/lib/db/repositories/nationalDoctrine";
 import { militaryUnitsCollection } from "@/lib/db/repositories/militaryUnits";
+import { nationalArsenalCollection } from "@/lib/db/repositories/nationalArsenal";
+import { nationalManpowerCollection } from "@/lib/db/repositories/nationalManpower";
 
 export interface MergeMilitaryArgs {
   fromCountryId: CountryId;
@@ -151,7 +153,7 @@ export async function mergeMilitary(db: Db, args: MergeMilitaryArgs): Promise<Me
   //    stocks). Two empty stores keep the survivor's grade — the arsenal
   //    contract says a drained store keeps its last grade. ───────────────────
   const fromArsenal = await mergeOneDocPerCountry(
-    db.collection<NationalArsenal>("nationalArsenal"),
+    nationalArsenalCollection(db),
     fromCountryId,
     toCountryId,
     now,
@@ -173,7 +175,7 @@ export async function mergeMilitary(db: Db, args: MergeMilitaryArgs): Promise<Me
   // ── Manpower: pools ALWAYS add; the reinforcement mode is stance and only
   //    crosses when the absorbed side is the winner. ────────────────────────
   const fromManpower = await mergeOneDocPerCountry(
-    db.collection<NationalManpower>("nationalManpower"),
+    nationalManpowerCollection(db),
     fromCountryId,
     toCountryId,
     now,

@@ -44,6 +44,7 @@ import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { nppInfluenceAttemptsCollection } from "@/lib/db/repositories/nppInfluenceAttempts";
 
 export type { PartyInfluenceCalculation } from "./partyExecutorCalculations";
 export type { ExecutePartyInfluenceInput } from "./partyExecutorTypes";
@@ -322,7 +323,7 @@ async function executeStatePartyInfluenceCore(
       partyInfluence: { type: "state", partyId: input.partyId, stateId: input.stateId! },
       createdAt: now,
     };
-    await db.collection<NPPInfluenceAttempt>("nppInfluenceAttempts").insertOne(failAttempt);
+    await nppInfluenceAttemptsCollection(db).insertOne(failAttempt);
 
     return {
       success: false,
@@ -369,7 +370,7 @@ async function executeStatePartyInfluenceCore(
     createdAt: now,
   };
 
-  await db.collection<NPPInfluenceAttempt>("nppInfluenceAttempts").insertOne(attemptRecord);
+  await nppInfluenceAttemptsCollection(db).insertOne(attemptRecord);
   return { success: outcome === "success", outcome, message, calculation, roll };
 }
 
@@ -553,7 +554,7 @@ async function executeNationalPartyInfluenceCore(
         partyInfluence: { type: "national", partyId: input.partyId, stateId: npp.homeState },
         createdAt: now,
       };
-      await db.collection<NPPInfluenceAttempt>("nppInfluenceAttempts").insertOne(failAttempt);
+      await nppInfluenceAttemptsCollection(db).insertOne(failAttempt);
 
       return {
         success: false,
@@ -601,7 +602,7 @@ async function executeNationalPartyInfluenceCore(
     createdAt: now,
   };
 
-  await db.collection<NPPInfluenceAttempt>("nppInfluenceAttempts").insertOne(attemptRecord);
+  await nppInfluenceAttemptsCollection(db).insertOne(attemptRecord);
   return { success: outcome === "success", outcome, message, calculation, roll };
 }
 

@@ -40,6 +40,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { caucusesCollection } from "@/lib/db/repositories/caucuses";
+import { caucusMembershipsCollection } from "@/lib/db/repositories/caucusMemberships";
 
 /**
  * UK party leadership removal shell commands.
@@ -182,8 +183,7 @@ export async function getCommitteeSnapshot(
           .toArray(),
     memberIds.length === 0
       ? []
-      : db
-          .collection<CaucusMembership>("caucusMemberships")
+      : caucusMembershipsCollection(db)
           .find({
             memberType: "character",
             memberId: { $in: memberIds },

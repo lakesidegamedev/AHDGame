@@ -18,6 +18,8 @@ import { electionsCollection } from "@/lib/db/repositories/elections";
 import { crisesCollection } from "@/lib/db/repositories/crises";
 import { usersCollection } from "@/lib/db/repositories/users";
 import { conflictsCollection } from "@/lib/db/repositories/conflicts";
+import { wealthListSnapshotsCollection } from "@/lib/db/repositories/wealthListSnapshots";
+import { analyticsRecordsCollection } from "@/lib/db/repositories/analyticsRecords";
 
 type WorldEventType = "election" | "war" | "bill_passed" | "crisis" | "record_wealth";
 
@@ -60,9 +62,10 @@ export async function captureTurnPosthog(input: {
           }
         )
         .toArray(),
-      db
-        .collection<WealthListSnapshot>("wealthListSnapshots")
-        .findOne({ _id: "global", turn }, { projection: { entries: 1 } }),
+      wealthListSnapshotsCollection(db).findOne(
+        { _id: "global", turn },
+        { projection: { entries: 1 } }
+      ),
       countryHistory
         .find(
           { turn, eventType: "bill_enacted" },
@@ -165,7 +168,7 @@ export async function captureTurnPosthog(input: {
       0
     );
     if (currentRecord > 0) {
-      const records = db.collection<{ _id: string; value: number }>("analyticsRecords");
+      const records = analyticsRecordsCollection<{ _id: string; value: number }>(db);
       const previous = await records.findOne({ _id: "player-wealth" });
       if (currentRecord > (previous?.value ?? 0)) {
         await records.updateOne(

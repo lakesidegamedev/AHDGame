@@ -37,6 +37,7 @@ import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { actionAuditLogCollection } from "@/lib/db/repositories/actionAuditLog";
 
 export class TreasuryReserveTransferRejected extends Error {
   constructor(
@@ -384,15 +385,14 @@ async function publishAudit(db: Db, receipt: Receipt): Promise<void> {
       ...plan.audit,
       ...(plan.state === "rejected" ? { outcome: "rejected" as const, reason: plan.error } : {}),
     };
-    const result = await db
-      .collection<ActionAuditRecord>("actionAuditLog")
-      .updateOne({ _id: audit._id }, { $setOnInsert: audit }, { upsert: true });
+    const result = await actionAuditLogCollection(db).updateOne(
+      { _id: audit._id },
+      { $setOnInsert: audit },
+      { upsert: true }
+    );
     if (
       result.matchedCount === 1 &&
-      !isDeepStrictEqual(
-        await db.collection<ActionAuditRecord>("actionAuditLog").findOne({ _id: audit._id }),
-        audit
-      )
+      !isDeepStrictEqual(await actionAuditLogCollection(db).findOne({ _id: audit._id }), audit)
     )
       throw new Error("Treasury transfer audit differs from original receipt");
     await db.collection<Receipt>(MONEY_MOVE_COLLECTION).updateOne(

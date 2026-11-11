@@ -19,6 +19,10 @@ import { TRADE_EMBARGO_MAX_DURATION_TURNS } from "@/lib/trade/constants";
 import type { ForeignPolicyChoice } from "./foreignPolicy";
 import { executeAutonomousWarChoice } from "./autonomousWarCommands";
 import { proposeNppForeignPolicyBill } from "./proposeNppForeignPolicyBill";
+import { tradeEmbargoesCollection } from "@/lib/db/repositories/tradeEmbargoes";
+import { organizationLegislationCollection } from "@/lib/db/repositories/organizationLegislation";
+import { organizationMembershipProposalsCollection } from "@/lib/db/repositories/organizationMembershipProposals";
+import { organizationLeadershipElectionsCollection } from "@/lib/db/repositories/organizationLeadershipElections";
 
 export interface ForeignPolicyExecutionResult {
   acted: boolean;
@@ -58,18 +62,14 @@ async function executeVote(
   const result =
     choice.pendingKind === "membership"
       ? await upsertPendingOrganizationVote(
-          db.collection<OrganizationMembershipProposal>("organizationMembershipProposals"),
+          organizationMembershipProposalsCollection(db),
           itemId,
           vote
         )
       : choice.pendingKind === "legislation"
-        ? await upsertPendingOrganizationVote(
-            db.collection<OrganizationLegislation>("organizationLegislation"),
-            itemId,
-            vote
-          )
+        ? await upsertPendingOrganizationVote(organizationLegislationCollection(db), itemId, vote)
         : await upsertPendingOrganizationVote(
-            db.collection<OrganizationLeadershipElection>("organizationLeadershipElections"),
+            organizationLeadershipElectionsCollection(db),
             itemId,
             vote
           );
@@ -177,7 +177,7 @@ async function executeEmbargo(
       : rejected(result.error);
   }
 
-  const embargo = await db.collection<TradeEmbargo>("tradeEmbargoes").findOne({
+  const embargo = await tradeEmbargoesCollection(db).findOne({
     sourceCountry: countryId,
     targetCountry: choice.targetCountryId,
     origin: "minister",

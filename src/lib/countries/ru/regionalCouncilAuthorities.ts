@@ -30,6 +30,7 @@ import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficia
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
+import { russianDumaElectionResultsCollection } from "@/lib/db/repositories/russianDumaElectionResults";
 
 export const RUSSIAN_REGIONAL_AUTHORITIES_COLLECTION = "russianRegionalAuthorities";
 export interface RussianRegionalAuthorityRecord extends RussianCouncilRegionalAuthority {
@@ -170,8 +171,7 @@ export async function materializeRussianRegionalAuthorities(input: {
   if (needsSupport) {
     root = new ObjectId(current.rootId);
     receipt = (
-      await db
-        .collection<RussianDumaResultRecord>("russianDumaElectionResults")
+      await russianDumaElectionResultsCollection<RussianDumaResultRecord>(db)
         .find(
           {
             countryId: "RU",

@@ -6,6 +6,7 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import type { DemographicConfigOverride } from "@/lib/db/types/demographicConfigOverride";
 import { SEED_ERA_IDS, type EraId } from "@/lib/seeds/presetSelector";
+import { demographicConfigOverridesCollection } from "@/lib/db/repositories/demographicConfigOverrides";
 
 const ERAS = SEED_ERA_IDS;
 const COUNTRIES = ["US", "UK", "DE", "JP", "IE", "BR", "CN"] as const;
@@ -44,9 +45,9 @@ export async function POST(request: Request) {
       updatedBy: auth.admin.username,
     };
     // Replace the whole doc so clearing turnout on re-apply unsets it.
-    await db
-      .collection<DemographicConfigOverride>("demographicConfigOverrides")
-      .replaceOne({ _id: doc._id }, doc, { upsert: true });
+    await demographicConfigOverridesCollection(db).replaceOne({ _id: doc._id }, doc, {
+      upsert: true,
+    });
 
     return NextResponse.json({
       success: true,

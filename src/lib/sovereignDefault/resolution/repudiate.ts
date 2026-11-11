@@ -33,6 +33,7 @@ import {
 } from "../constants";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { sovereignCrisisDecisionsCollection } from "@/lib/db/repositories/sovereignCrisisDecisions";
 
 export interface RepudiateResolutionInput {
   countryCode: CountryId;
@@ -155,9 +156,10 @@ export async function applyRepudiateResolution(
       resolvedAt: new Date(realtimeMs),
       resolvedReason: "Sovereign debt repudiated (phase 6 auto-ratify)",
     };
-    await db
-      .collection<SovereignCrisisDecision>("sovereignCrisisDecisions")
-      .updateOne({ _id: decisionId }, { $set: decisionUpdate });
+    await sovereignCrisisDecisionsCollection(db).updateOne(
+      { _id: decisionId },
+      { $set: decisionUpdate }
+    );
   }
 
   await emitRepudiatedNews(countryCode, currentTurn, bondsAffected);
@@ -165,9 +167,7 @@ export async function applyRepudiateResolution(
   await emitMassCascadeAlert(db, countryCode, cascadeResult.totalCorpsInsolvent, currentTurn);
 
   // Phase 11b: executive personal political impact (Repudiate is the harshest).
-  const decision = await db
-    .collection<SovereignCrisisDecision>("sovereignCrisisDecisions")
-    .findOne({ _id: decisionId });
+  const decision = await sovereignCrisisDecisionsCollection(db).findOne({ _id: decisionId });
   await applyExecutivePoliticalImpact(db, decision?.proposingCharacterId ?? null, "repudiate");
 
   // Phase 11b: parliamentary countries auto-trigger a no-confidence vote

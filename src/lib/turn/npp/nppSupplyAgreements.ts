@@ -53,6 +53,7 @@ import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
 import { supplyAgreementsCollection } from "@/lib/db/repositories/supplyAgreements";
 import { supplyListingsCollection } from "@/lib/db/repositories/supplyListings";
+import { tradeEmbargoesCollection } from "@/lib/db/repositories/tradeEmbargoes";
 
 /** Fill below this: the seller cannot move output and will discount to lock a buyer. */
 export const NPP_CONTRACT_GLUT_FILL = 0.5;
@@ -1116,8 +1117,7 @@ export async function processNppSupplyAgreements(
       .find({})
       .toArray(),
     gameStateCollection(db).findOne({ _id: "current" }, { projection: { currentYear: 1 } }),
-    db
-      .collection<TradeEmbargo>("tradeEmbargoes")
+    tradeEmbargoesCollection(db)
       .find(
         {
           mode: "block",

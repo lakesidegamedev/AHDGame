@@ -137,6 +137,7 @@ import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSecto
 import type { Document } from "mongodb";
 import { ledgerEntriesCollection } from "@/lib/db/repositories/ledgerEntries";
 import { producerEconomyTurnsCollection } from "@/lib/db/repositories/producerEconomyTurns";
+import { producerHouseholdSourceCollection } from "@/lib/db/repositories/producerHouseholdSource";
 
 /** Owner decision 2026-10-18: households open with about 3 turns of wages. */
 export const HOUSEHOLD_OPENING_APPROVAL = "owner 2026-10-18: household opening cash about 3 turns";
@@ -349,11 +350,10 @@ export async function runFundedProducerTurn(
       ? new Map(
           Object.entries(
             (
-              await db
-                .collection<{ _id: string; shareByCountry?: Record<string, number> }>(
-                  "producerHouseholdSource"
-                )
-                .findOne({ _id: worldEpoch })
+              await producerHouseholdSourceCollection<{
+                _id: string;
+                shareByCountry?: Record<string, number>;
+              }>(db).findOne({ _id: worldEpoch })
             )?.shareByCountry ?? {}
           )
         )
@@ -1239,7 +1239,7 @@ export async function runFundedProducerTurn(
       : null;
   if (backgroundTrade) await recordBackgroundTrade(db, turn, traders, backgroundTrade);
   if (demand.householdSource && openingShareByCountry && openingShareByCountry.size === 0)
-    await db.collection<{ _id: string }>("producerHouseholdSource").updateOne(
+    await producerHouseholdSourceCollection<{ _id: string }>(db).updateOne(
       { _id: worldEpoch },
       {
         $setOnInsert: {

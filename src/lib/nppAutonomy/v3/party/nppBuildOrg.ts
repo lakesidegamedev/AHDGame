@@ -42,6 +42,8 @@ import {
 import { buildOrganizationBucket } from "@/lib/parties/commands/buildOrganizationBucket";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { partyStrengthPressureCollection } from "@/lib/db/repositories/partyStrengthPressure";
+import { orgRegLedgerCollection } from "@/lib/db/repositories/orgRegLedger";
 
 export type NppBuildOrgResult =
   { ok: true; orgGain: number; newOrg: number; psCost: number } | { ok: false; reason: string };
@@ -155,9 +157,9 @@ export async function nppBuildPartyOrg(
   // the state rate from its state treasury; without this the sweep would
   // organise for free while players pay. Priced before the PS spend so a
   // refusal costs the party nothing.
-  const pressureRow = await db
-    .collection<PartyStrengthPressure>("partyStrengthPressure")
-    .findOne({ _id: `${countryId}_${partySequentialId}_${stateId}` });
+  const pressureRow = await partyStrengthPressureCollection(db).findOne({
+    _id: `${countryId}_${partySequentialId}_${stateId}`,
+  });
   const sizeMultiplier =
     sweepCache?.sizeMultiplierByKey.get(sizeCacheKey(countryId, stateId)) ??
     (await resolveOrgBuildSizeMultiplier(db, countryId, stateId));
@@ -251,7 +253,7 @@ export async function nppBuildPartyOrg(
       };
     });
   if (receipts.length > 0) {
-    await db.collection<OrgRegLedger>("orgRegLedger").insertMany(receipts);
+    await orgRegLedgerCollection(db).insertMany(receipts);
   }
 
   return {

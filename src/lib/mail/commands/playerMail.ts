@@ -6,6 +6,7 @@ import { containsSlur } from "@/lib/moderation";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { usersCollection } from "@/lib/db/repositories/users";
 import { playerMailCollection } from "@/lib/db/repositories/playerMail";
+import { playerMailReportsCollection } from "@/lib/db/repositories/playerMailReports";
 
 type MailSender = Pick<Character, "_id" | "name" | "sequentialId" | "userId">;
 
@@ -169,9 +170,7 @@ export async function reportReceivedMail(db: Db, userId: string, mailId: string)
     throw forbidden("Forbidden");
   }
 
-  const existing = await db
-    .collection<PlayerMailReport>("playerMailReports")
-    .findOne({ mailId: mailOid });
+  const existing = await playerMailReportsCollection(db).findOne({ mailId: mailOid });
   if (existing) {
     throw new ApiError(409, "Already reported");
   }
@@ -195,7 +194,7 @@ export async function reportReceivedMail(db: Db, userId: string, mailId: string)
     createdAt: new Date(),
   };
 
-  await db.collection<Omit<PlayerMailReport, "_id">>("playerMailReports").insertOne(report);
+  await playerMailReportsCollection<Omit<PlayerMailReport, "_id">>(db).insertOne(report);
 
   const staffUsers = await usersCollection(db)
     .find(

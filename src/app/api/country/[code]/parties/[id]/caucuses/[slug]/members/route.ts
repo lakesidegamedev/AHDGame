@@ -18,6 +18,8 @@ import type { CaucusMembership, NPP, NPPRelationship } from "@/lib/db/types";
 import { isSameCountry } from "@/lib/api/sameCountry";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { caucusMembershipsCollection } from "@/lib/db/repositories/caucusMemberships";
+import { nppRelationshipsCollection } from "@/lib/db/repositories/nppRelationships";
 
 const joinSchema = z.discriminatedUnion("memberType", [
   z.object({
@@ -215,20 +217,17 @@ export async function GET(
 
     const [relationshipDocs, membershipDocs, latestCaucusRecruitment] = await Promise.all([
       relationshipKeys.length > 0
-        ? db
-            .collection<NPPRelationship>("nppRelationships")
+        ? nppRelationshipsCollection(db)
             .find({ _id: { $in: relationshipKeys } })
             .toArray()
         : Promise.resolve([] as NPPRelationship[]),
       nppIds.length > 0
-        ? db
-            .collection<CaucusMembership>("caucusMemberships")
+        ? caucusMembershipsCollection(db)
             .find({ memberType: "npp", memberId: { $in: nppIds } })
             .sort({ joinedAt: -1, updatedAt: -1 })
             .toArray()
         : Promise.resolve([] as CaucusMembership[]),
-      db
-        .collection<CaucusMembership>("caucusMemberships")
+      caucusMembershipsCollection(db)
         .find({ caucusId: caucus._id, memberType: "npp", joinedAt: { $ne: null } })
         .sort({ joinedAt: -1, updatedAt: -1 })
         .limit(1)
@@ -399,16 +398,14 @@ export async function POST(
       const now = new Date();
       const currentTurn = await getCurrentTurn(db);
       const [relationshipDoc, membershipDocs, latestCaucusRecruitment] = await Promise.all([
-        db
-          .collection<NPPRelationship>("nppRelationships")
-          .findOne({ _id: `${callerId.toString()}_${memberOid.toString()}` }),
-        db
-          .collection<CaucusMembership>("caucusMemberships")
+        nppRelationshipsCollection(db).findOne({
+          _id: `${callerId.toString()}_${memberOid.toString()}`,
+        }),
+        caucusMembershipsCollection(db)
           .find({ memberType: "npp", memberId: memberOid })
           .sort({ joinedAt: -1, updatedAt: -1 })
           .toArray(),
-        db
-          .collection<CaucusMembership>("caucusMemberships")
+        caucusMembershipsCollection(db)
           .find({ caucusId: caucus._id, memberType: "npp", joinedAt: { $ne: null } })
           .sort({ joinedAt: -1, updatedAt: -1 })
           .limit(1)
@@ -443,16 +440,17 @@ export async function POST(
     // Reactivate or insert the membership row.
     const now = new Date();
     const currentTurn = await getCurrentTurn(db);
-    const existing = await db
-      .collection<CaucusMembership>("caucusMemberships")
-      .findOne({ caucusId: caucus._id, memberId: memberOid });
+    const existing = await caucusMembershipsCollection(db).findOne({
+      caucusId: caucus._id,
+      memberId: memberOid,
+    });
     if (existing && existing.status === "active") {
       return errorResponse(409, "Already a member of this caucus.", {
         extra: { membershipId: existing._id.toString() },
       });
     }
     if (existing) {
-      await db.collection<CaucusMembership>("caucusMemberships").updateOne(
+      await caucusMembershipsCollection(db).updateOne(
         { _id: existing._id },
         {
           $set: {
@@ -466,7 +464,7 @@ export async function POST(
         }
       );
     } else {
-      await db.collection<CaucusMembership>("caucusMemberships").insertOne({
+      await caucusMembershipsCollection(db).insertOne({
         _id: new ObjectId(),
         caucusId: caucus._id,
         countryId,

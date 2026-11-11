@@ -32,6 +32,8 @@ import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { nppEndorsementsCollection } from "@/lib/db/repositories/nppEndorsements";
+import { nppRelationshipsCollection } from "@/lib/db/repositories/nppRelationships";
+import { capitalActionLogsCollection } from "@/lib/db/repositories/capitalActionLogs";
 
 export class DirectActionBalanceConflictError extends Error {}
 
@@ -81,7 +83,7 @@ export async function applyNppDirectAction(
         },
       }
     ),
-    db.collection<NPPRelationship>("nppRelationships").findOne({ _id: relationshipKey }),
+    nppRelationshipsCollection(db).findOne({ _id: relationshipKey }),
     gameStateCollection(db).findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
   ]);
 
@@ -214,7 +216,7 @@ export async function applyNppDirectAction(
 
     onActionSpent?.();
 
-    await db.collection<NPPRelationship>("nppRelationships").updateOne(
+    await nppRelationshipsCollection(db).updateOne(
       { _id: relationshipKey },
       {
         $set: {
@@ -287,7 +289,7 @@ export async function applyNppDirectAction(
       );
     }
 
-    await db.collection<CapitalActionLog>("capitalActionLogs").insertOne(
+    await capitalActionLogsCollection(db).insertOne(
       {
         _id: new ObjectId(),
         characterId,
@@ -345,15 +347,15 @@ export async function applyNppDirectAction(
           );
         }
         if (rollbackSnapshot.relationship) {
-          await db
-            .collection<NPPRelationship>("nppRelationships")
-            .replaceOne({ _id: relationshipKey }, rollbackSnapshot.relationship, {
+          await nppRelationshipsCollection(db).replaceOne(
+            { _id: relationshipKey },
+            rollbackSnapshot.relationship,
+            {
               upsert: true,
-            });
+            }
+          );
         } else {
-          await db
-            .collection<NPPRelationship>("nppRelationships")
-            .deleteOne({ _id: relationshipKey });
+          await nppRelationshipsCollection(db).deleteOne({ _id: relationshipKey });
         }
         if (
           plan.sideEffects.favorabilityDelta !== undefined ||

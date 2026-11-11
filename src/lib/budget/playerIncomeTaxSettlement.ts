@@ -23,6 +23,7 @@ import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 import { playerIncomeTaxAssessmentsCollection } from "@/lib/db/repositories/playerIncomeTaxAssessments";
+import { playerIncomeTaxBatchesCollection } from "@/lib/db/repositories/playerIncomeTaxBatches";
 
 interface Payer {
   ownerCollection: Assessment["ownerCollection"];
@@ -70,7 +71,7 @@ const receiptGuard = (turn: number) => ({
 
 /** All monetary writes are batched; a failed wallet guard cannot block another payer. */
 async function deliver(db: Db, original: Batch): Promise<void> {
-  const batches = db.collection<Batch>("playerIncomeTaxBatches");
+  const batches = playerIncomeTaxBatchesCollection<Batch>(db);
   let batch = original;
   if (batch.stage === "complete") return;
   const identity = { _id: batch._id, key: batch.key };
@@ -518,7 +519,7 @@ export async function settlePlayerIncomeTaxAssessments(
   turnLengthMinutes: number,
   forexEnabled = false
 ): Promise<void> {
-  const batches = db.collection<Batch>("playerIncomeTaxBatches");
+  const batches = playerIncomeTaxBatchesCollection<Batch>(db);
   let active = await batches.findOne({ _id: worldId });
   if (active && active.stage !== "complete") {
     await deliver(db, active);

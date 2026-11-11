@@ -32,6 +32,7 @@ import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { resolvePrimaryTaxRate } from "./rules/primaryTaxRate";
 import { cabinetSettingsCollection } from "@/lib/db/repositories/cabinetSettings";
+import { regionalBudgetsCollection } from "@/lib/db/repositories/regionalBudgets";
 
 // ── Pure calculation ─────────────────────────────────────────────────────────
 
@@ -314,8 +315,7 @@ export async function processOnePartyRegionalBudgets(
     policiesByRegion.set(policy.stateId, existing);
   }
 
-  const existingBudgets = await db
-    .collection<RegionalBudget>("regionalBudgets")
+  const existingBudgets = await regionalBudgetsCollection(db)
     .find({ _id: { $in: regionIds } })
     .toArray();
   const budgetMap = new Map(existingBudgets.map((b) => [b._id, b]));
@@ -459,7 +459,7 @@ export async function processOnePartyRegionalBudgets(
     await statePoliciesCollection(db).bulkWrite(statePolicyOps);
   }
   if (regionalBudgetOps.length > 0) {
-    await db.collection<RegionalBudget>("regionalBudgets").bulkWrite(regionalBudgetOps);
+    await regionalBudgetsCollection(db).bulkWrite(regionalBudgetOps);
   }
 
   return { regionsProcessed };

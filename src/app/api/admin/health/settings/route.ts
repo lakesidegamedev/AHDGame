@@ -5,6 +5,7 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { z } from "zod";
 import type { SystemSettings } from "@/lib/db/types";
+import { systemSettingsCollection } from "@/lib/db/repositories/systemSettings";
 
 const patchSchema = z.object({
   integrityCheckCadenceTurns: z.number().int().min(1).max(48),
@@ -21,9 +22,7 @@ export async function GET() {
     if (!auth.ok) return auth.response;
 
     const db = await getDb();
-    const config = await db
-      .collection<SystemSettings>("systemSettings")
-      .findOne({ _id: "healthConfig" });
+    const config = await systemSettingsCollection(db).findOne({ _id: "healthConfig" });
 
     return NextResponse.json({
       integrityCheckCadenceTurns: config?.integrityCheckCadenceTurns ?? 1,
@@ -44,7 +43,7 @@ export async function PATCH(request: Request) {
     }
 
     const db = await getDb();
-    await db.collection<SystemSettings>("systemSettings").updateOne(
+    await systemSettingsCollection(db).updateOne(
       { _id: "healthConfig" },
       {
         $set: {

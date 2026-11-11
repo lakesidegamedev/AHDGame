@@ -60,6 +60,8 @@ import { billWhipsCollection } from "@/lib/db/repositories/billWhips";
 import { speakerElectionsCollection } from "@/lib/db/repositories/speakerElections";
 import type { Document } from "mongodb";
 import { leadershipElectionsCollection } from "@/lib/db/repositories/leadershipElections";
+import { impeachmentsCollection } from "@/lib/db/repositories/impeachments";
+import { speakerVacateMotionsCollection } from "@/lib/db/repositories/speakerVacateMotions";
 
 export const caucusWhipSchema = z
   .object({
@@ -411,9 +413,10 @@ export async function issueCaucusWhip({
         { status: 400 }
       );
     }
-    const motion = await db
-      .collection<SpeakerVacateMotion>("speakerVacateMotions")
-      .findOne({ _id: "current", status: "voting" });
+    const motion = await speakerVacateMotionsCollection(db).findOne({
+      _id: "current",
+      status: "voting",
+    });
     // Resolution is lazy (on read of the Speaker page), so a motion can sit in
     // "voting" past its deadline. Gate on the clock as well as the status, or
     // a chair could whip a motion that is already over.
@@ -432,9 +435,11 @@ export async function issueCaucusWhip({
     if (!targetOid) {
       return NextResponse.json(badRequest("Invalid target ID").toJson(), { status: 400 });
     }
-    const impeachment = await db
-      .collection<Impeachment>("impeachments")
-      .findOne({ _id: targetOid, countryId, stage: { $in: ["house", "senate"] } });
+    const impeachment = await impeachmentsCollection(db).findOne({
+      _id: targetOid,
+      countryId,
+      stage: { $in: ["house", "senate"] },
+    });
     if (!impeachment) {
       return NextResponse.json(
         notFound("Impeachment not found or no longer open for voting").toJson(),

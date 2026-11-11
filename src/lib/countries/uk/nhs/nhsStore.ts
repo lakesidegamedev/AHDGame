@@ -7,6 +7,7 @@ import {
   tickNhsQuality,
 } from "@/lib/countries/uk/nhs/nhsQuality";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { ukNhsStateCollection } from "@/lib/db/repositories/ukNhsState";
 
 /**
  * Persistence and per-turn drive for the UK NHS quality score.
@@ -17,7 +18,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
  */
 
 function getUKNhsCollection(db: Db) {
-  return db.collection<UKNhsState>("ukNhsState");
+  return ukNhsStateCollection<UKNhsState>(db);
 }
 
 export async function getNhsQuality(db: Db): Promise<number> {

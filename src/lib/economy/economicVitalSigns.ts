@@ -61,6 +61,8 @@ import { commoditySourcingFlowsCollection } from "@/lib/db/repositories/commodit
 import { stockExchangeSnapshotsCollection } from "@/lib/db/repositories/stockExchangeSnapshots";
 import { shareTradeHistoryCollection } from "@/lib/db/repositories/shareTradeHistory";
 import { ledgerReconciliationsCollection } from "@/lib/db/repositories/ledgerReconciliations";
+import { wealthListSnapshotsCollection } from "@/lib/db/repositories/wealthListSnapshots";
+import { balanceSnapshotsCollection } from "@/lib/db/repositories/balanceSnapshots";
 export {
   summarizeLedgerTurnover,
   computeEconomicVitalSigns,
@@ -319,10 +321,10 @@ export async function snapshotEconomicVitalSigns(
       .toArray(),
     shareOrdersPromise,
     bondsCollection(db).find({ matured: false }).toArray(),
-    db.collection<WealthListSnapshot>("wealthListSnapshots").findOne({ _id: "global" }),
+    wealthListSnapshotsCollection(db).findOne({ _id: "global" }),
     moneySupplySnapshotsCollection(db).find({ turn }).toArray(),
     ledgerReconciliationsCollection<LedgerReconciliation>(db).findOne({ turn }),
-    db.collection<BalanceSnapshot>("balanceSnapshots").findOne({ turn }),
+    balanceSnapshotsCollection<BalanceSnapshot>(db).findOne({ turn }),
     loadLedgerTurnover(db, windowStart, turn),
     ledgerEntriesCollection(db).countDocuments({ turn: { $gte: windowStart, $lte: turn } }),
     resolveFormalizedGroups(db),

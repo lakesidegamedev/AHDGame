@@ -10,6 +10,7 @@ import {
 import type { ResetMetricSnapshot } from "./rules/snapshot";
 import type { OpeningMetricObservation } from "./rules/openingObservation";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { resetMetricSnapshotsCollection } from "@/lib/db/repositories/resetMetricSnapshots";
 
 export interface ResetMetricDetailRead {
   history: ResetMetricHistoryPoint[];
@@ -53,7 +54,7 @@ export async function readResetMetricDetail(
 ): Promise<ResetMetricDetailRead | null> {
   const metric = primaryMetricById(metricId);
   if (!metric) return null;
-  const collection = db.collection<ResetMetricSnapshot>("resetMetricSnapshots");
+  const collection = resetMetricSnapshotsCollection<ResetMetricSnapshot>(db);
   if (metric.aggregation === "national") {
     const national = await collection.findOne(
       { _id: `${board.countryId}:national`, worldId: board.worldId },

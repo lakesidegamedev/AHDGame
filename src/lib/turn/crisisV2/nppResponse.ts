@@ -25,6 +25,7 @@ import { officeHolderProvider } from "./holderProviders";
 import { getCrisisDefinition } from "./registry";
 import { loadActiveCrisisDocs, resolveCrisisCountries } from "./spillover";
 import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
+import { crisisLeverUsesCollection } from "@/lib/db/repositories/crisisLeverUses";
 
 const COMPONENT = "crisisV2NppResponse";
 
@@ -114,8 +115,7 @@ async function loadLastPulls(
   crisisIds: readonly ObjectId[],
   holderIds: readonly string[]
 ): Promise<Map<string, number>> {
-  const rows = await db
-    .collection<CrisisLeverUse>("crisisLeverUses")
+  const rows = await crisisLeverUsesCollection(db)
     .find(
       { crisisId: { $in: [...crisisIds] }, holderId: { $in: [...holderIds] } },
       { projection: { crisisId: 1, leverId: 1, holderId: 1, submittedTurn: 1 } }
@@ -148,8 +148,7 @@ async function loadStanceTaken(
     countryIds.add(countryId);
   }
   if (crisisIds.length === 0) return new Set();
-  const rows = await db
-    .collection<CrisisLeverUse>("crisisLeverUses")
+  const rows = await crisisLeverUsesCollection(db)
     .find(
       {
         crisisId: { $in: crisisIds },

@@ -3,6 +3,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import type { OrgRegLedger, PoliticalParty, StatePartyOrg } from "@/lib/db/types";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { orgRegLedgerCollection } from "@/lib/db/repositories/orgRegLedger";
 
 export interface StateRegLedgerResult {
   seeded: boolean;
@@ -79,8 +80,7 @@ export async function getStateRegLedger(
   // generated in array order), and only then cut to the lookback window. The
   // sort stays on `turn` alone so it is served by `reg_ledger_lookup`; the
   // within-turn ordering is resolved here rather than by a blocking sort.
-  const ledgerRows = await db
-    .collection<OrgRegLedger>("orgRegLedger")
+  const ledgerRows = await orgRegLedgerCollection(db)
     .find({ countryId, stateId, partyId: top.partyId, metric: "reg" })
     .sort({ turn: -1 })
     .limit(lookback * MAX_REG_ROWS_PER_TURN)

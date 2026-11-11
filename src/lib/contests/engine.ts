@@ -83,6 +83,8 @@ import { corporationHistoryCollection } from "@/lib/db/repositories/corporationH
 import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
 import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
 import { playerEndorsementsCollection } from "@/lib/db/repositories/playerEndorsements";
+import { stateApprovalHistoryCollection } from "@/lib/db/repositories/stateApprovalHistory";
+import { altLinksCollection } from "@/lib/db/repositories/altLinks";
 
 type PlayerCharacter = Pick<
   Character,
@@ -373,8 +375,7 @@ async function loadStateApprovals(
 ): Promise<Map<string, { approval: number; name: string }>> {
   if (stateIds.length === 0) return new Map();
   const [approvals, states] = await Promise.all([
-    db
-      .collection<StateApprovalHistory>("stateApprovalHistory")
+    stateApprovalHistoryCollection(db)
       .find({ _id: { $in: stateIds } }, { projection: { _id: 1, countryId: 1, approvalRating: 1 } })
       .toArray(),
     statesCollection(db)
@@ -1040,8 +1041,7 @@ async function referralStandings(
   ];
   if (referrerIds.length === 0) return [];
 
-  const links = await db
-    .collection<AltLink>("altLinks")
+  const links = await altLinksCollection(db)
     .find(
       {
         confidence: { $gte: REFERRAL_ALT_LINK_THRESHOLD },

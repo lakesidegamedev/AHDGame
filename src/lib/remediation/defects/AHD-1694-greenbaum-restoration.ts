@@ -15,6 +15,7 @@ import type {
 } from "../types";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { depositInsuranceFundsCollection } from "@/lib/db/repositories/depositInsuranceFunds";
 
 /**
  * Remediation for the Greenbaum Group incident (sequential 493).
@@ -122,9 +123,10 @@ async function plan(db: Db): Promise<HealPlan> {
         : `${NAME}: reopen as retail would be refused: ${eligibility.reasons.join("; ")}`
     );
   }
-  const fund = await db
-    .collection<{ _id: string; balance?: number }>("depositInsuranceFunds")
-    .findOne({ _id: FUND_ID }, { projection: { balance: 1 } });
+  const fund = await depositInsuranceFundsCollection<{ _id: string; balance?: number }>(db).findOne(
+    { _id: FUND_ID },
+    { projection: { balance: 1 } }
+  );
   return {
     affected: (o.refund ? 1 : 0) + (o.reopen ? 1 : 0),
     touched: [

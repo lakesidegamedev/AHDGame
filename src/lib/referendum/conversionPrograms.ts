@@ -11,6 +11,10 @@ import type { ResetLawOpeningBoard } from "@/lib/resetLegislation/rules/openingB
 import type { RegionalBudget } from "@/lib/db/types/regionalBudget";
 import { releasePromotedRegionalClaims } from "./secede/rules/lawSuccession";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { regionalBudgetsCollection } from "@/lib/db/repositories/regionalBudgets";
+import { resetLawProgramsCollection } from "@/lib/db/repositories/resetLawPrograms";
+import { resetDepartmentAccountsCollection } from "@/lib/db/repositories/resetDepartmentAccounts";
+import { resetLawOpeningBoardsCollection } from "@/lib/db/repositories/resetLawOpeningBoards";
 
 export async function convertLawPrograms(
   db: Db,
@@ -18,12 +22,11 @@ export async function convertLawPrograms(
 ) {
   const { regionId, countryId, scale = 1, independent = false } = input;
   const nationalBoard = independent
-    ? await db
-        .collection<ResetLawOpeningBoard>("resetLawOpeningBoards")
-        .findOne({ _id: `${countryId}:national` })
+    ? await resetLawOpeningBoardsCollection<ResetLawOpeningBoard>(db).findOne({
+        _id: `${countryId}:national`,
+      })
     : null;
-  const programs = await db
-    .collection<ResetLawProgramDocument>("resetLawPrograms")
+  const programs = await resetLawProgramsCollection<ResetLawProgramDocument>(db)
     .find({
       country: "UK",
       ...(nationalBoard ? { worldId: nationalBoard.worldId } : {}),
@@ -41,8 +44,7 @@ export async function convertLawPrograms(
         .find({ countryId: "UK" }, { projection: { gdp: 1 } })
         .toArray()
     : [];
-  const accounts = await db
-    .collection<ResetDepartmentAccountSnapshot>("resetDepartmentAccounts")
+  const accounts = await resetDepartmentAccountsCollection<ResetDepartmentAccountSnapshot>(db)
     .find({ countryId })
     .toArray();
   const nationalFamilies =
@@ -72,7 +74,7 @@ export async function convertLawPrograms(
     changedAccounts.add(account._id);
   }
   if (changedAccounts.size)
-    await db.collection<ResetDepartmentAccountSnapshot>("resetDepartmentAccounts").bulkWrite(
+    await resetDepartmentAccountsCollection<ResetDepartmentAccountSnapshot>(db).bulkWrite(
       accounts
         .filter((account) => changedAccounts.has(account._id))
         .map((account) => ({
@@ -98,16 +100,13 @@ export async function convertLawPrograms(
       : {}),
   });
   if (updates.length)
-    await db.collection<ResetLawProgramDocument>("resetLawPrograms").bulkWrite(updates);
+    await resetLawProgramsCollection<ResetLawProgramDocument>(db).bulkWrite(updates);
   if (removals.length)
-    await db
-      .collection<ResetLawProgramDocument>("resetLawPrograms")
-      .deleteMany({ _id: { $in: removals } });
+    await resetLawProgramsCollection<ResetLawProgramDocument>(db).deleteMany({
+      _id: { $in: removals },
+    });
   if (promotedRegionalIds.length) {
-    const budgets = await db
-      .collection<RegionalBudget>("regionalBudgets")
-      .find({ countryId })
-      .toArray();
+    const budgets = await regionalBudgetsCollection(db).find({ countryId }).toArray();
     const released = budgets.map((budget) => ({
       updateOne: {
         filter: { _id: budget._id },
@@ -121,6 +120,6 @@ export async function convertLawPrograms(
         },
       },
     }));
-    if (released.length) await db.collection<RegionalBudget>("regionalBudgets").bulkWrite(released);
+    if (released.length) await regionalBudgetsCollection(db).bulkWrite(released);
   }
 }

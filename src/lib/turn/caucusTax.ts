@@ -32,6 +32,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { caucusesCollection } from "@/lib/db/repositories/caucuses";
+import { caucusMembershipsCollection } from "@/lib/db/repositories/caucusMemberships";
 
 interface CaucusTaxResult {
   caucusesProcessed: number;
@@ -96,8 +97,7 @@ export async function processCaucusTax(
     let credited = false;
     const landedDebits: LandedDebit[] = [];
     try {
-      const memberships = await db
-        .collection<CaucusMembership>("caucusMemberships")
+      const memberships = await caucusMembershipsCollection(db)
         .find({ caucusId: caucus._id, status: "active" })
         .toArray();
       if (memberships.length === 0) continue;

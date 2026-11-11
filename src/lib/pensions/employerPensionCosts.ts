@@ -22,6 +22,7 @@ import {
   pensionTopUpForTurn,
 } from "./rules";
 import { PENSION_SCHEMES } from "./schemeAssets";
+import { collectiveAgreementsCollection } from "@/lib/db/repositories/collectiveAgreements";
 
 export interface EmployerPensionCostAnchorPerTurn {
   /** The bargained rate applied to the covered wage bill. */
@@ -54,8 +55,7 @@ export async function employerPensionCostForTurn(
   currentTurn: number,
   wageBillAnchorPerTurnBySectorId: Map<string, number>
 ): Promise<EmployerPensionCostAnchorPerTurn> {
-  const agreements = await db
-    .collection<CollectiveAgreement>("collectiveAgreements")
+  const agreements = await collectiveAgreementsCollection(db)
     .find({
       ...activeCollectiveAgreementFilter(currentTurn),
       employerCorporationId: corporationId,

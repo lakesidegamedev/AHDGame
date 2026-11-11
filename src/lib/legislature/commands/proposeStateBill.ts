@@ -25,6 +25,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
+import { regionalBudgetsCollection } from "@/lib/db/repositories/regionalBudgets";
 
 const VOTING_DURATION_HOURS = 24;
 
@@ -308,9 +309,7 @@ export async function proposeStateBill(
     turnsOverBudget: number;
   } | null = null;
   if (postCountryConfig.subNationalChamber?.regionalModel) {
-    const budgetDoc = await db
-      .collection<RegionalBudget>("regionalBudgets")
-      .findOne({ _id: stateId });
+    const budgetDoc = await regionalBudgetsCollection(db).findOne({ _id: stateId });
     if (budgetDoc) {
       budget = {
         totalBudget: budgetDoc.totalBudget,

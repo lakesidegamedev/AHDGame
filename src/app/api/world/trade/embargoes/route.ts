@@ -25,6 +25,7 @@ import {
 import { TRADE_MINISTER_POSITION_BY_COUNTRY } from "@/lib/constants/internationalOrganizations";
 import { TRADE_EMBARGO_MAX_DURATION_TURNS } from "@/lib/trade/constants";
 import { billsCollection } from "@/lib/db/repositories/bills";
+import { tradeEmbargoesCollection } from "@/lib/db/repositories/tradeEmbargoes";
 
 const imposeSchema = z.object({
   sourceCountry: z.enum(ZOD_COUNTRY_ENUM),
@@ -144,10 +145,7 @@ export async function GET(request: Request) {
         ...(country ? [{ $or: [{ sourceCountry: country }, { targetCountry: country }] }] : []),
       ],
     } as Filter<TradeEmbargo>;
-    const ministerRows = await db
-      .collection<TradeEmbargo>("tradeEmbargoes")
-      .find(ministerFilter)
-      .toArray();
+    const ministerRows = await tradeEmbargoesCollection(db).find(ministerFilter).toArray();
 
     const signedEmbargoBills = await billsCollection(db)
       .find(
@@ -253,9 +251,7 @@ export async function DELETE(request: Request) {
     if (!id || !ObjectId.isValid(id)) throw badRequest("Invalid embargo id");
 
     const db = await getDb();
-    const embargo = await db
-      .collection<TradeEmbargo>("tradeEmbargoes")
-      .findOne({ _id: new ObjectId(id) });
+    const embargo = await tradeEmbargoesCollection(db).findOne({ _id: new ObjectId(id) });
     if (!embargo) throw notFound("Embargo not found");
 
     const minister = await requireTradeMinister(

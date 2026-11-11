@@ -10,6 +10,7 @@ import { indexFundPositionsCollection } from "@/lib/db/repositories/indexFundPos
 import { indexFundTransactionsCollection } from "@/lib/db/repositories/indexFundTransactions";
 import { indexFundRedemptionQueueCollection } from "@/lib/db/repositories/indexFundRedemptionQueue";
 import { indexFundSnapshotsCollection } from "@/lib/db/repositories/indexFundSnapshots";
+import { migrationsRunCollection } from "@/lib/db/repositories/migrationsRun";
 
 async function releaseFundHeldShares(db: Awaited<ReturnType<typeof getDb>>): Promise<{
   corporations: number;
@@ -103,7 +104,7 @@ export async function DELETE() {
     ]);
 
     // Also remove the bootstrap migration markers so re-enabling re-seeds.
-    await db.collection<{ _id: string }>("migrationsRun").deleteMany({
+    await migrationsRunCollection<{ _id: string }>(db).deleteMany({
       _id: {
         $in: [
           "2026-06-01-index-fund-foundation",

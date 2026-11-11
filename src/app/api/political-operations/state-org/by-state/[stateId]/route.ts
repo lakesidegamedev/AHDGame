@@ -11,6 +11,7 @@ import { loadCampaignFxRate } from "@/lib/currency/campaignFxRate";
 import { statePresenceNextCost } from "@/lib/campaigns/statePresenceCost";
 import type { CharacterStateOrg } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { characterStateOrgCollection } from "@/lib/db/repositories/characterStateOrg";
 
 const VALID_STATES = new Set(ELECTORAL_VOTE_UNITS.map((u) => u.stateId));
 
@@ -53,15 +54,15 @@ async function handleGET(_req: Request, { params }: RouteParams) {
     let viewerLevel = 0;
     let viewerNextCost: number | null = null;
     if (viewer) {
-      const own = await db
-        .collection<CharacterStateOrg>("characterStateOrg")
-        .findOne({ characterId: viewer._id, stateId }, { projection: { level: 1 } });
+      const own = await characterStateOrgCollection(db).findOne(
+        { characterId: viewer._id, stateId },
+        { projection: { level: 1 } }
+      );
       viewerLevel = own?.level ?? 0;
       viewerNextCost = statePresenceNextCost(viewerLevel, await loadCampaignFxRate(db, viewer));
     }
 
-    const rows = await db
-      .collection<CharacterStateOrg>("characterStateOrg")
+    const rows = await characterStateOrgCollection(db)
       .find({ stateId, level: { $gt: 0 } })
       .toArray();
     if (rows.length === 0) {

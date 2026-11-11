@@ -61,6 +61,7 @@ import { cabinetNominationsCollection } from "@/lib/db/repositories/cabinetNomin
 import type { Document } from "mongodb";
 import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
 import { billWhipsCollection } from "@/lib/db/repositories/billWhips";
+import { impeachmentsCollection } from "@/lib/db/repositories/impeachments";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; partyId: string }>;
@@ -199,9 +200,11 @@ export async function POST(request: Request, { params }: RouteParams) {
         );
       }
     } else if (targetType === "impeachmentVote") {
-      const impeachment = await db
-        .collection<Impeachment>("impeachments")
-        .findOne({ _id: targetOid, countryId, stage: { $in: ["house", "senate"] } });
+      const impeachment = await impeachmentsCollection(db).findOne({
+        _id: targetOid,
+        countryId,
+        stage: { $in: ["house", "senate"] },
+      });
       if (!impeachment) {
         return errorResponse(404, "Impeachment not found or no longer open for voting");
       }
