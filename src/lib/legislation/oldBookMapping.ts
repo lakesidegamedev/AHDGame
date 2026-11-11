@@ -7,6 +7,8 @@
  * - `leftLow`: the old left end is the lighter hand, so it maps low.
  *
  * Plain data and pure functions: no database, clock or randomness.
+ * Only for local singleplayer saves, which are never reset. A reset replaces
+ * every such id and the residue scan fails on any that survive.
  */
 
 export type LadderDirection = "leftHigh" | "leftLow";

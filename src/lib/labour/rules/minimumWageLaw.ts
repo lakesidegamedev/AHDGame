@@ -80,6 +80,8 @@ export const MINIMUM_WAGE_LAW_SCALES: Readonly<Record<string, MinimumWageLawScal
  * Old-generation laws that saved worlds still have enacted after their country
  * moved to the one law book. New worlds never seed them, so no catalog lists
  * them; without these a saved world's enacted floor would silently vanish.
+ * Only for local singleplayer saves, which are never reset. A reset replaces
+ * every such id and the residue scan fails on any that survive.
  */
 export const SAVED_WORLD_MINIMUM_WAGE_LAW_SCALES: Readonly<Record<string, MinimumWageLawScale>> = {
   // EUR/hour. EUR 12 is 0.55 of the median.

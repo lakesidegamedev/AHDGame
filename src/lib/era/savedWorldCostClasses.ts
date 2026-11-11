@@ -5,6 +5,8 @@ import type { CostClass } from "./legislationCostCatalog";
  * saved worlds still have enacted. The budget prices those laws every turn;
  * without a class an id reads as "none" and its spending line drops to zero.
  * Values are the classes these types carried while they were still seeded.
+ * Only for local singleplayer saves, which are never reset. A reset replaces
+ * every such id and the residue scan fails on any that survive.
  */
 export const SAVED_WORLD_COST_CLASS: Readonly<Record<string, CostClass>> = {
   cn_academic_pressure_reform: "none",
