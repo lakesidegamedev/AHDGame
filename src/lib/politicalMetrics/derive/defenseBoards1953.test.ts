@@ -12,7 +12,6 @@ const EXPECTED_COUNTRIES = [
   // dedicated seed dirs
   "AT",
   "BR",
-  "CN",
   "ES",
   "FI",
   "FR",
@@ -59,7 +58,7 @@ describe("DEFENSE_BOARDS_1953", () => {
   });
 
   it("never contains playable countries — they have authored anchors already", () => {
-    for (const playable of ["US", "UK", "RU", "DD", "DE", "JP"]) {
+    for (const playable of ["US", "UK", "RU", "DD", "DE", "JP", "CN"]) {
       expect(DEFENSE_BOARDS_1953[playable], playable).toBeUndefined();
     }
   });
@@ -92,9 +91,6 @@ describe("DEFENSE_BOARDS_1953", () => {
     // Sweden's armed neutrality: strong industry and forces, no projection.
     expect(DEFENSE_BOARDS_1953.SE["defense.defenseIndustry"]).toBeGreaterThan(65);
     expect(DEFENSE_BOARDS_1953.SE["defense.projection"]).toBeLessThan(25);
-    // The PLA after Korea is enormous; the PRC holds no UN seat in 1953.
-    expect(DEFENSE_BOARDS_1953.CN["defense.armedForces"]).toBeGreaterThan(75);
-    expect(DEFENSE_BOARDS_1953.CN["defense.institutions"]).toBeLessThan(25);
     // Tito split with Stalin in 1948 — Yugoslavia must not read as a satellite.
     expect(DEFENSE_BOARDS_1953.YU["defense.diplomacy"]).toBeGreaterThan(
       DEFENSE_BOARDS_1953.BG["defense.diplomacy"]

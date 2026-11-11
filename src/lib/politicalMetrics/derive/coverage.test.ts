@@ -79,7 +79,7 @@ describe("emitted non-playable board file", () => {
     let regionCount = 0;
     for (const presetId of presets) {
       const countries = Object.keys(NON_PLAYABLE_BOARDS[presetId]);
-      expect(countries.length, presetId).toBeGreaterThanOrEqual(21);
+      expect(countries.length, presetId).toBeGreaterThanOrEqual(20);
       for (const countryId of countries) {
         const byRegion = NON_PLAYABLE_BOARDS[presetId][countryId];
         expect(Object.keys(byRegion).length, countryId).toBeGreaterThan(0);
@@ -134,7 +134,7 @@ describe("emitted non-playable board file", () => {
   it("excludes playable countries, which seed from anchors instead", async () => {
     const NON_PLAYABLE_BOARDS = (await import("../seeds/nonPlayableBoards")).getNonPlayableBoards();
     for (const byCountry of Object.values(NON_PLAYABLE_BOARDS)) {
-      for (const playable of ["US", "UK", "RU", "DD", "DE", "JP"]) {
+      for (const playable of ["US", "UK", "RU", "DD", "DE", "JP", "CN"]) {
         expect(byCountry[playable], playable).toBeUndefined();
       }
     }

@@ -20,6 +20,7 @@ import { ukRegions1953 } from "../../src/lib/seeds/uk/ukRegions1953";
 import { ruRegions1953 } from "../../src/lib/seeds/ru/ruRegions1953";
 import { ddRegions1953 } from "../../src/lib/seeds/dd/ddRegions1953";
 import { deRegions1953 } from "../../src/lib/countries/de/data/deRegions1953";
+import { cnRegions1953 } from "../../src/lib/countries/cn/data/cnRegions1953";
 import { jpRegions1953 } from "../../src/lib/countries/jp/data/jpRegions1953";
 
 const COUNTRIES = ["US", "UK", "RU", "DD"] as const;
@@ -42,6 +43,7 @@ const POPULATIONS: Record<PoliticalMetricsCountryId, Map<string, number>> = {
   DD: new Map(ddRegions1953.map((s) => [s._id, s.population ?? 0])),
   DE: new Map(deRegions1953.map((s) => [s._id, s.population ?? 0])),
   JP: new Map(jpRegions1953.map((s) => [s._id, s.population ?? 0])),
+  CN: new Map(cnRegions1953.map((s) => [s._id, s.population ?? 0])),
 };
 
 const lines: string[] = [];

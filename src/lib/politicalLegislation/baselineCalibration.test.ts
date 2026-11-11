@@ -13,7 +13,7 @@ import { getCatalog } from "./catalog";
 import type { LawCountryId } from "./types";
 
 /** The goldens come from the 1953 catalog documents; the DE and JP books open in a later era. */
-type CalibratedCountryId = Exclude<LawCountryId, "DE" | "JP">;
+type CalibratedCountryId = Exclude<LawCountryId, "DE" | "JP" | "CN">;
 
 const BASES: Record<CalibratedCountryId, FiscalBase> = {
   US: { gdp: 397_100_000_000, population: 151_300_000 },

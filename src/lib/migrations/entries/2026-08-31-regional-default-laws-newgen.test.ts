@@ -11,6 +11,7 @@ const REGIONS: Record<string, string[]> = {
   RU: ["MOW"],
   DE: ["BY", "NW"],
   JP: ["TOH", "KAN"],
+  CN: ["BEJ", "SHA"],
   DD: ["BEO", "MV", "BB", "ST", "SN", "TH"],
   CA: ["CA_ON", "CA_QC"],
 };
