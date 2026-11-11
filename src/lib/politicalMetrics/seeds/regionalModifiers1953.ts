@@ -213,4 +213,6 @@ export const REGIONAL_MODIFIERS_1953: Record<
       "environment.urbanAir": 3,
     },
   },
+  // No hand-authored modifiers: Germany's regional texture is derived from its Land seeds.
+  DE: {},
 };

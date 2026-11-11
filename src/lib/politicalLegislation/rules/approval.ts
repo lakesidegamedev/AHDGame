@@ -38,6 +38,7 @@ export const APPROVAL_NEUTRAL_SCORE: Record<string, number> = {
   UK: 63.06,
   RU: 58.91,
   DD: 55.0, // section 2 calibration: 70/30 blend of the authored DD 1953 board
+  DE: 55.21,
 };
 
 /**

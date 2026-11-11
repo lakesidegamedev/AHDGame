@@ -102,10 +102,10 @@ describe("emitted non-playable board file", () => {
     // The Phase 0 guarantee. If a regeneration ever collapses back to a single
     // board per country, every non-playable region silently loses its character.
     const NON_PLAYABLE_BOARDS = (await import("../seeds/nonPlayableBoards")).getNonPlayableBoards();
-    const de = NON_PLAYABLE_BOARDS["1953-default"].DE;
-    const regionIds = Object.keys(de);
+    const fr = NON_PLAYABLE_BOARDS["1953-default"].FR;
+    const regionIds = Object.keys(fr);
     expect(regionIds.length).toBeGreaterThan(1);
-    const board = (r: string) => de[r] as Record<string, number>;
+    const board = (r: string) => fr[r] as Record<string, number>;
     const varying = Object.keys(board(regionIds[0])).filter(
       (familyId) => new Set(regionIds.map((r) => board(r)[familyId])).size > 1
     );
@@ -134,7 +134,7 @@ describe("emitted non-playable board file", () => {
   it("excludes playable countries, which seed from anchors instead", async () => {
     const NON_PLAYABLE_BOARDS = (await import("../seeds/nonPlayableBoards")).getNonPlayableBoards();
     for (const byCountry of Object.values(NON_PLAYABLE_BOARDS)) {
-      for (const playable of ["US", "UK", "RU", "DD"]) {
+      for (const playable of ["US", "UK", "RU", "DD", "DE"]) {
         expect(byCountry[playable], playable).toBeUndefined();
       }
     }

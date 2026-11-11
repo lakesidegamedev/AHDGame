@@ -30,7 +30,6 @@ const REGION_COUNTS_2019: Record<string, number> = {
   BR: 5,
   CN: 7,
   CS: 4,
-  DE: 16,
   ES: 8,
   FI: 6,
   FR: 8,
@@ -70,7 +69,7 @@ describe("non-playable boards data file", () => {
     const digest = createHash("sha256")
       .update(JSON.stringify(getNonPlayableBoards()))
       .digest("hex");
-    expect(digest).toBe("40ddfee47e979037df946e1a914587ab5b12521f075839e3a980c9a67cff369e");
+    expect(digest).toBe("f37ebcbf93510eeb69748e06db8022338613ca0208dd969042b9654b0fbd3d38");
   });
 
   it("loads once and serves the cached table", () => {
