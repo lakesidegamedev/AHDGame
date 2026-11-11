@@ -34,6 +34,9 @@ export const ANTITRUST_LAW_BY_COUNTRY: Partial<Record<CountryId, string>> = {
   RU: "ru.economy.competition.primary",
   DD: "dd.economy.competition.primary",
   CA: "ca.economy.competition.primary",
+  DE: "de.economy.competition.primary",
+  JP: "jp.economy.competition.primary",
+  CN: "cn.economy.competition.primary",
 };
 
 /**
@@ -52,16 +55,10 @@ export const MERGER_AUTHORITY_SEAT_BY_COUNTRY: Partial<Record<CountryId, string>
   RU: "minister_of_internal_trade",
   DD: "minister_of_internal_trade",
   CA: "minister_of_industry",
-  // Germany has no competition statute of its OWN — this seat exists for the
-  // CARRIED one: a reunification hands DE the GDR's competition primary
-  // (`carriedLawIdFor` resolves it on the ANTITRUST_LAW_BY_COUNTRY miss), and
-  // a statute with no referee would still fail open. The economy portfolio is
-  // the natural authority. Germany now also has its own Competition Act (see
-  // mechanicalLaws); the carried law still applies where it was carried.
   DE: "economy_minister",
+  JP: "economy_minister",
   // Every other legislature reviews under its Competition Act (mechanicalLaws),
   // refereed by the trade, industry or economy portfolio.
-  JP: "economy_minister",
   IE: "minister_for_enterprise",
   CN: "minister_of_commerce",
   NG: "minister_of_trade_industry",
