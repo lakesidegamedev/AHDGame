@@ -160,7 +160,7 @@ export const QC_CABINET_SEAT_IDS = {
   energy: "netZeroSecretary",
   infrastructure: "transportSecretary",
   defense: null,
-  foreignAffairs: null,
+  foreignAffairs: "externalAffairsSecretary",
   tradeMinister: null,
 } as const;
 
