@@ -64,7 +64,8 @@ export async function loadResetApprovalModifiers(
     resetSystemVersionsForCountry(gameState, RESET_V2_READY, countryId).metrics !== "v2"
   )
     return null;
-  const boards =
+  // Prefetched boards can span every reset country; lag is judged per country.
+  const boards = (
     prefetchedBoards ??
     (await resetMetricSnapshotsCollection<ResetMetricSnapshot>(db)
       .find(
@@ -73,7 +74,8 @@ export async function loadResetApprovalModifiers(
           projection: RESET_APPROVAL_BOARD_PROJECTION,
         }
       )
-      .toArray());
+      .toArray())
+  ).filter((board) => board.countryId === countryId);
   const byId = new Map(boards.map((board) => [board._id, board]));
   const expectedTurn = turn ?? gameState!.currentTurn;
   // A whole country one failed refresh behind reads its last refresh. A mix of
