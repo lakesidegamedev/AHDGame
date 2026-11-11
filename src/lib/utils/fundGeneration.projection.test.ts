@@ -4,9 +4,54 @@ import {
   projectNppGeneration,
   getTotalFundGeneration,
   calculateNppFundGeneration,
+  calculateFullFundDistribution,
 } from "./fundGeneration";
 
 describe("projectCharacterGeneration", () => {
+  it.each(["SCO", "WAL", "IE"])(
+    "keeps %s profile income and turn projections usable after conversion",
+    (countryId) => {
+      for (const preset of [
+        "1953-default",
+        "1979-default",
+        "1991-default",
+        "1999-default",
+        "2007-default",
+        "2019-default",
+        "2023-default",
+        "2027-default",
+      ]) {
+        const distribution = calculateFullFundDistribution(
+          500_000,
+          3,
+          null,
+          5,
+          10,
+          15_000,
+          countryId,
+          40,
+          preset
+        );
+        const projected = projectCharacterGeneration({
+          population: 500_000,
+          donorBaseLevel: 3,
+          currentOffice: null,
+          stateGdpMillions: 15_000,
+          countryId,
+          politicalInfluence: 40,
+          preset,
+        });
+        expect(Number.isFinite(distribution.totalGeneration)).toBe(true);
+        // Distribution rounds each income leg; the turn projection rounds the sum.
+        expect(Math.abs(projected - distribution.totalGeneration)).toBeLessThanOrEqual(1);
+        expect(
+          distribution.characterReceives +
+            distribution.stateTaxAmount +
+            distribution.nationalTaxAmount
+        ).toBe(distribution.totalGeneration);
+      }
+    }
+  );
   it("equals getTotalFundGeneration with the full 6-arg signature", () => {
     const office = null;
     const expected = getTotalFundGeneration(39_000_000, 3, office, 2_800_000, "US", 40);

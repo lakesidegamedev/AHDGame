@@ -174,6 +174,204 @@ describe("portfolioSnapshot", () => {
       expect(row.shortTermStockValue).toBe(row.stockValue);
       expect(row.longTermStockValue).toBe(0);
     });
+    describe("look-through of stakes held by a character's corporations", () => {
+      type Row = {
+        characterId: ObjectId;
+        totalValue: number;
+        netValue: number;
+        stockValue: number;
+        shortTermStockValue?: number;
+        longTermStockValue?: number;
+      };
+      async function snapshot(
+        characters: Array<Record<string, unknown>>,
+        corporations: Array<Record<string, unknown>>,
+        stockHoldingTaxStartTurn?: number
+      ): Promise<Row[]> {
+        mockCollection.mockReturnValueOnce(createMockChain(characters));
+        mockCollection.mockReturnValueOnce(createMockChain([])); // imperialCharacters
+        mockCollection.mockReturnValueOnce(createMockChain(corporations));
+        mockCollection.mockReturnValueOnce(createMockChain([])); // bonds
+        await snapshotPortfolioValues(147, stockHoldingTaxStartTurn);
+        return mockInsertMany.mock.calls[0][0] as Row[];
+      }
+      const owner = (characterId: ObjectId, shares: number) => ({ characterId, shares });
+      const stake = (corporationId: ObjectId, shares: number) => ({ corporationId, shares });
+
+      it("counts a subsidiary held only through the character's corporation", async () => {
+        const char = new ObjectId();
+        const parentId = new ObjectId();
+        const subId = new ObjectId();
+        const rows = await snapshot(
+          [{ _id: char, cashOnHand: 1_000 }],
+          [
+            { _id: parentId, sharePrice: 50, totalShares: 100, shareholders: [owner(char, 100)] },
+            {
+              _id: subId,
+              sharePrice: 10,
+              totalShares: 1000,
+              shareholders: [stake(parentId, 1000)],
+            },
+          ]
+        );
+        // direct 100 x 50, plus the parent's 1,000 x 10 subsidiary shares, plus cash
+        expect(rows[0]).toMatchObject({
+          stockValue: 15_000,
+          totalValue: 16_000,
+          netValue: 16_000,
+        });
+      });
+
+      it("attributes only the character's share of a partly owned parent", async () => {
+        const char = new ObjectId();
+        const other = new ObjectId();
+        const parentId = new ObjectId();
+        const subId = new ObjectId();
+        const rows = await snapshot(
+          [{ _id: char }, { _id: other }],
+          [
+            {
+              _id: parentId,
+              sharePrice: 50,
+              totalShares: 100,
+              shareholders: [owner(char, 40), owner(other, 60)],
+            },
+            {
+              _id: subId,
+              sharePrice: 10,
+              totalShares: 1000,
+              shareholders: [stake(parentId, 1000)],
+            },
+          ]
+        );
+        expect(rows.find((r) => r.characterId.equals(char))?.stockValue).toBe(2_000 + 4_000);
+        expect(rows.find((r) => r.characterId.equals(other))?.stockValue).toBe(3_000 + 6_000);
+      });
+
+      it("follows a chain from parent to subsidiary to sub-subsidiary", async () => {
+        const char = new ObjectId();
+        const pId = new ObjectId();
+        const sId = new ObjectId();
+        const tId = new ObjectId();
+        const rows = await snapshot(
+          [{ _id: char }],
+          [
+            { _id: pId, sharePrice: 1, totalShares: 100, shareholders: [owner(char, 100)] },
+            { _id: sId, sharePrice: 10, totalShares: 100, shareholders: [stake(pId, 50)] },
+            { _id: tId, sharePrice: 20, totalShares: 100, shareholders: [stake(sId, 100)] },
+          ]
+        );
+        // P direct 100; P's 50 of S = 500; S's whole of T = 2,000, half of it P's via S
+        expect(rows[0].stockValue).toBe(100 + 500 + 1_000);
+      });
+
+      it("terminates on a cross-holding loop", async () => {
+        const char = new ObjectId();
+        const aId = new ObjectId();
+        const bId = new ObjectId();
+        const rows = await snapshot(
+          [{ _id: char }],
+          [
+            {
+              _id: aId,
+              sharePrice: 10,
+              totalShares: 100,
+              shareholders: [owner(char, 100), stake(bId, 50)],
+            },
+            { _id: bId, sharePrice: 10, totalShares: 100, shareholders: [stake(aId, 50)] },
+          ]
+        );
+        expect(Number.isFinite(rows[0].stockValue)).toBe(true);
+        expect(rows[0].stockValue).toBeGreaterThan(1_000);
+        expect(rows[0].netValue).toBe(rows[0].totalValue);
+      });
+
+      it("leaves the history unchanged when no corporation holds a stake", async () => {
+        const char = new ObjectId();
+        const rows = await snapshot(
+          [{ _id: char, cashOnHand: 5 }],
+          [
+            {
+              _id: new ObjectId(),
+              sharePrice: 10,
+              totalShares: 100,
+              shareholders: [owner(char, 10)],
+            },
+          ]
+        );
+        expect(rows[0]).toMatchObject({ stockValue: 100, totalValue: 105 });
+      });
+
+      it("puts look-through value in the long-term bucket and keeps the split consistent", async () => {
+        const char = new ObjectId();
+        const parentId = new ObjectId();
+        const subId = new ObjectId();
+        const rows = await snapshot(
+          [{ _id: char }],
+          [
+            {
+              _id: parentId,
+              sharePrice: 50,
+              totalShares: 100,
+              shareholders: [
+                {
+                  characterId: char,
+                  shares: 100,
+                  holdingTerms: {
+                    longTermShares: 0,
+                    longTermCostBasisAnchor: 0,
+                    shortTermLots: [{ shares: 100, acquiredTurn: 100, costBasisAnchor: 0 }],
+                  },
+                },
+              ],
+            },
+            {
+              _id: subId,
+              sharePrice: 10,
+              totalShares: 1000,
+              shareholders: [stake(parentId, 1000)],
+            },
+          ],
+          100
+        );
+        expect(rows[0]).toMatchObject({
+          stockValue: 15_000,
+          shortTermStockValue: 5_000,
+          longTermStockValue: 10_000,
+        });
+      });
+
+      it("matches the wealth ranking's stock value for the same corporations", async () => {
+        const { sumStockValueByCharacter } = await import("@/lib/wealth/computeCharacterWealth");
+        const char = new ObjectId();
+        const pId = new ObjectId();
+        const sId = new ObjectId();
+        const tId = new ObjectId();
+        const corporations = [
+          { _id: pId, sharePrice: 3, totalShares: 200, shareholders: [owner(char, 80)] },
+          {
+            _id: sId,
+            sharePrice: 12,
+            totalShares: 500,
+            shareholders: [stake(pId, 120), owner(char, 7)],
+          },
+          {
+            _id: tId,
+            sharePrice: 4,
+            totalShares: 90,
+            shareholders: [stake(sId, 30), stake(pId, 10)],
+          },
+        ];
+        const ranked = sumStockValueByCharacter(
+          corporations as never,
+          new Set([char.toString()]),
+          new Map()
+        ).get(char.toString());
+        const rows = await snapshot([{ _id: char }], corporations);
+        expect(rows[0].stockValue).toBeCloseTo(ranked ?? NaN, 2);
+      });
+    });
+
     it("returns 0 when no corporations have shareholders", async () => {
       mockCollection.mockReturnValueOnce(createMockChain([])); // characters
       mockCollection.mockReturnValueOnce(createMockChain([])); // imperialCharacters

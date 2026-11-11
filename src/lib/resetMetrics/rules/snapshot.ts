@@ -45,6 +45,14 @@ export interface ResetMetricSnapshot {
   housingState?: HousingState;
 }
 
+/** Mongo serializes explicit undefined fields as null; national boards have no region. */
+export function normalizeNationalMetricBoard(board: ResetMetricSnapshot): ResetMetricSnapshot {
+  if (board.scope !== "national" || board.regionId != null) return board;
+  const normalized = { ...board };
+  delete normalized.regionId;
+  return normalized;
+}
+
 /** Validate an entire scoped opening board before any v2 writer can consume it. */
 export function buildResetMetricSnapshot(input: {
   worldId: string;

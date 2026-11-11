@@ -45,7 +45,7 @@ import {
   frontById,
   capacityOfTerrain,
 } from "./combat";
-import { NO_SUPPORT } from "@/lib/navair/frontSupport";
+import { NO_SUPPORT, MARINE_SUSTAINMENT_SEA_CONTROL } from "@/lib/navair/frontSupport";
 import type { FrontSupport } from "@/lib/navair/types";
 
 /**
@@ -244,15 +244,6 @@ export interface AggItem {
   s: StatObj;
   domain: string;
 }
-/**
- * Sea control a side needs to keep an amphibious force properly supplied ashore.
- *
- * Below the landing threshold on purpose: getting marines ashore against opposition is
- * far harder than keeping them fed once they are. A side that can no longer land can
- * still sustain what it already put there.
- */
-const MARINE_SUSTAINMENT_SEA_CONTROL = 40;
-
 /** What an unsupported marine formation is worth: light infantry, not a landing force. */
 const MARINE_UNSUPPORTED_FRACTION = 0.6;
 

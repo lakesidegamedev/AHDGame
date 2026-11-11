@@ -116,27 +116,59 @@ export function sumStockValueByCharacter(
   fxByCurrency: ReadonlyMap<CurrencyCode, number>
 ): Map<string, number> {
   const byCharId = new Map<string, number>();
-  const byId = new Map(corporations.map((c) => [c._id.toString(), c]));
-  // Stakes by holding corporation: the issuer's shareholder row names the holder.
-  const stakesByHolder = new Map<string, { issuer: CorpWealthSlice; shares: number }[]>();
   for (const corp of corporations) {
     const price = getPublicShareQuote(corp);
+    if (price <= 0) continue;
     const corpFxRate = fxRateForCorpFromMap(corp, fxByCurrency);
     for (const sh of corp.shareholders ?? []) {
-      if (sh.shares <= 0) continue;
-      if (sh.corporationId && price > 0) {
-        const holderId = sh.corporationId.toString();
-        const list = stakesByHolder.get(holderId) ?? [];
-        list.push({ issuer: corp, shares: sh.shares });
-        stakesByHolder.set(holderId, list);
-      }
-      if (!sh.characterId || price <= 0) continue;
+      if (sh.shares <= 0 || !sh.characterId) continue;
       const charId = sh.characterId.toString();
       if (!characterIdSet.has(charId)) continue;
       const holdingValue = corpLiquidCapitalToAnchor(sh.shares * price, corp, corpFxRate);
       byCharId.set(charId, (byCharId.get(charId) ?? 0) + holdingValue);
     }
   }
+  for (const [charId, value] of sumLookThroughStockValueByCharacter(
+    corporations,
+    characterIdSet,
+    fxByCurrency
+  )) {
+    byCharId.set(charId, (byCharId.get(charId) ?? 0) + value);
+  }
+  return byCharId;
+}
+
+/**
+ * ₳ value of the shares a character's corporations hold in other corporations,
+ * per character: each holder corporation's stakes (and what those issuers hold
+ * in turn) valued at the issuer's share price, scaled by the character's share
+ * of the holder. Direct holdings are NOT included; add this to the direct sum.
+ * This is the single look-through rule, used by the wealth ranking and by the
+ * per-turn portfolio history so the two cannot disagree.
+ *
+ * `corporations` must contain every holder and every issuer in the chain (see
+ * `withHeldStakeIssuers`), and each holder needs `totalShares`.
+ */
+export function sumLookThroughStockValueByCharacter(
+  corporations: readonly CorpWealthSlice[],
+  characterIdSet: ReadonlySet<string>,
+  fxByCurrency: ReadonlyMap<CurrencyCode, number>
+): Map<string, number> {
+  const byCharId = new Map<string, number>();
+  const byId = new Map(corporations.map((c) => [c._id.toString(), c]));
+  // Stakes by holding corporation: the issuer's shareholder row names the holder.
+  const stakesByHolder = new Map<string, { issuer: CorpWealthSlice; shares: number }[]>();
+  for (const corp of corporations) {
+    if (getPublicShareQuote(corp) <= 0) continue;
+    for (const sh of corp.shareholders ?? []) {
+      if (sh.shares <= 0 || !sh.corporationId) continue;
+      const holderId = sh.corporationId.toString();
+      const list = stakesByHolder.get(holderId) ?? [];
+      list.push({ issuer: corp, shares: sh.shares });
+      stakesByHolder.set(holderId, list);
+    }
+  }
+  if (stakesByHolder.size === 0) return byCharId;
 
   // ₳ value of everything a corporation owns in other corporations, including
   // what those corporations own in turn, at each issuer's share price.
