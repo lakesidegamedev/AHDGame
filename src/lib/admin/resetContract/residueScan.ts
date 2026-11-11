@@ -9,12 +9,21 @@ import {
   evaluateResidueScan,
   type AppropriationEvidence,
   type CollectionAgeEvidence,
+  type OldCatalogueEvidence,
   type DocumentAge,
   type PreservedFieldEvidence,
   type ResidueViolation,
   type TurnStampEvidence,
 } from "@/lib/admin/resetContract/rules/residueScan";
 import type { GameState } from "@/lib/db/types/gameState";
+import {
+  OLD_CATALOGUE_LAW_IDS,
+  oldCatalogueIdsWithin,
+} from "@/lib/admin/resetContract/rules/oldCatalogueIds";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { electoratePriorityOverridesCollection } from "@/lib/db/repositories/electoratePriorityOverrides";
+import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import type { Document } from "mongodb";
@@ -113,6 +122,49 @@ function documentAge(
     age.idSeconds = Math.floor(doc._id.getTimestamp().getTime() / 1000);
   if (doc.createdAt instanceof Date) age.createdAtMs = doc.createdAt.getTime();
   return age;
+}
+
+/**
+ * Documents that still name a retired-catalogue law type. Law types are only
+ * checked when the run replaced the reference data; every other collection is
+ * world state or admin content that a reset must leave clean either way.
+ */
+export async function loadOldCatalogueEvidence(
+  db: Db,
+  referenceReplaced: boolean
+): Promise<OldCatalogueEvidence[]> {
+  const old = [...OLD_CATALOGUE_LAW_IDS];
+  const evidence: OldCatalogueEvidence[] = [];
+  if (referenceReplaced) {
+    const types = await legislationTypesCollection(db)
+      .find({ _id: { $in: old } }, { projection: { _id: 1 } })
+      .toArray();
+    for (const row of types)
+      evidence.push({ collection: "legislationTypes", id: row._id, lawIds: [row._id] });
+  }
+  const enacted = await enactedLawsCollection(db)
+    .find({ legislationTypeId: { $in: old } }, { projection: { _id: 1, legislationTypeId: 1 } })
+    .toArray();
+  for (const row of enacted)
+    evidence.push({
+      collection: "enactedLaws",
+      id: String(row._id),
+      lawIds: [row.legislationTypeId],
+    });
+  const bills = await billsCollection(db)
+    .find({ legislationTypeId: { $in: old } }, { projection: { _id: 1, legislationTypeId: 1 } })
+    .toArray();
+  for (const row of bills)
+    evidence.push({ collection: "bills", id: String(row._id), lawIds: [row.legislationTypeId] });
+  const overrides = await electoratePriorityOverridesCollection(db)
+    .find({}, { projection: { _id: 1, priorities: 1 } })
+    .toArray();
+  for (const row of overrides) {
+    const lawIds = oldCatalogueIdsWithin(row.priorities);
+    if (lawIds.length > 0)
+      evidence.push({ collection: "electoratePriorityOverrides", id: String(row._id), lawIds });
+  }
+  return evidence;
 }
 
 /** Load the evidence for {@link evaluateResidueScan} and return its violations. */
@@ -234,5 +286,6 @@ export async function runResidueScan(
     turnStamps,
     appropriations,
     preservedFields,
+    oldCatalogue: await loadOldCatalogueEvidence(db, context.referenceReplaced),
   });
 }

@@ -116,6 +116,13 @@ describe("reset over a world holding every known leftover", () => {
     expect(text).toContain("extra documents survive: debt_ceiling_crisis");
     expect(text).toContain("US defence account carries old-world state");
     expect(text).toContain("US intelligence account carries old-world state");
+    expect(text).toContain(
+      "old-catalogue legislationTypes: de_minimum_wage names retired law type"
+    );
+    expect(text).toContain("old-catalogue enactedLaws:");
+    expect(text).toContain("old-catalogue bills:");
+    expect(text).toContain("old-catalogue electoratePriorityOverrides: US:US_CA:economic:workers");
+    expect(text).not.toContain("electoratePriorityOverrides: US:US_TX");
     expect(text).toMatch(/preserved-field users: .* activeCharacterId/);
     expect(text).toMatch(/preserved-field imperialCharacters: .* cashOnHand/);
   });
@@ -202,6 +209,10 @@ describe("reset over a world holding every known leftover", () => {
       incomeTaxStartTurn: 1,
       pendingStockTaxReceipts: [],
     });
+    expect(await memory.collection("legislationTypes").countDocuments()).toBe(0);
+    expect(await memory.collection("enactedLaws").countDocuments()).toBe(0);
+    const overrides = await memory.collection("electoratePriorityOverrides").find({}).toArray();
+    expect(overrides.map((row) => String(row._id))).toEqual(["US:US_TX:economic:workers"]);
     expect(await memory.collection("characters").countDocuments()).toBe(0);
     expect(await memory.collection("retiredCharacters").countDocuments()).toBe(1);
     expect(await memory.collection("activityLog").countDocuments({ type: "login" })).toBe(1);

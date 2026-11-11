@@ -38,6 +38,13 @@ export interface PreservedFieldEvidence {
   fields: ReadonlyArray<string>;
 }
 
+/** A surviving document that still names a law type from a retired catalogue. */
+export interface OldCatalogueEvidence {
+  collection: string;
+  id: string;
+  lawIds: ReadonlyArray<string>;
+}
+
 export interface GameStateEvidence {
   currentTurn: number | null;
   currentYear: number | null;
@@ -59,10 +66,16 @@ export interface ResidueScanInput {
   turnStamps: ReadonlyArray<TurnStampEvidence>;
   appropriations: ReadonlyArray<AppropriationEvidence>;
   preservedFields: ReadonlyArray<PreservedFieldEvidence>;
+  oldCatalogue?: ReadonlyArray<OldCatalogueEvidence>;
 }
 
 export type ResidueCheck =
-  "predates-reset" | "old-world-turn" | "game-state" | "appropriation" | "preserved-field";
+  | "predates-reset"
+  | "old-world-turn"
+  | "game-state"
+  | "appropriation"
+  | "preserved-field"
+  | "old-catalogue";
 
 export interface ResidueViolation {
   check: ResidueCheck;
@@ -136,6 +149,15 @@ export function evaluateResidueScan(input: ResidueScanInput): ResidueViolation[]
       check: "preserved-field",
       collection: doc.collection,
       detail: `${doc.id} still holds ${doc.fields.join(", ")}`,
+    });
+  }
+
+  for (const doc of input.oldCatalogue ?? []) {
+    if (doc.lawIds.length === 0) continue;
+    violations.push({
+      check: "old-catalogue",
+      collection: doc.collection,
+      detail: `${doc.id} names retired law type(s) ${doc.lawIds.slice(0, SAMPLE_IDS).join(", ")}`,
     });
   }
 

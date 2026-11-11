@@ -8,6 +8,7 @@ import { getCollectionsByCategory } from "@/lib/admin/seed/seedManifest";
 import {
   RESIDUE_SCAN_REFERENCE_EXEMPT,
   RESIDUE_SCAN_RUNTIME_EXEMPT,
+  loadOldCatalogueEvidence,
   residueScanAgeCollections,
 } from "@/lib/admin/resetContract/residueScan";
 import {
@@ -203,6 +204,7 @@ export async function runPreflight2027(
         legislationTypesLegacyApprovals: legislationTypes,
       },
       priceIndexCountries: priceIndexRows.map((row) => String(row.countryId ?? row._id)),
+      oldCatalogue: await loadOldCatalogueEvidence(db, true),
     })
   );
   return { findings, countries };

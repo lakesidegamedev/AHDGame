@@ -53,7 +53,46 @@ export const OLD_WORLD_RUNTIME_ROWS: Readonly<Record<string, Record<string, unkn
   actionLogs: { action: "campaign" },
   npps: { countryId: "US" },
   electedOfficials: { countryId: "US", office: "senator" },
+  enactedLaws: { legislationTypeId: "de_minimum_wage", countryId: "DE", scope: "national" },
+  bills: { status: "in_committee", legislationTypeId: "us_federal_education_funding" },
 };
+
+/** Law type rows of the retired catalogues, as a world seeded before the one law book holds them. */
+export const OLD_BOOK_LEGISLATION_TYPES: ReadonlyArray<Record<string, unknown>> = [
+  { _id: "us_federal_education_funding", name: "Federal education funding" },
+  { _id: "de_minimum_wage", name: "Minimum wage" },
+  { _id: "cn_ai_strategy", name: "AI strategy" },
+];
+
+const priorityRef = (lawTypeId: string) => ({ lawTypeId, policyOptionId: "o1" });
+
+/** Admin electorate priorities: one naming a retired law, one on the new book. */
+export const OLD_BOOK_PRIORITY_OVERRIDES: ReadonlyArray<Record<string, unknown>> = [
+  {
+    _id: "US:US_CA:economic:workers",
+    countryId: "US",
+    priorities: {
+      primary: priorityRef("us_federal_education_funding"),
+      secondary: [
+        priorityRef("us.health.universalCare.primary"),
+        priorityRef("a"),
+        priorityRef("b"),
+      ],
+    },
+  },
+  {
+    _id: "US:US_TX:economic:workers",
+    countryId: "US",
+    priorities: {
+      primary: priorityRef("us.education.universalSchooling.primary"),
+      secondary: [
+        priorityRef("us.health.universalCare.primary"),
+        priorityRef("a"),
+        priorityRef("b"),
+      ],
+    },
+  },
+];
 
 /** Reference rows carrying old-world state in fields a seeder no longer writes. */
 export const OLD_WORLD_REFERENCE_ROWS: ReadonlyArray<{
@@ -132,6 +171,14 @@ export function seedOldWorldResidue(memory: InMemoryDb): {
   for (const { collection, doc } of OLD_WORLD_REFERENCE_ROWS) {
     memory.seed(collection, [{ ...doc }]);
   }
+  memory.seed(
+    "legislationTypes",
+    OLD_BOOK_LEGISLATION_TYPES.map((row) => ({ ...row }))
+  );
+  memory.seed(
+    "electoratePriorityOverrides",
+    OLD_BOOK_PRIORITY_OVERRIDES.map((row) => ({ ...row }))
+  );
   memory.seed("gameState", [
     { ...OLD_WORLD_GAME_STATE },
     { _id: "debt_ceiling_crisis", active: true, triggeredYear: 1993 },
