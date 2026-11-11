@@ -28,7 +28,8 @@ import { secedeRegion } from "@/lib/referendum/secede/secedeRegion";
 import { isCountryEnabledForPlayers } from "@/lib/countryAccess";
 import { enterCountryForPlayers } from "@/lib/world/playerHandoff";
 import { billsCollection } from "@/lib/db/repositories/bills";
-import { sovereigntyRegion } from "@/lib/referendum/rules/sovereigntyRegions";
+import { independenceCopy } from "@/lib/referendum/rules/sovereigntyRegions";
+import { getCountryConfig, type CountryId } from "@/lib/constants/countries";
 
 /** Province grouping for NI under Ireland. */
 const NIR_PROVINCE = "Ulster";
@@ -148,7 +149,7 @@ async function runReferendumActuationInTransaction(
       turn: currentTurn,
       kind: "seceded",
       side: "yes",
-      summary: `${sovereigntyRegion(ref.regionId)?.successorCountryId ?? ref.regionId} became an independent country.`,
+      summary: `${independenceCopy(ref.regionId, (id) => getCountryConfig(id as CountryId)?.name).region} became an independent country.`,
     }).catch(() => {});
     return { ok: true, report: res.report };
   }
