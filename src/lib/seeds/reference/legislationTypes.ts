@@ -29,7 +29,7 @@ import { bankingSeparationLegislationTypes } from "../shared/bankingSeparationLe
 import { mechanicalLegislationTypes } from "@/lib/mechanicalLaws/legislation";
 import { modernEraLegislationTypes } from "../shared/modernEraLegislation";
 import { withLawAdministration } from "@/lib/governmentFinance/lawAdministrationCatalog";
-import { redistrictingLegislationTypes } from "./redistrictingLegislation";
+import { redistrictingLegislationTypes } from "@/lib/countries/us/data/redistrictingLegislation";
 
 const rawLegislationTypes: LegislationType[] = [
   // US state redistricting levers: mechanical, read by id from statePolicies.
