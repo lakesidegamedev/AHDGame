@@ -164,7 +164,7 @@ export const WIKI_LAST_UPDATED: Record<string, string> = {
   "reference-formulas": "2026-10-30",
   "reference-offices": "2026-10-30",
   "reference-turn-order": "2026-11-07",
-  referendums: "2026-10-30",
+  referendums: "2026-11-11",
   relocation: "2026-10-30",
   "resources-overview": "2026-10-30",
   "rpg-stats": "2026-10-30",
