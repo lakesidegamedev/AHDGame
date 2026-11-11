@@ -24,10 +24,11 @@ describe("sovereignty registry", () => {
     expect(sovereigntyRegion("SCO")).toMatchObject({ kind: "independence", targetCountryId: null });
   });
 
-  it("gives Quebec a mood but no referendum until its successor exists", () => {
+  it("lets Quebec hold a referendum that can make it the QC successor", () => {
     const quebec = sovereigntyRegionIn("CA", "CA_QC");
     expect(quebec).toMatchObject({ kind: "independence", executiveTitle: "Premier" });
-    expect(quebec?.actuates).toBe(false);
+    expect(quebec?.successorCountryId).toBe("QC");
+    expect(quebec?.actuates).toBe(true);
     expect(hostsSovereigntyReferendums("CA")).toBe(true);
   });
 

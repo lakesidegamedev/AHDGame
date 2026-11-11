@@ -377,6 +377,8 @@ export async function ruElectionsLive(db: Db, _countryId: CountryId = "RU"): Pro
   return nppGoverned;
 }
 
+/** Lower chambers of successor nations, which take snap elections and fixed cycles. */
+const SUCCESSOR_LOWER_CHAMBERS: ReadonlySet<string> = new Set(["holyrood", "senedd", "qcAssembly"]);
 /**
  * Standup-cycle spawner for a seceded country's devolved lower chamber
  * (SCO Holyrood / WAL Senedd). Modeled on `ensureIEElections`: one canonical
@@ -431,7 +433,7 @@ export async function ensureSecededChamberElections(
     }
   }
 
-  const chamber = electionType === "holyrood" || electionType === "senedd";
+  const chamber = SUCCESSOR_LOWER_CHAMBERS.has(electionType);
   const types = chamber ? [electionType, `snap_${electionType}`] : [electionType];
   const liveElections = await electionsCollection(db)
     .find({ countryId, electionType: { $in: types }, status: { $in: ["active", "upcoming"] } })

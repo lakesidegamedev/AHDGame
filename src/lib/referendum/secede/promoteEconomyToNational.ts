@@ -10,7 +10,9 @@ import { getCountryConfig } from "@/lib/constants/countries";
  * still equals its haircut-adjusted active non-defaulted bond face. Cash and debt are separate positions: only the bonds carry
  * obligations across, never a balance-derived mirror.
  *
- * Sterlingization: the new budget keeps `currencyCode: "GBP"` — no conversion.
+ * Shared currency: the new budget takes the successor's configured currency,
+ * which is its parent's (GBP for Scotland and Wales, CAD for Quebec), so no
+ * conversion runs.
  * Idempotent: a no-op once the new country's `federalBudget` already exists.
  *
  * Run AFTER `expandToSubRegions` (the GDP weight reads the post-expand `states`
@@ -154,7 +156,7 @@ export async function promoteEconomyToNational(
   const newBudget = structuredClone(ukBudget);
   newBudget._id = toCountryId;
   newBudget.countryId = toCountryId;
-  newBudget.currencyCode = "GBP";
+  newBudget.currencyCode = getCountryConfig(toCountryId).currencyCode;
   newBudget.updatedAt = now;
   // Existing international facilities and country-owned commitments stay with their obligor.
   for (const key of Object.keys(newBudget))

@@ -730,6 +730,7 @@ export interface LegislationTypePosition {
     | "riksdag" // SE Riksdag (unicameral; added with 1979 Sweden)
     | "caCommons" // CA House of Commons
     | "caSenate" // CA Senate (appointed)
+    | "qcAssembly" // QC National Assembly (successor country)
     | "milletMeclisi"
     | "senato" // TR parliament chambers (added with 1979 Turkey)
     | "volkskammer" // DD Volkskammer (one-party; added with 1979 GDR)

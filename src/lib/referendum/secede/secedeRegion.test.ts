@@ -168,7 +168,7 @@ describe("secedeRegion", () => {
     for (const args of [
       { regionId: "SCO", fromCountryId: "CA" as const },
       { regionId: "NIR", fromCountryId: "UK" as const },
-      { regionId: "CA_QC", fromCountryId: "CA" as const },
+      { regionId: "CA_QC", fromCountryId: "UK" as const },
       { regionId: "LON", fromCountryId: "UK" as const },
     ]) {
       expect(await secedeRegion(db, { ...args, currentTurn: 1 })).toEqual({
