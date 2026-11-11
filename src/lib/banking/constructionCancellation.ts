@@ -33,6 +33,7 @@ export async function cancelFinancedConstruction(input: {
   borrowerId: ObjectId;
   turn: number;
   fullRefund?: boolean;
+  wholePlants?: boolean;
 }): Promise<Result> {
   if (!input.enabled) return { ok: false, error: "Construction finance is not enabled" };
   const { db, sectorId, borrowerId, turn } = input;
@@ -53,6 +54,11 @@ export async function cancelFinancedConstruction(input: {
         industryModel: 1,
         mediaDiscriminator: 1,
         operatingCapacityTurn: 1,
+        buildDeliverySettledTurn: 1,
+        plantWearUnits: 1,
+        activeCapacityPercent: 1,
+        mothballed: 1,
+        strategyId: 1,
       },
     }
   );
@@ -144,6 +150,7 @@ export async function cancelFinancedConstruction(input: {
       destination: liveEpoch ? "bank" : "insurance",
       now: new Date(),
       fullRefund: input.fullRefund,
+      wholePlants: input.wholePlants,
       sector,
     });
     if (!candidate) {
@@ -266,6 +273,11 @@ export async function cancelFinancedConstruction(input: {
             industryModel: 1,
             mediaDiscriminator: 1,
             operatingCapacityTurn: 1,
+            buildDeliverySettledTurn: 1,
+            plantWearUnits: 1,
+            activeCapacityPercent: 1,
+            mothballed: 1,
+            strategyId: 1,
           },
         }
       ),
@@ -280,6 +292,7 @@ export async function cancelFinancedConstruction(input: {
       sector: updatedSector,
       turn,
       now: new Date(),
+      wholePlants: input.wholePlants,
     });
     if (supplement) {
       const frozen = await sectors.updateOne(

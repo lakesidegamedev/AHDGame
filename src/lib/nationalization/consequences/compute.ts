@@ -17,6 +17,7 @@ import {
   PRIVATIZATION_CONFIDENCE_BOOST_BASE,
   PRIVATIZATION_APPROVAL_NUDGE,
   PRIVATIZATION_LEGITIMACY_NUDGE,
+  EXPROPRIATION_TENSION_BY_TIER,
 } from "../constants";
 import type { CompensationTier } from "../constants";
 import type { NationalizationTrigger } from "./types";
@@ -139,6 +140,17 @@ export function computePrivatizationApprovalNudge(ideologyMultiplier: number): n
 /** Legitimacy delta for a privatization (confidence-model countries), same ideology direction. */
 export function computePrivatizationLegitimacyDelta(ideologyMultiplier: number): number {
   return PRIVATIZATION_LEGITIMACY_NUDGE * (ideologyMultiplier - 1);
+}
+
+/**
+ * World tension added when a taking expropriates a FOREIGN owner (spec §12.3).
+ *
+ * Paired with the expropriating country's identity at the call site, so the
+ * ledger entry names both sides. The tier ladder is the whole formula: paying
+ * fairly is a market transaction, a seizure is an incident.
+ */
+export function computeForeignExpropriationTension(tier: CompensationTier): number {
+  return EXPROPRIATION_TENSION_BY_TIER[tier];
 }
 
 /** Popular (approval up) vs unpopular (approval down) framing of a taking. */
