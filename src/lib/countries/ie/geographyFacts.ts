@@ -197,13 +197,15 @@ export const IE_CORE5_NORMALS: Record<string, NormalAnchor[]> = {
  */
 export const IE_ADJACENCY_MAP: AdjacencyMap = {
   DUB: ["KIL"],
-  KIL: ["DUB", "MID", "WEX", "DON"],
+  KIL: ["DUB", "MID", "WEX", "DON", "NIR"],
   MID: ["KIL", "WEX", "LIM", "GAL", "DON"],
   WEX: ["KIL", "MID", "LIM", "COR"],
   LIM: ["MID", "WEX", "COR", "GAL"],
   COR: ["WEX", "LIM"],
   GAL: ["MID", "LIM", "DON"],
-  DON: ["KIL", "MID", "GAL"],
+  DON: ["KIL", "MID", "GAL", "NIR"],
+  // Ulster participates only after its state belongs to Ireland.
+  NIR: ["DON", "KIL"],
 };
 
 /**

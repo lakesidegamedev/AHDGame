@@ -180,3 +180,17 @@ export const STATE_ADJACENCY: Readonly<Record<CountryId, AdjacencyMap>> = {
 export function adjacentStates(country: CountryId, stateId: string): readonly string[] {
   return STATE_ADJACENCY[country]?.[stateId] ?? [];
 }
+
+/**
+ * Regions that joined a country after its map was seeded, with the neighbours
+ * they gained there. Kept apart from `STATE_ADJACENCY` because that map is the
+ * seeded vocabulary of each country; applying these edges needs the live
+ * region set (see `annexedNeighbours`).
+ *
+ * IE: Northern Ireland (`NIR`) joins by referendum. Donegal's seeded region
+ * covers the border counties of Donegal, Cavan and Monaghan; Midlands and
+ * Kildare cover the remaining border to the east.
+ */
+export const ANNEXED_REGION_ADJACENCY: Partial<Record<CountryId, AdjacencyMap>> = {
+  IE: { NIR: ["DON", "MID", "KIL"] },
+};
