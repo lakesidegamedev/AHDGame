@@ -6,7 +6,7 @@ summary: >-
   of code into data files that the seed check validates before any world is built.
 tags: [seeding, politics]
 badges: [patch]
-areas: [backend, tooling]
+areas: [backend]
 ---
 
 The 1953 and 1991 regional score tables are plain data files now. Every value is

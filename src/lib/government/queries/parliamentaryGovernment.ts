@@ -85,7 +85,7 @@ export async function getPmAppointmentCandidates(
   const charIds = lowerChamberMPs
     .map((mp) => mp.characterId)
     .filter((id): id is ObjectId => id != null);
-  const characters = await charactersHandle<{
+  const characters = await charactersCollection<{
     _id: ObjectId;
     name: string;
     party?: string;
@@ -186,7 +186,7 @@ export async function getHosAppointmentCandidates(
   }
 
   const charIds = deputies.map((mp) => mp.characterId).filter((id): id is ObjectId => id != null);
-  const characters = await charactersHandle<{
+  const characters = await charactersCollection<{
     _id: ObjectId;
     name: string;
     party?: string;

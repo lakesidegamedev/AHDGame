@@ -5,7 +5,7 @@ summary: >-
   Canada now has its provinces, parties and national figures authored for the
   2027 world. It is not open to players yet.
 tags: [countries, canada]
-badges: [content]
+badges: [minor]
 areas: [engine, backend, fullstack]
 ---
 
