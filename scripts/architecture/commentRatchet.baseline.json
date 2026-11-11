@@ -4693,10 +4693,6 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/constants/countryOfficesClient.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/lib/constants/countryReadinessExpectations.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
@@ -4867,7 +4863,7 @@
     },
     "src/lib/constants/statesTables.ts": {
       "longBlocks": 2,
-      "narrativeLines": 2
+      "narrativeLines": 0
     },
     "src/lib/constants/techTree/costs.ts": {
       "longBlocks": 1,
@@ -7505,10 +7501,6 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/demographics/birthRateLever.legislation.sim.test.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/lib/demographics/bucketLabelsByCountry.test.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
@@ -9245,10 +9237,6 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/metricEngine/registry/healthcare.legislation.sim.test.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 1
-    },
     "src/lib/metricEngine/registry/healthcare.sim.test.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
@@ -9280,10 +9268,6 @@
     "src/lib/metricEngine/registry/publicSafety.ts": {
       "longBlocks": 0,
       "narrativeLines": 5
-    },
-    "src/lib/metricEngine/registry/social.legislation.sim.test.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 1
     },
     "src/lib/metricEngine/registry/social.sim.test.ts": {
       "longBlocks": 0,
@@ -11223,7 +11207,7 @@
     },
     "src/lib/seeds/reference/budgets.ts": {
       "longBlocks": 3,
-      "narrativeLines": 2
+      "narrativeLines": 1
     },
     "src/lib/seeds/reference/budgets1953.test.ts": {
       "longBlocks": 3,

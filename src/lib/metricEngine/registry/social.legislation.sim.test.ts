@@ -14,17 +14,13 @@ import type { NodeId } from "../types";
 import type { StateMetricBaseline } from "@/lib/db/types/statePolicy";
 
 /**
- * Legislative metric simulation — SOCIAL category, 240 turns.
+ * Legislative metric simulation, SOCIAL category, 240 turns.
  *
- * Law: "Social Security & Welfare Act" (us_social_security), high-benefit option (+1,
- * "Universal Social Security Expansion Act", annualCostPerCapita 5303).
- * The social-cohesion/anti-poverty nodes read `spending.social`; the income/poverty +
- * education cluster runs alongside (poverty feeds inequality + child poverty).
- * Control = the unlegislated federal seed baseline (~$2,702.70/capita — NATIONAL_BUDGET_
- * SEED_CONFIGS US socialSecurity $900B / 333M pop, src/lib/seeds/reference/budgets.ts).
- * Enacted = the real per-capita cost of the +1 option (5303), matching
- * SOCIAL_SPEND_HALF_SAT=2700 (ticket #826 item 14 follow-up). Expected: less poverty,
- * less child poverty, less inequality.
+ * Law: Japan's public pension (jp_pension), most generous option (+1). The
+ * anti-poverty nodes read `spending.social`; the income, poverty and education
+ * cluster runs alongside (poverty feeds inequality and child poverty). Control
+ * spends ~$2,703/capita, enacted ~$5,303/capita, against SOCIAL_SPEND_HALF_SAT=2700.
+ * Expected: less poverty, less child poverty, less inequality.
  */
 const TURNS = 240;
 const TPY = 48;
@@ -37,7 +33,7 @@ const CLUSTER = topoSort([
   ...EDUCATION_NODES,
 ]);
 
-const law = legislationTypes.find((l) => l._id === "us_social_security");
+const law = legislationTypes.find((l) => l._id === "jp_pension");
 const invest = law?.policyOptions?.find((o) => o.effectDirection === 1);
 
 const baselineDoc: StateMetricBaseline = {
@@ -72,9 +68,9 @@ const LOWER_BETTER: NodeId[] = [
   "economic.povertyRate",
 ];
 
-describe("legislation sim — social (Social Security & Welfare Act, 240 turns)", () => {
+describe("legislation sim: social (public pension, 240 turns)", () => {
   it("the seed law and its high-benefit option exist", () => {
-    expect(law, "us_social_security present").toBeTruthy();
+    expect(law, "jp_pension present").toBeTruthy();
     expect(invest, "an investment (+1) option exists").toBeTruthy();
   });
 
@@ -99,9 +95,7 @@ describe("legislation sim — social (Social Security & Welfare Act, 240 turns)"
   );
 
   it("prints the 240-turn trajectory report", () => {
-    console.log(
-      reportTrajectory("Social — Social Security & Welfare Act", LOWER_BETTER, control, enacted)
-    );
+    console.log(reportTrajectory("Social: public pension", LOWER_BETTER, control, enacted));
     expect(true).toBe(true);
   });
 
