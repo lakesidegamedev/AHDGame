@@ -6,6 +6,7 @@ import {
   advanceAutomationAbsorption,
   automationLabourFactor,
   displacedWorkers,
+  operatingCrewFactor,
 } from "./automation";
 import { advanceEmployment, type EmploymentState } from "@/lib/labour/rules/employment";
 import { aiLabourAnnualProbability } from "@/lib/livingConflict/rules/futureConflicts";
@@ -35,6 +36,18 @@ describe("automationLabourFactor", () => {
     expect(displacedWorkers(50, 0.5)).toBe(50);
     expect(displacedWorkers(40, 0.4)).toBeCloseTo(60, 9);
     expect(displacedWorkers(40, 1)).toBe(0);
+  });
+
+  it("keeps the full crew until an automated method is built", () => {
+    const sector = {
+      strategyId: "humanoid_robotics",
+      transitionFromStrategyId: "standard",
+      transitionStartTurn: 200,
+    };
+    expect(operatingCrewFactor(sector, 150, true)).toBe(1);
+    expect(operatingCrewFactor(sector, 200, true)).toBe(
+      AUTOMATION_LABOUR_FACTORS.humanoid_robotics
+    );
   });
 });
 

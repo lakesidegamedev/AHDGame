@@ -41,7 +41,29 @@ export function methodTransitionStartTurn(args: {
 /** True while a sector is still waiting for its new method to be built. */
 export function isAwaitingBuild(args: {
   currentTurn: number;
-  transitionStartTurn: number | null | undefined;
+  transitionStartTurn?: number | null;
 }): boolean {
   return args.transitionStartTurn != null && args.currentTurn < args.transitionStartTurn;
+}
+
+/** The fields of a sector that say which method it runs. */
+export interface SectorMethodState {
+  strategyId?: string | null;
+  transitionFromStrategyId?: string | null;
+  transitionStartTurn?: number | null;
+}
+
+/**
+ * The method a sector actually runs this turn. While the new method is still
+ * being built the sector runs its old one, so crews, levies and other
+ * per-method effects follow the old method until the build is done.
+ */
+export function operatingMethodId(
+  sector: SectorMethodState,
+  currentTurn: number
+): string | null | undefined {
+  const { transitionFromStrategyId, transitionStartTurn } = sector;
+  return transitionFromStrategyId && isAwaitingBuild({ currentTurn, transitionStartTurn })
+    ? transitionFromStrategyId
+    : sector.strategyId;
 }

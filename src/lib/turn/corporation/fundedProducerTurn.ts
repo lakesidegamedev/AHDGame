@@ -418,7 +418,7 @@ export async function runFundedProducerTurn(
   const publicScopes = demand.funding.map((f) => publicScope(f.countryId));
   const investmentScopes = demand.investmentFunding.map((f) => investmentScope(f.countryId));
   // One collection account per importing or levying country; none when both are off.
-  const levyByPlant = plantLevies(demand.planSector, lookups);
+  const levyByPlant = plantLevies(demand.planSector, lookups, turn);
   const tariffScopes = tariffCollectorScopes(
     demand.importTariffs,
     (c) => countryCurrency.get(c) ?? traders.find((t) => t.countryId === c)?.currency,

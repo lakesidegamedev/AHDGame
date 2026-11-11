@@ -9,6 +9,7 @@
  * retraining, by an economy running above trend and by a better educated
  * workforce. Absorbed workers become ordinary background labour demand.
  */
+import { operatingMethodId, type SectorMethodState } from "@/lib/corporations/rules/methodAdoption";
 
 /** Crew per unit of capacity relative to a conventional plant in the same sector. */
 export const AUTOMATION_LABOUR_FACTORS: Readonly<Record<string, number>> = {
@@ -24,6 +25,15 @@ export function automationLabourFactor(
 ): number {
   if (!enabled || !strategyId) return 1;
   return AUTOMATION_LABOUR_FACTORS[strategyId] ?? 1;
+}
+
+/** Crew factor of the method a sector runs this turn; the old one while the new is built. */
+export function operatingCrewFactor(
+  sector: SectorMethodState,
+  currentTurn: number,
+  enabled: boolean
+): number {
+  return automationLabourFactor(operatingMethodId(sector, currentTurn), enabled);
 }
 
 /**
