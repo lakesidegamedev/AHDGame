@@ -343,32 +343,67 @@ export async function splitParties(
             },
           ],
         },
-        { projection: { _id: 1, countryId: 1, party: 1, partyId: 1 } }
+        { projection: { _id: 1, countryId: 1, party: 1, partyId: 1, electionId: 1 } }
       )
       .toArray();
-    if (rows.length)
+    const remapped = (row: (typeof rows)[number], value: unknown): string =>
+      row.countryId === toCountryId && plan.idMap[Number(value)] != null
+        ? String(plan.idMap[Number(value)])
+        : "independent";
+
+    // Slates are one per (country, party, election) under a unique index, and every
+    // unmapped party collapses into "independent". Several UK-wide parties slating
+    // the same seceding-region election would therefore collide and abort the whole
+    // referendum phase on every turn. Keep one slate per target key and retire the
+    // rest (with their candidate rows) — those parties do not exist in the new country.
+    const doomed = new Set<string>();
+    if (collection === "recruitmentSlates" && rows.length) {
+      const sameKey = (r: { countryId?: unknown; partyId?: unknown; electionId?: unknown }) =>
+        `${String(r.countryId)}|${String(r.partyId)}|${String(r.electionId)}`;
+      const claimed = new Set<string>();
+      const existing = await db
+        .collection(collection)
+        .find(
+          {
+            countryId: { $in: [fromCountryId, toCountryId] },
+            partyId: "independent",
+            electionId: { $in: rows.map((row) => row.electionId) },
+          },
+          { projection: { _id: 1, countryId: 1, partyId: 1, electionId: 1 } }
+        )
+        .toArray();
+      const rowIds = new Set(rows.map((row) => String(row._id)));
+      for (const row of existing)
+        if (!rowIds.has(String(row._id))) claimed.add(sameKey(row as Record<string, unknown>));
+      // Rows that already hold their target key win over rows that would move onto it.
+      const ordered = [...rows].sort(
+        (a, b) =>
+          Number(remapped(b, b.partyId) === b.partyId) -
+          Number(remapped(a, a.partyId) === a.partyId)
+      );
+      for (const row of ordered) {
+        const key = sameKey({ ...row, partyId: remapped(row, row.partyId) });
+        if (claimed.has(key)) doomed.add(String(row._id));
+        else claimed.add(key);
+      }
+      if (doomed.size) {
+        const doomedRows = rows.filter((row) => doomed.has(String(row._id)));
+        await db.collection("slateCandidates").deleteMany({
+          slateId: { $in: doomedRows.map((row) => row._id) },
+        });
+        await db.collection(collection).deleteMany({ _id: { $in: doomedRows.map((r) => r._id) } });
+      }
+    }
+    const kept = rows.filter((row) => !doomed.has(String(row._id)));
+    if (kept.length)
       await db.collection(collection).bulkWrite(
-        rows.map((row) => ({
+        kept.map((row) => ({
           updateOne: {
             filter: { _id: row._id },
             update: {
               $set: {
-                ...(row.party != null
-                  ? {
-                      party:
-                        row.countryId === toCountryId && plan.idMap[Number(row.party)] != null
-                          ? String(plan.idMap[Number(row.party)])
-                          : "independent",
-                    }
-                  : {}),
-                ...(row.partyId != null
-                  ? {
-                      partyId:
-                        row.countryId === toCountryId && plan.idMap[Number(row.partyId)] != null
-                          ? String(plan.idMap[Number(row.partyId)])
-                          : "independent",
-                    }
-                  : {}),
+                ...(row.party != null ? { party: remapped(row, row.party) } : {}),
+                ...(row.partyId != null ? { partyId: remapped(row, row.partyId) } : {}),
               },
             },
           },
