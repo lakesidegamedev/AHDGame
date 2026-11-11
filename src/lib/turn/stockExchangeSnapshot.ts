@@ -80,6 +80,7 @@ import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 const EXCHANGE_NAMES: Record<string, string> = getExchangeNamesMap();
 
@@ -459,8 +460,7 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
         await Promise.all([
           // Legacy-shaped view for the margin engine's stored reads.
           findMergedRegionMetricsMany(database, {}),
-          database
-            .collection<State>("states")
+          statesCollection(database)
             .find({})
             .project<Pick<State, "_id" | "countryId" | "sectorSpecializations">>({
               countryId: 1,
@@ -922,8 +922,7 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
 
       // Resolve state names
       const hqIds = [...new Set(corporations.map((c) => c.headquartersState))];
-      const states = await database
-        .collection<State>("states")
+      const states = await statesCollection(database)
         .find({ _id: { $in: hqIds } })
         .project<{ _id: string; name: string }>({ _id: 1, name: 1 })
         .toArray();

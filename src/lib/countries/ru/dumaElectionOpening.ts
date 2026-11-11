@@ -16,6 +16,7 @@ import { planRussianDumaBallot } from "./rules/assemblySchedule";
 import { RU_1991_ECONOMIC_REGION_POPULATION } from "./data/ruPopulation1991";
 import type { RussianConstitutionalCalendar } from "./constitutionalProposals";
 import { STATE_POPULATION_FIELDS } from "@/lib/db/collections/states";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export async function materializeRussianDumaElectionOpening(input: {
   db: Db;
@@ -131,8 +132,7 @@ export async function materializeRussianDumaElectionOpening(input: {
     { session, projection: { _id: 1 } }
   );
   if (conflict) throw new Error("An unresolved Russian Duma ballot already exists");
-  const regions = await db
-    .collection<State>("states")
+  const regions = await statesCollection(db)
     .find({ countryId: "RU" }, { session, projection: STATE_POPULATION_FIELDS })
     .toArray();
   const pools = await db

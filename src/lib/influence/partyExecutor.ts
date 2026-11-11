@@ -38,6 +38,7 @@ import { resolvePartyTier } from "@/lib/parties/partyTier";
 import { getOfficeLabel } from "@/lib/utils/officeTitle";
 import { formatElectionTypeLabel } from "@/lib/utils/electionLabels";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export type { PartyInfluenceCalculation } from "./partyExecutorCalculations";
 export type { ExecutePartyInfluenceInput } from "./partyExecutorTypes";
@@ -90,15 +91,12 @@ async function getNationalRelocationTargetCost(
     return { ok: false, error: "Select a target state for this relocation request." };
   }
 
-  const targetState = await db
-    .collection<State>("states")
-    .findOne({ _id: targetStateId, countryId });
+  const targetState = await statesCollection(db).findOne({ _id: targetStateId, countryId });
   if (!targetState) {
     return { ok: false, error: "Target state not found in this country." };
   }
 
-  const countryStates = await db
-    .collection<State>("states")
+  const countryStates = await statesCollection(db)
     .find({ countryId }, { projection: { _id: 1 } })
     .toArray();
   const countryStateIds = countryStates.map((state) => state._id);
@@ -804,8 +802,7 @@ export async function getNationalPartyInfluenceOptions(party: PoliticalParty): P
   const db = await getDb();
   const partyId = String(party.sequentialId);
   const countryId = party.countryId ?? "US";
-  const states = await db
-    .collection<State>("states")
+  const states = await statesCollection(db)
     .find({ countryId }, { projection: { _id: 1, name: 1 } })
     .toArray();
   const stateIds = states.map((state) => state._id);

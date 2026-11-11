@@ -20,6 +20,7 @@ import {
   resolveSingleSeatLegislativeIncumbent,
 } from "@/lib/elections/engine/singleSeatIncumbency";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /** A rival candidate as the poll and the opponent summary see them. */
 export interface OpponentForShare {
@@ -159,9 +160,10 @@ export async function getElectionOpponents(
         }
       }
 
-      const state = await db
-        .collection<State>("states")
-        .findOne({ _id: character.homeState, countryId: character.countryId });
+      const state = await statesCollection(db).findOne({
+        _id: character.homeState,
+        countryId: character.countryId,
+      });
       if (!state) return null;
 
       // One electorate for every opponent summary: the same Layer-1 cells the

@@ -48,6 +48,7 @@ import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -125,8 +126,7 @@ export async function GET(request: Request) {
     const [states, stateMetricsDocs] =
       uniqueStateIds.length > 0
         ? await Promise.all([
-            db
-              .collection<State>("states")
+            statesCollection(db)
               .find({ _id: { $in: uniqueStateIds } })
               .project<Pick<State, "_id" | "name" | "sectorSpecializations">>({
                 _id: 1,

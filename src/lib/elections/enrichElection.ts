@@ -140,6 +140,7 @@ import {
 } from "./presidentialResolutionDisplay";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export async function _enrichElection(
   election: Election,
@@ -193,7 +194,7 @@ export async function _enrichElection(
       const stateDoc =
         deps.localRegionState !== undefined
           ? deps.localRegionState
-          : await db.collection<State>("states").findOne({ _id: localRegionId, countryId });
+          : await statesCollection(db).findOne({ _id: localRegionId, countryId });
       if (stateDoc) statesForEnrichment.set(localRegionId, stateDoc);
     }
   }

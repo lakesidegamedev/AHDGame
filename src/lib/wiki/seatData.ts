@@ -9,6 +9,7 @@ import type { State, ElectedOfficial, NPP, PoliticalParty } from "@/lib/db/types
 import { SENATE_CLASSES } from "@/lib/constants";
 import { buildCharacterHref, buildNppHref } from "@/lib/utils/profileUrls";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export type SeatSlugType = "governor" | "senate" | "house";
 
@@ -65,8 +66,7 @@ function slugToStateAndType(
 
 export async function getAllSeatSlugs(): Promise<SeatSlug[]> {
   const db = await getDb();
-  const states = await db
-    .collection<State>("states")
+  const states = await statesCollection(db)
     .find({
       $or: [{ countryId: "US" }, { countryId: { $exists: false } }],
     })
@@ -96,9 +96,7 @@ export async function getSeatData(slug: string): Promise<SeatData | null> {
   const db = await getDb();
   // This API only resolves US state-level offices (governor/house) — scope the
   // lookup to US to avoid cross-country state-ID collisions.
-  const state = await db
-    .collection<State>("states")
-    .findOne({ _id: parsed.stateId, countryId: "US" });
+  const state = await statesCollection(db).findOne({ _id: parsed.stateId, countryId: "US" });
   if (!state) return null;
 
   let officials: ElectedOfficial[];

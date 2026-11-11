@@ -72,6 +72,7 @@ import {
 import { attackCostAnchorUnderPlants, resolveWorldYear } from "@/lib/corporations/capacityCapture";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 const splitSchema = z.object({
   sectorType: z.enum(OPERATING_SECTOR_TYPES),
@@ -153,7 +154,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const { sectorType, industryModel, mediaDiscriminator } = laneIdentity;
 
     // Verify state exists
-    const state = await db.collection<State>("states").findOne({ _id: stateId, countryId });
+    const state = await statesCollection(db).findOne({ _id: stateId, countryId });
     if (!state) {
       return errorResponse(404, "State not found");
     }

@@ -10,6 +10,8 @@ import {
 import { getInfraProjectsCollection } from "@/lib/db/collections/infraProjects";
 import type { InfraProject } from "@/lib/db/types/infraProject";
 import { strictEraForPreset } from "@/lib/seeds/presetSelector";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
 
 function hash(s: string): number {
   let h = 2166136261;
@@ -85,7 +87,10 @@ export async function seedInfraProjects(db: Db, preset: string): Promise<void> {
     if (!positionId) continue;
     const existing = await col.countDocuments({ countryId, positionId });
     if (existing > 0) continue;
-    const regions = await db.collection("states").find({ countryId }).project({ _id: 1 }).toArray();
+    const regions = await statesCollection<Document>(db)
+      .find({ countryId })
+      .project({ _id: 1 })
+      .toArray();
     const regionIds = regions.map((s) => String(s._id));
     const pipeline = buildCountryPipeline(countryId, positionId, regionIds, 1, era);
     if (pipeline.length === 0) continue;

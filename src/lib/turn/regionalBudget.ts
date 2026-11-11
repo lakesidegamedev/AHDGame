@@ -37,6 +37,7 @@ import { resolveAnnualRegionalGrantPool } from "@/lib/governmentFinance/grantTra
 import type { ResetLawProgramDocument } from "@/lib/resetLegislation/program";
 import { buildResetRegionalProgramClaims } from "@/lib/resetLegislation/rules/regionalClaims";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 // ── Pure calculation types ───────────────────────────────────────────────────
 
@@ -270,7 +271,7 @@ export async function processRegionalBudgets(
   countryId: "UK" | "SCO" | "WAL" = "UK"
 ): Promise<{ regionsProcessed: number }> {
   // 1. Fetch all UK regions
-  const ukRegions = await db.collection<State>("states").find({ countryId }).toArray();
+  const ukRegions = await statesCollection(db).find({ countryId }).toArray();
 
   if (ukRegions.length === 0) return { regionsProcessed: 0 };
 

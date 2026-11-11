@@ -9,6 +9,7 @@ import {
 } from "./rules/nationalAggregation";
 import type { ResetMetricSnapshot } from "./rules/snapshot";
 import type { OpeningMetricObservation } from "./rules/openingObservation";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export interface ResetMetricDetailRead {
   history: ResetMetricHistoryPoint[];
@@ -100,8 +101,7 @@ export async function readResetMetricDetail(
         }
       )
       .toArray(),
-    db
-      .collection<State>("states")
+    statesCollection(db)
       .find(
         { countryId: board.countryId },
         {

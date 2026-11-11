@@ -16,6 +16,7 @@ import {
 } from "./pools";
 import { buildDistrictDocs } from "./buildDistrictDocs";
 import { loadCookPvi } from "./loadCookPvi";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /**
  * Build CongressionalDistrict docs for every state of `countryId` (or just
@@ -30,8 +31,7 @@ export async function buildDistrictDocsForStates(
 ): Promise<CongressionalDistrict[]> {
   const stateFilter =
     stateIds && stateIds.length > 0 ? { countryId, _id: { $in: stateIds } } : { countryId };
-  const states = (await db
-    .collection<State>("states")
+  const states = (await statesCollection(db)
     .find(stateFilter as Partial<State>)
     .toArray()) as State[];
   const parties = (await db

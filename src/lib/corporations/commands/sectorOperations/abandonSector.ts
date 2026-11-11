@@ -32,6 +32,7 @@ import {
 import { abandonBankImpact } from "@/lib/banking/capacityAllocation";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 interface RouteParams {
   params: Promise<{ id: string; sectorId: string }>;
@@ -164,9 +165,10 @@ export async function abandonSector(request: Request, { params }: RouteParams) {
       OPERATING_SECTOR_TYPE_LABELS[
         sector.sectorType as keyof typeof OPERATING_SECTOR_TYPE_LABELS
       ] ?? sector.sectorType;
-    const state = await db
-      .collection<State>("states")
-      .findOne({ _id: sector.stateId }, { projection: { name: 1 } });
+    const state = await statesCollection(db).findOne(
+      { _id: sector.stateId },
+      { projection: { name: 1 } }
+    );
     const stateName = state?.name ?? sector.stateId;
     const now = new Date();
 

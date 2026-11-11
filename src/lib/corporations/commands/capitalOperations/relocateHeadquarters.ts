@@ -54,6 +54,7 @@ import {
 } from "@/lib/corporations/securedConstructionProperty";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 const relocateSchema = z.object({
   targetStateId: z.string().min(1, "Target state/region ID required"),
@@ -137,9 +138,10 @@ export async function relocateHeadquarters(request: Request, { params }: RoutePa
 
     const resolvedTargetCountryId = (targetCountryId ??
       corporation.countryId) as typeof corporation.countryId;
-    const targetState = await db
-      .collection<State>("states")
-      .findOne({ _id: normalizedTarget, countryId: resolvedTargetCountryId });
+    const targetState = await statesCollection(db).findOne({
+      _id: normalizedTarget,
+      countryId: resolvedTargetCountryId,
+    });
     if (!targetState) {
       return errorResponse(400, "Invalid target state or region");
     }
@@ -178,9 +180,10 @@ export async function relocateHeadquarters(request: Request, { params }: RoutePa
 
     let corpCountryId: CountryId | undefined = corporation.countryId;
     if (!corpCountryId && corporation.headquartersState) {
-      const currentHq = await db
-        .collection<State>("states")
-        .findOne({ _id: corporation.headquartersState }, { projection: { countryId: 1 } });
+      const currentHq = await statesCollection(db).findOne(
+        { _id: corporation.headquartersState },
+        { projection: { countryId: 1 } }
+      );
       corpCountryId = currentHq?.countryId;
     }
     if (!corpCountryId) {

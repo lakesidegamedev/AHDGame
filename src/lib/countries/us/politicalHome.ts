@@ -5,6 +5,7 @@ import { getHouseSeats } from "@/lib/constants/states";
 import { admittedStateIdsAsOf, TERRITORY_ADMISSIONS } from "@/lib/elections/statehoodAdmission";
 import { NUMERIC_BSON_TYPE } from "@/lib/db/queryHelpers";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /**
  * Load the set of US state ids that currently host full state politics
@@ -24,8 +25,7 @@ export async function loadUsPoliticalStateIds(db: Db): Promise<{
   );
   const preset = gameState?.preset;
   const currentYear = gameState?.currentYear ?? Number.POSITIVE_INFINITY;
-  const admissionBearing = await db
-    .collection<State>("states")
+  const admissionBearing = await statesCollection(db)
     .find<{ _id: string; admittedYear?: number }>(
       { countryId: "US", admittedYear: { $type: NUMERIC_BSON_TYPE } },
       { projection: { _id: 1, admittedYear: 1 } }

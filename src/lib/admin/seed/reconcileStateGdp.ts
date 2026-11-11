@@ -3,6 +3,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import type { State } from "@/lib/db/types";
 import { NATIONAL_SCOPE_IDS } from "@/lib/constants/nationalScope";
 import { eraForPreset } from "@/lib/seeds/presetSelector";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /**
  * Seed-time regional-GDP to national-GDP reconciliation.
@@ -131,8 +132,7 @@ export async function reconcileStateGdpWithNationalSeeds(
   const nationalGdpByCountry = new Map<string, number>(
     configs.map((c) => [c.countryId as string, c.gdp])
   );
-  const regionRows = await db
-    .collection<State>("states")
+  const regionRows = await statesCollection(db)
     .find(
       { countryId: { $in: configs.map((c) => c.countryId as CountryId) } },
       { projection: { countryId: 1, gdp: 1 } }
@@ -142,7 +142,7 @@ export async function reconcileStateGdpWithNationalSeeds(
   const scalars = computeStateGdpScalars(regionRows, nationalGdpByCountry);
   const toApply = scalars.filter((s) => s.applied);
   if (toApply.length > 0) {
-    await db.collection<State>("states").bulkWrite(
+    await statesCollection(db).bulkWrite(
       toApply.map((entry) => ({
         updateMany: {
           filter: {

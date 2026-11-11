@@ -15,6 +15,7 @@ import {
   FEDERATION_RATIFICATIONS_COLLECTION,
   type FederationRatificationRecord,
 } from "./ratificationStore";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /** Record consent after the source legislature enacts the exact mandate. An
  * interrupted run resumes without revising any participant's first decision. */
@@ -57,8 +58,7 @@ export async function recordFederationRatifications(input: {
   const participants = proposal.terms.participants;
   if (participants.length < 2) throw new Error("Federation ratification has invalid participants");
   const regions = [...new Set(proposal.terms.territories.flatMap((entry) => entry.regionIds))];
-  const states = await db
-    .collection<State>("states")
+  const states = await statesCollection(db)
     .find({ _id: { $in: regions } })
     .toArray();
   if (

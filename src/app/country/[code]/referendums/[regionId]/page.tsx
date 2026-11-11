@@ -34,6 +34,7 @@ import { ConsentBillStatus } from "@/components/referendum/campaignsPanel/Consen
 import { buildConsentBillViews, type ConsentBillView } from "@/lib/referendum/consentBillView";
 import type { ObjectId } from "mongodb";
 import { turnoutTargetLabel } from "@/lib/demographics/turnoutTarget";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /**
  * Display name for a cohort. Cohorts are Layer-1 buckets
@@ -120,7 +121,7 @@ export default async function ReferendumDetailPage({
   const ref = resolved.referendum;
   const [currentTurn, stateDoc, user, pmId] = await Promise.all([
     getCurrentTurn(db),
-    db.collection<State>("states").findOne({ _id: regionId.toUpperCase(), countryId }),
+    statesCollection(db).findOne({ _id: regionId.toUpperCase(), countryId }),
     getAuthUserWithCharacter(),
     getHeadOfGovernmentCharacterId(db, countryId),
   ]);

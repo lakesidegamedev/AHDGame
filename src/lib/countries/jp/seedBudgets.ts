@@ -3,6 +3,7 @@ import type { CorporateSector, State } from "@/lib/db/types";
 import type { EnactedLaw, StateBudget } from "@/lib/db/types/budget";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /**
  * Seeds only JP budget data: national budget, enacted laws, regional budgets,
@@ -18,7 +19,7 @@ export async function seedJpBudgets(
     // Only delete JP-specific budget data, not US/UK
     await federalBudgetCollection(db).deleteMany({ countryId: "JP" });
     const jpStateIds = (
-      await db.collection("states").find({ countryId: "JP" }).project({ _id: 1 }).toArray()
+      await statesCollection<Document>(db).find({ countryId: "JP" }).project({ _id: 1 }).toArray()
     ).map((s) => s._id as string);
     if (jpStateIds.length > 0) {
       await db
@@ -89,7 +90,7 @@ export async function seedJpBudgets(
   log(`Seeded ${jpEnactedLaws.length} JP default enacted laws`);
 
   // Seed JP regional budgets
-  const states = await db.collection<State>("states").find({ countryId: "JP" }).toArray();
+  const states = await statesCollection(db).find({ countryId: "JP" }).toArray();
   const statesForBudgets = states.map((s) => ({
     id: s._id,
     population: s.population,

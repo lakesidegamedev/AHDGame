@@ -1,5 +1,6 @@
 import { ObjectId, type Db } from "mongodb";
 import type { PartyBudget, PoliticalParty, State } from "@/lib/db/types";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export async function seedPartyBudgets(db: Db, reset: boolean, log: (msg: string) => void) {
   const collection = db.collection<PartyBudget>("partyBudget");
@@ -15,8 +16,7 @@ export async function seedPartyBudgets(db: Db, reset: boolean, log: (msg: string
       .find({ isDefault: true })
       .project({ sequentialId: 1, countryId: 1 })
       .toArray(),
-    db
-      .collection<State>("states")
+    statesCollection(db)
       .find({ _id: { $not: /^NATIONAL_/ } })
       .project({ _id: 1, countryId: 1 })
       .toArray(),

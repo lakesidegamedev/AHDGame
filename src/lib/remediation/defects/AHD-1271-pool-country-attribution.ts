@@ -22,6 +22,7 @@ import type {
   HealResult,
   VerifyResult,
 } from "../types";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export const DEFECT_ID = "AHD-1271-pool-country-attribution";
 
@@ -45,8 +46,7 @@ interface Misfiled extends PoolRow {
  * the question. Those are counted into `notes` instead.
  */
 async function findMisfiled(db: Db): Promise<{ rows: Misfiled[]; statelessCount: number }> {
-  const states = await db
-    .collection<{ _id: string; countryId: string }>("states")
+  const states = await statesCollection<{ _id: string; countryId: string }>(db)
     .find({}, { projection: { countryId: 1 } })
     .toArray();
   const countryOfState = new Map(states.map((s) => [s._id, s.countryId]));

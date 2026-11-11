@@ -9,6 +9,7 @@ import { performRelocation } from "@/lib/character/performRelocation";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { isCountryEnabledForPlayers } from "@/lib/countryAccess";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 const updateCountrySchema = z.object({
   username: z.string().min(1, "Username is required"),
@@ -52,9 +53,7 @@ export async function PATCH(request: Request) {
     }
 
     const targetStateId = homeState ?? character.homeState;
-    const targetState = await db
-      .collection<State>("states")
-      .findOne({ _id: targetStateId, countryId });
+    const targetState = await statesCollection(db).findOne({ _id: targetStateId, countryId });
     if (!targetState) {
       return errorResponse(400, `No state "${targetStateId}" in country "${countryId}"`);
     }

@@ -39,6 +39,7 @@ import {
   applyProjectedDelegateShares,
   summarizePrimaryProjection,
 } from "./presidentialPrimaryDisplay";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export async function applyPresidentialPrimaryDisplay(
   db: Db,
@@ -69,8 +70,7 @@ export async function applyPresidentialPrimaryDisplay(
     campaignRulesVersion: campaignRulesVersion ?? 0,
   };
   const [states, demographics, resolvedStatePartyOrgs, engineEnriched] = await Promise.all([
-    db
-      .collection<State>("states")
+    statesCollection(db)
       .find({ _id: { $in: staggerStateIds } })
       .toArray(),
     db

@@ -26,6 +26,7 @@ import {
 } from "@/lib/parties/pendingTreasuryTransactions";
 import type { PendingTreasuryTransaction, State } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; txnId: string }>;
@@ -291,9 +292,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
         if (!ready.targetStateId) {
           return releaseSlot(errorResponse(500, "Pending row missing target state"));
         }
-        const state = await db
-          .collection<State>("states")
-          .findOne({ _id: ready.targetStateId, countryId });
+        const state = await statesCollection(db).findOne({ _id: ready.targetStateId, countryId });
         if (!state) {
           return releaseSlot(errorResponse(404, "Region no longer exists."));
         }

@@ -16,6 +16,7 @@ import type { MetricCategoryId, StateMetricValue } from "@/lib/db/types";
 import type { PoliticalMetricId } from "./types";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export type EvidenceSource =
   | { kind: "macro"; category: "economic" | "population"; metricId: string }
@@ -113,8 +114,7 @@ export async function loadEvidence(
       .collection<MacroDoc>("macroMetrics")
       .find({ countryId } as never)
       .toArray(),
-    db
-      .collection<{ _id: string; population?: number }>("states")
+    statesCollection<{ _id: string; population?: number }>(db)
       .find({ countryId } as never, { projection: { population: 1 } })
       .toArray(),
     centralBanksCollection(db).findOne({ _id: getBankId(countryId) } as never),

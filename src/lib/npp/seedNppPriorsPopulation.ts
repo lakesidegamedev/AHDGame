@@ -66,6 +66,7 @@ import {
   computeZeroStateRegionWeights,
   allocateSeatsByWeights,
 } from "@/lib/sim/backfillMissingSeats";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export interface SeedNppPriorsPopulationResult {
   nppsCreated: number;
@@ -191,8 +192,7 @@ export async function seedNppPriorsPopulation(
 
   // Real sub-national regions only - excludes national executive races that
   // pass a country code as `state`.
-  const stateDocs = await db
-    .collection<{ _id: string; countryId: CountryId }>("states")
+  const stateDocs = await statesCollection<{ _id: string; countryId: CountryId }>(db)
     .find({}, { projection: { _id: 1, countryId: 1 } })
     .toArray();
   const validRegionKeys = new Set(stateDocs.map((s) => `${s.countryId}:${s._id}`));

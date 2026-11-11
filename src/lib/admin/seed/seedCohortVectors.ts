@@ -8,6 +8,7 @@ import { getRegionCensusData } from "@/lib/seeds/regionCensusData";
 import { presetUsesDemographicPaths } from "@/lib/demographics/rules/demographicPaths";
 import { synthesizeAgeSexVector } from "@/lib/demographics/seedSynthesis";
 import { sexRatioFromVector, dependencyRatio } from "@/lib/demographics/cohortVector";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /**
  * Stand up the per-region single-year age×sex cohort vector (`regionDemographics.ages`)
@@ -67,8 +68,7 @@ export async function seedCohortVectors(
   }
 
   const [states, metricsDocs] = await Promise.all([
-    db
-      .collection<StateDoc>("states")
+    statesCollection<StateDoc>(db)
       .find({}, { projection: { _id: 1, countryId: 1, population: 1 } })
       .toArray(),
     db

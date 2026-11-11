@@ -94,6 +94,7 @@ import {
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /**
  * Sector capacity commands (plants tier, P3a of the buildable-sectors plan).
@@ -549,9 +550,10 @@ async function loadCapacityContext(
   // corporation's domicile. The state is read UNCONDITIONALLY and preferred over
   // the sector's stored value, matching `getSectorOperatingCountryId`: a stale
   // stored `countryId` from a region changing hands is exactly that case.
-  const sectorState = await db
-    .collection<State>("states")
-    .findOne({ _id: sector.stateId }, { projection: { countryId: 1 } });
+  const sectorState = await statesCollection(db).findOne(
+    { _id: sector.stateId },
+    { projection: { countryId: 1 } }
+  );
   // No guard on the result: `CorporateSector.countryId` and
   // `Corporation.countryId` are both required, so the chain always resolves,
   // and the sibling `setSectorGrowth` carries no guard either.

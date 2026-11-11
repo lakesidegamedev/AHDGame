@@ -17,6 +17,7 @@ import {
   type Modern2019CountryId,
 } from "@/lib/seeds/reference/modernRegions2019";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 const COUNTRY_IDS = [
   "RU",
@@ -47,7 +48,7 @@ export async function seedModern2019(
     const now = new Date();
 
     if (reset) {
-      await db.collection<State>("states").deleteMany({ countryId });
+      await statesCollection(db).deleteMany({ countryId });
       await db.collection<StateDemographics>("stateDemographics").deleteMany({ countryId });
       await db.collection("stateDemographicTurnout").deleteMany({ countryId });
       await db.collection<StatePartyOrg>("statePartyOrg").deleteMany({ countryId });
@@ -62,7 +63,7 @@ export async function seedModern2019(
       });
     }
 
-    await db.collection<State>("states").bulkWrite(
+    await statesCollection(db).bulkWrite(
       regions.map(({ _id, ...data }) => ({
         updateOne: { filter: { _id }, update: { $set: data }, upsert: true },
       }))

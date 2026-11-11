@@ -19,6 +19,7 @@ import {
 } from "./rules/accountability";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /** The party holding a country's national executive, with that government's approval. */
 export interface NationalExecutiveParty {
@@ -85,8 +86,7 @@ export async function observeGovernmentAccountability(
         .find({}, { projection: { countryId: 1, stateId: 1, approvalRating: 1 } })
         .toArray(),
       db.collection<GovernmentAccountability>("governmentAccountability").find({}).toArray(),
-      db
-        .collection<State>("states")
+      statesCollection(db)
         .find({}, { projection: { countryId: 1, stateSenateSeats: 1 } })
         .toArray(),
       db

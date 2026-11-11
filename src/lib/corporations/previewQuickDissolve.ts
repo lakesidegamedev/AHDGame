@@ -48,6 +48,7 @@ import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export type CommodityGlobalDeltaPreview = {
   commodity: CommodityType;
@@ -284,8 +285,7 @@ export async function previewQuickDissolve(
         }
       )
       .toArray(),
-    db
-      .collection<State>("states")
+    statesCollection(db)
       .find({}, { projection: { _id: 1, countryId: 1, gdp: 1 } })
       .toArray(),
     db

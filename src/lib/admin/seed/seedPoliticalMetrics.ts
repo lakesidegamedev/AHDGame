@@ -20,6 +20,7 @@ import { getRegionalTexture1991 } from "@/lib/politicalMetrics/seeds/regionalTex
 import { getRegionalTexture1953 } from "@/lib/politicalMetrics/seeds/regionalTexture1953";
 import { getNonPlayableBoards } from "@/lib/politicalMetrics/seeds/nonPlayableBoards";
 import { NON_PLAYABLE_BOARD_COUNTRY_IDS } from "@/lib/politicalMetrics/seeds/nonPlayableBoardsSchema";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /**
  * The 1953 preset carrying both authored modifiers and generated texture.
@@ -84,8 +85,7 @@ export async function seedPoliticalMetrics(
       });
   }
 
-  const states = await db
-    .collection<State>("states")
+  const states = await statesCollection(db)
     .find({ countryId: { $in: SEEDED_FILTER } })
     .toArray();
 

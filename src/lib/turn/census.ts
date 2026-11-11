@@ -7,6 +7,8 @@ import { regenerateCongressionalDistricts } from "@/lib/redistricting/regenerate
 import { getAutoNeutralizeStateIds } from "@/lib/redistricting/autoNeutralizeStates";
 import { getGameStateCollection } from "@/lib/db/collections/gameState";
 import { getStatesCollection } from "@/lib/db/collections/states";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
 
 /** Total US House seats redistributed each census (constitutional cap). */
 export const US_HOUSE_TOTAL_SEATS = 435;
@@ -85,8 +87,7 @@ export async function runCensus(
     return { ran: false };
   }
 
-  const usStates = await db
-    .collection("states")
+  const usStates = await statesCollection<Document>(db)
     .find<{ _id: string; population?: number; houseDistricts?: number }>(
       { countryId: "US" },
       { projection: { _id: 1, population: 1, houseDistricts: 1 } }

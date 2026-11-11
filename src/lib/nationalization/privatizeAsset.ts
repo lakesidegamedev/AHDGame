@@ -43,6 +43,7 @@ import {
 } from "@/lib/corporations/securedConstructionProperty";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export interface CarveSelection {
   sectorId: ObjectId;
@@ -237,9 +238,10 @@ export async function privatizeAsset(
   // winner's region on sale, so the selector is IPO-only in the UI.)
   let headquartersState = firstSector.stateId;
   if (params.headquartersState) {
-    const region = await db
-      .collection<{ _id: string; countryId: string }>("states")
-      .findOne({ _id: params.headquartersState, countryId: params.countryId });
+    const region = await statesCollection<{ _id: string; countryId: string }>(db).findOne({
+      _id: params.headquartersState,
+      countryId: params.countryId,
+    });
     if (!region) throw new Error("Invalid headquarters region for this country");
     headquartersState = params.headquartersState;
   }

@@ -7,6 +7,7 @@ import type { State } from "@/lib/db/types";
 import { isCountryEnabledForPlayers } from "@/lib/countryAccess";
 import { getSiteUrl } from "@/lib/siteMetadata";
 import { resolveCountryIdentity } from "@/lib/country/countryIdentity";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -39,12 +40,10 @@ export async function generateMetadata({
 
   // Resolve the region's display name — the raw param may be a compact code
   // (BUD) or a full prefixed id (HU_BUD), neither of which belongs in copy.
-  const state = await db
-    .collection<State>("states")
-    .findOne(
-      { _id: canonicalRegionId(countryId, regionId), countryId },
-      { projection: { name: 1 } }
-    );
+  const state = await statesCollection(db).findOne(
+    { _id: canonicalRegionId(countryId, regionId), countryId },
+    { projection: { name: 1 } }
+  );
   const regionName = state?.name ?? regionId;
 
   const title = `${party.name} in ${regionName} | A House Divided`;

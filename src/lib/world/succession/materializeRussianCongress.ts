@@ -20,6 +20,7 @@ import type { FederationStateTransferPlan } from "./territoryTransferPlan";
 import { planProvisionalRussianCongress } from "./rules/provisionalCongress";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export const FEDERATION_ARCHIVED_POLITICAL_ROWS_COLLECTION = "federationArchivedPoliticalRows";
 const UNION_OFFICES = ["unionCongressDeputy", "chairmanOfCabinet", "sovietPresident"];
@@ -77,8 +78,7 @@ export async function materializeProvisionalRussianCongress(input: {
     .collection<CountryState>("countryState")
     .findOne({ _id: "RU" }, { session, projection: { _id: 1 } });
   if (!runtime) throw new Error("Russian succession requires its existing runtime country state");
-  const states = await db
-    .collection<State>("states")
+  const states = await statesCollection(db)
     .find(
       { countryId: "RU", _id: { $in: retainedStateIds } },
       { session, projection: { houseDistricts: 1 } }
@@ -158,12 +158,11 @@ export async function materializeProvisionalRussianCongress(input: {
       { session }
     );
   // Clear office links in batches; personal wealth and residence never change.
-  await charactersCollection(db)
-    .updateMany(
-      { countryId: "RU", "currentOffice.type": { $in: FEDERAL_PERSON_OFFICES } },
-      { $set: { currentOffice: null, updatedAt: now } },
-      { session }
-    );
+  await charactersCollection(db).updateMany(
+    { countryId: "RU", "currentOffice.type": { $in: FEDERAL_PERSON_OFFICES } },
+    { $set: { currentOffice: null, updatedAt: now } },
+    { session }
+  );
   await db
     .collection<NPP>("npps")
     .updateMany(
@@ -199,8 +198,7 @@ export async function materializeProvisionalRussianCongress(input: {
       });
   }
   if (characterUpdates.length) {
-    const result = await charactersCollection(db)
-      .bulkWrite(characterUpdates, { session });
+    const result = await charactersCollection(db).bulkWrite(characterUpdates, { session });
     if (result.matchedCount !== characterUpdates.length)
       throw new Error("A retained player deputy is missing or awaiting residence choice");
   }

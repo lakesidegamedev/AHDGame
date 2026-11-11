@@ -20,6 +20,7 @@ import { getLaw } from "@/lib/politicalLegislation/catalog";
 import { computeLawCost } from "@/lib/politicalLegislation/costEngine";
 import { projectLawToLegislationType } from "@/lib/politicalLegislation/project";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 const GDP_MILLIONS = 1_000_000;
 
@@ -61,7 +62,7 @@ export async function processRURegionalBudgets(
   db: Db,
   turnNumber: number
 ): Promise<{ regionsProcessed: number }> {
-  const regions = await db.collection<State>("states").find({ countryId: "RU" }).toArray();
+  const regions = await statesCollection(db).find({ countryId: "RU" }).toArray();
   if (regions.length === 0) return { regionsProcessed: 0 };
 
   const budget = await federalBudgetCollection(db).findOne(

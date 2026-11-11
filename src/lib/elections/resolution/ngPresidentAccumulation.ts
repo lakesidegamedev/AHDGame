@@ -25,6 +25,7 @@ import {
 import { NG_ZONES } from "@/lib/elections/presidential/nigeriaPresidentialElectionEngine";
 import { planTurnSlice } from "@/lib/elections/rules/turnSlice";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /** Approximate NG presidential turnout (share of population voting). */
 const NG_TURNOUT_RATE = NG_CAMPAIGN_TURNOUT_RATE;
@@ -60,8 +61,7 @@ export async function accumulateNGPresidentVoteTurn(
   const candidateIds = Object.keys(candidateParties);
   if (candidateIds.length === 0) return;
 
-  const states = await db
-    .collection<State>("states")
+  const states = await statesCollection(db)
     .find(
       { countryId: "NG" },
       { projection: { _id: 1, countryId: 1, population: 1, votingEligiblePopulation: 1 } }

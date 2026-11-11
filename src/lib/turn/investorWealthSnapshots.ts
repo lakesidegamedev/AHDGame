@@ -40,6 +40,7 @@ import {
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /**
  * Generate pre-computed global investor rankings.
@@ -245,8 +246,7 @@ export async function generateWealthListSnapshots(currentTurn: number, db?: Db):
   // sum across corps and bonds of any currency, so each value must be
   // anchor-normalized via `fxByCurrency` before accumulation (v0.2.6).
   const [states, corporations, bonds, fxByCurrency] = await Promise.all([
-    database
-      .collection<State>("states")
+    statesCollection(database)
       .find({ _id: { $in: [...new Set(activeCharacters.map((c) => c.homeState))] } })
       .project<Pick<State, "_id" | "name">>({ _id: 1, name: 1 })
       .toArray(),

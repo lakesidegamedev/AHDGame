@@ -27,6 +27,7 @@ import { generateAddressNews } from "@/lib/news";
 import { sendCountryGameEvent } from "@/lib/discordWebhooks";
 import { buildNationalAddressEmbed } from "@/lib/governorOffice/address/addressWebhook";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export interface DeliverAddressInput {
   countryId: CountryId;
@@ -179,8 +180,7 @@ export async function deliverAddress(
   if (targetDemographicGroupId) {
     const isNational = stateId === getNationalStateId(countryId);
     if (isNational) {
-      const states = await db
-        .collection<{ _id: string; countryId: CountryId }>("states")
+      const states = await statesCollection<{ _id: string; countryId: CountryId }>(db)
         .find({ countryId })
         .toArray();
       const stateIds = states.map((s) => s._id);

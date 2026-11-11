@@ -79,6 +79,7 @@ import {
 } from "./campaign";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /**
  * The deep module for shared world-event responses. Callers only need to ask
@@ -496,8 +497,7 @@ async function applyEffectsForCountry(
   effects: CrisisDecisionOption["effects"]
 ): Promise<void> {
   if (effects.length === 0) return;
-  const states = await db
-    .collection<{ _id: string }>("states")
+  const states = await statesCollection<{ _id: string }>(db)
     .find({ countryId }, { projection: { _id: 1 } })
     .toArray();
   const characters = effects.some((effect) => effect.targetType === "stat")

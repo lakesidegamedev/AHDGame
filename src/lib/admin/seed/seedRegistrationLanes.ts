@@ -24,6 +24,7 @@ import { build2027RegistrationSeeds } from "@/lib/seeds/registration/registratio
 import type { CountryId } from "@/lib/constants/countries";
 import type { PoliticalParty, StatePartyOrg, StateRegistrationPool } from "@/lib/db/types";
 import { NUMERIC_BSON_TYPE } from "@/lib/db/queryHelpers";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 interface SeedResult {
   presetUsed: string;
@@ -205,8 +206,11 @@ export async function seedRegistrationLanes(
   // stale rows from an earlier bundle cannot survive (notably DC and the
   // pre-statehood AK/HI territories in a 1953 world).
   const coveredCountries = [...new Set(bundle.map((row) => row.countryId))];
-  const admittedUSStates = await db
-    .collection<{ _id: string; countryId?: string; admittedYear?: number }>("states")
+  const admittedUSStates = await statesCollection<{
+    _id: string;
+    countryId?: string;
+    admittedYear?: number;
+  }>(db)
     .find(
       { countryId: "US", admittedYear: { $type: NUMERIC_BSON_TYPE } },
       { projection: { _id: 1 } }

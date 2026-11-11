@@ -32,6 +32,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import type { Document } from "mongodb";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 type SeatScopedOfficial = ElectedOfficial & { seatId?: string };
 
@@ -752,8 +753,7 @@ async function collectEconomyStats(db: Db): Promise<EconomyStats> {
         },
       ])
       .toArray(),
-    db
-      .collection("states")
+    statesCollection<Document>(db)
       .aggregate([
         { $match: { countryId: { $in: countryIds } } },
         { $group: { _id: "$countryId", gdp: { $sum: "$gdp" } } },

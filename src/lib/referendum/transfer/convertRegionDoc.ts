@@ -10,6 +10,7 @@
 import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { State } from "@/lib/db/types";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /**
  * Seats for a region at the peers' average people-per-seat ratio, rounded and
@@ -49,10 +50,10 @@ export async function convertRegionDoc(db: Db, args: ConvertRegionDocArgs): Prom
   const { regionId, toCountryId, province, displayName, votingSystem } = args;
   const now = new Date();
 
-  const region = await db.collection<State>("states").findOne({ _id: regionId });
+  const region = await statesCollection(db).findOne({ _id: regionId });
   const population = region?.population ?? 0;
 
-  const peers = await db.collection<State>("states").find({ countryId: toCountryId }).toArray();
+  const peers = await statesCollection(db).find({ countryId: toCountryId }).toArray();
 
   // ⚠️ DO NOT source this from the `seats` collection. A `DE-bundestag-<Land>`
   // document holds that Land's WAHLKREIS count under the additive-member system
@@ -70,7 +71,7 @@ export async function convertRegionDoc(db: Db, args: ConvertRegionDocArgs): Prom
     peers.map((p) => ({ population: p.population, seats: p.stateSenateSeats }))
   );
 
-  await db.collection<State>("states").updateOne(
+  await statesCollection(db).updateOne(
     { _id: regionId },
     {
       $set: {

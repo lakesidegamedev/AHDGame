@@ -121,6 +121,7 @@ import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 export {
   settleFundedWholeCorpLiquidation,
   settleFundedWholeCorpShareholderPool,
@@ -446,9 +447,10 @@ export async function releaseForeignSectorToUnowned(
     // `restoreSectorsToUnowned` and the shed passes carried). Only read when the
     // row may not exist yet, since `$ifNull` leaves an existing row's country
     // alone either way.
-    const releaseState = await db
-      .collection<State>("states")
-      .findOne({ _id: sector.stateId }, { projection: { countryId: 1 } });
+    const releaseState = await statesCollection(db).findOne(
+      { _id: sector.stateId },
+      { projection: { countryId: 1 } }
+    );
     const releaseCountryId = releaseState?.countryId ?? sector.countryId;
     const restoreToken = sector._id.toHexString();
     const retryWindowStart = new Date(now.getTime() - UNOWNED_RELEASE_RETRY_WINDOW_MS);

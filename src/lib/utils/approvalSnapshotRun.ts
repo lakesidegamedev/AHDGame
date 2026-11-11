@@ -22,6 +22,8 @@ import {
   guestsToRelease,
   planApprovalSnapshot,
 } from "@/lib/utils/approvalSnapshotTargets";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
 
 /**
  * Orchestration for the per-turn approval snapshot: who gets one, and whose
@@ -83,7 +85,7 @@ export async function snapshotApprovalsForTurn(
     // Cheap: one projection over a collection with one document per country that
     // has ever needed one.
     approvals.find({}, { projection: { _id: 1 } }).toArray(),
-    db.collection("states").distinct("countryId"),
+    statesCollection<Document>(db).distinct("countryId"),
   ]);
 
   const known = (id: unknown): id is CountryId => typeof id === "string" && id in COUNTRY_CONFIGS;

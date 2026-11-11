@@ -65,6 +65,7 @@ import { expireMinisterialOrders } from "@/lib/cabinet/ministerialOrderLifecycle
 import { getCharactersCollection } from "@/lib/db/collections/characters";
 import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /**
  * Maximum |modifier| any single metric can receive per turn from the combined
@@ -266,8 +267,7 @@ export async function processMinisterialOrders(currentTurn: number): Promise<{
         advocacyActive: 1,
       })
       .toArray(),
-    db
-      .collection<{ _id: string; countryId: string }>("states")
+    statesCollection<{ _id: string; countryId: string }>(db)
       .find({}, { projection: { _id: 1, countryId: 1 } })
       .toArray(),
   ]);

@@ -27,6 +27,7 @@ import { bgOrdinarySeatingClockReady } from "./rules/assemblyClock1991";
 import { GAME_STATE_PRE_ITERATION_FIELDS } from "@/lib/db/collections/gameState";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 interface BgAssemblyOfficeArchive {
   _id: string;
@@ -380,7 +381,7 @@ async function materializeBgOrdinaryAssembly(input: {
     })),
     { session }
   );
-  const resized = await db.collection<State>("states").bulkWrite(
+  const resized = await statesCollection(db).bulkWrite(
     regions.map((id) => ({
       updateOne: {
         filter: { _id: id, countryId: "BG" },

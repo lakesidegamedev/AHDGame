@@ -94,6 +94,7 @@ import { BAL_NPP_CAPITAL_STATE } from "@/lib/countries/bal/geographyFacts";
 import { CA_NPP_CAPITAL_STATE } from "@/lib/countries/ca/geographyFacts";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /**
  * Default founding book for an admin/NPP-spawned corporation, in ₳ at MODERN
@@ -696,7 +697,7 @@ export async function spawnNppCorporation(
   await assertPrivateEnterprisePermitted(db, countryId);
 
   // Validate state exists and belongs to the country
-  const state = await db.collection<State>("states").findOne({ _id: headquartersState });
+  const state = await statesCollection(db).findOne({ _id: headquartersState });
   if (!state) {
     throw new Error(`State "${headquartersState}" not found`);
   }

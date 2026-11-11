@@ -37,6 +37,7 @@ import { isBillWhipInCurrentPhase } from "@/lib/congress/billWhipPhase";
 import { loadCabinetDiscipline, type CabinetDiscipline } from "@/lib/resetCabinet/loadDiscipline";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 // ─── Context Types ─────────────────────────────────────────────────────────────
 
@@ -445,8 +446,7 @@ export async function loadNPPContext(now: Date, options?: NPPContextOptions): Pr
       .collection<StateDemographics>("stateDemographics")
       .find({}, { projection: { _id: 1, countryId: 1 } })
       .toArray() as Promise<StateDemographics[]>,
-    db
-      .collection<State>("states")
+    statesCollection(db)
       .find({}, { projection: { _id: 1, countryId: 1 } })
       .toArray() as Promise<State[]>,
   ]);

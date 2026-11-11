@@ -57,6 +57,7 @@ import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import type { Document } from "mongodb";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 const MIN_STARTING_DONOR_BASE_LEVEL = 1;
 
@@ -137,7 +138,7 @@ export async function createCharacterForAccount(userId: string, data: CreateChar
   }
 
   // Verify state exists, scoped to the country the user picked at registration.
-  const stateDoc = await db.collection<State>("states").findOne({
+  const stateDoc = await statesCollection(db).findOne({
     _id: homeState,
     countryId: requestedCountryId.toUpperCase() as import("@/lib/constants/countries").CountryId,
   });

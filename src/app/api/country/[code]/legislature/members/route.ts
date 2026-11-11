@@ -22,6 +22,7 @@ import {
 import type { PoliticalParty, ElectedOfficial, State, Character, NPP } from "@/lib/db/types";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export async function GET(request: Request, { params }: { params: Promise<{ code: string }> }) {
   try {
@@ -130,8 +131,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
 
     // Look up region display names for all member states
     const memberStateIds = [...new Set(officials.map((o) => o.state).filter(Boolean))];
-    const stateDocs = await db
-      .collection<State>("states")
+    const stateDocs = await statesCollection(db)
       .find({ _id: { $in: memberStateIds as string[] } }, { projection: { name: 1 } })
       .toArray();
     const stateNameMap = new Map(stateDocs.map((s) => [s._id as string, s.name]));

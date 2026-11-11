@@ -41,6 +41,7 @@ import {
   type SnapshottedProvision,
 } from "@/lib/legislature/provisionEnrichment";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export interface StateLegislatureBillsPage {
   blockedProvisions: { legislationTypeId: string; policyOptionId: string }[];
@@ -329,9 +330,10 @@ export async function getStateLegislatureBillDetail(
 
   // Chamber size for the vote-seating hero — same source the composition uses
   // (CN's elected People's Congress is sized separately from `stateSenateSeats`).
-  const stateDoc = await db
-    .collection<State>("states")
-    .findOne({ _id: stateId, countryId }, { projection: { stateSenateSeats: 1 } });
+  const stateDoc = await statesCollection(db).findOne(
+    { _id: stateId, countryId },
+    { projection: { stateSenateSeats: 1 } }
+  );
   const eligibleSeats = stateDoc
     ? subNationalChamberSeats(
         countryId,

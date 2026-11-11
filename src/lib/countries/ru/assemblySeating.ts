@@ -19,6 +19,7 @@ import { loadRussianAssemblySeatingInputs } from "./assemblySeatingInputs";
 import type { RussianAssemblySeat } from "./rules/assemblySeating";
 import type { RussianAssemblyVacancyReason } from "./rules/assemblyOwnerEligibility";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 export const RUSSIAN_ASSEMBLY_SEATINGS_COLLECTION = "russianAssemblySeatings";
 export const RUSSIAN_ASSEMBLY_ARCHIVES_COLLECTION = "russianAssemblyOfficeArchives";
 export interface RussianAssemblySeatingRecord {
@@ -220,7 +221,7 @@ export async function materializeRussianAssemblySeating(input: {
     if (updated.matchedCount !== selected.length)
       throw new Error("Assembly owner changed during handover");
   }
-  await db.collection<State>("states").bulkWrite(
+  await statesCollection(db).bulkWrite(
     regions.map((row) => ({
       updateOne: {
         filter: { _id: row._id, countryId: "RU" },

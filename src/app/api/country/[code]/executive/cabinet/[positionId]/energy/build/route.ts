@@ -19,6 +19,7 @@ import {
 } from "@/lib/cabinet/ministerialActionPool";
 import { getEnergyPlantsCollection } from "@/lib/db/collections/energyPlants";
 import { resolveEnergyPosition, getEnergySource } from "@/lib/constants/cabinetEnergy";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 const buildSchema = z.object({
   source: z.enum(["coal", "gas", "nuclear", "hydro", "wind", "solar"]),
@@ -54,8 +55,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     const db = await getDb();
-    const region = await db
-      .collection<{ _id: string; countryId: string }>("states")
+    const region = await statesCollection<{ _id: string; countryId: string }>(db)
       .findOne({ _id: parsed.data.regionId, countryId }, { projection: { _id: 1 } });
     if (!region) {
       return errorResponse(400, "Invalid region for this country");

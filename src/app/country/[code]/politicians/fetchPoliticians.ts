@@ -4,6 +4,7 @@ import { getOfficeLabel } from "@/lib/utils/officeTitle";
 import type { Character, NPP, PoliticalParty } from "@/lib/db/types";
 import type { PoliticianData } from "@/lib/politicians/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export interface PoliticiansResult {
   politicians: PoliticianData[];
@@ -101,8 +102,7 @@ export async function fetchPoliticians(countryId: CountryId): Promise<Politician
     ),
   ];
   const [stateNameDocs, partyDocs] = await Promise.all([
-    db
-      .collection<{ _id: string; name: string }>("states")
+    statesCollection<{ _id: string; name: string }>(db)
       .find({ _id: { $in: allHomeStateIds } }, { projection: { name: 1 } })
       .toArray(),
     db

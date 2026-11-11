@@ -8,6 +8,7 @@ import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { getStateLean } from "@/lib/utils/demographics";
 import { buildStatePartyRows } from "@/lib/states/buildStatePartyRows";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 // GET /api/country/[code]/parties/[id]/state-parties — Aggregate per-region party data
 //   (org%, PS, treasury, registration%, lean, chair, NPP count, priority target) for the
@@ -44,7 +45,7 @@ export async function GET(
       return errorResponse(403, "Not authorized");
     }
 
-    const states = await db.collection<State>("states").find({ countryId }).toArray();
+    const states = await statesCollection(db).find({ countryId }).toArray();
     const orgRows = await db
       .collection<StatePartyOrg>("statePartyOrg")
       .find({ partyId: partyIdStr, countryId })

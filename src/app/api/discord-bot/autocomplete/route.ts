@@ -10,6 +10,7 @@ import type { State, GameState } from "@/lib/db/types";
 import { filterCountryResults } from "./countryResults";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 // GET /api/discord-bot/autocomplete — Returns name/ID matches for Discord slash command option prefills. Supports type=characters, type=states, and type=countries.
 // Auth: requireAdminOrApiKey
@@ -60,8 +61,7 @@ export async function GET(request: Request) {
     }
 
     if (type === "states") {
-      const states = await db
-        .collection<State>("states")
+      const states = await statesCollection(db)
         .find(
           {
             $or: [

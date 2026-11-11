@@ -6,10 +6,10 @@ import {
 } from "@/lib/db/collections/nationalManpower";
 import { resolveConscriptionStanceFor } from "@/lib/military/conscriptionLaw";
 import { manpowerCeiling, initialManpowerPool } from "@/lib/military/manpower";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 async function populationOf(db: Db, countryId: string): Promise<number> {
-  const states = await db
-    .collection<{ population?: number }>("states")
+  const states = await statesCollection<{ population?: number }>(db)
     .find({ countryId: countryId as CountryId })
     .toArray();
   return states.reduce((a, s) => a + (s.population ?? 0), 0);

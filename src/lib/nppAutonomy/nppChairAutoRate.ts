@@ -51,6 +51,7 @@ import {
 } from "@/lib/nppAutonomy/v6/rules/fxRateResponse";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /**
  * Bounded step toward the target: 0.5x the gap, clamped to [-1.75, +0.75].
@@ -200,8 +201,7 @@ export async function processNppChairAutoRate(
       alignment: bank.chairAlignment,
     });
   } else {
-    const regions = await db
-      .collection<State>("states")
+    const regions = await statesCollection(db)
       .find(
         { countryId },
         { projection: { gdp: 1, outputGap: 1, outputTrendGrowth: 1, realOutputStartTurn: 1 } }

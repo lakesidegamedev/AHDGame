@@ -7,6 +7,7 @@ import { huRegions1991 } from "@/lib/countries/hu/data/huRegions1991";
 import { roRegions1991 } from "@/lib/countries/ro/data/roRegions1991";
 import { bgRegions1991 } from "@/lib/countries/bg/data/bgRegions1991";
 import { yuRegions1991 } from "@/lib/countries/yu/data/yuRegions1991";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 const BUNDLES = [
   sovietUnionRegions1991,
@@ -26,7 +27,7 @@ export async function seedSuccessorRegions1991(
   log: (message: string) => void
 ): Promise<void> {
   if (preset !== "1991-default") return;
-  const states = db.collection<State>("states");
+  const states = statesCollection(db);
   for (const bundle of BUNDLES) {
     const countryId = bundle[0]?.countryId;
     if (!countryId) throw new Error("Empty 1991 successor region bundle");

@@ -47,6 +47,7 @@ import {
 } from "@/lib/seeds/reference/rules/openingProgramCostScale";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /** Player books refit per category to their authored 1991 composition. */
 const OPENING_COMPOSITION_REFIT_1991: ReadonlySet<string> = new Set(["US", "UK"]);
@@ -197,8 +198,7 @@ export async function seedPoliticalLegislationBaseline(
       const allowed = countryHasFeature("ddAdmin", countryId)
         ? new Set<string>(DD_LAND_STATE_IDS)
         : null;
-      const states = await db
-        .collection<{ _id: string }>("states")
+      const states = await statesCollection<{ _id: string }>(db)
         .find({ countryId }, { projection: { _id: 1 } })
         .toArray();
       const regionIds = states

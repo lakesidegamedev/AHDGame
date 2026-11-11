@@ -19,6 +19,7 @@ import {
   seedNuclearPrograms,
 } from "@/lib/admin/seed/seedNuclearPrograms";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 const NUCLEAR_DELIVERY_DOCTRINE_KEY = keyOf("strat", 5);
 
@@ -146,8 +147,7 @@ export async function seedColdWarFoundations(
     const populations: Record<string, number> = {};
     if (opts.presetId === "2027-default") {
       const [regions, macroCountries] = await Promise.all([
-        db
-          .collection<{ countryId: string; population?: number }>("states")
+        statesCollection<{ countryId: string; population?: number }>(db)
           .find({}, { projection: { countryId: 1, population: 1 } })
           .toArray(),
         db

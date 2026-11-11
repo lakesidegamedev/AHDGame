@@ -39,6 +39,8 @@ import {
 import { turnToWallClock } from "@/lib/elections/canonicalCycle";
 import { canRebindBg1991PrimaryCohort } from "./rules/primaryHandover1991";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
 
 export const BG_1991_PROPOSALS_COLLECTION = "bg1991ConstitutionalProposals";
 const ID = "1991-default:bg-constitutional:constitution1991";
@@ -156,8 +158,7 @@ export async function materializeBg1991ConstitutionalProposal(input: {
         "A revised draft cannot precede the previous decision"
       );
   }
-  const regions = await db
-    .collection("states")
+  const regions = await statesCollection<Document>(db)
     .find({ countryId: "BG" }, { session, projection: { houseDistricts: 1 } })
     .toArray();
   const capacity = regions.reduce((n, row) => n + (row.houseDistricts ?? 0), 0);

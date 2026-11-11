@@ -47,6 +47,7 @@ import {
 } from "@/lib/economy/householdPriceIndex";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 interface HistoryPoint {
   turn: number;
@@ -159,8 +160,7 @@ export async function buildCountryEconomyOutlook(
       federalBudgetCollection(db).findOne({ _id: getNationalBudgetId(countryId) } as {
         _id: "federal";
       }),
-      db
-        .collection<State>("states")
+      statesCollection(db)
         .find({ countryId })
         .project<Pick<State, "_id" | "name" | "gdp" | "population">>({
           name: 1,

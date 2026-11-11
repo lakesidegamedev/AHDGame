@@ -16,6 +16,7 @@ import { NEUTRAL_STAT } from "@/lib/stats/statsConstants";
 import { logEconomicAction } from "@/lib/corporations/economicActionLog";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 interface RouteParams {
   params: Promise<{ id: string; sectorId: string }>;
@@ -94,9 +95,10 @@ export async function setSectorGrowth(request: Request, { params }: RouteParams)
     // action log. State first, matching `getSectorOperatingCountryId`: a stored
     // `countryId` left stale by a region changing hands is the case that
     // precedence exists for.
-    const sectorState = await db
-      .collection<State>("states")
-      .findOne({ _id: sector.stateId }, { projection: { countryId: 1 } });
+    const sectorState = await statesCollection(db).findOne(
+      { _id: sector.stateId },
+      { projection: { countryId: 1 } }
+    );
     const countryId = sectorState?.countryId ?? sector.countryId ?? corporation.countryId;
     const primeRate = await resolveCountryPrimeRate(db, countryId);
     // Dominance penalty: dominant sectors (>{@link DOMINANCE_MARKET_SHARE_THRESHOLD}%

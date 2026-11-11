@@ -57,6 +57,7 @@ import { getElectedOfficialsCollection } from "@/lib/db/collections/electedOffic
 import { getNppsCollection } from "@/lib/db/collections/npps";
 import { getElectionsCollection } from "@/lib/db/collections/elections";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export const SNAP_ELECTION_LIMIT = 2;
 export const SNAP_ELECTION_COOLDOWN_TURNS = 336;
@@ -236,8 +237,7 @@ export async function triggerSnapElection(
   // A dissolution without replacement races would strand the country with no
   // lower chamber. Validate the region set before cancelling elections,
   // failing bills, or vacating any offices.
-  const regions = await db
-    .collection<{ _id: string }>("states")
+  const regions = await statesCollection<{ _id: string }>(db)
     .find({ countryId }, { projection: { _id: 1 } })
     .toArray();
   if (regions.length === 0) {

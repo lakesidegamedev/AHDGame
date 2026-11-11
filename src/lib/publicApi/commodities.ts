@@ -9,6 +9,8 @@ import {
   COMMODITY_UNITS,
   type CommodityType,
 } from "@/lib/constants/commodities";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
 
 /** Which source a country's supply and demand came from; null with no price row. */
 function balanceSource(data: object | null | undefined): NationalBalanceSource | null {
@@ -77,8 +79,7 @@ export async function queryCommodityDetail(db: Db, params: { key: string; countr
   // Filter state-level data by country if provided
   const filterState = country
     ? async () => {
-        const states = await db
-          .collection("states")
+        const states = await statesCollection<Document>(db)
           .find({ countryId: country })
           .project<{ _id: string }>({ _id: 1 })
           .toArray();

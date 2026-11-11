@@ -10,6 +10,7 @@ import {
 import { LAW_COUNTRY_IDS } from "@/lib/politicalLegislation/types";
 import { DD_LAND_STATE_IDS } from "@/lib/politicalLegislation/laws/ddLandLaws";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /**
  * Backfill the level-0 regional default law for every new-generation `both`
@@ -44,8 +45,7 @@ async function backfillRegionalDefaultLaws(db: Db, dryRun: boolean): Promise<Mig
     const allowed = countryHasFeature("ddSeeds", countryId)
       ? new Set<string>(DD_LAND_STATE_IDS)
       : null;
-    const states = await db
-      .collection<{ _id: string }>("states")
+    const states = await statesCollection<{ _id: string }>(db)
       .find({ countryId })
       .project<{ _id: string }>({ _id: 1 })
       .toArray();

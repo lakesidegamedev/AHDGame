@@ -38,6 +38,7 @@ import type {
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /**
  * What each kind costs and does, so the gate, the debit and the stored row all
@@ -210,8 +211,8 @@ export async function POST(request: Request, { params }: RouteParams) {
     // lookup that throws there would 500 on an attack the player has already
     // paid for.
     const stateName =
-      (await db.collection<State>("states").findOne({ _id: stateId }, { projection: { name: 1 } }))
-        ?.name ?? stateId;
+      (await statesCollection(db).findOne({ _id: stateId }, { projection: { name: 1 } }))?.name ??
+      stateId;
 
     const now = new Date();
     const row: Omit<PrimaryStateAction, "_id"> = {

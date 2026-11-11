@@ -46,6 +46,7 @@ import { resolveCampaignPriceLevel } from "@/lib/campaigns/rules/priceLevel";
 import { fundPoliticalMediaOrder } from "@/lib/politicalMedia/journal";
 import { applySlantToAdvertise, loadStateSlant } from "@/lib/mediaEditorial/slant";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 function clampAddExpression(fieldPath: string, delta: number, min: number, max: number) {
   return {
@@ -207,9 +208,7 @@ async function executeCharacterActionImpl(
   let state: State | null = null;
   if (stateId) {
     dbStartedAt = Date.now();
-    state = await db
-      .collection<State>("states")
-      .findOne({ _id: stateId, countryId: character.countryId });
+    state = await statesCollection(db).findOne({ _id: stateId, countryId: character.countryId });
     timing.dbReadMs += Date.now() - dbStartedAt;
     if (action.requiresState && !state) {
       return { ok: false, error: "Invalid state", status: 400 };

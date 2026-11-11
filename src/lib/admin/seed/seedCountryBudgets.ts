@@ -10,6 +10,8 @@ import type { CountryId } from "@/lib/constants/countries";
 import type { generateStateBudgets } from "@/lib/seeds/reference/budgets";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
 
 interface CountryBudgetSeedOptions {
   countryId: CountryId;
@@ -41,7 +43,7 @@ export async function seedCountryBudgets(
   if (reset) {
     await federalBudgetCollection(db).deleteMany({ countryId });
     const stateIds = (
-      await db.collection("states").find({ countryId }).project({ _id: 1 }).toArray()
+      await statesCollection<Document>(db).find({ countryId }).project({ _id: 1 }).toArray()
     ).map((state) => state._id as string);
     if (stateIds.length > 0) {
       await db.collection<StateBudget>("stateBudgets").deleteMany({
@@ -113,7 +115,7 @@ export async function seedCountryBudgets(
   }
   log(`Seeded ${enactedLaws.length} ${countryId} default enacted laws`);
 
-  const states = await db.collection<State>("states").find({ countryId }).toArray();
+  const states = await statesCollection(db).find({ countryId }).toArray();
   const statesForBudgets = states.map((state) => ({
     id: state._id,
     population: state.population,

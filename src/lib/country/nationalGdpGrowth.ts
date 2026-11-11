@@ -4,6 +4,7 @@ import type { StateMetrics } from "@/lib/db/types/stateMetrics";
 import type { CountryId } from "@/lib/constants/countries";
 import { getNationalDocId } from "@/lib/constants/nationalScope";
 import { getEraTrendGdpGrowth } from "@/lib/constants/monetaryEra";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /**
  * GDP-weighted mean of regional growth rates. Null when nothing is weightable.
@@ -97,8 +98,7 @@ export async function loadNationalGdpGrowth(
     if (typeof value === "number" && Number.isFinite(value)) return value;
   }
 
-  const states = await db
-    .collection<State>("states")
+  const states = await statesCollection(db)
     .find({ countryId })
     .project<{ _id: string; gdp?: number }>({ gdp: 1 })
     .toArray();

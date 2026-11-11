@@ -10,6 +10,7 @@ import type { HistoricalSeat } from "@/lib/constants/historicalSeats";
 import type { PoliticalParty, State, StatePartyOrg } from "@/lib/db/types";
 import { buildProportionalChamberSeats } from "@/lib/seeds/proportionalChamberSeats";
 import { getGameStatePreset } from "@/lib/db/collections/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /**
  * Economy-tier ("ECON") democracies enabled for live economy + NPP politics but
@@ -167,8 +168,7 @@ export async function seedEconTierRostersForCountry(
     .toArray()) as unknown as RosterParty[];
   if (parties.length === 0) return empty;
 
-  const regions = await db
-    .collection<State>("states")
+  const regions = await statesCollection(db)
     .find({ countryId }, { projection: { _id: 1, houseDistricts: 1, stateSenateSeats: 1 } })
     .toArray();
   if (regions.length === 0) return empty;

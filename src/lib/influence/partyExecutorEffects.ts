@@ -14,6 +14,7 @@ import {
 } from "@/lib/nppEndorsements";
 import { advertiseFavorabilityGain, campaignInfluenceGain } from "@/lib/actions";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 // Loyalty and stubbornness have no per-turn decay, so their boosts stay flat.
 // Influence and favorability DO decay every turn (see actionRefresh), so their
@@ -93,9 +94,10 @@ export async function applyPartyInfluenceEffects(
       const targetStateId = input.context.targetStateId;
       if (!targetStateId) return {};
 
-      const targetState = await db
-        .collection<State>("states")
-        .findOne({ _id: targetStateId, countryId: party.countryId });
+      const targetState = await statesCollection(db).findOne({
+        _id: targetStateId,
+        countryId: party.countryId,
+      });
       if (!targetState) {
         return {};
       }

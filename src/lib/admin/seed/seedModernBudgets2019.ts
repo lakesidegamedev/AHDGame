@@ -9,6 +9,7 @@ import {
 import { upsertCountryOwnedCorpEntries } from "./upsertCountryOwnedCorps";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 const COUNTRY_IDS = ["RU", "PL", "HU", "RO", "BG"] as const;
 
@@ -36,8 +37,7 @@ export async function seedModernBudgets2019(
       updateOne: { filter: { _id }, update: { $set: { ...budget, updatedAt: now } }, upsert: true },
     }))
   );
-  const regions = await db
-    .collection<State>("states")
+  const regions = await statesCollection(db)
     .find({ countryId: { $in: countries } })
     .project({ _id: 1, countryId: 1, population: 1, gdp: 1 })
     .toArray();

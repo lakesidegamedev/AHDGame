@@ -8,6 +8,7 @@ import type { State, StatePartyOrg } from "@/lib/db/types";
 import { findPartyBySequentialId, getStatePartyOrgDocumentId } from "@/lib/db/partyLookup";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 const heroSchema = z.object({
   heroImageUrl: z
@@ -49,7 +50,7 @@ export async function POST(
     const authData = auth.user;
 
     const db = await getDb();
-    const state = await db.collection<State>("states").findOne({ _id: stateId, countryId });
+    const state = await statesCollection(db).findOne({ _id: stateId, countryId });
     if (!state) {
       return errorResponse(404, "State not found");
     }

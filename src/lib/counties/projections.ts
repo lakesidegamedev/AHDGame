@@ -16,6 +16,7 @@ import {
   hasPopulationSubdivisionReference,
   loadPopulationSubdivisionReference,
 } from "./subdivisionReference";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /** Identity retained on journal writes so reassigned targets cannot be overwritten. */
 export function countyPopulationIdentity(
@@ -32,8 +33,7 @@ export async function freezeCountyPopulationPlans(
   regions: DemographicFlowRegionInput[]
 ): Promise<DemographicFlowRegionInput[]> {
   const states = (
-    await db
-      .collection<{ _id: string; countryId: CountyCountryId; population: number }>("states")
+    await statesCollection<{ _id: string; countryId: CountyCountryId; population: number }>(db)
       .find(
         {
           _id: { $in: regions.map((r) => r.regionId) },

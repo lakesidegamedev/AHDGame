@@ -27,6 +27,7 @@ import {
   UK_GOVERNOR_REGIONS,
   ensureRegionalGovernorElections,
 } from "@/lib/elections/scheduling/shared";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /**
  * Ensure every UK region has an active/upcoming Commons election.
@@ -48,8 +49,7 @@ export async function ensureUKElections(now: Date, inFlightTurn?: number): Promi
   const currentTurn = inFlightTurn ?? persistedTurn;
   const commonsSeatsByRegion = getUkCommonsSeats(ctx.preset);
 
-  const ukRegions = await db
-    .collection<State>("states")
+  const ukRegions = await statesCollection(db)
     .find({ countryId: "UK" }, { projection: { _id: 1 } })
     .toArray();
   const regionIds = ukRegions.map((r) => r._id as string);
@@ -240,11 +240,10 @@ export async function ensureUKRegionalCouncilElections(
     })
   );
   if (seatSyncOps.length > 0) {
-    await db.collection<State>("states").bulkWrite(seatSyncOps, { ordered: false });
+    await statesCollection(db).bulkWrite(seatSyncOps, { ordered: false });
   }
 
-  const ukRegions = await db
-    .collection<State>("states")
+  const ukRegions = await statesCollection(db)
     .find({ countryId: "UK" }, { projection: { _id: 1 } })
     .toArray();
   const devolution = await readUKDevolutionState(db, ctx.startingYear);

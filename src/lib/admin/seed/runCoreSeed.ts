@@ -60,6 +60,8 @@ import type {
 } from "@/lib/db/types";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
 
 /**
  * What `runSeed`'s reset branch deletes, and how far.
@@ -310,7 +312,7 @@ export async function runSeed(
 
   // Check if already seeded (states collection has data and reset not requested)
   if (!reset) {
-    const stateCount = await db.collection("states").countDocuments();
+    const stateCount = await statesCollection<Document>(db).countDocuments();
     const nationalBudgetCount = await federalBudgetCollection(db).countDocuments();
     const stateBudgetCount = await db.collection("stateBudgets").countDocuments();
     const formulaGrantCount = await db.collection("formulaGrants").countDocuments();
@@ -381,7 +383,7 @@ export async function runSeed(
 
   for (const state of statesBundle) {
     const update = statePopulationUpdate(state, reset);
-    await db.collection<State>("states").updateOne({ _id: state._id }, update, { upsert: true });
+    await statesCollection(db).updateOne({ _id: state._id }, update, { upsert: true });
   }
   log(`Seeded ${statesBundle.length} states (${preset})`);
 
@@ -452,7 +454,7 @@ export async function runSeed(
     await db
       .collection<StateDemographics>("demographicDefaults")
       .updateOne({ _id: sd._id }, { $set: cachedDemographics }, { upsert: true });
-    await db.collection<State>("states").updateOne(
+    await statesCollection(db).updateOne(
       { _id: sd._id },
       {
         $set: {
@@ -741,8 +743,7 @@ export async function runSeed(
   await charactersCollection(db)
     .createIndex({ homeState: 1 })
     .catch(() => {});
-  await db
-    .collection("states")
+  await statesCollection<Document>(db)
     .createIndex({ region: 1 })
     .catch(() => {});
   await db

@@ -20,6 +20,7 @@ import {
 } from "./subdivisionReference";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export async function seedCountyPopulations(
   db: Db,
@@ -42,8 +43,7 @@ export async function seedCountyPopulations(
   const year = countyBaselineYear(preset);
   const countryIds = options.countryIds ?? COUNTY_COUNTRY_IDS;
   const states = (
-    await db
-      .collection<{ _id: string; countryId: CountyCountryId; population: number }>("states")
+    await statesCollection<{ _id: string; countryId: CountyCountryId; population: number }>(db)
       .find(
         { countryId: { $in: [...countryIds] } },
         { projection: { _id: 1, countryId: 1, population: 1 } }

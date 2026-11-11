@@ -6,6 +6,7 @@ import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError } from "@/lib/api/errors";
 import { getDb } from "@/lib/mongodb";
 import type { StatePartyOrg, PoliticalParty, State } from "@/lib/db/types";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 interface MismatchedRecord {
   _id: string;
@@ -30,7 +31,7 @@ export async function GET() {
     // Get all parties and states to build lookup maps
     const [parties, states, allPartyOrg] = await Promise.all([
       db.collection<PoliticalParty>("politicalParties").find({}).toArray(),
-      db.collection<State>("states").find({}).toArray(),
+      statesCollection(db).find({}).toArray(),
       db.collection<StatePartyOrg>("statePartyOrg").find({}).toArray(),
     ]);
 
@@ -102,7 +103,7 @@ export async function POST() {
     // Get all parties and states to build lookup maps
     const [parties, states, allPartyOrg] = await Promise.all([
       db.collection<PoliticalParty>("politicalParties").find({}).toArray(),
-      db.collection<State>("states").find({}).toArray(),
+      statesCollection(db).find({}).toArray(),
       db.collection<StatePartyOrg>("statePartyOrg").find({}).toArray(),
     ]);
 

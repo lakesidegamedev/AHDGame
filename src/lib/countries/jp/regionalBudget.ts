@@ -21,6 +21,7 @@ import { resolveAnnualRegionalGrantPool } from "@/lib/governmentFinance/grantTra
 import type { ResetLawProgramDocument } from "@/lib/resetLegislation/program";
 import { buildResetRegionalProgramClaims } from "@/lib/resetLegislation/rules/regionalClaims";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -119,7 +120,7 @@ export async function processJPRegionalBudgets(
   resetLegislationV2Enabled = false,
   resetWorldId?: string
 ): Promise<{ regionsProcessed: number }> {
-  const jpRegions = await db.collection<State>("states").find({ countryId: "JP" }).toArray();
+  const jpRegions = await statesCollection(db).find({ countryId: "JP" }).toArray();
   if (jpRegions.length === 0) return { regionsProcessed: 0 };
 
   const { stateCostByStateId } = await loadAnnualSubsidyCostMaps(db);

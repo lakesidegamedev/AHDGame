@@ -44,6 +44,7 @@ import { isMoneySupplyEnabledFromConfig } from "@/lib/moneySupply/featureFlag";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 // ── Tuning constants ─────────────────────────────────────────────────────────
 
@@ -788,8 +789,7 @@ export async function calculateCountryInflation(
             )
             .toArray(),
       hasMeasuredTariffRate ? Promise.resolve(new Set<string>()) : loadActiveFtaPairs(db),
-      db
-        .collection<State>("states")
+      statesCollection(db)
         .find(
           { countryId },
           { projection: { gdp: 1, outputGap: 1, outputTrendGrowth: 1, realOutputStartTurn: 1 } }

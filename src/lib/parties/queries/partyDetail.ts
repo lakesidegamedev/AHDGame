@@ -35,6 +35,7 @@ import { isUserActive } from "@/lib/players/playerActivity";
 import { DEFAULT_LEGACY_COUNTRY_ID } from "@/lib/constants/countries";
 import { countDistinctOfficers } from "@/lib/treasury/payoutCapValues";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export async function loadPartyLeaders(
   db: Db,
@@ -232,8 +233,7 @@ export async function getPartyDetail(db: Db, party: PoliticalParty): Promise<Par
   const budgetCollection = await getPartyBudgetCollection();
   const [states, preset, campaignRates, priceLevel, nationalBudget] = await Promise.all([
     uniqueStates.length > 0
-      ? db
-          .collection<State>("states")
+      ? statesCollection(db)
           .find({ _id: { $in: uniqueStates } }, { projection: { population: 1, gdp: 1 } })
           .toArray()
       : Promise.resolve([]),

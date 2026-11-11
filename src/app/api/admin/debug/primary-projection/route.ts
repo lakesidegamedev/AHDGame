@@ -40,6 +40,7 @@ import {
 import { ELECTORAL_VOTE_UNITS } from "@/lib/constants/states";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 const ALL_STATE_IDS = [...new Set(ELECTORAL_VOTE_UNITS.map((u) => u.stateId))];
 
@@ -161,8 +162,7 @@ export async function GET(req: Request) {
         .collection<StatePartyOrg>("statePartyOrg")
         .find({ countryId: "US", partyId: partyKey })
         .toArray(),
-      db
-        .collection<State>("states")
+      statesCollection(db)
         .find({ _id: { $in: ALL_STATE_IDS } })
         .toArray(),
       db

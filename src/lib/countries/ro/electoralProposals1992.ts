@@ -23,6 +23,8 @@ import {
 import { RO_1992_DEPUTIES_BY_REGION, RO_1992_SENATORS_BY_REGION } from "./rules/parliament1992";
 import type { CountryState } from "@/lib/db/types/countryState";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
 
 export const RO_1992_PROPOSALS_COLLECTION = "ro1992ElectoralProposals";
 const ID = "1991-default:ro-electoral:parliament1992";
@@ -108,8 +110,7 @@ export async function materializeRo1992ElectoralProposal(input: {
       throw new Ro1992ElectoralConflict("Electoral proposal no longer matches its bill");
     if (!["failed", "vetoed", "override_failed"].includes(bill.status)) return prior;
   }
-  const regions = await db
-    .collection("states")
+  const regions = await statesCollection<Document>(db)
     .find({ countryId: "RO" }, { session, projection: { houseDistricts: 1, stateSenateSeats: 1 } })
     .toArray();
   const capacities = {

@@ -4,6 +4,8 @@ import type { CorporateSector, State } from "@/lib/db/types";
 import type { EnactedLaw, StateBudget } from "@/lib/db/types/budget";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
 
 /**
  * Seeds only UK budget data: national budget, enacted laws, regional budgets,
@@ -19,7 +21,7 @@ export async function seedUkBudgets(
     // Only delete UK-specific budget data, not US
     await federalBudgetCollection(db).deleteMany({ countryId: "UK" });
     const ukStateIds = (
-      await db.collection("states").find({ countryId: "UK" }).project({ _id: 1 }).toArray()
+      await statesCollection<Document>(db).find({ countryId: "UK" }).project({ _id: 1 }).toArray()
     ).map((s) => s._id as string);
     await db
       .collection<StateBudget>("stateBudgets")
@@ -88,7 +90,7 @@ export async function seedUkBudgets(
   log(`Seeded ${ukEnactedLaws.length} UK default enacted laws`);
 
   // Seed UK regional budgets
-  const states = await db.collection<State>("states").find({ countryId: "UK" }).toArray();
+  const states = await statesCollection(db).find({ countryId: "UK" }).toArray();
   const statesForBudgets = states.map((s) => ({
     id: s._id,
     population: s.population,

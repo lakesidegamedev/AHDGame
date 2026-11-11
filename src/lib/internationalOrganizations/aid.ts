@@ -19,6 +19,7 @@ import {
   resolveOrgFundCurrencyCountry,
 } from "./organizationFund";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /**
  * Aid packages disburse from the organization's pooled fund (capitalized by
@@ -55,8 +56,7 @@ async function applyOrganizationAidBoost(
 ): Promise<void> {
   const boost = aidGrowthBoost(amountUsd);
   if (boost <= 0) return;
-  const states = await db
-    .collection<{ _id: string; countryId: CountryId }>("states")
+  const states = await statesCollection<{ _id: string; countryId: CountryId }>(db)
     .find({ countryId: recipient })
     .project<{ _id: string }>({ _id: 1 })
     .toArray();

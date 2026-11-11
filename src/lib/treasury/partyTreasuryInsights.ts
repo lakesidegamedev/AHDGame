@@ -8,6 +8,7 @@ import type {
 } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { regionPartyUrl } from "@/lib/urls";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export interface TreasuryStateFundingMetric {
   stateId: string;
@@ -82,7 +83,7 @@ export async function buildNationalTreasuryInsights(
       .collection<PartyBudget>("partyBudget")
       .find({ countryId, partyId, scope: "state" })
       .toArray(),
-    db.collection<State>("states").find({ countryId }).toArray(),
+    statesCollection(db).find({ countryId }).toArray(),
     db
       .collection<TreasuryTransaction>("treasuryTransactions")
       .find({

@@ -40,6 +40,7 @@ import type {
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 const MIN_BASE_ACTIONS_PER_TURN = 4;
 
@@ -116,9 +117,7 @@ async function handleGET() {
       unionContribution,
     ] = await Promise.all([
       db.collection<GameConfig>("gameConfig").findOne({ _id: "default" }),
-      db
-        .collection<State>("states")
-        .findOne({ _id: character.homeState, countryId: character.countryId }),
+      statesCollection(db).findOne({ _id: character.homeState, countryId: character.countryId }),
       character.party && Number.isFinite(Number(character.party))
         ? db.collection<PoliticalParty>("politicalParties").findOne({
             sequentialId: Number(character.party),

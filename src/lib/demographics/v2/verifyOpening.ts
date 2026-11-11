@@ -4,6 +4,7 @@ import type { RegionDemographics } from "@/lib/db/types/regionDemographics";
 import type { State } from "@/lib/db/types/state";
 import type { CountryId } from "@/lib/constants/countries";
 import { RESET_V2_SEED_REVISION, type ResetSystemSeedReceipt } from "@/lib/resetVersions/rules";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 const OPENING_COUNTRIES = ["US", "UK", "JP"] as const;
 
@@ -34,8 +35,7 @@ export async function verifyDemographicsV2Opening(
       )
       .sort({ countryId: 1, _id: 1 })
       .toArray(),
-    db
-      .collection<State>("states")
+    statesCollection(db)
       .find(
         { countryId: { $in: [...countries] }, population: { $gt: 0 } },
         { projection: { _id: 1, countryId: 1 } }

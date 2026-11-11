@@ -11,6 +11,7 @@ import { getGameStatePreset } from "@/lib/db/collections/gameState";
 import type { State, ElectedOfficial, PoliticalParty, Character, NPP } from "@/lib/db/types";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 // GET /api/country/[code]/region/[id]/legislature — Return the state senate composition and current officials for a region
 // Auth: public
@@ -29,7 +30,7 @@ export async function GET(
 
     const db = await getDb();
 
-    const state = await db.collection<State>("states").findOne({ _id: stateId, countryId });
+    const state = await statesCollection(db).findOne({ _id: stateId, countryId });
     if (!state) {
       return errorResponse(404, "State not found");
     }

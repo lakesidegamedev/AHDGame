@@ -7,6 +7,7 @@ import { metricCategories } from "@/lib/constants/metricDefinitions";
 import { POLITICAL_METRIC_FAMILIES } from "@/lib/politicalMetrics/families";
 import { US_METRIC_NAMES } from "@/lib/politicalMetrics/names";
 import type { MapMetricDefinition, MapMetricsResponse } from "./metricTypes";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 const stocks: MapMetricDefinition[] = [
   {
@@ -152,8 +153,7 @@ export function buildMapMetrics(
 export async function loadMapMetrics(db: Db, stateIds: string[]): Promise<MapMetricsResponse> {
   const filter = { countryId: "US" as const, _id: { $in: stateIds } };
   const [states, macros, boards] = await Promise.all([
-    db
-      .collection<State>("states")
+    statesCollection(db)
       .find(filter, {
         projection: {
           _id: 1,

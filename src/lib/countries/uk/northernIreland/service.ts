@@ -15,6 +15,7 @@ import {
   type NorthernIrelandSignal,
 } from "./rules";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export async function loadNorthernIrelandSignal(db: Db): Promise<NorthernIrelandSignal | null> {
   return db
@@ -32,9 +33,7 @@ export async function reconcileNorthernIrelandGovernance(
 ): Promise<void> {
   if (!conflict.hasOpened || conflict.status === "closed") return;
   const [region, game] = await Promise.all([
-    db
-      .collection<State>("states")
-      .findOne({ _id: "NIR", countryId: "UK" }, { projection: { _id: 1 } }),
+    statesCollection(db).findOne({ _id: "NIR", countryId: "UK" }, { projection: { _id: 1 } }),
     gameStateCollection(db).findOne({ _id: "current" }, { projection: { startingYear: 1 } }),
   ]);
   if (!region) return;

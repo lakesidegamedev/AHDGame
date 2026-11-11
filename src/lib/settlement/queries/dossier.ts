@@ -52,6 +52,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export interface DossierPaymentView {
   mode: SettlementPaymentMode;
@@ -306,9 +307,7 @@ async function bundestagSubtitle(db: Db): Promise<string> {
 
 /** The Länder card's live subtitle — how many state governments there are. */
 async function laenderSubtitle(db: Db): Promise<string> {
-  const count = await db
-    .collection<State>("states")
-    .countDocuments({ countryId: "DE", regionType: "state" });
+  const count = await statesCollection(db).countDocuments({ countryId: "DE", regionType: "state" });
   return `${count} state governments · Bundesrat bloc`;
 }
 

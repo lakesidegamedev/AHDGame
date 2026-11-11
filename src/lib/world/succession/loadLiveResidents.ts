@@ -4,6 +4,7 @@ import type { State } from "@/lib/db/types/state";
 import type { SuccessionResident } from "./rules/residency";
 import { buildSourceRegionHierarchy } from "./sourceRegionHierarchy";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /** Read every character resident in the source country and resolve nested
  * home states to the actual top-level regions being partitioned. No character
@@ -13,8 +14,7 @@ export async function loadLiveSuccessionResidents(
   sourceCountryId: CountryId,
   session?: ClientSession
 ): Promise<SuccessionResident[]> {
-  const states = await db
-    .collection<State>("states")
+  const states = await statesCollection(db)
     .find({ countryId: sourceCountryId }, { session })
     .toArray();
   const { topLevelFor } = buildSourceRegionHierarchy(states);

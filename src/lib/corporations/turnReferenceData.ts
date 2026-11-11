@@ -10,6 +10,7 @@ import type {
 } from "@/lib/db/types";
 import { loadActiveFtaPairs } from "@/lib/tariffs/ftaOverrides";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export type TurnStateProjection = Pick<
   State,
@@ -69,8 +70,7 @@ async function loadTurnReferenceData(db: Db): Promise<TurnReferenceData> {
     centralBanks,
   ] = await Promise.all([
     db.collection<CommodityPrice>("commodityPrices").find({}).toArray(),
-    db
-      .collection<State>("states")
+    statesCollection(db)
       .find({}, { projection: { _id: 1, name: 1, countryId: 1, sectorSpecializations: 1, gdp: 1 } })
       .toArray() as Promise<TurnStateProjection[]>,
     db.collection<Tariff>("tariffs").find({}).toArray(),

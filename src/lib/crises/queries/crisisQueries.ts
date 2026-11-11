@@ -3,6 +3,7 @@ import { getGameState } from "@/lib/gameState";
 import { STARTING_YEAR } from "@/lib/constants/turnTime";
 import type { Crisis } from "@/lib/db/types/crisis";
 import { ObjectId, type Db } from "mongodb";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export interface CrisisListResult {
   crises: Crisis[];
@@ -47,8 +48,7 @@ export async function listCrises(
   const regionIds = [...new Set(crises.flatMap((c) => c.regionIds ?? []))];
   const regionNames: Record<string, string> = {};
   if (regionIds.length > 0) {
-    const states = await db
-      .collection<StateNameRow>("states")
+    const states = await statesCollection<StateNameRow>(db)
       .find({ _id: { $in: regionIds } }, { projection: { name: 1 } })
       .toArray();
     for (const s of states) {

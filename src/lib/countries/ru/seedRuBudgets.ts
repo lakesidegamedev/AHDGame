@@ -4,6 +4,8 @@ import type { EnactedLaw, StateBudget } from "@/lib/db/types/budget";
 import type { GameConfig } from "@/lib/db/types/gameConfig";
 import { upsertCountryOwnedCorpEntries } from "@/lib/admin/seed/upsertCountryOwnedCorps";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
 
 /**
  * Seeds the USSR FY1979 national budget, default enacted laws (from the su_*
@@ -23,7 +25,7 @@ export async function seedRuBudgets(
   if (reset) {
     await federalBudgetCollection(db).deleteMany({ countryId: "RU" });
     const suStateIds = (
-      await db.collection("states").find({ countryId: "RU" }).project({ _id: 1 }).toArray()
+      await statesCollection<Document>(db).find({ countryId: "RU" }).project({ _id: 1 }).toArray()
     ).map((s) => s._id as string);
     if (suStateIds.length > 0) {
       await db
@@ -85,7 +87,7 @@ export async function seedRuBudgets(
   }
   log(`Seeded ${suEnactedLaws.length} SU default enacted laws`);
 
-  const states = await db.collection<State>("states").find({ countryId: "RU" }).toArray();
+  const states = await statesCollection(db).find({ countryId: "RU" }).toArray();
   const statesForBudgets = states.map((s) => ({
     id: s._id,
     population: s.population,

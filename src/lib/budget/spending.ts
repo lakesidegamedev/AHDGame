@@ -43,6 +43,7 @@ import { applyAgingCostScale } from "@/lib/societyPressures/rules/agingCosts";
 import { loadSovereignCouponBooks } from "@/lib/bonds/sovereignCouponBook";
 import { sovereignStockAnnualService } from "@/lib/budget/rules/sovereignDebtService";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 // Re-exported so existing importers of `./spending` keep working.
 export { keepLatestActiveLawPerType } from "./keepLatestActiveLawPerType";
@@ -149,8 +150,7 @@ export function normalizeStateSpending(
 }
 
 async function getCountryPopulation(db: Db, countryId: CountryId): Promise<number> {
-  const states = await db
-    .collection<State>("states")
+  const states = await statesCollection(db)
     .find({ countryId }, { projection: { population: 1 } })
     .toArray();
   return states.reduce((sum, state) => sum + (state.population ?? 0), 0);
@@ -335,8 +335,7 @@ export async function calculateFederalSpending(
   const transferGrantField = CONFIG_DERIVED_TRANSFER_FIELD[budgetCountryId];
   if (transferGrantField && !items.some(({ law }) => law.isGrant)) {
     const stateIds = (
-      await db
-        .collection<State>("states")
+      await statesCollection(db)
         .find({ countryId: budgetCountryId }, { projection: { _id: 1 } })
         .toArray()
     ).map((s) => s._id);
@@ -364,9 +363,10 @@ export async function calculateFederalSpending(
   if (usesUKDevolution(budgetCountryId)) {
     const signal = await loadNorthernIrelandSignal(db);
     if (signal?.hasOpened && signal.status !== "closed") {
-      const region = await db
-        .collection<State>("states")
-        .findOne({ _id: "NIR", countryId: budgetCountryId }, { projection: { gdp: 1 } });
+      const region = await statesCollection(db).findOne(
+        { _id: "NIR", countryId: budgetCountryId },
+        { projection: { gdp: 1 } }
+      );
       byCategory[NI_SECURITY_SPENDING_KEY] = northernIrelandSecurityCost(
         signal,
         (region?.gdp ?? 0) * 1_000_000
@@ -429,7 +429,7 @@ export async function calculateStateSpendingDetail(
       .toArray()
   );
 
-  const state = await db.collection<State>("states").findOne({ _id: stateId, countryId });
+  const state = await statesCollection(db).findOne({ _id: stateId, countryId });
   // The cost-scale ramp is a national-era factor, so it uses the country's national
   // GDP-per-capita even for state laws (the per-capita cost itself still uses the
   // state population below).

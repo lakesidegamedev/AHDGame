@@ -24,6 +24,7 @@ import {
 } from "@/lib/corporations/sectorLocation";
 import { normalizeAndMergeCorporateSectors } from "@/lib/corporations/repairDuplicateSectors";
 import type { Defect, DetectResult, HealPlan, HealResult, VerifyResult } from "../types";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 interface Survey {
   /** Sectors whose stamped countryId disagrees with their state's country. */
@@ -44,8 +45,7 @@ async function survey(db: Db): Promise<Survey> {
     .find({})
     .sort({ createdAt: 1 })
     .toArray();
-  const states = await db
-    .collection<State>("states")
+  const states = await statesCollection(db)
     .find({}, { projection: { _id: 1, countryId: 1 } })
     .toArray();
   const stateCountryByStateId = buildSectorStateCountryMap(states);

@@ -24,6 +24,7 @@ import type { MacroMetricsDoc } from "@/lib/db/types/macroMetrics";
 import type { PoliticalMetricId } from "@/lib/politicalMetrics/types";
 import { politicalValueForLegacyMetric } from "@/lib/politicalLegislation/marginAdapter";
 import { legacyValueFromPoliticalScore } from "@/lib/politicalMetrics/derive/legacyInversion";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 const DECAY_FACTOR = getPolicyDecayFactor();
 
@@ -129,7 +130,7 @@ export async function computeStateTickRates(
           .collection<StatePolicy>("statePolicies")
           .find({ stateId: { $in: [stateId, ...nationalScopeIds] } })
           .toArray(),
-        db.collection<State>("states").findOne({ _id: stateId, countryId }),
+        statesCollection(db).findOne({ _id: stateId, countryId }),
         // Current metric values give the operating scale for large-range metrics.
         findMergedRegionMetrics(db, { _id: stateId }),
       ]);
@@ -319,7 +320,7 @@ export async function computeAllNationalMetricTickRates(
   if (!countryId) return {};
 
   const [countryStates, sectorDocs] = await Promise.all([
-    db.collection<State>("states").find({ countryId }).toArray(),
+    statesCollection(db).find({ countryId }).toArray(),
     db
       .collection<CorporateSector>("corporateSectors")
       .find({ countryId }, { projection: { stateId: 1 } })
@@ -411,7 +412,7 @@ export async function computeNationalMetricTickRate(
 
   const useGdpWeight = category === "economic" && metricId === "gdpGrowth";
   const [countryStates, sectorDocs] = await Promise.all([
-    db.collection<State>("states").find({ countryId }).toArray(),
+    statesCollection(db).find({ countryId }).toArray(),
     useGdpWeight
       ? db
           .collection<CorporateSector>("corporateSectors")

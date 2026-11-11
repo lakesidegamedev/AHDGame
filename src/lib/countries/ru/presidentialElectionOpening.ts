@@ -13,6 +13,7 @@ import { hasAuthorizedPostSovietTransition } from "./rules/postSovietTransition"
 import { planRussianPresidentialBallot } from "./rules/presidentialSchedule";
 import type { RussianConstitutionalCalendar } from "./constitutionalProposals";
 import { STATE_POPULATION_FIELDS } from "@/lib/db/collections/states";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export async function materializeRussianPresidentialElectionOpening(input: {
   db: Db;
@@ -77,8 +78,7 @@ export async function materializeRussianPresidentialElectionOpening(input: {
     { session, projection: { _id: 1 } }
   );
   if (existing) throw new Error("An unresolved Russian presidential ballot already exists");
-  const regions = await db
-    .collection<State>("states")
+  const regions = await statesCollection(db)
     .find({ countryId: "RU" }, { session, projection: STATE_POPULATION_FIELDS })
     .toArray();
   const pools = await db

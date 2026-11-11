@@ -9,6 +9,7 @@ import { selectPoliticianImage, weightedRandomEthnicity } from "./generator";
 import { NPP_ECONOMY_DEFAULTS } from "./economyDefaults";
 import { generateDefaultPersonality } from "./seedHistorical";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /** Marker used only to make this bootstrap-created independent pool idempotent. */
 export const PARTYLESS_FOUNDING_PRIOR_MARKER = "foundingIndependent";
@@ -55,8 +56,7 @@ export async function seedPartylessFoundingCandidates(
   const enabled = await getEnabledCountryIdsFromDb(db);
   if (enabled.length === 0) return { nppsCreated: 0, byCountry: {} };
   const enabledSet = new Set(enabled);
-  const states = await db
-    .collection<State>("states")
+  const states = await statesCollection(db)
     .find({ countryId: { $in: enabled } }, { projection: { _id: 1, countryId: 1 } })
     .toArray();
   const regions = new Set(states.map((state) => `${state.countryId}:${state._id}`));

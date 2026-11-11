@@ -5,6 +5,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import { commandEconomySoeSectors, isCommandEconomy } from "@/lib/constants/commandEconomy";
 import { getStartingYearForPreset } from "@/lib/constants/turnTime";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export interface CommandEconomyCountryReport {
   countryId: CountryId;
@@ -72,8 +73,7 @@ export async function verifyCommandEconomySeed(
   const seededCountryIds = [
     ...new Set(
       (
-        await db
-          .collection<State>("states")
+        await statesCollection(db)
           .find({}, { projection: { countryId: 1 } })
           .toArray()
       ).map((s) => s.countryId as CountryId)

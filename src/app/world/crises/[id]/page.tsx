@@ -22,6 +22,7 @@ import CrisisInteractionPanel from "./CrisisInteractionPanel";
 import CrisisAdminActions from "./CrisisAdminActions";
 import CrisisV2Detail from "./CrisisV2Detail";
 import { loadCrisisV2Detail } from "@/lib/crises/queries/crisisV2View";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 // UN General Assembly — shared with the crises list hero so the two surfaces
 // read as one section. https://unsplash.com/photos/41Wj4KxB7BA
@@ -231,8 +232,7 @@ export default async function CrisisDetailPage({ params }: { params: Promise<{ i
   const affectedStates =
     crisis.scope === "global"
       ? []
-      : await db
-          .collection<State>("states")
+      : await statesCollection(db)
           .find(stateFilter as never)
           .project({ name: 1, gdp: 1 })
           .toArray();

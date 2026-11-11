@@ -21,6 +21,7 @@ import {
   type CapacityRegionInput,
 } from "./rules/capacityDestruction";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 const CONFLICT_CAPACITY_OBLIGATIONS = "conflictCapacityObligations";
 
@@ -117,8 +118,7 @@ export async function applyCapacityDestructionSpec(
   const turn = clockTurn(world);
   const regionIds = spec.regions.map((region) => region.regionId);
   const [states, priorObligations] = await Promise.all([
-    db
-      .collection<State>("states")
+    statesCollection(db)
       .find(
         { _id: { $in: regionIds } },
         { projection: { _id: 1, name: 1, countryId: 1, gdp: 1, capitalStock: 1 } }
@@ -239,8 +239,7 @@ export async function loadCapacityRepairSpending(db: Db): Promise<Record<string,
   );
   if (!world) return {};
   const turn = clockTurn(world);
-  const owners = await db
-    .collection<State>("states")
+  const owners = await statesCollection(db)
     .find(
       { _id: { $in: [...new Set(rows.map((row) => row.regionId))] } },
       { projection: { _id: 1, countryId: 1 } }

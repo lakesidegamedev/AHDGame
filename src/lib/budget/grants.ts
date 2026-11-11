@@ -10,6 +10,8 @@ import type { Db } from "mongodb";
 import type { FormulaGrant, StateBudget } from "@/lib/db/types/budget";
 import type { CountryId } from "@/lib/constants/countries";
 import { formulaGrants } from "@/lib/seeds/reference/formulaGrants";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
 
 interface StateData {
   id: string;
@@ -18,8 +20,7 @@ interface StateData {
 }
 
 async function getStateData(db: Db, countryId?: CountryId): Promise<StateData[]> {
-  const states = await db
-    .collection("states")
+  const states = await statesCollection<Document>(db)
     .find(countryId ? { countryId } : {})
     .toArray();
 

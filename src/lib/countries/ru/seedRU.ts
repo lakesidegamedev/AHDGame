@@ -4,6 +4,8 @@ import type { StateMetricBaseline } from "@/lib/db/types/statePolicy";
 import type { PartySeed } from "@/lib/seeds/reference/politicalParties";
 import { getNextSequentialId } from "@/lib/db/sequentialId";
 import { resolveSeedPartyTier } from "@/lib/seeds/defaultPartyTiers";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
 
 /**
  * Seeds USSR regions. The USSR (`SU`) exists in the 1953 and 1979 presets (it
@@ -21,7 +23,7 @@ export async function seedRURegions(
   preset: string
 ) {
   if (reset) {
-    await db.collection("states").deleteMany({ countryId: "RU" });
+    await statesCollection<Document>(db).deleteMany({ countryId: "RU" });
   }
   const { regionTableFor } = await import("@/lib/seeds/contract/regionTables");
   const { selectPresetBundle } = await import("@/lib/seeds/presetSelector");
@@ -30,8 +32,7 @@ export async function seedRURegions(
     const { _id, ...regionData } = region;
     return { updateOne: { filter: { _id }, update: { $set: regionData }, upsert: true } };
   });
-  if (regionOps.length > 0)
-    await db.collection<State>("states").bulkWrite(regionOps, { ordered: false });
+  if (regionOps.length > 0) await statesCollection(db).bulkWrite(regionOps, { ordered: false });
   log(`Seeded ${bundle.length} SU regions (${preset})`);
 }
 

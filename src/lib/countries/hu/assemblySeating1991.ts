@@ -21,6 +21,7 @@ import { HU_1991_COUNTS_COLLECTION, type Hu1991AssemblyRecord } from "./assembly
 import { settleHu1991Mandates } from "./rules/mandates1991";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 const HU_1991_OFFICE_ARCHIVES_COLLECTION = "hu1991AssemblyOfficeArchives";
 interface Hu1991AssemblyArchive {
@@ -365,7 +366,7 @@ async function materializeHu1991AssemblySeating(input: {
   );
   if (finalizedElections.matchedCount !== ids.length)
     throw new Error("Hungarian handover lost election custody");
-  const resized = await db.collection<State>("states").bulkWrite(
+  const resized = await statesCollection(db).bulkWrite(
     Object.entries(settled.regionCapacity).map(([id, seats]) => ({
       updateOne: {
         filter: { _id: id, countryId: "HU" },

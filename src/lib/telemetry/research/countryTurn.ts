@@ -37,6 +37,7 @@ import {
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /** Recent-first change from the bank's rate ledger when it landed on `turn`. */
 function changeThisTurn(bank: CentralBank, turn: number) {
@@ -75,8 +76,7 @@ export async function buildCountryTurnRows(
       .find({ mergedInto: { $exists: false } })
       .toArray(),
     db.collection<ExchangeRate>("exchangeRates").find({}).toArray(),
-    db
-      .collection<State>("states")
+    statesCollection(db)
       .find({}, { projection: { countryId: 1, gdp: 1, outputGap: 1, population: 1 } })
       .toArray(),
     db

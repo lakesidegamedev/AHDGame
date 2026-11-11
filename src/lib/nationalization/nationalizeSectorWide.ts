@@ -53,6 +53,7 @@ import { seedPlantLedger, splitWholePlantCount } from "@/lib/corporations/plantL
 import { getCorporateSectorLaneQuery } from "@/lib/corporations/sectorLocation";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { statesCollection } from "@/lib/db/repositories/states";
 export { SECTOR_SCOPE_LABELS, type SectorScope };
 
 export interface NationalizeSectorWideParams {
@@ -670,8 +671,7 @@ export async function nationalizeSectorWide(
     if (natSectors.length > 0) {
       const stateIds = [...new Set(natSectors.map((s) => s.stateId))];
       const [stateDocs, remainingUnowned, preset] = await Promise.all([
-        db
-          .collection<State>("states")
+        statesCollection(db)
           .find({ _id: { $in: stateIds } }, { projection: { _id: 1, gdp: 1, countryId: 1 } })
           .toArray(),
         db

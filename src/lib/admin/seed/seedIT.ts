@@ -6,6 +6,8 @@ import type { PartySeed } from "@/lib/seeds/reference/politicalParties";
 import { getNextSequentialId } from "@/lib/db/sequentialId";
 import { resolveSeedPartyTier } from "@/lib/seeds/defaultPartyTiers";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
 
 const IT_REGION_IDS = [
   "IT_NW",
@@ -25,7 +27,7 @@ export async function seedITRegions(
   preset: string
 ) {
   if (reset) {
-    await db.collection("states").deleteMany({ countryId: "IT" });
+    await statesCollection<Document>(db).deleteMany({ countryId: "IT" });
   }
   const { regionTableFor } = await import("@/lib/seeds/contract/regionTables");
   const { selectPresetBundle } = await import("@/lib/seeds/presetSelector");
@@ -34,8 +36,7 @@ export async function seedITRegions(
     const { _id, ...regionData } = region;
     return { updateOne: { filter: { _id }, update: { $set: regionData }, upsert: true } };
   });
-  if (regionOps.length > 0)
-    await db.collection<State>("states").bulkWrite(regionOps, { ordered: false });
+  if (regionOps.length > 0) await statesCollection(db).bulkWrite(regionOps, { ordered: false });
   log(`Seeded ${bundle.length} IT regions (${preset})`);
 }
 

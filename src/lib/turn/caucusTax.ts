@@ -28,6 +28,7 @@ import {
 } from "@/lib/campaigns/rules/gdpBaseline";
 import type { ObjectId } from "mongodb";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 interface CaucusTaxResult {
   caucusesProcessed: number;
@@ -124,8 +125,7 @@ export async function processCaucusTax(
         ...new Set([...characters.map((c) => c.homeState), ...npps.map((n) => n.homeState)]),
       ];
       const stateDocs = homeStateIds.length
-        ? await db
-            .collection<State>("states")
+        ? await statesCollection(db)
             .find({ _id: { $in: homeStateIds } })
             .toArray()
         : [];

@@ -40,6 +40,7 @@ import {
 import { notifySupplyAgreementEvent } from "@/lib/corporations/supplyExchange/notifications";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /**
  * Private supply agreement lifecycle (bilateral, both-consent). Either CEO can
@@ -246,9 +247,10 @@ export async function proposeSupplyAgreement(request: Request, initiatingCorpId:
         );
       }
       stateId = body.stateId;
-      const state = await db
-        .collection<State>("states")
-        .findOne({ _id: stateId }, { projection: { _id: 1 } });
+      const state = await statesCollection(db).findOne(
+        { _id: stateId },
+        { projection: { _id: 1 } }
+      );
       if (!state) {
         return errorResponse(400, "Unknown state");
       }

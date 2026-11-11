@@ -6,6 +6,7 @@ import type { State } from "@/lib/db/types";
 import { getGameStateCollection } from "@/lib/db/collections/gameState";
 import { bucketProfileLean, getBucketProfileForRegion } from "@/lib/demographics/bucketProfile";
 import { eraYearContextFromGameState } from "@/lib/era/context";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -26,7 +27,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const db = await getDb();
 
     const [state, gameState] = await Promise.all([
-      db.collection<State>("states").findOne({ _id: stateId, countryId }),
+      statesCollection(db).findOne({ _id: stateId, countryId }),
       getGameStateCollection(db).then((games) =>
         games.findOne(
           { _id: "current" },

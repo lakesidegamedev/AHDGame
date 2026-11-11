@@ -12,6 +12,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import { getUnionName } from "@/lib/unions/unionNames";
 import { BASE_APPROVAL } from "@/lib/unions/unionDues";
 import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /**
  * Starting annual dues charged per member on a freshly seeded union. 0, not a
@@ -59,7 +60,7 @@ export async function seedUnions(
 
   // Background countries (#5702) run no sectors, so they get no unions.
   const countryIds = (
-    await db.collection<State>("states").distinct("countryId", { _id: { $not: /^NATIONAL_/ } })
+    await statesCollection(db).distinct("countryId", { _id: { $not: /^NATIONAL_/ } })
   ).filter((countryId) => !isBackgroundInPreset(preset, countryId));
 
   const now = new Date();

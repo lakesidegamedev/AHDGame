@@ -3,6 +3,7 @@ import { redenominatePublicRegion } from "./rules/publicCurrency";
 import type { Db } from "mongodb";
 import type { State } from "@/lib/db/types/state";
 import { scaleDeep } from "../secede/docScale";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export async function convertPublicCurrency(
   db: Db,
@@ -10,10 +11,10 @@ export async function convertPublicCurrency(
   scale: number
 ): Promise<void> {
   if (scale === 1) return;
-  const state = await db.collection<State>("states").findOne({ _id: regionId });
+  const state = await statesCollection(db).findOne({ _id: regionId });
   if (!state) throw new Error("Missing transferred region");
   const set = redenominatePublicRegion(state, scale);
-  await db.collection<State>("states").updateOne({ _id: regionId }, { $set: set });
+  await statesCollection(db).updateOne({ _id: regionId }, { $set: set });
   await convertBudgetMoney(
     db,
     "stateBudgets",

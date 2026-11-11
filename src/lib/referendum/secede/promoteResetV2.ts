@@ -46,6 +46,7 @@ import { verifyDemographicsV2Opening } from "@/lib/demographics/v2/verifyOpening
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 function rekeyReference(
   reference: OpeningLawReference,
@@ -118,8 +119,7 @@ export async function promoteResetV2ForIndependence(
     ]);
     return { promoted: false };
   }
-  const states = await db
-    .collection<State>("states")
+  const states = await statesCollection(db)
     .find({ countryId }, { projection: { _id: 1, population: 1, gdp: 1 } })
     .toArray();
   if (states.length === 0) throw new Error(`${countryId} v2 promotion has no sub-regions`);
@@ -132,8 +132,7 @@ export async function promoteResetV2ForIndependence(
   if (versions.metrics === "v2" && !aggregateMetric) {
     throw new Error(`${countryId} v2 promotion is missing its UK metric source`);
   }
-  const sourceRegions = await db
-    .collection<State>("states")
+  const sourceRegions = await statesCollection(db)
     .find({ countryId: "UK" }, { projection: { gdp: 1 } })
     .toArray();
   const successorGdp = states.reduce((sum, state) => sum + state.gdp, 0);
@@ -365,8 +364,7 @@ export async function promoteResetV2ForIndependence(
       .findOne({ _id: "UK", worldId });
     if (!sourceTreasury || !sourceAccounts.length)
       throw new Error("Independence requires the live UK finance books");
-    const rump = await db
-      .collection<State>("states")
+    const rump = await statesCollection(db)
       .find({ countryId: "UK" }, { projection: { gdp: 1 } })
       .toArray();
     const newGdp = states.reduce((sum, state) => sum + state.gdp, 0);

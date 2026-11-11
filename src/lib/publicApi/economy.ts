@@ -19,6 +19,7 @@ import { resolveCountryCurrencyCode } from "@/lib/currency/govBudgetFields";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 const HISTORY_CAP = 12;
@@ -134,8 +135,7 @@ export async function queryCountryEconomy(db: Db, country: string) {
         },
       }
     ),
-    db
-      .collection<Pick<State, "population" | "gdp">>("states")
+    statesCollection<Pick<State, "population" | "gdp">>(db)
       .find({ countryId: country }, { projection: { population: 1, gdp: 1 } })
       .toArray(),
   ]);

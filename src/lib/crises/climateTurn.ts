@@ -12,6 +12,7 @@ import {
 } from "./rules/climateFeedback";
 import { loadTransitionPolicies } from "@/lib/energyTransition/policies";
 import { NO_TRANSITION_POLICY, policyEmissionsCut } from "@/lib/energyTransition/rules";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export interface ClimateFeedbackState {
   _id: "world";
@@ -46,8 +47,7 @@ export async function processClimateFeedbackTurn(
   if (turn % TURNS_PER_YEAR !== 0 || (prior && prior.lastMeasuredTurn >= turn)) return oldPressure;
 
   const [regions, metrics, spending, agencies, transitionPolicies] = await Promise.all([
-    db
-      .collection<PopulationRow>("states")
+    statesCollection<PopulationRow>(db)
       .find(
         { regionType: { $nin: ["nation", "constituency"] } },
         {

@@ -9,6 +9,7 @@ import { buildGranularElectorateSubstrate } from "@/lib/demographics/granularEle
 import { eraYearContextFromGameState } from "@/lib/era/context";
 import { CAMPAIGN_RULES_VERSION, turnoutForElection } from "./rules";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export async function loadCampaignAudience(
   db: Db,
@@ -18,7 +19,7 @@ export async function loadCampaignAudience(
   turnoutRulesVersion = CAMPAIGN_RULES_VERSION
 ) {
   const [state, demographics, defaults, gameState, turnoutData] = await Promise.all([
-    db.collection<State>("states").findOne({ _id: stateId, countryId }),
+    statesCollection(db).findOne({ _id: stateId, countryId }),
     db.collection<StateDemographics>("stateDemographics").findOne({ _id: stateId, countryId }),
     db.collection<StateDemographics>("demographicDefaults").findOne({ _id: stateId, countryId }),
     gameStateCollection(db).findOne(
@@ -174,8 +175,7 @@ export async function loadNationalCampaignCells(
   countryId: CountryId,
   version = CAMPAIGN_RULES_VERSION
 ) {
-  const regions = await db
-    .collection<State>("states")
+  const regions = await statesCollection(db)
     .find({ countryId, _id: { $ne: countryId } })
     .toArray();
   const cells = await loadRegionalCampaignCells(

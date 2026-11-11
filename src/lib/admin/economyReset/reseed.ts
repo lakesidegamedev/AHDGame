@@ -15,6 +15,7 @@ import { isEasternBlocEra } from "@/lib/seeds/presetSelector";
 import type { CountryId } from "@/lib/constants/countries";
 import { countryCorporationSeeds, type CountryCorporationSeed } from "./rules/countryCorporations";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 type Log = (message: string) => void;
 
@@ -115,8 +116,7 @@ export async function reseedCountryOwnedCorporations(
   commandEconomyEnabled: boolean,
   log: Log
 ): Promise<{ countries: number; corporations: number; sectors: number }> {
-  const states = await db
-    .collection<State>("states")
+  const states = await statesCollection(db)
     .find({}, { projection: { _id: 1, countryId: 1, population: 1, gdp: 1 } })
     .toArray();
   const byCountry = new Map<

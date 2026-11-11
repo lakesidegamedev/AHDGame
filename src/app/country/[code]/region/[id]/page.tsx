@@ -55,6 +55,7 @@ import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { getRegionOfficialBuckets } from "@/lib/legislature/chamberOfficeType";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 interface Props {
   params: Promise<{ code: string; id: string }>;
@@ -77,9 +78,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const stateId = id;
   const db = await getDb();
-  const state = await db
-    .collection<State>("states")
-    .findOne({ _id: stateId, countryId: countryId });
+  const state = await statesCollection(db).findOne({ _id: stateId, countryId: countryId });
   if (!state) return {};
   const config = getCountryConfig(countryId);
   return {

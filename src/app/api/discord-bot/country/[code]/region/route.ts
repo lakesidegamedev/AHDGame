@@ -6,6 +6,7 @@ import { checkRateLimit, rateLimitResponse, BOT_READ_LIMITS } from "@/lib/api/ra
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 
 import type { State, ElectedOfficial, PoliticalParty } from "@/lib/db/types";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -43,7 +44,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
     const db = await getDb();
 
     const [state, officials] = await Promise.all([
-      db.collection<State>("states").findOne({ _id: stateId, countryId }),
+      statesCollection(db).findOne({ _id: stateId, countryId }),
       db.collection<ElectedOfficial>("electedOfficials").find({ state: stateId }).toArray(),
     ]);
 

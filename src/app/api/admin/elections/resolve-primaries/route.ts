@@ -38,6 +38,7 @@ import { parseSeatId } from "@/lib/seats/seatId";
 import { getGameTime } from "@/lib/time/gameTime";
 import { primaryClosedFilter, electionOpenFilter } from "@/lib/elections/electionDeadlineFilters";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 // POST /api/admin/elections/resolve-primaries — Eliminates primary losers and initializes vote tallies for elections whose primary phase has ended.
 // Auth: requireAdmin
@@ -150,9 +151,10 @@ export const POST = withAdminRoute(async (_auth) => {
       if (!isPresident && election.seatId) {
         const localRegionId = parseSeatId(election.seatId).localRegionId;
         if (localRegionId) {
-          const stateDoc = await db
-            .collection<State>("states")
-            .findOne({ _id: localRegionId, countryId: election.countryId ?? "US" });
+          const stateDoc = await statesCollection(db).findOne({
+            _id: localRegionId,
+            countryId: election.countryId ?? "US",
+          });
           if (
             stateDoc &&
             typeof stateDoc.cachedEconomicLean === "number" &&

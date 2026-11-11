@@ -27,6 +27,7 @@ import type {
 } from "@/lib/db/types";
 import { buildPartyIdResolver } from "@/lib/parties/partyMatch";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 // Re-uses electionLabels via the constants/countries re-export.
 // Import resolved inline above to keep this file self-contained.
@@ -124,8 +125,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
               })
               .toArray()
           : Promise.resolve([]),
-        db
-          .collection<State>("states")
+        statesCollection(db)
           .find({ countryId })
           .project<{ _id: string; name: string }>({ _id: 1, name: 1 })
           .sort({ name: 1 })

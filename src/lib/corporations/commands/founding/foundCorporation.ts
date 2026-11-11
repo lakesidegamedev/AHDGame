@@ -66,6 +66,7 @@ import {
 } from "@/lib/equities/primaryMarket";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export type FoundCorporationRequest = z.infer<typeof foundCorporationSchema>;
 
@@ -824,9 +825,10 @@ export async function foundCorporation({
     }
 
     const typeLabel = OPERATING_SECTOR_TYPE_LABELS[lane] ?? lane;
-    const hqStateDoc = await db
-      .collection<State>("states")
-      .findOne({ _id: headquartersState }, { projection: { name: 1 } });
+    const hqStateDoc = await statesCollection(db).findOne(
+      { _id: headquartersState },
+      { projection: { name: 1 } }
+    );
     const hqDisplayName = hqStateDoc?.name ?? headquartersState;
     logWireEvent("corporation_founded", wireHeadlineCorpFounded(name, typeLabel, hqDisplayName), {
       href: `/corporation/${sequentialId}`,

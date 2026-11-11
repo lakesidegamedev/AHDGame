@@ -28,6 +28,7 @@ import { apportionSeats } from "@/lib/seeds/reference/rules/apportionSeats";
 import { HU_2011_COUNTS_COLLECTION, type Hu2011AssemblyRecord } from "./assemblyCount2011";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export const HU_2011_BY_ELECTIONS_COLLECTION = "hu2011ConstituencyByElections";
 export interface HuModernByElectionRecord {
@@ -182,8 +183,7 @@ async function materializeHuModernByElectionOpening(input: {
     { session, projection: { _id: 1 } }
   );
   if (upcoming) return [];
-  const states = await db
-    .collection<State>("states")
+  const states = await statesCollection(db)
     .find(
       { countryId: "HU" },
       {

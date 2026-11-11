@@ -15,6 +15,7 @@ import {
 import { ensureRegionalGovernorElections } from "@/lib/elections/scheduling/shared";
 import { ensureChamberElections } from "@/lib/elections/scheduling/chamberSpawner";
 import { JP_SANGIIN_SPEC, JP_SHUGIIN_SPEC } from "./chamberSpecs";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /**
  * Ensure every JP region has an active or upcoming Shugiin election.
@@ -74,8 +75,7 @@ export async function ensureJPRegionalCouncilElections(
   const { currentTurn: persistedTurn, ctx } = await getCurrentTurnAndCtx(db);
   const currentTurn = inFlightTurn ?? persistedTurn;
 
-  const jpRegions = await db
-    .collection<State>("states")
+  const jpRegions = await statesCollection(db)
     .find({ countryId: "JP" }, { projection: { _id: 1, stateSenateSeats: 1 } })
     .toArray();
   const regions = jpRegions.map((r) => ({ id: r._id as string, seats: r.stateSenateSeats }));

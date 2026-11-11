@@ -23,6 +23,7 @@ import { MS_PER_TURN } from "@/lib/constants/turnTime";
 import { cycleAnchorContextFromGameState } from "@/lib/elections/cycleAnchorContext";
 import { electionToLarpYear } from "@/lib/utils/formatters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 // GET - List all elections
 export async function GET(request: Request, { params }: { params: Promise<{ code: string }> }) {
@@ -112,7 +113,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
     // Get all US electoral states. Federal districts like DC live in `states`
     // for economy/presidential electoral votes but elect no House/Senate/
     // Governor/state-legislature seats, so exclude them.
-    const states = (await db.collection<State>("states").find({}).toArray()).filter((s) =>
+    const states = (await statesCollection(db).find({}).toArray()).filter((s) =>
       isUsElectoralState(s._id)
     );
 

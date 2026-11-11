@@ -73,6 +73,7 @@ import {
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /** HTTP status for each entry refusal. */
 const MARKET_ENTRY_STATUS: Record<MarketEntryBlockReason, number> = {
@@ -147,7 +148,7 @@ export async function expandSector(request: Request, { params }: RouteParams) {
     // the sector's own `countryId` all key off `state.countryId`, not the corp's.
     // Filtering by `corporation.countryId` here silently 400'd every foreign
     // market the expand UI openly offers.
-    const state = await db.collection<State>("states").findOne({ _id: stateId });
+    const state = await statesCollection(db).findOne({ _id: stateId });
     if (!state) {
       return errorResponse(400, "Invalid state");
     }

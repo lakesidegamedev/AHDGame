@@ -33,6 +33,7 @@ import type { CommodityType } from "@/lib/constants/commodities";
 import type { GameState } from "@/lib/db/types/gameState";
 import type { SupplyAgreement } from "@/lib/db/types/supplyAgreement";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -155,8 +156,7 @@ export async function GET(request: Request, { params }: RouteParams) {
         { _id: "current" },
         { projection: { currentTurn: 1, currentYear: 1, hardwareInputReliefStartTurn: 1 } }
       ),
-      db
-        .collection<State>("states")
+      statesCollection(db)
         .find({ _id: { $in: stateIds } })
         .project<{ _id: string; name: string; region: string }>({ _id: 1, name: 1, region: 1 })
         .toArray(),

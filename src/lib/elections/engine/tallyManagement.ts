@@ -123,6 +123,7 @@ import {
 } from "@/lib/elections/rules/prStv";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 // ─── Accumulate one turn of votes into a tally ───────────────────────────────
 
@@ -265,7 +266,7 @@ export async function accumulateVoteTurn(
     partyRenewalEnabled = options.preload.partyRenewalEnabled === true;
   } else {
     const [s, d, spo, t, rp, gs] = await Promise.all([
-      db.collection<State>("states").findOne({ _id: stateId, countryId: election.countryId }),
+      statesCollection(db).findOne({ _id: stateId, countryId: election.countryId }),
       db
         .collection<StateDemographics>("stateDemographics")
         .findOne({ _id: stateId, countryId: election.countryId }),

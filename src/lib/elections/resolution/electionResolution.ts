@@ -86,6 +86,7 @@ import { workerConfig } from "@/lib/config/worker";
 import { getElectionsCollection } from "@/lib/db/collections/elections";
 import { getGameStateCollection } from "@/lib/db/collections/gameState";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export { HOUSE_SEATS, UK_COMMONS_SEATS };
 export { spawnHouseElection, spawnCommonsElection };
@@ -752,7 +753,7 @@ export async function resolveGeneralElections(
       status: { $ne: "resolved" },
     });
     if (pending > 0) continue;
-    await db.collection<State>("states").bulkWrite(
+    await statesCollection(db).bulkWrite(
       Object.entries(plan.regionCapacity).map(([regionId, houseDistricts]) => ({
         updateOne: {
           filter: { _id: regionId, countryId: "HU" as const },

@@ -14,6 +14,7 @@ import {
   STATE_LEADERSHIP_RELOCATION_DELAY_TURNS,
 } from "@/lib/parties/leadershipTenure";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; partyId: string }>;
@@ -53,7 +54,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     const db = await getDb();
-    const state = await db.collection<State>("states").findOne({ _id: stateId, countryId });
+    const state = await statesCollection(db).findOne({ _id: stateId, countryId });
     if (!state) {
       return errorResponse(404, "State not found");
     }

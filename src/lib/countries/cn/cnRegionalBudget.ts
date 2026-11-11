@@ -26,6 +26,7 @@ import type { RegionalBudget } from "@/lib/db/types/regionalBudget";
 import type { CabinetSetting } from "@/lib/db/types/cabinetSetting";
 import { loadAnnualSubsidyCostMaps } from "@/lib/subsidies/subsidyBudgetCosts";
 import { COUNTRY_CONFIGS, getCountryConfig, type CountryId } from "@/lib/constants/countries";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 // ── Pure calculation ─────────────────────────────────────────────────────────
 
@@ -243,7 +244,7 @@ export async function processOnePartyRegionalBudgets(
   const budgetKnobs = countryConfig.onePartyRegionalBudget;
   if (!budgetKnobs) return { regionsProcessed: 0 };
 
-  const regions = await db.collection<State>("states").find({ countryId }).toArray();
+  const regions = await statesCollection(db).find({ countryId }).toArray();
   if (regions.length === 0) return { regionsProcessed: 0 };
 
   const budgetConfig: OnePartyBudgetConfig = {

@@ -44,6 +44,7 @@ import type {
   TelemetryActorConfiguration,
 } from "./rules";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /** Run manifest row (`simRuns`), read best-effort from the same database. */
 interface SimRunManifest {
@@ -328,8 +329,7 @@ export async function appendMacroTelemetry(
   ctx: LongHorizonContext,
   turn: number
 ): Promise<{ pointsWritten: number; skipped: number }> {
-  const states = await db
-    .collection<State>("states")
+  const states = await statesCollection(db)
     .find({}, { projection: { _id: 1, countryId: 1, gdp: 1, population: 1 } })
     .toArray();
 

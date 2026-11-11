@@ -111,6 +111,7 @@ export function applyEraRevenueCap(
 
 import { initializeCapitalGainsTaxRates } from "./rules/capitalGainsTax";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 type LegacyFederalTaxRates = Partial<FederalTaxRates> & {
   corporateTax?: number;
@@ -244,8 +245,7 @@ export async function calculateNationalGDP(db: Db, budgetId: string = "federal")
   // today since all federalBudget docs carry taxBases so this GDP-fallback
   // path rarely fires, but a real scan when it does). NATIONAL_SCOPE_IDS
   // synthetic docs are still excluded in JS since they'd double-count.
-  const states = await db
-    .collection<State>("states")
+  const states = await statesCollection(db)
     .find({ countryId: countryId as State["countryId"] })
     .toArray();
   const totalFromStates = states
@@ -731,7 +731,7 @@ export async function calculateStateRevenue(
     bases = stateBudget.taxBases;
   } else {
     // Fallback: derive bases from state GDP
-    const state = await db.collection<State>("states").findOne({ _id: stateId, countryId });
+    const state = await statesCollection(db).findOne({ _id: stateId, countryId });
     // SP5: medianIncome lives on macroMetrics. (Also fixes the legacy filter,
     // which queried a nonexistent stateId field and always fell to the default.)
     const metrics = await db

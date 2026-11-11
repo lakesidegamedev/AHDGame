@@ -9,6 +9,8 @@ import {
 } from "@/lib/seeds/ensureDefaultParties";
 import { bgRegions2027 } from "@/lib/countries/bg/data/bgRegions2027";
 import { bgParties } from "@/lib/countries/bg/data/bgParties";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
 
 /** Political, demographic and regional metric substrate. Demographics use the
  * modern BG Layer-1 model; metrics are authored 2027 gameplay estimates
@@ -21,7 +23,7 @@ export async function seedBG2027(
 ): Promise<void> {
   if (preset !== "2027-default") return;
   if (reset) {
-    await db.collection("states").deleteMany({ countryId: "BG" });
+    await statesCollection<Document>(db).deleteMany({ countryId: "BG" });
     await db.collection("statePartyOrg").deleteMany({ countryId: "BG" });
     await db.collection("stateDemographics").deleteMany({ countryId: "BG" });
     await db.collection("stateDemographicTurnout").deleteMany({ countryId: "BG" });
@@ -35,7 +37,7 @@ export async function seedBG2027(
   const ops = bgRegions2027.map(({ _id, ...data }) => ({
     updateOne: { filter: { _id }, update: { $set: data }, upsert: true },
   }));
-  await db.collection<State>("states").bulkWrite(ops, { ordered: false });
+  await statesCollection(db).bulkWrite(ops, { ordered: false });
   await prunePresetMismatchedDefaultParties(db, bgParties, preset);
   const seeds = selectPartyRosterForPreset(bgParties, preset);
   const now = new Date();

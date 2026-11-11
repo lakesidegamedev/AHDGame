@@ -18,6 +18,7 @@ import type { State, StatePartyOrg, NPP } from "@/lib/db/types";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { getPartyNppCapacity, partyNppCapacityError } from "@/lib/npp/partyCapacity";
 import { activePartyNppFilter } from "@/lib/npp/recruitmentScope";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 // GET /api/country/[code]/parties/[id]/recruitment/states — Return eligible states with NPP slot and cost info for recruitment
 // Auth: requireAuthWithCharacter
@@ -56,7 +57,7 @@ export async function GET(
     }
 
     // Get all states in country
-    const states = await db.collection<State>("states").find({ countryId: countryId }).toArray();
+    const states = await statesCollection(db).find({ countryId: countryId }).toArray();
 
     // Get state party org for this party
     const statePartyOrgs = await db

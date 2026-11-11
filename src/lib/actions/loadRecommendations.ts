@@ -19,6 +19,7 @@ import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 interface StateEconomySector {
   type: string;
@@ -59,7 +60,7 @@ async function fetchStateEconomy(
   stateName: string,
   countryId: CountryId
 ): Promise<StateEconomyData> {
-  const state = await db.collection<State>("states").findOne({ _id: stateId, countryId });
+  const state = await statesCollection(db).findOne({ _id: stateId, countryId });
   if (!state) {
     return { stateId, stateName, countryId, sectors: [] };
   }
@@ -361,9 +362,7 @@ export async function loadRecommendationsForUser(
 
   // Fetch all required data in parallel
   const [homeState, party, statePartyOrg] = await Promise.all([
-    db
-      .collection<State>("states")
-      .findOne({ _id: character.homeState, countryId: character.countryId }),
+    statesCollection(db).findOne({ _id: character.homeState, countryId: character.countryId }),
     character.party
       ? db.collection<PoliticalParty>("politicalParties").findOne({
           sequentialId: Number(character.party),

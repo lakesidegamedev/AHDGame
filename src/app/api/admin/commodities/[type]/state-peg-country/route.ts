@@ -14,6 +14,7 @@ import { countryIdSchema } from "@/lib/api/schemas/country";
 import { NATIONAL_SCOPE_IDS } from "@/lib/constants/nationalScope";
 import type { CommodityPrice } from "@/lib/db/types";
 import type { State } from "@/lib/db/types/state";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 const schema = z.object({
   countryId: countryIdSchema,
@@ -32,8 +33,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ typ
     const { countryId, price } = parsed.data;
     const db = await getDb();
 
-    const states = await db
-      .collection<State>("states")
+    const states = await statesCollection(db)
       .find({ countryId }, { projection: { _id: 1 } })
       .toArray();
 

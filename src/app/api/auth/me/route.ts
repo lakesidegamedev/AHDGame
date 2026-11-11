@@ -31,6 +31,7 @@ import { recordIdentitySignals } from "@/lib/identityHistory/recordObservation";
 import { resolveStaffRole } from "@/lib/staff/rules";
 import { unifiedSessionIsCurrent } from "@/lib/auth/unifiedSession";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 function getPatreonAdPreference(
   user: User | null | undefined
@@ -244,9 +245,7 @@ export const GET = withNoStore(async () => {
 
     if (character) {
       const [state, party, unread, unreadMail] = await Promise.all([
-        db
-          .collection<State>("states")
-          .findOne({ _id: character.homeState, countryId: character.countryId }),
+        statesCollection(db).findOne({ _id: character.homeState, countryId: character.countryId }),
         character.party && Number.isFinite(Number(character.party))
           ? db.collection<PoliticalParty>("politicalParties").findOne({
               sequentialId: Number(character.party),

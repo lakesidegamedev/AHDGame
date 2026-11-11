@@ -12,6 +12,7 @@ import { countryIdSchema } from "@/lib/api/schemas/country";
 import type { CommodityPrice, CommodityPriceHistory, GameState, State } from "@/lib/db/types";
 import { computeCommodityPressureRatio } from "@/lib/constants/commodities";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 const querySchema = z.object({
   countryId: countryIdSchema,
@@ -89,8 +90,7 @@ export const GET = withAdminAuth(async (_auth, request: Request) => {
 
     // ── Country aggregate view ──
     // Get all stateIds belonging to this country
-    const countryStates = await db
-      .collection<State>("states")
+    const countryStates = await statesCollection(db)
       .find({ countryId }, { projection: { _id: 1 } })
       .toArray();
     const stateIds = new Set(countryStates.map((s) => s._id));

@@ -64,6 +64,7 @@ import {
   unprotectedConstructionPropertyFilter,
 } from "@/lib/corporations/securedConstructionProperty";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 const buySectorSchema = z.object({
   buyerCorporationId: schemas.objectId,
@@ -269,9 +270,10 @@ export async function buyListedSector(request: Request, { params }: RouteParams)
     const newGrowthCostLocal = Math.round(sector.currentGrowthCost ?? 0);
 
     const turn = await getCurrentTurn(db).catch(() => 0);
-    const stateDoc = await db
-      .collection<State>("states")
-      .findOne({ _id: sector.stateId }, { projection: { name: 1 } });
+    const stateDoc = await statesCollection(db).findOne(
+      { _id: sector.stateId },
+      { projection: { name: 1 } }
+    );
     const stateName = stateDoc?.name ?? sector.stateId;
     const sectorLabel =
       OPERATING_SECTOR_TYPE_LABELS[sector.sectorType as CorporationType] ?? sector.sectorType;

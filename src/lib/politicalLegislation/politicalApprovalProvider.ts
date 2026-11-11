@@ -27,6 +27,7 @@ import { POLITICAL_METRIC_COUNTRY_IDS } from "@/lib/politicalMetrics/types";
 import { NON_PLAYABLE_BOARD_COUNTRY_IDS } from "@/lib/politicalMetrics/seeds/nonPlayableBoardsSchema";
 import { approvalComponent, electorateLean } from "./politicalApproval";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /**
  * Every country whose political metrics come from the board: the four
@@ -103,8 +104,7 @@ export async function loadPoliticalApprovalBases(
         },
       }
     ),
-    db
-      .collection<State>("states")
+    statesCollection(db)
       .find(
         { countryId },
         { projection: { _id: 1, population: 1, cachedEconomicLean: 1, cachedSocialLean: 1 } }

@@ -11,6 +11,7 @@ import { corpFinancials } from "./corpFinancials";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -58,8 +59,7 @@ export async function queryCorporation(db: Db, params: { name?: string; id?: str
   const sectorStateIds = [...new Set(sectors.map((s) => s.stateId).filter(Boolean))];
   const states =
     sectorStateIds.length > 0
-      ? await db
-          .collection<{ _id: string; name?: string }>("states")
+      ? await statesCollection<{ _id: string; name?: string }>(db)
           .find({ _id: { $in: sectorStateIds } }, { projection: { name: 1 } })
           .toArray()
       : [];

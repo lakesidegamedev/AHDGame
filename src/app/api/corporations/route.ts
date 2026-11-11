@@ -24,6 +24,7 @@ import { getEnabledCountryIds } from "@/lib/countryAccess";
 import { foundCorporation } from "@/lib/corporations/commands/founding/foundCorporation";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 const INACTIVE_CEO_THRESHOLD_MS = INACTIVE_CEO_TURN_THRESHOLD * 60 * 60 * 1000;
 
@@ -133,8 +134,7 @@ export async function GET(request: Request) {
     const hqStateIds = [...new Set(corporations.map((c) => c.headquartersState))];
     const hqStates =
       hqStateIds.length > 0
-        ? await db
-            .collection<State>("states")
+        ? await statesCollection(db)
             .find({ _id: { $in: hqStateIds } })
             .project<{ _id: string; name: string }>({ _id: 1, name: 1 })
             .toArray()

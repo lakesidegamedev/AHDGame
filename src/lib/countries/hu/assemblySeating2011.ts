@@ -22,6 +22,7 @@ import { settleHuModernAssembly } from "./rules/modernAssembly2011";
 import { calendarTurn, turnToGameMonth } from "@/lib/utils/gameDate";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 const HU_2011_OFFICE_ARCHIVES_COLLECTION = "hu2011AssemblyOfficeArchives";
 interface Hu2011AssemblyArchive {
@@ -366,7 +367,7 @@ async function materializeHu2011AssemblySeating(input: {
   );
   if (finalizedElections.matchedCount !== ids.length)
     throw new Error("Hungarian handover lost election custody");
-  const resized = await db.collection<State>("states").bulkWrite(
+  const resized = await statesCollection(db).bulkWrite(
     Object.entries(settled.regionCapacity).map(([id, seats]) => ({
       updateOne: {
         filter: { _id: id, countryId: "HU" },

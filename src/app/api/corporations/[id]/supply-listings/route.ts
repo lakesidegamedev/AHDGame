@@ -27,6 +27,7 @@ import {
   supplyReachMessage,
 } from "@/lib/corporations/supplyExchange/rules/deliveryReach";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 type Context = { params: Promise<{ id: string }> };
 const privateHeaders = { "Cache-Control": "private, no-store" };
@@ -143,9 +144,7 @@ export async function POST(request: Request, context: Context) {
     const stateId = supplyAgreementRequiresState(body.commodity) ? body.stateId : undefined;
     if (
       stateId &&
-      !(await a.db
-        .collection<State>("states")
-        .findOne({ _id: stateId }, { projection: { _id: 1 } }))
+      !(await statesCollection(a.db).findOne({ _id: stateId }, { projection: { _id: 1 } }))
     )
       return errorResponse(400, "Unknown fulfillment state");
     const turn = await getCurrentTurn(a.db);

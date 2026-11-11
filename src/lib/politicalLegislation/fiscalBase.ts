@@ -9,12 +9,12 @@
 import type { Db } from "mongodb";
 import type { State } from "@/lib/db/types/state";
 import type { FiscalBase } from "./costEngine";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 const GDP_MILLIONS = 1_000_000;
 
 export async function countryFiscalBase(db: Db, countryId: string): Promise<FiscalBase> {
-  const states = await db
-    .collection<State>("states")
+  const states = await statesCollection(db)
     .find({ countryId: countryId as State["countryId"] }, { projection: { gdp: 1, population: 1 } })
     .toArray();
   let gdp = 0;
@@ -27,9 +27,10 @@ export async function countryFiscalBase(db: Db, countryId: string): Promise<Fisc
 }
 
 export async function regionFiscalBase(db: Db, regionId: string): Promise<FiscalBase> {
-  const state = await db
-    .collection<State>("states")
-    .findOne({ _id: regionId }, { projection: { gdp: 1, population: 1 } });
+  const state = await statesCollection(db).findOne(
+    { _id: regionId },
+    { projection: { gdp: 1, population: 1 } }
+  );
   return {
     gdp: (state?.gdp ?? 0) * GDP_MILLIONS,
     population: state?.population ?? 0,

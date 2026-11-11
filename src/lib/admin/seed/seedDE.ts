@@ -16,6 +16,8 @@ import type { LegislationType } from "@/lib/db/types/legislation";
 import { getNextSequentialId } from "@/lib/db/sequentialId";
 import { resolveSeedPartyTier } from "@/lib/seeds/defaultPartyTiers";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
 
 /**
  * The region roster DE actually governs in a given preset.
@@ -39,14 +41,13 @@ export async function seedDERegions(
   preset: string
 ) {
   if (reset) {
-    await db.collection("states").deleteMany({ countryId: "DE" });
+    await statesCollection<Document>(db).deleteMany({ countryId: "DE" });
   }
   const bundle = await deRegionRosterForPreset(preset);
   const regionOps = bundle.map((region) => ({
     updateOne: { filter: { _id: region._id }, update: { $set: region }, upsert: true },
   }));
-  if (regionOps.length > 0)
-    await db.collection<State>("states").bulkWrite(regionOps, { ordered: false });
+  if (regionOps.length > 0) await statesCollection(db).bulkWrite(regionOps, { ordered: false });
   log(`Seeded ${bundle.length} DE states (${preset})`);
 }
 
@@ -150,7 +151,7 @@ export async function seedDEDemographics(
       preset,
       demographicDefaults: sd,
     });
-    await db.collection<State>("states").updateOne(
+    await statesCollection(db).updateOne(
       { _id: sd._id },
       {
         $set: {

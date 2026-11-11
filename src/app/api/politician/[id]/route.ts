@@ -5,6 +5,7 @@ import type { NPP, State, PoliticalParty } from "@/lib/db/types";
 import { getOfficeLabel } from "@/lib/utils/officeTitle";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export type PoliticianType = "character" | "npp";
 
@@ -42,9 +43,10 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
 
     const character = await charactersCollection(db).findOne({ _id: objectId });
     if (character) {
-      const homeState = await db
-        .collection<State>("states")
-        .findOne({ _id: character.homeState, countryId: character.countryId });
+      const homeState = await statesCollection(db).findOne({
+        _id: character.homeState,
+        countryId: character.countryId,
+      });
       let party: PoliticalParty | null = null;
       if (character.party && character.party !== "independent") {
         const partySeqId = parseInt(character.party, 10);
@@ -77,9 +79,10 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
 
     const npp = await db.collection<NPP>("npps").findOne({ _id: objectId });
     if (npp) {
-      const homeState = await db
-        .collection<State>("states")
-        .findOne({ _id: npp.homeState, countryId: npp.countryId });
+      const homeState = await statesCollection(db).findOne({
+        _id: npp.homeState,
+        countryId: npp.countryId,
+      });
       let party: PoliticalParty | null = null;
       if (npp.party && npp.party !== "independent") {
         const partySeqId = parseInt(npp.party, 10);

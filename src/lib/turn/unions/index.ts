@@ -41,6 +41,7 @@ import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
 import { processLabourRelationsTurn } from "./labourRelationsTurn";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export interface UnionsTurnResult {
   unionsProcessed: number;
@@ -156,7 +157,7 @@ export async function processUnionsTurn(db: Db, turn?: number): Promise<UnionsTu
   const preset = await getGameStatePresetOrDefault(db);
   // Same country set seedUnions writes: background countries (#5702) have none.
   const seededCountryIds = (
-    await db.collection<State>("states").distinct("countryId", { _id: { $not: /^NATIONAL_/ } })
+    await statesCollection(db).distinct("countryId", { _id: { $not: /^NATIONAL_/ } })
   ).filter((countryId) => !isBackgroundInPreset(preset, countryId));
   const expectedUnionCount = seededCountryIds.length * OPERATING_SECTOR_TYPES.length;
   if (unionCount < expectedUnionCount) {

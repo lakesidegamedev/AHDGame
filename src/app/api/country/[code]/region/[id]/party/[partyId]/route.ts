@@ -49,6 +49,7 @@ import { findPartyBudgetForScope, getEffectivePartyBudgetSpending } from "@/lib/
 import { getTreasuryForecast, getTreasuryReserveSummary } from "@/lib/partyTreasuryPlan";
 import { countDistinctOfficers } from "@/lib/treasury/payoutCapValues";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; partyId: string }>;
@@ -91,7 +92,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const nppEconomyEnabled = gameConfig?.nppEconomyEnabled ?? false;
 
     // Verify state exists
-    const state = await db.collection<State>("states").findOne({ _id: stateId, countryId });
+    const state = await statesCollection(db).findOne({ _id: stateId, countryId });
     if (!state) {
       return errorResponse(404, "State not found");
     }

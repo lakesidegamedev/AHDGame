@@ -32,6 +32,7 @@ import { createSpawnDirector, directorScopeFor } from "./spawnDirector";
 import { legacyDefinitionId } from "./v2/legacyConvert";
 import { SPAWN_PRIORITY } from "./v2/spawnBudget";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /** Serializable description of an auto-spawnable template, for the admin tab. */
 export interface AutoCrisisCatalogEntry {
@@ -292,8 +293,7 @@ export async function forceSpawnCrisis(
   // Regional disaster.
   if (template.naturalDisaster) {
     if (!countryId) return { ok: false, error: "countryId required for a regional disaster" };
-    const regions = await db
-      .collection<State>("states")
+    const regions = await statesCollection(db)
       .find({ countryId, regionType: { $nin: [null, "nation", "constituency"] } } as never)
       .toArray();
     if (regions.length === 0) return { ok: false, error: "No regions for country" };

@@ -10,6 +10,8 @@ import type { GameConfig } from "@/lib/db/types/gameConfig";
 import type { CountryId } from "@/lib/constants/countries";
 import { upsertCountryOwnedCorpEntries } from "./upsertCountryOwnedCorps";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
 
 export interface EasternBlocSeedConfig {
   countryId: CountryId;
@@ -45,7 +47,7 @@ export async function seedEasternBlocCountry(
   const regionIds = regions.map((r) => r._id);
 
   if (reset) {
-    await db.collection("states").deleteMany({ countryId });
+    await statesCollection<Document>(db).deleteMany({ countryId });
     await db.collection("stateDemographics").deleteMany({ countryId });
     await db.collection("stateDemographicTurnout").deleteMany({ countryId });
     await db.collection("macroMetrics").deleteMany({ _id: { $in: regionIds } as never });
@@ -54,7 +56,7 @@ export async function seedEasternBlocCountry(
 
   for (const region of regions) {
     const { _id, ...regionData } = region;
-    await db.collection<State>("states").updateOne({ _id }, { $set: regionData }, { upsert: true });
+    await statesCollection(db).updateOne({ _id }, { $set: regionData }, { upsert: true });
   }
 
   const { isPartyValidForPreset, prunePresetMismatchedDefaultParties } =
@@ -143,7 +145,7 @@ export async function seedEasternBlocBudget(
   if (reset) {
     await federalBudgetCollection(db).deleteMany({ countryId });
     const ids = (
-      await db.collection("states").find({ countryId }).project({ _id: 1 }).toArray()
+      await statesCollection<Document>(db).find({ countryId }).project({ _id: 1 }).toArray()
     ).map((s) => s._id as string);
     if (ids.length > 0) {
       await db
@@ -208,7 +210,7 @@ export async function seedEasternBlocBudget(
   // block runs after. Repeating it here would be a no-op: bloc regions are seeded before
   // that pass and nothing between the two writes `state.gdp`. See
   // reconcileStateGdp.ts for the ordering contract this depends on.
-  const states = await db.collection<State>("states").find({ countryId }).toArray();
+  const states = await statesCollection(db).find({ countryId }).toArray();
   const statesForBudgets = states.map((s) => ({
     id: s._id,
     population: s.population,

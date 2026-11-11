@@ -50,6 +50,7 @@ import type { RetiredCharacter } from "@/lib/db/types/retiredCharacter";
 import { applyExperimentalUiCookie } from "@/lib/api/experimentalUiCookie";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /**
  * Whether to show the "Campaign Manager" navbar link. Returns true for: admins,
@@ -351,9 +352,7 @@ export async function GET() {
         myCorporation,
       ] = await Promise.all([
         character.homeState
-          ? db
-              .collection<State>("states")
-              .findOne({ _id: character.homeState }, { projection: { name: 1 } })
+          ? statesCollection(db).findOne({ _id: character.homeState }, { projection: { name: 1 } })
           : null,
         character.party && Number.isFinite(Number(character.party))
           ? db
@@ -450,9 +449,10 @@ export async function GET() {
           { projection: { state: 1 } }
         );
         if (officeRow) {
-          const officeState = await db
-            .collection<State>("states")
-            .findOne({ _id: officeRow.state }, { projection: { name: 1 } });
+          const officeState = await statesCollection(db).findOne(
+            { _id: officeRow.state },
+            { projection: { name: 1 } }
+          );
           if (officeState) {
             governorOffice = {
               stateId: officeRow.state,
@@ -618,9 +618,10 @@ export async function GET() {
 
       // Override homeState with imperial character's home state when in imperial mode
       if (isImperialMode && imperialChar?.homeState) {
-        const imperialStateDoc = await db
-          .collection<State>("states")
-          .findOne({ _id: imperialChar.homeState }, { projection: { name: 1 } });
+        const imperialStateDoc = await statesCollection(db).findOne(
+          { _id: imperialChar.homeState },
+          { projection: { name: 1 } }
+        );
         if (imperialStateDoc) {
           homeState = {
             id: imperialChar.homeState,

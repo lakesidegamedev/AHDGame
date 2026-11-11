@@ -10,6 +10,7 @@ import { subNationalChamberSeats } from "@/lib/constants/states";
 import { getGameStateCollection } from "@/lib/db/collections/gameState";
 
 import { StateLegislatureClient } from "./StateLegislatureClient";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export default async function StateLegislaturePage({
   params,
@@ -25,7 +26,7 @@ export default async function StateLegislaturePage({
   // The session, state document and world preset are independent;
   // fetch them together rather than serially.
   const [state, auth, gameState] = await Promise.all([
-    db.collection<State>("states").findOne({
+    statesCollection(db).findOne({
       _id: stateId,
       countryId,
     }),

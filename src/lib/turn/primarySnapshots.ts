@@ -69,6 +69,7 @@ import { planTurnSlice, type TurnSlicePart } from "@/lib/elections/rules/turnSli
 import { getElectionsCollection } from "@/lib/db/collections/elections";
 import { getStatesCollection } from "@/lib/db/collections/states";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /**
  * Record a primary standings snapshot for every election currently in primary phase.
@@ -740,8 +741,7 @@ async function recordPresidentialStatePollingSnapshots(
   // One-shot fetch for demographics + state used across all
   // pres elections in this turn.
   const [statesDocs, demographicsDocs] = await Promise.all([
-    db
-      .collection<State>("states")
+    statesCollection(db)
       .find({ _id: { $in: stateIds } })
       .toArray(),
     db

@@ -17,6 +17,8 @@ import {
   loadPoliticalApprovalBases,
 } from "@/lib/politicalLegislation/politicalApprovalProvider";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
 
 export interface RegionalApprovalData {
   approval: number;
@@ -38,7 +40,10 @@ export async function getRegionalApprovalData(
   if (!metrics) return null;
 
   const countryStateIds = (
-    await db.collection("states").find({ countryId }).project<{ _id: string }>({ _id: 1 }).toArray()
+    await statesCollection<Document>(db)
+      .find({ countryId })
+      .project<{ _id: string }>({ _id: 1 })
+      .toArray()
   ).map((s) => s._id);
 
   if (countryStateIds.length === 0) return null;

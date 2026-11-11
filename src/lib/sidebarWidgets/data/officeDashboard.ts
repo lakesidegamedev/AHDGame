@@ -18,6 +18,7 @@ import { isExecutiveOffice } from "@/lib/elections/executiveOffice";
 import { populationWeightedAverage } from "@/lib/metrics/populationWeightedAverage";
 import { loadViewerCharacter } from "./viewerContext";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export interface OfficeDashboardWidgetData {
   scope: "state" | "nation";
@@ -50,9 +51,7 @@ async function stateOffice(
 ): Promise<OfficeDashboardWidgetData | null> {
   const parliamentary = isParliamentarySystem(getCountryConfig(countryId));
   const [state, approval, metrics, regionalBudget, stateBudget] = await Promise.all([
-    db
-      .collection<State>("states")
-      .findOne({ _id: stateId, countryId }, { projection: { name: 1 } }),
+    statesCollection(db).findOne({ _id: stateId, countryId }, { projection: { name: 1 } }),
     db
       .collection<StateApprovalHistory>("stateApprovalHistory")
       .findOne({ _id: stateId, countryId }, { projection: { approvalRating: 1 } }),
@@ -111,8 +110,7 @@ async function nationOffice(db: Db, countryId: CountryId): Promise<OfficeDashboa
         },
       }
     ),
-    db
-      .collection<State>("states")
+    statesCollection(db)
       .find({ countryId }, { projection: { _id: 1, population: 1 } })
       .toArray(),
   ]);

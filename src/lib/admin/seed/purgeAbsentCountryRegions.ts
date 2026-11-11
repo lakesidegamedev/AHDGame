@@ -1,6 +1,7 @@
 import type { Db } from "mongodb";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { isShippingPreset, tierFor } from "@/lib/world/eraRoster";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /**
  * Country-keyed region collections a preset switch can strand.
@@ -69,7 +70,7 @@ export async function purgeAbsentCountryRegions(
   // stale rows. Use the states roster as authority, with the non-empty guard so
   // a partial bootstrap cannot erase the board.
   const stateIds = (
-    await db.collection<{ _id: string }>("states").find({}).project({ _id: 1 }).toArray()
+    await statesCollection<{ _id: string }>(db).find({}).project({ _id: 1 }).toArray()
   ).map((state) => state._id);
   if (stateIds.length > 0) {
     const result = await db.collection("politicalMetrics").deleteMany({ _id: { $nin: stateIds } });

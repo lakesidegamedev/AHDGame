@@ -5,6 +5,7 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { CorporationType, OperatingSectorType } from "@/lib/constants/corporations";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /**
  * Enriched, display-ready view of one open privatization auction (spec §13.3).
@@ -127,8 +128,7 @@ export async function buildAuctionListings(
   for (const sec of sectors) if (sec.stateId) stateIds.add(sec.stateId);
   const stateDocs =
     stateIds.size > 0
-      ? await db
-          .collection<{ _id: string; name: string }>("states")
+      ? await statesCollection<{ _id: string; name: string }>(db)
           .find({ _id: { $in: [...stateIds] } })
           .toArray()
       : [];

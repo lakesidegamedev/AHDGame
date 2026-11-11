@@ -18,6 +18,8 @@ import {
   bgContinuedAssemblyDissolutionAvailability,
 } from "./rules/constitutionalDecision1991";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
 
 export const BG_CONTINUED_ASSEMBLY_DISSOLUTION_ID =
   "1991-default:bg-constitutional:dissolution1991";
@@ -140,8 +142,7 @@ export async function openBg1991AssemblyDissolution(input: {
             "A revised motion cannot precede the previous vote"
           );
       }
-      const regions = await db
-        .collection("states")
+      const regions = await statesCollection<Document>(db)
         .find({ countryId: "BG" }, { session, projection: { houseDistricts: 1 } })
         .toArray();
       if (regions.reduce((sum, row) => sum + (row.houseDistricts ?? 0), 0) !== 400)

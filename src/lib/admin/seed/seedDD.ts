@@ -12,6 +12,8 @@ import type { PartySeed } from "@/lib/seeds/reference/politicalParties";
 import { getNextSequentialId } from "@/lib/db/sequentialId";
 import { resolveSeedPartyTier } from "@/lib/seeds/defaultPartyTiers";
 import { strictEraForPreset } from "@/lib/seeds/presetSelector";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
 
 // Both Cold-War seeds (1953 + 1979) put East Germany on the modern
 // eastern-Länder codes that the unified-era FRG seeds carry under `DE`
@@ -42,7 +44,7 @@ export async function seedDDRegions(
   preset: string
 ) {
   if (reset) {
-    await db.collection("states").deleteMany({ countryId: "DD" });
+    await statesCollection<Document>(db).deleteMany({ countryId: "DD" });
   }
   const { regionTableFor } = await import("@/lib/seeds/contract/regionTables");
   const { selectPresetBundle } = await import("@/lib/seeds/presetSelector");
@@ -53,9 +55,9 @@ export async function seedDDRegions(
   // the metric engine unable to compound state.gdp, so DD's economy stayed
   // byte-identical across independent sims.
   if (isDividedGermanyEra(preset)) {
-    const legacyDelete = await db
-      .collection("states")
-      .deleteMany({ _id: { $in: [...DD_LEGACY_MACRO_REGION_IDS] } as never });
+    const legacyDelete = await statesCollection<Document>(db).deleteMany({
+      _id: { $in: [...DD_LEGACY_MACRO_REGION_IDS] } as never,
+    });
     if (legacyDelete.deletedCount > 0) {
       log(`[DD] purged ${legacyDelete.deletedCount} legacy macro-region state(s)`);
     }
@@ -64,8 +66,7 @@ export async function seedDDRegions(
     const { _id, ...regionData } = region;
     return { updateOne: { filter: { _id }, update: { $set: regionData }, upsert: true } };
   });
-  if (regionOps.length > 0)
-    await db.collection<State>("states").bulkWrite(regionOps, { ordered: false });
+  if (regionOps.length > 0) await statesCollection(db).bulkWrite(regionOps, { ordered: false });
   log(`Seeded ${bundle.length} DD regions (${preset})`);
 }
 

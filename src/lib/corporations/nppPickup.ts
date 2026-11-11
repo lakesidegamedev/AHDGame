@@ -26,6 +26,7 @@ import {
 } from "@/lib/db/collections/extractionContracts";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /**
  * Share of a leaving plant's built capacity an NPP operator takes over. The
@@ -297,8 +298,7 @@ export async function disposeLeavingSectors(
     });
     const hostByState = new Map(
       (
-        await db
-          .collection<{ _id: string; countryId: string }>("states")
+        await statesCollection<{ _id: string; countryId: string }>(db)
           .find({ _id: { $in: [...new Set(eligible.map((s) => s.stateId))] } })
           .project<{ _id: string; countryId: string }>({ countryId: 1 })
           .toArray()

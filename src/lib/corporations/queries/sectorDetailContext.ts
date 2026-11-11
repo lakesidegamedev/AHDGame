@@ -43,6 +43,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /** Reads the state, country, tariff, sibling and market context for one sector. */
 export async function loadSectorDetailContext({
@@ -182,9 +183,8 @@ export async function loadSectorDetailContext({
     : Promise.resolve(null);
   const [state, allStates, stateMetrics, ceo, commodityPrices, allCorpSectors, gameState] =
     await Promise.all([
-      db.collection<State>("states").findOne({ _id: sector.stateId, countryId: sector.countryId }),
-      db
-        .collection<State>("states")
+      statesCollection(db).findOne({ _id: sector.stateId, countryId: sector.countryId }),
+      statesCollection(db)
         .find({}, { projection: { _id: 1, countryId: 1, name: 1 } })
         .toArray(),
       findMergedRegionMetrics(db, { _id: sector.stateId, countryId: sector.countryId }),

@@ -19,6 +19,7 @@ import {
 } from "@/lib/cabinet/ministerialActionPool";
 import { getInfraProjectsCollection } from "@/lib/db/collections/infraProjects";
 import { resolveInfraPosition, getInfraArchetype } from "@/lib/constants/cabinetInfra";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 const startSchema = z.object({
   archetypeId: z.string(),
@@ -54,9 +55,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     const db = await getDb();
-    const region = await db
-      .collection<{ _id: string; countryId: string }>("states")
-      .findOne({ _id: parsed.data.regionId, countryId }, { projection: { _id: 1 } });
+    const region = await statesCollection<{ _id: string; countryId: string }>(db).findOne(
+      { _id: parsed.data.regionId, countryId },
+      { projection: { _id: 1 } }
+    );
     if (!region) {
       return errorResponse(400, "Invalid region for this country");
     }

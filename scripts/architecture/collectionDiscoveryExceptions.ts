@@ -131,7 +131,7 @@ export const LEGACY_DYNAMIC_COLLECTION_SITES: readonly LegacyDynamicCollectionSi
     file: "src/lib/admin/seed/runCoreSeed.ts",
     owner: "runSeed",
     argument: "entry.name",
-    scopeHash: "9471134798c9a86f0e85c9cc31e2aea5b602119f7a7b9a0c19db0c37e62104c0",
+    scopeHash: "7ecd9c9ea7b98bed69558c4fc0dafac3dfcb4012f08d74182f57e59e85defa72",
     count: 1,
     reason:
       "Reviewed county reseed compatibility: only the literal states update now preserves live population, and the US census lean seeding no longer stores group rows. The reset filter no longer special-cases the retired voter-group category collection. The existing reset entry.name selector, registry, filters and dynamic call count are unchanged; no new dynamic collection scope is permitted.",
@@ -622,7 +622,7 @@ export const LEGACY_DYNAMIC_COLLECTION_SITES: readonly LegacyDynamicCollectionSi
     file: "src/lib/world/succession/materializeRussianCongress.ts",
     owner: "materializeProvisionalRussianCongress",
     argument: "collection",
-    scopeHash: "076a449fba3f154c0ca9f90c18051c248437f8f42bbf28adb03889a971341fcd",
+    scopeHash: "7c011c4f0a69d782f0ab1668f272fd1d522e6e8f29e9421bf0f442eba558d59a",
     count: 1,
     reason: "The world-transition operation iterates its explicit collection descriptors.",
   },

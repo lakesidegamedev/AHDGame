@@ -15,6 +15,7 @@ import {
   type ResetMetricSnapshot,
 } from "./rules/snapshot";
 import type { OpeningCountry } from "./rules/provisionalOpening";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export function buildOpeningMetricSnapshots1991(
   worldId: string,
@@ -72,8 +73,7 @@ export async function seedOpeningMetrics1991(
   const expected = buildOpeningMetricSnapshots1991(worldId, sourceTurn).filter((row) =>
     countries.includes(row.countryId)
   );
-  const seededRegions = await db
-    .collection<State>("states")
+  const seededRegions = await statesCollection(db)
     .find({ countryId: { $in: [...countries] } }, { projection: { _id: 1, countryId: 1 } })
     .toArray();
   const expectedRegionKeys = expected

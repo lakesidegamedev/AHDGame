@@ -24,6 +24,7 @@ import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export interface SectorPreviewAffectedCorp {
   corporationId: string;
@@ -232,8 +233,7 @@ export async function computeNationalizationTargetDetail(
   const stateIds = [...new Set(sectors.map((s) => s.stateId).concat(corp.headquartersState))];
   const stateDocs =
     stateIds.length > 0
-      ? await db
-          .collection<State>("states")
+      ? await statesCollection(db)
           .find({ _id: { $in: stateIds } }, { projection: { _id: 1, name: 1 } })
           .toArray()
       : [];

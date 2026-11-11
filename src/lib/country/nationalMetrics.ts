@@ -26,6 +26,7 @@ import { IS_HIGHER_BETTER } from "@/lib/utils/metricScoring";
 import { marginEffectForModifier } from "@/lib/states/conditions/marginEffects";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 interface MetricSummary {
   average: number;
@@ -112,7 +113,7 @@ export async function loadNationalMetrics(
   const db = await getDb();
 
   // Fetch states filtered by country, then metrics for those state IDs
-  const allStates = await db.collection<State>("states").find({ countryId }).toArray();
+  const allStates = await statesCollection(db).find({ countryId }).toArray();
   const stateIds = allStates.map((s) => s._id);
   // SP5: merged two-store view.
   const allMetrics = await findMergedRegionMetricsMany(db, {

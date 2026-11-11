@@ -22,6 +22,7 @@ import { REGION_PARTY_COLLECTIONS } from "@/lib/referendum/transfer/evacuateRegi
 import { rescaleRegionDelegations } from "./apportionChamber";
 import { statePartyOrgIdFor } from "@/lib/db/partyLookup";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /** A unique index that constrains `field`, as the fuse needs to see it. */
 interface UniqueIndexOverField {
@@ -150,8 +151,8 @@ export async function mergeRegion(db: Db, args: MergeRegionArgs): Promise<MergeR
     return { ok: false, error: "A region cannot absorb itself.", ...empty };
   }
 
-  const source = await db.collection<State>("states").findOne({ _id: fromRegionId });
-  const target = await db.collection<State>("states").findOne({ _id: toRegionId });
+  const source = await statesCollection(db).findOne({ _id: fromRegionId });
+  const target = await statesCollection(db).findOne({ _id: toRegionId });
 
   // IDEMPOTENT, and the ABSENT SOURCE is how that is detected. This ends by
   // deleting the source document, so a re-run after a partial failure finds
@@ -183,9 +184,10 @@ export async function mergeRegion(db: Db, args: MergeRegionArgs): Promise<MergeR
     if (typeof value === "number" && value !== 0) inc[field] = value;
   }
   if (Object.keys(inc).length > 0) {
-    await db
-      .collection<State>("states")
-      .updateOne({ _id: toRegionId }, { $inc: inc, $set: { updatedAt: now } });
+    await statesCollection(db).updateOne(
+      { _id: toRegionId },
+      { $inc: inc, $set: { updatedAt: now } }
+    );
   }
 
   // Re-point every region-keyed document at the surviving region. The key
@@ -411,7 +413,7 @@ export async function mergeRegion(db: Db, args: MergeRegionArgs): Promise<MergeR
   //
   // Everything the region owned has been re-pointed at the survivor above, so
   // there is nothing left for the document to hold.
-  await db.collection<State>("states").deleteOne({ _id: fromRegionId });
+  await statesCollection(db).deleteOne({ _id: fromRegionId });
 
   // The map changed, so the country's history should say so — the region is gone
   // from `states` and this entry is the only record that it ever existed.

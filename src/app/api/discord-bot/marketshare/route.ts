@@ -24,6 +24,7 @@ import {
 } from "@/lib/currency/corporationCapital";
 import { readCorpEconomicAnchor, writeCorpEconomicLocal } from "@/lib/currency/corpEconomyFields";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 const PAGE_SIZE = 15;
 
@@ -83,8 +84,7 @@ export async function GET(request: Request) {
       }
     }
 
-    const allStates = await db
-      .collection<State>("states")
+    const allStates = await statesCollection(db)
       .find({})
       .project<{ _id: string; name: string; gdp: number; countryId: CountryId }>({
         _id: 1,

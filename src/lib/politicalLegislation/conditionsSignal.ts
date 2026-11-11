@@ -18,6 +18,7 @@ import { aggregateNationalPoliticalMetrics, categoryScore } from "@/lib/politica
 import { POLITICAL_METRIC_CATEGORIES, type PoliticalMetricId } from "@/lib/politicalMetrics/types";
 import type { PoliticalMetricsCountryId } from "@/lib/politicalMetrics/types";
 import { PIPELINE_POLICY_DOMAIN } from "./project";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /** Category score below this (Weak/Critical territory; 40–54 is merely Strained) = weak domain. */
 export const WEAK_DOMAIN_THRESHOLD = 40;
@@ -81,8 +82,7 @@ export async function loadNationalPoliticalBoard(
 ): Promise<Record<PoliticalMetricId, number> | null> {
   const [docs, states] = await Promise.all([
     db.collection<PoliticalMetricsDoc>("politicalMetrics").find({ countryId }).toArray(),
-    db
-      .collection<State>("states")
+    statesCollection(db)
       .find({ countryId }, { projection: { _id: 1, population: 1 } })
       .toArray(),
   ]);

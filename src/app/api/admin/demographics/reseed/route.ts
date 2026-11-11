@@ -33,6 +33,7 @@ import { SEED_ERA_IDS, type EraId } from "@/lib/seeds/presetSelector";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import type { Document } from "mongodb";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 const VALID_ERAS = SEED_ERA_IDS;
 
@@ -104,7 +105,7 @@ export async function POST(request: Request) {
           preset: `${era}-default`,
           demographicDefaults: sd,
         });
-        await db.collection<State>("states").updateOne(
+        await statesCollection(db).updateOne(
           { _id: sd._id },
           {
             $set: {
@@ -152,8 +153,10 @@ export async function POST(request: Request) {
     // Clear stored polls (skippable to avoid disrupting active players)
     let charactersCleared = 0;
     if (!skipPollClear) {
-      const charsResult = await charactersCollection<Document>(db)
-        .updateMany({}, { $unset: { lastPoll: "", lastPollLarge: "" } });
+      const charsResult = await charactersCollection<Document>(db).updateMany(
+        {},
+        { $unset: { lastPoll: "", lastPollLarge: "" } }
+      );
       charactersCleared = charsResult.modifiedCount;
     }
 
@@ -178,7 +181,7 @@ export async function POST(request: Request) {
         .updateOne({ _id: sd._id }, { $set: cachedDemographics }, { upsert: true });
 
       // Refresh cached leans on states
-      await db.collection<State>("states").updateOne(
+      await statesCollection(db).updateOne(
         { _id: sd._id },
         {
           $set: {

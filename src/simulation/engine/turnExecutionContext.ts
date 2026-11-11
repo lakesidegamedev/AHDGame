@@ -14,6 +14,7 @@ import { nextScheduledTurnAfter, resolveTurnCronMinute } from "@/lib/cron/turnCr
 import type { Db } from "mongodb";
 import type { TurnExecutionContext } from "@/simulation/engine/types";
 import type { TurnEngine } from "@/simulation/engine/turnEngine";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export async function buildTurnExecutionContext(input: {
   db: Db;
@@ -79,8 +80,7 @@ export async function buildTurnExecutionContext(input: {
       }
     )
     .toArray();
-  const states = await db
-    .collection<State>("states")
+  const states = await statesCollection(db)
     .find({}, { projection: { countryId: 1, population: 1, gdp: 1, votingEligiblePopulation: 1 } })
     .toArray();
   const stateMap = new Map(states.map((state) => [state._id, state]));

@@ -28,6 +28,7 @@ import {
 import { getPath, setPath, scaleDeep } from "./docScale";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /**
  * Extensive (economy-sized) budget fields that split by GDP share. Intensive
@@ -65,8 +66,7 @@ export async function promoteEconomyToNational(
   if (existing) return;
 
   // GDP weight from the post-expand states: seceding sub-regions vs the rump-UK.
-  const states = (await db
-    .collection<State>("states")
+  const states = (await statesCollection(db)
     .find({ countryId: { $in: [fromCountryId, toCountryId] } })
     .toArray()) as Array<{ countryId?: string; gdp?: number }>;
   const newGdp = states

@@ -18,6 +18,7 @@ import { loadResetLawProvenance } from "@/lib/policy/resetLawPolicyRecords";
 import { getGovernmentFormationsCollection } from "@/lib/db/collections/governmentFormation";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /** Per-law provenance for the statute book's mono sublines + fiscal chips. */
 export interface PolicyProvenance {
@@ -81,8 +82,7 @@ export async function loadPolicyRecordPayload(countryId: CountryId) {
     federalBudgetCollection(db).findOne({
       _id: countryId === COUNTRY_CONFIGS.US.id ? "federal" : countryId,
     }),
-    db
-      .collection<State>("states")
+    statesCollection(db)
       .find({ countryId }, { projection: { population: 1 } })
       .toArray(),
     resolveCurrentEra(db, countryId),

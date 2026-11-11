@@ -20,6 +20,7 @@ import { NppCapitalPanel } from "./NppCapitalPanel";
 import { bypassNextImageOptimization } from "@/lib/images/bypassImageOptimization";
 import { NPP_MAX_DONOR_BASE_LEVEL } from "@/lib/npp/actionAi";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -118,9 +119,10 @@ async function getNPPData(id: string) {
 
   if (!npp) return null;
 
-  const homeState = await db
-    .collection<State>("states")
-    .findOne({ _id: npp.homeState, countryId: npp.countryId });
+  const homeState = await statesCollection(db).findOne({
+    _id: npp.homeState,
+    countryId: npp.countryId,
+  });
   let party: PoliticalParty | null = null;
   if (npp.party && npp.party !== "independent") {
     const partySeqId = parseInt(npp.party, 10);

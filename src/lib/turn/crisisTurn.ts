@@ -38,6 +38,7 @@ import {
 import { getStatesCollection } from "@/lib/db/collections/states";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /**
  * Process active crises for the current turn.
@@ -371,12 +372,10 @@ async function applyGdpLossEffects(
   }
   if (factor >= 1) return;
 
-  await db
-    .collection("states")
-    .updateMany(
-      { _id: { $in: targetStateIds.map((id) => id as unknown as import("mongodb").ObjectId) } },
-      { $mul: { gdp: factor } }
-    );
+  await statesCollection<Document>(db).updateMany(
+    { _id: { $in: targetStateIds.map((id) => id as unknown as import("mongodb").ObjectId) } },
+    { $mul: { gdp: factor } }
+  );
 }
 
 function resolveScope(

@@ -58,6 +58,7 @@ import {
   type SplinterPlan,
 } from "./rules/partyRenewal";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /** Renewal looks for newly resolved cycles this often. */
 export const PARTY_RENEWAL_CHECK_INTERVAL_TURNS = 6;
@@ -611,8 +612,7 @@ async function applyFounding(
   plan: FoundingPlan
 ): Promise<string> {
   const [regions, orgs, names] = await Promise.all([
-    db
-      .collection<{ _id: string }>("states")
+    statesCollection<{ _id: string }>(db)
       .find({ countryId }, { projection: { _id: 1 } })
       .toArray(),
     db

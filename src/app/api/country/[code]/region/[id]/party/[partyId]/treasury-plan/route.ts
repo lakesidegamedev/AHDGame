@@ -16,6 +16,7 @@ import { savePartyBudgetForScope } from "@/lib/partyBudgetGuards";
 import { getTreasuryReserveSummary } from "@/lib/partyTreasuryPlan";
 import type { State, StatePartyOrg } from "@/lib/db/types";
 import { getTreasuryPresetLabel, type TreasuryPresetId } from "@/lib/treasury/partyTreasuryPresets";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; partyId: string }>;
@@ -58,7 +59,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     const db = await getDb();
-    const state = await db.collection<State>("states").findOne({ _id: stateId, countryId });
+    const state = await statesCollection(db).findOne({ _id: stateId, countryId });
     if (!state) {
       return errorResponse(404, "State not found");
     }

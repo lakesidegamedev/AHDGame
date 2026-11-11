@@ -55,6 +55,7 @@ import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 let openingCalibrationCache: {
   gross: ReturnType<typeof openingGrossPurchasingInputs1991>;
@@ -172,8 +173,7 @@ export async function collectResetMetricOwnerReadings(
       .collection<TradeFlowSnapshot>("tradeFlowSnapshots")
       .find({ turn }, { projection: { turn: 1, national: 1 } })
       .toArray(),
-    db
-      .collection<State>("states")
+    statesCollection(db)
       .find(
         { _id: { $in: regionalIds }, countryId: { $in: countryIds } },
         {

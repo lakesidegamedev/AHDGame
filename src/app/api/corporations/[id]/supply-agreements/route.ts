@@ -26,6 +26,7 @@ import { buyerCommodityUse } from "@/lib/corporations/supplyExchange/rules/deliv
 import type { State } from "@/lib/db/types/state";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -177,8 +178,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
       const stateIds = supplyAgreementSectorStates(sectors);
       const stateNameById = new Map<string, string>();
       if (stateIds.length > 0) {
-        const states = await db
-          .collection<State>("states")
+        const states = await statesCollection(db)
           .find({ _id: { $in: stateIds } }, { projection: { name: 1 } })
           .toArray();
         for (const state of states) stateNameById.set(state._id, state.name);

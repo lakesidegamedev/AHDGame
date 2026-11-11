@@ -5,6 +5,8 @@ import { ALLOWED_FEATURE_FLAGS, METRIC_DEFINITION_VERSION } from "@/lib/clientSt
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
 
 const ELECTION_STATUS_FIELDS = {
   upcoming: "electionCountUpcoming",
@@ -123,8 +125,7 @@ export async function collectLocalStatistics(db: Db): Promise<LocalStatisticsPay
         projection: { "goods.pooledFillRate.value": 1, "firms.lossMakingShare.value": 1 },
       }
     ),
-    db
-      .collection("states")
+    statesCollection<Document>(db)
       .find({}, { projection: { _id: 1, gdp: 1, population: 1 } })
       .toArray(),
     db

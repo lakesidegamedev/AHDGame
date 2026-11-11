@@ -21,6 +21,7 @@ import { bucketKey } from "@/lib/nationalization/stateControlledBuckets";
 import { incrementNatCorpSectorRevenue } from "@/lib/nationalization/seedToNatCorp";
 import { computeUnownedHeadroomUnits } from "@/lib/market/unownedHeadroom";
 import { reconcileCommandEconomyUnowned } from "@/lib/admin/seed/reconcileCommandEconomyUnowned";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /**
  * Modern-era floor. Kept as a named export for existing callers; the value a
@@ -126,8 +127,7 @@ export async function seedUnownedSectors(
 ) {
   // Background countries keep their regions but run no sectors.
   const states = (
-    await db
-      .collection<State>("states")
+    await statesCollection(db)
       .find({ _id: { $not: /^NATIONAL_/ } })
       .toArray()
   ).filter((state) => !isBackgroundInPreset(preset, state.countryId));

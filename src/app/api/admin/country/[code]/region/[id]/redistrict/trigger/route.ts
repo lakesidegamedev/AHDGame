@@ -7,6 +7,7 @@ import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import type { State } from "@/lib/db/types";
 import { regionRedistrictUrl } from "@/lib/urls";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 // POST /api/admin/country/[code]/region/[id]/redistrict/trigger — reset a state's
 // district map to a neutral baseline and open it for manual redraw.
@@ -29,7 +30,7 @@ export const POST = withAdminRoute(
     }
 
     const db = await getDb();
-    const state = await db.collection<State>("states").findOne({ _id: stateId, countryId });
+    const state = await statesCollection(db).findOne({ _id: stateId, countryId });
     if (!state) {
       return errorResponse(404, "State not found");
     }

@@ -2,6 +2,7 @@
 import type { Db } from "mongodb";
 import type { Character, Election, ElectionCandidate, State } from "@/lib/db/types";
 import { forbidden } from "@/lib/api/errors";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 async function standingAdRegions(db: Db, owner: Character) {
   const candidates = await db
@@ -22,8 +23,7 @@ async function standingAdRegions(db: Db, owner: Character) {
       },
       { projection: { _id: 1 } }
     ));
-  return db
-    .collection<State>("states")
+  return statesCollection(db)
     .find(
       {
         countryId: owner.countryId,

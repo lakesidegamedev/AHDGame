@@ -64,6 +64,7 @@ import { isSittingLeader } from "@/lib/governorOffice/isSittingLeader";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /** Human-readable label for a `category.field` metric path (region-aware). */
 function mandateMetricLabel(path: string, stateId?: string): string {
@@ -333,8 +334,7 @@ export async function buildNationalCorporationView(
   // shows the proper name rather than the internal stateId abbreviation.
   const stateNameDocs =
     stateIds.length > 0
-      ? await db
-          .collection<State>("states")
+      ? await statesCollection(db)
           .find({ _id: { $in: stateIds } }, { projection: { _id: 1, name: 1 } })
           .toArray()
       : [];
@@ -344,8 +344,7 @@ export async function buildNationalCorporationView(
   // All regions of the country (alphabetical), for the IPO headquarters selector
   // in the privatize wizard. Distinct from the held-region names above, which
   // only cover regions this corp already operates in.
-  const countryRegionDocs = await db
-    .collection<State>("states")
+  const countryRegionDocs = await statesCollection(db)
     .find({ countryId }, { projection: { _id: 1, name: 1 } })
     .toArray();
   const countryRegions = countryRegionDocs

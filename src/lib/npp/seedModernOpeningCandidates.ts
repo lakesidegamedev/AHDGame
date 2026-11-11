@@ -19,6 +19,7 @@ import { canPartyFieldInState } from "@/lib/turn/nppEntryLogic";
 import { DEFAULT_CANDIDATE_SUPPORT } from "@/lib/elections/engine/electionFormulaFactors";
 import { generateNPP, type NPPGenerationContext } from "./generator";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /** Called only by fresh historical bootstrap, never by a turn or reference refresh. */
 export async function seedModernOpeningCandidates(
@@ -62,8 +63,7 @@ export async function seedModernOpeningCandidates(
     .find({ isDefault: true }, { projection: { sequentialId: 1, countryId: 1 } })
     .sort({ sequentialId: 1 })
     .toArray();
-  const regions = await db
-    .collection<{ _id: string; countryId: string }>("states")
+  const regions = await statesCollection<{ _id: string; countryId: string }>(db)
     .find({}, { projection: { _id: 1, countryId: 1 } })
     .sort({ _id: 1 })
     .toArray();

@@ -29,6 +29,7 @@ import { loadWorldPreset } from "@/lib/currency/gdpAnchorRate";
 import { NUMERIC_BSON_TYPE } from "@/lib/db/queryHelpers";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export interface ReconcileCommandEconomyUnownedResult {
   commandCountries: CountryId[];
@@ -90,8 +91,7 @@ export async function reconcileCommandEconomyUnowned(
   const preset = opts.preset ?? presetFromDb;
   const year = resolveSeedYear(preset, gameState?.currentYear ?? null);
 
-  const states = await db
-    .collection<State>("states")
+  const states = await statesCollection(db)
     .find({ _id: { $not: /^NATIONAL_/ } })
     .project<Pick<State, "_id" | "countryId" | "population" | "gdp">>({
       countryId: 1,

@@ -19,6 +19,7 @@ import {
 } from "@/lib/utils/decayProjections";
 import type { User, Notification, PoliticalParty, State, StatePartyOrg } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export async function GET() {
   try {
@@ -49,9 +50,7 @@ export async function GET() {
       unionContribution,
     ] = await Promise.all([
       character.homeState
-        ? db
-            .collection<State>("states")
-            .findOne({ _id: character.homeState, countryId: character.countryId })
+        ? statesCollection(db).findOne({ _id: character.homeState, countryId: character.countryId })
         : null,
       character.party && Number.isFinite(Number(character.party))
         ? db.collection<PoliticalParty>("politicalParties").findOne({

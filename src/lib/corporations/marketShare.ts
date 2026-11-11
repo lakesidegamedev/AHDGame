@@ -35,6 +35,7 @@ import {
   computeSectorImpliedUnits,
   computeUnownedHeadroomUnits,
 } from "@/lib/market/unownedHeadroom";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 type MarketIdentity = {
   sectorType: CorporateSector["sectorType"];
@@ -605,9 +606,10 @@ export async function fetchSectorMarketSharePercent(
   const { loadFxRatesByCurrency } = await import("@/lib/currency/corporationCapital");
 
   const [state, siblingSectors, fxByCurrency] = await Promise.all([
-    db
-      .collection<State>("states")
-      .findOne({ _id: sector.stateId }, { projection: { _id: 1, gdp: 1, countryId: 1 } }),
+    statesCollection(db).findOne(
+      { _id: sector.stateId },
+      { projection: { _id: 1, gdp: 1, countryId: 1 } }
+    ),
     db
       .collection<CorporateSector>("corporateSectors")
       .find(
@@ -688,8 +690,7 @@ export async function fetchCorporationNationalSectorSharesByCountry(
   const result = new Map<CountryId, number>(countryIds.map((countryId) => [countryId, 0]));
   if (countryIds.length === 0) return result;
 
-  const states = await db
-    .collection<State>("states")
+  const states = await statesCollection(db)
     .find({ countryId: { $in: countryIds } }, { projection: { _id: 1, countryId: 1 } })
     .toArray();
   const countryByStateId = new Map(
@@ -848,8 +849,7 @@ export async function fetchMarketSharePercentForSectors(
       )
       .toArray(),
     db.collection<UnownedSector>("unownedSectors").find({ $or: unownedBucketFilters }).toArray(),
-    db
-      .collection<State>("states")
+    statesCollection(db)
       .find({ _id: { $in: stateIds } }, { projection: { _id: 1, gdp: 1, countryId: 1 } })
       .toArray(),
     loadFxRatesByCurrency(db),
@@ -903,9 +903,10 @@ export async function fetchAttackerDefenderShares(
   const { loadFxRatesByCurrency } = await import("@/lib/currency/corporationCapital");
 
   const [state, siblingSectors, fxByCurrency] = await Promise.all([
-    db
-      .collection<State>("states")
-      .findOne({ _id: targetSector.stateId }, { projection: { _id: 1, gdp: 1, countryId: 1 } }),
+    statesCollection(db).findOne(
+      { _id: targetSector.stateId },
+      { projection: { _id: 1, gdp: 1, countryId: 1 } }
+    ),
     db
       .collection<CorporateSector>("corporateSectors")
       .find(

@@ -54,6 +54,8 @@ import {
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
 
 export async function GET() {
   try {
@@ -76,8 +78,8 @@ export async function GET() {
       partyBudgetCount,
       unownedSectorCount,
     ] = await Promise.all([
-      db.collection("states").countDocuments({ countryId: "US" }),
-      db.collection("states").countDocuments({ countryId: "UK" }),
+      statesCollection<Document>(db).countDocuments({ countryId: "US" }),
+      statesCollection<Document>(db).countDocuments({ countryId: "UK" }),
       db.collection("policies").countDocuments(),
       db.collection<{ _id: string }>("gameConfig").findOne({ _id: "default" }),
       gameStateCollection(db).findOne({ _id: "current" }),

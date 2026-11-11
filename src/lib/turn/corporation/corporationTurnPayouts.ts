@@ -46,6 +46,7 @@ import type { Db } from "mongodb";
 import type { MarketContext } from "@/lib/market/marketContext";
 import { workerConfig } from "@/lib/config/worker";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 // Optional sim-run salt, same convention as nppActionProcessing.ts's RNG.
 export const CORP_TURN_RNG_SALT = workerConfig.simRngSalt() ? `:${workerConfig.simRngSalt()}` : "";
@@ -441,7 +442,7 @@ export async function settleCorporationTurnPayouts({
         },
       },
     }));
-    await db.collection<State>("states").bulkWrite(stateInvestOps);
+    await statesCollection(db).bulkWrite(stateInvestOps);
   }
 
   mark("taxBases(fed+state)");

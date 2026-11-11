@@ -15,6 +15,7 @@ import type {
 } from "@/lib/db/types";
 import { formatElectionTypeLabel, MULTI_SEAT_TYPES } from "@/lib/utils/electionLabels";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export async function updatePoliticianPagesAfterElection(
   db: Db,
@@ -35,9 +36,7 @@ export async function updatePoliticianPagesAfterElection(
 
   const totalVotes = tally ? Object.values(tally.totalVotes).reduce((s, v) => s + v, 0) : 0;
   const state = election.state
-    ? await db
-        .collection<State>("states")
-        .findOne({ _id: election.state, countryId: election.countryId })
+    ? await statesCollection(db).findOne({ _id: election.state, countryId: election.countryId })
     : null;
   const stateName =
     state?.name ??
