@@ -1,5 +1,6 @@
 import type { Db, ObjectId } from "mongodb";
 import type { CorporationHistory } from "@/lib/db/types";
+import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
 
 export type CorpHistoryDividendRow = Pick<
   CorporationHistory,
@@ -28,8 +29,7 @@ export async function fetchLatestCorpHistoryDividendRows(
 ): Promise<Map<string, CorpHistoryDividendRow>> {
   if (corporationIds.length === 0) return new Map();
 
-  const rows = await db
-    .collection<CorporationHistory>("corporationHistory")
+  const rows = await corporationHistoryCollection(db)
     .aggregate<{
       _id: ObjectId;
       lastIncome: number;

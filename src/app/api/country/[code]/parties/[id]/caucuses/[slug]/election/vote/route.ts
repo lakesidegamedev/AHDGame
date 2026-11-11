@@ -17,6 +17,8 @@ import type {
   CaucusChairVote,
   CaucusMembership,
 } from "@/lib/db/types";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
 
 const bodySchema = z
   .object({
@@ -89,9 +91,10 @@ export async function POST(
     // all: a founding caucus race blocked new players that the other two
     // routes let vote (#593).
     if (!election.founding) {
-      const userDoc = await db
-        .collection("users")
-        .findOne({ _id: auth.user.character.userId }, { projection: { createdAt: 1 } });
+      const userDoc = await usersCollection<Document>(db).findOne(
+        { _id: auth.user.character.userId },
+        { projection: { createdAt: 1 } }
+      );
       const cooldown = isInNewCharacterCooldown({
         userCreatedAt: userDoc?.createdAt ?? new Date(0),
         characterCreatedAt: auth.user.character.createdAt,

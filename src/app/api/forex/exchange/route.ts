@@ -34,6 +34,8 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { currencyOrdersCollection } from "@/lib/db/repositories/currencyOrders";
 import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 const marketOrderSchema = z
   .object({
@@ -168,9 +170,10 @@ export async function POST(request: Request) {
     // Non-convertible command currencies cannot be market-traded. Gated here
     // (not inside executeMarketMakerTrade) so corp/bond/autoConvert system FX
     // still works when the flag is on.
-    const gameConfig = await db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } });
+    const gameConfig = await gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { commandEconomyEnabled: 1 } }
+    );
     const blocked = nonConvertibleTradeCurrency(
       [fromCurrency, toCurrency],
       gs?.currentYear,
@@ -181,9 +184,7 @@ export async function POST(request: Request) {
     }
 
     // Resolve character type for collection targeting
-    const userDoc = await db
-      .collection<User>("users")
-      .findOne({ _id: new ObjectId(auth.user.userId) });
+    const userDoc = await usersCollection(db).findOne({ _id: new ObjectId(auth.user.userId) });
     const isImperialMode =
       userDoc?.activeCharacterType === "imperial" && !!userDoc?.activeImperialCharacterId;
 

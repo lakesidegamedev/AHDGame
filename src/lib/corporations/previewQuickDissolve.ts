@@ -51,6 +51,8 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 
 export type CommodityGlobalDeltaPreview = {
   commodity: CommodityType;
@@ -249,9 +251,10 @@ export async function previewQuickDissolve(
   }>(db).findOne({ _id: "current" });
   const currentTurn = gameState?.currentTurn ?? 0;
 
-  const gdpPhaseConfig = await db
-    .collection<{ _id: string; stateGdpAnchorPhaseStartTurn?: number }>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { stateGdpAnchorPhaseStartTurn: 1 } });
+  const gdpPhaseConfig = await gameConfigCollection<{
+    _id: string;
+    stateGdpAnchorPhaseStartTurn?: number;
+  }>(db).findOne({ _id: "default" }, { projection: { stateGdpAnchorPhaseStartTurn: 1 } });
 
   const [allSectors, allCorps, allStates, stateMetrics, centralBanks] = await Promise.all([
     corporateSectorsCollection(db)
@@ -288,8 +291,7 @@ export async function previewQuickDissolve(
     statesCollection(db)
       .find({}, { projection: { _id: 1, countryId: 1, gdp: 1 } })
       .toArray(),
-    db
-      .collection<StateMetrics>("macroMetrics")
+    macroMetricsCollection(db)
       .find({}, { projection: { "economic.gdpGrowth.value": 1 } })
       .toArray(),
     centralBanksCollection(db).find({}).toArray(),

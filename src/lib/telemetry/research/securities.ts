@@ -32,6 +32,7 @@ import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
 
 /** Trade kinds that are price-forming executions between two parties. */
 const EXECUTION_KINDS = ["market_buy", "market_sell", "limit_fill", "peer_fill", "listing_fill"];
@@ -60,8 +61,7 @@ export async function buildSecurityTelemetryRowForTurn(
         }
       )
       .toArray(),
-    db
-      .collection<CorporationHistory>("corporationHistory")
+    corporationHistoryCollection(db)
       .find(
         { turn },
         {

@@ -7,6 +7,8 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
 import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
 
 /**
  * Seeds the USSR FY1979 national budget, default enacted laws (from the su_*
@@ -29,10 +31,12 @@ export async function seedRuBudgets(
       await statesCollection<Document>(db).find({ countryId: "RU" }).project({ _id: 1 }).toArray()
     ).map((s) => s._id as string);
     if (suStateIds.length > 0) {
-      await stateBudgetsCollection(db)
-        .deleteMany({ stateId: { $in: suStateIds }, countryId: "RU" });
+      await stateBudgetsCollection(db).deleteMany({
+        stateId: { $in: suStateIds },
+        countryId: "RU",
+      });
     }
-    await db.collection<EnactedLaw>("enactedLaws").deleteMany({ countryId: "RU" });
+    await enactedLawsCollection(db).deleteMany({ countryId: "RU" });
     log("Reset: deleted SU budget data");
   }
 
@@ -74,7 +78,7 @@ export async function seedRuBudgets(
     if (law.incomeCostFraction === undefined) unsetFields.incomeCostFraction = "";
     const update: Record<string, unknown> = { $set: lawWithoutId, $setOnInsert: { _id } };
     if (Object.keys(unsetFields).length > 0) update.$unset = unsetFields;
-    await db.collection<EnactedLaw>("enactedLaws").updateOne(
+    await enactedLawsCollection(db).updateOne(
       {
         legislationTypeId: law.legislationTypeId,
         scope: law.scope,
@@ -97,16 +101,16 @@ export async function seedRuBudgets(
   const stateBudgets = generateStateBudgets(statesForBudgets, suFiscalYear);
   for (const budget of stateBudgets) {
     const { _id, ...budgetData } = budget;
-    await stateBudgetsCollection(db)
-      .updateOne({ _id }, { $set: budgetData }, { upsert: true });
+    await stateBudgetsCollection(db).updateOne({ _id }, { $set: budgetData }, { upsert: true });
   }
   log(`Seeded ${stateBudgets.length} SU regional budgets`);
 
   // Command Economy v2 (P0): when `commandEconomyEnabled` is on, the RU seed
   // splits into one SOE per commanding-height sector (see generateCountryOwnedSeedData).
-  const gameConfig = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } });
+  const gameConfig = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { commandEconomyEnabled: 1 } }
+  );
   const commandEconomyEnabled = gameConfig?.commandEconomyEnabled === true;
 
   const countryOwnedSeedData = generateCountryOwnedSeedData(

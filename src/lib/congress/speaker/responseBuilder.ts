@@ -32,6 +32,7 @@ import {
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
 
 export interface BuildSpeakerResponseInput {
   db: Db;
@@ -75,9 +76,7 @@ export async function buildSpeakerResponse(
     !!election &&
     !isLeadershipElectionClosed(election, gameTime.currentTurn, gameTime.effectiveNow);
 
-  const leaderDoc = await db
-    .collection<CongressLeader>("congressLeaders")
-    .findOne({ role: "speaker_of_the_house" });
+  const leaderDoc = await congressLeadersCollection(db).findOne({ role: "speaker_of_the_house" });
 
   let currentSpeaker: SpeakerDisplay | null = null;
   if (leaderDoc?.characterId) {

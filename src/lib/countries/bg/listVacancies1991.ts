@@ -16,6 +16,8 @@ import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficia
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { notificationsCollection } from "@/lib/db/repositories/notifications";
+import type { Document } from "mongodb";
 
 export const BG_1991_LIST_REPLACEMENTS_COLLECTION = "bg1991ListReplacements";
 interface ReplacementReceipt {
@@ -35,11 +37,14 @@ function stableId(key: string) {
 }
 
 async function readParent(db: Db, turn: number, session?: ClientSession, full = false) {
-  const country = await countryGameStatesCollection<{ _id: string; bgOrdinaryAssemblySinceTurn?: number; dissolvedTurn?: number }>(db)
-    .findOne(
-      { _id: "BG" },
-      { session, projection: { bgOrdinaryAssemblySinceTurn: 1, dissolvedTurn: 1 } }
-    );
+  const country = await countryGameStatesCollection<{
+    _id: string;
+    bgOrdinaryAssemblySinceTurn?: number;
+    dissolvedTurn?: number;
+  }>(db).findOne(
+    { _id: "BG" },
+    { session, projection: { bgOrdinaryAssemblySinceTurn: 1, dissolvedTurn: 1 } }
+  );
   if (!country || country.bgOrdinaryAssemblySinceTurn != null || country.dissolvedTurn != null)
     return null;
   const parent = await db.collection<Parent>(BG_FOUNDING_COUNTS_COLLECTION).findOne(
@@ -164,8 +169,10 @@ export async function advanceBg1991ListVacancies(
       unavailablePersonIds: unavailable,
     });
     if (!placements.length) return 0;
-    const chamber = await governmentFormationsCollection<{ _id: string; bg1991MandateGeneration?: number }>(db)
-      .updateOne({ _id: "BG" }, { $inc: { bg1991MandateGeneration: 1 } }, { session });
+    const chamber = await governmentFormationsCollection<{
+      _id: string;
+      bg1991MandateGeneration?: number;
+    }>(db).updateOne({ _id: "BG" }, { $inc: { bg1991MandateGeneration: 1 } }, { session });
     if (chamber.matchedCount !== 1) throw new Error("Bulgarian chamber authority is missing");
     const lock = await db
       .collection<Parent>(BG_FOUNDING_COUNTS_COLLECTION)
@@ -316,7 +323,8 @@ export async function advanceBg1991ListVacancies(
         read: false,
         createdAt: now,
       }));
-    if (notices.length) await db.collection("notifications").insertMany(notices, { session });
+    if (notices.length)
+      await notificationsCollection<Document>(db).insertMany(notices, { session });
     await db.collection<ReplacementReceipt>(BG_1991_LIST_REPLACEMENTS_COLLECTION).insertMany(
       placements.map((row, index) => ({
         _id: `${parent._id}:list:${row.slotId}:${row.mandate.personId}`,

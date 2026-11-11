@@ -15,6 +15,8 @@ import type { CommodityPrice } from "@/lib/db/types/commodityPrice";
 import type { GameConfig } from "@/lib/db/types/gameConfig";
 import { isProspectingEnabled, isContractIssuanceEnabled } from "@/lib/extraction/featureFlag";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -46,20 +48,17 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         .collection<ExtractionContract>("extractionContracts")
         .find({ ...scope, ...activeExtractionContractFilter() })
         .toArray(),
-      db
-        .collection<CommodityPrice>("commodityPrices")
+      commodityPricesCollection(db)
         .find(
           { commodity: { $in: [...EXTRACTABLE_RESOURCES] }, [stateSupplyKey]: { $exists: true } },
           { projection: { commodity: 1, turn: 1, [stateSupplyKey]: 1 } }
         )
         .sort({ turn: -1 })
         .toArray(),
-      db
-        .collection<GameConfig>("gameConfig")
-        .findOne(
-          { _id: "default" },
-          { projection: { prospectingEnabled: 1, contractIssuanceEnabled: 1 } }
-        ),
+      gameConfigCollection(db).findOne(
+        { _id: "default" },
+        { projection: { prospectingEnabled: 1, contractIssuanceEnabled: 1 } }
+      ),
     ]);
 
     const capacity = capacityDoc?.resources ?? {};

@@ -23,6 +23,8 @@ import type { Bill } from "@/lib/db/types/legislation";
 import { BILL_PROPOSE_ACTION_COST } from "@shared/constants/legislation";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { billsCollection } from "@/lib/db/repositories/bills";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
+import type { Document } from "mongodb";
 
 const bodySchema = z.object({
   targetCountry: z.string().min(2).max(3),
@@ -77,9 +79,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
     const defenceSeat = DEFENSE_POSITION_BY_COUNTRY[countryId];
     const isDefence =
       !!defenceSeat &&
-      !!(await db
-        .collection("cabinetMembers")
-        .findOne({ countryId, positionId: defenceSeat, characterId: character._id }));
+      !!(await cabinetMembersCollection<Document>(db).findOne({
+        countryId,
+        positionId: defenceSeat,
+        characterId: character._id,
+      }));
     if (!auth.user.isAdmin && !isHog && !isDefence) {
       return errorResponse(
         403,

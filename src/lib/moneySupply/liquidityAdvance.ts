@@ -25,6 +25,7 @@ import { releaseMonetaryCommandReservation } from "./commandReservation";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 const COLLECTION = "bankLiquidityOperations";
 export class LiquidityAdvanceRejected extends Error {}
@@ -91,11 +92,14 @@ export async function executeLiquidityAdvance(
   const receipts = db.collection<Receipt>(COLLECTION);
   let receipt = await receipts.findOne({ _id: input.operationId });
   if (!receipt) {
-    const config = await db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { privateBankingEnabled: 1 } });
-    const currencyQuote = await exchangeRatesCollection<{ _id: string; currencyCode?: CurrencyCode }>(db)
-      .findOne({ _id: input.countryId }, { projection: { currencyCode: 1 } });
+    const config = await gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { privateBankingEnabled: 1 } }
+    );
+    const currencyQuote = await exchangeRatesCollection<{
+      _id: string;
+      currencyCode?: CurrencyCode;
+    }>(db).findOne({ _id: input.countryId }, { projection: { currencyCode: 1 } });
     const currency = currencyQuote?.currencyCode ?? COUNTRY_CURRENCY_MAP[input.countryId];
     const banks = (await isPrivateBankingEnabled(config))
       ? await corporationsCollection(db)

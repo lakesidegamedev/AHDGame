@@ -18,6 +18,7 @@ import {
 import { seedPlantLedger } from "@/lib/corporations/plantLedger";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 
 const DEFAULT_PROFIT_MARGIN = 20;
 const DEFAULT_GROWTH_RATE = 1;
@@ -194,7 +195,7 @@ export async function absorbUnownedDocIntoNatCorp(
   const revenue = Math.round(opts?.revenueOverride ?? doc.revenue ?? 0);
   if (revenue <= 0) {
     if (!opts?.dryRun) {
-      await db.collection<UnownedSector>("unownedSectors").deleteOne({ _id: doc._id });
+      await unownedSectorsCollection(db).deleteOne({ _id: doc._id });
     }
     return 0;
   }
@@ -208,7 +209,7 @@ export async function absorbUnownedDocIntoNatCorp(
       mediaDiscriminator: doc.mediaDiscriminator,
       revenueDelta: revenue,
     });
-    await db.collection<UnownedSector>("unownedSectors").deleteOne({ _id: doc._id });
+    await unownedSectorsCollection(db).deleteOne({ _id: doc._id });
   }
   return revenue;
 }

@@ -62,6 +62,7 @@ import type {
 } from "@/lib/turn/npp/entryDiagnostics";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
 
 /** The longest corporate tenor (7yr = 336 turns), mirrored from `issueRelocationBond`. */
 const RELOCATION_BOND_MATURITY_TURNS: BondMaturityTurns = 336;
@@ -173,8 +174,7 @@ export function createRelocationCreditBatch(input: {
             }
           )
           .toArray(),
-        db
-          .collection<{ corporationId: ObjectId; income?: number }>("corporationHistory")
+        corporationHistoryCollection<{ corporationId: ObjectId; income?: number }>(db)
           .aggregate<{ _id: ObjectId; income: number }>([
             { $match: { corporationId: { $in: corpIds } } },
             { $sort: { corporationId: 1, turn: -1 } },

@@ -20,6 +20,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { unionsCollection } from "@/lib/db/repositories/unions";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 
 export interface LabourRelationsTurnResult {
   campaignsMovedToDispute: number;
@@ -319,8 +320,7 @@ async function refreshOpenCampaigns(
   const stateIds = [...new Set(locals.map((local) => local.stateId).filter(Boolean))];
   const metrics =
     stateIds.length > 0
-      ? await db
-          .collection<StateMetrics>("macroMetrics")
+      ? await macroMetricsCollection(db)
           .find({ _id: { $in: stateIds } }, { projection: { "economic.costOfLiving": 1 } })
           .toArray()
       : [];

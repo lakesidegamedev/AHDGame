@@ -8,6 +8,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
 
 /**
  * Seeds only UK budget data: national budget, enacted laws, regional budgets,
@@ -25,9 +26,8 @@ export async function seedUkBudgets(
     const ukStateIds = (
       await statesCollection<Document>(db).find({ countryId: "UK" }).project({ _id: 1 }).toArray()
     ).map((s) => s._id as string);
-    await stateBudgetsCollection(db)
-      .deleteMany({ stateId: { $in: ukStateIds }, countryId: "UK" });
-    await db.collection<EnactedLaw>("enactedLaws").deleteMany({ countryId: "UK" });
+    await stateBudgetsCollection(db).deleteMany({ stateId: { $in: ukStateIds }, countryId: "UK" });
+    await enactedLawsCollection(db).deleteMany({ countryId: "UK" });
     log("Reset: deleted UK budget data");
   }
 
@@ -77,7 +77,7 @@ export async function seedUkBudgets(
       update.$unset = unsetFields;
     }
 
-    await db.collection<EnactedLaw>("enactedLaws").updateOne(
+    await enactedLawsCollection(db).updateOne(
       {
         legislationTypeId: law.legislationTypeId,
         scope: law.scope,
@@ -101,8 +101,7 @@ export async function seedUkBudgets(
   const stateBudgets = generateStateBudgets(statesForBudgets, ukFiscalYear);
   for (const budget of stateBudgets) {
     const { _id, ...budgetData } = budget;
-    await stateBudgetsCollection(db)
-      .updateOne({ _id }, { $set: budgetData }, { upsert: true });
+    await stateBudgetsCollection(db).updateOne({ _id }, { $set: budgetData }, { upsert: true });
   }
   log(`Seeded ${stateBudgets.length} UK regional budgets`);
 
@@ -146,8 +145,7 @@ export async function seedUkBudgets(
         metadata: { index: "stateId", error: String(error) },
       });
     });
-  await db
-    .collection("enactedLaws")
+  await enactedLawsCollection<Document>(db)
     .createIndex({ scope: 1, stateId: 1 })
     .catch((error) => {
       logWarning("Index creation failed (may already exist)", {
@@ -156,8 +154,7 @@ export async function seedUkBudgets(
         metadata: { index: "scope_stateId", error: String(error) },
       });
     });
-  await db
-    .collection("enactedLaws")
+  await enactedLawsCollection<Document>(db)
     .createIndex({ legislationTypeId: 1 })
     .catch((error) => {
       logWarning("Index creation failed (may already exist)", {

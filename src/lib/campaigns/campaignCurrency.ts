@@ -12,6 +12,7 @@ export { campaignAnchorToLocal, campaignLocalRate, getCampaignCurrency } from ".
 import type { CampaignCurrencyRates } from "./rules/currency";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 export type { CampaignCurrencyRates } from "./rules/currency";
 
 export async function loadCampaignCurrencyRates(db: Db): Promise<CampaignCurrencyRates> {
@@ -34,9 +35,10 @@ export function anchorToLocal(anchor: number, rate: number): number {
 /** Load the world's campaign price basis once at the shell boundary. */
 export async function loadCampaignPriceLevel(db: Db): Promise<number> {
   const [config, state] = await Promise.all([
-    db
-      .collection<{ _id: string; campaignEraPriceLevelEnabled?: boolean }>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { campaignEraPriceLevelEnabled: 1 } }),
+    gameConfigCollection<{ _id: string; campaignEraPriceLevelEnabled?: boolean }>(db).findOne(
+      { _id: "default" },
+      { projection: { campaignEraPriceLevelEnabled: 1 } }
+    ),
     gameStateCollection<{ _id: string; preset?: string }>(db).findOne(
       { _id: "current" },
       { projection: { preset: 1 } }

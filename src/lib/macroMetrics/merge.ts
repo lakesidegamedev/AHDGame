@@ -23,15 +23,16 @@
 import type { Db, Filter } from "mongodb";
 import type { StateMetrics } from "@/lib/db/types";
 import type { MacroMetricsDoc } from "@/lib/db/types/macroMetrics";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 
 /** findOne the macro store and project it to the legacy shape. */
 export async function findMergedRegionMetrics(
   db: Db,
   filter: Record<string, unknown>
 ): Promise<StateMetrics | null> {
-  const macro = await db
-    .collection<MacroMetricsDoc>("macroMetrics")
-    .findOne(filter as Filter<MacroMetricsDoc>);
+  const macro = await macroMetricsCollection<MacroMetricsDoc>(db).findOne(
+    filter as Filter<MacroMetricsDoc>
+  );
   return mergeRegionMetrics(macro);
 }
 
@@ -40,8 +41,7 @@ export async function findMergedRegionMetricsMany(
   db: Db,
   filter: Record<string, unknown>
 ): Promise<StateMetrics[]> {
-  const macro = await db
-    .collection<MacroMetricsDoc>("macroMetrics")
+  const macro = await macroMetricsCollection<MacroMetricsDoc>(db)
     .find(filter as Filter<MacroMetricsDoc>)
     .toArray();
   return macro

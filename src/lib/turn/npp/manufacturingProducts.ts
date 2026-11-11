@@ -15,6 +15,8 @@ import {
   manufacturingDevelopmentThresholdAnchor,
   allocatedManufacturingCapitalAnchor,
 } from "@/lib/products/rules/manufacturingRules";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 
 export async function loadNppProductProjectsV2(
   db: Db,
@@ -24,9 +26,10 @@ export async function loadNppProductProjectsV2(
   productLinesEnabled: boolean;
   activeProjectByCorporationId: Map<string, ManufacturingProductProject>;
 }> {
-  const config = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { marketSystemMode: 1, productLinesV2Enabled: 1 } });
+  const config = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { marketSystemMode: 1, productLinesV2Enabled: 1 } }
+  );
   const plantsEnabled = marketAtLeast(await getMarketSystemMode(config), "plants");
   const productLinesEnabled = plantsEnabled && config?.productLinesV2Enabled === true;
   const activeProjectByCorporationId = new Map<string, ManufacturingProductProject>();
@@ -67,8 +70,7 @@ export async function loadNppProductProjectsV2(
 }
 
 export async function loadNppCostOfLivingByState(db: Db): Promise<Map<string, number>> {
-  const documents = await db
-    .collection<StateMetrics>("macroMetrics")
+  const documents = await macroMetricsCollection(db)
     .find({}, { projection: { "economic.costOfLiving": 1 } })
     .toArray();
   return new Map(

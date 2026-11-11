@@ -2,6 +2,7 @@ import { isSingleplayer } from "@/lib/singleplayer";
 import type { Db } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import type { GameConfig } from "@/lib/db/types";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 export type MaintenanceMode = "off" | "partial" | "full";
 
@@ -116,7 +117,7 @@ export async function getCachedMaintenanceStatus(): Promise<MaintenanceStatusSna
   }
 
   const db = await getDb();
-  const config = await db.collection<GameConfig>("gameConfig").findOne(
+  const config = await gameConfigCollection(db).findOne(
     { _id: "default" },
     {
       projection: {
@@ -168,7 +169,7 @@ export async function enableMaintenanceMode(
   }
 ): Promise<void> {
   const now = new Date().toISOString();
-  await db.collection<GameConfig>("gameConfig").updateOne(
+  await gameConfigCollection(db).updateOne(
     { _id: "default" },
     {
       $set: {

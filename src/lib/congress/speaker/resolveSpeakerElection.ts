@@ -16,6 +16,7 @@ import type {
   PoliticalParty,
 } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
 
 export async function resolveSpeakerElection(
   db: Db,
@@ -69,7 +70,7 @@ export async function resolveSpeakerElection(
       { _id: { $ne: winner._id }, status: { $in: ["open", "voting"] } },
       { $set: { status: "failed", updatedAt: now } }
     );
-  await db.collection<CongressLeader>("congressLeaders").updateOne(
+  await congressLeadersCollection(db).updateOne(
     { role: "speaker_of_the_house" },
     {
       $set: {

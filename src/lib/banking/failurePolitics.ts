@@ -7,6 +7,7 @@ import {
   type BankFailurePoliticalEvent,
   type BankFailurePoliticalEffects,
 } from "./rules/failurePolitics";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 export const BANK_FAILURE_EVENTS = "bankFailurePoliticalEvents";
 export async function loadBankFailureEffects(
@@ -15,9 +16,10 @@ export async function loadBankFailureEffects(
   enabled?: boolean
 ): Promise<Map<string, BankFailurePoliticalEffects>> {
   if (enabled === undefined) {
-    const config = await db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { privateBankingEnabled: 1 } });
+    const config = await gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { privateBankingEnabled: 1 } }
+    );
     enabled = config?.privateBankingEnabled === true;
   }
   if (!enabled) return new Map();

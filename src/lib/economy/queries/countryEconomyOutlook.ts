@@ -49,6 +49,8 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 
 interface HistoryPoint {
   turn: number;
@@ -177,13 +179,13 @@ export async function buildCountryEconomyOutlook(
             .findOne({ _id: exchangeApiKey })
         : Promise.resolve(null),
       aggregateCountrySectorMix(db, countryId),
-      db
-        .collection<GameConfig>("gameConfig")
-        .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } }),
+      gameConfigCollection(db).findOne(
+        { _id: "default" },
+        { projection: { commandEconomyEnabled: 1 } }
+      ),
     ]);
 
-  const stateMetrics = await db
-    .collection<StateMetrics>("macroMetrics")
+  const stateMetrics = await macroMetricsCollection(db)
     .find({ _id: { $in: states.map((s) => s._id) } })
     .project<{
       _id: string;

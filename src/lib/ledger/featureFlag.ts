@@ -1,5 +1,6 @@
 import { getDb } from "@/lib/mongodb";
 import type { GameConfig } from "@/lib/db/types";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /**
  * `ledgerShadow`, master flag for the shadow double-entry ledger.
@@ -34,9 +35,10 @@ export async function isLedgerShadowEnabled(
   let value = false;
   try {
     const db = await getDb();
-    const config = await db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { ledgerShadow: 1 } });
+    const config = await gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { ledgerShadow: 1 } }
+    );
     value = config?.ledgerShadow === true;
   } catch {
     value = false;

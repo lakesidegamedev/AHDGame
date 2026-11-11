@@ -18,6 +18,8 @@ import {
 import type { StatePartyOrg } from "@/lib/db/types";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { adminLogsCollection } from "@/lib/db/repositories/adminLogs";
+import type { Document } from "mongodb";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -154,11 +156,10 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     if (config.storage === "statePartyOrg") {
       // tax → a scalar field on every state-party org row for this party+country.
-      const result = await statePartyOrgCollection(db)
-        .updateMany(
-          { countryId, partyId: partyKey },
-          { $set: { [config.field]: value, updatedAt: now } }
-        );
+      const result = await statePartyOrgCollection(db).updateMany(
+        { countryId, partyId: partyKey },
+        { $set: { [config.field]: value, updatedAt: now } }
+      );
       statesUpdated = result.matchedCount;
     } else {
       // org building / suppression → the partyBudget collection. Reuse the exact
@@ -183,7 +184,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       statesUpdated = chapters.length;
     }
 
-    await db.collection("adminLogs").insertOne({
+    await adminLogsCollection<Document>(db).insertOne({
       category: "system",
       action: "bulk_state_org_changed",
       username: authUser.username,

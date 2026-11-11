@@ -12,6 +12,7 @@ import type { ElectedOfficial, State, User } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -58,8 +59,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const userIds = characters.map((c) => c.userId);
 
     // Get users to check ban status
-    const users = await db
-      .collection<User>("users")
+    const users = await usersCollection(db)
       .find({ _id: { $in: userIds } })
       .toArray();
 

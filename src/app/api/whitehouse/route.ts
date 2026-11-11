@@ -18,6 +18,7 @@ import { pastRealTimestampToLarpDate } from "@/lib/utils/formatters";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { cabinetNominationsCollection } from "@/lib/db/repositories/cabinetNominations";
 
 // GET /api/whitehouse — Returns the current President and Vice President details along with caller admin and president flags.
 // Country-scoped via ?country= (default US) so any presidential country renders the surface.
@@ -49,9 +50,11 @@ export async function GET(request: Request) {
       await Promise.all([
         electedOfficialsCollection(db).findOne({ countryId, officeType: "president" }),
         electedOfficialsCollection(db).findOne({ countryId, officeType: "vicePresident" }),
-        db
-          .collection<CabinetNomination>("cabinetNominations")
-          .findOne({ countryId, positionId: "vicePresident", status: "active" }),
+        cabinetNominationsCollection(db).findOne({
+          countryId,
+          positionId: "vicePresident",
+          status: "active",
+        }),
         getGovernmentFormationsCollection(db).findOne(
           { _id: countryId },
           { projection: { status: 1, caretaker: 1, succession: 1 } }

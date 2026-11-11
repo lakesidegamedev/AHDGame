@@ -70,6 +70,7 @@ import { electionCandidatesCollection } from "@/lib/db/repositories/electionCand
 import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
 
 export type { PrimaryPartyDetail, PrimaryViewerCampaign };
 
@@ -224,8 +225,7 @@ export async function loadPrimaryPartyData(
     statesCollection(db)
       .find({ _id: { $in: TRAVEL_STATE_IDS } })
       .toArray(),
-    db
-      .collection<StateDemographics>("stateDemographics")
+    stateDemographicsCollection(db)
       .find({ _id: { $in: TRAVEL_STATE_IDS } })
       .toArray(),
     fetchEnrichedCandidates(candidates, { includePartyPositions: true, countryId }),

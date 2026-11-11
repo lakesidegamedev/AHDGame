@@ -12,6 +12,8 @@ import { unownedHeadroomUnitsOf } from "@/lib/corporations/marketShare";
 import { unownedHeadroomUnitsPerAnchor } from "@/lib/market/unownedHeadroom";
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
 import { getCorporateSectorsCollection } from "@/lib/db/collections/corporateSectors";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 
 const FALLBACK_GROWTH_RATE = 1; // % per game year (same unit as corporate growthRate)
 
@@ -36,7 +38,7 @@ const FALLBACK_DEMAND_GROWTH_RATE = 1;
 export async function processUnownedSectorGrowth(db: Db): Promise<number> {
   const [unownedSectors, corpSectors, nationalCorpIds, plantsEnabled, eraUnitScale] =
     await Promise.all([
-      db.collection<UnownedSector>("unownedSectors").find({}).toArray(),
+      unownedSectorsCollection(db).find({}).toArray(),
       (await getCorporateSectorsCollection(db))
         .find(
           {},
@@ -94,8 +96,7 @@ export async function processUnownedSectorGrowth(db: Db): Promise<number> {
   // read over a collection already keyed by stateId.
   const gdpGrowthByState = new Map<string, number>();
   if (plantsEnabled) {
-    const metricDocs = await db
-      .collection<StateMetrics>("macroMetrics")
+    const metricDocs = await macroMetricsCollection(db)
       .find({}, { projection: { "economic.gdpGrowth": 1 } })
       .toArray();
     for (const doc of metricDocs) {
@@ -175,6 +176,6 @@ export async function processUnownedSectorGrowth(db: Db): Promise<number> {
     };
   });
 
-  await db.collection<UnownedSector>("unownedSectors").bulkWrite(ops);
+  await unownedSectorsCollection(db).bulkWrite(ops);
   return ops.length;
 }

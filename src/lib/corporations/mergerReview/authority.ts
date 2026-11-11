@@ -19,6 +19,7 @@ import { getCabinetPositions } from "@/lib/constants/cabinetMechanics";
 import { isSeatActive, resolveSeatName } from "@/lib/cabinet/rosterEra";
 import { MERGER_AUTHORITY_SEAT_BY_COUNTRY } from "./constants";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
 
 export interface MergerAuthority {
   seatId: string;
@@ -56,12 +57,10 @@ export async function resolveMergerAuthority(
     countryId,
   };
 
-  const member = await db
-    .collection<UnifiedCabinetMember>("cabinetMembers")
-    .findOne(
-      { countryId: countryId as CountryId, positionId: seatId },
-      { projection: { characterId: 1, characterName: 1, isNPP: 1 } }
-    );
+  const member = await cabinetMembersCollection<UnifiedCabinetMember>(db).findOne(
+    { countryId: countryId as CountryId, positionId: seatId },
+    { projection: { characterId: 1, characterName: 1, isNPP: 1 } }
+  );
   if (!member) return authority;
 
   if (member.isNPP || !member.characterId) {

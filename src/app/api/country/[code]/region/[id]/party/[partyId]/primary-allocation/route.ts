@@ -17,6 +17,8 @@ import { z } from "zod";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { adminLogsCollection } from "@/lib/db/repositories/adminLogs";
+import type { Document } from "mongodb";
 
 const schema = z.object({
   method: z.union([z.literal("PR"), z.literal("WTA"), z.null()]),
@@ -69,8 +71,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const partyKey = getPartyIdString(party);
     const statePartyKey = getStatePartyOrgDocumentId(stateId, party);
-    const stateParty = await statePartyOrgCollection(db)
-      .findOne({ _id: statePartyKey });
+    const stateParty = await statePartyOrgCollection(db).findOne({ _id: statePartyKey });
 
     // Chair/vice-chair/treasurer/national-chair/admin may change allocation.
     // Same auth surface as the tax route for the state party.
@@ -149,7 +150,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       { upsert: true }
     );
 
-    await db.collection("adminLogs").insertOne({
+    await adminLogsCollection<Document>(db).insertOne({
       category: "system",
       action: "primary_allocation_changed",
       username: authUser.username,

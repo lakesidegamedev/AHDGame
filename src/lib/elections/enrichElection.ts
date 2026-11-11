@@ -147,6 +147,7 @@ import { electionCandidatesCollection } from "@/lib/db/repositories/electionCand
 import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
 
 export async function _enrichElection(
   election: Election,
@@ -1019,8 +1020,7 @@ export async function _enrichElection(
       getFundsByPartyForElection(electionOid, db),
       getIncumbentSeatShareByParty(election, db),
       demographicsQueryStateIds.length > 0
-        ? db
-            .collection<StateDemographics>("stateDemographics")
+        ? stateDemographicsCollection(db)
             .find({ _id: { $in: demographicsQueryStateIds }, countryId: countryId as CountryId })
             .toArray()
         : Promise.resolve([] as StateDemographics[]),
@@ -1397,9 +1397,7 @@ export async function fetchDepsForElection(
   if (election.status !== "completed" && election.status !== "resolved") {
     candidateQuery.status = "active";
   }
-  const candidates = await electionCandidatesCollection(db)
-    .find(candidateQuery)
-    .toArray();
+  const candidates = await electionCandidatesCollection(db).find(candidateQuery).toArray();
 
   const characterIds = candidates.filter((c) => !c.isNPP).map((c) => c.characterId);
   const runningMateIds = candidates.filter((c) => c.runningMateId).map((c) => c.runningMateId!);

@@ -15,6 +15,7 @@ import type {
   PoliticalParty,
 } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
 
 /**
  * Resolve the open Chairman of the CPPCC election. Mirrors
@@ -62,7 +63,7 @@ export async function resolveCppccChairElection(
       { _id: { $ne: winner._id }, status: { $in: ["open", "voting"] } },
       { $set: { status: "failed", updatedAt: now } }
     );
-  await db.collection<CongressLeader>("congressLeaders").updateOne(
+  await congressLeadersCollection(db).updateOne(
     { role: "chair_cppcc" },
     {
       $set: {

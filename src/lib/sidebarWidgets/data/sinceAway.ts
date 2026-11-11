@@ -6,6 +6,7 @@ import type { PortfolioHistory } from "@/lib/db/types/portfolioHistory";
 import { categoryOf, type InboxCategory } from "@/lib/inbox/categories";
 import { notificationTypeFilter } from "@/lib/notifications/visibility";
 import { loadViewerCharacter, loadViewerUser } from "./viewerContext";
+import { notificationsCollection } from "@/lib/db/repositories/notifications";
 
 export interface HoldingMove {
   kind: "stocks" | "bonds" | "funds";
@@ -86,8 +87,7 @@ export async function loadSinceAway(
           })
           .toArray()
       : Promise.resolve([] as Snapshot[]),
-    db
-      .collection<Notification>("notifications")
+    notificationsCollection(db)
       .aggregate<{ _id: Notification["type"]; count: number }>([
         {
           $match: {

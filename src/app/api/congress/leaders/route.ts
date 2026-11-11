@@ -24,6 +24,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import type { Document } from "mongodb";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
 
 export interface LeaderDisplay {
   role: LeadershipRole;
@@ -66,7 +67,7 @@ export async function GET() {
       return NextResponse.json({ leaders: [], isAdmin } satisfies CongressLeadersResponse);
     }
 
-    const docs = await db.collection<CongressLeader>("congressLeaders").find({}).toArray();
+    const docs = await congressLeadersCollection(db).find({}).toArray();
     const byRole = new Map(docs.map((d) => [d.role, d]));
 
     const leaderIds = docs.filter((d) => d.characterId).map((d) => d.characterId!);
@@ -170,7 +171,7 @@ export async function POST(request: Request) {
     const now = new Date();
 
     if (!characterId || characterId.trim() === "") {
-      await db.collection<CongressLeader>("congressLeaders").updateOne(
+      await congressLeadersCollection(db).updateOne(
         { role: roleKey },
         {
           $set: {
@@ -219,7 +220,7 @@ export async function POST(request: Request) {
       }
     }
 
-    await db.collection<CongressLeader>("congressLeaders").updateOne(
+    await congressLeadersCollection(db).updateOne(
       { role: roleKey },
       {
         $set: {

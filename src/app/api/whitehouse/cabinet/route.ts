@@ -26,6 +26,8 @@ import { getActingChargesCollection } from "@/lib/db/collections/actingAppointme
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
+import { cabinetNominationsCollection } from "@/lib/db/repositories/cabinetNominations";
 
 // GET /api/whitehouse/cabinet — Returns all cabinet positions with current members, pending nominations, and the caller's senator/president status.
 // Country-scoped via ?country= (default US).
@@ -42,9 +44,8 @@ export async function GET(request: Request) {
 
     const [cabinetMembers, nominations, presidentOfficial, myCharacter, parties] =
       await Promise.all([
-        db.collection<UnifiedCabinetMember>("cabinetMembers").find({ countryId }).toArray(),
-        db
-          .collection<CabinetNomination>("cabinetNominations")
+        cabinetMembersCollection<UnifiedCabinetMember>(db).find({ countryId }).toArray(),
+        cabinetNominationsCollection(db)
           .find({ countryId, status: { $in: ["active", "proposed"] } })
           .sort({ proposedAt: -1 })
           .toArray(),

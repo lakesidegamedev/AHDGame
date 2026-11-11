@@ -14,6 +14,12 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
+import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
+import { stateBaselinesCollection } from "@/lib/db/repositories/stateBaselines";
+import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
 
 export interface EasternBlocSeedConfig {
   countryId: CountryId;
@@ -50,10 +56,10 @@ export async function seedEasternBlocCountry(
 
   if (reset) {
     await statesCollection<Document>(db).deleteMany({ countryId });
-    await db.collection("stateDemographics").deleteMany({ countryId });
-    await db.collection("stateDemographicTurnout").deleteMany({ countryId });
-    await db.collection("macroMetrics").deleteMany({ _id: { $in: regionIds } as never });
-    await db.collection("stateBaselines").deleteMany({ _id: { $in: regionIds } as never });
+    await stateDemographicsCollection<Document>(db).deleteMany({ countryId });
+    await stateDemographicTurnoutCollection<Document>(db).deleteMany({ countryId });
+    await macroMetricsCollection<Document>(db).deleteMany({ _id: { $in: regionIds } as never });
+    await stateBaselinesCollection<Document>(db).deleteMany({ _id: { $in: regionIds } as never });
   }
 
   for (const region of regions) {
@@ -106,9 +112,11 @@ export async function seedEasternBlocCountry(
   if (model) {
     for (const raw of buildModelRegionDemographics(model)) {
       const { _id, groups: _groups, ...demoData } = raw;
-      await db
-        .collection<StateDemographics>("stateDemographics")
-        .updateOne({ _id }, { $set: demoData }, { upsert: true });
+      await stateDemographicsCollection(db).updateOne(
+        { _id },
+        { $set: demoData },
+        { upsert: true }
+      );
     }
   }
 
@@ -120,9 +128,7 @@ export async function seedEasternBlocCountry(
   );
   for (const b of baselines) {
     const { _id, ...baselineData } = b;
-    await db
-      .collection<StateMetricBaseline>("stateBaselines")
-      .updateOne({ _id }, { $set: baselineData }, { upsert: true });
+    await stateBaselinesCollection(db).updateOne({ _id }, { $set: baselineData }, { upsert: true });
   }
 
   log(
@@ -152,10 +158,9 @@ export async function seedEasternBlocBudget(
       await statesCollection<Document>(db).find({ countryId }).project({ _id: 1 }).toArray()
     ).map((s) => s._id as string);
     if (ids.length > 0) {
-      await stateBudgetsCollection(db)
-        .deleteMany({ stateId: { $in: ids }, countryId });
+      await stateBudgetsCollection(db).deleteMany({ stateId: { $in: ids }, countryId });
     }
-    await db.collection<EnactedLaw>("enactedLaws").deleteMany({ countryId });
+    await enactedLawsCollection(db).deleteMany({ countryId });
   }
 
   const {
@@ -196,7 +201,7 @@ export async function seedEasternBlocBudget(
     if (law.incomeCostFraction === undefined) unset.incomeCostFraction = "";
     const update: Record<string, unknown> = { $set: lawWithoutId, $setOnInsert: { _id } };
     if (Object.keys(unset).length > 0) update.$unset = unset;
-    await db.collection<EnactedLaw>("enactedLaws").updateOne(
+    await enactedLawsCollection(db).updateOne(
       {
         legislationTypeId: law.legislationTypeId,
         scope: law.scope,
@@ -222,8 +227,7 @@ export async function seedEasternBlocBudget(
   }));
   for (const budget of generateStateBudgets(statesForBudgets, fiscalYear)) {
     const { _id, ...budgetData } = budget;
-    await stateBudgetsCollection(db)
-      .updateOne({ _id }, { $set: budgetData }, { upsert: true });
+    await stateBudgetsCollection(db).updateOne({ _id }, { $set: budgetData }, { upsert: true });
   }
 
   // Command Economy v2 (P0): when `commandEconomyEnabled` is on, this satellite
@@ -232,9 +236,10 @@ export async function seedEasternBlocBudget(
   // call omitted the flag entirely (defaulting to `false`), so PL/HU/CS/BG/RO
   // NEVER got their SOE stack even with the feature on and a non-empty
   // `COMMAND_ECONOMY_SOE_SECTORS` entry — the seed path silently skipped them.
-  const easternBlocGameConfig = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } });
+  const easternBlocGameConfig = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { commandEconomyEnabled: 1 } }
+  );
   const corpData = generateCountryOwnedSeedData(
     statesForBudgets,
     preset,

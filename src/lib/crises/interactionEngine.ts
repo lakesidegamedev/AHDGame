@@ -52,6 +52,9 @@ import type { Document } from "mongodb";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { crisesCollection } from "@/lib/db/repositories/crises";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
+import { crisisInteractionsCollection } from "@/lib/db/repositories/crisisInteractions";
+import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
 
 /** Read a country's national treasury balance (the unified fiscal cash position). */
 async function getTreasuryBalance(db: Db, countryId: string): Promise<number> {
@@ -163,12 +166,10 @@ export async function resolveCharacterRoles(
   }
   // Parliamentary ministers can retain a legislative currentOffice.
   if (character.countryId && !roles.includes("cabinet")) {
-    const cabinet = await db
-      .collection<{ positionId: string }>("cabinetMembers")
-      .findOne(
-        { countryId: character.countryId, characterId: character._id },
-        { projection: { positionId: 1 } }
-      );
+    const cabinet = await cabinetMembersCollection<{ positionId: string }>(db).findOne(
+      { countryId: character.countryId, characterId: character._id },
+      { projection: { positionId: 1 } }
+    );
     if (cabinet?.positionId) roles.push("cabinet", `cabinet:${cabinet.positionId}`);
   }
   if (character.countryId) {
@@ -371,9 +372,7 @@ export async function createCrisisInteraction(
   if (!crisis.interactionDefinition) return null;
 
   // Guard against double-creation (admin inline + turn processor, or re-runs).
-  const existing = await db
-    .collection<CrisisInteraction>("crisisInteractions")
-    .findOne({ crisisId: crisis._id });
+  const existing = await crisisInteractionsCollection(db).findOne({ crisisId: crisis._id });
   if (existing) return existing;
 
   // Any choice node with an `aid_contribute` option becomes an `aid` node so
@@ -430,7 +429,7 @@ export async function createCrisisInteraction(
     updatedAt: now,
   };
 
-  await db.collection<CrisisInteraction>("crisisInteractions").insertOne(interaction);
+  await crisisInteractionsCollection(db).insertOne(interaction);
   return interaction;
 }
 
@@ -441,7 +440,7 @@ export async function getCrisisInteraction(
   db: Db,
   crisisId: ObjectId
 ): Promise<CrisisInteraction | null> {
-  return db.collection<CrisisInteraction>("crisisInteractions").findOne({ crisisId });
+  return crisisInteractionsCollection(db).findOne({ crisisId });
 }
 
 /** Load interactions for a set of crises in one query, keyed by crisis id. */
@@ -451,8 +450,7 @@ export async function getCrisisInteractionsByCrisisId(
 ): Promise<Map<string, CrisisInteraction>> {
   const uniqueIds = [...new Map(crisisIds.map((id) => [id.toString(), id])).values()];
   if (uniqueIds.length === 0) return new Map();
-  const interactions = await db
-    .collection<CrisisInteraction>("crisisInteractions")
+  const interactions = await crisisInteractionsCollection(db)
     .find({ crisisId: { $in: uniqueIds } })
     .toArray();
   return new Map(interactions.map((interaction) => [interaction.crisisId.toString(), interaction]));
@@ -509,9 +507,7 @@ export async function submitCrisisDecision(
   nextNode: CrisisDecisionNode | null;
   appliedEffects: CrisisEffect[];
 }> {
-  const interaction = await db
-    .collection<CrisisInteraction>("crisisInteractions")
-    .findOne({ _id: interactionId });
+  const interaction = await crisisInteractionsCollection(db).findOne({ _id: interactionId });
 
   if (!interaction) throw notFound("Crisis interaction not found");
   if (interaction.resolvedAt) throw conflict("Crisis already resolved");
@@ -639,7 +635,7 @@ export async function answerMultiResponderNode(
 
   // Claim the country's one response before any money or effects move. The
   // guarded write makes a double-click or concurrent request idempotent.
-  const claimed = await db.collection<CrisisInteraction>("crisisInteractions").updateOne(
+  const claimed = await crisisInteractionsCollection(db).updateOne(
     {
       _id: interactionId,
       resolvedAt: null,
@@ -718,7 +714,7 @@ export async function answerCollectiveNode(context: DecisionContext): Promise<De
   const option = currentNode.options?.find((o) => o.optionId === optionId);
   if (!option) throw badRequest("Invalid option");
 
-  const interactions = db.collection<CrisisInteraction>("crisisInteractions");
+  const interactions = crisisInteractionsCollection(db);
   const contribution = option.collectiveContribution ?? 0;
   const now = new Date();
   const entry = {
@@ -811,9 +807,9 @@ export async function answerChoiceNode(context: DecisionContext): Promise<Decisi
     // Every check runs before any money moves: a rejected choice must not cost
     // the treasury its budget.
     if (option.requiredApproval) {
-      const approvalDoc = await db
-        .collection("governmentApprovals")
-        .findOne({ _id: countryId as unknown as import("mongodb").ObjectId });
+      const approvalDoc = await governmentApprovalsCollection<Document>(db).findOne({
+        _id: countryId as unknown as import("mongodb").ObjectId,
+      });
       const approval = (approvalDoc?.approvalRating as number | undefined) ?? 0;
       if (approval < option.requiredApproval) {
         throw badRequest(
@@ -834,7 +830,7 @@ export async function answerChoiceNode(context: DecisionContext): Promise<Decisi
     // Claim the decision on the version this request read, before any money
     // or effect moves, so a double click cannot apply the choice twice.
     const claimedAt = new Date();
-    const claimed = await db.collection<CrisisInteraction>("crisisInteractions").updateOne(
+    const claimed = await crisisInteractionsCollection(db).updateOne(
       {
         _id: interactionId,
         resolvedAt: null,
@@ -919,7 +915,7 @@ export async function answerChoiceNode(context: DecisionContext): Promise<Decisi
 
   interaction.updatedAt = new Date();
 
-  await db.collection<CrisisInteraction>("crisisInteractions").updateOne(
+  await crisisInteractionsCollection(db).updateOne(
     { _id: interactionId },
     {
       $set: {
@@ -943,9 +939,7 @@ export async function answerChoiceNode(context: DecisionContext): Promise<Decisi
  * advances along its path, finalizing any terminal node it reaches.
  */
 export async function autoResolveCrisisInteraction(db: Db, interactionId: ObjectId): Promise<void> {
-  const interaction = await db
-    .collection<CrisisInteraction>("crisisInteractions")
-    .findOne({ _id: interactionId });
+  const interaction = await crisisInteractionsCollection(db).findOne({ _id: interactionId });
 
   if (!interaction || interaction.resolvedAt) return;
 
@@ -953,7 +947,7 @@ export async function autoResolveCrisisInteraction(db: Db, interactionId: Object
   if (!currentNode) {
     // A node id the tree no longer has can never be answered; close it rather
     // than re-select it every turn.
-    await db.collection<CrisisInteraction>("crisisInteractions").updateOne(
+    await crisisInteractionsCollection(db).updateOne(
       { _id: interactionId, resolvedAt: null },
       {
         $set: {
@@ -978,7 +972,7 @@ export async function autoResolveCrisisInteraction(db: Db, interactionId: Object
       await resolveGlobalResponse(db, crisis._id);
       return;
     }
-    await db.collection<CrisisInteraction>("crisisInteractions").updateOne(
+    await crisisInteractionsCollection(db).updateOne(
       { _id: interactionId },
       {
         $set: {
@@ -1020,7 +1014,7 @@ export async function autoResolveCrisisInteraction(db: Db, interactionId: Object
 
   // Advance to a non-terminal successor; otherwise finalize and resolve as auto.
   if (nextNode && nextNode.type !== "terminal") {
-    await db.collection<CrisisInteraction>("crisisInteractions").updateOne(
+    await crisisInteractionsCollection(db).updateOne(
       { _id: interactionId },
       {
         $set: {
@@ -1039,7 +1033,7 @@ export async function autoResolveCrisisInteraction(db: Db, interactionId: Object
     resolutionPath.push(nextNode.nodeId);
   }
 
-  await db.collection<CrisisInteraction>("crisisInteractions").updateOne(
+  await crisisInteractionsCollection(db).updateOne(
     { _id: interactionId },
     {
       $set: {
@@ -1118,8 +1112,7 @@ export function calculateDecisionDurationReduction(
  * Called by the cron/turn processor.
  */
 export async function getExpiredInteractions(db: Db): Promise<CrisisInteraction[]> {
-  return db
-    .collection<CrisisInteraction>("crisisInteractions")
+  return crisisInteractionsCollection(db)
     .find({
       resolvedAt: null,
       decisionDeadline: { $lt: new Date() },

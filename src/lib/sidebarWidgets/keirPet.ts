@@ -8,6 +8,7 @@ import {
   type KeirAdvice,
   type KeirPetWidgetData,
 } from "./keirPetShared";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 export { BOND_LEVELS, type AdviceTone, type KeirAdvice, type KeirPetWidgetData };
 
@@ -165,7 +166,7 @@ export async function loadKeirPet(
   loadRecommendations: LoadRecommendations,
   now = new Date()
 ): Promise<KeirPetWidgetData | null> {
-  const users = db.collection<User>("users");
+  const users = usersCollection(db);
   const _id = new ObjectId(userId);
   const user = await users.findOne({ _id }, { projection: { keirPet: 1 } });
   if (!user) return null;
@@ -194,7 +195,7 @@ export async function careForKeir(
   action: KeirPetAction,
   now = new Date()
 ): Promise<KeirPetWidgetData | null> {
-  const users = db.collection<User>("users");
+  const users = usersCollection(db);
   const _id = new ObjectId(userId);
   const user = await users.findOne({ _id }, { projection: { keirPet: 1 } });
   if (!user) return null;

@@ -6,6 +6,7 @@ import { getCountryState, updateCountryState } from "@/lib/countryState";
 import { getNationalStateId } from "@/lib/policy/nationalStateId";
 import { logger } from "../observability/logger";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
 
 /**
  * Per-law EMA pull toward the enacted option's social stance. 0.05 moves a
@@ -76,8 +77,7 @@ export async function processSocialAxisDrift(
         // bill phases (stamped enactedTurn = enactmentTurn) are counted once.
         const watermark = state.socialAxisDriftTurn ?? enactmentTurn - 1;
 
-        const rows = await db
-          .collection<NationalPolicyRow>("statePolicies")
+        const rows = await statePoliciesCollection<NationalPolicyRow>(db)
           .find({
             stateId: getNationalStateId(countryId),
             enactedTurn: { $gt: watermark, $lte: enactmentTurn },

@@ -34,6 +34,8 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import type { Document } from "mongodb";
 
 /**
  * v2: persist the per-state labour wage index (+ v2-3b: automation index) to
@@ -58,8 +60,7 @@ export async function persistLabourIndices(args: {
     // automationIndexByState shares its keyset with labourWageIndexByState by
     // construction (both accumulate inside the same per-sector conditional).
     const stateIds = Array.from(labourWageIndexByState.keys());
-    const priorDocs = await db
-      .collection<StateMetrics>("macroMetrics")
+    const priorDocs = await macroMetricsCollection(db)
       .find({ _id: { $in: stateIds } })
       .project<{
         _id: string;
@@ -103,7 +104,7 @@ export async function persistLabourIndices(args: {
       };
     });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await db.collection("macroMetrics").bulkWrite(wageIndexOps as any[]);
+    await macroMetricsCollection<Document>(db).bulkWrite(wageIndexOps as any[]);
   }
 }
 
@@ -135,8 +136,7 @@ export async function persistLabourDemand(args: {
   // calculated later by the metric engine, after it computes this turn's
   // labour force. Do not overwrite the prior tightness here: corporate staffing
   // intentionally consumes that prior-turn signal to avoid a feedback loop.
-  const regions = await db
-    .collection<StateMetrics>("macroMetrics")
+  const regions = await macroMetricsCollection(db)
     .find({ _id: { $nin: Array.from(NATIONAL_SCOPE_IDS) } })
     .project<{ _id: string }>({ _id: 1 })
     .toArray();
@@ -162,7 +162,7 @@ export async function persistLabourDemand(args: {
   }));
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await db.collection("macroMetrics").bulkWrite(ops as any[]);
+  await macroMetricsCollection<Document>(db).bulkWrite(ops as any[]);
 }
 
 /**

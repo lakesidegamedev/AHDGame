@@ -20,6 +20,7 @@ import {
 } from "./organizationFund";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 
 /**
  * Aid packages disburse from the organization's pooled fund (capitalized by
@@ -62,12 +63,10 @@ async function applyOrganizationAidBoost(
     .toArray();
   if (states.length === 0) return;
   // SP5: economic.* lives on macroMetrics.
-  await db
-    .collection<{ _id: string }>("macroMetrics")
-    .updateMany(
-      { _id: { $in: states.map((s) => s._id) } },
-      { $inc: { [AID_BOOST_METRIC_PATH]: boost }, $set: { lastUpdated: new Date() } }
-    );
+  await macroMetricsCollection<{ _id: string }>(db).updateMany(
+    { _id: { $in: states.map((s) => s._id) } },
+    { $inc: { [AID_BOOST_METRIC_PATH]: boost }, $set: { lastUpdated: new Date() } }
+  );
 }
 
 /**

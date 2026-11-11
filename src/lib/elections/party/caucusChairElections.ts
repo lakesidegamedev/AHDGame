@@ -17,6 +17,7 @@ import type {
   NationalPartyElection,
 } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nationalPartyElectionsCollection } from "@/lib/db/repositories/nationalPartyElections";
 
 const CAUCUS_ELECTION_LABEL = "Caucus Chair";
 
@@ -122,10 +123,7 @@ export async function createMissingCaucusChairElections(currentTurn: number): Pr
   const [caucuses, activeElections, activeNationalChairElections] = await Promise.all([
     db.collection<Caucus>("caucuses").find({ disbandedAt: null }).toArray(),
     db.collection<CaucusChairElection>("caucusChairElections").find({ status: "voting" }).toArray(),
-    db
-      .collection<NationalPartyElection>("nationalPartyElections")
-      .find({ status: "voting", position: "chair" })
-      .toArray(),
+    nationalPartyElectionsCollection(db).find({ status: "voting", position: "chair" }).toArray(),
   ]);
 
   const activeSet = new Set(activeElections.map((entry) => entry.caucusId.toString()));

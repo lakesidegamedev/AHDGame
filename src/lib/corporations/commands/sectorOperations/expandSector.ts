@@ -75,6 +75,9 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 
 /** HTTP status for each entry refusal. */
 const MARKET_ENTRY_STATUS: Record<MarketEntryBlockReason, number> = {
@@ -180,7 +183,7 @@ export async function expandSector(request: Request, { params }: RouteParams) {
     let retailPauseTurnsRemaining: number | null = null;
     if (plantsEnabled && sectorType === "retail") {
       const currentTurn = gameState?.currentTurn ?? 0;
-      const transition = await db.collection<GameConfig>("gameConfig").findOne(
+      const transition = await gameConfigCollection(db).findOne(
         { _id: "default" },
         {
           projection: {
@@ -266,9 +269,10 @@ export async function expandSector(request: Request, { params }: RouteParams) {
               { projection: { "stats.businessAcumen": 1 } }
             )
           : Promise.resolve(null),
-        db
-          .collection<StateMetrics>("macroMetrics")
-          .findOne({ _id: stateId }, { projection: { "economic.costOfLiving": 1 } }),
+        macroMetricsCollection(db).findOne(
+          { _id: stateId },
+          { projection: { "economic.costOfLiving": 1 } }
+        ),
         fetchCorporationNationalSectorSharePercent(db, {
           corporationId: corporation._id,
           countryId: state.countryId as CountryId,
@@ -494,11 +498,13 @@ export async function expandSector(request: Request, { params }: RouteParams) {
         eraUnitScale
       );
       if (starterDrawdown) {
-        await db
-          .collection<UnownedSector>("unownedSectors")
-          .updateOne({ stateId, sectorType, industryModel, mediaDiscriminator }, starterDrawdown, {
+        await unownedSectorsCollection(db).updateOne(
+          { stateId, sectorType, industryModel, mediaDiscriminator },
+          starterDrawdown,
+          {
             upsert: true,
-          });
+          }
+        );
       }
 
       // Shadow-ledger debit leg for the starter build — the cash → CIP reclass,

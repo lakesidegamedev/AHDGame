@@ -26,6 +26,7 @@ import type { GameConfig } from "@/lib/db/types";
 import type { ExtractableResource } from "@/lib/constants/commodities";
 import type { OperatingSectorType } from "@/lib/constants/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 export async function computeSectorExtractionCapacityContext(
   db: Db,
@@ -40,9 +41,10 @@ export async function computeSectorExtractionCapacityContext(
   // rations the same sector 70-174x harder on era worlds.
   const [eraUnitScale, gameConfigDoc] = await Promise.all([
     loadWorldEraUnitScale(db),
-    db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { extractionOutputScaleEnabled: 1 } }),
+    gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { extractionOutputScaleEnabled: 1 } }
+    ),
   ]);
   const extractionOutputScaleEnabled = await getExtractionOutputScaleEnabled(gameConfigDoc);
   let stateResources: Partial<Record<ExtractableResource, number>> | null | undefined = undefined;

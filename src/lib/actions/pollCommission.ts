@@ -46,6 +46,8 @@ import { getPresidentialConsecutiveTerms } from "@/lib/elections/resolution/pres
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
 
 // Poll pricing lives in the shared rules module: quotePollAction is the single
 // source of truth the effect, validation and the POST debit all call.
@@ -65,7 +67,7 @@ export async function buildPollOverview({
   const campaignRates = await loadCampaignCurrencyRates(db);
 
   // Resolve active character (admin accounts may have multiple characters)
-  const userDoc = await db.collection<User>("users").findOne({ _id: new ObjectId(userId) });
+  const userDoc = await usersCollection(db).findOne({ _id: new ObjectId(userId) });
   const characterQuery = userDoc?.activeCharacterId
     ? { _id: userDoc.activeCharacterId, userId: new ObjectId(userId) }
     : { userId: new ObjectId(userId) };
@@ -79,9 +81,10 @@ export async function buildPollOverview({
     statePartyOrgCollection(db)
       .find({ countryId: character.countryId, stateId: character.homeState })
       .toArray(),
-    db
-      .collection<StateDemographicTurnout>("stateDemographicTurnout")
-      .findOne({ _id: character.homeState, countryId: character.countryId }),
+    stateDemographicTurnoutCollection(db).findOne({
+      _id: character.homeState,
+      countryId: character.countryId,
+    }),
     isForexEnabled(),
   ]);
 
@@ -229,7 +232,7 @@ export async function commissionPoll({ userId, pollType }: { userId: string; pol
   const campaignRates = await loadCampaignCurrencyRates(db);
 
   // Resolve active character (admin accounts may have multiple characters)
-  const userDoc = await db.collection<User>("users").findOne({ _id: new ObjectId(userId) });
+  const userDoc = await usersCollection(db).findOne({ _id: new ObjectId(userId) });
   const characterQuery = userDoc?.activeCharacterId
     ? { _id: userDoc.activeCharacterId, userId: new ObjectId(userId) }
     : { userId: new ObjectId(userId) };
@@ -272,7 +275,7 @@ export async function commissionPoll({ userId, pollType }: { userId: string; pol
     statePartyOrgCollection(db)
       .find({ countryId: character.countryId, stateId: character.homeState })
       .toArray(),
-    db.collection<StateDemographicTurnout>("stateDemographicTurnout").findOne({
+    stateDemographicTurnoutCollection(db).findOne({
       _id: character.homeState,
       countryId: character.countryId,
     }),

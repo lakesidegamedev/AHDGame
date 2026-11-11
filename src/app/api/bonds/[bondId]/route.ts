@@ -33,6 +33,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 interface RouteParams {
   params: Promise<{ bondId: string }>;
@@ -111,7 +112,7 @@ export const GET = withNoStore(async function GET(_request: Request, { params }:
       const [forexEnabled, bankPropTradingEnabled, userDoc] = await Promise.all([
         isForexEnabled(),
         isBankPropTradingEnabled(),
-        db.collection<User>("users").findOne({ _id: new ObjectId(user.userId) }),
+        usersCollection(db).findOne({ _id: new ObjectId(user.userId) }),
       ]);
       // Load exchange rates so multi-currency wealth converts correctly. Without
       // these, getTotalPersonalWealth falls back to home-currency only and a
@@ -124,8 +125,10 @@ export const GET = withNoStore(async function GET(_request: Request, { params }:
 
       if (isImperialMode) {
         // Imperial character path
-        const imperial = await imperialCharactersCollection(db)
-          .findOne({ _id: userDoc!.activeImperialCharacterId!, userId: new ObjectId(user.userId) });
+        const imperial = await imperialCharactersCollection(db).findOne({
+          _id: userDoc!.activeImperialCharacterId!,
+          userId: new ObjectId(user.userId),
+        });
         if (imperial) {
           myCharacterId = imperial._id.toString();
           myCashOnHand = getTotalPersonalLiquidWealth(imperial, forexEnabled, exchangeRates);

@@ -65,6 +65,9 @@ import type {
 } from "../types";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
+import type { Document } from "mongodb";
+import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
 
 export const DEFECT_ID = "AHD-dissolution-npp-successors";
 
@@ -304,8 +307,8 @@ async function buildPlan(db: Db): Promise<{ events: PlannedEvent[]; notes: strin
     notes: [],
   };
   const events: PlannedEvent[] = [];
-  const pools = db.collection<PoolDoc>("unownedSectors");
-  const history = db.collection<HistoryRow>("corporationHistory");
+  const pools = unownedSectorsCollection<PoolDoc>(db);
+  const history = corporationHistoryCollection<HistoryRow>(db);
 
   const exits = await db
     .collection<CorporationExit>("corporationExits")
@@ -464,9 +467,9 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
         recipients.set(credited.corporationId.toHexString(), credited.corporationId);
         continue;
       }
-      const pool = await db
-        .collection<PoolDoc>("unownedSectors")
-        .findOne({ _id: new ObjectId(pickup.poolId) });
+      const pool = await unownedSectorsCollection<PoolDoc>(db).findOne({
+        _id: new ObjectId(pickup.poolId),
+      });
       const units = pool ? Math.min(pickup.units, headroomOf(pool)) : 0;
       if (!pool || !(units >= MIN_PICKUP_UNITS)) {
         notes.push(`${event.label}: ${pickup.stateId} pool shrank below the plan, skipped`);
@@ -536,7 +539,8 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
         now,
         eraUnitScale
       );
-      if (drawdown) await db.collection("unownedSectors").updateOne({ _id: pool._id }, drawdown);
+      if (drawdown)
+        await unownedSectorsCollection<Document>(db).updateOne({ _id: pool._id }, drawdown);
       updated += 1;
     }
     if (event.exitId && recipients.size > 0) {

@@ -36,6 +36,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /**
  * Safety ceiling for a SYNTHETIC *scaled* national corp's per-turn budget impact,
@@ -126,9 +127,10 @@ export async function loadPlantsBudgetContext(
   }
   const [state, config] = await Promise.all([
     gameStateCollection(db).findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
-    db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { marketGovernorRampTurns: 1 } }),
+    gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { marketGovernorRampTurns: 1 } }
+    ),
   ]);
   const rampTurns =
     typeof config?.marketGovernorRampTurns === "number" && config.marketGovernorRampTurns >= 1

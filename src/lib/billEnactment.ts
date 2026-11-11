@@ -115,6 +115,8 @@ import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 import { billsCollection } from "@/lib/db/repositories/bills";
 import type { Document } from "mongodb";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
 
 type EnactableBill = Pick<
   Bill | StateBill,
@@ -245,9 +247,10 @@ async function applyTaxRateChange(
     // netting is a no-op (sourcedImports stays undefined) for every other tax.
     let sourcedImports: { tariffPaidAnchor: number; importValueAnchor: number } | undefined;
     if (taxType === "tariffs") {
-      const moneyWiringConfig = await db
-        .collection<GameConfig>("gameConfig")
-        .findOne({ _id: "default" }, { projection: { interstateMoneyWiringEnabled: 1 } });
+      const moneyWiringConfig = await gameConfigCollection(db).findOne(
+        { _id: "default" },
+        { projection: { interstateMoneyWiringEnabled: 1 } }
+      );
       if (moneyWiringConfig?.interstateMoneyWiringEnabled === true) {
         const sourcedByCountry = await loadLatestSourcedImportAggregates(
           db,
@@ -333,8 +336,10 @@ async function applyTaxRateChange(
 
     const stateBudgetCountryId =
       countryOverride ?? ((legislationType.countryScope ?? "us").toUpperCase() as CountryId);
-    const budget = await stateBudgetsCollection(db)
-      .findOne({ _id: stateId, countryId: stateBudgetCountryId });
+    const budget = await stateBudgetsCollection(db).findOne({
+      _id: stateId,
+      countryId: stateBudgetCountryId,
+    });
     if (!budget) return;
     const normalizedTaxRates = normalizeStateTaxRates(budget.taxRates);
     if (!normalizedTaxRates) return;
@@ -953,9 +958,10 @@ async function processProvisionEnactment(
   }
 
   // Get old policy index before updating
-  const oldPolicy = await db
-    .collection<StatePolicy>("statePolicies")
-    .findOne({ stateId, legislationTypeId: provision.legislationTypeId });
+  const oldPolicy = await statePoliciesCollection(db).findOne({
+    stateId,
+    legislationTypeId: provision.legislationTypeId,
+  });
   // Default a missing prior policy to the CENTER OF THIS TYPE'S OPTIONS (not the
   // hardcoded 3, which is out of bounds for any type with <4 options). An
   // out-of-bounds index makes optionScores[oldIndex] undefined, which drops
@@ -1010,9 +1016,10 @@ async function processProvisionEnactment(
 
   // If a prior executive order set this same policy, mark it superseded so
   // the order's turn-phase doesn't try to revert the bill's effect.
-  const priorPolicy = await db
-    .collection<StatePolicy>("statePolicies")
-    .findOne({ stateId, legislationTypeId: provision.legislationTypeId });
+  const priorPolicy = await statePoliciesCollection(db).findOne({
+    stateId,
+    legislationTypeId: provision.legislationTypeId,
+  });
   if (priorPolicy?.enactedBy?.kind === "order") {
     await db.collection("governorExecutiveOrders").updateOne(
       { _id: priorPolicy.enactedBy.id, status: "active" },
@@ -1027,13 +1034,11 @@ async function processProvisionEnactment(
   }
 
   // Upsert into statePolicies collection keyed by (stateId, legislationTypeId)
-  await db
-    .collection<StatePolicy>("statePolicies")
-    .updateOne(
-      { stateId, legislationTypeId: provision.legislationTypeId },
-      { $set: statePolicy },
-      { upsert: true }
-    );
+  await statePoliciesCollection(db).updateOne(
+    { stateId, legislationTypeId: provision.legislationTypeId },
+    { $set: statePolicy },
+    { upsert: true }
+  );
   if (stateId === "uk_national" && provision.legislationTypeId === "uk_devolution_local_powers") {
     await reconcileEnactedUKDevolution(db, new Date());
   }

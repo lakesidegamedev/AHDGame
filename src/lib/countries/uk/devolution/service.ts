@@ -25,6 +25,7 @@ import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficia
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import type { Document } from "mongodb";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
 
 export async function readUKDevolutionState(
   db: Db,
@@ -63,12 +64,10 @@ export async function reconcileUKDevolution(
 ): Promise<UKDevolutionState> {
   const [stored, policy] = await Promise.all([
     db.collection<UKDevolutionState>("ukDevolution").findOne({ _id: "UK" }),
-    db
-      .collection<StatePolicy>("statePolicies")
-      .findOne(
-        { stateId: "uk_national", legislationTypeId: "uk_devolution_local_powers" },
-        { projection: { policyOptionIndex: 1, enactedTurn: 1, enactedByBillId: 1, enactedBy: 1 } }
-      ),
+    statePoliciesCollection(db).findOne(
+      { stateId: "uk_national", legislationTypeId: "uk_devolution_local_powers" },
+      { projection: { policyOptionIndex: 1, enactedTurn: 1, enactedByBillId: 1, enactedBy: 1 } }
+    ),
   ]);
   const state = stored ?? (await initialStatePreservingLeaders(db, startingYear));
   const latestCycles: Partial<Record<UKExecutiveRegion, number>> = {};

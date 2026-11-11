@@ -17,6 +17,7 @@ import {
   type SocietyLawPositions,
 } from "./rules/laws";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
 
 export { presetUsesSocietyPressures } from "./preset";
 
@@ -29,8 +30,7 @@ export async function loadSocietyLawPositions(
     SOCIETY_LAW_SLUGS.map((slug) => `${countryId.toLowerCase()}_${slug}`)
   );
   if (typeIds.length === 0) return new Map();
-  const rows = await db
-    .collection<EnactedLaw>("enactedLaws")
+  const rows = await enactedLawsCollection(db)
     .find(
       { scope: "national", legislationTypeId: { $in: typeIds }, repealedAt: { $exists: false } },
       { projection: { legislationTypeId: 1, policyOptionIndex: 1, enactedAt: 1 } }

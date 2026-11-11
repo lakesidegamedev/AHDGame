@@ -14,6 +14,7 @@ import type { Corporation, User } from "@/lib/db/types";
 import type { CorporationLookups } from "./types";
 import { shedSectorsForCorps, type SectorShedResult } from "./corporationSectorShed";
 import { VACANT_CEO_SECTOR_SHED_RATE } from "./vacantCeoSectorShed";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 /** Turns of inactivity before the inactive-CEO shed kicks in (= 72 real-time hours). */
 export const INACTIVE_CEO_TURN_THRESHOLD = 72;
@@ -61,8 +62,7 @@ export async function shedInactiveCeoSectorsToUnowned(
     )
   ).map((s) => new ObjectId(s));
 
-  const users = await db
-    .collection<User>("users")
+  const users = await usersCollection(db)
     .find({ _id: { $in: userIds } })
     .project<{ _id: ObjectId; lastActivity?: Date; createdAt?: Date }>({
       _id: 1,

@@ -58,6 +58,9 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import type { Document } from "mongodb";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { adminLogsCollection } from "@/lib/db/repositories/adminLogs";
 
 const MIN_STARTING_DONOR_BASE_LEVEL = 1;
 
@@ -157,8 +160,8 @@ export async function createCharacterForAccount(userId: string, data: CreateChar
 
   // Get game config, user, country access, and current turn in parallel
   const [gameConfig, userDoc, countryAccess, gameTime] = await Promise.all([
-    db.collection<GameConfig>("gameConfig").findOne({ _id: "default" }),
-    db.collection("users").findOne({ _id: new ObjectId(userId) }),
+    gameConfigCollection(db).findOne({ _id: "default" }),
+    usersCollection<Document>(db).findOne({ _id: new ObjectId(userId) }),
     getCountryAccess(stateDoc.countryId),
     getGameTime(),
   ]);
@@ -406,16 +409,17 @@ export async function createCharacterForAccount(userId: string, data: CreateChar
         { activeCharacterCount: { $lt: characterLimit } },
       ];
     }
-    const reserved = await db
-      .collection("users")
-      .updateOne(slotFilter, { $inc: { activeCharacterCount: 1 } });
+    const reserved = await usersCollection<Document>(db).updateOne(slotFilter, {
+      $inc: { activeCharacterCount: 1 },
+    });
     if (reserved.matchedCount === 0) {
       return errorResponse(409, "You already have a character");
     }
     const releaseSlot = () =>
-      db
-        .collection("users")
-        .updateOne({ _id: new ObjectId(userId) }, { $inc: { activeCharacterCount: -1 } });
+      usersCollection<Document>(db).updateOne(
+        { _id: new ObjectId(userId) },
+        { $inc: { activeCharacterCount: -1 } }
+      );
 
     let result: { insertedId: ObjectId };
     try {
@@ -449,7 +453,7 @@ export async function createCharacterForAccount(userId: string, data: CreateChar
     // Point the account at the new character before any best-effort follow-up
     // work. If a later step throws, the player still lands on this character
     // instead of being sent back to character creation.
-    await db.collection("users").updateOne(
+    await usersCollection<Document>(db).updateOne(
       { _id: new ObjectId(userId) },
       {
         $set: {
@@ -499,7 +503,10 @@ export async function createCharacterForAccount(userId: string, data: CreateChar
               $set: { updatedAt: new Date() },
             }
           ),
-          db.collection("users").updateOne({ _id: userDoc.referredBy }, { $inc: referrerUserInc }),
+          usersCollection<Document>(db).updateOne(
+            { _id: userDoc.referredBy },
+            { $inc: referrerUserInc }
+          ),
         ]);
         // Clamp the post-bonus total at the referrer's Energy-scaled action cap
         // (matches actionRefresh), not the static baseline.
@@ -558,10 +565,10 @@ export async function createCharacterForAccount(userId: string, data: CreateChar
     await setCharacterGateCookie(await cookies(), false);
 
     // Get username to update the account_created log with character name
-    const user = await db.collection("users").findOne({ _id: new ObjectId(userId) });
+    const user = await usersCollection<Document>(db).findOne({ _id: new ObjectId(userId) });
     if (user?.username) {
       // Update the account_created log to include the character name
-      await db.collection("adminLogs").updateOne(
+      await adminLogsCollection<Document>(db).updateOne(
         {
           username: user.username,
           action: "account_created",

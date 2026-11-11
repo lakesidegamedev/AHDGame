@@ -16,6 +16,7 @@ import {
   loadNationalPolicyRecords,
   buildSubsidyResponse,
 } from "@/lib/policy/nationalPolicyRecordsList";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
 
 // Re-export for any consumer that still imports types from the route file.
 // New consumers should import from "@/lib/policy/types".
@@ -41,8 +42,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
 
     if (scope === "state" && stateId) {
       const { legislationTypeMap } = await loadCountryLegislationTypes(db, countryId);
-      const policies = await db
-        .collection<StatePolicyRecord>("statePolicies")
+      const policies = await statePoliciesCollection<StatePolicyRecord>(db)
         .find({ scope: "state", stateId })
         .toArray();
       const subsidies = await db

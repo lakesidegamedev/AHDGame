@@ -20,6 +20,7 @@ import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 import type { Document } from "mongodb";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
 
 export const migration: Migration = {
   id: "2026-10-16-income-tax-tiers",
@@ -34,11 +35,12 @@ export const migration: Migration = {
           $or: [{ "taxRateChange.taxType": "incomeTax" }, { "taxSlider.taxType": "incomeTax" }],
         })
         .toArray(),
-      db.collection<StatePolicy>("statePolicies").find({}).toArray(),
+      statePoliciesCollection(db).find({}).toArray(),
       gameStateCollection<{ _id: string; currentTurn: number }>(db).findOne({ _id: "current" }),
       charactersCollection(db).countDocuments({ incomeTaxStartTurn: { $exists: false } }),
-      imperialCharactersCollection<Document>(db)
-        .countDocuments({ incomeTaxStartTurn: { $exists: false } }),
+      imperialCharactersCollection<Document>(db).countDocuments({
+        incomeTaxStartTurn: { $exists: false },
+      }),
     ]);
     for (const budget of [...national, ...regional])
       if (budget.taxRates) initializeIncomeTaxRates(budget.taxRates);
@@ -138,7 +140,7 @@ export const migration: Migration = {
         });
       }
     }
-    if (policyOps.length) await db.collection<StatePolicy>("statePolicies").bulkWrite(policyOps);
+    if (policyOps.length) await statePoliciesCollection(db).bulkWrite(policyOps);
     await charactersCollection(db).updateMany({}, [
       {
         $set: {

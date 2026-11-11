@@ -69,6 +69,7 @@ import { loadAutomationPolicies } from "@/lib/automationPolicy/policies";
 import { presetUsesSocietyPressures } from "@/lib/societyPressures/preset";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 export async function buildCorporationLookups(
   db: Db,
@@ -598,37 +599,35 @@ export async function buildCorporationLookups(
   // Management overhead: a margin charge on every sector of a corporation that
   // grows with its total whole-plant count (snowball brake). Off unless the
   // gameConfig knob is set.
-  const overheadCfg = await db
-    .collection<{
-      _id: string;
-      managementOverheadPpPerDoubling?: number;
-      strengthUpkeepStage?: number;
-      groupSizeCostsStage?: number;
-      soeSizeCostScale?: number;
-      dominanceRunningCostScale?: number;
-      honestBalanceSheetsStage?: number;
-      fundedOverheadStage?: number;
-      fundedHeadcountStage?: number;
-      fundedValuationStage?: number;
-      producerTariffStage?: number;
-    }>("gameConfig")
-    .findOne(
-      { _id: "default" },
-      {
-        projection: {
-          managementOverheadPpPerDoubling: 1,
-          strengthUpkeepStage: 1,
-          groupSizeCostsStage: 1,
-          soeSizeCostScale: 1,
-          dominanceRunningCostScale: 1,
-          honestBalanceSheetsStage: 1,
-          fundedOverheadStage: 1,
-          fundedHeadcountStage: 1,
-          fundedValuationStage: 1,
-          producerTariffStage: 1,
-        },
-      }
-    );
+  const overheadCfg = await gameConfigCollection<{
+    _id: string;
+    managementOverheadPpPerDoubling?: number;
+    strengthUpkeepStage?: number;
+    groupSizeCostsStage?: number;
+    soeSizeCostScale?: number;
+    dominanceRunningCostScale?: number;
+    honestBalanceSheetsStage?: number;
+    fundedOverheadStage?: number;
+    fundedHeadcountStage?: number;
+    fundedValuationStage?: number;
+    producerTariffStage?: number;
+  }>(db).findOne(
+    { _id: "default" },
+    {
+      projection: {
+        managementOverheadPpPerDoubling: 1,
+        strengthUpkeepStage: 1,
+        groupSizeCostsStage: 1,
+        soeSizeCostScale: 1,
+        dominanceRunningCostScale: 1,
+        honestBalanceSheetsStage: 1,
+        fundedOverheadStage: 1,
+        fundedHeadcountStage: 1,
+        fundedValuationStage: 1,
+        producerTariffStage: 1,
+      },
+    }
+  );
   const overheadPpPerDoubling = overheadCfg?.managementOverheadPpPerDoubling ?? 0;
   const fundedTariffsOn = (overheadCfg?.producerTariffStage ?? 0) >= 1;
   const strengthUpkeepStage =
@@ -750,9 +749,10 @@ export async function buildCorporationLookups(
       // isCurtained, so the curtain lifts on the historical marketization dates
       // and the Tito-split exemption keeps Yugoslavia trading with the open world.
       const [curtainCfg, curtainState, registeredCountries] = await Promise.all([
-        db
-          .collection<{ _id: string; commandEconomyEnabled?: boolean }>("gameConfig")
-          .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } }),
+        gameConfigCollection<{ _id: string; commandEconomyEnabled?: boolean }>(db).findOne(
+          { _id: "default" },
+          { projection: { commandEconomyEnabled: 1 } }
+        ),
         gameStateCollection(db).findOne({ _id: "current" }, { projection: { currentYear: 1 } }),
         getRegisteredCountryIds(db),
       ]);

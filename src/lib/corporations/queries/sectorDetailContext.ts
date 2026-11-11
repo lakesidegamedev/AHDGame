@@ -50,6 +50,10 @@ import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSecto
 import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 import { unionsCollection } from "@/lib/db/repositories/unions";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
+import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
+import { politicalMetricsCollection } from "@/lib/db/repositories/politicalMetrics";
 
 /** Reads the state, country, tariff, sibling and market context for one sector. */
 export async function loadSectorDetailContext({
@@ -121,12 +125,10 @@ export async function loadSectorDetailContext({
   // Look up the viewer's corporation (for attack/split UI)
   let viewerCorporation: Corporation | null = null;
   if (user) {
-    const userDoc = await db
-      .collection<User>("users")
-      .findOne(
-        { _id: new ObjectId(user.userId) },
-        { projection: { activeCharacterType: 1, activeImperialCharacterId: 1 } }
-      );
+    const userDoc = await usersCollection(db).findOne(
+      { _id: new ObjectId(user.userId) },
+      { projection: { activeCharacterType: 1, activeImperialCharacterId: 1 } }
+    );
     const imperialActive =
       userDoc?.activeCharacterType === "imperial" && !!userDoc.activeImperialCharacterId;
     const viewerChar = imperialActive
@@ -183,9 +185,7 @@ export async function loadSectorDetailContext({
   // Fetch state, all state ids, state metrics, CEO, commodity prices, corp siblings, and game state in parallel
   // SP4 §4a: the region's political board rides along for the margin overlay.
   const politicalDocPromise = isPoliticalApprovalCountry(sector.countryId)
-    ? db
-        .collection<PoliticalMetricsDoc>("politicalMetrics")
-        .findOne({ _id: sector.stateId, countryId: sector.countryId })
+    ? politicalMetricsCollection(db).findOne({ _id: sector.stateId, countryId: sector.countryId })
     : Promise.resolve(null);
   const [state, allStates, stateMetrics, ceo, commodityPrices, allCorpSectors, gameState] =
     await Promise.all([
@@ -195,11 +195,10 @@ export async function loadSectorDetailContext({
         .toArray(),
       findMergedRegionMetrics(db, { _id: sector.stateId, countryId: sector.countryId }),
       corporation.ceoType === "imperial"
-        ? imperialCharactersCollection<Document>(db)
-            .findOne(
-              { _id: corporation.ceoId },
-              { projection: { name: 1, sequentialId: 1, avatarUrl: 1 } }
-            )
+        ? imperialCharactersCollection<Document>(db).findOne(
+            { _id: corporation.ceoId },
+            { projection: { name: 1, sequentialId: 1, avatarUrl: 1 } }
+          )
         : corporation.ceoType === "npp"
           ? nppsCollection<Document>(db).findOne(
               { _id: corporation.ceoId },
@@ -219,7 +218,7 @@ export async function loadSectorDetailContext({
                 },
               }
             ),
-      db.collection<CommodityPrice>("commodityPrices").find({}).toArray(),
+      commodityPricesCollection(db).find({}).toArray(),
       corporateSectorsCollection(db)
         .find(
           { corporationId: corporation._id },
@@ -351,11 +350,10 @@ export async function loadSectorDetailContext({
   // all. The sector page needs it to say whether organizing here is a first
   // claim or a raid.
   const representingUnionDoc = sector.representingUnionId
-    ? await unionsCollection(db)
-        .findOne(
-          { _id: sector.representingUnionId },
-          { projection: { name: 1, undergroundStrength: 1 } }
-        )
+    ? await unionsCollection(db).findOne(
+        { _id: sector.representingUnionId },
+        { projection: { name: 1, undergroundStrength: 1 } }
+      )
     : null;
   const macroEcon: MacroEconomicValues = {
     inflationRate: federalBudget?.economicFactors?.inflationRate ?? null,
@@ -453,7 +451,7 @@ export async function loadSectorDetailContext({
           .toArray()
       : Promise.resolve([] as SiblingCorpProjection[]),
     loadFxRatesByCurrency(db),
-    db.collection<UnownedSector>("unownedSectors").findOne({
+    unownedSectorsCollection(db).findOne({
       stateId: sector.stateId,
       sectorType: sector.sectorType,
       industryModel: sector.industryModel ?? null,

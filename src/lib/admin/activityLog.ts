@@ -3,6 +3,9 @@ import type { ActionLog } from "@/lib/db/types/gameState";
 import type { ActivityLog, ActivityLogGameAction } from "@/lib/db/types/activityLog";
 import type { CountryId } from "@/lib/constants/countries";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
+import { activityLogCollection } from "@/lib/db/repositories/activityLog";
 
 export interface IdentityLookup {
   characterName?: string;
@@ -148,8 +151,7 @@ export async function fetchActivityLog(
     if (params.search?.trim()) filter.$text = { $search: params.search.trim() };
     if (idCursor) filter._id = idCursor;
     if (idRestriction) Object.assign(filter, idRestriction);
-    activityRows = (await db
-      .collection<ActivityLog>("activityLog")
+    activityRows = (await activityLogCollection(db)
       .find(filter)
       .sort({ _id: -1 })
       .limit(params.limit + 1)
@@ -175,8 +177,7 @@ export async function fetchActivityLog(
     if (params.search?.trim()) {
       const regex = new RegExp(escapeRegex(params.search.trim()), "i");
       const [matchedUsers, matchedCharacters] = await Promise.all([
-        db
-          .collection("users")
+        usersCollection<Document>(db)
           .find({ username: regex }, { projection: { _id: 1 } })
           .limit(50)
           .toArray(),

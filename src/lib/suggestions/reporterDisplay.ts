@@ -3,6 +3,7 @@ import type { PoliticalParty, User } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 export interface ReporterDisplay {
   characterName: string | null;
@@ -27,8 +28,7 @@ export async function loadReporterDisplayMap(
     .toArray();
   const charByUser = new Map(characters.map((c) => [c.userId.toString(), c]));
 
-  const users = await db
-    .collection<User>("users")
+  const users = await usersCollection(db)
     .find({ _id: { $in: unique.map((id) => new ObjectId(id)) } })
     .project({ username: 1, discordUsername: 1 })
     .toArray();

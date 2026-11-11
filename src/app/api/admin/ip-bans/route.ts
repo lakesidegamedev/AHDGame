@@ -8,6 +8,7 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { createAdminLog } from "@/lib/adminLog";
 import { getRegistrationIpMatchCandidates, normalizeIp } from "@/lib/utils/ipNormalize";
 import type { BannedIp, User } from "@/lib/db/types";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 const postSchema = z.union([
   z.object({
@@ -38,7 +39,7 @@ export async function GET() {
       .toArray();
 
     const ips = rows.map((r) => r.ip);
-    const usersColl = db.collection<User>("users");
+    const usersColl = usersCollection(db);
     const counts: Record<string, number> = {};
     await Promise.all(
       ips.map(async (ip) => {

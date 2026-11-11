@@ -97,6 +97,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 
 /**
  * Default founding book for an admin/NPP-spawned corporation, in ₳ at MODERN
@@ -597,7 +598,7 @@ async function grantNppSectorFromUnownedPool(
   // Reduce the unowned sector pool to reflect market capture.
   const unownedSector =
     input.pool ??
-    (await db.collection("unownedSectors").findOne({
+    (await unownedSectorsCollection<Document>(db).findOne({
       stateId,
       sectorType: type,
       industryModel,
@@ -631,7 +632,7 @@ async function grantNppSectorFromUnownedPool(
         ? unownedSector.headroomUnits
         : unownedHeadroomUnitsPerAnchor(type, eraUnitScale, industryModel, mediaDiscriminator) *
           (unownedSector.revenue ?? 0);
-    await db.collection("unownedSectors").updateOne(
+    await unownedSectorsCollection<Document>(db).updateOne(
       { _id: unownedSector._id },
       {
         $set: {
@@ -710,7 +711,7 @@ export async function spawnNppCorporation(
   }
   const eraUnitScale = await loadWorldEraUnitScale(db);
   const boundedPool = input.limitToUnownedPool
-    ? await db.collection("unownedSectors").findOne(marketFilter)
+    ? await unownedSectorsCollection<Document>(db).findOne(marketFilter)
     : null;
   // Reject before allocating an NPP CEO or corporation when the sim pool is
   // exhausted. The regular admin spawn path retains its historical floor.
@@ -756,7 +757,8 @@ export async function spawnNppCorporation(
   if (customRevenue !== undefined) {
     startingRevenue = customRevenue;
   } else {
-    const unowned = boundedPool ?? (await db.collection("unownedSectors").findOne(marketFilter));
+    const unowned =
+      boundedPool ?? (await unownedSectorsCollection<Document>(db).findOne(marketFilter));
     if (unowned?.revenue) {
       startingRevenue = Math.round(unowned.revenue * 0.25);
     } else {

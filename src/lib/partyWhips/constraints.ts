@@ -11,6 +11,7 @@ import type {
   CongressLeader,
   WhipIssuerRole,
 } from "@/lib/db/types";
+import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
 
 export type WhipChamber = BillWhip["chamber"];
 
@@ -56,7 +57,7 @@ export async function getChamberLeaderRole(
   const roles = CHAMBER_LEADER_ROLES[chamber];
   if (!roles || roles.length === 0) return null;
 
-  const leader = await db.collection<CongressLeader>("congressLeaders").findOne({
+  const leader = await congressLeadersCollection(db).findOne({
     role: { $in: roles },
     characterId,
     party: partyId,

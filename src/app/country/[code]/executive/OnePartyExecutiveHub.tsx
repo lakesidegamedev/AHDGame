@@ -55,6 +55,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
 
 type PartyRowMeta = {
   seqKey: string;
@@ -150,9 +151,9 @@ export async function OnePartyExecutiveHub({ countryId }: { countryId: CountryId
     if (!role) return null;
     // The surface stores the role as a plain string (constants stay decoupled
     // from db types); narrow it at the query boundary.
-    const leader = await db
-      .collection<CongressLeader>("congressLeaders")
-      .findOne({ role: role as CongressLeader["role"] });
+    const leader = await congressLeadersCollection(db).findOne({
+      role: role as CongressLeader["role"],
+    });
     if (!leader?.characterId) return null;
     return charactersCollection(db).findOne({ _id: leader.characterId });
   }

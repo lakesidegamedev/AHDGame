@@ -8,6 +8,8 @@
 import { ObjectId, type Db } from "mongodb";
 import type { AdminLog } from "@/lib/db/types/adminLog";
 import type { GameConfig } from "@/lib/db/types";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { adminLogsCollection } from "@/lib/db/repositories/adminLogs";
 
 const LOG_TAIL_LINES = 200;
 
@@ -93,7 +95,7 @@ export async function openResetRunLog(
   ctx: { preset: string; mode: string; adminUsername?: string }
 ): Promise<void> {
   const now = new Date();
-  await db.collection<AdminLog>("adminLogs").insertOne({
+  await adminLogsCollection(db).insertOne({
     category: "system",
     action: "game_reset",
     username: "SYSTEM",
@@ -136,7 +138,7 @@ export async function closeResetRunLog(
 ): Promise<void> {
   const finishedAt = new Date();
   try {
-    await db.collection<AdminLog>("adminLogs").updateOne(
+    await adminLogsCollection(db).updateOne(
       { "resetRun.runId": run.runId } as never,
       {
         $set: {
@@ -156,7 +158,7 @@ export async function closeResetRunLog(
   }
 
   try {
-    await db.collection<GameConfig>("gameConfig").updateOne(
+    await gameConfigCollection(db).updateOne(
       { _id: "default" },
       {
         $set: {

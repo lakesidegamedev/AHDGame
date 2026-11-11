@@ -15,6 +15,8 @@ import { syncSuspiciousFlagsForBanState } from "@/lib/account/syncSuspiciousFlag
 import type { BannedDeviceKind } from "@/lib/db/types";
 import { invalidateCachedUser } from "@/lib/auth/userDocCache";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
 
 // POST /api/admin/users/ban — Ban or unban a user by userId.
 // Auth: requireAdmin
@@ -38,10 +40,10 @@ export async function POST(request: Request) {
       return errorResponse(400, "You cannot ban yourself");
     }
 
-    const usersCollection = db.collection("users");
+    const usersCollectionHandle = usersCollection<Document>(db);
 
     // Check if user exists
-    const user = await usersCollection.findOne({ _id: objectId });
+    const user = await usersCollectionHandle.findOne({ _id: objectId });
     if (!user) {
       return errorResponse(404, "User not found");
     }
@@ -57,7 +59,7 @@ export async function POST(request: Request) {
     // Update the ban status
     if (ban) {
       const { ceoCorpIds } = await loadUserCharacterAndCeoCorpIds(db, objectId);
-      await usersCollection.updateOne(
+      await usersCollectionHandle.updateOne(
         { _id: objectId },
         {
           $set: {
@@ -126,7 +128,7 @@ export async function POST(request: Request) {
       await vacatePartyLeadershipForBannedUser(db, objectId);
       await stripPartyMembershipForBannedUser(db, objectId);
     } else {
-      await usersCollection.updateOne(
+      await usersCollectionHandle.updateOne(
         { _id: objectId },
         {
           $set: {

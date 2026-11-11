@@ -34,6 +34,7 @@ import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import type { Document } from "mongodb";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
 
 const VALID_ERAS = SEED_ERA_IDS;
 
@@ -93,9 +94,11 @@ export async function POST(request: Request) {
 
       for (const sd of regionDemographics) {
         const { groups: _groups, ...storedDemographics } = sd;
-        await db
-          .collection<StateDemographics>("stateDemographics")
-          .updateOne({ _id: sd._id }, { $set: storedDemographics }, { upsert: true });
+        await stateDemographicsCollection(db).updateOne(
+          { _id: sd._id },
+          { $set: storedDemographics },
+          { upsert: true }
+        );
         await db
           .collection<StateDemographics>("demographicDefaults")
           .updateOne({ _id: sd._id }, { $set: storedDemographics }, { upsert: true });
@@ -173,9 +176,11 @@ export async function POST(request: Request) {
         cachedEconomicLean: calculatedLean.economicLean,
         cachedSocialLean: calculatedLean.socialLean,
       };
-      await db
-        .collection<StateDemographics>("stateDemographics")
-        .updateOne({ _id: sd._id }, { $set: cachedDemographics }, { upsert: true });
+      await stateDemographicsCollection(db).updateOne(
+        { _id: sd._id },
+        { $set: cachedDemographics },
+        { upsert: true }
+      );
       await db
         .collection<StateDemographics>("demographicDefaults")
         .updateOne({ _id: sd._id }, { $set: cachedDemographics }, { upsert: true });
@@ -225,8 +230,7 @@ async function takeSnapshot(
   regionIds: string[],
   triggeredBy: string
 ): Promise<string> {
-  const currentDocs = await db
-    .collection<{ _id: string }>("stateDemographics")
+  const currentDocs = await stateDemographicsCollection<{ _id: string }>(db)
     .find({ _id: { $in: regionIds } })
     .toArray();
 

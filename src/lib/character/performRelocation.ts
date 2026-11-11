@@ -21,6 +21,7 @@ import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParti
 import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
 
 export interface RelocationOutcome {
   resignedFromOffice: string | null;
@@ -161,11 +162,10 @@ export async function performRelocation(
   // These were the defense-in-depth gap behind "relocated chair acts on
   // foreign entity" — clearing them here closes the loop at the source.
   if (countryChanged) {
-    await campaignsCollection<Document>(db)
-      .updateMany(
-        { managerCharacterId: characterId },
-        { $set: { managerId: null, managerCharacterId: null, updatedAt: now } }
-      );
+    await campaignsCollection<Document>(db).updateMany(
+      { managerCharacterId: characterId },
+      { $set: { managerId: null, managerCharacterId: null, updatedAt: now } }
+    );
     // Caucus participation: closes memberships, withdraws chair candidacies,
     // clears chair/vice-chair seats, AND clears the denormalized
     // character.factionId pointer. Missing factionId cleanup leaves relocated
@@ -200,7 +200,7 @@ export async function performRelocation(
     // Cabinet member records. Cabinet-bill voting and cabinet-position routes
     // filter by characterId+countryId, so a stale record in another country
     // would still grant voting rights.
-    await db.collection("cabinetMembers").deleteMany({ characterId });
+    await cabinetMembersCollection<Document>(db).deleteMany({ characterId });
   }
 
   // 4c. Cross-country: leave the old country's chain of command. Same reasoning as
@@ -245,8 +245,7 @@ export async function performRelocation(
         positions.push("treasurer");
       }
       if (positions.length > 0) {
-        await statePartyOrgCollection(db)
-          .updateOne({ _id: oldStateOrg._id }, { $set: updates });
+        await statePartyOrgCollection(db).updateOne({ _id: oldStateOrg._id }, { $set: updates });
         clearedStateLeadership.push(`${oldStateId}: ${positions.join(", ")}`);
       }
     }

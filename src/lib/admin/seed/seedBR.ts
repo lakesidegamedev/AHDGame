@@ -20,6 +20,10 @@ import type { Document } from "mongodb";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
+import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
+import { stateBaselinesCollection } from "@/lib/db/repositories/stateBaselines";
 
 const BR_REGION_IDS = ["NORTE", "NORDESTE", "CENTRO_OESTE", "SUDESTE", "SUL"];
 
@@ -97,8 +101,8 @@ export async function seedBRDemographics(
   preset: string
 ) {
   if (reset) {
-    await db.collection("stateDemographics").deleteMany({ countryId: "BR" });
-    await db.collection("stateDemographicTurnout").deleteMany({ countryId: "BR" });
+    await stateDemographicsCollection<Document>(db).deleteMany({ countryId: "BR" });
+    await stateDemographicTurnoutCollection<Document>(db).deleteMany({ countryId: "BR" });
   }
 
   const { brRegionDemographics: brRegionDemographicsStatic } =
@@ -130,17 +134,17 @@ export async function seedBRDemographics(
   for (const raw of brRegionDemographics) {
     const demo = is1991 ? applyEra1991DemographicAdjustments(raw, "BR") : raw;
     const { _id, groups: _groups, ...demoData } = demo;
-    await db
-      .collection<StateDemographics>("stateDemographics")
-      .updateOne({ _id }, { $set: demoData }, { upsert: true });
+    await stateDemographicsCollection(db).updateOne({ _id }, { $set: demoData }, { upsert: true });
   }
 
   const { brDemographicTurnout } = await import("@/lib/seeds/br/brDemographicTurnout");
   for (const turnout of brDemographicTurnout) {
     const { _id, ...turnoutData } = turnout;
-    await db
-      .collection<StateDemographicTurnout>("stateDemographicTurnout")
-      .updateOne({ _id }, { $set: turnoutData }, { upsert: true });
+    await stateDemographicTurnoutCollection(db).updateOne(
+      { _id },
+      { $set: turnoutData },
+      { upsert: true }
+    );
   }
 
   log(
@@ -155,7 +159,7 @@ export async function seedBRStateMetrics(
   preset: string
 ) {
   if (reset) {
-    await db.collection("macroMetrics").deleteMany({
+    await macroMetricsCollection<Document>(db).deleteMany({
       _id: { $in: BR_REGION_IDS } as never,
     });
   }
@@ -196,7 +200,7 @@ export async function seedBRBaselines(
   preset: string
 ) {
   if (reset) {
-    await db.collection("stateBaselines").deleteMany({
+    await stateBaselinesCollection<Document>(db).deleteMany({
       _id: { $in: BR_REGION_IDS } as never,
     });
   }
@@ -227,9 +231,7 @@ export async function seedBRBaselines(
     const overlay = getRegionMetricPresets("BR", String(raw._id), preset);
     const baseline = overlay ? applyMetricPresetToBaseline(adjusted, overlay) : adjusted;
     const { _id, ...baselineData } = baseline;
-    await db
-      .collection<StateMetricBaseline>("stateBaselines")
-      .updateOne({ _id }, { $set: baselineData }, { upsert: true });
+    await stateBaselinesCollection(db).updateOne({ _id }, { $set: baselineData }, { upsert: true });
   }
   log(`Seeded ${brStateBaselines.length} BR baselines (preset: ${preset})`);
 }
@@ -239,12 +241,11 @@ export async function seedBRGovernmentFormation(db: Db, log: (msg: string) => vo
   const now = new Date();
   const doc = await buildBrGovernmentFormation(db, now);
   const { _id, ...formationData } = doc;
-  await governmentFormationsCollection(db)
-    .updateOne(
-      { _id },
-      { $set: { ...formationData, createdAt: now, updatedAt: now } },
-      { upsert: true }
-    );
+  await governmentFormationsCollection(db).updateOne(
+    { _id },
+    { $set: { ...formationData, createdAt: now, updatedAt: now } },
+    { upsert: true }
+  );
   log(`Seeded BR government formation (${doc.status})`);
 }
 
@@ -268,8 +269,11 @@ export async function seedBRStatePartyOrg(
   const now = new Date();
   for (const org of orgs) {
     const { _id, ...orgData } = org;
-    await statePartyOrgCollection(db)
-      .updateOne({ _id }, { $set: { ...orgData, updatedAt: now } }, { upsert: true });
+    await statePartyOrgCollection(db).updateOne(
+      { _id },
+      { $set: { ...orgData, updatedAt: now } },
+      { upsert: true }
+    );
   }
   log(`Seeded ${orgs.length} BR state party org records (preset: ${activePreset})`);
 }
@@ -306,12 +310,11 @@ export async function ensureMissingBRStatePartyOrgRows(
   if (missing.length > 0) {
     for (const org of missing) {
       const { _id, ...orgData } = org;
-      await statePartyOrgCollection(db)
-        .updateOne(
-          { _id },
-          { $set: { ...orgData, updatedAt: now }, $setOnInsert: { createdAt: now } },
-          { upsert: true }
-        );
+      await statePartyOrgCollection(db).updateOne(
+        { _id },
+        { $set: { ...orgData, updatedAt: now }, $setOnInsert: { createdAt: now } },
+        { upsert: true }
+      );
     }
     log(`Inserted ${missing.length} missing BR state party org row(s) (preset: ${activePreset})`);
   }

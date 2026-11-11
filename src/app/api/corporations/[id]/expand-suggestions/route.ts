@@ -68,6 +68,9 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -146,7 +149,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     // carry the pause as their entry verdict instead.
     let retailPauseTurnsRemaining: number | null = null;
     if (plantsMode && sectorType === "retail") {
-      const transition = await db.collection<GameConfig>("gameConfig").findOne(
+      const transition = await gameConfigCollection(db).findOne(
         { _id: "default" },
         {
           projection: {
@@ -230,8 +233,7 @@ export async function GET(request: Request, { params }: RouteParams) {
       stateIds = [...new Set(competitorSectors.map((s) => s.stateId))];
     } else {
       // Find states with unowned revenue pools
-      const unownedIds = await db
-        .collection<UnownedSector>("unownedSectors")
+      const unownedIds = await unownedSectorsCollection(db)
         // A plants market can be a valid greenfield build even before it earns
         // revenue. Filtering those rows out made zero-revenue markets vanish
         // from the only UI that can found their first plant.
@@ -274,8 +276,7 @@ export async function GET(request: Request, { params }: RouteParams) {
           buildQueue: 1,
         })
         .toArray(),
-      db
-        .collection<UnownedSector>("unownedSectors")
+      unownedSectorsCollection(db)
         .find({ ...marketFilter, stateId: { $in: stateIds } })
         .toArray(),
     ]);
@@ -422,8 +423,7 @@ export async function GET(request: Request, { params }: RouteParams) {
           countryIds: uniqueCountryIds as CountryId[],
         }),
         resolveCountryPrimeRates(db, uniqueCountryIds as CountryId[]),
-        db
-          .collection<StateMetrics>("macroMetrics")
+        macroMetricsCollection(db)
           .find({ _id: { $in: stateIds } }, { projection: { "economic.costOfLiving": 1 } })
           .toArray(),
       ]);

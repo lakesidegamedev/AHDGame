@@ -23,6 +23,8 @@ import type {
   VerifyResult,
 } from "../types";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
+import type { Document } from "mongodb";
 
 export const DEFECT_ID = "AHD-1271-pool-country-attribution";
 
@@ -51,8 +53,7 @@ async function findMisfiled(db: Db): Promise<{ rows: Misfiled[]; statelessCount:
     .toArray();
   const countryOfState = new Map(states.map((s) => [s._id, s.countryId]));
 
-  const pool = await db
-    .collection<PoolRow>("unownedSectors")
+  const pool = await unownedSectorsCollection<PoolRow>(db)
     .find({}, { projection: { stateId: 1, countryId: 1, sectorType: 1 } })
     .toArray();
 
@@ -123,7 +124,7 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
   let updated = 0;
   for (const row of rows) {
     if (!approved.has(String(row._id))) continue;
-    const res = await db.collection("unownedSectors").updateOne(
+    const res = await unownedSectorsCollection<Document>(db).updateOne(
       // The old country is part of the filter, so a concurrent correction wins
       // and this becomes a no-op rather than clobbering it.
       { _id: row._id, countryId: row.countryId } as Record<string, unknown>,

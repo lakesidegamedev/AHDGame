@@ -7,6 +7,8 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { badRequest, handleRouteError, errorResponse } from "@/lib/api/errors";
 import type { RetiredCharacter } from "@/lib/db/types/retiredCharacter";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
 
 const schema = z.object({ characterId: z.string().nullable() });
 
@@ -39,14 +41,12 @@ export async function PATCH(request: Request) {
       if (!ownsActive && !ownsRetired) throw badRequest("That life does not belong to you");
     }
 
-    await db
-      .collection("users")
-      .updateOne(
-        { _id: userId },
-        characterId === null
-          ? { $unset: { legacyDisplayCharacterId: "" } }
-          : { $set: { legacyDisplayCharacterId: characterId } }
-      );
+    await usersCollection<Document>(db).updateOne(
+      { _id: userId },
+      characterId === null
+        ? { $unset: { legacyDisplayCharacterId: "" } }
+        : { $set: { legacyDisplayCharacterId: characterId } }
+    );
 
     return NextResponse.json({ success: true });
   } catch (error) {

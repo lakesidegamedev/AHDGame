@@ -22,6 +22,7 @@ import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParti
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
 
 export async function POST() {
   try {
@@ -40,10 +41,7 @@ export async function POST() {
     const stateMap = new Map(states.map((s) => [String(s._id), s]));
     const partyMap = new Map(parties.map((p) => [String(p._id), p]));
 
-    const congressLeaders = await db
-      .collection<CongressLeader>("congressLeaders")
-      .find({})
-      .toArray();
+    const congressLeaders = await congressLeadersCollection(db).find({}).toArray();
     const characterIdsInLeadership = new Set(
       congressLeaders.filter((l) => l.characterId).map((l) => l.characterId!.toString())
     );

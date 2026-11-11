@@ -22,6 +22,7 @@ import { resolvePresidentialCountry } from "@/lib/executive/presidentialCountry"
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { cabinetNominationsCollection } from "@/lib/db/repositories/cabinetNominations";
 
 const VOTING_DURATION_HOURS = 24;
 const VOTING_DURATION_MS = VOTING_DURATION_HOURS * 60 * 60 * 1000;
@@ -150,12 +151,10 @@ export async function POST(request: Request) {
     }
 
     // Withdraw any existing active/proposed nomination for this position
-    await db
-      .collection<CabinetNomination>("cabinetNominations")
-      .updateMany(
-        { positionId, status: { $in: ["active", "proposed", "awaiting_choice"] } },
-        { $set: { status: "withdrawn", updatedAt: now } }
-      );
+    await cabinetNominationsCollection(db).updateMany(
+      { positionId, status: { $in: ["active", "proposed", "awaiting_choice"] } },
+      { $set: { status: "withdrawn", updatedAt: now } }
+    );
 
     // Anchor votingEndsAt to the game clock so it agrees with votingEndsOnTurn
     // and with the readers (lifecycle + vote routes) that compare against game time.
@@ -197,9 +196,9 @@ export async function POST(request: Request) {
 
     let result;
     try {
-      result = await db
-        .collection<CabinetNomination>("cabinetNominations")
-        .insertOne(nomination as unknown as CabinetNomination);
+      result = await cabinetNominationsCollection(db).insertOne(
+        nomination as unknown as CabinetNomination
+      );
     } catch (error) {
       if (isActiveCabinetNominationDuplicateKey(error)) {
         return errorResponse(409, "An active nomination for this cabinet position already exists");

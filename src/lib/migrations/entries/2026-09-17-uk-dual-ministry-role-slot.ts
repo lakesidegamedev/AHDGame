@@ -9,6 +9,8 @@ import {
 } from "@/lib/countries/uk/dualMinistry/rules";
 import type { Migration, MigrationResult } from "../types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
+import type { Document } from "mongodb";
 
 export const UK_DUAL_MINISTRY_ROLE_SLOT_INDEX = "cabinetMembers_countryId_characterId_roleSlot";
 const LEGACY_ONE_SEAT_INDEX = "cabinetMembers_countryId_characterId";
@@ -45,7 +47,7 @@ interface UkCabinetRow {
  */
 async function backfillUkDualMinistry(db: Db, dryRun: boolean): Promise<MigrationResult> {
   const notes: string[] = [];
-  const members = db.collection("cabinetMembers");
+  const members = cabinetMembersCollection<Document>(db);
 
   const rows = (await members
     .find({ countryId: "UK" })

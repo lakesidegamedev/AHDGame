@@ -26,6 +26,7 @@ import {
   applyCabinetPoliticalInputs,
   cabinetEffectsForRegion,
 } from "@/lib/resetCabinet/rules/gameplay";
+import { politicalMetricsCollection } from "@/lib/db/repositories/politicalMetrics";
 
 export interface PoliticalMacroInputs {
   cabinetEffects?(stateId: string, countryId?: string): readonly ApplicableTemporaryTargetEffect[];
@@ -71,8 +72,7 @@ export async function loadPoliticalMacroInputs(
   turn?: number
 ): Promise<PoliticalMacroInputs> {
   const [docs, cabinetEffects, owned] = await Promise.all([
-    db
-      .collection<PoliticalMetricsDoc>("politicalMetrics")
+    politicalMetricsCollection(db)
       .find({}, { projection: { _id: 1, countryId: 1, values: 1 } })
       .toArray(),
     loadCabinetGameplayEffects(db, undefined, turn),

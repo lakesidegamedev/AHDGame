@@ -1,6 +1,7 @@
 import type { Db } from "mongodb";
 import { COMMODITY_BASE_PRICES, type CommodityType } from "@/lib/constants/commodities";
 import type { CommodityPrice } from "@/lib/db/types/commodityPrice";
+import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
 
 /**
  * Live commodity price ratios for defence lot costing.
@@ -44,8 +45,7 @@ export function priceRatiosFrom(prices: readonly CommodityPrice[]): CommodityPri
  * the class of bug the anchor-rate module was written to remove.
  */
 export async function loadDefencePriceRatios(db: Db): Promise<CommodityPriceRatios> {
-  const prices = await db
-    .collection<CommodityPrice>("commodityPrices")
+  const prices = await commodityPricesCollection(db)
     .find({}, { projection: { commodity: 1, globalPrice: 1 } })
     .toArray();
   return priceRatiosFrom(prices);

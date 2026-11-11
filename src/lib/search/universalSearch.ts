@@ -33,6 +33,8 @@ import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficia
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
 
 /**
  * Maximum accepted `q` length (after trimming). Longer queries are rejected
@@ -149,8 +151,7 @@ export async function runUniversalSearch({
 
   // Get user IDs to check ban status
   const userIds = characters.map((c) => c.userId);
-  const users = await db
-    .collection<User>("users")
+  const users = await usersCollection(db)
     .find({ _id: { $in: userIds } })
     .toArray();
   const bannedUserIds = new Set(users.filter((u) => u.isBanned).map((u) => u._id.toString()));
@@ -170,8 +171,7 @@ export async function runUniversalSearch({
 
   // Search users by discordUsername — when someone types a Discord handle,
   // find their characters and surface them in results (unless already found by name).
-  const discordUsers = await db
-    .collection<User>("users")
+  const discordUsers = await usersCollection(db)
     .find({
       $and: [{ discordUsername: { $exists: true, $ne: "" } }, { discordUsername: searchRegex }],
     })
@@ -194,8 +194,7 @@ export async function runUniversalSearch({
       .filter((uid) => !userIds.some((existing) => existing.equals(uid)));
 
     if (newUserIds.length > 0) {
-      const bannedCheck = await db
-        .collection<User>("users")
+      const bannedCheck = await usersCollection(db)
         .find({ _id: { $in: newUserIds }, isBanned: true })
         .project<User>({ _id: 1 })
         .toArray();
@@ -343,11 +342,7 @@ export async function runUniversalSearch({
   if (enabledCountries) {
     stateBillQuery.countryId = { $in: enabledCountries };
   }
-  const stateBills = await db
-    .collection<StateBill>("stateBills")
-    .find(stateBillQuery)
-    .limit(5)
-    .toArray();
+  const stateBills = await stateBillsCollection(db).find(stateBillQuery).limit(5).toArray();
 
   for (const bill of stateBills) {
     const statusLabel = bill.status.replace(/_/g, " ");

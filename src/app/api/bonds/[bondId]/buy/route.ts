@@ -50,6 +50,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 interface RouteParams {
   params: Promise<{ bondId: string }>;
@@ -282,9 +283,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       });
     } else {
       // Buying as character (regular or imperial)
-      const userDoc = await db
-        .collection<User>("users")
-        .findOne({ _id: new ObjectId(user.userId) });
+      const userDoc = await usersCollection(db).findOne({ _id: new ObjectId(user.userId) });
       const isImperialMode =
         userDoc?.activeCharacterType === "imperial" && !!userDoc?.activeImperialCharacterId;
 

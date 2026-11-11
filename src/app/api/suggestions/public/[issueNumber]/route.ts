@@ -15,6 +15,7 @@ import {
   discordSubmitPrimaryLabel,
 } from "@/lib/suggestions/discordSubmitAttribution";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 // GET /api/suggestions/public/[issueNumber] — Public suggestion detail for forum thread.
 // Auth: public
@@ -48,8 +49,7 @@ export const GET = withNoStore(async function GET(
 
     if (s.userId) {
       const [u, character] = await Promise.all([
-        db
-          .collection<User>("users")
+        usersCollection(db)
           .findOne({ _id: s.userId }, { projection: { username: 1, discordUsername: 1 } }),
         getCharacterByUserId(db, s.userId),
       ]);

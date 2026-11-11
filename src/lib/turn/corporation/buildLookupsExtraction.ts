@@ -87,6 +87,7 @@ import type { WithId } from "mongodb";
 import type { StateMetrics } from "@/lib/db/types";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { crisesCollection } from "@/lib/db/repositories/crises";
+import { politicalMetricsCollection } from "@/lib/db/repositories/politicalMetrics";
 
 /** Builds extraction capacity utilisation, corporate portfolio values and the remaining per-corporation lookups. */
 export async function buildExtractionAndPortfolioLookups({
@@ -436,9 +437,7 @@ export async function buildExtractionAndPortfolioLookups({
   // engine resolves demolished political signals from these instead of the
   // (stripped) stateMetrics docs. One batch read, one map per region.
   const cabinetEffects = await loadCabinetGameplayEffects(db, gameState, options?.productionTurn);
-  const politicalDocs = (
-    await db.collection<PoliticalMetricsDoc>("politicalMetrics").find({}).toArray()
-  ).map((doc) => ({
+  const politicalDocs = (await politicalMetricsCollection(db).find({}).toArray()).map((doc) => ({
     ...doc,
     values: applyCabinetPoliticalInputs(
       doc.values,

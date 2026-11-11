@@ -2,6 +2,7 @@ import type { Db } from "mongodb";
 import type { GameConfig } from "@/lib/db/types";
 import { normalizeMaintenanceMode } from "@/lib/maintenanceStatus";
 import { isSingleplayer } from "@/lib/singleplayer";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /**
  * Whether a newcomer can sign up, and whether a signed-in account can create a
@@ -66,7 +67,7 @@ export function computeIntakeStatus(config: IntakeConfig | null | undefined): In
 
 /** Reads the gates fresh from `gameConfig`. One small projected findOne. */
 export async function loadIntakeStatus(db: Db): Promise<IntakeStatus> {
-  const config = await db.collection<GameConfig>("gameConfig").findOne(
+  const config = await gameConfigCollection(db).findOne(
     { _id: "default" },
     {
       projection: { maintenanceMode: 1, registrationEnabled: 1, maintenanceExpectedEnd: 1 },

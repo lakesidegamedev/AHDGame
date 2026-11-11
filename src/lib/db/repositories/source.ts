@@ -1,9 +1,12 @@
-import type { Collection, Document } from "mongodb";
+import type { Collection, CollectionOptions, Document } from "mongodb";
 
 /**
  * Anything that can hand out a collection by name: a `Db`, a session-bound
  * `Db`, or the in-memory database the headless harness uses.
  */
 export interface CollectionSource {
-  collection<TSchema extends Document = Document>(name: string): Collection<TSchema>;
+  collection<TSchema extends Document = Document>(
+    name: string,
+    options?: CollectionOptions
+  ): Collection<TSchema>;
 }

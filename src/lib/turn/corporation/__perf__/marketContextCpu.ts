@@ -29,6 +29,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import type { Document } from "mongodb";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 interface ProfileNode {
   id: number;
@@ -293,9 +294,9 @@ async function main() {
       `lookup database: ${await corporationsCollection(db).countDocuments({})} corporations, ` +
         `${await corporateSectorsCollection<Document>(db).countDocuments({})} sectors`
     );
-    const config = (await db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" })) as GameConfig | null;
+    const config = (await gameConfigCollection(db).findOne({
+      _id: "default",
+    })) as GameConfig | null;
     const lookups = await buildCorporationLookups(db, {
       ...lookupOptions,
       productionTurn: Number(process.argv[4] ?? 0) || undefined,

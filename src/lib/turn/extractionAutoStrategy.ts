@@ -51,6 +51,8 @@ import { isParentDirectedStrategyProtected } from "@/lib/turn/npp/rules/parentDi
 import { getCorporationsCollection } from "@/lib/db/collections/corporations";
 import { getCorporateSectorsCollection } from "@/lib/db/collections/corporateSectors";
 import { getGameStateCollection } from "@/lib/db/collections/gameState";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
 
 const NPC_CORPORATION_USER_ID = new ObjectId("000000000000000000000000");
 
@@ -329,12 +331,10 @@ export async function processExtractionAutoStrategy(
 
   // Resolved ONCE per run and threaded into both passes' rescale calls — the
   // D9 capacity renormalization below is plants-only.
-  const config = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne(
-      { _id: "default" },
-      { projection: { marketSystemMode: 1, freightSettlementMode: 1, marketGovernorCap: 1 } }
-    );
+  const config = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { marketSystemMode: 1, freightSettlementMode: 1, marketGovernorCap: 1 } }
+  );
   const marketMode = isMarketSystemMode(config?.marketSystemMode) ? config.marketSystemMode : "off";
   const plantsEnabled = marketAtLeast(marketMode, "plants");
   const clearingEnabled = marketAtLeast(marketMode, "clearing");
@@ -349,8 +349,7 @@ export async function processExtractionAutoStrategy(
     }
   }
 
-  const prices = await db
-    .collection<CommodityPrice>("commodityPrices")
+  const prices = await commodityPricesCollection(db)
     .find({ commodity: { $in: [...strategyCommodities] } })
     .project<ExtractionPriceDoc>({
       commodity: 1,

@@ -27,6 +27,7 @@ import { snapshotMoneySupply } from "@/lib/moneySupply/snapshot";
 import { isMoneySupplyEnabledFromConfig } from "@/lib/moneySupply/featureFlag";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 const schema = z.object({
   type: z.enum(["qe", "qt", "treasury_advance", "liquidity_injection"]),
@@ -55,9 +56,10 @@ export async function POST(request: Request, context: { params: Promise<{ code: 
       federalBudgetCollection(db).findOne({ _id: getNationalBudgetId(countryId) } as {
         _id: "federal";
       }),
-      db
-        .collection<GameConfig>("gameConfig")
-        .findOne({ _id: "default" }, { projection: { moneySupplyEnabled: 1 } }),
+      gameConfigCollection(db).findOne(
+        { _id: "default" },
+        { projection: { moneySupplyEnabled: 1 } }
+      ),
     ]);
     if (!isMoneySupplyEnabledFromConfig(config))
       return errorResponse(409, "Money-supply policy is not enabled");

@@ -44,6 +44,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 import type { Document } from "mongodb";
 import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -332,24 +333,20 @@ export async function POST(request: Request, { params }: RouteParams) {
     // price back toward the old per-share level and moves market cap on a
     // split that should be value-neutral. Market cap on the row is unchanged
     // by construction.
-    const currentHist = await db
-      .collection<CorporationHistory>("corporationHistory")
-      .findOne(
-        { corporationId: corporation._id, turn: currentTurn },
-        { projection: { sharePrice: 1 } }
-      );
+    const currentHist = await corporationHistoryCollection(db).findOne(
+      { corporationId: corporation._id, turn: currentTurn },
+      { projection: { sharePrice: 1 } }
+    );
     if (currentHist && typeof currentHist.sharePrice === "number") {
       const scaledHist = scaleSharePricesForStructureChange(
         oldTotal,
         targetTotalShares,
         currentHist.sharePrice
       );
-      await db
-        .collection<CorporationHistory>("corporationHistory")
-        .updateOne(
-          { _id: currentHist._id },
-          { $set: { sharePrice: scaledHist.sharePrice, totalShares: targetTotalShares } }
-        );
+      await corporationHistoryCollection(db).updateOne(
+        { _id: currentHist._id },
+        { $set: { sharePrice: scaledHist.sharePrice, totalShares: targetTotalShares } }
+      );
     }
 
     // Mirror each surviving index fund's rescaled cap-table position into its
@@ -361,11 +358,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     // apart on every split).
     const fundSyncs = planFundHoldingSplitSync(newShareholders, oldTotal, targetTotalShares);
     for (const sync of fundSyncs) {
-      await indexFundsCollection<Document>(db)
-        .updateOne(
-          { _id: sync.fundId, "holdings.corporationId": corporation._id },
-          { $set: { "holdings.$.shares": sync.newShares, updatedAt: now } }
-        );
+      await indexFundsCollection<Document>(db).updateOne(
+        { _id: sync.fundId, "holdings.corporationId": corporation._id },
+        { $set: { "holdings.$.shares": sync.newShares, updatedAt: now } }
+      );
       // Scale per-share cost basis only where it exists, so a missing field is
       // never coerced to 0 by $mul.
       await indexFundsCollection<Document>(db).updateOne(

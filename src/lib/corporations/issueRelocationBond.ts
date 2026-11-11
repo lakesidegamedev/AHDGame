@@ -33,6 +33,8 @@ import { errorResponse } from "@/lib/api/errors";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
+import type { Document } from "mongodb";
 
 /** Relocation bond uses the longest corporate tenor (7yr = 336 turns). */
 export const RELOCATION_BOND_MATURITY_TURNS: BondMaturityTurns = 336;
@@ -147,9 +149,10 @@ export async function previewRelocationBond(
     )
   );
 
-  const latestHistory = await db
-    .collection("corporationHistory")
-    .findOne({ corporationId: corporation._id }, { sort: { turn: -1 } });
+  const latestHistory = await corporationHistoryCollection<Document>(db).findOne(
+    { corporationId: corporation._id },
+    { sort: { turn: -1 } }
+  );
   // corporationHistory.income is denominated in the corp's home currency
   // post-v0.2.6; normalize to ₳ before feeding the scorer.
   const incomeLocal = ((latestHistory?.income as number) ?? 0) * TURNS_PER_YEAR;

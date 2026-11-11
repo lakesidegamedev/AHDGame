@@ -100,6 +100,9 @@ import { NPP_ENGINE_VERSION } from "@/lib/nppAutonomy/engineVersion";
 import { nextScheduledTurnAfter, resolveTurnCronMinute } from "@/lib/cron/turnCronMinute";
 import { resetResidueTurnRefusal } from "@/lib/admin/resetContract/rules/residueScan";
 import { serverEnv } from "@/lib/config/read";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
+import type { Document } from "mongodb";
 
 /** Read once per process: the deployment does not change under a running server. */
 const turnBuild = currentTurnBuild();
@@ -344,7 +347,7 @@ async function processTurnImpl(
       // guard on its first turn. Undefined in production, so inert there.
       const turnConfig = localSingleplayer
         ? null
-        : await db.collection<GameConfig>("gameConfig").findOne({ _id: "default" });
+        : await gameConfigCollection(db).findOne({ _id: "default" });
       const simSandbox = localSingleplayer || turnConfig?.simSandbox === true;
       const residueRefusal = resetResidueTurnRefusal(turnConfig?.lastReset);
       if (residueRefusal) {
@@ -445,7 +448,7 @@ async function processTurnImpl(
       }
     }
 
-    const unownedCount = await db.collection("unownedSectors").countDocuments();
+    const unownedCount = await unownedSectorsCollection<Document>(db).countDocuments();
     if (unownedCount === 0) {
       // Seed at the WORLD's era. This used to ride the seeder's "2019-default"
       // parameter default, so a 1953 world auto-seeded modern sector floors
@@ -550,7 +553,7 @@ async function processTurnImpl(
     // Repair their frozen receipt before any resumed phase reads the context.
     await recoverDemographicFlowsBeforeContext(db, gameState, resumedFromCrash?.appliedPhases);
 
-    const config = await db.collection<GameConfig>("gameConfig").findOne({ _id: "default" });
+    const config = await gameConfigCollection(db).findOne({ _id: "default" });
     // One read of the selector per turn, before any phase runs. A resume pins the
     // engine recorded by the holder that died, so config can only choose the engine
     // for the NEXT turn — never for a turn that is already in progress.
@@ -1091,9 +1094,10 @@ async function processTurnImpl(
 export async function startTurnSystem(): Promise<{ success: boolean; message: string }> {
   try {
     const db = await getDb();
-    const config = await db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { lastReset: 1 } });
+    const config = await gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { lastReset: 1 } }
+    );
     const residueRefusal = resetResidueTurnRefusal(config?.lastReset);
     if (residueRefusal) return { success: false, message: residueRefusal };
     const now = new Date();

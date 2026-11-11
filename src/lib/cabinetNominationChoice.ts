@@ -14,6 +14,7 @@ import { getCabinetPositionById } from "@/lib/constants";
 import { vacateFomcChairSeat } from "@/lib/centralBank/helpers";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { cabinetNominationsCollection } from "@/lib/db/repositories/cabinetNominations";
 
 /** Turns a nominee has to answer before the offer lapses. */
 export const CABINET_NOMINATION_CHOICE_TURNS = 3;
@@ -30,7 +31,7 @@ export async function findPendingCabinetNominationChoice(
   characterId: ObjectId,
   currentTurn: number
 ): Promise<CabinetNomination | null> {
-  const nomination = await db.collection<CabinetNomination>("cabinetNominations").findOne({
+  const nomination = await cabinetNominationsCollection(db).findOne({
     nomineeCharacterId: characterId,
     status: "awaiting_choice",
   });
@@ -75,7 +76,7 @@ export async function resolveCabinetNominationChoice(
   db: Db,
   input: ResolveCabinetNominationChoiceInput
 ): Promise<ResolveCabinetNominationChoiceResult> {
-  const nomination = await db.collection<CabinetNomination>("cabinetNominations").findOne({
+  const nomination = await cabinetNominationsCollection(db).findOne({
     _id: input.nominationId,
     status: "awaiting_choice",
   });
@@ -100,7 +101,7 @@ export async function resolveCabinetNominationChoice(
   const notifications: NotificationInput[] = [];
 
   if (input.decision === "remain") {
-    await db.collection<CabinetNomination>("cabinetNominations").updateOne(
+    await cabinetNominationsCollection(db).updateOne(
       { _id: nomination._id, status: "awaiting_choice" },
       {
         $set: {
@@ -188,7 +189,7 @@ export async function resolveCabinetNominationChoice(
 
   // Re-run the normal confirmation path on the next turn: voting is closed, the
   // bank office is gone, so the seat is filled without any special-casing.
-  await db.collection<CabinetNomination>("cabinetNominations").updateOne(
+  await cabinetNominationsCollection(db).updateOne(
     { _id: nomination._id, status: "awaiting_choice" },
     {
       $set: {
@@ -241,8 +242,7 @@ export async function expireUnansweredCabinetNominationChoices(
   now: Date,
   currentTurn: number
 ): Promise<void> {
-  const lapsed = await db
-    .collection<CabinetNomination>("cabinetNominations")
+  const lapsed = await cabinetNominationsCollection(db)
     .find({ status: "awaiting_choice", choiceExpiresOnTurn: { $lte: currentTurn } })
     .toArray();
   if (lapsed.length === 0) return;
@@ -313,7 +313,7 @@ export async function expireUnansweredCabinetNominationChoices(
   }
 
   if (updates.length > 0) {
-    await db.collection<CabinetNomination>("cabinetNominations").bulkWrite(updates);
+    await cabinetNominationsCollection(db).bulkWrite(updates);
   }
   if (notifications.length > 0) await createNotifications(notifications);
 }

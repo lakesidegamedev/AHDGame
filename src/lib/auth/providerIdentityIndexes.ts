@@ -1,4 +1,5 @@
-import type { Db, IndexDescriptionInfo } from "mongodb";
+import type { Db, Document, IndexDescriptionInfo } from "mongodb";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 const PROVIDER_FIELDS = ["googleId", "discordId", "appleId"] as const;
 
@@ -23,7 +24,7 @@ function matchesProviderIndex(index: IndexDescriptionInfo, field: string): boole
  * Existing conflicts are rejected without modifying any account document.
  */
 export async function ensureProviderIdentityIndexes(db: Db, dryRun = false): Promise<string[]> {
-  const users = db.collection("users", {
+  const users = usersCollection<Document>(db, {
     writeConcern: { w: "majority", wtimeoutMS: 10000 },
   });
   const notes: string[] = [];

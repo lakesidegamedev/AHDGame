@@ -46,6 +46,8 @@ import { electionCandidatesCollection } from "@/lib/db/repositories/electionCand
 import { billsCollection } from "@/lib/db/repositories/bills";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
+import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
 
 // ─── Context Types ─────────────────────────────────────────────────────────────
 
@@ -423,8 +425,7 @@ export async function loadNPPContext(now: Date, options?: NPPContextOptions): Pr
         }) as Filter<Bill>
       )
       .toArray(),
-    db
-      .collection<StateBill>("stateBills")
+    stateBillsCollection(db)
       .find({
         $or: [
           { status: "active", ...billStillOpen("votingEndsOnTurn", "votingEndsAt") },
@@ -445,8 +446,7 @@ export async function loadNPPContext(now: Date, options?: NPPContextOptions): Pr
     legislationTypesCollection(db)
       .find({}, { projection: { _id: 1, policyOptions: 1 } })
       .toArray() as Promise<LegislationType[]>,
-    db
-      .collection<StateDemographics>("stateDemographics")
+    stateDemographicsCollection(db)
       .find({}, { projection: { _id: 1, countryId: 1 } })
       .toArray() as Promise<StateDemographics[]>,
     statesCollection(db)

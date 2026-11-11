@@ -39,6 +39,7 @@ import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /** Resolved sessions returned to the panel (newest last in storage). */
 const MEETING_HISTORY_LIMIT = 10;
@@ -147,11 +148,13 @@ export async function GET(_request: Request, context: RouteContext) {
         : null;
     // Machine-driven eligibility: what this viewer may do right now, why not,
     // the next deadline, and the grid of rates a direct set may pick.
-    const fxDoc = await exchangeRatesCollection(db)
-      .findOne({ countryId }, { projection: { fxRegime: 1, capitalControls: 1 } });
-    const gameConfig = await db
-      .collection<{ _id: string; commandEconomyEnabled?: boolean }>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } });
+    const fxDoc = await exchangeRatesCollection(db).findOne(
+      { countryId },
+      { projection: { fxRegime: 1, capitalControls: 1 } }
+    );
+    const gameConfig = await gameConfigCollection<{ _id: string; commandEconomyEnabled?: boolean }>(
+      db
+    ).findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } });
     const commandEconomyEnabled = gameConfig?.commandEconomyEnabled === true;
     // Per-country command gate (ticket #1270): the global flag alone blocked
     // EVERY bank, including the US Fed. Mirror the central-bank rate POST gate:

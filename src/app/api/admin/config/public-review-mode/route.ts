@@ -6,6 +6,7 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import { createAdminLog } from "@/lib/adminLog";
 import type { GameConfig } from "@/lib/db/types";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 const patchSchema = z.object({
   enabled: z.boolean(),
@@ -20,9 +21,10 @@ export async function GET() {
     if (!auth.ok) return auth.response;
 
     const db = await getDb();
-    const config = await db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { publicReviewMode: 1 } });
+    const config = await gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { publicReviewMode: 1 } }
+    );
 
     const enabled = config?.publicReviewMode === true;
 
@@ -48,9 +50,11 @@ export async function PATCH(request: Request) {
     const { enabled } = parsed.data;
 
     const db = await getDb();
-    await db
-      .collection<GameConfig>("gameConfig")
-      .updateOne({ _id: "default" }, { $set: { publicReviewMode: enabled } }, { upsert: true });
+    await gameConfigCollection(db).updateOne(
+      { _id: "default" },
+      { $set: { publicReviewMode: enabled } },
+      { upsert: true }
+    );
 
     await createAdminLog({
       category: "system",

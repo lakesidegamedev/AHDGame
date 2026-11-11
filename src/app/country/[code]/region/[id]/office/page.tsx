@@ -61,6 +61,7 @@ import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
 
 interface Props {
   params: Promise<{ code: string; id: string }>;
@@ -162,8 +163,7 @@ export default async function GovernorOfficePage({ params }: Props) {
         )
       : Promise.resolve(null),
     getOfficeState(db, countryId, stateId),
-    db
-      .collection<StateBill>("stateBills")
+    stateBillsCollection(db)
       .find(
         { stateId, status: "passed" },
         {
@@ -387,7 +387,7 @@ export default async function GovernorOfficePage({ params }: Props) {
   // hits a terminal status (enacted / failed / override_failed / signed).
   // Tied to the office (per-state), not the specific governor character, so a
   // successor sees in-flight bills inherited from their predecessor.
-  const inFlightGovernorBill = await db.collection<StateBill>("stateBills").findOne(
+  const inFlightGovernorBill = await stateBillsCollection(db).findOne(
     {
       stateId,
       countryId,
@@ -508,8 +508,7 @@ export default async function GovernorOfficePage({ params }: Props) {
           .toArray()
       : [];
     const blocking = npps.length
-      ? await db
-          .collection<StateBill>("stateBills")
+      ? await stateBillsCollection(db)
           .find({
             sponsorNppId: { $in: npps.map((n) => n._id) },
             status: { $nin: STATE_TERMINAL_STATUSES },

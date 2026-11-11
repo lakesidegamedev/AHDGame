@@ -13,6 +13,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import type { Document } from "mongodb";
 import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { activityLogCollection } from "@/lib/db/repositories/activityLog";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -60,8 +61,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     }
 
     // Aggregate contributions from activityLog
-    const contributions = await db
-      .collection("activityLog")
+    const contributions = await activityLogCollection<Document>(db)
       .aggregate<{
         _id: { characterId?: string; characterName?: string };
         totalAdded: number;
@@ -162,8 +162,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     const currentTurn = (gameStateDoc?.currentTurn as number) ?? 0;
 
     // Sum contributions this turn
-    const thisTurnContribAgg = await db
-      .collection("activityLog")
+    const thisTurnContribAgg = await activityLogCollection<Document>(db)
       .aggregate([
         {
           $match: {

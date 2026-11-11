@@ -20,6 +20,7 @@ import {
   getNewCharacterTransferBarrier,
   NEW_CHARACTER_TRANSFER_BARRIER_TURNS,
 } from "@/lib/character/newCharacterTransferBarrier";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 export type NegotiatedSaleParty = Pick<
   Character,
@@ -90,11 +91,10 @@ export async function checkNegotiatedSale(
   const [userA, userB] = sortedPair(seller.userId, buyer.userId);
   const [link, config] = await Promise.all([
     db.collection<AltLink>("altLinks").findOne({ userA, userB }, { projection: { confidence: 1 } }),
-    db
-      .collection<{ _id: string; altScoring?: Parameters<typeof resolveAltScoringConfig>[0] }>(
-        "gameConfig"
-      )
-      .findOne({ _id: "default" }, { projection: { altScoring: 1 } }),
+    gameConfigCollection<{
+      _id: string;
+      altScoring?: Parameters<typeof resolveAltScoringConfig>[0];
+    }>(db).findOne({ _id: "default" }, { projection: { altScoring: 1 } }),
   ]);
   const strongLink = resolveAltScoringConfig(config?.altScoring ?? null).thresholds.strongLink;
   if (link && link.confidence >= strongLink) {

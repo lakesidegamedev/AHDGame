@@ -6,6 +6,7 @@ import { createGitHubIssue, syncFeedbackToGitHub } from "@/lib/github";
 import type { Feedback, User } from "@/lib/db/types";
 import { ObjectId } from "mongodb";
 import { servicesConfig } from "@/lib/config/services";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 /**
  * POST /api/admin/feedback/backfill-github
@@ -67,8 +68,7 @@ export async function POST() {
     ];
     const users =
       userIds.length > 0
-        ? await db
-            .collection<User>("users")
+        ? await usersCollection(db)
             .find({ _id: { $in: userIds } })
             .project({ _id: 1, username: 1 })
             .toArray()

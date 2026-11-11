@@ -27,6 +27,8 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { loadWholePlantsOn } from "@/lib/corporations/wholePlants/stage";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
+import type { Document } from "mongodb";
 
 async function cancelSecuredBuild(
   db: Db,
@@ -289,7 +291,7 @@ export async function refundConversionConstruction(
         },
       }))
     );
-  if (poolOps.length) await db.collection("unownedSectors").bulkWrite(poolOps);
+  if (poolOps.length) await unownedSectorsCollection<Document>(db).bulkWrite(poolOps);
   if (logs.length) await emitBuildCapexTxBulk(db, logs);
   // Infrastructure construction reserves a budget envelope, not prepaid cash.
   // Cancelling releases that commitment; there is no cash debit to refund.

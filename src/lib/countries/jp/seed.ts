@@ -23,6 +23,10 @@ import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParti
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
+import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
+import { stateBaselinesCollection } from "@/lib/db/repositories/stateBaselines";
 
 export async function seedJPRegions(
   db: Db,
@@ -102,8 +106,8 @@ export async function seedJPDemographics(
   preset: string
 ) {
   if (reset) {
-    await db.collection("stateDemographics").deleteMany({ countryId: "JP" });
-    await db.collection("stateDemographicTurnout").deleteMany({ countryId: "JP" });
+    await stateDemographicsCollection<Document>(db).deleteMany({ countryId: "JP" });
+    await stateDemographicTurnoutCollection<Document>(db).deleteMany({ countryId: "JP" });
   }
 
   const { jpRegionDemographics: jpRegionDemographicsStatic } =
@@ -135,17 +139,17 @@ export async function seedJPDemographics(
   for (const raw of jpRegionDemographics) {
     const demo = is1991 ? applyEra1991DemographicAdjustments(raw, "JP") : raw;
     const { _id, groups: _groups, ...demoData } = demo;
-    await db
-      .collection<StateDemographics>("stateDemographics")
-      .updateOne({ _id }, { $set: demoData }, { upsert: true });
+    await stateDemographicsCollection(db).updateOne({ _id }, { $set: demoData }, { upsert: true });
   }
 
   const { jpDemographicTurnout } = await import("@/lib/countries/jp/data/jpDemographicTurnout");
   for (const turnout of jpDemographicTurnout) {
     const { _id, ...turnoutData } = turnout;
-    await db
-      .collection<StateDemographicTurnout>("stateDemographicTurnout")
-      .updateOne({ _id }, { $set: turnoutData }, { upsert: true });
+    await stateDemographicTurnoutCollection(db).updateOne(
+      { _id },
+      { $set: turnoutData },
+      { upsert: true }
+    );
   }
 
   log(
@@ -176,8 +180,11 @@ export async function seedJPStatePartyOrg(
   const now = new Date();
   for (const org of orgs) {
     const { _id, ...orgData } = org;
-    await statePartyOrgCollection(db)
-      .updateOne({ _id }, { $set: { ...orgData, updatedAt: now } }, { upsert: true });
+    await statePartyOrgCollection(db).updateOne(
+      { _id },
+      { $set: { ...orgData, updatedAt: now } },
+      { upsert: true }
+    );
   }
   log(`Seeded ${orgs.length} JP state party org records (preset: ${activePreset})`);
 }
@@ -215,12 +222,11 @@ export async function ensureMissingJPStatePartyOrgRows(
   if (missing.length > 0) {
     for (const org of missing) {
       const { _id, ...orgData } = org;
-      await statePartyOrgCollection(db)
-        .updateOne(
-          { _id },
-          { $set: { ...orgData, updatedAt: now }, $setOnInsert: { createdAt: now } },
-          { upsert: true }
-        );
+      await statePartyOrgCollection(db).updateOne(
+        { _id },
+        { $set: { ...orgData, updatedAt: now }, $setOnInsert: { createdAt: now } },
+        { upsert: true }
+      );
     }
     log(`Inserted ${missing.length} missing JP state party org row(s) (preset: ${activePreset})`);
   }
@@ -233,7 +239,7 @@ export async function seedJPStateMetrics(
   preset: string
 ) {
   if (reset) {
-    await db.collection("macroMetrics").deleteMany({
+    await macroMetricsCollection<Document>(db).deleteMany({
       _id: { $in: ["HOK", "TOH", "KAN", "CHU", "KNS", "CGK", "SHI", "KYU"] } as never,
     });
   }
@@ -279,7 +285,7 @@ export async function seedJPBaselines(
   // cleanup standardised on `stateBaselines` — see KNOWN_INCONSISTENCIES in
   // seedManifest.ts.
   if (reset) {
-    await db.collection("stateBaselines").deleteMany({
+    await stateBaselinesCollection<Document>(db).deleteMany({
       _id: { $in: ["HOK", "TOH", "KAN", "CHU", "KNS", "CGK", "SHI", "KYU"] } as never,
     });
   }
@@ -310,9 +316,7 @@ export async function seedJPBaselines(
     const overlay = getRegionMetricPresets("JP", String(raw._id), preset);
     const baseline = overlay ? applyMetricPresetToBaseline(adjusted, overlay) : adjusted;
     const { _id, ...baselineData } = baseline;
-    await db
-      .collection<StateMetricBaseline>("stateBaselines")
-      .updateOne({ _id }, { $set: baselineData }, { upsert: true });
+    await stateBaselinesCollection(db).updateOne({ _id }, { $set: baselineData }, { upsert: true });
   }
   log(`Seeded ${jpStateBaselines.length} JP baselines (preset: ${preset})`);
 }
@@ -321,12 +325,11 @@ export async function seedJPGovernmentFormation(db: Db, log: (msg: string) => vo
   const { jpGovernmentFormation } = await import("@/lib/countries/jp/data/jpGovernmentFormation");
   const now = new Date();
   const { _id, ...formationData } = jpGovernmentFormation;
-  await governmentFormationsCollection(db)
-    .updateOne(
-      { _id },
-      { $set: { ...formationData, createdAt: now, updatedAt: now } },
-      { upsert: true }
-    );
+  await governmentFormationsCollection(db).updateOne(
+    { _id },
+    { $set: { ...formationData, createdAt: now, updatedAt: now } },
+    { upsert: true }
+  );
   log("Seeded JP government formation document");
 }
 

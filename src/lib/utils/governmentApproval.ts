@@ -72,6 +72,9 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
+import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
 
 /**
  * The cabinet's own drag on national approval, as modifiers.
@@ -315,7 +318,7 @@ export async function loadElectorateGroups(
     layer1TurnoutOverrides: 1,
   };
   const [docs, defaultDocs, gameState, tiers] = await Promise.all([
-    db.collection<StateDemographics>("stateDemographics").find(filter, { projection }).toArray(),
+    stateDemographicsCollection(db).find(filter, { projection }).toArray(),
     db.collection<StateDemographics>("demographicDefaults").find(filter, { projection }).toArray(),
     getGameStateCollection(db).then((col) =>
       col.findOne(
@@ -735,7 +738,7 @@ export async function snapshotApprovalHistory(
   // whichever direction the country is currently going, so it only reaches the
   // right value if it is stepped EVERY turn. A country that returned early here
   // would freeze its exhaustion — and, once at peace, never finish healing.
-  const approvalDoc = await db.collection<GovernmentApproval>("governmentApprovals").findOne(
+  const approvalDoc = await governmentApprovalsCollection(db).findOne(
     { _id: countryId },
     {
       projection: {
@@ -762,7 +765,7 @@ export async function snapshotApprovalHistory(
     // `upsert: false` — a country with neither metrics nor an approval document
     // has no exhaustion to heal, and inventing one here would create a document
     // missing every other required field.
-    await db.collection<GovernmentApproval>("governmentApprovals").updateOne(
+    await governmentApprovalsCollection(db).updateOne(
       { _id: countryId },
       {
         $set: {
@@ -841,8 +844,9 @@ export async function snapshotApprovalHistory(
   const nationalAddressMods = await getActiveNationalAddressModifier(db, countryId, turn);
   const orgStatementMods = await getActiveOrgStatementModifiersByCountry(db, countryId, turn);
 
-  const cabinetMembers = await db
-    .collection<{ acting?: boolean; positionId?: string }>("cabinetMembers")
+  const cabinetMembers = await cabinetMembersCollection<{ acting?: boolean; positionId?: string }>(
+    db
+  )
     .find({ countryId }, { projection: { acting: 1, positionId: 1 } })
     .toArray();
   // One gameState read per country per turn: the live year and the seats created
@@ -954,7 +958,7 @@ export async function snapshotApprovalHistory(
   const allNationalMods = [expectationsMod, ...nationalMods];
   approval = applyModifiers(approval, allNationalMods);
 
-  await db.collection<GovernmentApproval>("governmentApprovals").updateOne(
+  await governmentApprovalsCollection(db).updateOne(
     { _id: countryId },
     {
       $set: {

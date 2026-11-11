@@ -58,6 +58,7 @@ import { BAL_ECONOMY } from "@/lib/countries/bal/economy";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { CA_ECONOMY } from "@/lib/countries/ca/economy";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
 
 /**
  * Shared national policy-record assembly — extracted verbatim from
@@ -439,8 +440,7 @@ export async function assembleNationalPolicyRecords(
 ): Promise<NationalPolicyAssembly> {
   const types = await loadCountryLegislationTypes(db, countryId);
   const nationalStateId = NATIONAL_POLICY_STATE_IDS[countryId];
-  const policies = await db
-    .collection<StatePolicyRecord>("statePolicies")
+  const policies = await statePoliciesCollection<StatePolicyRecord>(db)
     .find({
       scope: "national",
       $or: [

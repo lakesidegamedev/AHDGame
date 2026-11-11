@@ -2,6 +2,8 @@ import type { Db } from "mongodb";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { isShippingPreset, tierFor } from "@/lib/world/eraRoster";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalMetricsCollection } from "@/lib/db/repositories/politicalMetrics";
+import type { Document } from "mongodb";
 
 /**
  * Country-keyed region collections a preset switch can strand.
@@ -73,7 +75,9 @@ export async function purgeAbsentCountryRegions(
     await statesCollection<{ _id: string }>(db).find({}).project({ _id: 1 }).toArray()
   ).map((state) => state._id);
   if (stateIds.length > 0) {
-    const result = await db.collection("politicalMetrics").deleteMany({ _id: { $nin: stateIds } });
+    const result = await politicalMetricsCollection<Document>(db).deleteMany({
+      _id: { $nin: stateIds },
+    });
     if (result.deletedCount > 0) {
       deleted.politicalMetrics = (deleted.politicalMetrics ?? 0) + result.deletedCount;
     }

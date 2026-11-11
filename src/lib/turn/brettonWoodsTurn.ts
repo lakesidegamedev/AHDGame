@@ -41,6 +41,7 @@ import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 export interface BrettonWoodsTurnResult {
   /** Always true: the phase runs every turn. Kept for the phase telemetry shape. */
@@ -72,9 +73,10 @@ export async function processBrettonWoodsTurn(
     currenciesProcessed: 0,
   };
 
-  const gameConfig = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } });
+  const gameConfig = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { commandEconomyEnabled: 1 } }
+  );
   const commandEconomyEnabled = gameConfig?.commandEconomyEnabled === true;
 
   // Small rows, but rateHistory is chart ballast this phase never reads —

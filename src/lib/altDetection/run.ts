@@ -45,6 +45,10 @@ import {
 } from "./runPersist";
 import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { activityLogCollection } from "@/lib/db/repositories/activityLog";
+import type { Document } from "mongodb";
 
 // ─── Tunables ────────────────────────────────────────────────────────────
 
@@ -176,13 +180,13 @@ async function selectCandidateUserIds(
 
   const [recentLogins, recentTurnSummaryUserIds, actionActiveUserIds, flaggedCharacters] =
     await Promise.all([
-      db
-        .collection<ActivityLogAuth>("activityLog")
+      activityLogCollection<ActivityLogAuth>(db)
         .find({ type: "login", timestamp: { $gte: since } }, { projection: { userId: 1 } })
         .toArray(),
-      db
-        .collection("activityLog")
-        .distinct("userId", { type: "turn_summary", timestamp: { $gte: since } }),
+      activityLogCollection<Document>(db).distinct("userId", {
+        type: "turn_summary",
+        timestamp: { $gte: since },
+      }),
       db.collection("actionLogs").distinct("userId", {
         createdAt: { $gte: since },
       }),
@@ -206,8 +210,7 @@ async function selectCandidateUserIds(
   // with a seed — this is how a burner with no independent activity signal
   // (never logs in during the window, no actionLogs) still enters the pool
   // when its operator does.
-  const seedUsers = await db
-    .collection<User>("users")
+  const seedUsers = await usersCollection(db)
     .find(
       { _id: { $in: seedUserIds } },
       {
@@ -257,8 +260,7 @@ async function selectCandidateUserIds(
   if (deviceKeys.size > 0) orClauses.push({ deviceKey: { $in: [...deviceKeys] } });
 
   if (orClauses.length > 0) {
-    const expansionMatches = await db
-      .collection<User>("users")
+    const expansionMatches = await usersCollection(db)
       .find({ $or: orClauses }, { projection: { _id: 1 } })
       .limit(MAX_CANDIDATES)
       .toArray();
@@ -369,8 +371,7 @@ async function buildCandidateFacets(
   const since = new Date(now.getTime() - CANDIDATE_LOOKBACK_MS);
 
   const [users, characters] = await Promise.all([
-    db
-      .collection<User>("users")
+    usersCollection(db)
       .find({ _id: { $in: candidateUserIds } })
       .toArray(),
     charactersCollection(db)
@@ -445,8 +446,7 @@ async function buildCandidateFacets(
   }
 
   if (candidateUserIds.length > 0) {
-    const loginLogs = await db
-      .collection<ActivityLogAuth>("activityLog")
+    const loginLogs = await activityLogCollection<ActivityLogAuth>(db)
       .find({
         type: "login",
         userId: { $in: candidateUserIds },
@@ -476,8 +476,7 @@ async function buildCandidateFacets(
   const fundingEventsByUser = new Map<string, AltFundingEvent[]>();
   if (candidateCharacterIds.length > 0) {
     const [donations, transfers] = await Promise.all([
-      db
-        .collection<ActivityLogFundEvent>("activityLog")
+      activityLogCollection<ActivityLogFundEvent>(db)
         .find({
           type: "fund_event",
           fundEventType: "party_donation",
@@ -486,8 +485,7 @@ async function buildCandidateFacets(
           fromType: "character",
         })
         .toArray(),
-      db
-        .collection<ActivityLogFundEvent>("activityLog")
+      activityLogCollection<ActivityLogFundEvent>(db)
         .find({
           type: "fund_event",
           fundEventType: "party_transfer",
@@ -624,8 +622,7 @@ async function buildCandidateFacets(
   };
 
   if (candidateUserIds.length > 0) {
-    const switches = await db
-      .collection<ActivityLogProfileEvent>("activityLog")
+    const switches = await activityLogCollection<ActivityLogProfileEvent>(db)
       .find({
         type: "party_change",
         userId: { $in: candidateUserIds },
@@ -867,8 +864,7 @@ export async function runAltScoring(
 
     const [gameState, configDoc] = await Promise.all([
       getGameState(db).catch(() => null),
-      db
-        .collection<AltScoringConfigDoc>("gameConfig")
+      gameConfigCollection<AltScoringConfigDoc>(db)
         .findOne({ _id: "default" }, { projection: { altScoring: 1 } })
         .catch(() => null),
     ]);

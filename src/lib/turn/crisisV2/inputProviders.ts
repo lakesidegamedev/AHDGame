@@ -13,6 +13,9 @@ import {
   type CrisisInputProvider,
 } from "./registry";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
+import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
 
 function averageByCountry(
   stateIdsByCountry: ReadonlyMap<string, readonly string[]>,
@@ -43,8 +46,7 @@ export async function loadStateMetricValues(
   const valueByState = new Map<string, number>();
   if (stateIds.length === 0) return valueByState;
   const path = `economic.${field}.value`;
-  const docs = await db
-    .collection<StateMetrics>("macroMetrics")
+  const docs = await macroMetricsCollection(db)
     .find({ _id: { $in: [...stateIds] } }, { projection: { [path]: 1 } })
     .toArray();
   for (const doc of docs) {
@@ -279,8 +281,7 @@ export const unrestGapProvider: CrisisInputProvider = {
   async load(ctx) {
     const result = new Map<string, number>();
     if (ctx.countryIds.size === 0) return result;
-    const docs = await ctx.db
-      .collection<GovernmentApproval>("governmentApprovals")
+    const docs = await governmentApprovalsCollection(ctx.db)
       .find(
         { _id: { $in: [...ctx.countryIds] as CountryId[] } },
         { projection: { approvalRating: 1 } }
@@ -301,9 +302,10 @@ const ENERGY_COMMODITY = "energy";
 export const energyPriceGapProvider: CrisisInputProvider = {
   input: "energyPriceGap",
   async load(ctx) {
-    const doc = await ctx.db
-      .collection<CommodityPrice>("commodityPrices")
-      .findOne({ commodity: ENERGY_COMMODITY }, { projection: { basePrice: 1, statePrices: 1 } });
+    const doc = await commodityPricesCollection(ctx.db).findOne(
+      { commodity: ENERGY_COMMODITY },
+      { projection: { basePrice: 1, statePrices: 1 } }
+    );
     if (!doc || !(doc.basePrice > 0)) return new Map();
     const premiumByState = new Map<string, number>();
     for (const [stateId, price] of Object.entries(doc.statePrices ?? {})) {

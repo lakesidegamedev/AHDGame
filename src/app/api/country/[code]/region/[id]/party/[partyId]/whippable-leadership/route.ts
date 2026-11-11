@@ -21,6 +21,7 @@ import { impeachmentStageChamberKey } from "@/lib/impeachment/impeachmentTally";
 import type { Impeachment } from "@/lib/db/types/impeachment";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { cabinetNominationsCollection } from "@/lib/db/repositories/cabinetNominations";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; partyId: string }>;
@@ -64,8 +65,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
 
     const partyKey = getPartyIdString(party);
     const statePartyKey = getStatePartyOrgDocumentId(stateId, party);
-    const statePartyOrg = await statePartyOrgCollection(db)
-      .findOne({ _id: statePartyKey });
+    const statePartyOrg = await statePartyOrgCollection(db).findOne({ _id: statePartyKey });
 
     if (!statePartyOrg) {
       return errorResponse(404, "State party organization not found");
@@ -179,8 +179,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
 
     // ── Cabinet nominations voted by the national upper chamber ─────────────
     if (cabinetOfficials.length > 0) {
-      const nominations = await db
-        .collection<CabinetNomination>("cabinetNominations")
+      const nominations = await cabinetNominationsCollection(db)
         .find({ status: "active", countryId })
         .toArray();
       const activeNominations = nominations.filter(

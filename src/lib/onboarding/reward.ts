@@ -8,6 +8,7 @@ import { emitTx } from "@/lib/financialTxLog/emit";
 import { onboardingRewardLocalAmount } from "./rules";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /**
  * One-time payout for completing all seven onboarding checklist steps,
@@ -62,9 +63,7 @@ export async function grantOnboardingReward(
   preset?: string
 ): Promise<OnboardingRewardResult> {
   const [gameConfig, forexEnabled] = await Promise.all([
-    db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { startingFunds: 1 } }),
+    gameConfigCollection(db).findOne({ _id: "default" }, { projection: { startingFunds: 1 } }),
     isForexEnabled(),
   ]);
   const amount = Math.round(

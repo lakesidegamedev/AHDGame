@@ -37,6 +37,8 @@ import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
 import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 export const ECONOMY_RESET_PROCESSING_KIND = "economyReset";
 
@@ -201,7 +203,7 @@ async function loadSource(
   fence: Fence,
   options: EconomyResetCensusOptions
 ): Promise<EconomyResetSource> {
-  const config = await db.collection<Document>("gameConfig").findOne(
+  const config = await gameConfigCollection<Document>(db).findOne(
     { _id: "default" as never },
     {
       projection: {
@@ -380,8 +382,7 @@ async function loadSource(
   const userIds = [...new Set(characters.map((c) => c.userId).filter(Boolean))];
   const referredUsers = new Set(
     (
-      await db
-        .collection<Document>("users")
+      await usersCollection<Document>(db)
         .find(
           { _id: { $in: userIds }, referredBy: { $exists: true, $ne: null } },
           { projection: { _id: 1 } }

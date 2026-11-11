@@ -22,6 +22,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 export interface OrganizationCashContext {
   turn: number;
@@ -212,16 +213,14 @@ export async function loadOrganizationCashContext(
   turn?: number
 ): Promise<OrganizationCashContext | null> {
   try {
-    const config = await db
-      .collection<{
-        _id: string;
-        ledgerShadow?: boolean;
-        treasuryCashLedgerEnabled?: boolean;
-      }>("gameConfig")
-      .findOne(
-        { _id: "default" },
-        { projection: { ledgerShadow: 1, treasuryCashLedgerEnabled: 1 } }
-      );
+    const config = await gameConfigCollection<{
+      _id: string;
+      ledgerShadow?: boolean;
+      treasuryCashLedgerEnabled?: boolean;
+    }>(db).findOne(
+      { _id: "default" },
+      { projection: { ledgerShadow: 1, treasuryCashLedgerEnabled: 1 } }
+    );
     const ledgerShadowEnabled = config?.ledgerShadow === true;
     const treasuryCashLedgerEnabled = config?.treasuryCashLedgerEnabled === true;
     if (!ledgerShadowEnabled && !treasuryCashLedgerEnabled) return null;

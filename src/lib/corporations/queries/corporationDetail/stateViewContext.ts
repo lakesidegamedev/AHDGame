@@ -17,6 +17,7 @@ import { buildPoliticalBaseModifiers } from "@/lib/politicalLegislation/marginAd
 import type { MacroEconomicValues, StateMetricValues } from "@/lib/constants/corporations";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { politicalMetricsCollection } from "@/lib/db/repositories/politicalMetrics";
 
 export interface StateViewContext {
   states: TurnStateProjection[];
@@ -100,8 +101,7 @@ export async function loadStateViewContext(
   // SP4 §4a: political margin overlays for playable regions among this corp's states.
   const politicalDocs: PoliticalMetricsDoc[] =
     uniqueStateIds.length > 0
-      ? await db
-          .collection<PoliticalMetricsDoc>("politicalMetrics")
+      ? await politicalMetricsCollection(db)
           .find({ _id: { $in: uniqueStateIds } })
           .toArray()
       : [];

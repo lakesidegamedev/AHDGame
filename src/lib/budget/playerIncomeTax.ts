@@ -33,6 +33,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 
 /**
  * Pass-through distributions already taxed at source (the owner tax on
@@ -125,8 +126,7 @@ export async function processPlayerIncomeTax(
     stateBudgetsCollection(db)
       .find({}, { projection: { countryId: 1, taxRates: 1 } })
       .toArray(),
-    db
-      .collection<MacroMetricsDoc>("macroMetrics")
+    macroMetricsCollection<MacroMetricsDoc>(db)
       .find({}, { projection: { "economic.medianIncome.value": 1 } })
       .toArray(),
     exchangeRatesCollection(db)
@@ -518,8 +518,7 @@ export async function processPlayerIncomeTax(
     });
   }
   if (tierOps.length) await charactersCollection(db).bulkWrite(tierOps);
-  if (imperialTierOps.length)
-    await imperialCharactersCollection(db).bulkWrite(imperialTierOps);
+  if (imperialTierOps.length) await imperialCharactersCollection(db).bulkWrite(imperialTierOps);
   const inserted = assessmentOps.length
     ? await db
         .collection<PlayerIncomeTaxAssessment>("playerIncomeTaxAssessments")

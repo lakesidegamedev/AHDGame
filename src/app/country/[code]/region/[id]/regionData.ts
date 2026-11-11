@@ -29,6 +29,8 @@ import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficia
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
 
 /**
  * Coerce a Mongo timestamp field to an ISO string for client serialization.
@@ -123,9 +125,10 @@ export async function getCurrentPartyNav(
 export async function getRegionDemographics(stateId: string, countryId: CountryId) {
   try {
     const db = await getDb();
-    const demographics = await db
-      .collection<StateDemographics>("stateDemographics")
-      .findOne({ _id: stateId, countryId: countryId });
+    const demographics = await stateDemographicsCollection(db).findOne({
+      _id: stateId,
+      countryId: countryId,
+    });
     return { demographics };
   } catch (error) {
     console.error("Error fetching demographics:", error);
@@ -194,9 +197,7 @@ export async function getStatePartyBudgets(
 export async function getRegionPartyOrg(stateId: string, countryId: CountryId) {
   try {
     const db = await getDb();
-    const partyOrg = await statePartyOrgCollection(db)
-      .find({ countryId, stateId })
-      .toArray();
+    const partyOrg = await statePartyOrgCollection(db).find({ countryId, stateId }).toArray();
 
     const partyIds = [...new Set(partyOrg.map((po) => po.partyId))];
     const partySeqIds = partyIds.map(Number).filter(Boolean);
@@ -283,8 +284,7 @@ export async function getRegionPlayers(stateId: string) {
       .toArray();
 
     const userIds = players.map((p) => p.userId);
-    const users = await db
-      .collection<User>("users")
+    const users = await usersCollection(db)
       .find({ _id: { $in: userIds } })
       .project<
         Pick<
@@ -390,8 +390,7 @@ export async function getRegionOfficials(stateId: string, countryId: CountryId) 
         : Promise.resolve([] as PoliticalParty[]),
     ]);
     const userIds = characters.map((c) => c.userId);
-    const users = await db
-      .collection<User>("users")
+    const users = await usersCollection(db)
       .find({ _id: { $in: userIds } })
       .project<Pick<User, "_id" | "isBanned" | "patreonProfileBorder" | "patreonHighlightColor">>({
         _id: 1,

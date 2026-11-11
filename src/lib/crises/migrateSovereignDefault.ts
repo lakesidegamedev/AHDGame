@@ -5,6 +5,8 @@ import type { SovereignCrisisDecision } from "@/lib/db/types/sovereignCrisisDeci
 import { createCrisisInteraction } from "@/lib/crises/interactionEngine";
 import { getGameState } from "@/lib/gameState";
 import { crisesCollection } from "@/lib/db/repositories/crises";
+import { crisisInteractionsCollection } from "@/lib/db/repositories/crisisInteractions";
+import type { Document } from "mongodb";
 
 /**
  * Migration: Convert existing sovereign default crisis records to the new
@@ -309,9 +311,9 @@ export async function migrateSovereignDefaultToCrisisSystem(db: Db): Promise<{
       await createCrisisInteraction(db, crisisDoc);
 
       if (old.executiveChoice && old.state === "executiveProposed") {
-        const interaction = await db
-          .collection("crisisInteractions")
-          .findOne({ crisisId: insertResult.insertedId });
+        const interaction = await crisisInteractionsCollection<Document>(db).findOne({
+          crisisId: insertResult.insertedId,
+        });
 
         if (interaction) {
           const choiceMap: Record<string, string> = {
@@ -323,12 +325,10 @@ export async function migrateSovereignDefaultToCrisisSystem(db: Db): Promise<{
           const optionId = choiceMap[old.executiveChoice];
 
           if (optionId) {
-            await db
-              .collection("crisisInteractions")
-              .updateOne(
-                { _id: interaction._id },
-                { $set: { currentNodeId: "legislative_ratification" } }
-              );
+            await crisisInteractionsCollection<Document>(db).updateOne(
+              { _id: interaction._id },
+              { $set: { currentNodeId: "legislative_ratification" } }
+            );
           }
         }
       }

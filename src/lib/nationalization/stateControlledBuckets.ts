@@ -9,6 +9,7 @@ import {
 } from "./enactedSectorTaking";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 
 /**
  * `(stateId:sectorType)` key for a market bucket. Shared format across the
@@ -311,8 +312,7 @@ export async function healCapturedMarkets(
   const [corpSectors, enactedTakings, unownedSectors, ownedSectors] = await Promise.all([
     loadCorpSectorBucketFields(db),
     loadSectorWideTakingAuthority(db, nationalCorpIds),
-    db
-      .collection<UnownedSector>("unownedSectors")
+    unownedSectorsCollection(db)
       .find(
         {},
         {

@@ -4,6 +4,8 @@ import type { LegislationType } from "@/lib/db/types";
 import { legislationTypes } from "@/lib/seeds/reference/legislationTypes";
 import { getProjectedPoliticalLegislationTypes } from "./seedPoliticalLegislation";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
+import type { Document } from "mongodb";
 
 export async function seedLegislationTypes(
   db: Db,
@@ -22,7 +24,7 @@ export async function seedLegislationTypes(
           metadata: { error: String(error) },
         });
       });
-    await db.collection("stateBills").deleteMany({});
+    await stateBillsCollection<Document>(db).deleteMany({});
   }
 
   const collection = legislationTypesCollection(db);

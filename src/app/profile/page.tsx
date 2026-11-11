@@ -126,6 +126,9 @@ import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParti
 import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
 
 const MIN_BASE_ACTIONS_PER_TURN = 4;
 
@@ -136,15 +139,14 @@ async function getCharacterData() {
   const db = await getDb();
 
   // Resolve character by activeCharacterId if set (admin multi-character), fallback to userId
-  const userDoc = await db.collection<User>("users").findOne({ _id: new ObjectId(user.userId) });
+  const userDoc = await usersCollection(db).findOne({ _id: new ObjectId(user.userId) });
 
   // Redirect to imperial profile when in imperial mode
   if (userDoc?.activeCharacterType === "imperial" && userDoc.activeImperialCharacterId) {
-    const imperial = await imperialCharactersCollection(db)
-      .findOne(
-        { _id: userDoc.activeImperialCharacterId, userId: new ObjectId(user.userId) },
-        { projection: { sequentialId: 1 } }
-      );
+    const imperial = await imperialCharactersCollection(db).findOne(
+      { _id: userDoc.activeImperialCharacterId, userId: new ObjectId(user.userId) },
+      { projection: { sequentialId: 1 } }
+    );
     if (imperial) {
       redirect(`/imperial/${imperial.sequentialId}`);
     }
@@ -175,7 +177,7 @@ async function getCharacterData() {
     partyHistoryEvents,
   ] = await Promise.all([
     statesCollection(db).findOne({ _id: character.homeState, countryId: character.countryId }),
-    db.collection<GameConfig>("gameConfig").findOne({ _id: "default" }),
+    gameConfigCollection(db).findOne({ _id: "default" }),
     hasParty
       ? (async () => {
           const partySeqId = parseInt(character.party as string, 10);
@@ -187,9 +189,7 @@ async function getCharacterData() {
           });
         })()
       : Promise.resolve(null),
-    hasParty
-      ? statePartyOrgCollection(db).findOne({ _id: statePartyKey })
-      : Promise.resolve(null),
+    hasParty ? statePartyOrgCollection(db).findOne({ _id: statePartyKey }) : Promise.resolve(null),
     corporationsCollection(db).findOne(
       {
         ceoId: character._id,
@@ -547,8 +547,7 @@ export default async function ProfilePage() {
         { projection: { countryId: 1, positionId: 1, acting: 1 } }
       )
       .toArray(),
-    apDb
-      .collection<CongressLeader>("congressLeaders")
+    congressLeadersCollection(apDb)
       .find({ characterId: character._id }, { projection: { role: 1 } })
       .toArray(),
     apDb

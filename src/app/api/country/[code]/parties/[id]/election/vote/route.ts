@@ -23,6 +23,9 @@ import { hasTurnBackedWindowClosed } from "@/lib/time/turnBackedWindow";
 import { getLeadershipEligibility } from "@/lib/parties/leadershipTenure";
 import { CANONICAL_VOTING_ELECTION_SORT } from "@/lib/elections/canonicalVotingElection";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
+import { nationalPartyElectionsCollection } from "@/lib/db/repositories/nationalPartyElections";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -99,12 +102,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     // Filter by countryId to avoid cross-country sequential ID collisions
-    const election = await db
-      .collection<NationalPartyElection>("nationalPartyElections")
-      .findOne(
-        { partyId, countryId: partyCountryId, position, status: "voting" },
-        { sort: CANONICAL_VOTING_ELECTION_SORT }
-      );
+    const election = await nationalPartyElectionsCollection(db).findOne(
+      { partyId, countryId: partyCountryId, position, status: "voting" },
+      { sort: CANONICAL_VOTING_ELECTION_SORT }
+    );
 
     if (!election) {
       logRequest("POST", path, 400, Date.now() - start);
@@ -121,9 +122,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     // elections (the accelerated 12-turn chair race at iteration start) so
     // brand-new players can vote immediately.
     if (!election.founding) {
-      const userDoc = await db
-        .collection("users")
-        .findOne({ _id: new ObjectId(authUser.userId) }, { projection: { createdAt: 1 } });
+      const userDoc = await usersCollection<Document>(db).findOne(
+        { _id: new ObjectId(authUser.userId) },
+        { projection: { createdAt: 1 } }
+      );
       const cooldown = isInNewCharacterCooldown({
         userCreatedAt: userDoc?.createdAt ?? new Date(0),
         characterCreatedAt: authUser.character.createdAt,

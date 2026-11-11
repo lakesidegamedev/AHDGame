@@ -9,6 +9,7 @@ import { getReferendumCollection } from "@/lib/db/collections/referendum";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { canDecideReferendum } from "@/lib/referendum/pmAccess";
 import { isCountryEnabledForPlayers } from "@/lib/countryAccess";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 
 // GET /api/country/[code]/referendum
 // Returns in-flight sovereignty referendums (awaiting the PM's decision, campaigning, or
@@ -50,8 +51,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
     // can show the sentiment driving each request.
     const regionIds = [...new Set(pending.map((r) => r.regionId))];
     const metricDocs = regionIds.length
-      ? await db
-          .collection<MacroMetricsDoc>("macroMetrics")
+      ? await macroMetricsCollection<MacroMetricsDoc>(db)
           .find({ _id: { $in: regionIds } }, { projection: { "independenceDesire.value": 1 } })
           .toArray()
       : [];

@@ -9,6 +9,8 @@ import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
 import type { PoliticalMetricsDoc } from "@/lib/db/types/politicalMetrics";
 import { EMPTY_WAVE_SIGNALS } from "./rules/waveFamilies";
 import type { WaveSignals } from "./rules/waveFamilyTables";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { politicalMetricsCollection } from "@/lib/db/repositories/politicalMetrics";
 
 export interface WaveSignalCache {
   byCountry?: Promise<Map<string, WaveSignals>>;
@@ -56,8 +58,7 @@ function sovereignCrisisReading(states: Array<string | undefined>): number | nul
 
 async function readSignals(db: Db, countryIds: string[]): Promise<Map<string, WaveSignals>> {
   const [macro, boards, operators, budgets] = await Promise.all([
-    db
-      .collection<MacroRow>("macroMetrics")
+    macroMetricsCollection<MacroRow>(db)
       .find(
         { countryId: { $in: countryIds } },
         {
@@ -75,8 +76,7 @@ async function readSignals(db: Db, countryIds: string[]): Promise<Map<string, Wa
       )
       .toArray(),
     // Board values are keyed by dotted ids, so read the whole values record.
-    db
-      .collection<Pick<PoliticalMetricsDoc, "countryId" | "values">>("politicalMetrics")
+    politicalMetricsCollection<Pick<PoliticalMetricsDoc, "countryId" | "values">>(db)
       .find({ countryId: { $in: countryIds } } as never, {
         projection: { _id: 0, countryId: 1, values: 1 },
       })

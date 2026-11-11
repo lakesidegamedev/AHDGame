@@ -51,6 +51,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 interface RouteParams {
   params: Promise<{ bondId: string }>;
@@ -477,8 +478,7 @@ export async function POST(request: Request, { params }: RouteParams) {
         return errorResponse(403, "Only the CEO can sell bonds for a corporation");
       }
 
-      const bondRateDoc = await exchangeRatesCollection(db)
-        .findOne({ currencyCode: bondCurrency });
+      const bondRateDoc = await exchangeRatesCollection(db).findOne({ currencyCode: bondCurrency });
       const bondFxRate = bondRateDoc?.rate && bondRateDoc.rate > 0 ? bondRateDoc.rate : 1;
       const proceedsAnchor = corpCapitalToAnchor(proceedsLocal, bondCurrency, bondFxRate);
       const corpFxRate = await getCorpFxRate(db, corp);
@@ -595,7 +595,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       });
     }
 
-    const userDoc = await db.collection<User>("users").findOne({ _id: new ObjectId(user.userId) });
+    const userDoc = await usersCollection(db).findOne({ _id: new ObjectId(user.userId) });
     const isImperialMode =
       userDoc?.activeCharacterType === "imperial" && !!userDoc?.activeImperialCharacterId;
 
@@ -648,8 +648,11 @@ export async function POST(request: Request, { params }: RouteParams) {
           );
           if (!poolDebit.ok) throw await poolDepthRefusal();
 
-          const payoutResult = await imperialCharactersCollection(db)
-            .updateOne({ _id: imperial._id }, payoutUpdate, { session });
+          const payoutResult = await imperialCharactersCollection(db).updateOne(
+            { _id: imperial._id },
+            payoutUpdate,
+            { session }
+          );
           if (payoutResult.matchedCount === 0) {
             throw notFound("Imperial character not found");
           }

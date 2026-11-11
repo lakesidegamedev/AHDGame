@@ -79,6 +79,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
 import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 interface RouteParams {
   params: Promise<{ id: string; orderId: string }>;
@@ -122,8 +123,7 @@ export async function fillShareOrder(request: Request, { params }: RouteParams) 
       return errorResponse(400, "Invalid order ID");
     }
 
-    const loadedOrder = await shareOrdersCollection(db)
-      .findOne({ _id: new ObjectId(orderId) });
+    const loadedOrder = await shareOrdersCollection(db).findOne({ _id: new ObjectId(orderId) });
 
     if (!loadedOrder) return errorResponse(404, "Order not found");
     // Repair a stranded legacy claim and recover the stamped prior attempt
@@ -155,9 +155,7 @@ export async function fillShareOrder(request: Request, { params }: RouteParams) 
     }
 
     // Resolve filler identity (regular or imperial)
-    const userDoc = await db
-      .collection<User>("users")
-      .findOne({ _id: new ObjectId(auth.user.userId) });
+    const userDoc = await usersCollection(db).findOne({ _id: new ObjectId(auth.user.userId) });
     const isImperialFiller =
       userDoc?.activeCharacterType === "imperial" && !!userDoc?.activeImperialCharacterId;
 
@@ -602,8 +600,10 @@ export async function fillShareOrder(request: Request, { params }: RouteParams) 
       if (order.lastShareFillKey === undefined) {
         restoreUpdate.$unset = { ...restoreUpdate.$unset, lastShareFillKey: "" };
       }
-      await shareOrdersCollection(db)
-        .updateOne({ _id: order._id, activeShareFillKey: fillKey }, restoreUpdate);
+      await shareOrdersCollection(db).updateOne(
+        { _id: order._id, activeShareFillKey: fillKey },
+        restoreUpdate
+      );
     };
 
     const sellerCharacterAvgCost = orderCharacterId

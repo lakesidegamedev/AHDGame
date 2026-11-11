@@ -14,6 +14,8 @@ import type { State } from "@/lib/db/types";
 import { performRelocation } from "@/lib/character/performRelocation";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
 
 const updateStateSchema = z.object({
   username: z.string().min(1, "username is required"),
@@ -48,7 +50,7 @@ export const PATCH = withAdminRoute(async (_auth, request: Request) => {
 
   const db = await getDb();
 
-  const user = await db.collection("users").findOne({ username });
+  const user = await usersCollection<Document>(db).findOne({ username });
   if (!user) {
     return errorResponse(404, `User '${username}' not found`);
   }

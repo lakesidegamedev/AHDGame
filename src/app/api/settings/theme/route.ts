@@ -8,6 +8,7 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { themeSchema } from "@/lib/api/schemas/settings";
 import { emit } from "@/lib/events";
 import type { User } from "@/lib/db/types";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 // PATCH /api/settings/theme — Updates the authenticated user's UI theme preference
 // Auth: requireBasicAuth
@@ -27,12 +28,10 @@ export async function PATCH(request: Request) {
     const { theme } = parsed.data;
 
     const db = await getDb();
-    await db
-      .collection<User>("users")
-      .updateOne(
-        { _id: new ObjectId(auth.user.userId) },
-        { $set: { theme, updatedAt: new Date() } }
-      );
+    await usersCollection(db).updateOne(
+      { _id: new ObjectId(auth.user.userId) },
+      { $set: { theme, updatedAt: new Date() } }
+    );
 
     // Notify SSE listeners. In-process only — Vercel multi-instance deployments
     // may not deliver this to all connected clients. Clients should poll as fallback.

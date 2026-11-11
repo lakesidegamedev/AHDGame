@@ -37,6 +37,7 @@ import {
 } from "@/lib/market/unownedHeadroom";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 
 type MarketIdentity = {
   sectorType: CorporateSector["sectorType"];
@@ -844,7 +845,7 @@ export async function fetchMarketSharePercentForSectors(
         }
       )
       .toArray(),
-    db.collection<UnownedSector>("unownedSectors").find({ $or: unownedBucketFilters }).toArray(),
+    unownedSectorsCollection(db).find({ $or: unownedBucketFilters }).toArray(),
     statesCollection(db)
       .find({ _id: { $in: stateIds } }, { projection: { _id: 1, gdp: 1, countryId: 1 } })
       .toArray(),

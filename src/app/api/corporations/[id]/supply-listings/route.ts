@@ -29,6 +29,7 @@ import {
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 type Context = { params: Promise<{ id: string }> };
 const privateHeaders = { "Cache-Control": "private, no-store" };
@@ -40,9 +41,10 @@ async function access(context: Context) {
   if (!resolved.ok) return resolved;
   const denied = requireCeo(resolved.corporation, auth.user.userId);
   if (denied) return { ok: false as const, response: denied };
-  const config = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { supplyAgreementsEnabled: 1 } });
+  const config = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { supplyAgreementsEnabled: 1 } }
+  );
   if (!config?.supplyAgreementsEnabled)
     return {
       ok: false as const,

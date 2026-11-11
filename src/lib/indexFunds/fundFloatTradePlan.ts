@@ -29,6 +29,7 @@ import { loadQueuedPayoutAuditContext } from "./queuedPayoutSettlement";
 import { type FundFloatPlan, type SettlementFund } from "./fundFloatSettlement";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 export type FloatAuditContext = Awaited<ReturnType<typeof loadQueuedPayoutAuditContext>>;
 export async function loadFloatAuditContext(
@@ -40,7 +41,7 @@ export async function loadFloatAuditContext(
   // Existing transactions require sequential commands on their session.
   const thresholds = preloadedThresholds ?? (await loadTxThresholds(db));
   const turnLength = await loadTurnLengthMinutes(db);
-  const config = await db.collection<GameConfig>("gameConfig").findOne({ _id: "default" });
+  const config = await gameConfigCollection(db).findOne({ _id: "default" });
   return {
     thresholds,
     turnLength,

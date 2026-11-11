@@ -17,6 +17,7 @@ import {
   shouldNppMinisterResign,
   type NppResignationInput,
 } from "@/lib/countries/uk/cabinet/rules/nppResignation";
+import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
 
 export interface NppCaretakerResignationArgs {
   countryId: CountryId;
@@ -63,8 +64,6 @@ export async function resignNppCaretakerMinister(
 
 /** Read the latest aggregate approval for the resignation rule (UK hook). */
 export async function readApprovalForResignation(db: Db, countryId: CountryId): Promise<number> {
-  const doc = await db
-    .collection<GovernmentApproval>("governmentApprovals")
-    .findOne({ _id: countryId });
+  const doc = await governmentApprovalsCollection(db).findOne({ _id: countryId });
   return typeof doc?.approvalRating === "number" ? doc.approvalRating : 50;
 }

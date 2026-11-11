@@ -6,6 +6,7 @@ import { errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import { createAdminLog } from "@/lib/adminLog";
 import type { GameConfig } from "@/lib/db/types";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 const patchSchema = z.object({
   enabled: z.boolean(),
@@ -16,9 +17,10 @@ const patchSchema = z.object({
 // Errors: 403
 export const GET = withAdminRoute(async (_auth) => {
   const db = await getDb();
-  const config = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { lineOfCreditEnabled: 1 } });
+  const config = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { lineOfCreditEnabled: 1 } }
+  );
 
   const enabled = config?.lineOfCreditEnabled !== false;
 
@@ -37,9 +39,11 @@ export const PATCH = withAdminRoute(async (auth, request: Request) => {
   const { enabled } = parsed.data;
 
   const db = await getDb();
-  await db
-    .collection<GameConfig>("gameConfig")
-    .updateOne({ _id: "default" }, { $set: { lineOfCreditEnabled: enabled } }, { upsert: true });
+  await gameConfigCollection(db).updateOne(
+    { _id: "default" },
+    { $set: { lineOfCreditEnabled: enabled } },
+    { upsert: true }
+  );
 
   await createAdminLog({
     category: "system",

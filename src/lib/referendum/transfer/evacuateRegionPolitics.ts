@@ -46,6 +46,7 @@ import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
 
 /**
  * Region-scoped party collections.
@@ -134,9 +135,10 @@ export async function evacuateRegionPolitics(
   if (nppIds.length && !dissolving) {
     const held = { countryId: fromCountryId, nppId: { $in: nppIds } };
     await electedOfficialsCollection<Document>(db).deleteMany(held);
-    await db.collection("cabinetMembers").deleteMany(held);
-    const departingGovernment = await governmentFormationsCollection<ParliamentaryGovernment>(db)
-      .findOne({ _id: fromCountryId, pmNppId: { $in: nppIds } });
+    await cabinetMembersCollection<Document>(db).deleteMany(held);
+    const departingGovernment = await governmentFormationsCollection<ParliamentaryGovernment>(
+      db
+    ).findOne({ _id: fromCountryId, pmNppId: { $in: nppIds } });
     if (departingGovernment)
       await unformGovernmentAndVacatePM(db, fromCountryId, now, { reason: "lost-seat" });
   }
@@ -189,8 +191,9 @@ export async function evacuateRegionPolitics(
     for (const col of ["cabinetMembers", "electedOfficials"] as const) {
       await db.collection(col).deleteMany(heldInSource);
     }
-    const departingGovernment = await governmentFormationsCollection<ParliamentaryGovernment>(db)
-      .findOne({ _id: fromCountryId, pmCharacterId: { $in: playerIds } });
+    const departingGovernment = await governmentFormationsCollection<ParliamentaryGovernment>(
+      db
+    ).findOne({ _id: fromCountryId, pmCharacterId: { $in: playerIds } });
     if (departingGovernment)
       await unformGovernmentAndVacatePM(db, fromCountryId, now, { reason: "lost-seat" });
   }
@@ -288,7 +291,9 @@ export async function evacuateRegionPolitics(
   const electionIds = regionElections.map((e) => e._id);
   let electionsDissolved = 0;
   if (electionIds.length > 0) {
-    await electionCandidatesCollection<Document>(db).deleteMany({ electionId: { $in: electionIds } });
+    await electionCandidatesCollection<Document>(db).deleteMany({
+      electionId: { $in: electionIds },
+    });
     const res = await electionsCollection<Document>(db).deleteMany({ _id: { $in: electionIds } });
     electionsDissolved = res?.deletedCount ?? 0;
   }

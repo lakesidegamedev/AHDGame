@@ -14,6 +14,7 @@ import { leverBlock } from "./availability";
 import { governsAffectedState, leverInActorJurisdiction } from "./jurisdiction";
 import { resolveLeverRoles } from "./roles";
 import { crisesCollection } from "@/lib/db/repositories/crises";
+import { crisisInteractionsCollection } from "@/lib/db/repositories/crisisInteractions";
 
 /** Size bounds for an aid pledge, as shares of the sender's GDP. */
 export interface AidPledgeRange {
@@ -101,8 +102,7 @@ async function loadLegacyNodes(
   const nodeCountries = new Map<string, Map<string, readonly string[]>>();
   if (crisisIds.length === 0 || !countryId) return { ranges, nodeCountries };
   const [interactions, budget] = await Promise.all([
-    db
-      .collection<CrisisInteraction>("crisisInteractions")
+    crisisInteractionsCollection(db)
       .find(
         { crisisId: { $in: crisisIds } },
         {

@@ -17,6 +17,8 @@ import type { Bill, GovernorExecutiveOrder } from "@/lib/db/types";
 import type { CabinetMember, CabinetNomination } from "@/lib/db/types/cabinet";
 import { billsCollection } from "@/lib/db/repositories/bills";
 import type { Document } from "mongodb";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
+import { cabinetNominationsCollection } from "@/lib/db/repositories/cabinetNominations";
 
 const LEDGER_BILL_STATUSES = [
   "signed",
@@ -75,14 +77,8 @@ async function loadExecutiveActInputs(db: Db, countryId: CountryId): Promise<Exe
       .sort({ createdAt: -1 })
       .limit(14)
       .toArray(),
-    db
-      .collection<CabinetNomination>("cabinetNominations")
-      .find({ countryId })
-      .sort({ _id: -1 })
-      .limit(14)
-      .toArray(),
-    db
-      .collection<CabinetMember>("cabinetMembers")
+    cabinetNominationsCollection(db).find({ countryId }).sort({ _id: -1 }).limit(14).toArray(),
+    cabinetMembersCollection(db)
       .find({ countryId })
       // By _id rather than confirmedAt: acting holders have no confirmedAt, and
       // a descending sort on a missing field would push every acting

@@ -85,6 +85,8 @@ import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficia
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { billsCollection } from "@/lib/db/repositories/bills";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
+import type { Document } from "mongodb";
 
 const BILL_PAGE_LIMIT = 50;
 
@@ -824,9 +826,10 @@ export async function getNationalBillDetail(
         const isPrimeMinister = governmentFormation?.pmCharacterId?.equals(character._id) ?? false;
         const cabinetMember = isPrimeMinister
           ? null
-          : await db
-              .collection("cabinetMembers")
-              .findOne({ characterId: character._id, countryId: country });
+          : await cabinetMembersCollection<Document>(db).findOne({
+              characterId: character._id,
+              countryId: country,
+            });
         canCabinetVote = isPrimeMinister || Boolean(cabinetMember);
       }
     }

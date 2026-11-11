@@ -17,6 +17,7 @@ import type { ChangelogPost } from "@/lib/changelog/types";
 import { getCanonicalUrl, getWikiCanonicalUrl } from "@/lib/siteMetadata";
 import crypto from "crypto";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -304,12 +305,10 @@ async function sendEmbedsBatched(url: string, embeds: DiscordEmbed[]): Promise<v
 
 async function getChangelogWebhookUrl(): Promise<string | undefined> {
   const db = await getDb();
-  const config = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne(
-      { _id: "default" },
-      { projection: { discordChangelogWebhookUrl: 1, discordWebhookOwnerService: 1 } }
-    );
+  const config = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { discordChangelogWebhookUrl: 1, discordWebhookOwnerService: 1 } }
+  );
   // #1208 — a database restored into another deployment inherits these URLs.
   if (!ownsConfiguredWebhooks(config?.discordWebhookOwnerService)) return undefined;
   return config?.discordChangelogWebhookUrl || undefined;

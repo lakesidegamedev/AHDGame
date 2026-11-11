@@ -4,6 +4,8 @@ import type { GameConfig } from "@/lib/db/types";
 import { gameConfig } from "@/lib/seeds/reference/gameConfig";
 import { assertKnownSeedPreset, strictEraForPreset } from "@/lib/seeds/presetSelector";
 import { splitFreshWorldGameConfigFlags } from "@/lib/seeds/reference/featureFlagDefaults";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import type { Document } from "mongodb";
 
 export async function seedGameConfig(
   db: Db,
@@ -13,8 +15,7 @@ export async function seedGameConfig(
 ) {
   if (preset !== undefined) assertKnownSeedPreset(preset);
   if (reset)
-    await db
-      .collection("gameConfig")
+    await gameConfigCollection<Document>(db)
       .drop()
       .catch((error) => {
         logWarning("Collection drop failed (may not exist)", {
@@ -29,8 +30,10 @@ export async function seedGameConfig(
   const { settings, flags } = splitFreshWorldGameConfigFlags(configData);
   const extra: Pick<GameConfig, "seedYear"> =
     preset !== undefined ? { seedYear: parseInt(strictEraForPreset(preset), 10) } : {};
-  await db
-    .collection<GameConfig>("gameConfig")
-    .updateOne({ _id }, { $set: { ...settings, ...extra }, $setOnInsert: flags }, { upsert: true });
+  await gameConfigCollection(db).updateOne(
+    { _id },
+    { $set: { ...settings, ...extra }, $setOnInsert: flags },
+    { upsert: true }
+  );
   log("Seeded game config");
 }

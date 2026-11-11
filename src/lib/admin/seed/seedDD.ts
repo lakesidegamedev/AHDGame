@@ -16,6 +16,10 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
+import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
+import { stateBaselinesCollection } from "@/lib/db/repositories/stateBaselines";
 
 // Both Cold-War seeds (1953 + 1979) put East Germany on the modern
 // eastern-Länder codes that the unified-era FRG seeds carry under `DE`
@@ -131,8 +135,8 @@ export async function seedDDDemographics(
   preset: string
 ) {
   if (reset) {
-    await db.collection("stateDemographics").deleteMany({ countryId: "DD" });
-    await db.collection("stateDemographicTurnout").deleteMany({ countryId: "DD" });
+    await stateDemographicsCollection<Document>(db).deleteMany({ countryId: "DD" });
+    await stateDemographicTurnoutCollection<Document>(db).deleteMany({ countryId: "DD" });
   }
   // DD's region demographics are keyed by the shared eastern-Länder codes, so seed
   // them only in the divided (1979) era — otherwise we'd clobber DE's demographics
@@ -154,9 +158,7 @@ export async function seedDDDemographics(
   const regionDemographics = buildModelRegionDemographics(model);
   for (const raw of regionDemographics) {
     const { _id, groups: _groups, ...demoData } = raw;
-    await db
-      .collection<StateDemographics>("stateDemographics")
-      .updateOne({ _id }, { $set: demoData }, { upsert: true });
+    await stateDemographicsCollection(db).updateOne({ _id }, { $set: demoData }, { upsert: true });
   }
 
   // Derive the electorate lean onto the states docs. Without this the regions
@@ -171,9 +173,11 @@ export async function seedDDDemographics(
   const { ddDemographicTurnout } = await import("@/lib/seeds/dd/ddDemographicTurnout");
   for (const turnout of ddDemographicTurnout) {
     const { _id, ...turnoutData } = turnout;
-    await db
-      .collection<StateDemographicTurnout>("stateDemographicTurnout")
-      .updateOne({ _id: _id as never }, { $set: turnoutData }, { upsert: true });
+    await stateDemographicTurnoutCollection(db).updateOne(
+      { _id: _id as never },
+      { $set: turnoutData },
+      { upsert: true }
+    );
   }
 
   log(
@@ -193,7 +197,7 @@ export async function seedDDStateMetrics(
     // metrics belong to (and are re-seeded by) DE, so deleting them here would wipe
     // DE's data.
     const ids = divided ? DD_DIVIDED_REGION_IDS : DD_EXCLUSIVE_REGION_IDS;
-    await db.collection("macroMetrics").deleteMany({ _id: { $in: ids } as never });
+    await macroMetricsCollection<Document>(db).deleteMany({ _id: { $in: ids } as never });
   }
   if (!divided) {
     log("[DD] skipped state metrics (unified era)");
@@ -234,7 +238,7 @@ export async function seedDDBaselines(
     // Baselines have no countryId, so scope by code: in a unified era only clean
     // DD's exclusive codes (the shared eastern-Länder baselines belong to DE).
     const ids = divided ? DD_DIVIDED_REGION_IDS : DD_EXCLUSIVE_REGION_IDS;
-    await db.collection("stateBaselines").deleteMany({ _id: { $in: ids } as never });
+    await stateBaselinesCollection<Document>(db).deleteMany({ _id: { $in: ids } as never });
   }
   if (!divided) {
     log("[DD] skipped baselines (unified era)");
@@ -251,9 +255,11 @@ export async function seedDDBaselines(
     const { ddStateBaselines1953 } = await import("@/lib/seeds/dd/ddStateBaselines1953");
     for (const raw of ddStateBaselines1953) {
       const { _id, ...baselineData } = raw;
-      await db
-        .collection<StateMetricBaseline>("stateBaselines")
-        .updateOne({ _id }, { $set: baselineData }, { upsert: true });
+      await stateBaselinesCollection(db).updateOne(
+        { _id },
+        { $set: baselineData },
+        { upsert: true }
+      );
     }
     log(`Seeded ${ddStateBaselines1953.length} DD baselines (preset: ${preset})`);
     return;
@@ -265,9 +271,7 @@ export async function seedDDBaselines(
   for (const raw of ddStateBaselines) {
     const adjusted = is1979 ? applyEra1979BaselineAdjustments(raw) : raw;
     const { _id, ...baselineData } = adjusted;
-    await db
-      .collection<StateMetricBaseline>("stateBaselines")
-      .updateOne({ _id }, { $set: baselineData }, { upsert: true });
+    await stateBaselinesCollection(db).updateOne({ _id }, { $set: baselineData }, { upsert: true });
   }
   log(`Seeded ${ddStateBaselines.length} DD baselines (preset: ${preset})`);
 }
@@ -291,11 +295,10 @@ export async function seedDDGovernmentFormation(
   const { ddGovernmentFormation } = await import("@/lib/seeds/dd/ddGovernmentFormation");
   const now = new Date();
   const { _id, ...formationData } = ddGovernmentFormation;
-  await governmentFormationsCollection(db)
-    .updateOne(
-      { _id },
-      { $set: { ...formationData, createdAt: now, updatedAt: now } },
-      { upsert: true }
-    );
+  await governmentFormationsCollection(db).updateOne(
+    { _id },
+    { $set: { ...formationData, createdAt: now, updatedAt: now } },
+    { upsert: true }
+  );
   log("Seeded DD government formation document");
 }

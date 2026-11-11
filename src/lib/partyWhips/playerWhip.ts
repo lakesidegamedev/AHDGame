@@ -5,6 +5,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import { getOfficeTypeForChamber } from "@/lib/legislature/chamberOfficeType";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 /**
  * Returns characterIds of seated, non-NPP, non-banned party members eligible
@@ -52,8 +53,7 @@ export async function getEligibleCharactersForWhip(
     (s) => characters.find((c) => c.userId.toString() === s)!.userId
   );
 
-  const bannedUsers = await db
-    .collection<User>("users")
+  const bannedUsers = await usersCollection(db)
     .find({ _id: { $in: userIds }, isBanned: true })
     .project<{ _id: ObjectId }>({ _id: 1 })
     .toArray();

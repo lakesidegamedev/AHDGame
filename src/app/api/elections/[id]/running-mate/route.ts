@@ -23,6 +23,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -161,9 +162,10 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(400, "That character is not eligible to be selected as running mate");
     }
 
-    const runningMateUser = await db
-      .collection<User>("users")
-      .findOne({ _id: runningMateChar.userId }, { projection: { _id: 1, isBanned: 1 } });
+    const runningMateUser = await usersCollection(db).findOne(
+      { _id: runningMateChar.userId },
+      { projection: { _id: 1, isBanned: 1 } }
+    );
     if (!runningMateUser || runningMateUser.isBanned) {
       return errorResponse(400, "That character is not eligible to be selected as running mate");
     }
@@ -188,13 +190,12 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     // A candidate who suspended their own campaign to endorse is allowed to be a
     // running mate; only a genuinely-active (non-suspended) candidate is blocked.
-    const isAlreadyCandidate = await electionCandidatesCollection(db)
-      .findOne({
-        electionId: election._id,
-        characterId: runningMateObjectId,
-        status: "active",
-        campaignSuspended: { $ne: true },
-      });
+    const isAlreadyCandidate = await electionCandidatesCollection(db).findOne({
+      electionId: election._id,
+      characterId: runningMateObjectId,
+      status: "active",
+      campaignSuspended: { $ne: true },
+    });
     if (isAlreadyCandidate) {
       return errorResponse(400, "That character is already a candidate in this election");
     }

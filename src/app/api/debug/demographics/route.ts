@@ -17,6 +17,7 @@ import { getStateLean } from "@/lib/utils/demographics";
 import { censusCachedStateLean } from "@/lib/demographics/cachedStateLean";
 import { loadCampaignProjectionContext } from "@/lib/campaignTargeting/audience";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
 
 // GET /api/debug/demographics — Debug demographic lean calculation for a given state; admin-only in production.
 // Auth: requireAdmin
@@ -39,7 +40,7 @@ export async function GET(request: Request) {
     const db = await getDb();
 
     const [demographics, state, context] = await Promise.all([
-      db.collection<StateDemographics>("stateDemographics").findOne({ _id: stateId, countryId }),
+      stateDemographicsCollection(db).findOne({ _id: stateId, countryId }),
       statesCollection(db).findOne({ _id: stateId, countryId }),
       loadCampaignProjectionContext(db, [stateId]),
     ]);

@@ -26,6 +26,9 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
+import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
 
 export interface SectorRevenueTax {
   /** Per-state owned-sector revenue (FX-normalized to ₳) + growth rate. */
@@ -125,8 +128,7 @@ export async function sectorRevenueTaxProvider(db: Db, turn = 0): Promise<Sector
         corporationId: 1,
       })
       .toArray(),
-    db
-      .collection<UnownedSector>("unownedSectors")
+    unownedSectorsCollection(db)
       .find({})
       .project<
         Pick<
@@ -164,8 +166,7 @@ export async function sectorRevenueTaxProvider(db: Db, turn = 0): Promise<Sector
       .toArray(),
     // P2/D7: market mode via the SAME db handle (mock-db safe — mirrors the
     // labourSystemMode read in the engine phase), not the global getDb().
-    db
-      .collection<GameConfig>("gameConfig")
+    gameConfigCollection(db)
       .findOne({ _id: "default" }, { projection: { marketSystemMode: 1, outputBasis: 1 } })
       .catch(() => null),
   ]);
@@ -280,8 +281,7 @@ export async function sectorRevenueTaxProvider(db: Db, turn = 0): Promise<Sector
  * cross-turn cycle rather than a same-turn one.
  */
 export async function governmentApprovalProvider(db: Db): Promise<Map<string, number>> {
-  const docs = await db
-    .collection<{ _id: string; approvalRating?: number }>("governmentApprovals")
+  const docs = await governmentApprovalsCollection<{ _id: string; approvalRating?: number }>(db)
     .find({})
     .project<{ _id: string; approvalRating?: number }>({ approvalRating: 1 })
     .toArray();

@@ -26,6 +26,7 @@ import {
   STRENGTH_UPKEEP_STAGE,
   strengthUpkeepActive,
 } from "./strengthUpkeepRules";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 export {
   DOMINANCE_SHIELD_UPKEEP_CAP,
@@ -36,9 +37,10 @@ export {
 } from "./strengthUpkeepRules";
 
 export async function loadStrengthUpkeepStage(db: Db): Promise<number> {
-  const cfg = await db
-    .collection<{ _id: string; strengthUpkeepStage?: number }>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { strengthUpkeepStage: 1 } });
+  const cfg = await gameConfigCollection<{ _id: string; strengthUpkeepStage?: number }>(db).findOne(
+    { _id: "default" },
+    { projection: { strengthUpkeepStage: 1 } }
+  );
   const stage = cfg?.strengthUpkeepStage;
   return typeof stage === "number" && Number.isFinite(stage) ? stage : 0;
 }

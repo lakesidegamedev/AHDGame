@@ -7,6 +7,8 @@ import {
 } from "@/lib/corporations/corporateOwnership";
 import { createNotification } from "@/lib/notifications";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { notificationsCollection } from "@/lib/db/repositories/notifications";
+import type { Document } from "mongodb";
 
 /**
  * When corporate ownership is above 75%, notify that corp’s CEO they may merge.
@@ -38,7 +40,7 @@ export async function notifyHostileTakeoverThresholdIfEligible(
       );
       if (!parent?.userId) continue;
 
-      const dup = await db.collection("notifications").findOne({
+      const dup = await notificationsCollection<Document>(db).findOne({
         userId: parent.userId,
         type: "corp_hostile_takeover_available",
         "metadata.issuerCorporationId": corp._id.toString(),

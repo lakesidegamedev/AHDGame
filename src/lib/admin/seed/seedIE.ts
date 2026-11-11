@@ -20,6 +20,10 @@ import type { Document } from "mongodb";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
+import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
+import { stateBaselinesCollection } from "@/lib/db/repositories/stateBaselines";
 
 const IE_REGION_IDS = ["DUB", "KIL", "MID", "WEX", "LIM", "COR", "GAL", "DON"];
 
@@ -102,8 +106,8 @@ export async function seedIEDemographics(
   preset: string
 ) {
   if (reset) {
-    await db.collection("stateDemographics").deleteMany({ countryId: "IE" });
-    await db.collection("stateDemographicTurnout").deleteMany({ countryId: "IE" });
+    await stateDemographicsCollection<Document>(db).deleteMany({ countryId: "IE" });
+    await stateDemographicTurnoutCollection<Document>(db).deleteMany({ countryId: "IE" });
   }
 
   const { ieRegionDemographics: ieRegionDemographicsStatic } =
@@ -135,17 +139,17 @@ export async function seedIEDemographics(
   for (const raw of ieRegionDemographics) {
     const demo = is1991 ? applyEra1991DemographicAdjustments(raw, "IE") : raw;
     const { _id, groups: _groups, ...demoData } = demo;
-    await db
-      .collection<StateDemographics>("stateDemographics")
-      .updateOne({ _id }, { $set: demoData }, { upsert: true });
+    await stateDemographicsCollection(db).updateOne({ _id }, { $set: demoData }, { upsert: true });
   }
 
   const { ieDemographicTurnout } = await import("@/lib/seeds/ie/ieDemographicTurnout");
   for (const turnout of ieDemographicTurnout) {
     const { _id, ...turnoutData } = turnout;
-    await db
-      .collection<StateDemographicTurnout>("stateDemographicTurnout")
-      .updateOne({ _id }, { $set: turnoutData }, { upsert: true });
+    await stateDemographicTurnoutCollection(db).updateOne(
+      { _id },
+      { $set: turnoutData },
+      { upsert: true }
+    );
   }
 
   log(
@@ -160,7 +164,7 @@ export async function seedIEStateMetrics(
   preset: string
 ) {
   if (reset) {
-    await db.collection("macroMetrics").deleteMany({
+    await macroMetricsCollection<Document>(db).deleteMany({
       _id: { $in: IE_REGION_IDS } as never,
     });
   }
@@ -194,7 +198,7 @@ export async function seedIEBaselines(
   preset: string
 ) {
   if (reset) {
-    await db.collection("stateBaselines").deleteMany({
+    await stateBaselinesCollection<Document>(db).deleteMany({
       _id: { $in: IE_REGION_IDS } as never,
     });
   }
@@ -227,9 +231,7 @@ export async function seedIEBaselines(
     const overlay = getRegionMetricPresets("IE", String(raw._id), preset);
     const baseline = overlay ? applyMetricPresetToBaseline(adjusted, overlay) : adjusted;
     const { _id, ...baselineData } = baseline;
-    await db
-      .collection<StateMetricBaseline>("stateBaselines")
-      .updateOne({ _id }, { $set: baselineData }, { upsert: true });
+    await stateBaselinesCollection(db).updateOne({ _id }, { $set: baselineData }, { upsert: true });
   }
   log(`Seeded ${ieStateBaselines.length} IE baselines (preset: ${preset})`);
 }
@@ -244,12 +246,11 @@ export async function seedIEGovernmentFormation(
   const { _id, ...formationData } = ieGovernmentFormation;
   // 1953 Dáil Éireann had 147 seats (13th Dáil). Majority: 74.
   const eraOverride = preset === "1953-default" ? { totalSeats: 147, majorityThreshold: 74 } : {};
-  await governmentFormationsCollection(db)
-    .updateOne(
-      { _id },
-      { $set: { ...formationData, ...eraOverride, createdAt: now, updatedAt: now } },
-      { upsert: true }
-    );
+  await governmentFormationsCollection(db).updateOne(
+    { _id },
+    { $set: { ...formationData, ...eraOverride, createdAt: now, updatedAt: now } },
+    { upsert: true }
+  );
   log("Seeded IE government formation document");
 }
 
@@ -277,8 +278,11 @@ export async function seedIEStatePartyOrg(
   const now = new Date();
   for (const org of orgs) {
     const { _id, ...orgData } = org;
-    await statePartyOrgCollection(db)
-      .updateOne({ _id }, { $set: { ...orgData, updatedAt: now } }, { upsert: true });
+    await statePartyOrgCollection(db).updateOne(
+      { _id },
+      { $set: { ...orgData, updatedAt: now } },
+      { upsert: true }
+    );
   }
   log(`Seeded ${orgs.length} IE state party org records (preset: ${activePreset})`);
 }
@@ -315,12 +319,11 @@ export async function ensureMissingIEStatePartyOrgRows(
   if (missing.length > 0) {
     for (const org of missing) {
       const { _id, ...orgData } = org;
-      await statePartyOrgCollection(db)
-        .updateOne(
-          { _id },
-          { $set: { ...orgData, updatedAt: now }, $setOnInsert: { createdAt: now } },
-          { upsert: true }
-        );
+      await statePartyOrgCollection(db).updateOne(
+        { _id },
+        { $set: { ...orgData, updatedAt: now }, $setOnInsert: { createdAt: now } },
+        { upsert: true }
+      );
     }
     log(`Inserted ${missing.length} missing IE state party org row(s) (preset: ${activePreset})`);
   }

@@ -37,6 +37,7 @@ import type {
 } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
 
 const LEADERSHIP_ELECTION_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -70,7 +71,7 @@ export async function vacateCongressLeadershipRole(
   expectCharacterId?: ObjectId
 ): Promise<boolean> {
   const scoped = expectCharacterId !== undefined;
-  const result = await db.collection<CongressLeader>("congressLeaders").updateOne(
+  const result = await congressLeadersCollection(db).updateOne(
     scoped ? { role: leaderRole, characterId: expectCharacterId } : { role: leaderRole },
     {
       $set: {
@@ -172,7 +173,7 @@ export async function resolveLeadershipElection(
     }
   );
 
-  await db.collection<CongressLeader>("congressLeaders").updateOne(
+  await congressLeadersCollection(db).updateOne(
     { role: leaderRole },
     {
       $set: {
@@ -254,9 +255,7 @@ async function autoNominateIncumbent(
   ctx: ChamberLeadershipContext,
   now: Date
 ): Promise<void> {
-  const leader = await db
-    .collection<CongressLeader>("congressLeaders")
-    .findOne({ role: leaderRole });
+  const leader = await congressLeadersCollection(db).findOne({ role: leaderRole });
   if (!leader?.characterId) return;
 
   const hasSeat = await electedOfficialsCollection(db).findOne({
@@ -322,9 +321,7 @@ async function autoNominateStandingIncumbent(
   ctx: ChamberLeadershipContext,
   now: Date
 ): Promise<void> {
-  const speaker = await db
-    .collection<CongressLeader>("congressLeaders")
-    .findOne({ role: leaderRole });
+  const speaker = await congressLeadersCollection(db).findOne({ role: leaderRole });
   if (!speaker?.characterId) return;
 
   const hasSeat = await electedOfficialsCollection(db).findOne({
@@ -428,9 +425,7 @@ async function hasControllingPartyChanged(
   expectedParty: string | null
 ): Promise<boolean> {
   if (expectedParty == null) return true;
-  const current = await db
-    .collection<CongressLeader>("congressLeaders")
-    .findOne({ role: leaderRole });
+  const current = await congressLeadersCollection(db).findOne({ role: leaderRole });
   if (!current?.characterId) return true;
   return current.party !== expectedParty;
 }
@@ -770,8 +765,7 @@ export async function vacateLeadershipForLostSeats(db: Db): Promise<number> {
   ];
 
   // Fetch all current leaders
-  const leaderDocs = await db
-    .collection<CongressLeader>("congressLeaders")
+  const leaderDocs = await congressLeadersCollection(db)
     .find({ role: { $in: leadershipRoles.map((r) => r.role) } })
     .toArray();
 

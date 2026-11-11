@@ -23,6 +23,8 @@ import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
+import type { Document } from "mongodb";
 
 type HistoricalPoliticalRow = { _id: ObjectId | string; [key: string]: unknown };
 
@@ -43,8 +45,10 @@ export async function materializeFederationFederalRetirement(input: {
     !Number.isFinite(now.getTime())
   )
     throw new Error("Federation retirement needs a transaction, application, turn and time");
-  const country = await countryGameStatesCollection(db)
-    .findOne({ _id: sourceCountryId, dissolvedTurn: null }, { session });
+  const country = await countryGameStatesCollection(db).findOne(
+    { _id: sourceCountryId, dissolvedTurn: null },
+    { session }
+  );
   if (!country) throw new Error("Federation source country changed before dissolution");
   // Keep historical offices and cabinet memberships before vacating the source.
   // Each collection is read once and archived in the existing settlement ledger.
@@ -108,7 +112,10 @@ export async function materializeFederationFederalRetirement(input: {
         { $set: { status: "cancelled", closedAt: now, updatedAt: now } },
         { session }
       );
-  await db.collection("cabinetMembers").deleteMany({ countryId: sourceCountryId }, { session });
+  await cabinetMembersCollection<Document>(db).deleteMany(
+    { countryId: sourceCountryId },
+    { session }
+  );
   await db.collection("ukCabinetCooldowns").deleteMany({ countryId: sourceCountryId }, { session });
   const elections = await electionsCollection(db).updateMany(
     { countryId: sourceCountryId, status: { $in: ["upcoming", "active"] } },

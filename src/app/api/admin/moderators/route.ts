@@ -5,6 +5,7 @@ import { withAdminAuth } from "@/lib/api/withAdminAuth";
 import { parseBoundedIntParam } from "@/lib/api/validate";
 import type { User } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 // GET /api/admin/moderators — List users holding a grantable staff role.
 // Query: ?role=moderator|junior_dev (default moderator)
@@ -20,14 +21,13 @@ export const GET = withAdminAuth(async (_auth, request: Request) => {
 
     const db = await getDb();
     const [moderators, total] = await Promise.all([
-      db
-        .collection<User>("users")
+      usersCollection(db)
         .find({ role })
         .sort(role === "moderator" ? { moderatorSince: -1 } : { juniorDevSince: -1 })
         .skip(offset)
         .limit(limit)
         .toArray(),
-      db.collection<User>("users").countDocuments({ role }),
+      usersCollection(db).countDocuments({ role }),
     ]);
 
     const characterIds = moderators

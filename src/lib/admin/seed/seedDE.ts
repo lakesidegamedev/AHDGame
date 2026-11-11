@@ -23,6 +23,10 @@ import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParti
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
+import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
+import { stateBaselinesCollection } from "@/lib/db/repositories/stateBaselines";
 
 /**
  * The region roster DE actually governs in a given preset.
@@ -108,9 +112,9 @@ export async function seedDEDemographics(
   preset: string
 ) {
   if (reset) {
-    await db.collection("stateDemographics").deleteMany({ countryId: "DE" });
+    await stateDemographicsCollection<Document>(db).deleteMany({ countryId: "DE" });
     await db.collection("demographicDefaults").deleteMany({ countryId: "DE" });
-    await db.collection("stateDemographicTurnout").deleteMany({ countryId: "DE" });
+    await stateDemographicTurnoutCollection<Document>(db).deleteMany({ countryId: "DE" });
   }
 
   const { deRegionDemographics: deRegionDemographicsStatic } =
@@ -145,9 +149,11 @@ export async function seedDEDemographics(
   for (const raw of deRegionDemographics) {
     const sd = is1991 ? applyEra1991DemographicAdjustments(raw, "DE") : raw;
     const { groups: _groups, ...storedDemographics } = sd;
-    await db
-      .collection<StateDemographics>("stateDemographics")
-      .updateOne({ _id: sd._id }, { $set: storedDemographics }, { upsert: true });
+    await stateDemographicsCollection(db).updateOne(
+      { _id: sd._id },
+      { $set: storedDemographics },
+      { upsert: true }
+    );
     await db
       .collection<StateDemographics>("demographicDefaults")
       .updateOne({ _id: sd._id }, { $set: storedDemographics }, { upsert: true });
@@ -171,9 +177,11 @@ export async function seedDEDemographics(
   }
 
   for (const turnout of deDemographicTurnout) {
-    await db
-      .collection<StateDemographicTurnout>("stateDemographicTurnout")
-      .updateOne({ _id: turnout._id }, { $set: turnout }, { upsert: true });
+    await stateDemographicTurnoutCollection(db).updateOne(
+      { _id: turnout._id },
+      { $set: turnout },
+      { upsert: true }
+    );
   }
 
   log(
@@ -202,12 +210,11 @@ export async function seedDEStatePartyOrg(
   const orgs = await calculateDEStatePartyOrgs(db, activePreset);
   const now = new Date();
   for (const org of orgs) {
-    await statePartyOrgCollection(db)
-      .updateOne(
-        { _id: org._id },
-        { $set: { ...org, updatedAt: now }, $setOnInsert: { createdAt: now } },
-        { upsert: true }
-      );
+    await statePartyOrgCollection(db).updateOne(
+      { _id: org._id },
+      { $set: { ...org, updatedAt: now }, $setOnInsert: { createdAt: now } },
+      { upsert: true }
+    );
   }
   log(`Seeded ${orgs.length} DE state party org records (preset: ${activePreset})`);
 }
@@ -244,12 +251,11 @@ export async function ensureMissingDEStatePartyOrgRows(
   const missing = orgs.filter((o) => !existingIds.has(o._id));
   if (missing.length > 0) {
     for (const org of missing) {
-      await statePartyOrgCollection(db)
-        .updateOne(
-          { _id: org._id },
-          { $set: { ...org, updatedAt: now }, $setOnInsert: { createdAt: now } },
-          { upsert: true }
-        );
+      await statePartyOrgCollection(db).updateOne(
+        { _id: org._id },
+        { $set: { ...org, updatedAt: now }, $setOnInsert: { createdAt: now } },
+        { upsert: true }
+      );
     }
     log(`Inserted ${missing.length} missing DE state party org row(s) (preset: ${activePreset})`);
   }
@@ -266,9 +272,9 @@ export async function seedDEStateMetrics(
   const roster = await deRegionRosterForPreset(preset);
   const ownedRegionIds = new Set(roster.map((region) => String(region._id)));
   if (reset) {
-    await db
-      .collection("macroMetrics")
-      .deleteMany({ _id: { $in: [...ownedRegionIds] as never[] } });
+    await macroMetricsCollection<Document>(db).deleteMany({
+      _id: { $in: [...ownedRegionIds] as never[] },
+    });
   }
   const { deStateMetrics } = await import("@/lib/seeds/de/deStateMetrics");
   const { applyEra1991Adjustments } = await import("@/lib/seeds/reference/stateMetrics1991");
@@ -310,7 +316,7 @@ export async function seedDEBaselines(
 ) {
   if (reset) {
     const { deRegions } = await import("@/lib/seeds/de/deRegions");
-    await db.collection("stateBaselines").deleteMany({
+    await stateBaselinesCollection<Document>(db).deleteMany({
       _id: { $in: deRegions.map((region) => region._id) as never[] },
     });
   }
@@ -341,9 +347,11 @@ export async function seedDEBaselines(
     // the country authors nothing for a metric (falls through to uniformMetricDefault).
     const overlay = getRegionMetricPresets("DE", String(raw._id), preset);
     const baseline = overlay ? applyMetricPresetToBaseline(adjusted, overlay) : adjusted;
-    await db
-      .collection<StateMetricBaseline>("stateBaselines")
-      .updateOne({ _id: baseline._id }, { $set: baseline }, { upsert: true });
+    await stateBaselinesCollection(db).updateOne(
+      { _id: baseline._id },
+      { $set: baseline },
+      { upsert: true }
+    );
   }
   log(`Seeded ${deStateBaselines.length} DE baselines (preset: ${preset})`);
 }

@@ -16,6 +16,7 @@ import { loadIndustryBasis } from "../corpMarketShare";
 import { controlGroupMemberIds, controlGroupRootByCorpId } from "../groups/controlGroups";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /** gameConfig.groupSizeCostsStage at which merger concentration reads both sides' control groups. */
 export const GROUP_MERGER_CONCENTRATION_STAGE = 5;
@@ -32,9 +33,10 @@ async function dealSides(
   target: Pick<Corporation, "_id">
 ): Promise<{ acquirerIds: string[]; targetIds: string[] }> {
   const alone = { acquirerIds: [acquirer._id.toString()], targetIds: [target._id.toString()] };
-  const cfg = await db
-    .collection<{ groupSizeCostsStage?: number }>("gameConfig")
-    .findOne({ _id: "default" as never }, { projection: { groupSizeCostsStage: 1 } });
+  const cfg = await gameConfigCollection<{ groupSizeCostsStage?: number }>(db).findOne(
+    { _id: "default" as never },
+    { projection: { groupSizeCostsStage: 1 } }
+  );
   if ((cfg?.groupSizeCostsStage ?? 0) < GROUP_MERGER_CONCENTRATION_STAGE) return alone;
   const corps = await corporationsCollection(db)
     .find({}, { projection: { shareholders: 1, totalShares: 1, superShareMultiplier: 1 } })

@@ -22,6 +22,7 @@ import { CA_PARTY_SLUG_BY_ABBREVIATION } from "@/lib/countries/ca/data/caParties
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 
 /** Election types where the hook is applied. */
 const HOOKED_ELECTION_TYPES = new Set([
@@ -318,9 +319,9 @@ export async function maybeApplyIndependenceDesireHook(
   if (!HOOKED_ELECTION_TYPES.has(electionType)) return noop;
 
   // SP5: independenceDesire lives top-level on macroMetrics.
-  const metric = await db
-    .collection<MacroMetricsDoc>("macroMetrics")
-    .findOne({ _id: state.toUpperCase() });
+  const metric = await macroMetricsCollection<MacroMetricsDoc>(db).findOne({
+    _id: state.toUpperCase(),
+  });
   const desire = metric?.independenceDesire?.value;
   if (desire == null) return noop;
 

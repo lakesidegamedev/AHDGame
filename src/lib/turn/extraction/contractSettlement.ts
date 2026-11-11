@@ -37,6 +37,7 @@ import { oid, type BankingTransition } from "@/lib/banking/rules/boundary";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
 
 export interface ContractSettlementResult {
   contractsSettled: number;
@@ -149,8 +150,10 @@ function parseFrozenRoyaltyQuote(receipt: FundedRoyaltyReceipt): FrozenRoyaltyQu
 }
 
 async function loadFundedRoyaltyReceipt(db: Db, key: string): Promise<FundedRoyaltyReceipt | null> {
-  return bankMoneyMovesCollection<FundedRoyaltyReceipt>(db)
-    .findOne({ _id: key }, { projection: { _id: 1, turn: 1, event: 1 } });
+  return bankMoneyMovesCollection<FundedRoyaltyReceipt>(db).findOne(
+    { _id: key },
+    { projection: { _id: 1, turn: 1, event: 1 } }
+  );
 }
 
 async function resumeFrozenRoyaltyReceipt(db: Db, key: string): Promise<FrozenRoyaltyQuote> {
@@ -282,8 +285,7 @@ export async function settleExtractionContracts(
   const capCol = await getStateResourceCapacityCollection(db);
   const [capDocs, priceDocs, fxByCurrency, thresholds, stateBudgets] = await Promise.all([
     capCol.find({ stateId: { $in: stateIds } }).toArray(),
-    db
-      .collection<CommodityPrice>("commodityPrices")
+    commodityPricesCollection(db)
       .find({ commodity: { $in: [...EXTRACTABLE_RESOURCES] } })
       .toArray(),
     loadFxRatesByCurrency(db),

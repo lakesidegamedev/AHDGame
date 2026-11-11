@@ -44,6 +44,7 @@ import { openSpeakerElection } from "@/lib/congress/speaker/openSpeakerElection"
 import type { CongressLeader, ElectedOfficial, LeadershipRole } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
 
 /**
  * The majority-party-gated roles, per chamber, paired with the per-chamber
@@ -101,8 +102,7 @@ export async function reconcileLeadershipPartyEligibility(
   // Three queries total, not three per role: this runs on the congress page
   // GETs, right beside `vacateLeadershipForLostSeats`, which is batched for
   // exactly this reason.
-  const leaders = await db
-    .collection<CongressLeader>("congressLeaders")
+  const leaders = await congressLeadersCollection(db)
     .find({ role: { $in: roles.map((r) => r.leaderRole) } })
     .toArray();
   const holderIds = leaders.flatMap((l) => (l.characterId ? [l.characterId] : []));

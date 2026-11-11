@@ -19,6 +19,7 @@ import {
 } from "./foreignPolicyRollout";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
 
 export interface AutonomousWarCommandResult {
   acted: boolean;
@@ -166,7 +167,7 @@ export async function prepareAutonomousWarEntry(
     return { ready: false, deployedUnits: 0, reason: "Autonomous war entry is not active." };
   }
   const [approval, budget] = await Promise.all([
-    db.collection<GovernmentApproval>("governmentApprovals").findOne({ _id: countryId }),
+    governmentApprovalsCollection(db).findOne({ _id: countryId }),
     federalBudgetCollection<{ countryId: CountryId; debtToGdpRatio?: number }>(db).findOne({
       countryId,
     }),

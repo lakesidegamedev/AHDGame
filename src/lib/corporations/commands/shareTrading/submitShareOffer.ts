@@ -49,6 +49,7 @@ import { getGameTime } from "@/lib/time/gameTime";
 import { settleListingOffer } from "./acceptShareOffer";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { notificationsCollection } from "@/lib/db/repositories/notifications";
 
 interface RouteParams {
   params: Promise<{ id: string; listingId: string }>;
@@ -463,7 +464,7 @@ export async function submitShareOffer(request: Request, { params }: RouteParams
           { projection: { userId: 1 } }
         );
         if (!sellerChar) return;
-        await db.collection<Omit<Notification, "_id">>("notifications").insertOne({
+        await notificationsCollection<Omit<Notification, "_id">>(db).insertOne({
           userId: sellerChar.userId,
           type: "share_offer_accepted",
           title: "Your negotiated share sale went through",
@@ -485,7 +486,7 @@ export async function submitShareOffer(request: Request, { params }: RouteParams
 
       if (!sellerChar) return;
 
-      await db.collection<Omit<Notification, "_id">>("notifications").insertOne({
+      await notificationsCollection<Omit<Notification, "_id">>(db).insertOne({
         userId: sellerChar.userId,
         type: "share_listing_offer_received",
         title: "New offer on your share listing",

@@ -24,6 +24,7 @@ import {
 } from "@/lib/utils/approvalSnapshotTargets";
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
+import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
 
 /**
  * Orchestration for the per-turn approval snapshot: who gets one, and whose
@@ -60,7 +61,7 @@ export async function snapshotApprovalsForTurn(
   marketAdjustmentStage = 0
 ): Promise<ApprovalSnapshotRun> {
   const activeIds = COUNTRY_ORDER.filter((id) => COUNTRY_CONFIGS[id].status === "active");
-  const approvals = db.collection<GovernmentApproval>("governmentApprovals");
+  const approvals = governmentApprovalsCollection(db);
 
   const [conflicts, documentedDocs, seededStateCountries] = await Promise.all([
     getConflictsCollection(db)
@@ -135,7 +136,7 @@ async function releaseApprovalGuests(
 ): Promise<CountryId[]> {
   if (guests.length === 0) return [];
 
-  const approvals = db.collection<GovernmentApproval>("governmentApprovals");
+  const approvals = governmentApprovalsCollection(db);
   const docs = await approvals
     .find({ _id: { $in: guests } }, { projection: { _id: 1, warExhaustion: 1 } })
     .toArray();

@@ -12,6 +12,7 @@ import {
 import { emitTx } from "@/lib/financialTxLog/emit";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 /**
  * The casino house bank.
@@ -50,7 +51,7 @@ export type ResolvePlayerResult =
   { ok: true; player: CasinoPlayer } | { ok: false; status: 403 | 404; error: string };
 
 export async function resolveCasinoPlayer(db: Db, discordId: string): Promise<ResolvePlayerResult> {
-  const user = await db.collection<User>("users").findOne({ discordId });
+  const user = await usersCollection(db).findOne({ discordId });
   if (!user) return { ok: false, status: 404, error: "No user found with that Discord ID" };
   if (user.isBanned) return { ok: false, status: 403, error: "This account is banned" };
   const character = await charactersCollection(db).findOne({ userId: user._id });

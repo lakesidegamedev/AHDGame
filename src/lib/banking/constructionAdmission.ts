@@ -4,6 +4,7 @@ import type { GameConfig } from "@/lib/db/types";
 import type { CorporateSector } from "@/lib/db/types/corporation";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 export interface ConstructionAdmission {
   token: string;
@@ -16,7 +17,7 @@ export async function acquireConstructionAdmission(
   db: Db,
   admission: ConstructionAdmission
 ): Promise<boolean> {
-  const config = db.collection<GameConfig>("gameConfig");
+  const config = gameConfigCollection(db);
   const guard = {
     _id: "default",
     privateBankingEnabled: true,
@@ -39,9 +40,10 @@ export async function acquireConstructionAdmission(
 
 export async function releaseConstructionAdmission(db: Db, token?: string): Promise<void> {
   if (!token) return;
-  await db
-    .collection<GameConfig>("gameConfig")
-    .updateOne({ _id: "default" }, { $pull: { bankConstructionAdmissions: { token } } });
+  await gameConfigCollection(db).updateOne(
+    { _id: "default" },
+    { $pull: { bankConstructionAdmissions: { token } } }
+  );
 }
 
 /** Leave recovery enabled until every persisted cash or collateral obligation is clear. */
@@ -49,7 +51,7 @@ export async function setConstructionFinanceEnabled(
   db: Db,
   enabled: boolean
 ): Promise<{ ok: boolean; error?: string }> {
-  const config = db.collection<GameConfig>("gameConfig");
+  const config = gameConfigCollection(db);
   if (enabled) {
     const result = await config.updateOne(
       {
@@ -148,9 +150,10 @@ export async function setConstructionFinanceEnabled(
 
 /** A killed pre-reservation request has no sector claim or bank cash lease to retain. */
 export async function recoverConstructionAdmissions(db: Db, turn: number): Promise<void> {
-  const config = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { bankConstructionAdmissions: 1 } });
+  const config = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { bankConstructionAdmissions: 1 } }
+  );
   for (const admission of config?.bankConstructionAdmissions ?? []) {
     if (admission.turn >= turn) continue;
     const [claim, bank] = await Promise.all([

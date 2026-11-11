@@ -28,6 +28,7 @@ import { isStateScopedCommodity } from "@/lib/market/rules/commodityMarketScope"
 import { stateShortage } from "@/lib/market/rules/stateShortage";
 import { loadReachableBooks, reachableBooksFor } from "@/lib/trade/queries/loadReachableBooks";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
 
 /**
  * GET /api/commodities?exchange=nyse|ftse
@@ -67,7 +68,7 @@ export async function GET(request: Request) {
     const target24hTurn = Math.max(1, currentTurn - 24);
 
     const [rawPrices, historyAtOrBeforeTarget, oldestHistory, history24h] = await Promise.all([
-      db.collection<CommodityPrice>("commodityPrices").find({}).toArray(),
+      commodityPricesCollection(db).find({}).toArray(),
       db
         .collection<CommodityPriceHistory>("commodityPriceHistory")
         .aggregate<{ _id: string; turn: number; globalPrice: number }>([

@@ -8,6 +8,10 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
+import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
+import { stateBaselinesCollection } from "@/lib/db/repositories/stateBaselines";
 
 /**
  * Seeds USSR regions. The USSR (`SU`) exists in the 1953 and 1979 presets (it
@@ -87,8 +91,8 @@ export async function seedRUDemographics(
   preset: string
 ) {
   if (reset) {
-    await db.collection("stateDemographics").deleteMany({ countryId: "RU" });
-    await db.collection("stateDemographicTurnout").deleteMany({ countryId: "RU" });
+    await stateDemographicsCollection<Document>(db).deleteMany({ countryId: "RU" });
+    await stateDemographicTurnoutCollection<Document>(db).deleteMany({ countryId: "RU" });
   }
 
   const { getCountryLayer1Model, buildModelRegionDemographics } =
@@ -103,9 +107,7 @@ export async function seedRUDemographics(
   const regionDemographics = buildModelRegionDemographics(model);
   for (const raw of regionDemographics) {
     const { _id, groups: _groups, ...demoData } = raw;
-    await db
-      .collection<StateDemographics>("stateDemographics")
-      .updateOne({ _id }, { $set: demoData }, { upsert: true });
+    await stateDemographicsCollection(db).updateOne({ _id }, { $set: demoData }, { upsert: true });
   }
 
   // Derive the electorate lean onto the states docs. Without this the regions
@@ -119,9 +121,11 @@ export async function seedRUDemographics(
   const { ruDemographicTurnout } = await import("@/lib/seeds/ru/ruDemographicTurnout");
   for (const turnout of ruDemographicTurnout) {
     const { _id, ...turnoutData } = turnout;
-    await db
-      .collection("stateDemographicTurnout")
-      .updateOne({ _id: _id as never }, { $set: turnoutData }, { upsert: true });
+    await stateDemographicTurnoutCollection<Document>(db).updateOne(
+      { _id: _id as never },
+      { $set: turnoutData },
+      { upsert: true }
+    );
   }
 
   log(
@@ -174,7 +178,7 @@ export async function seedRUStateMetrics(
 ) {
   if (reset) {
     await Promise.all([
-      db.collection("macroMetrics").deleteMany({ _id: { $in: RU_REGION_IDS } as never }),
+      macroMetricsCollection<Document>(db).deleteMany({ _id: { $in: RU_REGION_IDS } as never }),
       purgeRetiredRuRegionDocs(db),
     ]);
   }
@@ -202,7 +206,9 @@ export async function seedRUBaselines(
   preset: string
 ) {
   if (reset) {
-    await db.collection("stateBaselines").deleteMany({ _id: { $in: RU_REGION_IDS } as never });
+    await stateBaselinesCollection<Document>(db).deleteMany({
+      _id: { $in: RU_REGION_IDS } as never,
+    });
   }
   const { ruStateBaselines } = await import("@/lib/seeds/ru/ruStateBaselines");
   const { getRegionMetricPresets, applyMetricPresetToBaseline } =
@@ -226,9 +232,7 @@ export async function seedRUBaselines(
     const overlay = getRegionMetricPresets("RU", String(raw._id), preset);
     const baseline = overlay ? applyMetricPresetToBaseline(adjusted, overlay) : adjusted;
     const { _id, ...baselineData } = baseline;
-    await db
-      .collection<StateMetricBaseline>("stateBaselines")
-      .updateOne({ _id }, { $set: baselineData }, { upsert: true });
+    await stateBaselinesCollection(db).updateOne({ _id }, { $set: baselineData }, { upsert: true });
   }
   log(`Seeded ${ruStateBaselines.length} SU baselines (preset: ${preset})`);
 }
@@ -251,12 +255,11 @@ export async function seedRUGovernmentFormation(
     return;
   }
   const { _id, ...formationData } = doc;
-  await governmentFormationsCollection<Document>(db)
-    .updateOne(
-      { _id: _id as never },
-      { $set: { ...formationData, createdAt: now, updatedAt: now } },
-      { upsert: true }
-    );
+  await governmentFormationsCollection<Document>(db).updateOne(
+    { _id: _id as never },
+    { $set: { ...formationData, createdAt: now, updatedAt: now } },
+    { upsert: true }
+  );
   const chamber =
     preset === "1991-default" ? "Congress" : preset === "2027-default" ? "Duma" : "Union";
   log(`Seeded RU government formation (${doc.status}, ${doc.totalSeats} ${chamber} seats)`);

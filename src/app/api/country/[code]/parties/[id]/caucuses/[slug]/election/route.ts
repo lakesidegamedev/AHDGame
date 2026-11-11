@@ -21,6 +21,9 @@ import type {
 } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
+import { nationalPartyElectionsCollection } from "@/lib/db/repositories/nationalPartyElections";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; slug: string }>;
@@ -83,7 +86,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     if (!activeElection && latestElection.length === 0) {
       const [gameState, activeNationalChairElection] = await Promise.all([
         gameStateCollection(db).findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
-        db.collection<NationalPartyElection>("nationalPartyElections").findOne({
+        nationalPartyElectionsCollection(db).findOne({
           partyId,
           countryId,
           position: "chair",
@@ -134,9 +137,10 @@ export async function GET(_request: Request, { params }: RouteParams) {
     // Founding races waive the cooldown and tenure gates, as the vote and enter
     // routes do, so the ballot must not be disabled for brand-new members.
     if (isActiveMember && authUser.character && !activeElection?.founding) {
-      const userDoc = await db
-        .collection("users")
-        .findOne({ _id: new ObjectId(authUser.userId) }, { projection: { createdAt: 1 } });
+      const userDoc = await usersCollection<Document>(db).findOne(
+        { _id: new ObjectId(authUser.userId) },
+        { projection: { createdAt: 1 } }
+      );
       const cooldown = isInNewCharacterCooldown({
         userCreatedAt: userDoc?.createdAt ?? new Date(0),
         characterCreatedAt: authUser.character.createdAt,

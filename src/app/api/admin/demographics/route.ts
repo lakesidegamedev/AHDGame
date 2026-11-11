@@ -5,6 +5,8 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import { adminDemographicsPostSchema } from "@/lib/api/schemas/admin";
 import type { StateDemographics, AdminLog } from "@/lib/db/types";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
+import { adminLogsCollection } from "@/lib/db/repositories/adminLogs";
 
 // GET /api/admin/demographics — Returns one state's stored demographics (state query param).
 // Auth: requireAdmin
@@ -21,9 +23,9 @@ export async function GET(request: Request) {
 
     let stateDemographics: StateDemographics | null = null;
     if (stateId) {
-      stateDemographics = await db
-        .collection<StateDemographics>("stateDemographics")
-        .findOne({ _id: stateId.toUpperCase() });
+      stateDemographics = await stateDemographicsCollection(db).findOne({
+        _id: stateId.toUpperCase(),
+      });
     }
 
     return NextResponse.json({ stateDemographics });
@@ -53,10 +55,7 @@ export async function POST(request: Request) {
     const db = await getDb();
 
     // Get all current state demographics
-    const currentDemographics = await db
-      .collection<StateDemographics>("stateDemographics")
-      .find({})
-      .toArray();
+    const currentDemographics = await stateDemographicsCollection(db).find({}).toArray();
 
     if (currentDemographics.length === 0) {
       return errorResponse(400, "No demographics data found to save as defaults");
@@ -75,7 +74,7 @@ export async function POST(request: Request) {
     }
 
     // Log the action
-    await db.collection<AdminLog>("adminLogs").insertOne({
+    await adminLogsCollection(db).insertOne({
       category: "system",
       action: "demographics_defaults_overwritten",
       username: "SYSTEM",

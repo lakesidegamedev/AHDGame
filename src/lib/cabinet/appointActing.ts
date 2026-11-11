@@ -31,6 +31,7 @@ import { getCabinetMembersCollection } from "@/lib/db/collections/cabinetMembers
 import type { CabinetNomination, ElectedOfficial } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { cabinetNominationsCollection } from "@/lib/db/repositories/cabinetNominations";
 
 const actingSchema = z.object({
   // Validated against the country's own roster below, not here: a bare id
@@ -159,7 +160,7 @@ export async function appointActingCabinetMember(
 
     // Keep the historical votes, but only this presidency can bar an acting pick.
     // A failed office-compatibility check is not a Senate defeat.
-    const rejected = await db.collection<CabinetNomination>("cabinetNominations").findOne({
+    const rejected = await cabinetNominationsCollection(db).findOne({
       countryId,
       positionId,
       nomineeCharacterId: appointeeOid,

@@ -15,6 +15,7 @@ import {
   type MechanicalLawKey,
   type MechanicalLawLevel,
 } from "./rules";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
 
 export type MechanicalLawLevels = Record<MechanicalLawKey, MechanicalLawLevel>;
 
@@ -48,10 +49,11 @@ export async function getMechanicalLawLevelsByCountry(
     out.set(countryId, levels);
   }
   if (wanted.length === 0) return out;
-  const rows = await db
-    .collection<{ stateId: string; legislationTypeId: string; policyOptionIndex?: number }>(
-      "statePolicies"
-    )
+  const rows = await statePoliciesCollection<{
+    stateId: string;
+    legislationTypeId: string;
+    policyOptionIndex?: number;
+  }>(db)
     .find(
       {
         stateId: { $in: [...new Set(wanted.map((w) => w.stateId))] },

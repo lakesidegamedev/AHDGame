@@ -23,6 +23,7 @@ import { getStatesCollection } from "@/lib/db/collections/states";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import type { Document } from "mongodb";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 
 // Max per-year revenue boost applied to the most distressed sector type (linearly
 // scaled down the distress ranking). Raised 0.02 → 0.06 (audit t786): at 0.02 the
@@ -112,8 +113,7 @@ export async function processAutoSectorSeed(
     .find({ _id: { $not: /^NATIONAL_/ } })
     .toArray();
 
-  const existingDocs = await db
-    .collection<UnownedSector>("unownedSectors")
+  const existingDocs = await unownedSectorsCollection(db)
     .find({})
     .project({ stateId: 1, sectorType: 1, industryModel: 1, mediaDiscriminator: 1 })
     .toArray();
@@ -145,8 +145,7 @@ export async function processAutoSectorSeed(
 
     const multiplier = 1 + boost;
 
-    const sectorDocs = await db
-      .collection<UnownedSector>("unownedSectors")
+    const sectorDocs = await unownedSectorsCollection(db)
       .find({ sectorType, industryModel, mediaDiscriminator })
       .toArray();
     const openIds = sectorDocs
@@ -203,9 +202,10 @@ export async function processAutoSectorSeed(
           mediaDiscriminator
         ),
       };
-      const { modifiedCount } = await db
-        .collection<UnownedSector>("unownedSectors")
-        .updateMany({ _id: { $in: openIds } }, [boostPipeline]);
+      const { modifiedCount } = await unownedSectorsCollection(db).updateMany(
+        { _id: { $in: openIds } },
+        [boostPipeline]
+      );
       sectorsUpdated += modifiedCount;
     }
     // Natcorp corporate sectors get the same $multiply boost as open unowned markets.
@@ -289,7 +289,7 @@ export async function processAutoSectorSeed(
         boostMultiplier: multiplier,
       });
 
-      await db.collection<UnownedSector>("unownedSectors").insertOne({
+      await unownedSectorsCollection(db).insertOne({
         _id: new ObjectId(),
         stateId: state._id as string,
         countryId: state.countryId as CountryId,

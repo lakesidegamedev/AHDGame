@@ -7,6 +7,7 @@ import { getStartingYearForPreset } from "@/lib/constants/turnTime";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 export interface CommandEconomyCountryReport {
   countryId: CountryId;
@@ -62,9 +63,10 @@ export async function verifyCommandEconomySeed(
 ): Promise<CommandEconomySeedReport> {
   const empty: CommandEconomySeedReport = { checked: false, countries: [], issues: [], fatal: [] };
 
-  const gameConfig = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } });
+  const gameConfig = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { commandEconomyEnabled: 1 } }
+  );
   if (gameConfig?.commandEconomyEnabled !== true) return empty;
 
   const startingYear = getStartingYearForPreset(preset);

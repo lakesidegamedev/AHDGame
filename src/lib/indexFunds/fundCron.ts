@@ -113,6 +113,7 @@ import type { EquityMarketPool, ShareOrder } from "@/lib/db/types";
 import { workerConfig } from "@/lib/config/worker";
 import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 import type { Document } from "mongodb";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 export {
   INDEX_FUND_NAV_CONCURRENCY,
   shouldRebalanceIndexFundConstituents,
@@ -239,8 +240,10 @@ async function runFundCron(db: Db, options?: IndexFundCronOptions): Promise<Fund
 
   if (
     !(await isIndexFundsEnabled()) &&
-    !(await indexFundsCollection<Document>(db)
-      .countDocuments({ "mandate.mode": "picked_stocks", status: { $ne: "delisted" } }))
+    !(await indexFundsCollection<Document>(db).countDocuments({
+      "mandate.mode": "picked_stocks",
+      status: { $ne: "delisted" },
+    }))
   ) {
     try {
       await refreshEquityLiquidityFacility({
@@ -285,7 +288,7 @@ async function runFundCron(db: Db, options?: IndexFundCronOptions): Promise<Fund
     _tPrev = nowMs;
   };
 
-  const liquidityConfig = await db.collection<GameConfig>("gameConfig").findOne(
+  const liquidityConfig = await gameConfigCollection(db).findOne(
     { _id: "default" },
     {
       projection: {

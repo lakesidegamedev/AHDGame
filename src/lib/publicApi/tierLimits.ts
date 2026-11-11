@@ -13,6 +13,8 @@ import { ObjectId } from "mongodb";
 import { BOT_READ_LIMITS } from "@/lib/api/rateLimit";
 import { isPatreonActive, type PatreonTier } from "@/lib/db/types";
 import { getDb } from "@/lib/mongodb";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
 
 /** Multiplier applied to the base public-read allowance, per active tier. */
 const PUBLIC_API_TIER_MULTIPLIERS: Record<Exclude<PatreonTier, null>, number> = {
@@ -67,12 +69,10 @@ export async function resolvePublicApiTier(userId: string): Promise<PatreonTier>
   try {
     if (ObjectId.isValid(userId)) {
       const db = await getDb();
-      const user = await db
-        .collection("users")
-        .findOne(
-          { _id: new ObjectId(userId) },
-          { projection: { patreonTier: 1, patreonExpiresAt: 1 } }
-        );
+      const user = await usersCollection<Document>(db).findOne(
+        { _id: new ObjectId(userId) },
+        { projection: { patreonTier: 1, patreonExpiresAt: 1 } }
+      );
       const stored = (user?.patreonTier ?? null) as PatreonTier;
       if (isPatreonActive(stored, user?.patreonExpiresAt ?? null)) tier = stored;
     }

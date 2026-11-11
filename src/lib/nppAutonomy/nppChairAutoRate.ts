@@ -54,6 +54,7 @@ import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 
 /**
  * Bounded step toward the target: 0.5x the gap, clamped to [-1.75, +0.75].
@@ -176,7 +177,7 @@ export async function processNppChairAutoRate(
   const nationalMetrics =
     !commonIndicators && nationalDocId
       ? // SP5: national economic rollup lives on macroMetrics.
-        await db.collection<StateMetrics>("macroMetrics").findOne({ _id: nationalDocId })
+        await macroMetricsCollection(db).findOne({ _id: nationalDocId })
       : null;
   const gdpGrowth =
     commonIndicators?.gdpGrowth ??
@@ -386,11 +387,10 @@ export async function processNppCurrencyDefence(
   const now = new Date();
 
   if (action === "release" && band) {
-    await exchangeRatesCollection(db)
-      .updateOne(
-        { _id: countryId, "interventionPolicy.setAtTurn": band.setAtTurn },
-        { $set: { interventionPolicy: null, updatedAt: now } }
-      );
+    await exchangeRatesCollection(db).updateOne(
+      { _id: countryId, "interventionPolicy.setAtTurn": band.setAtTurn },
+      { $set: { interventionPolicy: null, updatedAt: now } }
+    );
     return action;
   }
   if (action !== "set") return "none";
@@ -416,10 +416,9 @@ export async function processNppCurrencyDefence(
     recentInterventions: [],
   };
   // Only into an empty slot: a band a person set between the read and now wins.
-  await exchangeRatesCollection(db)
-    .updateOne(
-      { _id: countryId, interventionPolicy: null },
-      { $set: { interventionPolicy: policy, updatedAt: now } }
-    );
+  await exchangeRatesCollection(db).updateOne(
+    { _id: countryId, interventionPolicy: null },
+    { $set: { interventionPolicy: policy, updatedAt: now } }
+  );
   return action;
 }

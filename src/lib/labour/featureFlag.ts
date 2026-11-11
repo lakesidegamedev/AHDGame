@@ -18,6 +18,7 @@ export {
 } from "@/lib/labour/modes";
 
 import { isLabourSystemMode, labourAtLeast, type LabourSystemMode } from "@/lib/labour/modes";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /**
  * Resolve the current labour-system mode.
@@ -32,9 +33,10 @@ export async function getLabourSystemMode(
     mode = preloadedConfig?.labourSystemMode;
   } else {
     const db = await getDb();
-    const config = await db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { labourSystemMode: 1 } });
+    const config = await gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { labourSystemMode: 1 } }
+    );
     mode = config?.labourSystemMode;
   }
   return isLabourSystemMode(mode) ? mode : "off";

@@ -13,6 +13,7 @@ import { unownedPoolDrawdown, type UnownedPoolBucket } from "@/lib/market/unowne
 import { oid, type BankingTransition, type TransitionLeg } from "./rules/boundary";
 import type { ConstructionBuildEffects } from "./rules/constructionBuild";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 
 export async function prepareConstructionBuildEffects(input: {
   db: Db;
@@ -117,7 +118,7 @@ export async function prepareConstructionBuildEffects(input: {
       });
   }
   const pool = pipeline
-    ? await db.collection<UnownedSector>("unownedSectors").findOneAndUpdate(
+    ? await unownedSectorsCollection(db).findOneAndUpdate(
         {
           stateId: input.bucket.stateId,
           sectorType: input.bucket.sectorType,

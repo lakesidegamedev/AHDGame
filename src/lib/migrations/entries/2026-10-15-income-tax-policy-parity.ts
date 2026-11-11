@@ -9,6 +9,7 @@ import {
 import type { Migration } from "../types";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
 
 /** Align original seed policies with existing receipts, without changing rates or enacted laws. */
 export const migration: Migration = {
@@ -26,7 +27,7 @@ export const migration: Migration = {
       enactedTurn: { $exists: false },
     };
     const [policies, budgets, types] = await Promise.all([
-      db.collection<StatePolicy>("statePolicies").find(seedOnly).toArray(),
+      statePoliciesCollection(db).find(seedOnly).toArray(),
       federalBudgetCollection(db)
         .find(
           { countryId: { $in: ["BR", "NG"] } },
@@ -94,9 +95,7 @@ export const migration: Migration = {
           `Would align ${ops.length} seed policies; budget rates and ideological effects are preserved.`,
         ],
       };
-    const result = ops.length
-      ? await db.collection<StatePolicy>("statePolicies").bulkWrite(ops)
-      : undefined;
+    const result = ops.length ? await statePoliciesCollection(db).bulkWrite(ops) : undefined;
     return { documentsScanned: policies.length, documentsUpdated: result?.modifiedCount ?? 0 };
   },
 };

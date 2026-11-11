@@ -51,6 +51,8 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
 import type { Document } from "mongodb";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { nationalPartyElectionsCollection } from "@/lib/db/repositories/nationalPartyElections";
 
 export {
   NATIONAL_ELECTION_DURATION_TURNS,
@@ -112,14 +114,8 @@ export async function createMissingNationalElections(
 
   const [parties, activeElections, deferredElections] = await Promise.all([
     politicalPartiesCollection(db).find(scopedPartiesQuery).toArray(),
-    db
-      .collection<NationalPartyElection>("nationalPartyElections")
-      .find(scopedActiveElectionQuery)
-      .toArray(),
-    db
-      .collection<NationalPartyElection>("nationalPartyElections")
-      .find(scopedDeferredElectionQuery)
-      .toArray(),
+    nationalPartyElectionsCollection(db).find(scopedActiveElectionQuery).toArray(),
+    nationalPartyElectionsCollection(db).find(scopedDeferredElectionQuery).toArray(),
   ]);
 
   // A charter proposer is seated as the party's first chair. Keep that seat
@@ -133,8 +129,7 @@ export async function createMissingNationalElections(
   const firstTermChairPartyKeys = new Set<string>();
   if (firstTermChairParties.length > 0) {
     const foundingPartyIds = firstTermChairParties.map((party) => String(party.sequentialId));
-    const completedFirstCycleElections = await db
-      .collection<NationalPartyElection>("nationalPartyElections")
+    const completedFirstCycleElections = await nationalPartyElectionsCollection(db)
       .find(
         applyOptionalCountryScope(
           {
@@ -253,7 +248,7 @@ export async function createMissingNationalElections(
   );
 
   const inserted = await insertManyIgnoringDuplicateKey(
-    db.collection<NationalPartyElection>("nationalPartyElections"),
+    nationalPartyElectionsCollection(db),
     elections as NationalPartyElection[]
   );
   if (inserted === 0) return 0;
@@ -323,10 +318,7 @@ async function createMissingFoundingLeadershipElections(
 
   const [parties, activeElections] = await Promise.all([
     politicalPartiesCollection(db).find(scopedPartiesQuery).toArray(),
-    db
-      .collection<NationalPartyElection>("nationalPartyElections")
-      .find(scopedActiveElectionQuery)
-      .toArray(),
+    nationalPartyElectionsCollection(db).find(scopedActiveElectionQuery).toArray(),
   ]);
 
   const activeSet = new Set(
@@ -372,7 +364,7 @@ async function createMissingFoundingLeadershipElections(
   }));
 
   const inserted = await insertManyIgnoringDuplicateKey(
-    db.collection<NationalPartyElection>("nationalPartyElections"),
+    nationalPartyElectionsCollection(db),
     elections as NationalPartyElection[]
   );
   if (inserted === 0) return 0;
@@ -428,8 +420,7 @@ export async function processCompletedNationalElections(
     },
     countryId
   );
-  const endedElections = await db
-    .collection<NationalPartyElection>("nationalPartyElections")
+  const endedElections = await nationalPartyElectionsCollection(db)
     .find(scopedEndedElectionQuery)
     .toArray();
 
@@ -797,7 +788,7 @@ export async function processCompletedNationalElections(
     });
   }
 
-  await db.collection<NationalPartyElection>("nationalPartyElections").bulkWrite(electionOps);
+  await nationalPartyElectionsCollection(db).bulkWrite(electionOps);
 
   // Terminalize the resolved elections' candidacies. The candidate docs are
   // read for the tally above (status:"active"), so this must run afterward.
@@ -888,8 +879,7 @@ export async function vacateInactiveNationalLeadership(
   );
   const users =
     userIds.length > 0
-      ? await db
-          .collection<User>("users")
+      ? await usersCollection(db)
           .find({ _id: { $in: userIds } })
           .project<{ _id: ObjectId; lastActivity?: Date; createdAt?: Date }>({
             _id: 1,
@@ -957,11 +947,10 @@ export async function vacateInactiveNationalLeadership(
     // when the party chair is vacated for inactivity, null the led coalition's
     // chairCharacterId so it doesn't dangle on a departed leader.
     if (vacatedChairPartyOids.length > 0) {
-      await coalitionsCollection<Document>(db)
-        .updateMany(
-          { chairPartyId: { $in: vacatedChairPartyOids } },
-          { $set: { chairCharacterId: null, updatedAt: now } }
-        );
+      await coalitionsCollection<Document>(db).updateMany(
+        { chairPartyId: { $in: vacatedChairPartyOids } },
+        { $set: { chairCharacterId: null, updatedAt: now } }
+      );
     }
     await Promise.all(notifications);
     console.log(`[NationalPartyElections] Vacated ${vacated} inactive national leadership seat(s)`);

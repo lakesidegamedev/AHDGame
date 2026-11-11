@@ -7,6 +7,8 @@ import { errorResponse } from "@/lib/api/errors";
 import { createModAuditLog } from "@/lib/modAuditLog";
 import { z } from "zod";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
 
 const positionValue = z.number().int().min(-5).max(5);
 
@@ -41,7 +43,7 @@ export const PATCH = withAdminRoute(async (auth, request: Request) => {
 
   // Resolve the linked account for audit-log attribution (NPCs may have none).
   const user = character.userId
-    ? await db.collection("users").findOne({ _id: character.userId })
+    ? await usersCollection<Document>(db).findOne({ _id: character.userId })
     : null;
 
   const oldEconomic = character.policies.economic;

@@ -20,6 +20,8 @@ import { loadSectorHeatmap } from "./data/sectorHeatmap";
 import { loadNetWorth } from "./data/netWorth";
 import { loadCommodityBoard } from "./data/commodityBoard";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
 
 export interface MyCompanyWidgetData {
   sequentialId: number | null;
@@ -80,12 +82,10 @@ function percentChange(current: number, previous: number | undefined): number | 
 }
 
 async function loadMyCompany(db: Db, viewer: WidgetViewer): Promise<MyCompanyWidgetData | null> {
-  const user = await db
-    .collection<User>("users")
-    .findOne(
-      { _id: new ObjectId(viewer.userId) },
-      { projection: { activeCharacterId: 1, activeCharacterType: 1, activeImperialCharacterId: 1 } }
-    );
+  const user = await usersCollection(db).findOne(
+    { _id: new ObjectId(viewer.userId) },
+    { projection: { activeCharacterId: 1, activeCharacterType: 1, activeImperialCharacterId: 1 } }
+  );
   const ceoId =
     user?.activeCharacterType === "imperial"
       ? user.activeImperialCharacterId
@@ -107,8 +107,7 @@ async function loadMyCompany(db: Db, viewer: WidgetViewer): Promise<MyCompanyWid
     }
   );
   if (!corp) return null;
-  const history = await db
-    .collection<CorporationHistory>("corporationHistory")
+  const history = await corporationHistoryCollection(db)
     .find(
       { corporationId: corp._id },
       { projection: { turn: 1, sharePrice: 1, liquidCapital: 1, revenue: 1, income: 1 } }
@@ -148,8 +147,7 @@ async function loadTicker(db: Db, exchange: string): Promise<StockTickerWidgetDa
   if (!snapshot) return null;
   const listings = snapshot.listings ?? [];
   // One read for every row's recent history, bounded by a turn floor.
-  const history = await db
-    .collection<CorporationHistory>("corporationHistory")
+  const history = await corporationHistoryCollection(db)
     .find(
       {
         corporationId: { $in: listings.map((row) => row._id) },

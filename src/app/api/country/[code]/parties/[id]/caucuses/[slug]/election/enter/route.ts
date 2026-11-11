@@ -12,6 +12,8 @@ import { findPartyBySequentialId } from "@/lib/db/partyLookup";
 import { findCaucusBySlug } from "@/lib/db/caucusLookup";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import type { CaucusChairCandidate, CaucusChairElection, CaucusMembership } from "@/lib/db/types";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
 
 const bodySchema = z.object({
   withdraw: z.boolean().optional(),
@@ -72,9 +74,10 @@ export async function POST(
     // Both gates are waived for founding races, matching the caucus vote route
     // and the national and state leadership enter routes.
     if (!election.founding) {
-      const userDoc = await db
-        .collection("users")
-        .findOne({ _id: auth.user.character.userId }, { projection: { createdAt: 1 } });
+      const userDoc = await usersCollection<Document>(db).findOne(
+        { _id: auth.user.character.userId },
+        { projection: { createdAt: 1 } }
+      );
       const cooldown = isInNewCharacterCooldown({
         userCreatedAt: userDoc?.createdAt ?? new Date(0),
         characterCreatedAt: auth.user.character.createdAt,

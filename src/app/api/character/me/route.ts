@@ -31,6 +31,7 @@ import { enrichFundPositions } from "@/lib/indexFunds/fundPortfolioView";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 // The current corporation is read here, so this endpoint must never serve a
 // stale body: a positive max-age let the browser return a pre-founding
@@ -61,12 +62,12 @@ export async function GET(request?: Request) {
       return errorResponse(401, "Unauthorized");
     }
 
-    const userDoc = await db
-      .collection<User>("users")
-      .findOne({ _id: new ObjectId(authUser.userId) });
+    const userDoc = await usersCollection(db).findOne({ _id: new ObjectId(authUser.userId) });
     if (userDoc?.activeCharacterType === "imperial" && userDoc.activeImperialCharacterId) {
-      const imperial = await imperialCharactersCollection(db)
-        .findOne({ _id: userDoc.activeImperialCharacterId, userId: new ObjectId(authUser.userId) });
+      const imperial = await imperialCharactersCollection(db).findOne({
+        _id: userDoc.activeImperialCharacterId,
+        userId: new ObjectId(authUser.userId),
+      });
 
       if (imperial) {
         const [corporation, forexEnabled] = await Promise.all([

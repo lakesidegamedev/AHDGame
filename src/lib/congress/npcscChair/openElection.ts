@@ -27,6 +27,7 @@ import type {
 } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
 
 const ELECTION_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours — parity with US Speaker
 
@@ -81,9 +82,7 @@ export async function triggerNpcscChairElectionAfterReconcile(db: Db, now: Date)
     majorityBloc: npc.majorityBloc,
   });
 
-  const incumbent = await db
-    .collection<CongressLeader>("congressLeaders")
-    .findOne({ role: "chair_npcsc" });
+  const incumbent = await congressLeadersCollection(db).findOne({ role: "chair_npcsc" });
 
   if (incumbent?.characterId) {
     const hasSeat = await electedOfficialsCollection(db).findOne({

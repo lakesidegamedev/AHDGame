@@ -25,6 +25,7 @@ import {
 } from "./bookAdmission";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 export interface LocEffect {
   locAfter?: Character["lineOfCredit"];
@@ -111,9 +112,10 @@ async function recordsFor(db: Db, key: string, plan: LocPlan) {
     loadTxThresholds(db),
     loadTurnLengthMinutes(db),
     loadAnchorRateMap(db, entries),
-    db
-      .collection("gameConfig")
-      .findOne({ _id: "default" as never }, { projection: { ledgerShadow: 1 } }),
+    gameConfigCollection<Document>(db).findOne(
+      { _id: "default" as never },
+      { projection: { ledgerShadow: 1 } }
+    ),
     resolveLedgerTurn(db),
   ]);
   const tx = buildTxDocs(entries, thresholds, cadence, rates).map((entry, i) => ({

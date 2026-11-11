@@ -27,6 +27,7 @@ import {
 import type { CurrencyOrder, GameConfig, PlayerMail } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { currencyOrdersCollection } from "@/lib/db/repositories/currencyOrders";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 const directTradeSchema = z
   .object({
@@ -93,9 +94,10 @@ export async function POST(request: Request) {
     }
 
     // Non-convertible command currencies cannot be peer-traded either.
-    const gameConfig = await db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } });
+    const gameConfig = await gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { commandEconomyEnabled: 1 } }
+    );
     const blocked = nonConvertibleTradeCurrency(
       [fromCurrency, toCurrency],
       gameTime.currentYear,
@@ -149,8 +151,10 @@ export async function POST(request: Request) {
           );
         }
 
-        const result: InsertOneResult<CurrencyOrder> = await currencyOrdersCollection(db)
-          .insertOne(order as CurrencyOrder, { session });
+        const result: InsertOneResult<CurrencyOrder> = await currencyOrdersCollection(db).insertOne(
+          order as CurrencyOrder,
+          { session }
+        );
         requestId = result.insertedId;
       },
       async () => {
@@ -166,8 +170,9 @@ export async function POST(request: Request) {
         }
 
         try {
-          const result: InsertOneResult<CurrencyOrder> = await currencyOrdersCollection(db)
-            .insertOne(order as CurrencyOrder);
+          const result: InsertOneResult<CurrencyOrder> = await currencyOrdersCollection(
+            db
+          ).insertOne(order as CurrencyOrder);
           requestId = result.insertedId;
         } catch (error) {
           await charactersCollection(db).updateOne(

@@ -22,6 +22,8 @@ import { emitTxBulk, loadTxThresholds } from "@/lib/financialTxLog/emit";
 import { POSITION_UPDATE_VOUCHER_GRANT_AMOUNT } from "@/lib/positionUpdateVouchers/rules";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { adminLogsCollection } from "@/lib/db/repositories/adminLogs";
+import type { Document } from "mongodb";
 
 export const POST = withAdminRoute(async (auth, request: Request) => {
   const { admin } = auth;
@@ -139,7 +141,7 @@ export const POST = withAdminRoute(async (auth, request: Request) => {
 
   // Log the action
   const logNow = new Date();
-  await db.collection("adminLogs").insertOne({
+  await adminLogsCollection<Document>(db).insertOne({
     category: "system",
     action: "resources_granted",
     username: "SYSTEM",
@@ -161,9 +163,7 @@ export const POST = withAdminRoute(async (auth, request: Request) => {
       .find({ _id: { $in: objectIds } }, { projection: { _id: 1, name: 1, countryId: 1 } })
       .toArray();
     const transferThresholds = await loadTxThresholds(db);
-    const rateDocs = forexEnabled
-      ? await exchangeRatesCollection(db).find({}).toArray()
-      : [];
+    const rateDocs = forexEnabled ? await exchangeRatesCollection(db).find({}).toArray() : [];
     const rateByCountry = new Map<string, number>(rateDocs.map((r) => [r._id as string, r.rate]));
     const transferEntries = affectedChars.flatMap((char) => {
       const homeCurrency = (COUNTRY_CURRENCY_MAP[

@@ -31,6 +31,7 @@ import {
   type PlayerWhipSummaryEntry,
 } from "@/lib/partyWhips/playerWhipSummary";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { cabinetNominationsCollection } from "@/lib/db/repositories/cabinetNominations";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; slug: string }>;
@@ -349,8 +350,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     }
 
     if (hasUpperMembers || hasLowerMembers) {
-      const activeNominations = await db
-        .collection<CabinetNomination>("cabinetNominations")
+      const activeNominations = await cabinetNominationsCollection(db)
         .find({ status: "active", countryId })
         .toArray();
 

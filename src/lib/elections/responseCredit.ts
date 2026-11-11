@@ -43,6 +43,8 @@ import {
 import { billsCollection } from "@/lib/db/repositories/bills";
 import type { Document } from "mongodb";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
+import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
 
 /**
  * Which referendum component a metric feeds, and which sign of `ratePerTurn`
@@ -149,8 +151,7 @@ export async function loadResponseCredit(
   const nationalDocId = getNationalDocId(countryId);
   if (!nationalDocId || !Number.isFinite(currentTurn)) return [];
 
-  const policies = await db
-    .collection<StatePolicy>("statePolicies")
+  const policies = await statePoliciesCollection(db)
     .find({
       stateId: nationalDocId,
       enactedTurn: { $gte: currentTurn - CREDIT_WINDOW_TURNS, $lte: currentTurn },
@@ -171,8 +172,7 @@ export async function loadResponseCredit(
     legislationTypesCollection(db)
       .find({ _id: { $in: typeIds } }, { projection: { name: 1, policyOptions: 1 } })
       .toArray(),
-    db
-      .collection<EnactedLaw>("enactedLaws")
+    enactedLawsCollection(db)
       .find({ billId: { $in: billIds } })
       .toArray(),
     billsCollection<Document>(db)

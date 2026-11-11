@@ -27,6 +27,7 @@ import {
   type PlacementSignals,
 } from "@/lib/turn/npp/marketSignals";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 export async function loadNppPlacementSignals(
   db: Db,
@@ -40,7 +41,7 @@ export async function loadNppPlacementSignals(
       .find({}, { projection: { stateId: 1, resources: 1 } })
       .toArray(),
     loadWorldEraUnitScale(db),
-    db.collection<GameConfig>("gameConfig").findOne(
+    gameConfigCollection(db).findOne(
       { _id: "default" },
       {
         projection: {

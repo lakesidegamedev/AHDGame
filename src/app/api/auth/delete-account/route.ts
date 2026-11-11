@@ -24,6 +24,7 @@ import { heldBlocRowIds, releaseVacatedBlocSeats } from "@/lib/elections/vacated
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import type { Document } from "mongodb";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 // DELETE /api/auth/delete-account — Permanently deletes the authenticated user's account, character, and clears offices held.
 // Auth: requireBasicAuth
@@ -39,13 +40,13 @@ export const DELETE = withNoStore(async () => {
 
     const objectId = new ObjectId(userId);
     const db = await getDb();
-    const usersCollection = db.collection<User>("users");
+    const usersCollectionHandle = usersCollection(db);
     const charactersHandle = charactersCollection(db);
     const actionLogsCollection = db.collection("actionLogs");
     const officialsCollection = electedOfficialsCollection<Document>(db);
 
     // Verify user exists
-    const user = await usersCollection.findOne({ _id: objectId });
+    const user = await usersCollectionHandle.findOne({ _id: objectId });
     if (!user) {
       return errorResponse(404, "User not found");
     }
@@ -196,7 +197,7 @@ export const DELETE = withNoStore(async () => {
     await revokeAppleGrantForDeletion(user.appleRefreshToken);
 
     // Delete the user
-    await usersCollection.deleteOne({ _id: objectId });
+    await usersCollectionHandle.deleteOne({ _id: objectId });
 
     await clearAuthCookie("user_delete_account");
 

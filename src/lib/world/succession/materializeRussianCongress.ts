@@ -26,6 +26,8 @@ import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
+import type { Document } from "mongodb";
 
 export const FEDERATION_ARCHIVED_POLITICAL_ROWS_COLLECTION = "federationArchivedPoliticalRows";
 const UNION_OFFICES = ["unionCongressDeputy", "chairmanOfCabinet", "sovietPresident"];
@@ -233,7 +235,7 @@ export async function materializeProvisionalRussianCongress(input: {
         { $set: { status: "cancelled", closedAt: now, updatedAt: now } },
         { session }
       );
-  await db.collection("cabinetMembers").deleteMany({ countryId: "RU" }, { session });
+  await cabinetMembersCollection<Document>(db).deleteMany({ countryId: "RU" }, { session });
   await db.collection("ukCabinetCooldowns").deleteMany({ countryId: "RU" }, { session });
   await governmentFormationsCollection(db).updateOne(
     { _id: "RU" },
@@ -441,7 +443,7 @@ async function preserveEstablishedRussianConstitution(input: {
           { session }
         );
     }
-    await db.collection("cabinetMembers").deleteMany({ countryId: "RU" }, { session });
+    await cabinetMembersCollection<Document>(db).deleteMany({ countryId: "RU" }, { session });
     await db.collection("ukCabinetCooldowns").deleteMany({ countryId: "RU" }, { session });
     for (const collection of ["characters", "npps"]) {
       await db

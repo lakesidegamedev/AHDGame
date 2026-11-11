@@ -74,6 +74,8 @@ import {
   type CrisisOpenCandidate,
 } from "./crisisV2/registry";
 import { crisesCollection } from "@/lib/db/repositories/crises";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { crisisInteractionsCollection } from "@/lib/db/repositories/crisisInteractions";
 
 const COMPONENT = "crisisV2Turn";
 
@@ -288,9 +290,10 @@ async function openApproved(
 /** Operational switch: absent or false stops the detectors; open crises still step. */
 async function loadEmergentEnabled(db: Db): Promise<boolean> {
   try {
-    const config = await db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { crisisV2EmergentEnabled: 1 } });
+    const config = await gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { crisisV2EmergentEnabled: 1 } }
+    );
     return config?.crisisV2EmergentEnabled === true;
   } catch (error) {
     logger.warn(COMPONENT, "emergent switch unreadable; detectors held off", {
@@ -368,8 +371,7 @@ async function loadScheduledLengths(
   const lengths = new Map<string, number | null>();
   const withInteraction = crises.filter((crisis) => crisis.interactionDefinition);
   if (withInteraction.length === 0) return lengths;
-  const interactions = await db
-    .collection<CrisisInteraction>("crisisInteractions")
+  const interactions = await crisisInteractionsCollection(db)
     .find({ crisisId: { $in: withInteraction.map((crisis) => crisis._id) } })
     .toArray();
   const byCrisis = new Map(interactions.map((row) => [row.crisisId.toString(), row]));

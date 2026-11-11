@@ -28,6 +28,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -147,9 +148,10 @@ export async function GET(_request: Request, { params }: RouteParams) {
           { _id: "current" },
           { projection: { currentTurn: 1, currentYear: 1 } }
         ),
-        db
-          .collection<GameConfig>("gameConfig")
-          .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } }),
+        gameConfigCollection(db).findOne(
+          { _id: "default" },
+          { projection: { commandEconomyEnabled: 1 } }
+        ),
       ]);
       const context = {
         sectors,

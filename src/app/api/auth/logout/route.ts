@@ -9,6 +9,9 @@ import { ObjectId } from "mongodb";
 import { recordAudit } from "@/lib/audit/recordAudit";
 import { classifyDevice } from "@/lib/utils/userAgent";
 import { createHash } from "crypto";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
+import { activityLogCollection } from "@/lib/db/repositories/activityLog";
 
 /** Partially redact an IP for display in forensic surfaces — never store the
  * raw address in `actionAuditLog.net` (plan §3.1 "net" doc-comment). */
@@ -50,9 +53,10 @@ export async function POST(request: Request) {
       try {
         db = await getDb();
         const now = new Date();
-        const result = await db
-          .collection("users")
-          .updateOne({ _id: userId }, { $max: { authRevokedAt: now }, $set: { lastLogout: now } });
+        const result = await usersCollection<Document>(db).updateOne(
+          { _id: userId },
+          { $max: { authRevokedAt: now }, $set: { lastLogout: now } }
+        );
         if (result.acknowledged !== true) throw new Error("Revocation was not acknowledged");
         if (payload.authSource === "unified" && payload.sid) {
           const sessionResult = await db
@@ -72,8 +76,7 @@ export async function POST(request: Request) {
       // A concurrent read may have repopulated this process's cache while
       // the database write was pending. Evict again after acknowledgment.
       invalidateCachedUser(payload.userId);
-      void db
-        .collection("activityLog")
+      void activityLogCollection<Document>(db)
         .insertOne({
           type: "logout",
           timestamp: new Date(),

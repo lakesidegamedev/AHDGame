@@ -31,6 +31,7 @@ import { getPoliticalPartiesCollection } from "@/lib/db/collections/politicalPar
 import { getCharactersCollection } from "@/lib/db/collections/characters";
 import { getNppsCollection } from "@/lib/db/collections/npps";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /*
  * NPPs receive 2 action points per turn (vs. 3+ for player characters). The
@@ -59,7 +60,7 @@ export async function processNppFundGeneration(
   currentTurn: number,
   preloadedStateMap?: Map<string, State>
 ): Promise<NppFundGenerationResult> {
-  const config = await db.collection<GameConfig>("gameConfig").findOne({ _id: "default" });
+  const config = await gameConfigCollection(db).findOne({ _id: "default" });
   // NPP economy is on by default; only an explicit `false` disables it.
   if (config?.nppEconomyEnabled === false) {
     return { nppsProcessed: 0, totalGenerated: 0, totalStateTax: 0, totalNationalTax: 0 };

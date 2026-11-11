@@ -169,6 +169,10 @@ import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
+import type { Document } from "mongodb";
 
 export interface CommodityPriceTurnResult {
   commoditiesUpdated: number;
@@ -231,7 +235,7 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
   // their macro economy (#5702). Empty on every world without the flag.
   const [countryTiers, ledgerConfig] = await Promise.all([
     loadCountryTiers(db),
-    db.collection<GameConfig>("gameConfig").findOne(
+    gameConfigCollection(db).findOne(
       { _id: "default" },
       {
         projection: {
@@ -313,9 +317,7 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
         }
       )
       .toArray(),
-    db
-      // SP5: economic.* lives on macroMetrics.
-      .collection<StateMetrics>("macroMetrics")
+    macroMetricsCollection(db)
       .find(
         {},
         {
@@ -394,15 +396,13 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
       .project<Pick<ExchangeRate, "_id" | "currencyCode" | "rate">>({ currencyCode: 1, rate: 1 })
       .toArray(),
     // Admin-set one-turn price nudges for this turn
-    db
-      .collection<CommodityPrice>("commodityPrices")
+    commodityPricesCollection(db)
       .find({ nudgeTurn: turn, nudgePrice: { $ne: null } } as Record<string, unknown>, {
         projection: { commodity: 1, nudgePrice: 1 },
       })
       .toArray(),
     // Existing commodity prices for drift baseline and peg state
-    db
-      .collection<CommodityPrice>("commodityPrices")
+    commodityPricesCollection(db)
       .find(
         {},
         {
@@ -584,9 +584,9 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
   const demographicsDemandEnabled = await getDemographicsDemandEnabled();
   const householdConsumptionEnabled = await getHouseholdConsumptionEnabled();
   // Commodity treadmill fix stage (0..6), advanced one per turn by an operator.
-  const fixStageCfg = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" } as Record<string, unknown>, {
+  const fixStageCfg = await gameConfigCollection(db).findOne(
+    { _id: "default" } as Record<string, unknown>,
+    {
       projection: {
         commodityFixStage: 1,
         marketRecoveryStage: 1,
@@ -595,7 +595,8 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
         producerPriceMaxMultiplier: 1,
         producerSoftPriceCeilingStage: 1,
       },
-    });
+    }
+  );
   const inputDemandRealPhase = inputDemandRealPhaseProgress(
     inputDemandRealPhaseStartTurnFrom(fixStageCfg),
     turn
@@ -770,9 +771,10 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
   let householdFinalDemandByState = new Map<string, Map<CommodityType, number>>();
   if (householdConsumptionEnabled) {
     // Optional per-world sizing override (sandbox tuning without a redeploy).
-    const pcCfg = await db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { householdConsumptionPerCapita: 1 } });
+    const pcCfg = await gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { householdConsumptionPerCapita: 1 } }
+    );
     const perCapitaOverride =
       typeof pcCfg?.householdConsumptionPerCapita === "number" &&
       pcCfg.householdConsumptionPerCapita > 0
@@ -1107,16 +1109,17 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
   // Scarcity drift (persistent-imbalance integrator): config-gated so it can
   // be flipped live without a deploy. When off, multipliers reset to 1 so the
   // economy returns to the memoryless baseline within one turn.
-  const marketFlagsConfig = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" } as Record<string, unknown>, {
+  const marketFlagsConfig = await gameConfigCollection(db).findOne(
+    { _id: "default" } as Record<string, unknown>,
+    {
       projection: {
         commodityScarcityDriftEnabled: 1,
         stockCoverCapEnabled: 1,
         commandEconomyEnabled: 1,
         producerFundedBookStage: 1,
       },
-    });
+    }
+  );
   const scarcityDriftEnabled = marketFlagsConfig?.commodityScarcityDriftEnabled === true;
   // Administered pricing for planned economies (P2). Country-scoped to the
   // NATIONAL leg only — never the shared global leg.
@@ -1254,7 +1257,7 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
   }
 
   if (ops.length > 0) {
-    await db.collection("commodityPrices").bulkWrite(ops);
+    await commodityPricesCollection<Document>(db).bulkWrite(ops);
   }
   await persistCommodityNominalIndex(db, commodityNominalPriceIndex, turn);
 

@@ -31,6 +31,7 @@ import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import type { CorporationShareInvite, User } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 const actionSchema = z.object({
   action: z.enum(["accept", "decline", "cancel"]),
@@ -105,9 +106,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     // decline / accept: caller must be the invitee.
-    const userDoc = await db
-      .collection<User>("users")
-      .findOne({ _id: new ObjectId(auth.user.userId) });
+    const userDoc = await usersCollection(db).findOne({ _id: new ObjectId(auth.user.userId) });
     const callerCharacterId = userDoc?.activeCharacterId;
     if (!callerCharacterId || !callerCharacterId.equals(invite.invitedCharacterId)) {
       return errorResponse(403, "Only the invitee can accept or decline");

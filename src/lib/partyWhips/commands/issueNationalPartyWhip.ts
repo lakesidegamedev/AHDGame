@@ -59,6 +59,9 @@ import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficia
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { billsCollection } from "@/lib/db/repositories/bills";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
+import { cabinetNominationsCollection } from "@/lib/db/repositories/cabinetNominations";
+import type { Document } from "mongodb";
 
 export const nationalPartyWhipSchema = z
   .object({
@@ -445,7 +448,7 @@ async function resolveWhipTarget(
 
   // cabinetNomination
   if (!targetOid) return fail(400, "Invalid target ID");
-  const nomination = await db.collection("cabinetNominations").findOne<CabinetNomination>({
+  const nomination = await cabinetNominationsCollection<Document>(db).findOne<CabinetNomination>({
     _id: targetOid,
     status: "active",
   });
@@ -695,19 +698,16 @@ async function issueNppWhip(
 
   let r: { fellInLine: number; ignored: number } | null = null;
   if (targetType === "bill") {
-    const bill = await billsCollection(db)
-      .findOne({ _id: requireObjectId(targetOid), countryId });
+    const bill = await billsCollection(db).findOne({ _id: requireObjectId(targetOid), countryId });
     if (bill) {
       // applyWhipVotesToBill resolves NPP votes via cross-pressure, which needs
       // the bill's legislation type, the home-state demographics for each NPP,
       // and the current turn for the prediction snapshot.
       const [legislationType, stateDemographicsArr, gameStateDoc] = await Promise.all([
         bill.legislationTypeId
-          ? legislationTypesCollection(db)
-              .findOne({ _id: bill.legislationTypeId })
+          ? legislationTypesCollection(db).findOne({ _id: bill.legislationTypeId })
           : Promise.resolve(null),
-        db
-          .collection<StateDemographics>("stateDemographics")
+        stateDemographicsCollection(db)
           .find({
             _id: {
               $in: [

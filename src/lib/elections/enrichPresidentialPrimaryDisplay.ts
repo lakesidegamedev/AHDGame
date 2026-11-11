@@ -41,6 +41,7 @@ import {
 } from "./presidentialPrimaryDisplay";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
 
 export async function applyPresidentialPrimaryDisplay(
   db: Db,
@@ -74,8 +75,7 @@ export async function applyPresidentialPrimaryDisplay(
     statesCollection(db)
       .find({ _id: { $in: staggerStateIds } })
       .toArray(),
-    db
-      .collection<StateDemographics>("stateDemographics")
+    stateDemographicsCollection(db)
       .find({ _id: { $in: staggerStateIds } })
       .toArray(),
     preloadedStatePartyOrgs.length > 0

@@ -18,6 +18,7 @@ import { REQUEST_AP_COST, referendumRequestEligibility } from "@/lib/constants/r
 import { announceReferendumRequested } from "@/lib/referendum/referendumWebhooks";
 import { recordWireEvent } from "@/lib/referendum/wire";
 import { sovereigntyRegionIn } from "@/lib/referendum/rules/sovereigntyRegions";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 
 /** Non-terminal statuses that count as "a referendum is in progress". */
 const ACTIVE_STATUSES: ReferendumStatus[] = [
@@ -88,7 +89,7 @@ async function requestReferendumInTransaction(
     .toArray();
 
   // SP5: independenceDesire lives top-level on macroMetrics.
-  const metric = await db.collection<MacroMetricsDoc>("macroMetrics").findOne({ _id: stateId });
+  const metric = await macroMetricsCollection<MacroMetricsDoc>(db).findOne({ _id: stateId });
   const desire = metric?.independenceDesire?.value ?? 0;
 
   const elig = referendumRequestEligibility({

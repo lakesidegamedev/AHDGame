@@ -39,6 +39,7 @@ import { closeCeoTenure } from "@/lib/corporations/ceoHistory";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
+import { notificationsCollection } from "@/lib/db/repositories/notifications";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -369,8 +370,7 @@ export async function createShareListing(request: Request, { params }: RoutePara
     if (negotiatedTerms && negotiatedBuyer) {
       const sym =
         CURRENCY_SYMBOLS[(corporation.liquidCurrencyCode ?? "USD") as CurrencyCode] ?? "₳";
-      void db
-        .collection<Omit<Notification, "_id">>("notifications")
+      void notificationsCollection<Omit<Notification, "_id">>(db)
         .insertOne({
           userId: negotiatedBuyer.userId,
           type: "share_listing_offer_received",

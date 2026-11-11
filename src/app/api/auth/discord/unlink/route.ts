@@ -3,6 +3,7 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { withNoStore } from "@/lib/api/withNoStore";
 import { unlinkProviderCredential } from "@/lib/auth/providerUnlink";
 import type { GameConfig } from "@/lib/db/types";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 // POST /api/auth/discord/unlink - Removes the Discord account link from the authenticated user's profile.
 // Auth: requireBasicAuth
@@ -26,9 +27,10 @@ export const POST = withNoStore(async function POST() {
         discordLinkedAt: "",
       },
       beforeWrite: async (db) => {
-        const config = await db
-          .collection<GameConfig>("gameConfig")
-          .findOne({ _id: "default" }, { projection: { discordLinkRequiredForCharacter: 1 } });
+        const config = await gameConfigCollection(db).findOne(
+          { _id: "default" },
+          { projection: { discordLinkRequiredForCharacter: 1 } }
+        );
         if (config?.discordLinkRequiredForCharacter !== true) return null;
         return errorResponse(
           403,

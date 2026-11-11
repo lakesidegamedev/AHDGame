@@ -12,6 +12,7 @@ import { supportsCostPlusPricing, validCostPlusBasis } from "@/lib/market/costPl
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { setSectorPricingSchema } from "@/lib/api/schemas/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 interface RouteParams {
   params: Promise<{ id: string; sectorId: string }>;
@@ -63,9 +64,10 @@ export async function setSectorPricing(request: Request, { params }: RouteParams
 
     const config =
       pricingMode === "costPlus"
-        ? await db
-            .collection<GameConfig>("gameConfig")
-            .findOne({ _id: "default" }, { projection: { explicitPlantCostsEnabled: 1 } })
+        ? await gameConfigCollection(db).findOne(
+            { _id: "default" },
+            { projection: { explicitPlantCostsEnabled: 1 } }
+          )
         : null;
 
     const sector = await corporateSectorsCollection(db).findOne(

@@ -6,6 +6,7 @@ import { type CountryId } from "@/lib/constants/countries";
 import { applyOptionalCountryScope } from "./nationalPartyElectionScope";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nationalPartyElectionsCollection } from "@/lib/db/repositories/nationalPartyElections";
 
 // ─── Quorum Acceleration ─────────────────────────────────────────────────────
 
@@ -39,10 +40,7 @@ export async function applyQuorumAcceleration(
     countryId
   );
 
-  const candidateElections = await db
-    .collection<NationalPartyElection>("nationalPartyElections")
-    .find(scopedQuery)
-    .toArray();
+  const candidateElections = await nationalPartyElectionsCollection(db).find(scopedQuery).toArray();
 
   if (candidateElections.length === 0) return 0;
 
@@ -73,10 +71,7 @@ export async function applyQuorumAcceleration(
         countryId: { $in: partyCountryIds },
       })
       .toArray(),
-    db
-      .collection<NationalPartyElection>("nationalPartyElections")
-      .find(priorCompletedQuery)
-      .toArray(),
+    nationalPartyElectionsCollection(db).find(priorCompletedQuery).toArray(),
   ]);
 
   const partyMap = new Map(parties.map((p) => [`${p.countryId ?? "US"}:${p.sequentialId}`, p]));
@@ -203,7 +198,7 @@ export async function applyQuorumAcceleration(
     },
   }));
 
-  await db.collection<NationalPartyElection>("nationalPartyElections").bulkWrite(bulkOps);
+  await nationalPartyElectionsCollection(db).bulkWrite(bulkOps);
 
   console.log(
     `[NationalPartyElections] Quorum acceleration applied to ${acceleratedIds.length} chair election(s) ` +

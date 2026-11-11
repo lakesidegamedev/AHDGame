@@ -11,6 +11,8 @@ import { isInNewCharacterCooldown } from "@/lib/auth/newCharacterCooldown";
 import { getLeadershipEligibility } from "@/lib/parties/leadershipTenure";
 import type { DueSoonContext, DueSoonItem } from "./types";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { cabinetNominationsCollection } from "@/lib/db/repositories/cabinetNominations";
+import { nationalPartyElectionsCollection } from "@/lib/db/repositories/nationalPartyElections";
 
 const ROW_LIMIT = 20;
 
@@ -38,8 +40,7 @@ export async function partyBallots(ctx: DueSoonContext): Promise<DueSoonItem[]> 
 
   const homeState = member.homeState?.toUpperCase();
   const [national, regional] = await Promise.all([
-    ctx.db
-      .collection<NationalPartyElection>("nationalPartyElections")
+    nationalPartyElectionsCollection(ctx.db)
       .find(
         { countryId, partyId: canonicalId, status: "voting" },
         { projection: { position: 1, endTurn: 1, founding: 1 } }
@@ -132,8 +133,7 @@ export async function confirmationVotes(ctx: DueSoonContext): Promise<DueSoonIte
   if (!seat?.countryId) return [];
   const countryId = seat.countryId;
   const [cabinet, scotus] = await Promise.all([
-    ctx.db
-      .collection<CabinetNomination>("cabinetNominations")
+    cabinetNominationsCollection(ctx.db)
       .find(
         { countryId, status: "active", ...(senate ? {} : { positionId: "vicePresident" }) },
         {

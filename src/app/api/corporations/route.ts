@@ -26,6 +26,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 const INACTIVE_CEO_THRESHOLD_MS = INACTIVE_CEO_TURN_THRESHOLD * 60 * 60 * 1000;
 
@@ -99,8 +100,7 @@ export async function GET(request: Request) {
       .map((c) => c.userId as ObjectId);
     const ceoUsers =
       ceoUserIds.length > 0
-        ? await db
-            .collection<User>("users")
+        ? await usersCollection(db)
             .find({ _id: { $in: ceoUserIds } })
             .project<{ _id: ObjectId; lastActivity?: Date; createdAt?: Date }>({
               _id: 1,

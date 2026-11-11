@@ -61,6 +61,9 @@ import { incomeTaxEffectOptionId } from "@/lib/budget/rules/incomeTaxPolicy";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
+import { stateBaselinesCollection } from "@/lib/db/repositories/stateBaselines";
 
 /**
  * Map of legislation type IDs to their documents
@@ -103,7 +106,7 @@ export async function getActivePoliciesForState(
   stateId: string,
   countryId: string = "US"
 ): Promise<ActivePolicy[]> {
-  const statePolicies = db.collection<StatePolicy>("statePolicies");
+  const statePolicies = statePoliciesCollection(db);
 
   // Get state-specific policies
   const statePoliciesArray = await statePolicies.find({ stateId }).toArray();
@@ -354,11 +357,11 @@ export async function processStateMetrics(
   legTypeMap: LegislationTypeMap,
   currentTurn: number = 0
 ): Promise<void> {
-  const statePoliciesCollection = db.collection<StatePolicy>("statePolicies");
-  const stateBaselinesCollection = db.collection<StateMetricBaseline>("stateBaselines");
+  const statePoliciesCollectionHandle = statePoliciesCollection(db);
+  const stateBaselinesCollectionHandle = stateBaselinesCollection(db);
 
   // Get state-specific policies (federal policies are passed in)
-  const statePoliciesArray = await statePoliciesCollection.find({ stateId }).toArray();
+  const statePoliciesArray = await statePoliciesCollectionHandle.find({ stateId }).toArray();
 
   const stateWithMultiplier: ActivePolicy[] = statePoliciesArray.map((policy) => ({
     ...policy,
@@ -371,7 +374,7 @@ export async function processStateMetrics(
   // Get current state metrics (SP5: merged two-store view) and baseline in parallel
   const [currentMetrics, baselineDoc] = await Promise.all([
     findMergedRegionMetrics(db, { _id: stateId }),
-    stateBaselinesCollection.findOne({ _id: stateId }),
+    stateBaselinesCollectionHandle.findOne({ _id: stateId }),
   ]);
 
   if (!currentMetrics) {
@@ -481,9 +484,10 @@ export async function processStateMetrics(
     const writes: Promise<unknown>[] = [];
     if (Object.keys(macroSet).length > 0) {
       writes.push(
-        db
-          .collection<StateMetrics>("macroMetrics")
-          .updateOne({ _id: stateId }, { $set: { ...macroSet, lastUpdated: now } })
+        macroMetricsCollection(db).updateOne(
+          { _id: stateId },
+          { $set: { ...macroSet, lastUpdated: now } }
+        )
       );
     }
     await Promise.all(writes);
@@ -512,13 +516,13 @@ export async function processStatePolicyEffects(
   const [states, allStatePolicies, allLegTypes, allStateMetrics, allStateBaselines] =
     await Promise.all([
       statesCollection(db).find({}).toArray(),
-      db.collection<StatePolicy>("statePolicies").find({}).toArray(),
+      statePoliciesCollection(db).find({}).toArray(),
       knownLegislationTypes
         ? Promise.resolve(knownLegislationTypes)
         : legislationTypesCollection(db).find({}).toArray(),
       // SP5: merged two-store view — economic/population inputs live on macroMetrics.
       findMergedRegionMetricsMany(db, {}),
-      db.collection<StateMetricBaseline>("stateBaselines").find({}).toArray(),
+      stateBaselinesCollection(db).find({}).toArray(),
     ]);
 
   // Build legislation type map for O(1) lookups
@@ -745,6 +749,6 @@ export async function processStatePolicyEffects(
 
   // One bulkWrite instead of N individual updateOne calls
   if (macroBulkOps.length > 0) {
-    await db.collection<StateMetrics>("macroMetrics").bulkWrite(macroBulkOps);
+    await macroMetricsCollection(db).bulkWrite(macroBulkOps);
   }
 }

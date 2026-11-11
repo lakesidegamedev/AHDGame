@@ -26,6 +26,8 @@ import type { Document } from "mongodb";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
+import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
 
 export async function GET(
   request: Request,
@@ -110,8 +112,7 @@ async function serveRegionalBudget(
       return errorResponse(404, "Regional budget not found");
     }
 
-    const enactedLaws = await db
-      .collection<EnactedLaw>("enactedLaws")
+    const enactedLaws = await enactedLawsCollection(db)
       .find({ scope: "state", stateId, countryId, repealedAt: { $exists: false } })
       .toArray();
 
@@ -138,8 +139,7 @@ async function serveRegionalBudget(
 
   // Compute spending by category from enacted regional policies
   const taxTypeIds = TAX_TYPE_IDS_BY_COUNTRY[countryId] ?? new Set();
-  const regionPolicies = await db
-    .collection<StatePolicy>("statePolicies")
+  const regionPolicies = await statePoliciesCollection(db)
     .find({ stateId, scope: "state" })
     .toArray();
 
@@ -184,8 +184,7 @@ async function serveRegionalBudget(
   };
 
   // Fetch enacted regional laws
-  const enactedLaws = await db
-    .collection<EnactedLaw>("enactedLaws")
+  const enactedLaws = await enactedLawsCollection(db)
     .find({ scope: "state", stateId, countryId, repealedAt: { $exists: false } })
     .toArray();
 
@@ -206,14 +205,12 @@ async function serveStateBudget(
   countryId: CountryId,
   grantLabel: string
 ) {
-  const stateBudget = await stateBudgetsCollection(db)
-    .findOne({ _id: stateId, countryId });
+  const stateBudget = await stateBudgetsCollection(db).findOne({ _id: stateId, countryId });
   if (!stateBudget) {
     return errorResponse(404, "State budget not found");
   }
 
-  const enactedLaws = await db
-    .collection<EnactedLaw>("enactedLaws")
+  const enactedLaws = await enactedLawsCollection(db)
     .find({ scope: "state", stateId, repealedAt: { $exists: false } })
     .toArray();
 

@@ -39,6 +39,8 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
+import type { Document } from "mongodb";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -80,9 +82,10 @@ export async function GET(_request: Request, { params }: RouteParams) {
       corporateSectorsCollection(db).find({ corporationId: corporation._id }).toArray(),
       centralBanksCollection(db).find({}).toArray(),
       getGameState(),
-      db
-        .collection("corporationHistory")
-        .findOne({ corporationId: corporation._id }, { sort: { turn: -1 } }),
+      corporationHistoryCollection<Document>(db).findOne(
+        { corporationId: corporation._id },
+        { sort: { turn: -1 } }
+      ),
       getMarketSystemModeForDb(db),
     ]);
 

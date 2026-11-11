@@ -10,6 +10,8 @@ import { eraYearContextFromGameState } from "@/lib/era/context";
 import { CAMPAIGN_RULES_VERSION, turnoutForElection } from "./rules";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
+import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
 
 export async function loadCampaignAudience(
   db: Db,
@@ -20,7 +22,7 @@ export async function loadCampaignAudience(
 ) {
   const [state, demographics, defaults, gameState, turnoutData] = await Promise.all([
     statesCollection(db).findOne({ _id: stateId, countryId }),
-    db.collection<StateDemographics>("stateDemographics").findOne({ _id: stateId, countryId }),
+    stateDemographicsCollection(db).findOne({ _id: stateId, countryId }),
     db.collection<StateDemographics>("demographicDefaults").findOne({ _id: stateId, countryId }),
     gameStateCollection(db).findOne(
       { _id: "current" },
@@ -34,9 +36,7 @@ export async function loadCampaignAudience(
       }
     ),
     turnout === undefined
-      ? db
-          .collection<StateDemographicTurnout>("stateDemographicTurnout")
-          .findOne({ _id: stateId, countryId })
+      ? stateDemographicTurnoutCollection(db).findOne({ _id: stateId, countryId })
       : Promise.resolve(turnout),
   ]);
   if (!state || !demographics) return null;
@@ -71,8 +71,7 @@ export async function loadCampaignAudience(
 /** One batch for every region of a projection; no reads inside candidate loops. */
 export async function loadCampaignProjectionContext(db: Db, regionIds: string[]) {
   const [turnout, defaults, gameState] = await Promise.all([
-    db
-      .collection<StateDemographicTurnout>("stateDemographicTurnout")
+    stateDemographicTurnoutCollection(db)
       .find({ _id: { $in: regionIds } })
       .toArray(),
     db
@@ -112,8 +111,7 @@ export async function loadRegionalCampaignCells(
   const ids = states.map((state) => state._id);
   const [context, demographics] = await Promise.all([
     loadCampaignProjectionContext(db, ids),
-    db
-      .collection<StateDemographics>("stateDemographics")
+    stateDemographicsCollection(db)
       .find({ _id: { $in: ids } })
       .toArray(),
   ]);

@@ -21,6 +21,7 @@ import {
 import { announceReferendumDecision } from "@/lib/referendum/referendumWebhooks";
 import { recordWireEvent } from "@/lib/referendum/wire";
 import { hostsSovereigntyReferendums } from "@/lib/referendum/rules/sovereigntyRegions";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 
 export type GrantReferendumAction = "grant" | "decline";
 
@@ -86,11 +87,9 @@ async function grantReferendumInTransaction(
     // A rebuffed petition inflames the cause: nudge the region's desire up
     // (clamped to 100) so a decline is not a free way to bury the question.
     // SP5: independenceDesire lives top-level on macroMetrics.
-    const metric = await db
-      .collection<MacroMetricsDoc>("macroMetrics")
-      .findOne({ _id: ref.regionId });
+    const metric = await macroMetricsCollection<MacroMetricsDoc>(db).findOne({ _id: ref.regionId });
     const current = metric?.independenceDesire?.value ?? ref.yesShare;
-    await db.collection<MacroMetricsDoc>("macroMetrics").updateOne(
+    await macroMetricsCollection<MacroMetricsDoc>(db).updateOne(
       { _id: ref.regionId },
       {
         $set: {
@@ -114,9 +113,7 @@ async function grantReferendumInTransaction(
   const closeTurn = currentTurn + CAMPAIGN_WINDOW_TURNS;
   // Seed the campaign baseline from the region's CURRENT desire at grant time
   // (spec §7), so the Yes share starts from where sentiment actually sits.
-  const metric = await db
-    .collection<MacroMetricsDoc>("macroMetrics")
-    .findOne({ _id: ref.regionId });
+  const metric = await macroMetricsCollection<MacroMetricsDoc>(db).findOne({ _id: ref.regionId });
   const baseYesShare = metric?.independenceDesire?.value ?? ref.yesShare;
   await refs.updateOne(
     { _id: ref._id, status: "requested" },

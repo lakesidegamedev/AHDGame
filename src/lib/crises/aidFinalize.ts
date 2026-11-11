@@ -8,6 +8,8 @@ import { applyCrisisEffects } from "@/lib/crises/applyEffects";
 import { logWireEvent } from "@/lib/wireEvent";
 import type { CrisisEffect } from "@/lib/db/types/crisis";
 import { billsCollection } from "@/lib/db/repositories/bills";
+import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
+import type { Document } from "mongodb";
 
 /**
  * Classify a bill status as a resolved aid outcome, or null if still in flight.
@@ -32,12 +34,10 @@ function negate(effects: CrisisEffect[]): CrisisEffect[] {
 }
 
 async function incApproval(db: Db, countryId: string, delta: number): Promise<void> {
-  await db
-    .collection("governmentApprovals")
-    .updateOne(
-      { _id: countryId as unknown as import("mongodb").ObjectId },
-      { $inc: { approvalRating: delta } }
-    );
+  await governmentApprovalsCollection<Document>(db).updateOne(
+    { _id: countryId as unknown as import("mongodb").ObjectId },
+    { $inc: { approvalRating: delta } }
+  );
 }
 
 /** Finalize a single resolved commitment: pass = stands; fail = clawback + penalty. */

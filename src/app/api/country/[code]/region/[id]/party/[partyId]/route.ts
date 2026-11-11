@@ -54,6 +54,8 @@ import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParti
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; partyId: string }>;
@@ -92,7 +94,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
 
     // NPPs only generate/are taxed when the economy is enabled (mirrors
     // processNppFundGeneration); otherwise they contribute $0 to revenue.
-    const gameConfig = await db.collection<GameConfig>("gameConfig").findOne({ _id: "default" });
+    const gameConfig = await gameConfigCollection(db).findOne({ _id: "default" });
     const nppEconomyEnabled = gameConfig?.nppEconomyEnabled ?? false;
 
     // Verify state exists
@@ -132,7 +134,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
       if (!character) return null;
 
       // Check if user is banned
-      const user = await db.collection<User>("users").findOne({ _id: character.userId });
+      const user = await usersCollection(db).findOne({ _id: character.userId });
       if (user?.isBanned) return null;
 
       return {
@@ -170,8 +172,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
 
     // Get user IDs and fetch ban + activity status
     const userIds = characters.map((c) => c.userId);
-    const users = await db
-      .collection<User>("users")
+    const users = await usersCollection(db)
       .find({ _id: { $in: userIds } })
       .toArray();
 
@@ -355,9 +356,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     // Rival parties present in this state — read-only, powers the Contest panel
     // on the party sub-page. Sorted by Org desc (strongest first) via the shared
     // buildStateRivals mapper.
-    const rivalRows = await statePartyOrgCollection(db)
-      .find({ stateId })
-      .toArray();
+    const rivalRows = await statePartyOrgCollection(db).find({ stateId }).toArray();
     const rivalSeqIds = rivalRows.map((r) => Number(r.partyId)).filter(Boolean);
     const rivalParties = rivalSeqIds.length
       ? await politicalPartiesCollection(db)

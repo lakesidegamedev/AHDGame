@@ -9,6 +9,7 @@ import { clampRatio } from "./rules/implementation";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
 
 export interface DepartmentDeliveryMultiplierInput {
   currentTurn: number;
@@ -102,8 +103,7 @@ export async function loadDepartmentDeliveryMultipliersByCountry(
     federalBudgetCollection(db)
       .find(countryFilter, { projection: { countryId: 1, departmentAccounts: 1 } })
       .toArray(),
-    db
-      .collection<EnactedLaw>("enactedLaws")
+    enactedLawsCollection(db)
       .find(
         { scope: "national", repealedAt: { $exists: false }, ...lawCountryFilter },
         {

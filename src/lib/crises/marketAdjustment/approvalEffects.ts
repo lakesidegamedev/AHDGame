@@ -12,6 +12,7 @@ import { FADE_TURNS, marketAdjustmentApproval } from "./approvalRules";
 import { MARKET_ADJUSTMENT_TEMPLATE_KEY } from "./template";
 import { MARKET_ADJUSTMENT_SIGNALS } from "./signals";
 import { crisesCollection } from "@/lib/db/repositories/crises";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 
 /** marketAdjustmentStage at which the unemployment term counts. */
 const UNEMPLOYMENT_TERM_STAGE = 2;
@@ -73,10 +74,9 @@ export async function loadMarketAdjustmentEffects(
       .collection<{ _id: string; economic?: { unemploymentRate?: Point[] } }>("macroMetricsHistory")
       .find({ _id: { $in: docIds } }, { projection: { economic: 1 } })
       .toArray(),
-    db
-      .collection<{ _id: string; economic?: { unemploymentRate?: { value?: number } } }>(
-        "macroMetrics"
-      )
+    macroMetricsCollection<{ _id: string; economic?: { unemploymentRate?: { value?: number } } }>(
+      db
+    )
       .find({ _id: { $in: docIds } }, { projection: { economic: 1 } })
       .toArray(),
   ]);

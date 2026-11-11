@@ -46,6 +46,7 @@ import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficia
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
 
 export interface StateLegislatureBillsPage {
   blockedProvisions: { legislationTypeId: string; policyOptionId: string }[];
@@ -72,12 +73,7 @@ export async function listStateLegislatureBills(
   }
 ): Promise<StateLegislatureBillsPage> {
   const [bills, parties] = await Promise.all([
-    db
-      .collection<StateBill>("stateBills")
-      .find({ stateId })
-      .sort({ proposedAt: -1 })
-      .limit(100)
-      .toArray(),
+    stateBillsCollection(db).find({ stateId }).sort({ proposedAt: -1 }).limit(100).toArray(),
     politicalPartiesCollection(db).find({ countryId }).toArray(),
   ]);
   const partyMap = new Map(parties.map((party) => [String(party.sequentialId), party]));
@@ -324,7 +320,7 @@ export async function getStateLegislatureBillDetail(
     authUser: AuthUser | null;
   }
 ): Promise<StateBillDetail | null> {
-  const bill = await db.collection<StateBill>("stateBills").findOne({
+  const bill = await stateBillsCollection(db).findOne({
     _id: new ObjectId(billId),
     stateId,
   });

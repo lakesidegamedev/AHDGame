@@ -11,6 +11,7 @@ import type { ElectedOfficial, OfficeType, User } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import type { Document } from "mongodb";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 // POST /api/admin/officials/appoint — Appoints or vacates a character in an elected office position, with admin logging.
 // Auth: requireAdmin
@@ -91,7 +92,7 @@ export async function POST(request: Request) {
       );
 
       // Get user for logging
-      const user = await db.collection<User>("users").findOne({ _id: character.userId });
+      const user = await usersCollection(db).findOne({ _id: character.userId });
 
       // Log the appointment
       await createAdminLog({
@@ -341,7 +342,7 @@ export async function POST(request: Request) {
       );
 
       // Get user for logging
-      const user = await db.collection<User>("users").findOne({ _id: character.userId });
+      const user = await usersCollection(db).findOne({ _id: character.userId });
 
       // Log the appointment
       await createAdminLog({
@@ -392,7 +393,7 @@ export async function POST(request: Request) {
         // Get the previous holder's user for logging
         const prevCharacter = await charactersCollection(db).findOne({ _id: official.characterId });
         const prevUser = prevCharacter
-          ? await db.collection<User>("users").findOne({ _id: prevCharacter.userId })
+          ? await usersCollection(db).findOne({ _id: prevCharacter.userId })
           : null;
 
         await createAdminLog({

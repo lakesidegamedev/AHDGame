@@ -20,6 +20,7 @@ import {
 } from "@/lib/corporations/groups/controlGroups";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /** gameConfig.groupSizeCostsStage at which the monopoly trigger reads the control group. */
 const GROUP_MONOPOLY_TRIGGER_STAGE = 4;
@@ -68,9 +69,10 @@ export async function loadGroupTopMarketShares(
   db: Db,
   corporationIds: readonly ObjectId[]
 ): Promise<Map<string, number> | null> {
-  const cfg = await db
-    .collection<{ groupSizeCostsStage?: number }>("gameConfig")
-    .findOne({ _id: "default" as never }, { projection: { groupSizeCostsStage: 1 } });
+  const cfg = await gameConfigCollection<{ groupSizeCostsStage?: number }>(db).findOne(
+    { _id: "default" as never },
+    { projection: { groupSizeCostsStage: 1 } }
+  );
   if ((cfg?.groupSizeCostsStage ?? 0) < GROUP_MONOPOLY_TRIGGER_STAGE) return null;
   const corps = await corporationsCollection(db)
     .find({}, { projection: { shareholders: 1, totalShares: 1, superShareMultiplier: 1 } })

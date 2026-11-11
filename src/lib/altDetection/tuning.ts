@@ -6,6 +6,7 @@ import {
   resolveAltScoringConfig,
   type AltSignalWeights,
 } from "./config";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /**
  * Learning loop (forensics-v2 Wave 2): turn moderator dispositions
@@ -215,9 +216,7 @@ export async function computeTuningSuggestions(db: Db): Promise<TuningReport> {
         { projection: { status: 1, signalSummary: 1 } }
       )
       .toArray(),
-    db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { altScoring: 1 } }),
+    gameConfigCollection(db).findOne({ _id: "default" }, { projection: { altScoring: 1 } }),
   ]);
 
   const { weights } = resolveAltScoringConfig(gameConfig?.altScoring);

@@ -198,6 +198,9 @@ import { getNppsCollection } from "@/lib/db/collections/npps";
 import { getGameStateCollection } from "@/lib/db/collections/gameState";
 import { getStatesCollection } from "@/lib/db/collections/states";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
+import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
 
 export {
   NPP_GROWTH_MIN_SHORTAGE,
@@ -287,8 +290,8 @@ export async function processNppCorporationDecisions(
           .find({ _id: { $in: ceoNppIds } }, { projection: { personality: 1 } })
           .toArray()
       : Promise.resolve([]),
-    db.collection<CommodityPrice>("commodityPrices").find({}).toArray(),
-    db.collection<UnownedSector>("unownedSectors").find({}).toArray(),
+    commodityPricesCollection(db).find({}).toArray(),
+    unownedSectorsCollection(db).find({}).toArray(),
   ]);
   const { archetypeByNppId, sectorsByCorp, priceByCommodity } = buildNppCorporationDecisionIndexes(
     ceoNpps,
@@ -478,38 +481,36 @@ export async function processNppCorporationDecisions(
     const primeByCountry = bankSnapshot.primeByCountry;
     const colByState = await loadNppCostOfLivingByState(db);
     const nationalShareOf = buildNppNationalShareResolver(globalSectors);
-    const nppGameConfig = await db
-      .collection<
-        {
-          commandEconomyEnabled?: boolean;
-          producerConversionPaceShare?: number;
-          producerFundedRestartStage?: number;
-          wholePlantsStage?: number;
-          producerCaptiveDeliveryStage?: number;
-          nppStateServiceHeadroomStage?: number;
-          nppDividendAfterTaxStage?: number;
-          nppGrowthPerProductFillStage?: number;
-        } & ShortageGrowthFinanceConfigInput
-      >("gameConfig")
-      .findOne(
-        { _id: "default" as never },
-        {
-          projection: {
-            commandEconomyEnabled: 1,
-            producerConversionPaceShare: 1,
-            producerFundedRestartStage: 1,
-            wholePlantsStage: 1,
-            producerCaptiveDeliveryStage: 1,
-            nppStateServiceHeadroomStage: 1,
-            nppShortageGrowthFinanceStage: 1,
-            nppDividendAfterTaxStage: 1,
-            nppGrowthPerProductFillStage: 1,
-            nppShortageGrowthFinanceCandidateLimit: 1,
-            nppShortageGrowthFinanceMaxPaybackTurns: 1,
-            nppShortageGrowthFinanceMaxExposureProfitTurns: 1,
-          },
-        }
-      );
+    const nppGameConfig = await gameConfigCollection<
+      {
+        commandEconomyEnabled?: boolean;
+        producerConversionPaceShare?: number;
+        producerFundedRestartStage?: number;
+        wholePlantsStage?: number;
+        producerCaptiveDeliveryStage?: number;
+        nppStateServiceHeadroomStage?: number;
+        nppDividendAfterTaxStage?: number;
+        nppGrowthPerProductFillStage?: number;
+      } & ShortageGrowthFinanceConfigInput
+    >(db).findOne(
+      { _id: "default" as never },
+      {
+        projection: {
+          commandEconomyEnabled: 1,
+          producerConversionPaceShare: 1,
+          producerFundedRestartStage: 1,
+          wholePlantsStage: 1,
+          producerCaptiveDeliveryStage: 1,
+          nppStateServiceHeadroomStage: 1,
+          nppShortageGrowthFinanceStage: 1,
+          nppDividendAfterTaxStage: 1,
+          nppGrowthPerProductFillStage: 1,
+          nppShortageGrowthFinanceCandidateLimit: 1,
+          nppShortageGrowthFinanceMaxPaybackTurns: 1,
+          nppShortageGrowthFinanceMaxExposureProfitTurns: 1,
+        },
+      }
+    );
     conversionPaceShare = nppGameConfig?.producerConversionPaceShare ?? 0;
     fundedRestartStage = nppGameConfig?.producerFundedRestartStage ?? 0;
     shortageGrowthFinanceConfig = resolveShortageGrowthFinanceConfig(nppGameConfig);

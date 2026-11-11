@@ -57,6 +57,7 @@ import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 interface Props {
   params: Promise<{ code: string; id: string }>;
@@ -267,9 +268,10 @@ async function renderUKRegion(regionCode: string) {
 
   // Bug #0668: treat a viewer from another country as unaffiliated for this UK
   // region so cross-country party-id collisions don't surface party actions.
-  const gameConfig = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { regionalConditionsOverviewEnabled: 1 } });
+  const gameConfig = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { regionalConditionsOverviewEnabled: 1 } }
+  );
   const regionalConditionsOverviewEnabled = await isRegionalConditionsOverviewEnabled(gameConfig);
 
   const viewerPartyIdForRegion = isSameCountry(userData?.character, { countryId: "UK" })
@@ -352,9 +354,10 @@ async function renderGenericRegion(countryId: CountryId, regionCode: string) {
       { _id: "current" },
       { projection: { preset: 1, currentYear: 1, startingYear: 1 } }
     ),
-    db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { regionalConditionsOverviewEnabled: 1 } }),
+    gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { regionalConditionsOverviewEnabled: 1 } }
+    ),
     db
       .collection<StateDemographics>("demographicDefaults")
       .findOne(

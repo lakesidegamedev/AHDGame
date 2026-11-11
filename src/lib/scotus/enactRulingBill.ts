@@ -5,6 +5,7 @@ import type { EnactedLaw } from "@/lib/db/types/budget";
 import type { CountryId } from "@/lib/constants/countries";
 import { billsCollection } from "@/lib/db/repositories/bills";
 import type { Document } from "mongodb";
+import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
 
 export interface RulingBillInput {
   /** Display title, already suffixed by the caller (e.g. "... (Surprise SCOTUS Ruling)"). */
@@ -100,9 +101,10 @@ export async function enactRulingBill(
     input.currentTurn
   );
 
-  const enactedLawRow = await db
-    .collection("enactedLaws")
-    .findOne<{ _id: ObjectId }>({ billId }, { projection: { _id: 1 }, sort: { enactedAt: -1 } });
+  const enactedLawRow = await enactedLawsCollection<Document>(db).findOne<{ _id: ObjectId }>(
+    { billId },
+    { projection: { _id: 1 }, sort: { enactedAt: -1 } }
+  );
 
   return { billId, enactedLawId: enactedLawRow?._id };
 }

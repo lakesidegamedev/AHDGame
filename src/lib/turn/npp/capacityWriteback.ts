@@ -35,6 +35,7 @@ import {
   type NppReinvestmentCashWitness,
 } from "./reinvestmentCashLedger";
 import type { NppCorpUpdateOp } from "./nppCashWrite";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 
 export type NppReinvestmentList = NonNullable<NppCorpDecision["reinvestments"]>;
 export type NppUnownedDrawList = NonNullable<NppCorpDecision["unownedDraws"]>;
@@ -174,7 +175,7 @@ export async function drawFoundedCapacityFromPools(
   args: { eraUnitScale: number; now: Date }
 ): Promise<void> {
   if (draws.length === 0) return;
-  await db.collection<UnownedSector>("unownedSectors").bulkWrite(
+  await unownedSectorsCollection(db).bulkWrite(
     draws.map(({ stateId, sectorType, units, countryId, industryModel, mediaDiscriminator }) => {
       return {
         updateOne: {

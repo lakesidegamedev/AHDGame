@@ -9,6 +9,7 @@ import type { CommodityPrice } from "@/lib/db/types/commodityPrice";
 import type { CommodityType } from "@/lib/constants/commodities";
 import type { CommoditySourcingDoc, SourcingNetworkDoc } from "@/lib/logistics/sourcingLedger";
 import { getDb } from "@/lib/mongodb";
+import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
 
 // The canonical export lives in @/lib/economy/economicVitalSigns, but that
 // module pulls the whole snapshot builder (and its heavy dependency graph)
@@ -62,8 +63,7 @@ export const GET = withAdminRoute(async (_auth, request: Request) => {
     db.collection<SourcingNetworkDoc>("sourcingNetworkLoad").findOne({ turn }),
     db.collection<CommoditySourcingDoc>("commoditySourcingFlows").find({ turn }).toArray(),
     db.collection<EconomicVitalSigns>(ECONOMIC_VITAL_SIGNS_COLLECTION).findOne({ turn }),
-    db
-      .collection<CommodityPrice>("commodityPrices")
+    commodityPricesCollection(db)
       .find({}, { projection: { commodity: 1, globalPrice: 1, basePrice: 1 } })
       .toArray(),
   ]);

@@ -7,6 +7,7 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { createAdminLog } from "@/lib/adminLog";
 import { invalidateMaintenanceCache, normalizeMaintenanceMode } from "@/lib/maintenanceStatus";
 import type { GameConfig } from "@/lib/db/types";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 const patchSchema = z.object({
   mode: z.enum(["off", "partial", "full"]),
@@ -20,7 +21,7 @@ const patchSchema = z.object({
 /** GET — fetch current maintenance status (admin only) */
 export const GET = withAdminRoute(async (_auth) => {
   const db = await getDb();
-  const config = await db.collection<GameConfig>("gameConfig").findOne(
+  const config = await gameConfigCollection(db).findOne(
     { _id: "default" },
     {
       projection: {
@@ -58,7 +59,7 @@ export const PATCH = withAdminRoute(async (auth, request: Request) => {
   const now = new Date().toISOString();
 
   if (mode !== "off") {
-    await db.collection<GameConfig>("gameConfig").updateOne(
+    await gameConfigCollection(db).updateOne(
       { _id: "default" },
       {
         $set: {
@@ -72,7 +73,7 @@ export const PATCH = withAdminRoute(async (auth, request: Request) => {
       { upsert: true }
     );
   } else {
-    await db.collection<GameConfig>("gameConfig").updateOne(
+    await gameConfigCollection(db).updateOne(
       { _id: "default" },
       {
         $set: { maintenanceMode: "off" },

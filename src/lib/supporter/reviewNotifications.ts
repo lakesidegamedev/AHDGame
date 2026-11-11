@@ -3,6 +3,7 @@ import { getDb } from "@/lib/mongodb";
 import { createNotification } from "@/lib/notifications";
 import type { User } from "@/lib/db/types";
 import type { SupporterRequestKind } from "@/lib/db/types/supporterRequests";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 function kindLabel(kind: SupporterRequestKind): string {
   return kind === "wall-name" ? "supporter wall name" : "politician rename";
@@ -19,8 +20,7 @@ export async function notifyModeratorsOfSupporterRequest(opts: {
   summary: string;
 }): Promise<void> {
   const db = await getDb();
-  const mods = await db
-    .collection<User>("users")
+  const mods = await usersCollection(db)
     .find({ $or: [{ role: "admin" }, { role: "moderator" }, { isAdmin: true }] })
     .project<{ _id: User["_id"] }>({ _id: 1 })
     .toArray();

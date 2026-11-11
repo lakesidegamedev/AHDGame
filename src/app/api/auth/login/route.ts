@@ -29,6 +29,10 @@ import {
 import { issueUnifiedGameSession } from "@/lib/auth/unifiedGameSession";
 import { recordIdentitySignals } from "@/lib/identityHistory/recordObservation";
 import { authConfig } from "@/lib/config/auth";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { activityLogCollection } from "@/lib/db/repositories/activityLog";
 
 // One random, unused hash per process gives unknown accounts a real bcrypt
 // comparison at the same cost as account registration, without a stored credential.
@@ -82,10 +86,10 @@ export async function POST(request: Request) {
     };
 
     const db = await getDb();
-    const usersCollection = db.collection("users");
+    const usersCollectionHandle = usersCollection<Document>(db);
 
     // Find user by email or username
-    const user = await usersCollection.findOne({
+    const user = await usersCollectionHandle.findOne({
       $or: [{ email: email.toLowerCase() }, { username: email.toLowerCase() }],
     });
 
@@ -268,7 +272,7 @@ export async function POST(request: Request) {
     // Keep authRevokedAt. Conditional match on the snapshot plus current
     // password/ban so a concurrent reset/logout/ban cannot be overwritten by
     // a login that already verified the old credential.
-    const updateResult = await usersCollection.updateOne(
+    const updateResult = await usersCollectionHandle.updateOne(
       {
         _id: user._id,
         isBanned: { $ne: true },
@@ -317,7 +321,7 @@ export async function POST(request: Request) {
 
     // Fire-and-forget: log the login event for admin activity tracking.
     // If this insert fails, the login itself is unaffected.
-    db.collection("activityLog")
+    activityLogCollection<Document>(db)
       .insertOne({
         type: "login",
         timestamp: new Date(),
@@ -354,13 +358,13 @@ export async function POST(request: Request) {
     // Fire-and-forget: backfill IP details for users missing them.
     // Only runs if ipDetectionEnabled is on and this user has no ipDetails yet.
     if (!user.ipDetails) {
-      db.collection<GameConfig>("gameConfig")
+      gameConfigCollection(db)
         .findOne({ _id: "default" }, { projection: { ipDetectionEnabled: 1 } })
         .then((config) => {
           if (config?.ipDetectionEnabled) {
             checkIpFireAndForget(clientIp).then((ipDetails) => {
               if (ipDetails) {
-                usersCollection
+                usersCollectionHandle
                   .updateOne({ _id: user._id }, { $set: { ipDetails } })
                   .catch(() => {});
               }

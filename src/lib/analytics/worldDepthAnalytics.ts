@@ -17,6 +17,8 @@ import { captureServerGameEvent, getServerPosthogClient } from "./serverPosthog"
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { crisesCollection } from "@/lib/db/repositories/crises";
+import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
+import { adminLogsCollection } from "@/lib/db/repositories/adminLogs";
 
 type Properties = Record<string, string | number | boolean>;
 const finite = (value: number | undefined) => (Number.isFinite(value) ? value! : 0);
@@ -46,7 +48,7 @@ export async function captureWorldDepthPosthog(input: {
       // Older gameState documents predate worldEpochStartedAt. The reset-run
       // row is opened before teardown and retains its original startedAt across
       // failed resets and build-only recovery, so it is the legacy boundary.
-      const latestReset = await db.collection<AdminLog>("adminLogs").findOne(
+      const latestReset = await adminLogsCollection(db).findOne(
         {
           action: { $in: ["game_reset", "game_full_reset"] },
           "resetRun.preset": currentWorld.preset,
@@ -118,8 +120,7 @@ export async function captureWorldDepthPosthog(input: {
           },
         })
         .toArray(),
-      db
-        .collection<CorporationHistory>("corporationHistory")
+      corporationHistoryCollection(db)
         .find(
           { turn },
           {

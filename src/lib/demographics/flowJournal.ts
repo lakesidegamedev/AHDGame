@@ -22,6 +22,7 @@ import {
 import { demographicFlowBatchId, type DemographicFlowReceiptStatus } from "./rules/flowReceipt";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 
 export const DEMOGRAPHIC_FLOW_RECEIPTS = "demographicFlowReceipts";
 export const DEMOGRAPHIC_FLOW_PROJECTIONS = "demographicFlowProjections";
@@ -460,7 +461,7 @@ async function materializeReceipt(
   if (stateOps.length)
     await statesCollection<StampedTarget>(db).bulkWrite(stateOps, { ordered: true });
   if (metricOps.length)
-    await db.collection<StampedTarget>("macroMetrics").bulkWrite(metricOps, { ordered: true });
+    await macroMetricsCollection<StampedTarget>(db).bulkWrite(metricOps, { ordered: true });
 
   const [confirmedDemographics, confirmedStates, confirmedMetrics] = await Promise.all([
     readTargetMap(db, "regionDemographics", regionIds),

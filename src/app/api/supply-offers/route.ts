@@ -11,6 +11,7 @@ import type { Corporation, GameConfig } from "@/lib/db/types";
 import { loadOpenOffers, openOffersFilter } from "@/lib/corporations/supplyExchange/listingView";
 import { OFFER_SORT_DIRS, OFFER_SORTS } from "@/lib/corporations/supplyExchange/offerOrdering";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 const MAX_OFFERS = 60;
 const privateHeaders = { "Cache-Control": "private, no-store" };
@@ -56,9 +57,10 @@ export async function GET(request: Request) {
     });
     if (!query.success) return errorResponse(400, "Invalid filter or paging");
     const db = await getDb();
-    const config = await db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { supplyAgreementsEnabled: 1 } });
+    const config = await gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { supplyAgreementsEnabled: 1 } }
+    );
     if (!config?.supplyAgreementsEnabled) {
       return NextResponse.json(
         {

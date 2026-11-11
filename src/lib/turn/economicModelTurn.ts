@@ -20,6 +20,8 @@ import { getStatesCollection } from "@/lib/db/collections/states";
 import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
 import { getCorporationsCollection } from "@/lib/db/collections/corporations";
 import { getCorporateSectorsCollection } from "@/lib/db/collections/corporateSectors";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
 
 /** Owned + unowned sector revenue rolled up by CorporationType for one region. */
 interface RegionRevenue {
@@ -106,10 +108,9 @@ export async function processEconomicModelTurn(
   ] = await Promise.all([
     (await getStatesCollection(db)).find({}).toArray(),
     // SP5: the model inputs (economic.*) live on macroMetrics now.
-    db.collection<StateMetrics>("macroMetrics").find({}).toArray(),
+    macroMetricsCollection(db).find({}).toArray(),
     sectorRevenueTaxProvider(db),
-    db
-      .collection<EnactedLaw>("enactedLaws")
+    enactedLawsCollection(db)
       .find({ repealedAt: { $exists: false } })
       .project<Pick<EnactedLaw, "legislationTypeId" | "countryId">>({
         legislationTypeId: 1,
@@ -247,7 +248,7 @@ export async function processEconomicModelTurn(
 
   if (ops.length > 0) {
     // SP5: economicModel rides on the macroMetrics doc.
-    await db.collection<StateMetrics>("macroMetrics").bulkWrite(ops);
+    await macroMetricsCollection(db).bulkWrite(ops);
   }
   // regionsProcessed retained in the return shape for the phase logger; the model is
   // national-only now, so no regional docs are written.

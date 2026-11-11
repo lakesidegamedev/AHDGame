@@ -74,6 +74,8 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
 
 /** Sector-type flow rows for the Production Flow panel: base tables plus strategies that add commodities not present in the base map. */
 function buildSectorFlowRows(
@@ -184,7 +186,7 @@ export async function getCommodityDetailData(
       freightStateSupplyDocs,
       latestSourcingNetwork,
     ] = await Promise.all([
-      db.collection<CommodityPrice>("commodityPrices").findOne({ commodity }),
+      commodityPricesCollection(db).findOne({ commodity }),
       db
         .collection<CommodityPriceHistory>("commodityPriceHistory")
         .find({ commodity, turn: { $lte: currentTurn } })
@@ -198,8 +200,7 @@ export async function getCommodityDetailData(
         .collection<CommodityPriceHistory>("commodityPriceHistory")
         .findOne({ commodity, turn: { $lte: currentTurn } }, { sort: { turn: 1 } }),
       includeHeavy && commodity === "freight"
-        ? db
-            .collection<CommodityPrice>("commodityPrices")
+        ? commodityPricesCollection(db)
             .find({ commodity: { $in: [...SHIPPED_COMMODITIES] } })
             .project<{ commodity: CommodityType; stateSupply?: Record<string, number> }>({
               commodity: 1,
@@ -374,16 +375,14 @@ export async function getCommodityDetailData(
     const eraUnitScale = getEraUnitScale(worldPreset);
     const [gameConfigDoc, gameStateDoc, stateResourceDocs] = includeHeavy
       ? await Promise.all([
-          db
-            .collection<{
-              _id: string;
-              commandEconomyEnabled?: boolean;
-              inputDemandRealPhaseStartTurn?: number;
-            }>("gameConfig")
-            .findOne(
-              { _id: "default" },
-              { projection: { commandEconomyEnabled: 1, inputDemandRealPhaseStartTurn: 1 } }
-            ),
+          gameConfigCollection<{
+            _id: string;
+            commandEconomyEnabled?: boolean;
+            inputDemandRealPhaseStartTurn?: number;
+          }>(db).findOne(
+            { _id: "default" },
+            { projection: { commandEconomyEnabled: 1, inputDemandRealPhaseStartTurn: 1 } }
+          ),
           gameStateCollection<{
             _id: string;
             currentYear?: number;

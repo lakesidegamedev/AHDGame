@@ -42,6 +42,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /**
  * Private supply agreement lifecycle (bilateral, both-consent). Either CEO can
@@ -126,9 +127,10 @@ export async function validateCapacity(
         }
       )
       .toArray(),
-    db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } }),
+    gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { commandEconomyEnabled: 1 } }
+    ),
   ]);
   const capacityUnits = computeSupplierCommodityCapacityUnits({
     sectors,

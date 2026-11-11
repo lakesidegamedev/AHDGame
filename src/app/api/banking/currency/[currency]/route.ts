@@ -13,6 +13,7 @@ import {
 import { getInsuredCap } from "@/lib/banking/insurance";
 import type { DepositInsuranceFund } from "@/lib/db/types/bank";
 import type { GameConfig } from "@/lib/db/types";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 interface RouteParams {
   params: Promise<{ currency: string }>;
@@ -34,7 +35,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const currency = code as CurrencyCode;
 
     const db = await getDb();
-    const config = await db.collection<GameConfig>("gameConfig").findOne(
+    const config = await gameConfigCollection(db).findOne(
       { _id: "default" },
       {
         projection: {

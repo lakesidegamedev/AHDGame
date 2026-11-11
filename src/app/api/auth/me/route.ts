@@ -34,6 +34,9 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
+import { notificationsCollection } from "@/lib/db/repositories/notifications";
 
 function getPatreonAdPreference(
   user: User | null | undefined
@@ -68,7 +71,7 @@ export const GET = withNoStore(async () => {
     const username = payload.username;
 
     const db = await getDb();
-    let user = await db.collection<User>("users").findOne({ _id: new ObjectId(userId) });
+    let user = await usersCollection(db).findOne({ _id: new ObjectId(userId) });
     if (!user) {
       await clearAuthCookie("auth_me:user_not_found");
       return errorResponse(401, "Authentication required");
@@ -93,8 +96,7 @@ export const GET = withNoStore(async () => {
     // the first load of each UTC day. Fire-and-forget: never delays /me.
     const seenDay = startOfUtcDay(new Date());
     if (!(user.lastSeenAt instanceof Date) || user.lastSeenAt < seenDay) {
-      void db
-        .collection<User>("users")
+      void usersCollection(db)
         .updateOne(
           {
             _id: user._id,
@@ -121,7 +123,7 @@ export const GET = withNoStore(async () => {
       user.patreonTier &&
       !isPatreonActive(user.patreonTier, user.patreonExpiresAt ?? null)
     ) {
-      await db.collection<User>("users").updateOne(
+      await usersCollection(db).updateOne(
         { _id: user._id },
         {
           $set: {
@@ -131,7 +133,7 @@ export const GET = withNoStore(async () => {
           $unset: { patreonProfileBorder: "", patreonHighlightColor: "" },
         }
       );
-      user = await db.collection<User>("users").findOne({ _id: user._id });
+      user = await usersCollection(db).findOne({ _id: user._id });
     }
 
     // Resolve active character — check if user is in imperial mode
@@ -140,14 +142,16 @@ export const GET = withNoStore(async () => {
     let imperialCharacter: ImperialCharacter | null = null;
 
     if (isImperialMode && user?.activeImperialCharacterId) {
-      imperialCharacter = await imperialCharactersCollection(db)
-        .findOne({ _id: user.activeImperialCharacterId, userId: new ObjectId(userId) });
+      imperialCharacter = await imperialCharactersCollection(db).findOne({
+        _id: user.activeImperialCharacterId,
+        userId: new ObjectId(userId),
+      });
 
       // If the imperial character was deleted (e.g., by a game reset), clear the orphaned
       // reference and fall back to regular character mode.
       if (!imperialCharacter) {
         isImperialMode = false;
-        db.collection<User>("users")
+        usersCollection(db)
           .updateOne(
             { _id: new ObjectId(userId) },
             { $unset: { activeImperialCharacterId: "", activeCharacterType: "" } }
@@ -172,7 +176,7 @@ export const GET = withNoStore(async () => {
     }
 
     // Update last activity timestamp and tracking ID (fire-and-forget for performance)
-    db.collection("users")
+    usersCollection<Document>(db)
       // `trackingIdAt` matters most here: this is the ONLY trackingId writer
       // with no `lastLogin` alongside it, so without the stamp an active
       // player's cookie would be dated by a login months old and expire under
@@ -225,8 +229,7 @@ export const GET = withNoStore(async () => {
         : [new ObjectId(userId)];
 
     if (bundleIds.length > 1) {
-      const labelDocs = await db
-        .collection<User>("users")
+      const labelDocs = await usersCollection(db)
         .find({ _id: { $in: bundleIds } })
         .project<{ _id: ObjectId; username: string; displayName: string }>({
           username: 1,
@@ -253,7 +256,7 @@ export const GET = withNoStore(async () => {
               countryId: character.countryId,
             })
           : Promise.resolve(null),
-        db.collection<Notification>("notifications").countDocuments({
+        notificationsCollection(db).countDocuments({
           userId: { $in: bundleIds },
           ...notificationTypeFilter(user?.notificationPreferences, new Date()),
           read: false,
@@ -271,7 +274,7 @@ export const GET = withNoStore(async () => {
       unreadMailCount = unreadMail;
     } else {
       [unreadCount, unreadMailCount] = await Promise.all([
-        db.collection<Notification>("notifications").countDocuments({
+        notificationsCollection(db).countDocuments({
           userId: { $in: bundleIds },
           ...notificationTypeFilter(user?.notificationPreferences, new Date()),
           read: false,

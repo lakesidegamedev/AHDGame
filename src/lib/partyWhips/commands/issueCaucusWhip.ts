@@ -53,6 +53,9 @@ import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficia
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { billsCollection } from "@/lib/db/repositories/bills";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
+import { cabinetNominationsCollection } from "@/lib/db/repositories/cabinetNominations";
 
 export const caucusWhipSchema = z
   .object({
@@ -122,8 +125,7 @@ async function getEligibleCaucusCharactersForWhip(
     new Set(characters.map((character) => character.userId.toString()))
   ).map((id) => characters.find((character) => character.userId.toString() === id)!.userId);
 
-  const bannedUsers = await db
-    .collection<User>("users")
+  const bannedUsers = await usersCollection(db)
     .find({ _id: { $in: userIds }, isBanned: true })
     .project<{ _id: ObjectId }>({ _id: 1 })
     .toArray();
@@ -150,8 +152,7 @@ async function buildCaucusPlayerWhipMessage(
   const prefix = isSoft ? `${caucusName} suggests` : `${caucusName} has whipped you`;
 
   if (targetType === "bill" && targetId instanceof ObjectId) {
-    const bill = await billsCollection(db)
-      .findOne({ _id: targetId }, { projection: { title: 1 } });
+    const bill = await billsCollection(db).findOne({ _id: targetId }, { projection: { title: 1 } });
     const title = bill?.title ?? "a bill";
     return {
       subject: isSoft
@@ -459,7 +460,7 @@ export async function issueCaucusWhip({
     if (!targetOid) {
       return NextResponse.json(badRequest("Invalid target ID").toJson(), { status: 400 });
     }
-    const nomination = await db.collection<CabinetNomination>("cabinetNominations").findOne({
+    const nomination = await cabinetNominationsCollection(db).findOne({
       _id: targetOid,
       status: "active",
     });
@@ -675,16 +676,13 @@ export async function issueCaucusWhip({
     );
   };
   if (targetType === "bill") {
-    const bill = await billsCollection(db)
-      .findOne({ _id: requireTargetObjectId(), countryId });
+    const bill = await billsCollection(db).findOne({ _id: requireTargetObjectId(), countryId });
     if (bill) {
       const [legislationType, stateDemographicsArr, gameStateDoc] = await Promise.all([
         bill.legislationTypeId
-          ? legislationTypesCollection(db)
-              .findOne({ _id: bill.legislationTypeId })
+          ? legislationTypesCollection(db).findOne({ _id: bill.legislationTypeId })
           : Promise.resolve(null),
-        db
-          .collection<StateDemographics>("stateDemographics")
+        stateDemographicsCollection(db)
           .find({
             _id: {
               $in: [

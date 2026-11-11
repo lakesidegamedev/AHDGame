@@ -8,6 +8,7 @@ import { deriveLedgerEntries } from "@/lib/ledger/deriveFromTx";
 import { finalizeLedgerEntry } from "@/lib/ledger/emit";
 import { ledgerTurnFromClock } from "@/lib/ledger/ledgerTurn";
 import { prepareAuditRecord } from "@/lib/audit/recordAudit";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /** Original native amounts are frozen with completion, never recalculated from current FX. */
 export interface FundCommandAudit {
@@ -57,7 +58,7 @@ export async function resumeFundCommandAudit(db: Db, key: string): Promise<void>
     const [thresholds, turnLength, config] = await Promise.all([
       loadTxThresholds(db),
       loadTurnLengthMinutes(db),
-      db.collection<GameConfig>("gameConfig").findOne({ _id: "default" }),
+      gameConfigCollection(db).findOne({ _id: "default" }),
     ]);
     const inputs: TxInput[] = [];
     for (const entry of audit.entries) {

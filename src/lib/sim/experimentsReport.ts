@@ -27,6 +27,8 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import type { Document } from "mongodb";
 
 // Static sim-harness parameters — the "conditions we specified" for a run.
 // Source-of-truth lives in scripts/sim/runWorld.ts (country allowlist,
@@ -491,7 +493,7 @@ export async function collectExperimentsReport(
       .toArray(),
     collectBalanceMetrics(db),
     gameStateCollection(db).findOne({ _id: "current" }),
-    db.collection("gameConfig").findOne({ _id: "default" as never }),
+    gameConfigCollection<Document>(db).findOne({ _id: "default" as never }),
     options.runId
       ? db.collection<Record<string, unknown>>("simRuns").findOne(
           {

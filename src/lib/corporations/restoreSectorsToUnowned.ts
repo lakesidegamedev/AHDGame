@@ -20,6 +20,7 @@ import { reserveSectorsForRestore } from "@/lib/corporations/securedConstruction
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 
 const RESTORE_IDEMPOTENCY_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -229,7 +230,7 @@ export async function restoreSectorsToUnowned(
       eraUnitScale,
       delta.industryModel
     );
-    const before = await db.collection<UnownedSector>("unownedSectors").findOneAndUpdate(
+    const before = await unownedSectorsCollection(db).findOneAndUpdate(
       {
         stateId: delta.stateId,
         sectorType: delta.sectorType,

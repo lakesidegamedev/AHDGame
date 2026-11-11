@@ -91,6 +91,10 @@ import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficia
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { billsCollection } from "@/lib/db/repositories/bills";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import type { Document } from "mongodb";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
 
 /**
  * Conservative catalog of legislation types that are clearly market-liberalizing
@@ -325,7 +329,9 @@ export async function loadConditionsSignal(
         // political half of this read is gone with the store it came from, so
         // their weak-domain signal is economic-only rather than partly stale.
         (
-          db.collection("macroMetrics") as import("mongodb").Collection<Record<string, unknown>>
+          macroMetricsCollection<Document>(db) as import("mongodb").Collection<
+            Record<string, unknown>
+          >
         ).findOne(
           { _id: nationalDocId } as unknown as import("mongodb").Filter<Record<string, unknown>>,
           { projection: { economic: 1 } }
@@ -485,28 +491,26 @@ async function loadNationalLegislationTypes(
     "policyOptions.0": { $exists: true },
   };
 
-  return (
-    legislationTypesCollection(db)
-      .find(query as import("mongodb").Filter<LegislationType>, {
-        projection: {
-          _id: 1,
-          name: 1,
-          subCategory: 1,
-          policyDomain: 1,
-          taxSlider: 1,
-          "policyOptions.id": 1,
-          "policyOptions.name": 1,
-          "policyOptions.stance": 1,
-          "policyOptions.effectDirection": 1,
-          "policyOptions.economic": 1,
-          "policyOptions.social": 1,
-          "policyOptions.gdpCostFraction": 1,
-          "policyOptions.annualCostPerCapita": 1,
-          "policyOptions.gdpPerCapitaMultiplier": 1,
-        },
-      })
-      .toArray()
-  );
+  return legislationTypesCollection(db)
+    .find(query as import("mongodb").Filter<LegislationType>, {
+      projection: {
+        _id: 1,
+        name: 1,
+        subCategory: 1,
+        policyDomain: 1,
+        taxSlider: 1,
+        "policyOptions.id": 1,
+        "policyOptions.name": 1,
+        "policyOptions.stance": 1,
+        "policyOptions.effectDirection": 1,
+        "policyOptions.economic": 1,
+        "policyOptions.social": 1,
+        "policyOptions.gdpCostFraction": 1,
+        "policyOptions.annualCostPerCapita": 1,
+        "policyOptions.gdpPerCapitaMultiplier": 1,
+      },
+    })
+    .toArray();
 }
 
 // ── Per-party sponsorship attempt ────────────────────────────────────────────
@@ -782,12 +786,10 @@ export async function processNppBillSponsorship(ctx: NPPContext): Promise<number
   // drop market-liberalization / privatization levers from the candidate set.
   // Fail-safe: flag off → isPlannedEconomy is false → filter is a no-op.
   const [cmdConfig, cmdGameState] = await Promise.all([
-    db
-      .collection<GameConfig>("gameConfig")
-      .findOne(
-        { _id: "default" },
-        { projection: { commandEconomyEnabled: 1, mediaRegulationEnabled: 1, marketSystemMode: 1 } }
-      ),
+    gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { commandEconomyEnabled: 1, mediaRegulationEnabled: 1, marketSystemMode: 1 } }
+    ),
     gameStateCollection(db).findOne(
       { _id: "current" },
       {
@@ -934,8 +936,7 @@ export async function processNppBillSponsorship(ctx: NPPContext): Promise<number
           loadNationalLegislationTypes(db, countryId),
           loadConditionsSignal(db, countryId),
           loadGovernmentDirectives(db, countryId),
-          db
-            .collection<StatePolicy>("statePolicies")
+          statePoliciesCollection(db)
             .find(
               { stateId: nationalPolicyStoreId },
               { projection: { legislationTypeId: 1, policyOptionId: 1 } }

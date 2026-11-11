@@ -67,6 +67,9 @@ import {
 } from "@/lib/governmentFinance/deliveryMultipliers";
 import { getGameStateCollection } from "@/lib/db/collections/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
+import { politicalMetricsCollection } from "@/lib/db/repositories/politicalMetrics";
 
 // Defined in politicalMetrics/historyCadence so a client component can read the
 // cadence without importing this module (and with it the whole turn engine).
@@ -133,9 +136,7 @@ export async function processPoliticalMetricsDynamics(
   //
   // Read from the collection rather than a constant: the seeded set is the
   // authority, so adding a country to the board cannot leave it undriven.
-  const countryIds = (
-    await db.collection<PoliticalMetricsDoc>("politicalMetrics").distinct("countryId")
-  ).filter(Boolean);
+  const countryIds = (await politicalMetricsCollection(db).distinct("countryId")).filter(Boolean);
 
   // Inputs for the ENGINE TERM — the metric engine's political nodes, which
   // model outcomes causally (spending -> attainment, inequality -> safety) and
@@ -187,7 +188,7 @@ export async function processPoliticalMetricsDynamics(
       // the whole fan-out runs concurrently. The four country-scoped reads are
       // independent of one another too.
       const [docs, nationalLevels, cabinetSnapshot, macroDocs] = await Promise.all([
-        db.collection<PoliticalMetricsDoc>("politicalMetrics").find({ countryId }).toArray(),
+        politicalMetricsCollection(db).find({ countryId }).toArray(),
         getEnactedLevels(db, countryId),
         // Standing cabinet effects (momentum driver channel): the contribution
         // snapshot the ministerial step persisted last turn. National standing
@@ -199,7 +200,7 @@ export async function processPoliticalMetricsDynamics(
         // Bridge B: the region's macro reality, flattened to "category.metricId".
         // Only the macro-owned categories matter — the political board supplies
         // everything else.
-        db.collection<MacroMetricsDoc>("macroMetrics").find({ countryId }).toArray(),
+        macroMetricsCollection<MacroMetricsDoc>(db).find({ countryId }).toArray(),
       ]);
       if (docs.length === 0) return;
       countriesProcessed++;
@@ -236,8 +237,7 @@ export async function processPoliticalMetricsDynamics(
       const catalogLawIds = getCatalog(countryId)
         .filter((law) => law.kind !== "tax")
         .map((law) => law.id);
-      const regionalRecords = await db
-        .collection<StatePolicy>("statePolicies")
+      const regionalRecords = await statePoliciesCollection(db)
         .find(
           {
             scope: "state",
@@ -458,7 +458,7 @@ export async function processPoliticalMetricsDynamics(
       }
 
       if (ops.length > 0) {
-        await db.collection<PoliticalMetricsDoc>("politicalMetrics").bulkWrite(ops);
+        await politicalMetricsCollection(db).bulkWrite(ops);
       }
 
       // §5 trend history: national aggregate snapshot on cadence.

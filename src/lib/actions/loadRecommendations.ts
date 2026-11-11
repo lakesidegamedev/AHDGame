@@ -24,6 +24,7 @@ import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParti
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 
 interface StateEconomySector {
   type: string;
@@ -77,8 +78,7 @@ async function fetchStateEconomy(
     .find({ stateId })
     .toArray();
 
-  const unownedSectors = await db
-    .collection<{ sectorType: string; revenue: number }>("unownedSectors")
+  const unownedSectors = await unownedSectorsCollection<{ sectorType: string; revenue: number }>(db)
     .find({ stateId })
     .toArray();
 
@@ -263,8 +263,11 @@ async function fetchMarketPositions(
   }
 
   // Fetch only the unowned sectors that match the user's state+sectorType combinations
-  const unownedSectors = await db
-    .collection<{ stateId: string; sectorType: string; revenue: number }>("unownedSectors")
+  const unownedSectors = await unownedSectorsCollection<{
+    stateId: string;
+    sectorType: string;
+    revenue: number;
+  }>(db)
     .find({
       $or: Array.from(stateSectorKeys).map((key) => {
         const [stateId, sectorType] = key.split(":");

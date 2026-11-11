@@ -30,6 +30,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
 
 export async function checkNationalBudgets(
   db: Db,
@@ -205,13 +206,12 @@ export async function checkStaleCostFractions(
   const expectedByKey = new Map<string, (typeof expectedLaws)[number]>(
     expectedLaws.map((law) => [`${law.countryId}:${law.legislationTypeId}`, law])
   );
-  const actualLaws = await db
-    .collection<{
-      countryId?: string;
-      legislationTypeId?: string;
-      gdpCostFraction?: number;
-      incomeCostFraction?: number;
-    }>("enactedLaws")
+  const actualLaws = await enactedLawsCollection<{
+    countryId?: string;
+    legislationTypeId?: string;
+    gdpCostFraction?: number;
+    incomeCostFraction?: number;
+  }>(db)
     .find({})
     .project({
       countryId: 1,
@@ -377,7 +377,12 @@ export async function checkMonetary(
 }
 
 export async function checkForex(db: Db, expect: SeedExpectations): Promise<SeedDiagnosticCheck[]> {
-  const rates = await exchangeRatesCollection<{ _id: string; countryId?: string; currencyCode?: CurrencyCode; rate?: number }>(db)
+  const rates = await exchangeRatesCollection<{
+    _id: string;
+    countryId?: string;
+    currencyCode?: CurrencyCode;
+    rate?: number;
+  }>(db)
     .find({})
     .toArray();
   const byCountry = new Map(rates.map((r) => [String(r.countryId ?? r._id), r] as const));

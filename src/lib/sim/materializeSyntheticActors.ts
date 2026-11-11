@@ -74,6 +74,9 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import type { Document } from "mongodb";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { crisisInteractionsCollection } from "@/lib/db/repositories/crisisInteractions";
 
 /** Database-name prefix every sandbox sim world uses (`ahd_sim_<seed>`). */
 export const SIM_SANDBOX_DB_PREFIX = "ahd_sim_";
@@ -125,9 +128,9 @@ export async function assertSandboxDb(db: Db): Promise<void> {
         `database (expected prefix "${SIM_SANDBOX_DB_PREFIX}").`
     );
   }
-  const config = await db
-    .collection<{ _id: string; simSandbox?: boolean }>("gameConfig")
-    .findOne({ _id: "default" });
+  const config = await gameConfigCollection<{ _id: string; simSandbox?: boolean }>(db).findOne({
+    _id: "default",
+  });
   if (config?.simSandbox !== true) {
     throw new Error(
       `Refusing to seed synthetic actors into database "${name}": gameConfig.simSandbox ` +
@@ -738,9 +741,9 @@ export async function readActorPopulation(
   const simUsernamePrefix = escapeRegExp(SIM_ACTOR_USERNAME_PREFIX);
   const [characters, users, syntheticCharacters, syntheticUsers] = await Promise.all([
     charactersCollection<Document>(db).countDocuments({}),
-    db.collection("users").countDocuments({}),
+    usersCollection<Document>(db).countDocuments({}),
     charactersCollection<Document>(db).countDocuments({ isSynthetic: true }),
-    db.collection("users").countDocuments({ username: { $regex: `^${simUsernamePrefix}` } }),
+    usersCollection<Document>(db).countDocuments({ username: { $regex: `^${simUsernamePrefix}` } }),
   ]);
   const syntheticIds = await charactersCollection<Document>(db)
     .find({ isSynthetic: true }, { projection: { _id: 1 } })
@@ -749,9 +752,9 @@ export async function readActorPopulation(
   const [statePartyCandidates, crisisDecidedInteractions, wealthListRows, playerFoundedCorps] =
     await Promise.all([
       db.collection("statePartyCandidates").countDocuments({}),
-      db
-        .collection("crisisInteractions")
-        .countDocuments({ resolutionPath: { $exists: true, $ne: [] } }),
+      crisisInteractionsCollection<Document>(db).countDocuments({
+        resolutionPath: { $exists: true, $ne: [] },
+      }),
       db.collection("wealthListHistory").countDocuments({}),
       syntheticIdSet.length > 0
         ? corporationsCollection(db).countDocuments({

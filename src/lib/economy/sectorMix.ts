@@ -47,6 +47,8 @@ import { withFundedNationalBalances } from "@/lib/market/producerMarket/loadFund
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
+import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
 
 export interface CountrySectorMixEntry {
   type: OperatingSectorType;
@@ -474,7 +476,7 @@ export async function aggregateCountrySectorMix(
         { _id: "current" },
         { projection: { currentTurn: 1, worldEpochId: 1 } }
       ),
-      db.collection<CommodityPrice>("commodityPrices").find({}).toArray(),
+      commodityPricesCollection(db).find({}).toArray(),
     ]);
   // The national gap reads the funded country book of the prices' turn when
   // there is one: stored nationalDemand misses buyers with no state.
@@ -482,7 +484,7 @@ export async function aggregateCountrySectorMix(
   const plantsMode = marketAtLeast(marketMode, "plants");
   const unownedDocs = plantsMode
     ? []
-    : await db.collection<UnownedSector>("unownedSectors").find({ countryId }).toArray();
+    : await unownedSectorsCollection(db).find({ countryId }).toArray();
   const eraUnitScale = getEraUnitScale(preset);
   const currentTurn =
     typeof worldState?.currentTurn === "number" && Number.isFinite(worldState.currentTurn)

@@ -25,6 +25,7 @@ import { resolveMergeFxScale } from "./mergeFxScale";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
 
 export interface MergeNationalFiscArgs {
   fromCountryId: CountryId;
@@ -231,7 +232,7 @@ export async function mergeNationalFisc(
   // "national", no stateId) is what nothing else moves. Money fields convert
   // (currency only) and the fraction terms re-base onto the merged economy
   // below, because their pricing base is changed BY the merge.
-  const laws = db.collection<EnactedLaw>("enactedLaws");
+  const laws = enactedLawsCollection(db);
   // `stateId: null` matches both an absent field and an explicit null in Mongo;
   // the cast is because `EnactedLaw.stateId` is `string | undefined` and the
   // driver's Filter type refuses a literal null for it.

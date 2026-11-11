@@ -3,6 +3,7 @@ import type { GovernorExecutiveOrder, LegislationType, StatePolicy } from "@/lib
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { buildOrderRevertPolicyFields } from "./revertPolicy";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
 
 export interface RescindOrderInput {
   orderId: ObjectId;
@@ -30,7 +31,7 @@ export async function rescindOrder(
 
   const currentTurn = await getCurrentTurn(db);
   const now = new Date();
-  const policy = await db.collection<StatePolicy>("statePolicies").findOne({
+  const policy = await statePoliciesCollection(db).findOne({
     stateId: order.stateId,
     legislationTypeId: order.legislationTypeId,
   });
@@ -45,9 +46,11 @@ export async function rescindOrder(
     // State Policy page which matches by axes) read the correct base option.
     // effectDirection comes from the type's own ladder (5-level new-generation
     // ladders center at 2 — the old hardcoded center-3 misdirects them).
-    const legislationType = await legislationTypesCollection(db)
-      .findOne({ _id: order.legislationTypeId }, { projection: { policyOptions: 1 } });
-    await db.collection<StatePolicy>("statePolicies").updateOne(
+    const legislationType = await legislationTypesCollection(db).findOne(
+      { _id: order.legislationTypeId },
+      { projection: { policyOptions: 1 } }
+    );
+    await statePoliciesCollection(db).updateOne(
       { stateId: order.stateId, legislationTypeId: order.legislationTypeId },
       {
         $set: {

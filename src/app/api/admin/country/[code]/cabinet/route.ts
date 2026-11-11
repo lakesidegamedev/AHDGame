@@ -42,6 +42,8 @@ import { reconcileUkSharedPool } from "@/lib/cabinet/ministerialActionPool";
 import { preserveSurvivingCabinetRow } from "@/lib/countries/uk/dualMinistry/survivor";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { cabinetNominationsCollection } from "@/lib/db/repositories/cabinetNominations";
+import type { Document } from "mongodb";
 
 const actionSchema = z
   .object({
@@ -72,12 +74,10 @@ async function withdrawActiveNominations(
   countryId: CountryId,
   positionId: string
 ): Promise<void> {
-  await db
-    .collection("cabinetNominations")
-    .updateMany(
-      { countryId, positionId, status: { $in: ["active", "proposed"] } },
-      { $set: { status: "withdrawn", updatedAt: new Date() } }
-    );
+  await cabinetNominationsCollection<Document>(db).updateMany(
+    { countryId, positionId, status: { $in: ["active", "proposed"] } },
+    { $set: { status: "withdrawn", updatedAt: new Date() } }
+  );
 }
 
 /** Vacate a seat: delete member rows and restore the holder's office state. */

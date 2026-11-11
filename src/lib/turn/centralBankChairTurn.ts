@@ -41,6 +41,8 @@ import { getStatesCollection } from "@/lib/db/collections/states";
 import { getGameStateCollection } from "@/lib/db/collections/gameState";
 import { getCharactersCollection } from "@/lib/db/collections/characters";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 
 /** Fallback target inflation rate — deviations drive infamy */
 const TARGET_INFLATION = 2.0;
@@ -189,8 +191,7 @@ export async function processCentralBankChairTurn(
 
   const nationalMetricsDocs =
     nationalDocIdSet.size > 0
-      ? await db
-          .collection<StateMetrics>("macroMetrics")
+      ? await macroMetricsCollection(db)
           .find(
             { _id: { $in: Array.from(nationalDocIdSet) } },
             { projection: { "economic.gdpGrowth.value": 1, "economic.unemploymentRate.value": 1 } }
@@ -247,9 +248,10 @@ export async function processCentralBankChairTurn(
   // bank, and this loop runs over every central bank in the world each turn.
   const startingYear =
     gameState?.startingYear ?? getStartingYearForPreset(gameState?.preset ?? DEFAULT_SEED_PRESET);
-  const chairGameConfig = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } });
+  const chairGameConfig = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { commandEconomyEnabled: 1 } }
+  );
   const commandEconomyEnabled = chairGameConfig?.commandEconomyEnabled === true;
 
   const union = gameState?.euroMonetaryUnion;

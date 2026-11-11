@@ -12,6 +12,8 @@ import { getCountryConfig, type CountryId } from "@/lib/constants/countries";
 import { getChamberKeyForOfficeType } from "@/lib/legislature/chamberOfficeType";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
+import type { Document } from "mongodb";
 
 type LifecycleDb = Awaited<ReturnType<typeof import("@/lib/mongodb").getDb>>;
 
@@ -43,9 +45,10 @@ export async function didPassWithFilibusterCheck(
 ): Promise<boolean> {
   if (!bill.filibusterInvocations?.length) return didPass(votesFor, votesAgainst);
 
-  const filibusterPolicy = await db
-    .collection("statePolicies")
-    .findOne({ stateId: "federal", legislationTypeId: "senate_filibuster_rules" });
+  const filibusterPolicy = await statePoliciesCollection<Document>(db).findOne({
+    stateId: "federal",
+    legislationTypeId: "senate_filibuster_rules",
+  });
   if (filibusterPolicy && filibusterPolicy.effectDirection === -1) {
     return didPass(votesFor, votesAgainst);
   }

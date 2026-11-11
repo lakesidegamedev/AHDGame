@@ -32,6 +32,7 @@ import {
 import { createSystemNewsPost } from "@/lib/news";
 import type { CrisisBlameShift } from "@/lib/elections/engine/crisisBlame";
 import { crisesCollection } from "@/lib/db/repositories/crises";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
 
 /** Turns of history read when the term start is unknown. */
 const UNKNOWN_START_LOOKBACK_TURNS = 192;
@@ -89,8 +90,7 @@ export async function recordLeaderDeparture(
 
   const [leader, lawRows, crises] = await Promise.all([
     resolveLeader(db, leaderKey),
-    db
-      .collection<{ enactedByBillId?: ObjectId }>("statePolicies")
+    statePoliciesCollection<{ enactedByBillId?: ObjectId }>(db)
       .find(
         { scope: "national", countryId, enactedTurn: { $gte: startTurn, $lte: turn } },
         { projection: { enactedByBillId: 1 } }

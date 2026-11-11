@@ -21,6 +21,7 @@ import {
   renewablesReliabilityPenalty,
   type TransitionPolicy,
 } from "./rules";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
 
 type PolicyKey = keyof TransitionPolicy;
 
@@ -70,8 +71,7 @@ export function foldTransitionPolicies(
 
 /** countryId -> enacted climate law levels. Countries with none are absent. */
 export async function loadTransitionPolicies(db: Db): Promise<Map<string, TransitionPolicy>> {
-  const records = await db
-    .collection<StatePolicy>("statePolicies")
+  const records = await statePoliciesCollection(db)
     .find(
       { legislationTypeId: { $in: [...LAW_REFS.keys()] } },
       { projection: { _id: 0, legislationTypeId: 1, policyOptionIndex: 1, scope: 1 } }

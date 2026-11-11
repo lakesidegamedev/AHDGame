@@ -30,6 +30,7 @@ import { resetTaxesFor } from "@/lib/resetLegislation/taxCatalog";
 import { resolveResetTaxProvisionFields } from "@/lib/resetLegislation/resolveTaxProvision";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
 
 export type ValidateStateBillProvisionsResult =
   | {
@@ -197,7 +198,7 @@ export async function validateStateBillProvisions(
         balanceBasis: entry.balanceBasis,
       });
     }
-    const duplicateProgramBill = await db.collection<StateBill>("stateBills").findOne({
+    const duplicateProgramBill = await stateBillsCollection(db).findOne({
       stateId,
       countryId,
       status: { $nin: STATE_TERMINAL_STATUSES },

@@ -37,6 +37,7 @@ import { nppsCollection } from "@/lib/db/repositories/npps";
 import type { Document } from "mongodb";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { activityLogCollection } from "@/lib/db/repositories/activityLog";
 export {
   appointCampaignManager,
   contributeCampaignStrength,
@@ -421,8 +422,11 @@ export async function donateToCampaign(params: {
       if (debitResult.matchedCount === 0) {
         throw badRequest("Insufficient party funds");
       }
-      const campaignUpdateResult = await campaignsCollection(db)
-        .updateOne({ _id: campaignId }, campaignUpdate, { session });
+      const campaignUpdateResult = await campaignsCollection(db).updateOne(
+        { _id: campaignId },
+        campaignUpdate,
+        { session }
+      );
       if (campaignUpdateResult.matchedCount === 0) {
         throw notFound("Campaign not found");
       }
@@ -437,8 +441,10 @@ export async function donateToCampaign(params: {
         throw badRequest("Insufficient party funds");
       }
 
-      const campaignUpdateResult = await campaignsCollection(db)
-        .updateOne({ _id: campaignId }, campaignUpdate);
+      const campaignUpdateResult = await campaignsCollection(db).updateOne(
+        { _id: campaignId },
+        campaignUpdate
+      );
       if (campaignUpdateResult.matchedCount === 0) {
         await politicalPartiesCollection(db).updateOne(
           { _id: party._id },
@@ -460,7 +466,7 @@ export async function donateToCampaign(params: {
     // Log the donor-side outflow in the party's local home currency — same
     // unit the treasury ledger / chair UI displays. (The donation amount the
     // player typed is in anchor; we record the LOCAL value actually debited.)
-    void db.collection("activityLog").insertOne({
+    void activityLogCollection<Document>(db).insertOne({
       type: "fund_event",
       timestamp: now,
       userId: new ObjectId(user.userId),
@@ -564,8 +570,11 @@ export async function donateToCampaign(params: {
         throw badRequest("Insufficient funds");
       }
 
-      const campaignUpdateResult = await campaignsCollection(db)
-        .updateOne({ _id: campaignId }, campaignUpdate, { session });
+      const campaignUpdateResult = await campaignsCollection(db).updateOne(
+        { _id: campaignId },
+        campaignUpdate,
+        { session }
+      );
       if (campaignUpdateResult.matchedCount === 0) {
         throw notFound("Campaign not found");
       }
@@ -580,8 +589,10 @@ export async function donateToCampaign(params: {
       }
 
       try {
-        const campaignUpdateResult = await campaignsCollection(db)
-          .updateOne({ _id: campaignId }, campaignUpdate);
+        const campaignUpdateResult = await campaignsCollection(db).updateOne(
+          { _id: campaignId },
+          campaignUpdate
+        );
         if (campaignUpdateResult.matchedCount === 0) {
           throw notFound("Campaign not found");
         }
@@ -598,7 +609,7 @@ export async function donateToCampaign(params: {
   // Log the donor-side outflow in the character's local home currency so the
   // activityLog reflects what the character actually paid. The Campaign.funds
   // ledger remains anchor-denominated until that subsystem is migrated.
-  void db.collection("activityLog").insertOne({
+  void activityLogCollection<Document>(db).insertOne({
     type: "fund_event",
     timestamp: now,
     userId: new ObjectId(user.userId),

@@ -10,6 +10,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import { regionPartyUrl } from "@/lib/urls";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { adminLogsCollection } from "@/lib/db/repositories/adminLogs";
 
 export interface TreasuryStateFundingMetric {
   stateId: string;
@@ -97,8 +98,7 @@ export async function buildNationalTreasuryInsights(
       .sort({ createdAt: -1 })
       .limit(200)
       .toArray(),
-    db
-      .collection<AdminLog>("adminLogs")
+    adminLogsCollection(db)
       .find({
         action: "funds_transferred",
         details: {
@@ -170,8 +170,7 @@ export async function buildStateTreasuryInsights(
   partyName: string,
   stateName: string
 ): Promise<StateTreasuryInsights> {
-  const overrideLogs = await db
-    .collection<AdminLog>("adminLogs")
+  const overrideLogs = await adminLogsCollection(db)
     .find({
       action: "funds_transferred",
       details: {

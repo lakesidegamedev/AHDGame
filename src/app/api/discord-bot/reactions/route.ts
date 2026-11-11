@@ -8,6 +8,7 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { getSuggestionsCollection } from "@/lib/db/collections/suggestions";
 import { getSuggestionReactionsCollection } from "@/lib/db/collections/suggestionReactions";
 import type { NewsPost, NewsReaction, SuggestionReaction, User } from "@/lib/db/types";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 const schema = z.object({
   discordUserId: z.string().min(1),
@@ -36,9 +37,10 @@ export async function POST(request: Request) {
 
     const db = await getDb();
 
-    const user = await db
-      .collection<User>("users")
-      .findOne({ discordId: discordUserId }, { projection: { _id: 1 } });
+    const user = await usersCollection(db).findOne(
+      { discordId: discordUserId },
+      { projection: { _id: 1 } }
+    );
     if (!user) {
       return statusResponse(404, { linked: false });
     }

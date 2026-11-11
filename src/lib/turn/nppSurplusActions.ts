@@ -55,6 +55,7 @@ import { getCorporationsCollection } from "@/lib/db/collections/corporations";
 import { getGameStateCollection } from "@/lib/db/collections/gameState";
 import { getCorporateSectorsCollection } from "@/lib/db/collections/corporateSectors";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
 
 // v3 party-org building: counteracts processPartyOrgTurn's unconditional
 // per-turn Org decay, which nothing has ever offset autonomously (growth was
@@ -483,7 +484,7 @@ export async function foundNppCorporationsSurplus(
   const rng = makeSeededRng(`npp-found-corp:${currentTurn}${NPP_ACTION_RNG_SALT}`);
 
   // Sector choice follows the market: one price read and one count per sweep.
-  const priceDocs = await db.collection<CommodityPrice>("commodityPrices").find({}).toArray();
+  const priceDocs = await commodityPricesCollection(db).find({}).toArray();
   // Entry answers shortage: the more markets run short, the more NPPs try to
   // found and the more foundings one sweep may complete.
   const shortagePressure = foundingShortagePressure(

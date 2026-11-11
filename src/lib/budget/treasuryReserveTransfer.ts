@@ -36,6 +36,7 @@ import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 export class TreasuryReserveTransferRejected extends Error {
   constructor(
@@ -105,7 +106,7 @@ async function prepare(db: Db, command: Command): Promise<void> {
   const budgetId = countryHasFeature("usLib", command.countryId) ? "federal" : command.countryId;
   const [budget, config] = await Promise.all([
     federalBudgetCollection(db).findOne({ _id: budgetId }),
-    db.collection<GameConfig>("gameConfig").findOne(
+    gameConfigCollection(db).findOne(
       { _id: "default" },
       {
         projection: {
@@ -171,8 +172,10 @@ async function prepare(db: Db, command: Command): Promise<void> {
   };
   const projections: TransitionProjection[] = [];
   const [rate, state, thresholds, cadence] = await Promise.all([
-    exchangeRatesCollection<{ currencyCode: string; rate: number }>(db)
-      .findOne({ currencyCode: currency }, { projection: { rate: 1 } }),
+    exchangeRatesCollection<{ currencyCode: string; rate: number }>(db).findOne(
+      { currencyCode: currency },
+      { projection: { rate: 1 } }
+    ),
     gameStateCollection<{ _id: string; preset?: string }>(db).findOne(
       { _id: "current" },
       { projection: { preset: 1 } }

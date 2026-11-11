@@ -15,6 +15,7 @@ import { durableRateLimit } from "@/lib/api/rateLimit.mongo";
 import { recordAudit } from "@/lib/audit/recordAudit";
 import { createEmailChange } from "@/lib/emailChange";
 import { sendEmail } from "@/lib/email";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 /** Per-account mail limit: 3 links per hour, so the route cannot be used to spam an inbox. */
 const SEND_LIMITS = { maxRequests: 3, windowMs: 60 * 60 * 1000 };
@@ -55,8 +56,8 @@ export async function POST(request: Request) {
     }
 
     const db = await getDb();
-    const usersCollection = db.collection<User>("users");
-    const user = await usersCollection.findOne({ _id: new ObjectId(userId) });
+    const usersCollectionHandle = usersCollection(db);
+    const user = await usersCollectionHandle.findOne({ _id: new ObjectId(userId) });
     if (!user) {
       return errorResponse(404, "User not found");
     }
@@ -75,7 +76,7 @@ export async function POST(request: Request) {
       return errorResponse(400, "That is already the email on your account.");
     }
 
-    const taken = await usersCollection.findOne(
+    const taken = await usersCollectionHandle.findOne(
       { email: newEmail, _id: { $ne: user._id } },
       { projection: { _id: 1 } }
     );

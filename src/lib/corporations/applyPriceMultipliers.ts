@@ -13,6 +13,8 @@ import { loadActiveFtaPairs } from "@/lib/tariffs/ftaOverrides";
 import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import type { Document } from "mongodb";
 
 export interface ApplyPriceMultipliersResult {
   updated: number;
@@ -46,8 +48,7 @@ export async function applyPriceMultipliers(db?: Db): Promise<ApplyPriceMultipli
 
   // Per-state investor confidence (0–100) → HQ-state share-price sentiment. One
   // batched projection; corps join on `headquartersState`.
-  const confidenceDocs = await database
-    .collection("macroMetrics")
+  const confidenceDocs = await macroMetricsCollection<Document>(database)
     .find({}, { projection: { "economic.investorConfidence.value": 1 } })
     .toArray();
   const investorConfidenceByState = new Map<string, number>();

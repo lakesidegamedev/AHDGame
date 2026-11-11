@@ -10,6 +10,7 @@ import { resolvePresetIdFromGameState } from "@/lib/world/presetId";
 import { buildNationalCommodityBalances } from "@/lib/commodity-map";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 
 export interface MarketViewContext {
   marketShareBySectorId: Map<string, number>;
@@ -112,7 +113,7 @@ export async function loadMarketViewContext(
   const [siblingSectors, unownedSectors] = bucketFilter
     ? await Promise.all([
         corporateSectorsCollection(db).find(bucketFilter).toArray(),
-        db.collection<UnownedSector>("unownedSectors").find(bucketFilter).toArray(),
+        unownedSectorsCollection(db).find(bucketFilter).toArray(),
       ])
     : [[] as CorporateSector[], [] as UnownedSector[]];
 

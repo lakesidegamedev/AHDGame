@@ -15,6 +15,7 @@ import { getSuggestionsCollection } from "@/lib/db/collections/suggestions";
 import type { Suggestion, User } from "@/lib/db/types";
 import type { SuggestionCategory, SuggestionGameSystem } from "@/lib/db/types/suggestion";
 import { servicesConfig } from "@/lib/config/services";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 const schema = z.object({
   title: z.string().min(1).max(200),
@@ -103,24 +104,20 @@ export async function POST(request: Request) {
     let reporterDiscordUsername: string | null = body.discordUsername ?? null;
 
     if (body.discordUserId) {
-      const user = await db
-        .collection<User>("users")
-        .findOne(
-          { discordId: body.discordUserId },
-          { projection: { _id: 1, username: 1, discordUsername: 1 } }
-        );
+      const user = await usersCollection(db).findOne(
+        { discordId: body.discordUserId },
+        { projection: { _id: 1, username: 1, discordUsername: 1 } }
+      );
       if (user) {
         userId = user._id;
         reporterUsername = user.username ?? null;
         reporterDiscordUsername = user.discordUsername ?? body.discordUsername ?? null;
       }
     } else if (accountId) {
-      const user = await db
-        .collection<User>("users")
-        .findOne(
-          { _id: new ObjectId(accountId) },
-          { projection: { _id: 1, username: 1, discordUsername: 1 } }
-        );
+      const user = await usersCollection(db).findOne(
+        { _id: new ObjectId(accountId) },
+        { projection: { _id: 1, username: 1, discordUsername: 1 } }
+      );
       if (!user) return errorResponse(404, "User not found.");
       userId = user._id;
       reporterUsername = user.username ?? null;
@@ -238,8 +235,7 @@ export async function POST(request: Request) {
 
     // Admin notifications (non-fatal)
     try {
-      const admins = await db
-        .collection<User>("users")
+      const admins = await usersCollection(db)
         .find({ $or: [{ role: "admin" }, { isAdmin: true }] })
         .project({ _id: 1 })
         .toArray();

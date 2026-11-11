@@ -3,6 +3,9 @@ import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError } from "@/lib/api/errors";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
+import { adminLogsCollection } from "@/lib/db/repositories/adminLogs";
 
 /**
  * One-time migration endpoint to fix account_created logs that are missing character names.
@@ -21,8 +24,7 @@ export async function POST() {
     const db = await getDb();
 
     // Find all account_created logs missing character names
-    const logsToFix = await db
-      .collection("adminLogs")
+    const logsToFix = await adminLogsCollection<Document>(db)
       .find({
         action: "account_created",
         $or: [{ characterName: { $exists: false } }, { characterName: null }],
@@ -42,7 +44,7 @@ export async function POST() {
 
     for (const log of logsToFix) {
       // Find the user by username
-      const user = await db.collection("users").findOne({ username: log.username });
+      const user = await usersCollection<Document>(db).findOne({ username: log.username });
       if (!user) {
         notFoundUsernames.push(log.username);
         continue;
@@ -56,9 +58,10 @@ export async function POST() {
       }
 
       // Update the log with the character name
-      await db
-        .collection("adminLogs")
-        .updateOne({ _id: log._id }, { $set: { characterName: character.name } });
+      await adminLogsCollection<Document>(db).updateOne(
+        { _id: log._id },
+        { $set: { characterName: character.name } }
+      );
       fixedCount++;
     }
 

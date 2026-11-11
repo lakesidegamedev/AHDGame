@@ -16,6 +16,8 @@ import {
 } from "./registry";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
+import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
 
 export const HEAD_OF_STATE_OFFICES = [
   "president",
@@ -78,7 +80,9 @@ async function loadOfficeCharacters(db: Db, countryIds: string[], draft: Draft):
 }
 
 async function loadFormedGovernments(db: Db, countryIds: string[], draft: Draft): Promise<void> {
-  const formations = await governmentFormationsCollection<{ _id: string; pmCharacterId?: unknown }>(db)
+  const formations = await governmentFormationsCollection<{ _id: string; pmCharacterId?: unknown }>(
+    db
+  )
     .find(
       { _id: { $in: countryIds }, status: "formed", pmCharacterId: { $ne: null } },
       { projection: { pmCharacterId: 1 } }
@@ -105,8 +109,11 @@ async function loadFinanceMinisters(db: Db, countryIds: string[], draft: Draft):
     if (seat) seatByCountry.set(countryId, seat);
   }
   if (seatByCountry.size === 0) return;
-  const members = await db
-    .collection<{ countryId: string; positionId: string; characterId: unknown }>("cabinetMembers")
+  const members = await cabinetMembersCollection<{
+    countryId: string;
+    positionId: string;
+    characterId: unknown;
+  }>(db)
     .find(
       {
         countryId: { $in: [...seatByCountry.keys()] },
@@ -124,8 +131,7 @@ async function loadFinanceMinisters(db: Db, countryIds: string[], draft: Draft):
 }
 
 async function loadLegislatureLeaders(db: Db, countryIds: string[], draft: Draft): Promise<void> {
-  const leaders = await db
-    .collection<CongressLeader>("congressLeaders")
+  const leaders = await congressLeadersCollection(db)
     .find(
       { role: { $in: [...LEGISLATURE_LEADER_ROLES] }, characterId: { $ne: null } },
       { projection: { characterId: 1 } }

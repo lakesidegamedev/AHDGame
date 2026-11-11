@@ -29,6 +29,8 @@ import {
   type CurrencyCode,
 } from "@/lib/constants/currencies";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
 
 const wireSchema = z.object({
   amount: z.number().int().positive(),
@@ -82,12 +84,10 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const [target, userDoc] = await Promise.all([
       charactersCollection(db).findOne({ _id: targetObjectId }),
-      db
-        .collection<User>("users")
-        .findOne(
-          { _id: new ObjectId(user.userId) },
-          { projection: { wireQuotaUsed: 1, wireQuotaWindowStart: 1 } }
-        ),
+      usersCollection(db).findOne(
+        { _id: new ObjectId(user.userId) },
+        { projection: { wireQuotaUsed: 1, wireQuotaWindowStart: 1 } }
+      ),
     ]);
 
     if (!target) {
@@ -165,7 +165,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const userObjectId = new ObjectId(user.userId);
     const claimFreshQuota = () =>
-      db.collection("users").updateOne(
+      usersCollection<Document>(db).updateOne(
         {
           _id: userObjectId,
           wireQuotaWindowStart: { $gte: quotaWindowCutoff },
@@ -174,7 +174,7 @@ export async function POST(request: Request, { params }: RouteParams) {
         { $inc: { wireQuotaUsed: anchorAmount }, $set: { updatedAt: now } }
       );
     const claimResetQuota = () =>
-      db.collection("users").updateOne(
+      usersCollection<Document>(db).updateOne(
         {
           _id: userObjectId,
           $or: [
@@ -204,12 +204,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     if (!quotaClaimMode) {
-      const latestUserDoc = await db
-        .collection<User>("users")
-        .findOne(
-          { _id: userObjectId },
-          { projection: { wireQuotaUsed: 1, wireQuotaWindowStart: 1 } }
-        );
+      const latestUserDoc = await usersCollection(db).findOne(
+        { _id: userObjectId },
+        { projection: { wireQuotaUsed: 1, wireQuotaWindowStart: 1 } }
+      );
       const latestWindowStart = latestUserDoc?.wireQuotaWindowStart
         ? new Date(latestUserDoc.wireQuotaWindowStart)
         : null;
@@ -226,12 +224,10 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const rollbackQuotaClaim = async () => {
       if (quotaClaimMode === "fresh") {
-        await db
-          .collection("users")
-          .updateOne(
-            { _id: userObjectId, wireQuotaWindowStart: { $gte: quotaWindowCutoff } },
-            { $inc: { wireQuotaUsed: -anchorAmount }, $set: { updatedAt: new Date() } }
-          );
+        await usersCollection<Document>(db).updateOne(
+          { _id: userObjectId, wireQuotaWindowStart: { $gte: quotaWindowCutoff } },
+          { $inc: { wireQuotaUsed: -anchorAmount }, $set: { updatedAt: new Date() } }
+        );
         return;
       }
 
@@ -244,7 +240,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       if (userDoc?.wireQuotaUsed !== undefined) {
         resetRollback.wireQuotaUsed = userDoc.wireQuotaUsed;
       } else {
-        await db.collection("users").updateOne(
+        await usersCollection<Document>(db).updateOne(
           { _id: userObjectId },
           {
             $unset: { wireQuotaUsed: "", wireQuotaWindowStart: "" },
@@ -254,7 +250,7 @@ export async function POST(request: Request, { params }: RouteParams) {
         return;
       }
 
-      await db.collection("users").updateOne({ _id: userObjectId }, { $set: resetRollback });
+      await usersCollection<Document>(db).updateOne({ _id: userObjectId }, { $set: resetRollback });
     };
 
     const atomicFilter = forexEnabled

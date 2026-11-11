@@ -50,6 +50,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { billsCollection } from "@/lib/db/repositories/bills";
 import type { Document } from "mongodb";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 
 /** National pseudo-state ids (federal, uk_national, …) vs real sub-national regions (XB, TX, …). */
 function getNonPolicyProvisionScope(stateId: string | undefined): "national" | "state" {
@@ -78,7 +79,7 @@ async function applyOneProvision(
   // cannot be attributed, so its macro effect is dropped.
   if (isMacroMetricPath(path)) {
     if (!countryId) return;
-    await db.collection<StateMetrics>("macroMetrics").updateMany(
+    await macroMetricsCollection(db).updateMany(
       {
         countryId,
         ...(path === "economic.unemploymentRate.value"
@@ -161,8 +162,7 @@ export async function applyLegislationEffect(
   );
   const legislationTypes = new Map<string, LegislationType>();
   if (policyTypeIds.length === 1) {
-    const legislationType = await legislationTypesCollection(db)
-      .findOne({ _id: policyTypeIds[0] });
+    const legislationType = await legislationTypesCollection(db).findOne({ _id: policyTypeIds[0] });
     if (legislationType) legislationTypes.set(legislationType._id, legislationType);
   } else if (policyTypeIds.length > 1) {
     const loaded = await legislationTypesCollection(db)
@@ -204,11 +204,10 @@ export async function applyLegislationEffect(
               snapshotTurn
             );
             if (snapshot && bill._id) {
-              await billsCollection<Document>(db)
-                .updateOne(
-                  { _id: bill._id },
-                  { $set: { [`provisions.${provisionIndex}.nationalizationSnapshot`]: snapshot } }
-                );
+              await billsCollection<Document>(db).updateOne(
+                { _id: bill._id },
+                { $set: { [`provisions.${provisionIndex}.nationalizationSnapshot`]: snapshot } }
+              );
             }
           } catch (err) {
             console.error("[legislationEffects] nationalization snapshot failed:", err);

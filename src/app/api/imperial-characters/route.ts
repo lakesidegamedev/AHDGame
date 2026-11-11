@@ -24,6 +24,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import type { Document } from "mongodb";
 import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 const IMPERIAL_STARTING_CAPITAL = 50_000_000;
 const IMPERIAL_INITIAL_SHARES = 10_000_000;
@@ -69,8 +70,9 @@ export async function POST(request: Request) {
     }
 
     // Check no imperial character already exists for this country
-    const existing = await imperialCharactersCollection(db)
-      .findOne({ countryId: countryId as CountryId });
+    const existing = await imperialCharactersCollection(db).findOne({
+      countryId: countryId as CountryId,
+    });
     if (existing) {
       return errorResponse(400, `An imperial character already exists for ${countryId}`);
     }
@@ -138,7 +140,7 @@ export async function POST(request: Request) {
     await corporationsCollection(db).insertOne(corporation as Corporation);
 
     // Update user document: set active imperial character
-    await db.collection<User>("users").updateOne(
+    await usersCollection(db).updateOne(
       { _id: adminUserId },
       {
         $set: {
@@ -193,8 +195,9 @@ export async function GET(request: Request) {
     const config = COUNTRY_CONFIGS[countryId as CountryId];
     const resolvedCountryId = config?.imperialSharedWith ?? countryId;
 
-    const imperial = await imperialCharactersCollection(db)
-      .findOne({ countryId: resolvedCountryId as CountryId });
+    const imperial = await imperialCharactersCollection(db).findOne({
+      countryId: resolvedCountryId as CountryId,
+    });
 
     if (!imperial) {
       return NextResponse.json({ imperial: null });

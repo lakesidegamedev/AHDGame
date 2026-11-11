@@ -8,6 +8,7 @@ import { buildCharacterHref, buildNppHref } from "@/lib/utils/profileUrls";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
 
 export type LeadershipRole = (typeof LEADERSHIP_ROLES)[number]["role"];
 
@@ -38,7 +39,7 @@ export async function getLeadershipData(role: string): Promise<LeadershipData | 
   if (!entry) return null;
 
   const db = await getDb();
-  const doc = await db.collection<CongressLeader>("congressLeaders").findOne({ role: entry.role });
+  const doc = await congressLeadersCollection(db).findOne({ role: entry.role });
   // Congress leadership is US-only, so filter parties by US countryId
   const parties = await politicalPartiesCollection(db).find({ countryId: "US" }).toArray();
   const partyMap = new Map(parties.map((p) => [String(p.sequentialId), p]));

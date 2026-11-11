@@ -14,6 +14,7 @@ import { toAbsoluteUploadUrl } from "@/lib/discord";
 import { getBaseUrl } from "@/lib/utils/network";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 const MAX_SIZE = 2 * 1024 * 1024; // 2 MB
@@ -48,7 +49,7 @@ export async function POST(request: Request) {
     }
 
     const db = await getDb();
-    const user = await db.collection<User>("users").findOne({ _id: new ObjectId(authUser.userId) });
+    const user = await usersCollection(db).findOne({ _id: new ObjectId(authUser.userId) });
     const isImperialMode = user?.activeCharacterType === "imperial";
 
     // Resolve target: imperial character or regular character
@@ -56,8 +57,10 @@ export async function POST(request: Request) {
     let targetCollection: "characters" | "imperialCharacters";
 
     if (isImperialMode && user?.activeImperialCharacterId) {
-      const imperial = await imperialCharactersCollection(db)
-        .findOne({ _id: user.activeImperialCharacterId, userId: new ObjectId(authUser.userId) });
+      const imperial = await imperialCharactersCollection(db).findOne({
+        _id: user.activeImperialCharacterId,
+        userId: new ObjectId(authUser.userId),
+      });
       if (!imperial) {
         return errorResponse(400, "No imperial character found");
       }

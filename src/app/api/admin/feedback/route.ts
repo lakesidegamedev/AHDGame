@@ -5,6 +5,7 @@ import { withAdminAuth } from "@/lib/api/withAdminAuth";
 import { handleRouteError } from "@/lib/api/errors";
 import { parseBoundedIntParam } from "@/lib/api/validate";
 import type { Feedback, User } from "@/lib/db/types";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 const STATUS_OPTIONS = ["open", "in_progress", "resolved", "wont_fix"] as const;
 
@@ -49,8 +50,7 @@ export const GET = withAdminAuth(async (_auth, request: Request) => {
     const userIds = [...new Set(items.map((f) => f.userId).filter(Boolean))] as ObjectId[];
     const users =
       userIds.length > 0
-        ? await db
-            .collection<User>("users")
+        ? await usersCollection(db)
             .find({ _id: { $in: userIds } })
             .project({ _id: 1, username: 1 })
             .toArray()

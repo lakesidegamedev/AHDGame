@@ -6,6 +6,7 @@ import { checkRateLimit, rateLimitResponse, BOT_FINANCIAL_LIMITS } from "@/lib/a
 import type { CorporationHistory, MarketCapHistory } from "@/lib/db/types";
 import { getExchangeApiKey } from "@/lib/constants/exchangeRegistry";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
 
 // GET /api/discord-bot/stock-chart — Returns historical share price or aggregate market-cap data for a corporation or exchange.
 // Auth: requireAdminOrApiKey
@@ -41,8 +42,7 @@ export async function GET(request: Request) {
         return NextResponse.json({ found: false });
       }
 
-      const history = await db
-        .collection<CorporationHistory>("corporationHistory")
+      const history = await corporationHistoryCollection(db)
         .find({ corporationId: corporation._id })
         .sort({ turn: -1 })
         .limit(limit)

@@ -59,6 +59,9 @@ import type { Document } from "mongodb";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 
 export async function GET() {
   try {
@@ -84,15 +87,15 @@ export async function GET() {
       statesCollection<Document>(db).countDocuments({ countryId: "US" }),
       statesCollection<Document>(db).countDocuments({ countryId: "UK" }),
       db.collection("policies").countDocuments(),
-      db.collection<{ _id: string }>("gameConfig").findOne({ _id: "default" }),
+      gameConfigCollection<{ _id: string }>(db).findOne({ _id: "default" }),
       gameStateCollection(db).findOne({ _id: "current" }),
       electedOfficialsCollection<Document>(db).countDocuments(),
       electionsCollection<Document>(db).countDocuments(),
       politicalPartiesCollection<Document>(db).countDocuments(),
-      db.collection("stateDemographics").countDocuments(),
+      stateDemographicsCollection<Document>(db).countDocuments(),
       db.collection("seats").countDocuments(),
       db.collection("partyBudget").countDocuments(),
-      db.collection("unownedSectors").countDocuments(),
+      unownedSectorsCollection<Document>(db).countDocuments(),
     ]);
 
     const checks = {

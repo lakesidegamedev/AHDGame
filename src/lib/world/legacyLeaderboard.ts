@@ -33,6 +33,7 @@ import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 function sameIteration(a: GameIteration | null, b: GameIteration | null): boolean {
   if (!a || !b) return false;
@@ -269,13 +270,12 @@ export async function getLegacyLeaderboardData(
   for (const c of activeCharacters) referencedUserIds.set(String(c.userId), c.userId);
   for (const r of retired) referencedUserIds.set(String(r.userId), r.userId);
 
-  const users = await db
-    .collection<{
-      _id: ObjectId;
-      isBanned?: boolean;
-      legacyDisplayCharacterId?: string;
-      activeCharacterId?: ObjectId;
-    }>("users")
+  const users = await usersCollection<{
+    _id: ObjectId;
+    isBanned?: boolean;
+    legacyDisplayCharacterId?: string;
+    activeCharacterId?: ObjectId;
+  }>(db)
     .find(
       { _id: { $in: [...referencedUserIds.values()] } },
       { projection: { isBanned: 1, legacyDisplayCharacterId: 1, activeCharacterId: 1 } }

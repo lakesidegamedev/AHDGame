@@ -16,6 +16,7 @@ import { createNotification } from "@/lib/notifications";
 import type { Feedback, FeedbackType, BugCategory, SuggestionCategory } from "@/lib/db/types";
 import type { User } from "@/lib/db/types";
 import { servicesConfig } from "@/lib/config/services";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 /**
  * POST /api/feedback
@@ -115,11 +116,8 @@ export async function POST(request: Request) {
     let githubIssueUrl: string | undefined;
     if (servicesConfig.gitToken() && servicesConfig.githubRepo()) {
       const reporterUsername = userId
-        ? (
-            await db
-              .collection<User>("users")
-              .findOne({ _id: userId }, { projection: { username: 1 } })
-          )?.username
+        ? (await usersCollection(db).findOne({ _id: userId }, { projection: { username: 1 } }))
+            ?.username
         : null;
       const gh = await createGitHubIssue({
         issueNumber,
@@ -149,8 +147,7 @@ export async function POST(request: Request) {
 
     // Notify all admins of the new submission (best-effort, non-blocking)
     try {
-      const admins = await db
-        .collection<User>("users")
+      const admins = await usersCollection(db)
         .find({ $or: [{ role: "admin" }, { isAdmin: true }] })
         .project({ _id: 1 })
         .toArray();

@@ -33,6 +33,8 @@ import { getStatesCollection } from "@/lib/db/collections/states";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 
 /* Applies 1/TURNS_PER_YEAR of the annual wage/trade/gdp rates to tax bases
  * each turn, so bases and accrued revenue track the live economy instead of
@@ -128,11 +130,12 @@ export async function processFiscalBaseGrowth(
   const [allFederalBudgets, stateBudgets, allStateMetrics, states, gameConfig] = await Promise.all([
     (await getFederalBudgetCollection(db)).find({}).toArray(),
     stateBudgetsCollection(db).find({}).toArray(),
-    db.collection<StateMetrics>("macroMetrics").find({}).toArray(),
+    macroMetricsCollection(db).find({}).toArray(),
     (await getStatesCollection(db)).find({}).toArray(),
-    db
-      .collection<LabourWageGameConfig & { _id: string }>("gameConfig")
-      .findOne({ _id: "default" }, { projection: LABOUR_WAGE_CONFIG_PROJECTION }),
+    gameConfigCollection<LabourWageGameConfig & { _id: string }>(db).findOne(
+      { _id: "default" },
+      { projection: LABOUR_WAGE_CONFIG_PROJECTION }
+    ),
   ]);
   // Labour stage: wage growth follows each country's labour market instead of
   // the national doc's rate (or the flat 3.0 where there is none).

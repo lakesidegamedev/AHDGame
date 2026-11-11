@@ -30,6 +30,7 @@ import { getStatesCollection } from "@/lib/db/collections/states";
 import { getCharactersCollection } from "@/lib/db/collections/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /**
  * Process fund generation for all characters each turn.
@@ -63,9 +64,10 @@ export async function processFundGeneration(
       // GDP-baseline era for income math: the world's reset preset, so
       // historical worlds scale against their own denomination (issue #798).
       const preset = await getGameStatePresetOrDefault(db);
-      const gameConfig = await db
-        .collection<GameConfig>("gameConfig")
-        .findOne({ _id: "default" }, { projection: { campaignEraPriceLevelEnabled: 1 } });
+      const gameConfig = await gameConfigCollection(db).findOne(
+        { _id: "default" },
+        { projection: { campaignEraPriceLevelEnabled: 1 } }
+      );
       const priceLevel = resolveCampaignPriceLevel(
         gameConfig?.campaignEraPriceLevelEnabled,
         preset

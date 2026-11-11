@@ -14,6 +14,7 @@ import { computeCabinetNominationTallies } from "@/lib/congress/governmentVoteBr
 import { loadNominationPeople } from "@/lib/congress/nominationPeople";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { cabinetNominationsCollection } from "@/lib/db/repositories/cabinetNominations";
 
 // GET /api/congress/cabinet-nominations — Returns all active cabinet nominations with the current user's vote status.
 // Auth: public
@@ -25,8 +26,7 @@ export const GET = withNoStore(async function GET() {
 
     // A seat filled without a Senate vote (Chief of Staff) is never on the ballot.
     const activeNominations = (
-      await db
-        .collection<CabinetNomination>("cabinetNominations")
+      await cabinetNominationsCollection(db)
         .find({ status: "active", countryId: "US" })
         .sort({ proposedAt: -1 })
         .toArray()

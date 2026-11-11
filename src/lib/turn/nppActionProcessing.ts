@@ -85,6 +85,7 @@ import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 export {
   NPP_FOUNDING_FEE_ANCHOR,
   sellNppStockSurplus,
@@ -180,7 +181,7 @@ async function runNppActions(db: Db, currentTurn: number): Promise<NppActionProc
   const actsThisTurn = staggered ? (id: ObjectId) => nppActsThisTurn(id, currentTurn) : undefined;
 
   // NPP economy is on by default; only an explicit `false` disables it.
-  const config = await db.collection<GameConfig>("gameConfig").findOne({ _id: "default" });
+  const config = await gameConfigCollection(db).findOne({ _id: "default" });
   if (config?.nppEconomyEnabled === false) {
     return zeroResult();
   }

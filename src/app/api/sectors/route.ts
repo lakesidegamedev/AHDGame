@@ -32,6 +32,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import type { Document } from "mongodb";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 
 export type SectorView = "unowned" | "owned" | "forSale";
 export type SectorSort = "revenue" | "type" | "state" | "country" | "margin" | "growth";
@@ -203,8 +204,7 @@ export async function GET(request: Request) {
       Object.assign(unownedFilter, unownedScopedFilter);
 
       const unownedSectors = (
-        await db
-          .collection<UnownedSector>("unownedSectors")
+        await unownedSectorsCollection(db)
           .find(unownedFilter, {
             projection: {
               sectorType: 1,
@@ -405,7 +405,7 @@ export async function GET(request: Request) {
     const corpCountFilter = { ...countryScopedFilter };
 
     const [unownedCount, ownedCount, forSaleCount] = await Promise.all([
-      db.collection("unownedSectors").countDocuments(unownedCountFilter),
+      unownedSectorsCollection<Document>(db).countDocuments(unownedCountFilter),
       corporateSectorsCollection<Document>(db).countDocuments(corpCountFilter),
       corporateSectorsCollection<Document>(db).countDocuments({
         forSale: { $ne: null },

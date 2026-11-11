@@ -29,6 +29,7 @@ import { lastTurnSupplyAgreementCash } from "@/lib/corporations/supplyAgreementC
 import type { SupplyAgreement } from "@/lib/db/types/supplyAgreement";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
 
 export interface LatestCorpIncomeRow {
   income?: number;
@@ -188,7 +189,7 @@ export async function loadPortfolioHoldings(
   const { receivables: imfReceivableRows, totalPrincipal: imfReceivablesPrincipal } =
     await findImfFacilityReceivablesForLender(db, corporation._id);
   const [latestCorpIncomeRow, imfLenderReceiptsAnchor] = await Promise.all([
-    db.collection<LatestCorpIncomeRow>("corporationHistory").findOne(
+    corporationHistoryCollection<LatestCorpIncomeRow>(db).findOne(
       { corporationId: corporation._id },
       {
         sort: { turn: -1 },

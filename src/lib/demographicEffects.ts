@@ -69,6 +69,9 @@ import { regionalFamilyLeanPolicies } from "@/lib/resetLegislation/familyLeanEff
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
 
 /**
  * Lean shift per turn at maximum policy strength (magnitude 1, state scope).
@@ -531,14 +534,13 @@ export async function processAllStateDemographics(
     statesCollection(db)
       .find({}, { projection: { _id: 1, countryId: 1 } })
       .toArray(),
-    db
-      .collection<import("@/lib/db/types/statePolicy").StatePolicy>("statePolicies")
+    statePoliciesCollection<import("@/lib/db/types/statePolicy").StatePolicy>(db)
       .find({})
       .toArray(),
     knownLegislationTypes
       ? Promise.resolve(knownLegislationTypes)
       : legislationTypesCollection(db).find({}).toArray(),
-    db.collection<StateDemographics>("stateDemographics").find({}).toArray(),
+    stateDemographicsCollection(db).find({}).toArray(),
     gameStateCollection(db).findOne(
       { _id: "current" },
       {
@@ -561,9 +563,10 @@ export async function processAllStateDemographics(
   // Newsroom slant: two batched reads for every state, only with the media
   // editorial flag on. Flag-off turns issue nothing extra.
   let slantByState = new Map<string, StateSlant>();
-  const config = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { mediaEditorialEnabled: 1 } });
+  const config = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { mediaEditorialEnabled: 1 } }
+  );
   if (config?.mediaEditorialEnabled === true) slantByState = await loadAllStateSlants(db);
 
   // Build legislation type map for O(1) lookups
@@ -821,7 +824,7 @@ export async function processAllStateDemographics(
 
   // Single bulkWrite instead of N individual updateOne calls
   if (bulkOps.length > 0) {
-    await db.collection<StateDemographics>("stateDemographics").bulkWrite(bulkOps);
+    await stateDemographicsCollection(db).bulkWrite(bulkOps);
   }
   if (stateCacheOps.length > 0) {
     await statesCollection(db).bulkWrite(stateCacheOps);

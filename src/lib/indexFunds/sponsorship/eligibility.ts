@@ -15,6 +15,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import type { Document } from "mongodb";
 import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 export async function fundCreationEligibility(
   db: Db,
@@ -31,11 +32,14 @@ export async function fundCreationEligibility(
       { _id: "current" },
       { projection: { corporationActionsPaused: 1 } }
     ),
-    db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { indexFundsMode: 1, indexFundsEnabled: 1 } }),
-    indexFundsCollection<Document>(db)
-      .countDocuments({ sponsorCorporationId: sponsor._id, status: { $ne: "delisted" } }),
+    gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { indexFundsMode: 1, indexFundsEnabled: 1 } }
+    ),
+    indexFundsCollection<Document>(db).countDocuments({
+      sponsorCorporationId: sponsor._id,
+      status: { $ne: "delisted" },
+    }),
   ]);
   const reason = fundSponsorEligibility({
     hasFinancialSector: !!sector,

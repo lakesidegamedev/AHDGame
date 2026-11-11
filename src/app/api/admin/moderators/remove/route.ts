@@ -9,6 +9,7 @@ import { z } from "zod";
 import type { User } from "@/lib/db/types";
 import { GRANTABLE_STAFF_ROLES } from "@/lib/staff/rules";
 import { planRevoke, staffRoleLabel } from "@/lib/staff/grantRules";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 const removeSchema = z.object({
   userId: z.string().length(24),
@@ -34,7 +35,7 @@ export async function POST(request: Request) {
 
     const db = await getDb();
     const objectId = new ObjectId(parsed.data.userId);
-    const user = await db.collection<User>("users").findOne({ _id: objectId });
+    const user = await usersCollection(db).findOne({ _id: objectId });
 
     if (!user) {
       return errorResponse(404, "User not found");
@@ -45,7 +46,7 @@ export async function POST(request: Request) {
       return errorResponse(plan.status, plan.error);
     }
 
-    await db.collection<User>("users").updateOne(
+    await usersCollection(db).updateOne(
       { _id: objectId },
       {
         $set: {

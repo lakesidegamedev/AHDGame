@@ -10,6 +10,7 @@ import {
 } from "@/lib/politicalLegislation/regionalDefaults";
 import { ObjectId } from "mongodb";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
 
 // GET /api/game/current-policies — Returns current policy option indices for a given state or federal level.
 // Auth: public
@@ -27,7 +28,7 @@ export async function GET(request: Request) {
 
     const db = await getDb();
 
-    const policies = await db.collection<StatePolicy>("statePolicies").find({ stateId }).toArray();
+    const policies = await statePoliciesCollection(db).find({ stateId }).toArray();
 
     // Executive orders are temporary nudges, not real law. For bill-proposal
     // purposes (which is what this endpoint feeds), the "current law" is the

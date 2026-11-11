@@ -4,6 +4,7 @@ import type { Notification, NotificationPreferences } from "@/lib/db/types/notif
 import { STARTING_YEAR } from "@/lib/constants/turnTime";
 import { notificationTypeFilter } from "@/lib/notifications/visibility";
 import { rawTurnToLarpDate } from "@/lib/utils/formatters";
+import { notificationsCollection } from "@/lib/db/repositories/notifications";
 
 export interface WidgetExtras {
   turn: { current: number; date: string; nextAt: string | null; active: boolean } | null;
@@ -37,7 +38,7 @@ export async function loadWidgetExtras(
         }
       )
     ),
-    db.collection<Notification>("notifications").countDocuments({
+    notificationsCollection(db).countDocuments({
       userId,
       ...notificationTypeFilter(preferences, now),
       read: false,

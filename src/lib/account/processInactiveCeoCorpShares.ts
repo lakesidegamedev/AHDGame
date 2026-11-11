@@ -11,6 +11,7 @@ import {
 import { createNotifications, type NotificationInput } from "@/lib/notifications";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 const TURN_MS = 60 * 60 * 1000;
 
@@ -113,8 +114,7 @@ export async function processInactiveCeoCorpShares(
   const ownerIds = Array.from(
     new Set(candidates.map((c) => c.userId?.toString()).filter((s): s is string => !!s))
   ).map((s) => new ObjectId(s));
-  const users = await db
-    .collection<User>("users")
+  const users = await usersCollection(db)
     .find({ _id: { $in: ownerIds } }, { projection: { _id: 1, lastActivity: 1, createdAt: 1 } })
     .toArray();
   const releaseOwnerIds = new Set<string>();

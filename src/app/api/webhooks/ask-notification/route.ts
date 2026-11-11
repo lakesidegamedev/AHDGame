@@ -8,6 +8,7 @@ import { BOT_READ_LIMITS, checkRateLimit, rateLimitResponse } from "@/lib/api/ra
 import { parseJsonBody } from "@/lib/api/validate";
 import { createNotifications, type NotificationInput } from "@/lib/notifications";
 import type { User } from "@/lib/db/types";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 // POST /api/webhooks/ask-notification
 // The Ask service (ask.lakesidegames.net) pushes player notifications here:
@@ -72,7 +73,7 @@ export async function POST(request: Request) {
     }
 
     const db = await getDb();
-    const users = db.collection<User>("users");
+    const users = usersCollection(db);
     const results: Array<{ ok: true } | { error: "unknown_user" }> = [];
     const notifications: NotificationInput[] = [];
 

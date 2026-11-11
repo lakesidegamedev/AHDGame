@@ -11,6 +11,7 @@ import {
   getUkEconomicLeanLabelHex,
 } from "@/lib/utils/politics";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
 
 export interface MapLeanState {
   economicLean: number;
@@ -31,7 +32,7 @@ export async function computeLeanMap(
 ): Promise<Record<string, MapLeanState>> {
   const [allStates, allDemographics, gameState] = await Promise.all([
     statesCollection(db).find({ countryId }).toArray(),
-    db.collection<StateDemographics>("stateDemographics").find({ countryId }).toArray(),
+    stateDemographicsCollection(db).find({ countryId }).toArray(),
     getGameStateCollection(db).then((col) =>
       col.findOne(
         { _id: "current" },

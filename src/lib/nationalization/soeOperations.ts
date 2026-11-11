@@ -77,6 +77,8 @@ import { CORPORATE_SECTOR_LEAN_FIELDS } from "@/lib/db/collections/corporateSect
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
 
 interface MetricOpInput {
   countryId: CountryId;
@@ -432,9 +434,7 @@ export async function processSoeOperations(
     if (board.length > 0) boardDeltasByState.set(stateId, board);
   }
   if (metricOps.length > 0) {
-    await db
-      .collection<StateMetrics>("macroMetrics")
-      .bulkWrite(metricOps as AnyBulkWriteOperation<StateMetrics>[]);
+    await macroMetricsCollection(db).bulkWrite(metricOps as AnyBulkWriteOperation<StateMetrics>[]);
   }
   await applyBoardValueDeltasByRegion(db, boardDeltasByState);
 
@@ -967,8 +967,7 @@ async function applyStateCapexGrowth(
       { countryId },
       { projection: { debt: 1, sovereignCrisisState: 1, treasuryCashLocal: 1 } }
     ),
-    db
-      .collection<CommodityPrice>("commodityPrices")
+    commodityPricesCollection(db)
       .find(
         {},
         {

@@ -43,6 +43,8 @@ import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { activityLogCollection } from "@/lib/db/repositories/activityLog";
+import type { Document } from "mongodb";
 
 export async function appointCampaignManager(params: {
   db: Db;
@@ -315,7 +317,7 @@ export async function contributeCampaignStrength(params: {
   // say how many clicks it stood in for or the ledger reads as a single
   // implausibly large donation.
   const batchSuffix = clicks > 1 ? ` (x${clicks})` : "";
-  void db.collection("activityLog").insertOne({
+  void activityLogCollection<Document>(db).insertOne({
     type: "game_action",
     timestamp: now,
     userId: new ObjectId(user.userId),
@@ -607,13 +609,12 @@ export async function setCampaignColor(params: {
   }
 
   const now = new Date();
-  await campaignsCollection(db)
-    .updateOne(
-      { _id: campaign._id },
-      color === null
-        ? { $unset: { color: "" }, $set: { updatedAt: now } }
-        : { $set: { color, updatedAt: now } }
-    );
+  await campaignsCollection(db).updateOne(
+    { _id: campaign._id },
+    color === null
+      ? { $unset: { color: "" }, $set: { updatedAt: now } }
+      : { $set: { color, updatedAt: now } }
+  );
 
   return {
     message:
@@ -813,8 +814,7 @@ export async function fireRallyOneShot(params: {
   );
   if (candidateResult.modifiedCount === 0) {
     // Roll back the campaign action deduction.
-    await campaignsCollection(db)
-      .updateOne({ _id: campaignId }, { $inc: { actions: actionCost } });
+    await campaignsCollection(db).updateOne({ _id: campaignId }, { $inc: { actions: actionCost } });
     throw new ApiError(409, "Rally state changed since page load. Please refresh.");
   }
 
@@ -869,11 +869,15 @@ export async function setRallyTourActive(params: {
   }
 
   if (active) {
-    await electionCandidatesCollection(db)
-      .updateOne({ _id: candidate._id }, { $set: { rallyTourActive: true } });
+    await electionCandidatesCollection(db).updateOne(
+      { _id: candidate._id },
+      { $set: { rallyTourActive: true } }
+    );
   } else {
-    await electionCandidatesCollection(db)
-      .updateOne({ _id: candidate._id }, { $unset: { rallyTourActive: "" } });
+    await electionCandidatesCollection(db).updateOne(
+      { _id: candidate._id },
+      { $unset: { rallyTourActive: "" } }
+    );
   }
 
   return { active };

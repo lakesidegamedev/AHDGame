@@ -55,6 +55,10 @@ import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
+import { cabinetNominationsCollection } from "@/lib/db/repositories/cabinetNominations";
+import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
 
 /**
  * Core retirement function: snapshots a character, cleans up all gameplay
@@ -155,10 +159,8 @@ export async function retireCharacter(
     if (units <= 0) continue;
     const localValue = units * BOND_UNIT_FACE_VALUE * (bond.marketPrice ?? 1);
     const fxRate = bond.currencyCode
-      ? ((
-          await exchangeRatesCollection(db)
-            .findOne({ currencyCode: bond.currencyCode })
-        )?.rate ?? 1)
+      ? ((await exchangeRatesCollection(db).findOne({ currencyCode: bond.currencyCode }))?.rate ??
+        1)
       : 1;
     bondValueAnchor += corpCapitalToAnchor(localValue, bond.currencyCode, fxRate);
   }
@@ -289,8 +291,7 @@ export async function retireCharacter(
     electedOfficialsCollection(db)
       .find({ characterId }, { projection: { officeType: 1, countryId: 1, party: 1 } })
       .toArray(),
-    db
-      .collection<CabinetMember>("cabinetMembers")
+    cabinetMembersCollection(db)
       .find({ characterId }, { projection: { countryId: 1, party: 1 } })
       .toArray(),
     centralBanksCollection(db)
@@ -360,11 +361,10 @@ export async function retireCharacter(
     }
   }
 
-  await coalitionsCollection<Document>(db)
-    .updateMany(
-      { chairCharacterId: characterId },
-      { $set: { chairCharacterId: null, updatedAt: now } }
-    );
+  await coalitionsCollection<Document>(db).updateMany(
+    { chairCharacterId: characterId },
+    { $set: { chairCharacterId: null, updatedAt: now } }
+  );
 
   if (character.party !== "independent") {
     await politicalPartiesCollection<Document>(db).updateOne(
@@ -406,11 +406,10 @@ export async function retireCharacter(
       }
 
       if (partySet.chairId === null) {
-        await coalitionsCollection<Document>(db)
-          .updateMany(
-            { chairPartyId: partyDoc._id },
-            { $set: { chairCharacterId: null, updatedAt: now } }
-          );
+        await coalitionsCollection<Document>(db).updateMany(
+          { chairPartyId: partyDoc._id },
+          { $set: { chairCharacterId: null, updatedAt: now } }
+        );
       }
     }
   }
@@ -419,14 +418,22 @@ export async function retireCharacter(
   // No `partyId` filter: a character can hold a state-level seat in any party
   // they belong to. Leaving stale ids makes the leadership vacancy check reject
   // new appointments with "not vacant".
-  await statePartyOrgCollection<Document>(db)
-    .updateMany({ campaignerId: characterId }, { $set: { campaignerId: null, updatedAt: now } });
-  await statePartyOrgCollection<Document>(db)
-    .updateMany({ chairId: characterId }, { $set: { chairId: null, updatedAt: now } });
-  await statePartyOrgCollection<Document>(db)
-    .updateMany({ viceChairId: characterId }, { $set: { viceChairId: null, updatedAt: now } });
-  await statePartyOrgCollection<Document>(db)
-    .updateMany({ treasurerId: characterId }, { $set: { treasurerId: null, updatedAt: now } });
+  await statePartyOrgCollection<Document>(db).updateMany(
+    { campaignerId: characterId },
+    { $set: { campaignerId: null, updatedAt: now } }
+  );
+  await statePartyOrgCollection<Document>(db).updateMany(
+    { chairId: characterId },
+    { $set: { chairId: null, updatedAt: now } }
+  );
+  await statePartyOrgCollection<Document>(db).updateMany(
+    { viceChairId: characterId },
+    { $set: { viceChairId: null, updatedAt: now } }
+  );
+  await statePartyOrgCollection<Document>(db).updateMany(
+    { treasurerId: characterId },
+    { $set: { treasurerId: null, updatedAt: now } }
+  );
 
   await db
     .collection("nationalCommitteeCandidates")
@@ -444,12 +451,12 @@ export async function retireCharacter(
   };
   const withdrawNomination = { $set: { status: "withdrawn", updatedAt: now } };
   await Promise.all([
-    db.collection<Document>("cabinetNominations").updateMany(openNomination, withdrawNomination),
+    cabinetNominationsCollection<Document>(db).updateMany(openNomination, withdrawNomination),
     db.collection<Document>("scotusNominations").updateMany(openNomination, withdrawNomination),
     db.collection<Document>("fomcNominations").updateMany(openNomination, withdrawNomination),
   ]);
 
-  await db.collection("congressLeaders").deleteMany({ characterId });
+  await congressLeadersCollection<Document>(db).deleteMany({ characterId });
   await db.collection("statePartyCandidates").deleteMany({ characterId });
   await db.collection("statePartyVotes").deleteMany({ voterId: characterId });
   await db.collection("nationalPartyCandidates").deleteMany({ characterId });
@@ -528,7 +535,7 @@ export async function retireCharacter(
 
   const retiredCharacterResult = await charactersCollection(db).deleteOne({ _id: characterId });
 
-  await db.collection("users").updateOne(
+  await usersCollection<Document>(db).updateOne(
     { _id: userId },
     {
       $set: {

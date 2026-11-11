@@ -8,6 +8,7 @@ import type { AnyBulkWriteOperation, Db } from "mongodb";
 import type { State, StateDemographics } from "@/lib/db/types";
 import { censusCachedStateLean } from "@/lib/demographics/cachedStateLean";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
 
 export async function backfillMissingRegionLeans(db: Db, now: Date, preset: string) {
   const states = await statesCollection(db)
@@ -24,8 +25,7 @@ export async function backfillMissingRegionLeans(db: Db, now: Date, preset: stri
     (row) => !valid(row.cachedEconomicLean) || !valid(row.cachedSocialLean)
   );
   if (!missing.length) return { written: 0, missingDemographics: 0, missingCategories: 0 };
-  const demographics = await db
-    .collection<StateDemographics>("stateDemographics")
+  const demographics = await stateDemographicsCollection(db)
     .find(
       { _id: { $in: missing.map((row) => row._id) } },
       {
@@ -72,9 +72,7 @@ export async function backfillMissingRegionLeans(db: Db, now: Date, preset: stri
   if (stateOps.length) {
     // The states cache is the completion marker. Write it last so a retry after
     // a failed demographic-cache write still selects this region.
-    await db
-      .collection<StateDemographics>("stateDemographics")
-      .bulkWrite(demoOps, { ordered: false });
+    await stateDemographicsCollection(db).bulkWrite(demoOps, { ordered: false });
     await statesCollection(db).bulkWrite(stateOps, { ordered: false });
   }
   return { written: stateOps.length, missingDemographics, missingCategories };

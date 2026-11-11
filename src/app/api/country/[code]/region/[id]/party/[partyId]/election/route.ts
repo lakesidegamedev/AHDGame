@@ -31,6 +31,8 @@ import { pickCanonicalVotingElectionPerKey } from "@/lib/elections/canonicalVoti
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
 
 /** Get position labels appropriate for the country (UK uses "Regional Chair") */
 function getPositionLabels(countryId: CountryId): Record<StatePartyElectionPosition, string> {
@@ -128,8 +130,9 @@ export async function GET(_request: Request, { params }: RouteParams) {
     let turnsUntilEligible: number | null = null;
 
     // Get statePartyOrg for current holders
-    const org = await statePartyOrgCollection(db)
-      .findOne({ _id: getStatePartyOrgDocumentId(stateId, party) });
+    const org = await statePartyOrgCollection(db).findOne({
+      _id: getStatePartyOrgDocumentId(stateId, party),
+    });
 
     const holderMap: Record<StatePartyElectionPosition, string | null> = {
       chair: org?.chairId?.toString() ?? null,
@@ -149,9 +152,10 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const hasFoundingElection = activeElections.some((election) => election.founding === true);
 
     if (isMember && authUser?.character && !hasFoundingElection) {
-      const userDoc = await db
-        .collection("users")
-        .findOne({ _id: authUser.character.userId }, { projection: { createdAt: 1 } });
+      const userDoc = await usersCollection<Document>(db).findOne(
+        { _id: authUser.character.userId },
+        { projection: { createdAt: 1 } }
+      );
       const cooldown = isInNewCharacterCooldown({
         userCreatedAt: userDoc?.createdAt ?? new Date(0),
         characterCreatedAt: authUser.character.createdAt,

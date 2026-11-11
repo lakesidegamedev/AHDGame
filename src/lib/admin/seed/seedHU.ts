@@ -18,6 +18,10 @@ import type { Document } from "mongodb";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
+import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
+import { stateBaselinesCollection } from "@/lib/db/repositories/stateBaselines";
 
 const HU_REGION_IDS = ["HU_BUD", "HU_PES", "HU_TRW", "HU_TRS", "HU_NOR", "HU_ALF"];
 
@@ -113,8 +117,8 @@ export async function seedHUDemographics(
     return;
   }
   if (reset) {
-    await db.collection("stateDemographics").deleteMany({ countryId: "HU" });
-    await db.collection("stateDemographicTurnout").deleteMany({ countryId: "HU" });
+    await stateDemographicsCollection<Document>(db).deleteMany({ countryId: "HU" });
+    await stateDemographicTurnoutCollection<Document>(db).deleteMany({ countryId: "HU" });
   }
   const { getCountryLayer1Model, buildModelRegionDemographics } =
     await import("@/lib/seeds/international");
@@ -128,9 +132,7 @@ export async function seedHUDemographics(
   const regionDemographics = buildModelRegionDemographics(model);
   for (const raw of regionDemographics) {
     const { _id, groups: _groups, ...demoData } = raw;
-    await db
-      .collection<StateDemographics>("stateDemographics")
-      .updateOne({ _id }, { $set: demoData }, { upsert: true });
+    await stateDemographicsCollection(db).updateOne({ _id }, { $set: demoData }, { upsert: true });
   }
   log(`[HU] Seeded ${regionDemographics.length} region demographics (era ${era})`);
 }
@@ -146,7 +148,7 @@ export async function seedHUStateMetrics(
     return;
   }
   if (reset) {
-    await db.collection("macroMetrics").deleteMany({ _id: { $in: HU_REGION_IDS } as never });
+    await macroMetricsCollection<Document>(db).deleteMany({ _id: { $in: HU_REGION_IDS } as never });
   }
   const { huStateMetrics2027 } = await import("@/lib/countries/hu/data/huStateMetrics2027");
   const { getRegionMetricPresets, applyMetricPresetToMetrics } =
@@ -176,7 +178,9 @@ export async function seedHUBaselines(
     return;
   }
   if (reset) {
-    await db.collection("stateBaselines").deleteMany({ _id: { $in: HU_REGION_IDS } as never });
+    await stateBaselinesCollection<Document>(db).deleteMany({
+      _id: { $in: HU_REGION_IDS } as never,
+    });
   }
   const { huStateBaselines2027 } = await import("@/lib/countries/hu/data/huStateBaselines2027");
   const { getRegionMetricPresets, applyMetricPresetToBaseline } =
@@ -187,9 +191,7 @@ export async function seedHUBaselines(
     const overlay = getRegionMetricPresets("HU", String(raw._id), preset);
     const baseline = overlay ? applyMetricPresetToBaseline(raw, overlay) : raw;
     const { _id, ...baselineData } = baseline;
-    await db
-      .collection<StateMetricBaseline>("stateBaselines")
-      .updateOne({ _id }, { $set: baselineData }, { upsert: true });
+    await stateBaselinesCollection(db).updateOne({ _id }, { $set: baselineData }, { upsert: true });
   }
   log(`Seeded ${huStateBaselines2027.length} HU baselines (preset: ${preset})`);
 }
@@ -281,11 +283,10 @@ export async function seedHUGovernmentFormation(
     formedTurn: null,
     collapsedAt: null,
   };
-  await governmentFormationsCollection(db)
-    .updateOne(
-      { _id: "HU" },
-      { $set: { ...formation, updatedAt: now }, $setOnInsert: { createdAt: now } },
-      { upsert: true }
-    );
+  await governmentFormationsCollection(db).updateOne(
+    { _id: "HU" },
+    { $set: { ...formation, updatedAt: now }, $setOnInsert: { createdAt: now } },
+    { upsert: true }
+  );
   log(`Seeded HU government formation document (pending, ${formation.totalSeats} seats)`);
 }

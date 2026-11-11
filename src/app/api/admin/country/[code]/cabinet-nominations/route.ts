@@ -21,6 +21,8 @@ import { getGameTime } from "@/lib/time/gameTime";
 import { z } from "zod";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
+import { cabinetNominationsCollection } from "@/lib/db/repositories/cabinetNominations";
 
 const actionSchema = z.object({
   nominationId: z.string().length(24),
@@ -55,7 +57,7 @@ export const GET = withAdminRoute(
     const positionIds = countryId === COUNTRY_CONFIGS.UK.id ? UK_POSITION_IDS : US_POSITION_IDS;
     const query = { positionId: { $in: positionIds } };
 
-    const collection = db.collection<CabinetNomination>("cabinetNominations");
+    const collection = cabinetNominationsCollection(db);
     const [nominations, total] = await Promise.all([
       collection
         .find(query)
@@ -110,9 +112,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
     const { nominationId, action } = parsed.data;
 
     const db = await getDb();
-    const nomination = await db
-      .collection<CabinetNomination>("cabinetNominations")
-      .findOne({ _id: new ObjectId(nominationId), countryId: routeCountryId });
+    const nomination = await cabinetNominationsCollection(db).findOne({
+      _id: new ObjectId(nominationId),
+      countryId: routeCountryId,
+    });
 
     if (!nomination) {
       return errorResponse(404, "Nomination not found");
@@ -123,7 +126,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
 
     if (action === "force_confirm") {
       // Update nomination to confirmed
-      await db.collection<CabinetNomination>("cabinetNominations").updateOne(
+      await cabinetNominationsCollection(db).updateOne(
         { _id: nomination._id },
         {
           $set: {
@@ -135,7 +138,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
       );
 
       // Update or create cabinet member record
-      await db.collection<CabinetMember>("cabinetMembers").updateOne(
+      await cabinetMembersCollection(db).updateOne(
         { countryId: nomination.countryId, positionId: nomination.positionId },
         {
           $set: {
@@ -185,7 +188,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
     }
 
     if (action === "force_reject") {
-      await db.collection<CabinetNomination>("cabinetNominations").updateOne(
+      await cabinetNominationsCollection(db).updateOne(
         { _id: nomination._id },
         {
           $set: {
@@ -202,7 +205,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
     }
 
     if (action === "withdraw") {
-      await db.collection<CabinetNomination>("cabinetNominations").updateOne(
+      await cabinetNominationsCollection(db).updateOne(
         { _id: nomination._id },
         {
           $set: {
@@ -226,7 +229,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
         gameTimeForReset.effectiveNow.getTime() + VOTING_DURATION_HOURS * 60 * 60 * 1000
       );
       const votingEndsOnTurn = gameTimeForReset.currentTurn + VOTING_DURATION_HOURS;
-      await db.collection<CabinetNomination>("cabinetNominations").updateOne(
+      await cabinetNominationsCollection(db).updateOne(
         { _id: nomination._id },
         {
           $set: {

@@ -37,6 +37,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
 import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
 
 export { CHARACTER_LOAN_SPREAD_PP };
 
@@ -124,8 +125,7 @@ export async function averageCorpIncomePerTurn(
   currentTurn: number
 ): Promise<number> {
   const windowStart = Math.max(1, currentTurn - CORP_INCOME_AVERAGING_TURNS + 1);
-  const rows = await db
-    .collection<Pick<CorporationHistory, "income">>("corporationHistory")
+  const rows = await corporationHistoryCollection<Pick<CorporationHistory, "income">>(db)
     .find({
       corporationId,
       turn: { $gte: windowStart, $lte: currentTurn },
@@ -146,7 +146,9 @@ async function committedNamedLoanPaymentPerTurn(
   currentTurn: number,
   currency: CurrencyCode
 ): Promise<number> {
-  const loans = await bankLoansCollection<Pick<BankLoan, "outstanding" | "ratePercent" | "originatedTurn" | "termTurns" | "currency">>(db)
+  const loans = await bankLoansCollection<
+    Pick<BankLoan, "outstanding" | "ratePercent" | "originatedTurn" | "termTurns" | "currency">
+  >(db)
     .find({
       borrowerType: borrower.type,
       borrowerId: borrower.id,

@@ -3,6 +3,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
 import type { GameConfig } from "@/lib/db/types";
 import { createSystemNewsPost } from "@/lib/news";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /**
  * Country recession: an operator-scheduled contraction of one country's
@@ -88,7 +89,7 @@ export async function announceCountryRecessions(
   const due = recessions.filter((r) => recessionActive(r, turn) && r.announcedAtTurn == null);
   if (due.length === 0) return 0;
   // One atomic claim for every due entry: the run that flips them posts.
-  const claim = await db.collection<GameConfig>("gameConfig").updateOne(
+  const claim = await gameConfigCollection(db).updateOne(
     {
       _id: "default",
       countryRecessions: {

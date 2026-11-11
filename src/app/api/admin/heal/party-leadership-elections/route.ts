@@ -19,6 +19,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nationalPartyElectionsCollection } from "@/lib/db/repositories/nationalPartyElections";
 
 interface OrphanedCandidate {
   candidateId: string;
@@ -132,8 +133,7 @@ export async function GET() {
     }
 
     // 2. Check national party elections
-    const activeNationalElections = await db
-      .collection<NationalPartyElection>("nationalPartyElections")
+    const activeNationalElections = await nationalPartyElectionsCollection(db)
       .find({ status: "voting" })
       .toArray();
 
@@ -303,8 +303,7 @@ export async function POST() {
     }
 
     // 2. Fix national party elections
-    const activeNationalElections = await db
-      .collection<NationalPartyElection>("nationalPartyElections")
+    const activeNationalElections = await nationalPartyElectionsCollection(db)
       .find({ status: "voting" })
       .toArray();
 

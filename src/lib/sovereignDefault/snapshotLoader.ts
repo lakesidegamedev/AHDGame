@@ -25,6 +25,7 @@ import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { politicalMetricsCollection } from "@/lib/db/repositories/politicalMetrics";
 
 export async function loadCountrySovereignSnapshot(
   db: Db,
@@ -45,13 +46,11 @@ export async function loadCountrySovereignSnapshot(
 
   // `countryCode` is already known to be a real country: the COUNTRY_CONFIGS
   // guard at the top of this function returned null otherwise.
-  const boards = await db
-    .collection<PoliticalMetricsDoc>("politicalMetrics")
+  const boards = await politicalMetricsCollection(db)
     .find({ countryId: countryCode as CountryId })
     .toArray();
 
-  const exchangeRate = await exchangeRatesCollection(db)
-    .findOne({ _id: countryCode });
+  const exchangeRate = await exchangeRatesCollection(db).findOne({ _id: countryCode });
 
   // Phase 3 — entity-participation inputs. Run in parallel since they're
   // independent of each other and of the existing single-doc fetches above.
@@ -162,8 +161,7 @@ export async function loadCountrySovereignSnapshots(
       .toArray(),
     // `values` whole: the trust key is the literal dotted name
     // "governance.integrity", which a projection path cannot address.
-    db
-      .collection<PoliticalMetricsDoc>("politicalMetrics")
+    politicalMetricsCollection(db)
       .find({ countryId: { $in: known } }, { projection: { countryId: 1, values: 1 } })
       .toArray(),
     exchangeRatesCollection(db)

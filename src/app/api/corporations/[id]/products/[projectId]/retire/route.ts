@@ -10,6 +10,7 @@ import {
 } from "@/lib/products/manufacturingProject";
 import { marketAtLeast, getMarketSystemMode } from "@/lib/market/featureFlag";
 import type { GameConfig } from "@/lib/db/types/gameConfig";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 interface RouteParams {
   params: Promise<{ id: string; projectId: string }>;
@@ -32,12 +33,10 @@ export async function POST(_request: Request, { params }: RouteParams) {
     const corporation = resolved.corporation;
     const ceoError = requireCeo(corporation, auth.user.userId);
     if (ceoError) return ceoError;
-    const config = await db
-      .collection<GameConfig>("gameConfig")
-      .findOne(
-        { _id: "default" },
-        { projection: { marketSystemMode: 1, productLinesV2Enabled: 1 } }
-      );
+    const config = await gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { marketSystemMode: 1, productLinesV2Enabled: 1 } }
+    );
     if (
       config?.productLinesV2Enabled !== true ||
       !marketAtLeast(await getMarketSystemMode(config), "plants")

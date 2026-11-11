@@ -23,6 +23,7 @@ import {
   MAX_LOAD_TIME_MS,
   normalizeAnalyticsPath,
 } from "@/lib/analytics/siteTraffic";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 const bodySchema = z.object({
   path: z.string().min(1).max(520),
@@ -104,7 +105,7 @@ export async function POST(request: Request) {
     const supportPath = sanitizeSupportPath(parsed.data.path);
     if (authUser && supportPath) {
       const db = await getDb();
-      await db.collection<User>("users").updateOne(
+      await usersCollection(db).updateOne(
         { _id: new ObjectId(authUser.userId) },
         {
           $push: {

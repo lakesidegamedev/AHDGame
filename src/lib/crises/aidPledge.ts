@@ -14,6 +14,7 @@ import { logWireEvent } from "@/lib/wireEvent";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { crisesCollection } from "@/lib/db/repositories/crises";
 import type { Document } from "mongodb";
+import { crisisInteractionsCollection } from "@/lib/db/repositories/crisisInteractions";
 
 export interface SubmitCrisisAidPledgeInput {
   interactionId: ObjectId;
@@ -39,9 +40,7 @@ export async function submitCrisisAidPledge(
   db: Db,
   input: SubmitCrisisAidPledgeInput
 ): Promise<{ commitmentId: ObjectId; billId: ObjectId; impact: FiscalImpact }> {
-  const interaction = await db
-    .collection<CrisisInteraction>("crisisInteractions")
-    .findOne({ _id: input.interactionId });
+  const interaction = await crisisInteractionsCollection(db).findOne({ _id: input.interactionId });
   if (!interaction) throw notFound("Crisis interaction not found");
   if (interaction.resolvedAt) throw conflict("Crisis already resolved");
 
@@ -139,7 +138,7 @@ export async function submitCrisisAidPledge(
   });
 
   // 5. Advance the crisis to its terminal node (resolves the interaction).
-  await db.collection<CrisisInteraction>("crisisInteractions").updateOne(
+  await crisisInteractionsCollection(db).updateOne(
     { _id: interaction._id },
     {
       $set: {

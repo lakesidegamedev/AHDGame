@@ -4,6 +4,7 @@ import { getDb } from "@/lib/mongodb";
 import type { CharacterAchievement, User } from "@/lib/db/types";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 interface RouteParams {
   params: Promise<{ achievementId: string }>;
@@ -27,8 +28,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const userIds = awards.flatMap((award) => (award.userId ? [award.userId] : []));
     const characterIds = awards.flatMap((award) => (award.characterId ? [award.characterId] : []));
     const [users, characters] = await Promise.all([
-      db
-        .collection<User>("users")
+      usersCollection(db)
         .find({ _id: { $in: userIds } })
         .toArray(),
       charactersCollection(db)

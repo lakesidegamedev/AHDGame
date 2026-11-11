@@ -2,6 +2,8 @@ import { alignSeedIncomeTaxTierRecords } from "@/lib/budget/incomeTaxSeedPolicie
 import type { AnyBulkWriteOperation, Db } from "mongodb";
 import { logWarning } from "@/lib/utils/errorLog";
 import type { StatePolicyRecord } from "@/lib/db/types";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
+import type { Document } from "mongodb";
 
 export async function seedStatePolicies(
   db: Db,
@@ -10,8 +12,7 @@ export async function seedStatePolicies(
   preset: string
 ) {
   if (reset)
-    await db
-      .collection("statePolicies")
+    await statePoliciesCollection<Document>(db)
       .drop()
       .catch((error) => {
         logWarning("Collection drop failed (may not exist)", {
@@ -23,9 +24,9 @@ export async function seedStatePolicies(
 
   const DEPRECATED_TYPE_IDS = ["immigration", "medicare"];
 
-  const cleanupResult = await db
-    .collection("statePolicies")
-    .deleteMany({ legislationTypeId: { $in: DEPRECATED_TYPE_IDS } });
+  const cleanupResult = await statePoliciesCollection<Document>(db).deleteMany({
+    legislationTypeId: { $in: DEPRECATED_TYPE_IDS },
+  });
   if (cleanupResult.deletedCount > 0) {
     log(`Removed ${cleanupResult.deletedCount} policies for deprecated legislation types`);
   }
@@ -76,7 +77,7 @@ export async function seedStatePolicies(
   // Before the cleanup below, and ordered: `basePolicies` can revisit a
   // (scope, stateId, legislationTypeId) key, so loop order decides the winner.
   if (ops.length > 0) {
-    await db.collection<StatePolicyRecord>("statePolicies").bulkWrite(ops, { ordered: true });
+    await statePoliciesCollection<StatePolicyRecord>(db).bulkWrite(ops, { ordered: true });
   }
 
   // The cleanup is country-blind, so the new-generation id set must be in the
@@ -85,7 +86,7 @@ export async function seedStatePolicies(
   const validLegTypeIds = [...legislationTypes.map((lt) => lt._id), ...getAllNewGenerationLawIds()];
 
   // Remove state policies that reference non-existent legislation types
-  const deleteResult = await db.collection("statePolicies").deleteMany({
+  const deleteResult = await statePoliciesCollection<Document>(db).deleteMany({
     legislationTypeId: { $nin: validLegTypeIds },
   });
   const staleRemoved = deleteResult.deletedCount || 0;

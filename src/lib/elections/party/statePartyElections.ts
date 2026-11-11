@@ -30,6 +30,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 export const ELECTION_DURATION_TURNS = 72; // 72 turns = 72 hours
 
@@ -707,8 +708,7 @@ export async function vacateInactiveLeadership(
   );
   const users =
     userIds.length > 0
-      ? await db
-          .collection<User>("users")
+      ? await usersCollection(db)
           .find({ _id: { $in: userIds } })
           .project<{ _id: ObjectId; lastActivity?: Date; createdAt?: Date }>({
             _id: 1,

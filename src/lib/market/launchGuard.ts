@@ -14,6 +14,7 @@ import {
   DEFAULT_GUARD_DROP_PCT,
   DEFAULT_GUARD_GRACE_TURNS,
 } from "@/lib/market/launchGuardConstants";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /**
  * Launch guard — automated kill switch for the clearing/capital flip.
@@ -190,7 +191,7 @@ export async function runLaunchGuard(
    *  the guard falls back to the raw launch drawdown. */
   fundamentals?: { aggregateFundamentalMcap: number; coverage: number }
 ): Promise<void> {
-  const cfg = await db.collection<GameConfig>("gameConfig").findOne(
+  const cfg = await gameConfigCollection(db).findOne(
     { _id: "default" },
     {
       projection: {
@@ -225,7 +226,7 @@ export async function runLaunchGuard(
   // MCAP reference only — a fundamental-only stamp must not move it, or the
   // grace window would restart a turn after arming.
   if (decision.setReference !== undefined || decision.setReferenceFundamental !== undefined) {
-    await db.collection<GameConfig>("gameConfig").updateOne(
+    await gameConfigCollection(db).updateOne(
       { _id: "default" },
       {
         $set: {
@@ -245,7 +246,7 @@ export async function runLaunchGuard(
   }
 
   if (decision.trip) {
-    await db.collection<GameConfig>("gameConfig").updateOne(
+    await gameConfigCollection(db).updateOne(
       { _id: "default" },
       {
         $set: {

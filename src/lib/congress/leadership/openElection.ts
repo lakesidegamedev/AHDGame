@@ -33,6 +33,7 @@ import type {
 } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
 
 export const LEADERSHIP_ELECTION_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours = 24 turns
 
@@ -133,9 +134,7 @@ export async function openCongressLeadershipElection(
     chamber === "senate"
       ? senateElectionRoleToLeader(role as SenateLeadershipElectionRole)
       : houseElectionRoleToLeader(role as HouseLeadershipElectionRole);
-  const incumbent = await db
-    .collection<CongressLeader>("congressLeaders")
-    .findOne({ role: leaderRole });
+  const incumbent = await congressLeadersCollection(db).findOne({ role: leaderRole });
   if (!incumbent?.characterId) return true;
 
   const seat = await electedOfficialsCollection(db).findOne({

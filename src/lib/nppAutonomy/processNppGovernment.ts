@@ -85,6 +85,7 @@ import {
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /**
  * Routine agenda review interval, measured in game-calendar years (48 turns).
@@ -516,9 +517,10 @@ export async function runNppGovernmentPhases(gameNow: Date, currentTurn: number)
     { projection: { currentYear: 1, preset: 1 } }
   );
   const currentYear = gameState?.currentYear;
-  const gameConfig = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } });
+  const gameConfig = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { commandEconomyEnabled: 1 } }
+  );
   const commandEconomyEnabled = gameConfig?.commandEconomyEnabled === true;
 
   // REGISTERED countries only. A dissolved country reads

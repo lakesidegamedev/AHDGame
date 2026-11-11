@@ -3,6 +3,7 @@ import { logWarning } from "@/lib/utils/errorLog";
 import type { Achievement, User } from "@/lib/db/types";
 import { getAchievementDocsForSeed } from "@/lib/seeds/achievements";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 export async function seedAchievements(db: Db, reset: boolean, log: (msg: string) => void) {
   if (reset)
@@ -65,8 +66,7 @@ export async function seedAchievements(db: Db, reset: boolean, log: (msg: string
     .find({})
     .toArray()) as Array<Achievement & { _id: ObjectId }>;
   if (allAchievements.length > 0) {
-    const adminUsers = await db
-      .collection<User>("users")
+    const adminUsers = await usersCollection(db)
       .find({ $or: [{ isAdmin: true }, { role: "admin" }] })
       .toArray();
     const adminUserIds = adminUsers.map((u: User) => u._id);

@@ -9,6 +9,7 @@ import { createModAuditLog } from "@/lib/modAuditLog";
 import { getSupporterRequestsCollection } from "@/lib/db/collections/supporterRequests";
 import type { User } from "@/lib/db/types";
 import { notifySubmitterOfSupporterDecision } from "@/lib/supporter/reviewNotifications";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -50,9 +51,10 @@ export async function POST(request: Request, { params }: RouteContext) {
       return errorResponse(409, "Request has already been decided.");
     }
 
-    const requester = await db
-      .collection<User>("users")
-      .findOne({ _id: req.userId }, { projection: { username: 1 } });
+    const requester = await usersCollection(db).findOne(
+      { _id: req.userId },
+      { projection: { username: 1 } }
+    );
 
     const now = new Date();
     const claim = await requestsCol.updateOne(

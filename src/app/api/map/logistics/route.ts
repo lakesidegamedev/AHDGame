@@ -14,6 +14,8 @@ import type { SourcingNetworkDoc } from "@/lib/logistics/sourcingLedger";
 import type { FreightDemandEntry, FreightDemandResponse } from "@/lib/logistics/types";
 import type { CommodityPrice } from "@/lib/db/types/commodityPrice";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
+import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
 
 const countryIdSchema = z.enum(ZOD_COUNTRY_ENUM);
 
@@ -40,9 +42,8 @@ export async function GET(request: Request) {
       statesCollection<{ _id: string }>(db)
         .find({ countryId }, { projection: { _id: 1 } })
         .toArray(),
-      db.collection<CommodityPrice>("commodityPrices").findOne({ commodity: "freight" }),
-      db
-        .collection<{ stateId: string; revenue: number }>("unownedSectors")
+      commodityPricesCollection(db).findOne({ commodity: "freight" }),
+      unownedSectorsCollection<{ stateId: string; revenue: number }>(db)
         .aggregate<{ _id: string; revenue: number }>([
           { $match: { countryId, sectorType: "logistics" } },
           { $group: { _id: "$stateId", revenue: { $sum: "$revenue" } } },

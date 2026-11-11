@@ -31,6 +31,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { billsCollection } from "@/lib/db/repositories/bills";
+import { cabinetNominationsCollection } from "@/lib/db/repositories/cabinetNominations";
 
 export interface WhipDefianceScope {
   countryId: CountryId;
@@ -481,8 +482,7 @@ async function buildWhipDefianceSnapshotsForScopes(
           .toArray()
       : Promise.resolve([] as Bill[]),
     cabinetIds.length
-      ? db
-          .collection<CabinetNomination>("cabinetNominations")
+      ? cabinetNominationsCollection(db)
           .find({ _id: { $in: cabinetIds }, status: "active" })
           .toArray()
       : Promise.resolve([] as CabinetNomination[]),

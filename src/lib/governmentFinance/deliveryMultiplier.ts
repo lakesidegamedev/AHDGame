@@ -4,6 +4,7 @@ import { nationalLawCountryQuery } from "@/lib/policy/nationalPolicyRecords";
 import { clampRatio } from "./rules/implementation";
 import { US_HEALTH_DEPARTMENT_ID, US_PUBLIC_HEALTH_PROGRAM_ID } from "./departments";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
 
 export const US_PUBLIC_HEALTH_LEGISLATION_TYPE_ID = "us.health.prevention.primary";
 const US_PUBLIC_HEALTH_POLICY_OPTION_INDEX = 4;
@@ -88,7 +89,7 @@ export async function loadPublicHealthDeliveryMultiplier(
         },
       }
     ),
-    db.collection<EnactedLaw>("enactedLaws").findOne(
+    enactedLawsCollection(db).findOne(
       {
         scope: "national",
         ...nationalLawCountryQuery("US"),

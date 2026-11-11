@@ -232,6 +232,8 @@ import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficia
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 
 async function seedInitialBudgetSnapshots(db: Db, log: (msg: string) => void): Promise<void> {
   const budgets = await federalBudgetCollection(db).find({}).toArray();
@@ -730,7 +732,7 @@ export async function bootstrapGameWorld(options: BootstrapOptions) {
   // hardcodes the flag to true, so an earlier write is silently overwritten).
   // It still lands before the budget seeders below, which are what read it.
   const commandEconomyEnabled = isEasternBlocEra(preset);
-  await db.collection<GameConfig>("gameConfig").updateOne(
+  await gameConfigCollection(db).updateOne(
     { _id: "default" },
     {
       $set: {
@@ -1433,7 +1435,7 @@ export async function bootstrapGameWorld(options: BootstrapOptions) {
     electionsCollection<Document>(db).countDocuments(),
     electedOfficialsCollection<Document>(db).countDocuments(),
     db.collection("partyBudget").countDocuments(),
-    db.collection("unownedSectors").countDocuments(),
+    unownedSectorsCollection<Document>(db).countDocuments(),
   ]);
 
   const summary = {

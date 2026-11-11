@@ -55,6 +55,7 @@ import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 export { SECTOR_SCOPE_LABELS, type SectorScope };
 
 export interface NationalizeSectorWideParams {
@@ -619,8 +620,7 @@ export async function nationalizeSectorWide(
 
   // ── 2. Unowned market pool (scope: all | unowned) — free, no owner. ──
   if (params.scope !== "corporations") {
-    const unowned = await db
-      .collection<UnownedSector>("unownedSectors")
+    const unowned = await unownedSectorsCollection(db)
       .find({ countryId: params.countryId, ...sectorLane })
       .toArray();
     for (const u of unowned) {
@@ -633,9 +633,9 @@ export async function nationalizeSectorWide(
       // derives the capacity leg from this same ₳ figure.
       await addToNatCorp(u.stateId, carvedRevAnchor, 0, 0, UNOWNED_DEFAULT_MARGIN, 1, 1, null);
       if (f >= 1) {
-        await db.collection<UnownedSector>("unownedSectors").deleteOne({ _id: u._id });
+        await unownedSectorsCollection(db).deleteOne({ _id: u._id });
       } else {
-        await db.collection<UnownedSector>("unownedSectors").updateOne(
+        await unownedSectorsCollection(db).updateOne(
           { _id: u._id },
           {
             $set: {
@@ -675,8 +675,7 @@ export async function nationalizeSectorWide(
         statesCollection(db)
           .find({ _id: { $in: stateIds } }, { projection: { _id: 1, gdp: 1, countryId: 1 } })
           .toArray(),
-        db
-          .collection<UnownedSector>("unownedSectors")
+        unownedSectorsCollection(db)
           .find({
             countryId: params.countryId,
             ...sectorLane,

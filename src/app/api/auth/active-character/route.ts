@@ -14,6 +14,8 @@ import { recordAudit } from "@/lib/audit/recordAudit";
 import { getClientIp } from "@/lib/utils/network";
 import { createHash } from "crypto";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
 
 const schema = z.object({
   characterId: schemas.objectId,
@@ -71,9 +73,10 @@ async function handleGET(request: Request) {
       return errorResponse(404, "Character not found");
     }
 
-    await db
-      .collection("users")
-      .updateOne({ _id: userId }, { $set: { activeCharacterId: characterId } });
+    await usersCollection<Document>(db).updateOne(
+      { _id: userId },
+      { $set: { activeCharacterId: characterId } }
+    );
 
     recordAudit({
       source: "api",
@@ -135,9 +138,10 @@ export async function PATCH(request: Request) {
       return errorResponse(404, "Character not found");
     }
 
-    await db
-      .collection("users")
-      .updateOne({ _id: userId }, { $set: { activeCharacterId: characterId } });
+    await usersCollection<Document>(db).updateOne(
+      { _id: userId },
+      { $set: { activeCharacterId: characterId } }
+    );
 
     recordAudit({
       source: "api",

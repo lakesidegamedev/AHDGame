@@ -46,6 +46,8 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import type { Document } from "mongodb";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 
 export const DEFECT_ID = "AHD-1271-merged-state-extraction";
 
@@ -92,9 +94,10 @@ function seedYear(preset: string, gameYear: number | null | undefined): number |
  */
 async function survey(db: Db): Promise<Survey> {
   const [gameConfig, gameState, preset, marketMode] = await Promise.all([
-    db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } }),
+    gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { commandEconomyEnabled: 1 } }
+    ),
     gameStateCollection(db).findOne(
       { _id: "current" as never },
       { projection: { currentYear: 1, currentTurn: 1 } }
@@ -137,7 +140,7 @@ async function survey(db: Db): Promise<Survey> {
       stateId: { $in: stateIds },
       sectorType: "extraction",
     }),
-    db.collection("unownedSectors").distinct("stateId", {
+    unownedSectorsCollection<Document>(db).distinct("stateId", {
       stateId: { $in: stateIds },
       sectorType: "extraction",
     }),
@@ -444,9 +447,10 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
       stateId: { $in: stateIds },
       sectorType: "extraction",
     }),
-    db
-      .collection("unownedSectors")
-      .distinct("stateId", { stateId: { $in: stateIds }, sectorType: "extraction" }),
+    unownedSectorsCollection<Document>(db).distinct("stateId", {
+      stateId: { $in: stateIds },
+      sectorType: "extraction",
+    }),
   ]);
   const alreadyCovered = new Set([...ownedNow, ...unownedNow] as string[]);
 

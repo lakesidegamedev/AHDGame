@@ -62,6 +62,7 @@ import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParti
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
 
 export interface ActuationResult {
   actuated: boolean;
@@ -204,8 +205,10 @@ export async function actuateSettlementOutcome(
   //     real accounts locked out of the country they had just won.
   let absorbedWasPlayable = crisis.absorbedWasPlayable ?? null;
   if (absorbedWasPlayable == null) {
-    const absorbedGameState = await countryGameStatesCollection(db)
-      .findOne({ _id: absorbed }, { projection: { enabledForPlayers: 1, status: 1 } });
+    const absorbedGameState = await countryGameStatesCollection(db).findOne(
+      { _id: absorbed },
+      { projection: { enabledForPlayers: 1, status: 1 } }
+    );
     absorbedWasPlayable = absorbedGameState?.enabledForPlayers === true;
     await crises.updateOne({ _id: crisis._id }, { $set: { absorbedWasPlayable } });
   }
@@ -383,12 +386,11 @@ export async function actuateSettlementOutcome(
   //    which is the one dissolution marker everything honors (deliberately NOT
   //    a `CountryStatus` value — see that field's doc).
   if (absorbedWasPlayable) {
-    await countryGameStatesCollection(db)
-      .updateOne(
-        { _id: survivor },
-        { $set: { enabledForPlayers: true, status: "active", updatedAt: new Date() } },
-        { upsert: true }
-      );
+    await countryGameStatesCollection(db).updateOne(
+      { _id: survivor },
+      { $set: { enabledForPlayers: true, status: "active", updatedAt: new Date() } },
+      { upsert: true }
+    );
   }
 
   await recordCountryEvent(db, {
@@ -441,8 +443,9 @@ async function creditReunificationToLeader(
   survivor: CountryId,
   currentTurn: number
 ): Promise<void> {
-  const gov = await governmentFormationsCollection<GovernmentFormationHead>(db)
-    .findOne({ _id: survivor });
+  const gov = await governmentFormationsCollection<GovernmentFormationHead>(db).findOne({
+    _id: survivor,
+  });
   if (!gov?.pmCharacterId) return;
   await adjustLeaderConfidence(
     db,
@@ -590,8 +593,7 @@ async function retireNationalRemnants(
   // defeated it.
   //
   // Read BEFORE the delete, because the rows are how the holders are found.
-  const ministers = await db
-    .collection("cabinetMembers")
+  const ministers = await cabinetMembersCollection<Document>(db)
     .find<{
       characterId?: ObjectId | null;
       nppId?: ObjectId | null;
@@ -599,7 +601,7 @@ async function retireNationalRemnants(
       appointedTurn?: number;
     }>({ countryId: absorbed })
     .toArray();
-  await db.collection("cabinetMembers").deleteMany({ countryId: absorbed });
+  await cabinetMembersCollection<Document>(db).deleteMany({ countryId: absorbed });
   await clearCabinetPointers(db, ministers, now);
   for (const minister of ministers) {
     if (!minister.characterId && !minister.nppId) continue;

@@ -46,6 +46,8 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 
 // ── Tuning constants ─────────────────────────────────────────────────────────
 
@@ -745,12 +747,10 @@ export async function calculateCountryInflation(
       { projection: { currentYear: 1, startingYear: 1, currentTurn: 1 } }
     ),
     // Command-economy CPI is administered (held at the era target), not market-driven.
-    db
-      .collection<GameConfig>("gameConfig")
-      .findOne(
-        { _id: "default" },
-        { projection: { commandEconomyEnabled: 1, moneySupplyEnabled: 1 } }
-      ),
+    gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { commandEconomyEnabled: 1, moneySupplyEnabled: 1 } }
+    ),
   ]);
   const currentYear = gameState?.currentYear;
   const commandEconomyEnabled = gc?.commandEconomyEnabled === true;
@@ -773,9 +773,7 @@ export async function calculateCountryInflation(
     typeof tariffRateOverride === "number" && Number.isFinite(tariffRateOverride);
   const [nationalMetrics, centralBank, tariffs, sectors, activeFtaPairs, gapStates] =
     await Promise.all([
-      nationalDocId
-        ? db.collection<StateMetrics>("macroMetrics").findOne({ _id: nationalDocId })
-        : null,
+      nationalDocId ? macroMetricsCollection(db).findOne({ _id: nationalDocId }) : null,
       centralBanksCollection(db).findOne({ _id: getBankId(countryId) }),
       hasMeasuredTariffRate
         ? Promise.resolve([])

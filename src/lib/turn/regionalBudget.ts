@@ -39,6 +39,7 @@ import { buildResetRegionalProgramClaims } from "@/lib/resetLegislation/rules/re
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
 
 // ── Pure calculation types ───────────────────────────────────────────────────
 
@@ -279,8 +280,7 @@ export async function processRegionalBudgets(
   const { stateCostByStateId } = await loadAnnualSubsidyCostMaps(db);
 
   // 2. Fetch all enacted UK regional policies
-  const allRegionalPolicies = await db
-    .collection<StatePolicy>("statePolicies")
+  const allRegionalPolicies = await statePoliciesCollection(db)
     .find({ stateId: { $in: ukRegions.map((r) => r._id as string) } })
     .toArray();
   const resetPrograms =
@@ -593,7 +593,7 @@ export async function processRegionalBudgets(
   }
 
   if (statePolicyOps.length > 0) {
-    await db.collection<StatePolicy>("statePolicies").bulkWrite(statePolicyOps);
+    await statePoliciesCollection(db).bulkWrite(statePolicyOps);
   }
   if (regionalBudgetOps.length > 0) {
     await db.collection<RegionalBudget>("regionalBudgets").bulkWrite(regionalBudgetOps);

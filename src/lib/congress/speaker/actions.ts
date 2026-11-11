@@ -35,6 +35,7 @@ import {
 } from "@/lib/congress/leadership/rolePolicy";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
 
 const ELECTION_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -182,9 +183,7 @@ async function handleStartElection(ctx: ActionContext): Promise<ActionResult> {
     majorityBloc: house.majorityBloc,
   });
 
-  const incumbent = await db
-    .collection<CongressLeader>("congressLeaders")
-    .findOne({ role: "speaker_of_the_house" });
+  const incumbent = await congressLeadersCollection(db).findOne({ role: "speaker_of_the_house" });
   if (incumbent?.characterId) {
     const hasSeat = await electedOfficialsCollection(db).findOne({
       officeType: "house",
@@ -464,9 +463,7 @@ async function handleFileVacateMotion(
   const { db, character } = ctx;
 
   // There must be a sitting Speaker to move against.
-  const leader = await db
-    .collection<CongressLeader>("congressLeaders")
-    .findOne({ role: "speaker_of_the_house" });
+  const leader = await congressLeadersCollection(db).findOne({ role: "speaker_of_the_house" });
   if (!leader?.characterId) {
     return { success: false, error: "There is no sitting Speaker to vacate.", status: 409 };
   }

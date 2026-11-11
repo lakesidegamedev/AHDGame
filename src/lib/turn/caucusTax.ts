@@ -30,6 +30,7 @@ import type { ObjectId } from "mongodb";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 interface CaucusTaxResult {
   caucusesProcessed: number;
@@ -220,7 +221,7 @@ export async function processCaucusTax(
       // NPP members use the same income-tax basis as player members. Taxing the
       // accumulated funds balance each turn compounds into a rapid wealth drain.
       if (npps.length > 0) {
-        const config = await db.collection<GameConfig>("gameConfig").findOne({ _id: "default" });
+        const config = await gameConfigCollection(db).findOne({ _id: "default" });
         const nppDebits: { npp: NPP; tax: number }[] = [];
         for (const n of npps) {
           const funds = n.funds ?? 0;

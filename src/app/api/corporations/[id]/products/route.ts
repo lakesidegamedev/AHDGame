@@ -27,6 +27,7 @@ import {
   type ManufacturingProductProject,
 } from "@/lib/products/manufacturingProject";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -53,9 +54,10 @@ type ManufacturingPlantSector = Pick<
 const noStore = { "Cache-Control": "private, no-store" };
 
 async function productLinesAvailable(db: Db): Promise<boolean> {
-  const config = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { marketSystemMode: 1, productLinesV2Enabled: 1 } });
+  const config = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { marketSystemMode: 1, productLinesV2Enabled: 1 } }
+  );
   return (
     config?.productLinesV2Enabled === true &&
     marketAtLeast(await getMarketSystemMode(config), "plants")

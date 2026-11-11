@@ -12,6 +12,7 @@ import type { GameConfig } from "@/lib/db/types";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import type { Document } from "mongodb";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -41,9 +42,10 @@ export async function PUT(request: Request, { params }: RouteParams) {
     const db = await getDb();
     const actionBlock = await requireCorporationActionsEnabled(db);
     if (actionBlock) return actionBlock;
-    const config = await db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { mediaEditorialEnabled: 1 } });
+    const config = await gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { mediaEditorialEnabled: 1 } }
+    );
     if (config?.mediaEditorialEnabled !== true) {
       return errorResponse(404, "Editorial stance is unavailable");
     }

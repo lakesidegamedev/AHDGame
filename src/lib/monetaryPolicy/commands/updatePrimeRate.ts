@@ -30,6 +30,7 @@ import { loadInflationVsTarget } from "@/lib/monetaryGovernance/inflationGap";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 type PrimeRateActor = {
   userId: string;
@@ -119,9 +120,10 @@ async function updatePrimeRateInner(params: {
   // reaches the same BoE doc through its own URL), and authority belongs to
   // that home country's government too.
   const bankHomeCountryId = jurisdiction.anchorCountryId;
-  const gameConfig = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } });
+  const gameConfig = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { commandEconomyEnabled: 1 } }
+  );
   const commandEconomyEnabled = gameConfig?.commandEconomyEnabled === true;
   // API processes do not hydrate the turn engine's marketization registry.
   // Read the anchor's persisted level, falling back to its era schedule.
@@ -156,11 +158,10 @@ async function updatePrimeRateInner(params: {
   // never set: the promise to defend a corridor is the commitment.
   let fxCommitment: { regime: "float" | "peg" | "band"; capitalControls: boolean } | null = null;
   if (!isAdmin) {
-    const fxDoc = await exchangeRatesCollection(db)
-      .findOne(
-        { countryId: bankHomeCountryId },
-        { projection: { fxRegime: 1, capitalControls: 1, interventionPolicy: 1 } }
-      );
+    const fxDoc = await exchangeRatesCollection(db).findOne(
+      { countryId: bankHomeCountryId },
+      { projection: { fxRegime: 1, capitalControls: 1, interventionPolicy: 1 } }
+    );
     if (fxDoc) {
       const regime: FxRegime = fxDoc.fxRegime ?? (fxDoc.interventionPolicy ? "band" : "float");
       fxCommitment = { regime, capitalControls: fxDoc.capitalControls === true };

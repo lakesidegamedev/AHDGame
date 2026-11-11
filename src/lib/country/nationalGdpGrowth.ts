@@ -5,6 +5,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import { getNationalDocId } from "@/lib/constants/nationalScope";
 import { getEraTrendGdpGrowth } from "@/lib/constants/monetaryEra";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 
 /**
  * GDP-weighted mean of regional growth rates. Null when nothing is weightable.
@@ -89,9 +90,10 @@ export async function loadNationalGdpGrowth(
   const nationalDocId = getNationalDocId(countryId);
 
   if (nationalDocId) {
-    const doc = await db
-      .collection<StateMetrics>("macroMetrics")
-      .findOne({ _id: nationalDocId }, { projection: { "economic.gdpGrowth.value": 1 } });
+    const doc = await macroMetricsCollection(db).findOne(
+      { _id: nationalDocId },
+      { projection: { "economic.gdpGrowth.value": 1 } }
+    );
     const value = doc?.economic?.gdpGrowth?.value;
     // `typeof`, not `??` or truthiness: a negative rate is real (CN reads
     // -4.867) and so is an exact 0.
@@ -104,8 +106,7 @@ export async function loadNationalGdpGrowth(
     .toArray();
 
   if (states.length > 0) {
-    const metrics = await db
-      .collection<StateMetrics>("macroMetrics")
+    const metrics = await macroMetricsCollection(db)
       .find({ _id: { $in: states.map((s) => s._id) } })
       .project<{ _id: string; economic?: { gdpGrowth?: { value?: number } } }>({
         "economic.gdpGrowth.value": 1,

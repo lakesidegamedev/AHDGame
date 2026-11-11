@@ -65,6 +65,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import type { Document } from "mongodb";
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /**
  * Command-economy macro turn phase. Advances shortage-economy state on
@@ -80,12 +81,10 @@ export async function processCommandEconomyTurn(
   _turn: number,
   currentYear?: number | null
 ): Promise<{ countriesUpdated: number }> {
-  const config = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne(
-      { _id: "default" },
-      { projection: { commandEconomyEnabled: 1, commandEconomySecondEconomyTolerance: 1 } }
-    );
+  const config = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { commandEconomyEnabled: 1, commandEconomySecondEconomyTolerance: 1 } }
+  );
   const enabled = config?.commandEconomyEnabled === true;
   if (!enabled) return { countriesUpdated: 0 };
 

@@ -38,6 +38,7 @@ import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFla
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 
 const LEGACY_BOOST_MULTIPLIER = 1.2;
 const MAX_BOOST_CAP = 3.0;
@@ -71,8 +72,7 @@ export async function GET(request: Request) {
 
     // Aggregate current revenue per (sectorType, countryId) so we can convert
     // each country's local-currency total to ₳ at its own FX rate.
-    const agg = await db
-      .collection<UnownedSector>("unownedSectors")
+    const agg = await unownedSectorsCollection(db)
       .aggregate<{
         _id: { sectorType: string; countryId: CountryId };
         totalRevenue: number;
@@ -149,7 +149,7 @@ export async function POST(request: Request) {
     const eraUnitScale = await loadWorldEraUnitScale(db);
 
     if (body.maxBoost == null) {
-      const allUnowned = await db.collection<UnownedSector>("unownedSectors").find({}).toArray();
+      const allUnowned = await unownedSectorsCollection(db).find({}).toArray();
       const open = allUnowned.filter(
         (u) =>
           !redirectBuckets.has(
@@ -169,21 +169,19 @@ export async function POST(request: Request) {
       for (const [lane, ids] of idsByType) {
         if (ids.length === 0) continue;
         const identity = operatingSectorIdentity(lane);
-        const res = await db
-          .collection<UnownedSector>("unownedSectors")
-          .updateMany({ _id: { $in: ids } }, [
-            {
-              $set: unownedPoolBoostSet(
-                identity.sectorType,
-                LEGACY_BOOST_MULTIPLIER,
-                now,
-                plantsEnabled,
-                eraUnitScale,
-                identity.industryModel,
-                identity.mediaDiscriminator
-              ),
-            },
-          ]);
+        const res = await unownedSectorsCollection(db).updateMany({ _id: { $in: ids } }, [
+          {
+            $set: unownedPoolBoostSet(
+              identity.sectorType,
+              LEGACY_BOOST_MULTIPLIER,
+              now,
+              plantsEnabled,
+              eraUnitScale,
+              identity.industryModel,
+              identity.mediaDiscriminator
+            ),
+          },
+        ]);
         modifiedCount += res.modifiedCount;
       }
       const redirectedCount = await boostProtectedUnownedToNatCorp(
@@ -220,10 +218,7 @@ export async function POST(request: Request) {
       if (boost <= 0) continue;
       const multiplier = 1 + boost;
       const identity = operatingSectorIdentity(lane);
-      const sectorDocs = await db
-        .collection<UnownedSector>("unownedSectors")
-        .find(identity)
-        .toArray();
+      const sectorDocs = await unownedSectorsCollection(db).find(identity).toArray();
       const openIds = sectorDocs
         .filter(
           (u) =>
@@ -233,9 +228,9 @@ export async function POST(request: Request) {
         )
         .map((u) => u._id);
       if (openIds.length > 0) {
-        const { modifiedCount } = await db
-          .collection<UnownedSector>("unownedSectors")
-          .updateMany({ _id: { $in: openIds } }, [
+        const { modifiedCount } = await unownedSectorsCollection(db).updateMany(
+          { _id: { $in: openIds } },
+          [
             {
               $set: unownedPoolBoostSet(
                 identity.sectorType,
@@ -247,7 +242,8 @@ export async function POST(request: Request) {
                 identity.mediaDiscriminator
               ),
             },
-          ]);
+          ]
+        );
         totalModified += modifiedCount;
       }
       totalRedirected += await boostProtectedUnownedToNatCorp(

@@ -39,6 +39,8 @@ import type { Document } from "mongodb";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { billsCollection } from "@/lib/db/repositories/bills";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
 
 export type NationalBillActionInput =
   | { action: "vote"; vote: "for" | "against" | "abstain" }
@@ -165,7 +167,10 @@ export async function performNationalBillAction(
       const isPM = govFormation?.pmCharacterId?.equals(character._id) ?? false;
       const cabinetMember = isPM
         ? null
-        : await db.collection("cabinetMembers").findOne({ characterId: character._id, countryId });
+        : await cabinetMembersCollection<Document>(db).findOne({
+            characterId: character._id,
+            countryId,
+          });
 
       if (!isPM && !cabinetMember) {
         return {
@@ -598,8 +603,10 @@ export async function performNationalBillAction(
         },
       };
     }
-    await billsCollection(db)
-      .updateOne({ _id: bill._id }, { $set: { status: "withdrawn", updatedAt: now } });
+    await billsCollection(db).updateOne(
+      { _id: bill._id },
+      { $set: { status: "withdrawn", updatedAt: now } }
+    );
 
     await captureBillStatusChanged({
       db,
@@ -698,9 +705,10 @@ export async function performNationalBillAction(
       return { status: 403, body: { error: "Only US Senators can invoke the filibuster." } };
     }
 
-    const filibusterPolicy = await db
-      .collection("statePolicies")
-      .findOne({ stateId: "federal", legislationTypeId: "senate_filibuster_rules" });
+    const filibusterPolicy = await statePoliciesCollection<Document>(db).findOne({
+      stateId: "federal",
+      legislationTypeId: "senate_filibuster_rules",
+    });
     if (filibusterPolicy && filibusterPolicy.effectDirection === -1) {
       return {
         status: 409,

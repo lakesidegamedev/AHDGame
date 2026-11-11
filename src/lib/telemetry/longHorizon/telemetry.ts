@@ -47,6 +47,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
 
 /** Run manifest row (`simRuns`), read best-effort from the same database. */
 interface SimRunManifest {
@@ -605,9 +606,10 @@ export async function readApprovalSeriesWithFallback(
   const bounded =
     region === null
       ? ((
-          await db
-            .collection<GovernmentApproval>("governmentApprovals")
-            .findOne({ _id: country as never }, { projection: { history: 1 } })
+          await governmentApprovalsCollection(db).findOne(
+            { _id: country as never },
+            { projection: { history: 1 } }
+          )
         )?.history ?? [])
       : ((
           await db

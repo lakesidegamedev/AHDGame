@@ -15,6 +15,8 @@ import { loadUserCharacterAndCeoCorpIds } from "@/lib/account/loadUserCharacterA
 import { syncSuspiciousFlagsForBanState } from "@/lib/account/syncSuspiciousFlagsForBanState";
 import { getMailReportDetail } from "@/lib/mail/queries/mailReportDetail";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
 
 const mailReportActionSchema = z.object({
   action: z.enum(["dismiss", "delete_mail", "warn", "ban"]),
@@ -126,7 +128,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
         if (senderChar) {
           const { ceoCorpIds } = await loadUserCharacterAndCeoCorpIds(db, senderChar.userId);
-          await db.collection("users").updateOne(
+          await usersCollection<Document>(db).updateOne(
             { _id: senderChar.userId },
             {
               $set: {

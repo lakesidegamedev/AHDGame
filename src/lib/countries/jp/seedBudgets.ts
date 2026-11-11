@@ -6,6 +6,8 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
+import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
 
 /**
  * Seeds only JP budget data: national budget, enacted laws, regional budgets,
@@ -24,10 +26,12 @@ export async function seedJpBudgets(
       await statesCollection<Document>(db).find({ countryId: "JP" }).project({ _id: 1 }).toArray()
     ).map((s) => s._id as string);
     if (jpStateIds.length > 0) {
-      await stateBudgetsCollection(db)
-        .deleteMany({ stateId: { $in: jpStateIds }, countryId: "JP" });
+      await stateBudgetsCollection(db).deleteMany({
+        stateId: { $in: jpStateIds },
+        countryId: "JP",
+      });
     }
-    await db.collection<EnactedLaw>("enactedLaws").deleteMany({ countryId: "JP" });
+    await enactedLawsCollection(db).deleteMany({ countryId: "JP" });
     log("Reset: deleted JP budget data");
   }
 
@@ -77,7 +81,7 @@ export async function seedJpBudgets(
       update.$unset = unsetFields;
     }
 
-    await db.collection<EnactedLaw>("enactedLaws").updateOne(
+    await enactedLawsCollection(db).updateOne(
       {
         legislationTypeId: law.legislationTypeId,
         scope: law.scope,
@@ -101,8 +105,7 @@ export async function seedJpBudgets(
   const stateBudgets = generateStateBudgets(statesForBudgets, jpFiscalYear);
   for (const budget of stateBudgets) {
     const { _id, ...budgetData } = budget;
-    await stateBudgetsCollection(db)
-      .updateOne({ _id }, { $set: budgetData }, { upsert: true });
+    await stateBudgetsCollection(db).updateOne({ _id }, { $set: budgetData }, { upsert: true });
   }
   log(`Seeded ${stateBudgets.length} JP regional budgets`);
 
@@ -196,7 +199,7 @@ export async function seedJpBudgets(
   // Interleaved + ordered: the backfill and the upsert hit the same document,
   // so their relative order is the behaviour, not an implementation detail.
   if (policyOps.length > 0) {
-    await db.collection("statePolicies").bulkWrite(policyOps, { ordered: true });
+    await statePoliciesCollection<Document>(db).bulkWrite(policyOps, { ordered: true });
   }
   if (regionalPoliciesSeeded > 0) {
     log(`Seeded ${regionalPoliciesSeeded} JP regional policies with policyOptionId`);

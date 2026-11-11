@@ -32,6 +32,9 @@ import { countDistinctOfficers } from "@/lib/treasury/payoutCapValues";
 import { TreasuryExecutionUncertainError } from "@/lib/treasury/executionUncertain";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { adminLogsCollection } from "@/lib/db/repositories/adminLogs";
+import { activityLogCollection } from "@/lib/db/repositories/activityLog";
+import type { Document } from "mongodb";
 
 export interface ExecuteSendToMemberArgs {
   db: Db;
@@ -247,7 +250,7 @@ export async function executeSendToMember(
     }`,
   };
   try {
-    await db.collection<AdminLog>("adminLogs").insertOne(adminLog);
+    await adminLogsCollection(db).insertOne(adminLog);
   } catch (err) {
     console.error(
       JSON.stringify({
@@ -311,7 +314,7 @@ export async function executeSendToMember(
   // SYNCHRONOUSLY on a malformed id, so even a call that is never
   // awaited can escape this function with the money already moved.
   try {
-    void db.collection("activityLog").insertOne({
+    void activityLogCollection<Document>(db).insertOne({
       type: "fund_event",
       timestamp: now,
       userId: new ObjectId(args.initiatorUserId),

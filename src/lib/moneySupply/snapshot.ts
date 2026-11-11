@@ -36,6 +36,8 @@ import { nppsCollection } from "@/lib/db/repositories/npps";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 
 export { PERSONS_PER_HOUSEHOLD, HOUSEHOLD_LIQUID_RATIO, HOUSEHOLD_SAVINGS_RATIO };
 
@@ -47,7 +49,7 @@ type SnapshotMoneySupplyConfig = GameConfig & {
 };
 
 export async function snapshotMoneySupply(db: Db, turn: number): Promise<number> {
-  const config = await db.collection<SnapshotMoneySupplyConfig>("gameConfig").findOne(
+  const config = await gameConfigCollection<SnapshotMoneySupplyConfig>(db).findOne(
     { _id: "default" },
     {
       projection: {
@@ -169,8 +171,7 @@ export async function snapshotMoneySupply(db: Db, turn: number): Promise<number>
     // State-level + national-scope rows. Restricting to NATIONAL_SCOPE alone
     // left FR/IT/ES/SE/TR (and every other country without a national doc) at
     // householdLiquid = 0 even after the demography derivation landed.
-    db
-      .collection<{ _id: string; economic?: { medianIncome?: { value?: number } } }>("macroMetrics")
+    macroMetricsCollection<{ _id: string; economic?: { medianIncome?: { value?: number } } }>(db)
       .find({}, { projection: { "economic.medianIncome": 1 } })
       .toArray(),
     // Fund cash is ₳ (every fund leg is, since the currency SSOT fix), so it

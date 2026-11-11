@@ -24,6 +24,7 @@ import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficia
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
+import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
 
 /** The party holding a country's national executive, with that government's approval. */
 export interface NationalExecutiveParty {
@@ -79,8 +80,7 @@ export async function observeGovernmentAccountability(
           }
         )
         .toArray(),
-      db
-        .collection<{ _id: CountryId; approvalRating: number }>("governmentApprovals")
+      governmentApprovalsCollection<{ _id: CountryId; approvalRating: number }>(db)
         .find({}, { projection: { approvalRating: 1 } })
         .toArray(),
       db
@@ -116,10 +116,10 @@ export async function observeGovernmentAccountability(
       .find({ _id: { $in: nppIds } }, { projection: { party: 1 } })
       .toArray(),
     coalitionsCollection<{
-        sequentialId: number;
-        countryId: CountryId;
-        members: { partySequentialId: number }[];
-      }>(db)
+      sequentialId: number;
+      countryId: CountryId;
+      members: { partySequentialId: number }[];
+    }>(db)
       .find(
         {
           sequentialId: {

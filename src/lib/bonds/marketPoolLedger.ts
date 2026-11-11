@@ -15,6 +15,7 @@ import { emitLedgerEntries } from "@/lib/ledger/emit";
 import { ledgerTurnFromClock } from "@/lib/ledger/ledgerTurn";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 export interface BondPoolLedgerContext {
   turn: number;
@@ -29,9 +30,10 @@ export async function loadBondPoolLedgerContext(
   turn?: number
 ): Promise<BondPoolLedgerContext | null> {
   try {
-    const config = await db
-      .collection<{ _id: string; ledgerShadow?: boolean }>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { ledgerShadow: 1 } });
+    const config = await gameConfigCollection<{ _id: string; ledgerShadow?: boolean }>(db).findOne(
+      { _id: "default" },
+      { projection: { ledgerShadow: 1 } }
+    );
     if (config?.ledgerShadow !== true) return null;
     const [rates, state] = await Promise.all([
       exchangeRatesCollection<{ currencyCode: string; rate: number }>(db)

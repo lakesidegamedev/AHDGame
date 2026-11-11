@@ -21,6 +21,11 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
+import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
+import type { Document } from "mongodb";
+import { stateBaselinesCollection } from "@/lib/db/repositories/stateBaselines";
 
 const COUNTRY_IDS = [
   "RU",
@@ -52,16 +57,14 @@ export async function seedModern2019(
 
     if (reset) {
       await statesCollection(db).deleteMany({ countryId });
-      await db.collection<StateDemographics>("stateDemographics").deleteMany({ countryId });
-      await db.collection("stateDemographicTurnout").deleteMany({ countryId });
+      await stateDemographicsCollection(db).deleteMany({ countryId });
+      await stateDemographicTurnoutCollection<Document>(db).deleteMany({ countryId });
       await statePartyOrgCollection(db).deleteMany({ countryId });
-      await db
-        .collection<StateMetrics>("macroMetrics")
-        .deleteMany({ _id: { $in: regions.map((r) => r._id) } });
+      await macroMetricsCollection(db).deleteMany({ _id: { $in: regions.map((r) => r._id) } });
       await db
         .collection<StateMetrics>("stateMetrics")
         .deleteMany({ _id: { $in: regions.map((r) => r._id) } });
-      await db.collection<StateMetricBaseline>("stateBaselines").deleteMany({
+      await stateBaselinesCollection(db).deleteMany({
         _id: { $in: regions.map((r) => String(r._id)) },
       });
     }
@@ -73,7 +76,7 @@ export async function seedModern2019(
     );
     await writeSplitMetricsBulk(db, metrics);
     const baselines = metricsToBaselines(metrics);
-    await db.collection<StateMetricBaseline>("stateBaselines").bulkWrite(
+    await stateBaselinesCollection(db).bulkWrite(
       baselines.map(({ _id, ...data }) => ({
         updateOne: { filter: { _id }, update: { $set: data }, upsert: true },
       }))
@@ -89,7 +92,7 @@ export async function seedModern2019(
     const demographics = buildModelRegionDemographics(model);
     if (demographics.length !== regions.length)
       throw new Error(`2019 ${countryId} demographic regions do not match seeded regions`);
-    await db.collection<StateDemographics>("stateDemographics").bulkWrite(
+    await stateDemographicsCollection(db).bulkWrite(
       demographics.map(({ _id, ...data }) => ({
         updateOne: { filter: { _id }, update: { $set: data }, upsert: true },
       }))
@@ -172,12 +175,11 @@ export async function seedModern2019(
         formedTurn: null,
         collapsedAt: null,
       };
-      await governmentFormationsCollection(db)
-        .updateOne(
-          { _id: countryId },
-          { $set: { ...formation, updatedAt: now }, $setOnInsert: { createdAt: now } },
-          { upsert: true }
-        );
+      await governmentFormationsCollection(db).updateOne(
+        { _id: countryId },
+        { $set: { ...formation, updatedAt: now }, $setOnInsert: { createdAt: now } },
+        { upsert: true }
+      );
     }
     log(
       `[${countryId}] seeded ${regions.length} 2019 regions and ${partySeeds.length} democratic parties`

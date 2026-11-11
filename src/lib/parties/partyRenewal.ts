@@ -69,6 +69,7 @@ import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVot
 import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
 
 /** Renewal looks for newly resolved cycles this often. */
 export const PARTY_RENEWAL_CHECK_INTERVAL_TURNS = 6;
@@ -230,8 +231,7 @@ export async function processPartyRenewal(
         { projection: { _id: 1, governingPartyId: 1, pmNppId: 1, status: 1 } }
       )
       .toArray(),
-    db
-      .collection<GovernmentApproval>("governmentApprovals")
+    governmentApprovalsCollection(db)
       .find({ _id: { $in: dueCountries } }, { projection: { approvalRating: 1 } })
       .toArray(),
     // A departed leader's legacy colours how the governing party's record reads.
@@ -564,8 +564,9 @@ async function applySplinter(
   );
   const regions = plan.baseRegions.slice(0, MAX_SPLINTER_BASE_REGIONS);
   if (regions.length > 0) {
-    await statePartyOrgCollection(db)
-      .insertMany(regions.map((stateId) => baseOrgRow(countryId, stateId, partyId, currentTurn)));
+    await statePartyOrgCollection(db).insertMany(
+      regions.map((stateId) => baseOrgRow(countryId, stateId, partyId, currentTurn))
+    );
   }
   const nppIds = plan.nppIds.map((id) => new ObjectId(id));
   const parentId = String(parent.sequentialId);
@@ -581,19 +582,19 @@ async function applySplinter(
       { $set: { party: partyId } }
     ),
     // NPP candidacies carry the NPP id as characterId; live ones run under the new banner.
-    electionCandidatesCollection<Document>(db)
-      .updateMany(
-        { party: parentId, status: "active", characterId: { $in: nppIds } },
-        { $set: { party: partyId } }
-      ),
-    campaignsCollection<Document>(db)
-      .updateMany(
-        { party: parentId, candidateId: { $in: nppIds }, status: { $ne: "archived" } },
-        { $set: { party: partyId, updatedAt: now } }
-      ),
+    electionCandidatesCollection<Document>(db).updateMany(
+      { party: parentId, status: "active", characterId: { $in: nppIds } },
+      { $set: { party: partyId } }
+    ),
+    campaignsCollection<Document>(db).updateMany(
+      { party: parentId, candidateId: { $in: nppIds }, status: { $ne: "archived" } },
+      { $set: { party: partyId, updatedAt: now } }
+    ),
   ]);
-  const gov = await governmentFormationsCollection(db)
-    .findOne({ _id: countryId }, { projection: { _id: 1 } });
+  const gov = await governmentFormationsCollection(db).findOne(
+    { _id: countryId },
+    { projection: { _id: 1 } }
+  );
   if (gov) {
     const { updateParliamentaryGovernmentSeats } =
       await import("@/lib/turn/parliamentaryGovernment");
@@ -635,8 +636,7 @@ async function applyFounding(
     newPartyDoc(countryId, seq, plan, currentTurn, 0, { kind: "founding", cycle })
   );
   if (!base) return partyId;
-  await statePartyOrgCollection(db)
-    .insertOne(baseOrgRow(countryId, base, partyId, currentTurn));
+  await statePartyOrgCollection(db).insertOne(baseOrgRow(countryId, base, partyId, currentTurn));
   const context: NPPGenerationContext = { existingNames: new Set(names.map((n) => n.name)) };
   for (let i = 0; i < FOUNDING_BENCH_SIZE; i++) {
     await createNPP({ state: base, party: partyId, countryId }, context);

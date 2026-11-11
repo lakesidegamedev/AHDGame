@@ -50,6 +50,9 @@ import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
+import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
+import { politicalMetricsCollection } from "@/lib/db/repositories/politicalMetrics";
 
 /** Player books refit per category to their authored opening composition, by world year. */
 const OPENING_COMPOSITION_REFIT: Readonly<Partial<Record<number, readonly LawCountryId[]>>> = {
@@ -114,7 +117,7 @@ export async function seedPoliticalLegislationBaseline(
   // countries. Country budget seeders may have already written uk_nhs_funding /
   // us_defense_spending / etc. from generateDefaultEnactedLaws before this runs;
   // leaving them would double-count (or misprice) against the v2 baseline book.
-  const oldLawPurge = await db.collection<EnactedLaw>("enactedLaws").deleteMany({
+  const oldLawPurge = await enactedLawsCollection(db).deleteMany({
     countryId: { $in: [...LAW_COUNTRY_IDS] },
     scope: "national",
     legislationTypeId: {
@@ -243,10 +246,10 @@ export async function seedPoliticalLegislationBaseline(
   // Flushed before the budget sync below, which READS `enactedLaws` — batching
   // must not let that sync run ahead of the law book it is summing.
   if (policyOps.length > 0) {
-    await db.collection<StatePolicyRecord>("statePolicies").bulkWrite(policyOps, { ordered: true });
+    await statePoliciesCollection<StatePolicyRecord>(db).bulkWrite(policyOps, { ordered: true });
   }
   if (lawOps.length > 0) {
-    await db.collection<EnactedLaw>("enactedLaws").bulkWrite(lawOps, { ordered: true });
+    await enactedLawsCollection(db).bulkWrite(lawOps, { ordered: true });
   }
 
   // Recalibrate from the new 1991 law book on every seed. A prior run's
@@ -406,7 +409,7 @@ async function calibratePlayerOpeningPrograms(
           ]
         : []
     );
-    if (costOps.length > 0) await db.collection<EnactedLaw>("enactedLaws").bulkWrite(costOps);
+    if (costOps.length > 0) await enactedLawsCollection(db).bulkWrite(costOps);
 
     const typeOps: AnyBulkWriteOperation<LegislationType>[] = getCatalog(countryId, year)
       .filter((law) => law.kind !== "tax")
@@ -429,8 +432,7 @@ async function calibratePlayerOpeningPrograms(
           },
         };
       });
-    if (typeOps.length > 0)
-      await legislationTypesCollection(db).bulkWrite(typeOps);
+    if (typeOps.length > 0) await legislationTypesCollection(db).bulkWrite(typeOps);
     await refreshNationalBudgetRevenue(db, [budgetId]);
     log(`Calibrated ${year} ${countryId} program expense fractions by ${scaleNote}`);
   }
@@ -463,10 +465,7 @@ export async function seedPoliticalMetricsResiduals(db: Db, year: number): Promi
     const regionalSupplement =
       regionalBaseline.size > 0 ? lawTargets(countryId, regionalBaseline) : null;
 
-    const docs = await db
-      .collection<PoliticalMetricsDoc>("politicalMetrics")
-      .find({ countryId })
-      .toArray();
+    const docs = await politicalMetricsCollection(db).find({ countryId }).toArray();
     for (const doc of docs) {
       const residuals = {} as Record<PoliticalMetricId, number>;
       for (const [metricId, points] of Object.entries(national)) {
@@ -482,9 +481,7 @@ export async function seedPoliticalMetricsResiduals(db: Db, year: number): Promi
     }
   }
   if (residualOps.length > 0) {
-    await db
-      .collection<PoliticalMetricsDoc>("politicalMetrics")
-      .bulkWrite(residualOps, { ordered: true });
+    await politicalMetricsCollection(db).bulkWrite(residualOps, { ordered: true });
   }
   return count;
 }

@@ -15,6 +15,7 @@ import type { GovernmentApproval } from "@/lib/db/types/governmentApproval";
 import { BASE_APPROVAL } from "@/lib/utils/governmentApproval";
 import { approvalCoattailMultiplier, coattailMultiplierMapToPct } from "./coattailMagnitude";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
 
 /**
  * The election type that is the head-of-government race per country.
@@ -56,9 +57,7 @@ export async function resolvePresidentApproval(
   );
   if (!official?.party) return null;
 
-  const approvalDoc = await db
-    .collection<GovernmentApproval>("governmentApprovals")
-    .findOne({ _id: countryId });
+  const approvalDoc = await governmentApprovalsCollection(db).findOne({ _id: countryId });
   const approval = approvalDoc?.approvalRating ?? BASE_APPROVAL;
 
   return {

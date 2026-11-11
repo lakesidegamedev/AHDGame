@@ -14,6 +14,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import type { Document } from "mongodb";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { notificationsCollection } from "@/lib/db/repositories/notifications";
 
 /**
  * Multi-turn advance for a normal singleplayer world.
@@ -555,8 +556,7 @@ export function createDbBatchPorts(db: Db): BatchPorts {
     },
 
     async notesSince(since) {
-      const docs = await db
-        .collection("notifications")
+      const docs = await notificationsCollection<Document>(db)
         .find({ userId, createdAt: { $gte: since }, archivedAt: { $exists: false } })
         .sort({ createdAt: 1 })
         .limit(500)

@@ -58,6 +58,7 @@ import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParti
 import { billsCollection } from "@/lib/db/repositories/bills";
 import type { Document } from "mongodb";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
 
 const CABINET_VOTE_DURATION_MS = 24 * 3_600_000; // 24 hours
 type BillListProvisionDisplay = NonNullable<BillDisplay["provisions"]>[number];
@@ -137,8 +138,7 @@ export async function listCabinetBills(countryId: CountryId) {
         } else {
           // A dual-office holder proposes from the union of both portfolios:
           // each row contributes its domains, but they still vote only once.
-          const cabinetRows = await db
-            .collection("cabinetMembers")
+          const cabinetRows = await cabinetMembersCollection<Document>(db)
             .find({ characterId: character._id, countryId })
             .project({ positionId: 1 })
             .toArray();
@@ -372,8 +372,7 @@ export async function proposeCabinetBill({
   // never match. All rows are loaded so a dual-office holder proposes from
   // the union of both portfolios.
   const cabinetRows = !isPM
-    ? await db
-        .collection("cabinetMembers")
+    ? await cabinetMembersCollection<Document>(db)
         .find({ characterId: character._id, countryId })
         .project({ positionId: 1 })
         .toArray()
@@ -420,8 +419,7 @@ export async function proposeCabinetBill({
     if (mechanicsFound) {
       const allowedDomains = new Set(unionLegislativeDomains(domainLists));
       // Look up the legislation type to check its category
-      const legType = await legislationTypesCollection(db)
-        .findOne({ _id: legislationTypeId });
+      const legType = await legislationTypesCollection(db).findOne({ _id: legislationTypeId });
       if (legType) {
         const billDomain = legType.policyDomain;
         if (!allowedDomains.has(billDomain)) {
@@ -448,8 +446,11 @@ export async function proposeCabinetBill({
   }
 
   // Check limit: only 1 cabinet bill in "cabinet_review" at a time
-  const existingReview = await billsCollection(db)
-    .findOne({ countryId, status: "cabinet_review", originChamber: "cabinet" });
+  const existingReview = await billsCollection(db).findOne({
+    countryId,
+    status: "cabinet_review",
+    originChamber: "cabinet",
+  });
   if (existingReview) {
     return NextResponse.json(badRequest("A cabinet bill is already under review").toJson(), {
       status: 400,
@@ -458,9 +459,10 @@ export async function proposeCabinetBill({
 
   // Require PM plus at least 1 distinct player-held minister. Counting distinct
   // characters means dual-office holders don't buy extra votes toward quorum.
-  const playerHolderIds = await db
-    .collection("cabinetMembers")
-    .distinct("characterId", { countryId, characterId: { $ne: null } });
+  const playerHolderIds = await cabinetMembersCollection<Document>(db).distinct("characterId", {
+    countryId,
+    characterId: { $ne: null },
+  });
   const distinctPlayerHolders = new Set(
     playerHolderIds.filter((id) => id != null).map((id) => String(id))
   ).size;
@@ -772,8 +774,9 @@ export async function proposeCabinetBill({
     });
   }
 
-  const selectedLegislationType = await legislationTypesCollection(db)
-    .findOne({ _id: legislationTypeId });
+  const selectedLegislationType = await legislationTypesCollection(db).findOne({
+    _id: legislationTypeId,
+  });
   if (!selectedLegislationType) {
     return NextResponse.json(badRequest("Unknown legislation type.").toJson(), {
       status: 400,

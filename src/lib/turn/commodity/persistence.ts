@@ -12,6 +12,7 @@ import type { buildReachableBooks } from "@/lib/trade/reachableBook";
 import type { PlantsUnits } from "./ledgerTypes";
 import type { CountryLedger, GlobalLedger } from "./ledgerTypes";
 import { buildPriceHistoryDocs } from "./pricing";
+import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
 
 export interface TurnPersistenceInputs {
   marketSystemMode: Parameters<typeof marketAtLeast>[0];
@@ -241,11 +242,12 @@ export async function persistTurnOutputs(
   // mixes, embargoes, policy, and diversions. Overwrite every current-turn row,
   // including non-producers with {}, so retries cannot retain a stale snapshot.
   if (corporationIds.length > 0) {
-    await db
-      .collection<CorporationHistory>("corporationHistory")
-      .bulkWrite(buildCorporationCommodityOutputOps(corporationIds, supplyByCorporation, turn), {
+    await corporationHistoryCollection(db).bulkWrite(
+      buildCorporationCommodityOutputOps(corporationIds, supplyByCorporation, turn),
+      {
         ordered: false,
-      });
+      }
+    );
   }
 
   return { tradeClearedVolume: tradeSnapshot.world.clearedVolume };

@@ -29,6 +29,7 @@ import {
   type LabourSignal,
 } from "./rules/futureConflicts";
 import type { LivingConflictDef } from "./types";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 
 /** Settled phases in which each family rests between waves. */
 export const FUTURE_CONFLICT_RESTING_PHASES: Record<string, readonly string[]> = {
@@ -51,14 +52,13 @@ const finite = (value: unknown): value is number =>
 /** Country means of regional unemployment, its trend and the automation index. */
 export async function loadLabourSignals(db: Db, countryIds: string[]): Promise<LabourSignal[]> {
   if (countryIds.length === 0) return [];
-  const rows = await db
-    .collection<{
-      countryId?: string;
-      economic?: {
-        unemploymentRate?: { value?: number; trend?: number };
-        automationIndex?: { value?: number };
-      };
-    }>("macroMetrics")
+  const rows = await macroMetricsCollection<{
+    countryId?: string;
+    economic?: {
+      unemploymentRate?: { value?: number; trend?: number };
+      automationIndex?: { value?: number };
+    };
+  }>(db)
     .find(
       { countryId: { $in: countryIds } },
       {

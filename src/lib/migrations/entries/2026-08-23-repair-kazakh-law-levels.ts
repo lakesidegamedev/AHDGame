@@ -7,6 +7,8 @@ import {
 } from "@/lib/governorOffice/orders/revertPolicy";
 import type { Migration, MigrationResult } from "../types";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
+import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
 
 const STATE_ID = "KAZ";
 
@@ -22,16 +24,13 @@ function fieldsDiffer(policy: StatePolicy, canonical: CanonicalPolicyFields): bo
 }
 
 async function repairKazakhLawLevels(db: Db, dryRun: boolean): Promise<MigrationResult> {
-  const policies = await db
-    .collection<StatePolicy>("statePolicies")
-    .find({ stateId: STATE_ID })
-    .toArray();
+  const policies = await statePoliciesCollection(db).find({ stateId: STATE_ID }).toArray();
   const legislationTypeIds = [...new Set(policies.map((policy) => policy.legislationTypeId))];
   const [legislationTypes, enactedLaws, orders] = await Promise.all([
     legislationTypesCollection(db)
       .find({ _id: { $in: legislationTypeIds } })
       .toArray(),
-    db.collection<EnactedLaw>("enactedLaws").find({ stateId: STATE_ID }).toArray(),
+    enactedLawsCollection(db).find({ stateId: STATE_ID }).toArray(),
     db
       .collection<GovernorExecutiveOrder>("governorExecutiveOrders")
       .find({ stateId: STATE_ID })
@@ -102,7 +101,7 @@ async function repairKazakhLawLevels(db: Db, dryRun: boolean): Promise<Migration
 
   if (!dryRun) {
     for (const repair of repairs) {
-      await db.collection<StatePolicy>("statePolicies").updateOne(repair.filter, {
+      await statePoliciesCollection(db).updateOne(repair.filter, {
         $set: repair.fields,
       });
     }

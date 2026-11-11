@@ -40,6 +40,7 @@ import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
 import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
 
 export const STOCK_HOLDING_MIGRATION_ID = "2026-10-16-stock-holding-tax-tiers";
 function ownerKey(
@@ -82,10 +83,7 @@ function historyEvents(rows: readonly ShareTradeHistory[], owner: string): Legac
 }
 
 async function migrate(db: Db, ctx: MigrationContext): Promise<MigrationResult> {
-  if (
-    await shareOrdersCollection(db)
-      .countDocuments({ activeShareFillKey: { $exists: true } })
-  )
+  if (await shareOrdersCollection(db).countDocuments({ activeShareFillKey: { $exists: true } }))
     throw new Error("Recover pending share fills before migrating stock holdings");
   if (
     await db
@@ -143,7 +141,7 @@ async function migrate(db: Db, ctx: MigrationContext): Promise<MigrationResult> 
           $or: [{ "taxRateChange.taxType": "incomeTax" }, { "taxSlider.taxType": "incomeTax" }],
         })
         .toArray(),
-      db.collection<StatePolicy>("statePolicies").find({}).toArray(),
+      statePoliciesCollection(db).find({}).toArray(),
     ]);
   if (!state) throw new Error("Stock holding migration requires a world");
   const turn = state.currentTurn;
@@ -427,7 +425,7 @@ async function migrate(db: Db, ctx: MigrationContext): Promise<MigrationResult> 
       });
     }
   }
-  if (policyOps.length) await db.collection<StatePolicy>("statePolicies").bulkWrite(policyOps);
+  if (policyOps.length) await statePoliciesCollection(db).bulkWrite(policyOps);
   const activation = await gameStateCollection(db).updateOne(
     {
       _id: "current",

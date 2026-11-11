@@ -57,6 +57,8 @@ import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
 
 let openingCalibrationCache: {
   gross: ReturnType<typeof openingGrossPurchasingInputs1991>;
@@ -111,8 +113,7 @@ export async function collectResetMetricOwnerReadings(
       board.scope === "national" && dueResetMetricIds(board, turn, false, false).includes("57")
   );
   const [macro, budgets, units] = await Promise.all([
-    db
-      .collection<MacroMetricsDoc>("macroMetrics")
+    macroMetricsCollection<MacroMetricsDoc>(db)
       .find(
         { _id: { $in: regionalIds } },
         {
@@ -198,8 +199,7 @@ export async function collectResetMetricOwnerReadings(
     states,
   });
   const stateById = new Map(states.map((s) => [s._id, s]));
-  const serviceMarkets = await db
-    .collection<CommodityPrice>("commodityPrices")
+  const serviceMarkets = await commodityPricesCollection(db)
     .find(
       {
         commodity: { $in: ["healthcare_services", "energy", "food", "coal", "oil", "natural_gas"] },
@@ -468,7 +468,7 @@ export async function collectResetMetricOwnerReadings(
       householdSourceByCountry.get(country)?.calibration
   );
   const constructionMarket = housingCandidates.length
-    ? await db.collection<CommodityPrice>("commodityPrices").findOne(
+    ? await commodityPricesCollection(db).findOne(
         { commodity: "construction_services", turn },
         {
           projection: {

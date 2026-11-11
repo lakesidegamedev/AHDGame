@@ -7,6 +7,7 @@ import { getAuthUser } from "@/lib/auth";
 import { shouldRedactCorporationForViewer } from "@/lib/corporations/reservedCorporateHoldings";
 import { getRoundedPublicMarketCap } from "@/lib/corporations/marketQuote";
 import type { CorporationHistory } from "@/lib/db/types";
+import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -108,8 +109,7 @@ export async function GET(request: Request, { params }: RouteParams) {
       : "public, s-maxage=120, stale-while-revalidate=300, no-transform";
 
     if (sparkline) {
-      const sparkPoints = await db
-        .collection<CorporationHistory>("corporationHistory")
+      const sparkPoints = await corporationHistoryCollection(db)
         .aggregate<{ turn: number; sharePrice: number }>([
           { $match: { corporationId: corporation._id } },
           { $sort: { turn: -1, createdAt: -1, _id: -1 } },
@@ -132,8 +132,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     let stride = 1;
     let snapshotTurns = 0;
     if (fullRange) {
-      const countRes = await db
-        .collection<CorporationHistory>("corporationHistory")
+      const countRes = await corporationHistoryCollection(db)
         .aggregate<{ n: number }>([
           { $match: { corporationId: corporation._id } },
           { $group: { _id: "$turn" } },
@@ -176,8 +175,7 @@ export async function GET(request: Request, { params }: RouteParams) {
         ]
       : [{ $sort: { turn: -1 } }, { $limit: 500 }, { $sort: { turn: 1 } }];
 
-    const history = await db
-      .collection<CorporationHistory>("corporationHistory")
+    const history = await corporationHistoryCollection(db)
       .aggregate<CorporationHistoryChartRow>([
         ...dedupeStages,
         ...windowStages,

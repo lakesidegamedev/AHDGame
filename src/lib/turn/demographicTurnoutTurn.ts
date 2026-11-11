@@ -81,6 +81,7 @@ import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficia
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 type StoredPartyBudget = PartyBudget & { countryId?: CountryId };
 
@@ -491,7 +492,7 @@ export async function processPartyGOTV(
         .toArray(),
       statesPromise,
     ]);
-    const gameConfig = await db.collection<GameConfig>("gameConfig").findOne({ _id: "default" });
+    const gameConfig = await gameConfigCollection(db).findOne({ _id: "default" });
     const nppEconomyEnabled = gameConfig?.nppEconomyEnabled !== false;
     // GDP-baseline era for revenue math: the world's reset preset, so
     // historical worlds budget against their own denomination (issue #798).

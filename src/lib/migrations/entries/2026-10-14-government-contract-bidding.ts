@@ -5,6 +5,8 @@ import type { ExtractionContract } from "@/lib/db/types/extractionContract";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { notificationsCollection } from "@/lib/db/repositories/notifications";
+import type { Document } from "mongodb";
 
 /** Withdraw only unanswered legacy offers; active and historical signed contracts retain their terms. */
 export const migration: Migration = {
@@ -216,7 +218,7 @@ export const migration: Migration = {
             ]
           : [];
       });
-      if (notices.length) await db.collection("notifications").bulkWrite(notices);
+      if (notices.length) await notificationsCollection<Document>(db).bulkWrite(notices);
     }
     return {
       documentsScanned: pending + extraction,

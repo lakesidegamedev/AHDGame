@@ -9,6 +9,7 @@ import type { GameConfig } from "@/lib/db/types";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
 import { getLabourSystemMode, type LabourSystemMode } from "@/lib/labour/featureFlag";
 import { seedUnions } from "@/lib/admin/seed/seedUnions";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 const patchSchema = z.object({
   mode: z.enum(["off", "wages", "macro", "unions", "full"]),
@@ -39,7 +40,7 @@ export const PATCH = withAdminRoute(async (auth, request: Request) => {
   const { mode } = parsed.data as { mode: LabourSystemMode };
 
   const db = await getDb();
-  const gameConfig = db.collection<GameConfig>("gameConfig");
+  const gameConfig = gameConfigCollection(db);
 
   const priorMode = await getLabourSystemMode();
 

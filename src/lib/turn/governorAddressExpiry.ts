@@ -2,6 +2,7 @@ import type { Db } from "mongodb";
 import type { GovernorAddress } from "@/lib/db/types";
 import type { StateDemographicTurnout } from "@/lib/db/types/stateDemographicTurnout";
 import { readTurnoutModifier, turnoutModifierPath } from "@/lib/demographics/turnoutTarget";
+import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
 
 /**
  * Turn phase: expire address effects whose `expiresAtTurn` has passed.
@@ -52,8 +53,7 @@ export async function processGovernorAddressExpiry(
       const deltasByState = a.demographicEffect.turnoutDeltasByState;
       if (groupId && deltasByState && Object.keys(deltasByState).length > 0) {
         const stateIds = Object.keys(deltasByState);
-        const turnoutDocs = await db
-          .collection<StateDemographicTurnout>("stateDemographicTurnout")
+        const turnoutDocs = await stateDemographicTurnoutCollection(db)
           .find({ _id: { $in: stateIds } })
           .toArray();
         const currentByState = new Map(
@@ -83,18 +83,18 @@ export async function processGovernorAddressExpiry(
           });
         }
         if (ops.length > 0) {
-          await db.collection<StateDemographicTurnout>("stateDemographicTurnout").bulkWrite(ops);
+          await stateDemographicTurnoutCollection(db).bulkWrite(ops);
           turnoutReverted += ops.length;
         }
       } else {
         const delta = a.demographicEffect.turnoutDelta ?? 0;
         if (delta > 0 && groupId) {
-          const turnoutDoc = await db
-            .collection<StateDemographicTurnout>("stateDemographicTurnout")
-            .findOne({ _id: a.stateId });
+          const turnoutDoc = await stateDemographicTurnoutCollection(db).findOne({
+            _id: a.stateId,
+          });
           const currentModifier = readTurnoutModifier(turnoutDoc?.modifiers, groupId);
           const newModifier = Math.max(-20, Math.min(20, currentModifier - delta));
-          await db.collection<StateDemographicTurnout>("stateDemographicTurnout").updateOne(
+          await stateDemographicTurnoutCollection(db).updateOne(
             { _id: a.stateId },
             {
               $set: {

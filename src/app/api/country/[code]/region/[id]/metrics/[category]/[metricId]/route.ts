@@ -26,6 +26,7 @@ import { pushesValueUp } from "@/lib/utils/policyDirection";
 import { MIRROR_CONTROLLED_METRIC_IDS } from "@/lib/metricEngine/fiscalMirror";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
 
 type AffectingPolicy = {
   name: string;
@@ -133,7 +134,7 @@ export async function GET(
         await Promise.all([
           findMergedRegionMetricsForDisplay(db, { _id: stateId }),
           findMergedRegionMetricsManyForDisplay(db, {}),
-          db.collection<StatePolicy>("statePolicies").find({ stateId }).toArray(),
+          statePoliciesCollection(db).find({ stateId }).toArray(),
           getMetricHistory(db, stateId, category as MetricCategoryId, metricId),
           computeNationalMetricTickRate(db, stateId, category as MetricCategoryId, metricId),
         ]);
@@ -300,8 +301,7 @@ export async function GET(
     // Fetch the state's own policies plus every national-scope doc in one query; pick the
     // one matching this state's country (fall back to the US federal bucket).
     const nationalScopeIds = Object.keys(NATIONAL_SCOPE);
-    const allPolicyDocs = await db
-      .collection<StatePolicy>("statePolicies")
+    const allPolicyDocs = await statePoliciesCollection(db)
       .find({ stateId: { $in: [stateId, ...nationalScopeIds] } })
       .toArray();
     const statePoliciesArr = allPolicyDocs.filter((p) => p.stateId === stateId);

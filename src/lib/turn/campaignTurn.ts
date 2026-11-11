@@ -47,6 +47,7 @@ import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 export interface CampaignTurnResults {
   campaignsProcessed: number;
@@ -96,13 +97,11 @@ export async function processCampaignTurn(turnNumber: number): Promise<CampaignT
         // generation so an active player rolls a correspondingly more active campaign.
         // Campaign pool is separate from the player's own action pool; endorsements
         // only boost this campaign pool, never the player's.
-        const gameConfig = await db
-          .collection<{
-            _id: string;
-            baseActionsPerTurn?: number;
-            politicalMediaMarketEnabled?: boolean;
-          }>("gameConfig")
-          .findOne({ _id: "default" });
+        const gameConfig = await gameConfigCollection<{
+          _id: string;
+          baseActionsPerTurn?: number;
+          politicalMediaMarketEnabled?: boolean;
+        }>(db).findOne({ _id: "default" });
         const politicalMediaMarketEnabled = gameConfig?.politicalMediaMarketEnabled === true;
         // Passed through raw. `campaignActionsPerTurn` owns the floor and the
         // halving for NPP-run campaigns, so the desk applies the same ones.

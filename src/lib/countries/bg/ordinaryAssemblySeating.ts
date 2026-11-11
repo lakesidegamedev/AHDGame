@@ -35,6 +35,8 @@ import { electionCandidatesCollection } from "@/lib/db/repositories/electionCand
 import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { notificationsCollection } from "@/lib/db/repositories/notifications";
+import type { Document } from "mongodb";
 
 interface BgAssemblyOfficeArchive {
   _id: string;
@@ -79,11 +81,10 @@ async function materializeBgOrdinaryAssembly(input: {
     preIterationActive: game.preIteration?.active,
     preIterationTurns: game.preIterationTurns,
   });
-  const country = await countryGameStatesCollection(db)
-    .findOne(
-      { _id: "BG" },
-      { session, projection: { bgOrdinaryAssemblySinceTurn: 1, bgConstitution1991SinceTurn: 1 } }
-    );
+  const country = await countryGameStatesCollection(db).findOne(
+    { _id: "BG" },
+    { session, projection: { bgOrdinaryAssemblySinceTurn: 1, bgConstitution1991SinceTurn: 1 } }
+  );
   if (!country) throw new Error("Bulgarian country authority is missing");
   if (
     !bgOrdinarySeatingClockReady({
@@ -359,12 +360,11 @@ async function materializeBgOrdinaryAssembly(input: {
   );
   if (finalizedTallies.matchedCount !== 5)
     throw new Error("Bulgarian handover tally custody changed");
-  await electionCandidatesCollection(db)
-    .updateMany(
-      { electionId: { $in: ids }, status: "active" },
-      { $set: { status: "withdrawn", withdrawnAt: now } },
-      { session }
-    );
+  await electionCandidatesCollection(db).updateMany(
+    { electionId: { $in: ids }, status: "active" },
+    { $set: { status: "withdrawn", withdrawnAt: now } },
+    { session }
+  );
   await electionsCollection(db).bulkWrite(
     elections.map((row) => ({
       updateOne: {
@@ -391,12 +391,11 @@ async function materializeBgOrdinaryAssembly(input: {
     { session }
   );
   if (resized.matchedCount !== 5) throw new Error("Bulgarian handover requires all five regions");
-  const formation = await governmentFormationsCollection(db)
-    .updateOne(
-      { _id: "BG" },
-      { $set: { totalSeats: 240, majorityThreshold: 121, updatedAt: now } },
-      { session }
-    );
+  const formation = await governmentFormationsCollection(db).updateOne(
+    { _id: "BG" },
+    { $set: { totalSeats: 240, majorityThreshold: 121, updatedAt: now } },
+    { session }
+  );
   if (formation.matchedCount !== 1) throw new Error("Bulgarian government formation is missing");
   await countryGameStatesCollection(db).updateOne(
     { _id: "BG" },
@@ -409,7 +408,7 @@ async function materializeBgOrdinaryAssembly(input: {
     { session }
   );
   if (officials.some((row) => !row.isNPP))
-    await db.collection("notifications").insertMany(
+    await notificationsCollection<Document>(db).insertMany(
       players
         .filter((player) => officials.some((row) => row.characterId?.equals(player._id)))
         .map((player) => ({

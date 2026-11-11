@@ -16,6 +16,7 @@ import type { PoliticalMetricId } from "@/lib/politicalMetrics/types";
 import { normalizeServiceIds, servicesWorkerSecurityNudge } from "./unionServices";
 import { loadFundedUnionServices, UNION_SERVICE_FUNDING_PROJECTION } from "./unionServiceFunding";
 import { unionsCollection } from "@/lib/db/repositories/unions";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /** Political attention fades unless a dispute escalates again. */
 export const LABOUR_DISPUTE_DECAY = 0.9;
@@ -143,9 +144,10 @@ export async function loadLabourRelationsPoliticalNudgesByCountry(
   db: Db,
   currentTurn: number
 ): Promise<CountryPoliticalNudges> {
-  const config = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { labourSystemMode: 1 } });
+  const config = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { labourSystemMode: 1 } }
+  );
   if (!(await isLabourFullMode(config))) return new Map();
 
   const [campaigns, unions] = await Promise.all([

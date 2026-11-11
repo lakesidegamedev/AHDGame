@@ -24,6 +24,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 function resolveCountryId(character: Pick<Character, "countryId">): CountryId {
   return character.countryId as CountryId;
@@ -94,8 +95,7 @@ async function computeWealthListFallback(
   const userIds = [...new Set(exchangeCharacters.map((c) => c.userId.toString()))].map(
     (id) => new ObjectId(id)
   );
-  const users = await db
-    .collection<User>("users")
+  const users = await usersCollection(db)
     .find({ _id: { $in: userIds } })
     .project<Pick<User, "_id" | "isBanned" | "discordId" | "discordAvatar" | "googleAvatar">>({
       _id: 1,

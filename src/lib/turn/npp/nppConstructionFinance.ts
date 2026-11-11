@@ -35,6 +35,7 @@ import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
 import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
 
 type ConstructionBorrowerLoan = Pick<
   BankLoan,
@@ -146,10 +147,7 @@ export async function loadNppConstructionFundingPool(input: {
         }
       )
       .toArray(),
-    db
-      .collection<Pick<CorporationHistory, "corporationId" | "turn" | "income">>(
-        "corporationHistory"
-      )
+    corporationHistoryCollection<Pick<CorporationHistory, "corporationId" | "turn" | "income">>(db)
       .find({ corporationId: { $in: borrowerIds }, turn: { $gte: historyStart, $lte: turn } })
       .project<Pick<CorporationHistory, "corporationId" | "turn" | "income">>({
         corporationId: 1,

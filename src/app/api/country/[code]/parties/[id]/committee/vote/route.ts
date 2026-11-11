@@ -20,6 +20,8 @@ import { getGameTime } from "@/lib/time/gameTime";
 import { hasTurnBackedWindowClosed } from "@/lib/time/turnBackedWindow";
 import { isSameCountry } from "@/lib/api/sameCountry";
 import { CANONICAL_VOTING_ELECTION_SORT } from "@/lib/elections/canonicalVotingElection";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -67,9 +69,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     // 24h new-character cooldown on committee actions.
-    const userDoc = await db
-      .collection("users")
-      .findOne({ _id: new ObjectId(authUser.userId) }, { projection: { createdAt: 1 } });
+    const userDoc = await usersCollection<Document>(db).findOne(
+      { _id: new ObjectId(authUser.userId) },
+      { projection: { createdAt: 1 } }
+    );
     const cooldown = isInNewCharacterCooldown({
       userCreatedAt: userDoc?.createdAt ?? new Date(0),
       characterCreatedAt: authUser.character.createdAt,

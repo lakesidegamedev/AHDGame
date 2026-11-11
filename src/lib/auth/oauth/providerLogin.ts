@@ -31,6 +31,10 @@ import { loginDestination, takeOAuthReturnUrlCookie } from "@/lib/auth/lakesideL
 import { resolveReauthIssuedAt } from "@/lib/auth/sessionIssue";
 import { authMigrationFenceAbsentFilter, isAuthMigrationFenced } from "@/lib/auth/sourceFence";
 import type { OAuthCookieStore, OAuthDb, OAuthLoginAdapter } from "./types";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { activityLogCollection } from "@/lib/db/repositories/activityLog";
+import type { Document } from "mongodb";
 
 /** Player-facing welcome text; only the separator before "then" differs per provider. */
 export function oauthWelcomeMessage(separator: string): string {
@@ -55,10 +59,10 @@ export async function runOAuthLogin(
   userAgent: string | null,
   cf: CfFingerprint
 ) {
-  const usersCollection = db.collection<User>("users");
+  const usersCollectionHandle = usersCollection(db);
   const idFilter = { [adapter.idField]: adapter.externalId } as Filter<User>;
 
-  const existingUser = await usersCollection.findOne(idFilter);
+  const existingUser = await usersCollectionHandle.findOne(idFilter);
   if (existingUser) {
     return loginExistingUser(db, adapter, cookieStore, baseUrl, userAgent, cf, existingUser);
   }
@@ -74,7 +78,7 @@ async function loginExistingUser(
   cf: CfFingerprint,
   existingUser: WithId<User>
 ) {
-  const usersCollection = db.collection<User>("users");
+  const usersCollectionHandle = usersCollection(db);
   const idFilter = { [adapter.idField]: adapter.externalId } as Filter<User>;
 
   if (existingUser.isBanned) {
@@ -113,7 +117,7 @@ async function loginExistingUser(
     .setExpirationTime("7d")
     .sign(getJwtSecret());
 
-  const updateResult = await usersCollection.updateOne(
+  const updateResult = await usersCollectionHandle.updateOne(
     {
       _id: existingUser._id,
       isBanned: { $ne: true },
@@ -161,7 +165,7 @@ async function loginExistingUser(
     cookieStore.set("__ahd_track", trackingId, await getTrackingCookieOptions());
   }
 
-  db.collection("activityLog")
+  activityLogCollection<Document>(db)
     .insertOne({
       type: "login",
       timestamp: new Date(),
@@ -201,18 +205,16 @@ async function registerNewUser(
   userAgent: string | null,
   cf: CfFingerprint
 ) {
-  const usersCollection = db.collection<User>("users");
+  const usersCollectionHandle = usersCollection(db);
   const account = adapter.newAccount;
 
   // Block new registrations during maintenance (partial or full) and test
   // mode, mirroring the email signup path. Test mode limits signup to holders
   // of the test secret, which only the email form can carry.
-  const gameConfig = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne(
-      { _id: "default" },
-      { projection: { maintenanceMode: 1, testMode: 1, ipDetectionEnabled: 1 } }
-    );
+  const gameConfig = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { maintenanceMode: 1, testMode: 1, ipDetectionEnabled: 1 } }
+  );
   if (normalizeMaintenanceMode(gameConfig?.maintenanceMode) !== "off") {
     return adapter.resultRedirect("error", "/maintenance", "maintenance");
   }
@@ -229,7 +231,10 @@ async function registerNewUser(
   const oauthDeviceKey = cookieStore.get(OAUTH_DEVICE_KEY_COOKIE)?.value;
   cookieStore.delete(OAUTH_DEVICE_KEY_COOKIE);
 
-  const referredByObjectId = await resolveReferredByFromOAuthCookie(cookieStore, usersCollection);
+  const referredByObjectId = await resolveReferredByFromOAuthCookie(
+    cookieStore,
+    usersCollectionHandle
+  );
 
   const device = classifyDevice(userAgent);
   let gateDecision: Awaited<ReturnType<typeof assertRegistrationAllowed>> = {};
@@ -264,7 +269,7 @@ async function registerNewUser(
   let attempts = 0;
   const maxAttempts = 15;
   while (attempts < maxAttempts) {
-    const taken = await usersCollection.findOne({ username });
+    const taken = await usersCollectionHandle.findOne({ username });
     if (!taken) break;
     // Crypto-random suffix keeps collisions unguessable.
     const suffix = randomBytes(4).toString("hex");
@@ -280,7 +285,7 @@ async function registerNewUser(
   const newUserObservedAt = new Date();
 
   const acquisition = parseAcquisition(cookieStore.get(ACQUISITION_COOKIE)?.value);
-  const result = await usersCollection.insertOne({
+  const result = await usersCollectionHandle.insertOne({
     ...(acquisition ? { acquisition } : {}),
     email: account.email,
     username,
@@ -355,7 +360,7 @@ async function registerNewUser(
   const detectIp = () => {
     checkIpFireAndForget(clientIp).then((ipDetails) => {
       if (ipDetails) {
-        usersCollection
+        usersCollectionHandle
           .updateOne({ _id: result.insertedId }, { $set: { ipDetails } })
           .catch(() => {});
       }
@@ -364,7 +369,7 @@ async function registerNewUser(
   if (account.ipDetection === "inline") {
     if (gameConfig?.ipDetectionEnabled) detectIp();
   } else {
-    db.collection<GameConfig>("gameConfig")
+    gameConfigCollection(db)
       .findOne({ _id: "default" }, { projection: { ipDetectionEnabled: 1 } })
       .then((config) => {
         if (config?.ipDetectionEnabled) detectIp();
@@ -404,7 +409,7 @@ async function registerNewUser(
     maxAge: 15 * 60,
   });
 
-  await usersCollection.updateOne(
+  await usersCollectionHandle.updateOne(
     { _id: result.insertedId },
     // No `lastKnownIpAt` here: this `$set` writes no IP, and stamping it would
     // assert an observation that did not happen.
@@ -418,7 +423,7 @@ async function registerNewUser(
     }
   );
 
-  db.collection("activityLog")
+  activityLogCollection<Document>(db)
     .insertOne({
       type: "login",
       timestamp: new Date(),

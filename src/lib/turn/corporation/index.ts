@@ -73,6 +73,8 @@ import { getMediaProductKind } from "@/lib/products/mediaProductCatalog";
 import { aggregateMediaProductSectorEffects } from "@/lib/products/rules/mediaProductRules";
 import { runCorporationTurnSideEffects } from "./corporationTurnSideEffects";
 import { settleCorporationTurnPayouts } from "./corporationTurnPayouts";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
 
 export type { CorporationTurnResult } from "./corporationTurnRuntime";
 
@@ -101,7 +103,7 @@ export async function processCorporationTurn(
     [
       isForexEnabled(),
       loadTxThresholds(db),
-      db.collection<GameConfig>("gameConfig").findOne(
+      gameConfigCollection(db).findOne(
         { _id: "default" },
         {
           projection: CORPORATION_TURN_GAME_CONFIG_PROJECTION,
@@ -183,12 +185,10 @@ export async function processCorporationTurn(
           ?.productLinesV2Enabled === true,
     }),
     mediaRegulationEnabled
-      ? db
-          .collection<StatePolicy>("statePolicies")
-          .findOne(
-            { legislationTypeId: "us_media_communications", stateId: "federal" },
-            { projection: { policyOptionIndex: 1 } }
-          )
+      ? statePoliciesCollection(db).findOne(
+          { legislationTypeId: "us_media_communications", stateId: "federal" },
+          { projection: { policyOptionIndex: 1 } }
+        )
       : Promise.resolve(null),
   ]);
   await resolvePhaseLookups(db, marketGovernorConfig, turn ?? gameState?.currentTurn ?? 0, lookups);

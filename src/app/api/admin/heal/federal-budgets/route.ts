@@ -27,6 +27,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
 
 const FEDERAL_TAX_RATE_KEYS: ReadonlySet<keyof FederalTaxRates> = new Set([
   "incomeTax",
@@ -82,8 +83,7 @@ export async function GET() {
       const population = states.reduce((sum, s) => sum + (s.population ?? 0), 0);
       const nationalMedianIncome = await resolveNationalMedianIncome(db, budgetCountryId);
 
-      const enactedLaws = await db
-        .collection<EnactedLaw>("enactedLaws")
+      const enactedLaws = await enactedLawsCollection(db)
         .find({
           scope: "national",
           ...(countryHasFeature("usApi", budgetCountryId)
@@ -282,7 +282,7 @@ export async function POST() {
         update.$unset = unsetFields;
       }
 
-      const result = await db.collection<EnactedLaw>("enactedLaws").updateOne(
+      const result = await enactedLawsCollection(db).updateOne(
         {
           legislationTypeId: law.legislationTypeId,
           scope: law.scope,
@@ -300,8 +300,7 @@ export async function POST() {
     const { legislationTypes } = await import("@/lib/seeds/reference/legislationTypes");
     const ltMap = new Map(legislationTypes.map((lt: { _id: string }) => [lt._id, lt]));
 
-    const allEnactedLaws = await db
-      .collection<EnactedLaw>("enactedLaws")
+    const allEnactedLaws = await enactedLawsCollection(db)
       .find({ repealedAt: { $exists: false } })
       .toArray();
 
@@ -345,9 +344,7 @@ export async function POST() {
       if (Object.keys(setFields).length > 0) {
         const update: Record<string, unknown> = { $set: setFields };
         if (Object.keys(unsetFields).length > 0) update.$unset = unsetFields;
-        const result = await db
-          .collection<EnactedLaw>("enactedLaws")
-          .updateOne({ _id: law._id }, update);
+        const result = await enactedLawsCollection(db).updateOne({ _id: law._id }, update);
         if (result.modifiedCount > 0) lawsUpdated++;
       }
     }
@@ -357,7 +354,9 @@ export async function POST() {
     let nationalHealed = 0;
 
     // Pre-fetch all legislation types with taxRateChange for rate sync
-    const taxLegTypes = await legislationTypesCollection<import("@/lib/db/types").LegislationType>(db)
+    const taxLegTypes = await legislationTypesCollection<import("@/lib/db/types").LegislationType>(
+      db
+    )
       .find({ taxRateChange: { $exists: true } })
       .toArray();
     const taxTypeByLegId = new Map(taxLegTypes.map((lt) => [lt._id, lt.taxRateChange!.taxType]));
@@ -371,8 +370,7 @@ export async function POST() {
       // Each enacted law with a `rate` field overrides the corresponding budget taxRate.
       const budgetCountryId = (budget.countryId ||
         (budget._id === "federal" ? "US" : budget._id)) as CountryId;
-      const taxEnactedLaws = await db
-        .collection<EnactedLaw>("enactedLaws")
+      const taxEnactedLaws = await enactedLawsCollection(db)
         .find({
           scope: "national",
           countryId: budgetCountryId,

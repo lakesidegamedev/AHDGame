@@ -20,6 +20,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 // GET /api/discord-bot/sync-roles — Returns the Discord roles a user should hold based on their in-game party, office, and investment status.
 // Auth: requireAdminOrApiKey
@@ -47,7 +48,7 @@ export async function GET(request: Request) {
     const db = await getDb();
 
     // Find user by Discord ID
-    const user = await db.collection<User>("users").findOne({ discordId });
+    const user = await usersCollection(db).findOne({ discordId });
     if (!user) {
       return NextResponse.json({ found: false, roles: [] });
     }
@@ -215,8 +216,7 @@ export async function POST(request: Request) {
     const db = await getDb();
 
     // Find all users with Discord linked
-    const linkedUsers = await db
-      .collection<User>("users")
+    const linkedUsers = await usersCollection(db)
       .find({ discordId: { $exists: true, $ne: "" } })
       .project<{ _id: import("mongodb").ObjectId; discordId: string }>({
         _id: 1,

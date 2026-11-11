@@ -78,6 +78,9 @@ import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParti
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { savingsLedgerCollection } from "@/lib/db/repositories/savingsLedger";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
 
 type ViewerCharacter = Character | null;
 
@@ -347,17 +350,14 @@ export async function loadCountryCentralBankDetail(params: {
     fxDocForBreakdown,
     tariffExposureSnapshot,
   ] = await Promise.all([
-    db
-      .collection<GameConfig>("gameConfig")
-      .findOne(
-        { _id: "default" },
-        { projection: { lineOfCreditEnabled: 1, moneySupplyEnabled: 1 } }
-      ),
+    gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { lineOfCreditEnabled: 1, moneySupplyEnabled: 1 } }
+    ),
     nationalDocId
-      ? db.collection<StateMetrics>("macroMetrics").findOne({ _id: nationalDocId })
+      ? macroMetricsCollection(db).findOne({ _id: nationalDocId })
       : Promise.resolve(null),
-    db
-      .collection<CommodityPrice>("commodityPrices")
+    commodityPricesCollection(db)
       .find({}, { projection: { commodity: 1, basePrice: 1, nationalPrices: 1 } })
       .toArray(),
     savingsLedgerCollection(db)

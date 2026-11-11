@@ -16,14 +16,16 @@ import type { CommodityDominanceSector } from "@/lib/corporations/rules/commodit
 import { controlGroupRootByCorpId } from "@/lib/corporations/groups/controlGroups";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 export async function loadGroupDominanceSectorResolver(
   db: Db,
   turn: number
 ): Promise<((corporationId: string) => CommodityDominanceSector[]) | null> {
-  const cfg = await db
-    .collection<{ groupSizeCostsStage?: number }>("gameConfig")
-    .findOne({ _id: "default" as never }, { projection: { groupSizeCostsStage: 1 } });
+  const cfg = await gameConfigCollection<{ groupSizeCostsStage?: number }>(db).findOne(
+    { _id: "default" as never },
+    { projection: { groupSizeCostsStage: 1 } }
+  );
   if ((cfg?.groupSizeCostsStage ?? 0) < GROUP_DOMINANCE_TOLL_STAGE) return null;
   const [corps, sectors] = await Promise.all([
     corporationsCollection(db)

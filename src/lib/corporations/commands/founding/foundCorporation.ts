@@ -67,6 +67,7 @@ import {
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 export type FoundCorporationRequest = z.infer<typeof foundCorporationSchema>;
 
@@ -189,9 +190,10 @@ export async function foundCorporation({
     );
   }
 
-  const founderUser = await db
-    .collection<User>("users")
-    .findOne({ _id: new ObjectId(userId) }, { projection: { lastCorporationFoundedTurn: 1 } });
+  const founderUser = await usersCollection(db).findOne(
+    { _id: new ObjectId(userId) },
+    { projection: { lastCorporationFoundedTurn: 1 } }
+  );
   const cooldownRemaining = foundingCooldownTurnsRemaining(
     founderUser?.lastCorporationFoundedTurn,
     currentTurnAtFounding

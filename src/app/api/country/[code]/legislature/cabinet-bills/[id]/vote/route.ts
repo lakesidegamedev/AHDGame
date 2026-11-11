@@ -13,6 +13,8 @@ import { ObjectId } from "mongodb";
 import type { Bill } from "@/lib/db/types";
 import { z } from "zod";
 import { billsCollection } from "@/lib/db/repositories/bills";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
+import type { Document } from "mongodb";
 
 const cabinetVoteSchema = z.object({
   vote: z.enum(["for", "against"]),
@@ -52,8 +54,11 @@ export async function POST(
     const db = await getDb();
 
     // Find the cabinet bill
-    const bill = await billsCollection(db)
-      .findOne({ _id: new ObjectId(id), countryId, status: "cabinet_review" });
+    const bill = await billsCollection(db).findOne({
+      _id: new ObjectId(id),
+      countryId,
+      status: "cabinet_review",
+    });
     if (!bill) {
       return NextResponse.json(notFound("Cabinet bill not found or not in review").toJson(), {
         status: 404,
@@ -66,7 +71,10 @@ export async function POST(
     const isPM = gov?.pmCharacterId?.toString() === character._id.toString();
 
     const cabinetMember = !isPM
-      ? await db.collection("cabinetMembers").findOne({ characterId: character._id, countryId })
+      ? await cabinetMembersCollection<Document>(db).findOne({
+          characterId: character._id,
+          countryId,
+        })
       : null;
 
     if (!isPM && !cabinetMember) {

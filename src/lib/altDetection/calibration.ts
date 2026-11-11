@@ -2,6 +2,7 @@ import type { Db } from "mongodb";
 import type { AltCluster, AltClusterStatus, AltSignal } from "@/lib/db/types/altDetection";
 import type { GameConfig } from "@/lib/db/types";
 import { DEFAULT_ALT_SCORING_WEIGHTS, resolveAltScoringConfig } from "./config";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /**
  * Confidence calibration.
@@ -380,9 +381,7 @@ export async function computeCalibrationReport(db: Db): Promise<CalibrationRepor
         { projection: { status: 1, confidence: 1, signalSummary: 1 } }
       )
       .toArray(),
-    db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { altScoring: 1 } }),
+    gameConfigCollection(db).findOne({ _id: "default" }, { projection: { altScoring: 1 } }),
   ]);
 
   const { thresholds } = resolveAltScoringConfig(gameConfig?.altScoring);

@@ -53,6 +53,7 @@ import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { savingsLedgerCollection } from "@/lib/db/repositories/savingsLedger";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 
 const SAVINGS_FLOW_WINDOW_TURNS = 12;
 
@@ -191,7 +192,7 @@ export async function loadInflationDiagnostics(
 
     const nationalDocId = getNationalDocId(countryId);
     const nationalMetrics = nationalDocId
-      ? await db.collection<StateMetrics>("macroMetrics").findOne({ _id: nationalDocId })
+      ? await macroMetricsCollection(db).findOne({ _id: nationalDocId })
       : null;
 
     const unemployment = finiteOr(nationalMetrics?.economic?.unemploymentRate?.value, 5.0);

@@ -75,6 +75,7 @@ import { buildSectorDetailPlantsTier } from "./sectorDetailPlantsTier";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 interface RouteParams {
   params: Promise<{ id: string; sectorId: string }>;
@@ -99,7 +100,7 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
       return errorResponse(400, "Invalid sector ID");
     }
 
-    const governorConfig = await db.collection<GameConfig>("gameConfig").findOne(
+    const governorConfig = await gameConfigCollection(db).findOne(
       { _id: "default" },
       {
         projection: {

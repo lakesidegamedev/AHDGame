@@ -5,6 +5,8 @@ import { ObjectId } from "mongodb";
 import { issueUnifiedGameSession } from "@/lib/auth/unifiedGameSession";
 import { getDb } from "@/lib/mongodb";
 import { authConfig } from "@/lib/config/auth";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
 
 function cohortSourceForSubject(subject: string): string | null {
   try {
@@ -73,7 +75,7 @@ export async function GET(request: Request) {
   const sourceId = cohortSourceForSubject(payload.sub);
   if (!sourceId || !ObjectId.isValid(sourceId))
     return NextResponse.redirect(new URL("/login?error=unified_cohort", appOrigin));
-  const user = await db.collection("users").findOne({
+  const user = await usersCollection<Document>(db).findOne({
     _id: new ObjectId(sourceId),
     "authMigrationFence.canonicalAccountId": { $exists: true },
     isBanned: { $ne: true },

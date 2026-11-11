@@ -10,6 +10,7 @@ import { applyPatreonStatus } from "@/lib/patreon/service";
 import { escapeRegex } from "@/lib/utils/escapeRegex";
 import type { Character, User } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 const schema = z
   .object({
@@ -53,7 +54,7 @@ export async function POST(request: Request) {
     let character: Character | null = null;
 
     if (discordId) {
-      user = await db.collection<User>("users").findOne({ discordId });
+      user = await usersCollection(db).findOne({ discordId });
       if (user) {
         character = await charactersCollection(db).findOne({ userId: user._id });
       }
@@ -62,7 +63,7 @@ export async function POST(request: Request) {
         name: { $regex: `^${escapeRegex(name)}$`, $options: "i" },
       });
       if (character) {
-        user = await db.collection<User>("users").findOne({ _id: character.userId });
+        user = await usersCollection(db).findOne({ _id: character.userId });
       }
     }
 

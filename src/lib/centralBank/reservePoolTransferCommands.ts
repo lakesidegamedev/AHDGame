@@ -21,6 +21,7 @@ import {
   type ReservePoolTransferDirection,
 } from "./reservePoolTransfer";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 const COLLECTION = "reservePoolTransferCommands";
 export class ReservePoolTransferRejected extends Error {}
@@ -199,9 +200,10 @@ async function prepare(
       event: { kind: "monetary.executed", command: "monetary.reserve_pool_transfer" },
     },
   };
-  const config = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { auditLog: 1 } });
+  const config = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { auditLog: 1 } }
+  );
   if (isAuditLogEnabledFromConfig(config))
     receipt.audit = prepareAuditRecord(
       {
