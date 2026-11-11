@@ -39,6 +39,7 @@ import { assertKnownSeedPreset } from "@/lib/seeds/presetSelector";
 import { RESET_V2_READY } from "@/lib/resetVersions/availability";
 import { planGameStateRebuild } from "@/lib/admin/resetContract/rules/gameStateRebuild";
 import { applyPreservedFieldContracts } from "@/lib/admin/resetContract/applyPreservedFieldContracts";
+import { purgeOldCatalogueOverrides } from "@/lib/admin/resetContract/purgeOldCatalogueOverrides";
 import { PRESERVED_ACTIVITY_LOG_TYPES } from "@/lib/admin/resetContract/rules/preservedFields";
 import {
   resetSelectionPreflight,
@@ -597,6 +598,9 @@ export async function resetGameWorld(
       .map(([name, count]) => `${name} ${count}`)
       .join(", ")}`
   );
+
+  const purgedOverrides = await purgeOldCatalogueOverrides(db);
+  log(`Removed ${purgedOverrides} saved electorate priorities naming retired law types`);
 
   // ⚠️ LEGACY BRANCH — dead on every real path, and it does NOT seed the world.
   //

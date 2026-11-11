@@ -169,4 +169,18 @@ describe("evaluatePreflight", () => {
     const found = failures(input({ priceIndexCountries: ["US", "UK"] }));
     expect(found.map((f) => f.check)).toEqual(["price-index"]);
   });
+  it("reports retired law types: a warning before the reset, a failure in a fresh world", () => {
+    const oldCatalogue = [
+      { collection: "enactedLaws", id: "a1", lawIds: ["de_minimum_wage"] },
+      { collection: "legislationTypes", id: "cn_ai_strategy", lawIds: ["cn_ai_strategy"] },
+    ];
+    const before = evaluatePreflight(input({ oldCatalogue }));
+    expect(before.map((f) => [f.severity, f.check])).toEqual([
+      ["warn", "old-catalogue"],
+      ["warn", "old-catalogue"],
+    ]);
+    const fresh = failures(input({ mode: "fresh", oldCatalogue }));
+    expect(fresh).toHaveLength(2);
+    expect(fresh[0].detail).toContain("enactedLaws holds 1 document(s) naming retired law types");
+  });
 });

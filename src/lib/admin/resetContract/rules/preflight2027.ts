@@ -111,6 +111,8 @@ export interface PreflightInput {
   legacy: LegacyFieldCounts;
   /** Country ids whose federal budget already carries a stored priceIndex. */
   priceIndexCountries: readonly string[];
+  /** Documents still naming a law type from a retired catalogue. */
+  oldCatalogue?: ReadonlyArray<{ collection: string; id: string; lawIds: readonly string[] }>;
 }
 
 const SAMPLE = 5;
@@ -288,6 +290,30 @@ function priceIndexFindings(input: PreflightInput): PreflightFinding[] {
   ];
 }
 
+function oldCatalogueFindings(input: PreflightInput): PreflightFinding[] {
+  const rows = input.oldCatalogue ?? [];
+  const byCollection = new Map<string, string[]>();
+  for (const row of rows)
+    byCollection.set(row.collection, [...(byCollection.get(row.collection) ?? []), row.id]);
+  const out: PreflightFinding[] = [];
+  for (const [collection, ids] of byCollection) {
+    out.push(
+      input.mode === "fresh"
+        ? {
+            severity: "fail",
+            check: "old-catalogue",
+            detail: `${collection} holds ${ids.length} document(s) naming retired law types in a fresh world: ${sample(ids)}`,
+          }
+        : {
+            severity: "warn",
+            check: "old-catalogue",
+            detail: `${collection} holds ${ids.length} document(s) naming retired law types; the reset replaces them: ${sample(ids)}`,
+          }
+    );
+  }
+  return out;
+}
+
 export function evaluatePreflight(input: PreflightInput): PreflightFinding[] {
   return [
     ...flagFindings(input),
@@ -295,6 +321,7 @@ export function evaluatePreflight(input: PreflightInput): PreflightFinding[] {
     ...seatFindings(input),
     ...legacyFindings(input),
     ...priceIndexFindings(input),
+    ...oldCatalogueFindings(input),
   ];
 }
 
