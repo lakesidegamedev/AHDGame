@@ -30,11 +30,17 @@ beforeEach(() => {
 async function expectDestination(path: string) {
   const response = await GET(request());
   expect(response.status).toBe(307);
-  expect(response.headers.get("location")).toBe(`https://example.com${path}`);
+  expect(response.headers.get("location")).toBe(path);
   expect(response.headers.get("cache-control")).toBe("private, no-store");
 }
 
 describe("GET /api/corporations/mine", () => {
+  it("redirects with a relative location even when the request URL is an internal origin", async () => {
+    const response = await GET(new Request("http://localhost:8080/api/corporations/mine"));
+    expect(response.headers.get("location")).toBe("/corporation/42");
+    expect(response.headers.get("location")).not.toMatch(/^https?:/);
+  });
+
   it("resolves the current company again after a reset or CEO change", async () => {
     await expectDestination("/corporation/42");
     db.collection("corporations").findOne.mockResolvedValue({
