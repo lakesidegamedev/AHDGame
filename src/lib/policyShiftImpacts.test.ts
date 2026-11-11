@@ -13,6 +13,7 @@ import {
 } from "./policyShiftImpacts";
 import { DOMAIN_BUCKET_AFFINITIES } from "./bucketAffinities";
 import { turnoutTargetIdsForCountry } from "./demographics/turnoutTargets";
+import { SHIPPING_PRESETS } from "./world/eraRoster";
 
 describe("getDomainForPolicyDomain", () => {
   it("maps known policy domains correctly", () => {
@@ -170,7 +171,12 @@ describe("DOMAIN_BUCKET_AFFINITIES coverage", () => {
     // exactly how every non-US archetype approval used to be lost.
     const offenders: string[] = [];
     for (const [countryId, table] of Object.entries(DOMAIN_BUCKET_AFFINITIES)) {
-      const valid = turnoutTargetIdsForCountry(countryId);
+      // The default era, or the first era the country's electorate exists in
+      // (Canada has an electorate only in the 2027 world).
+      const valid =
+        [undefined, ...SHIPPING_PRESETS]
+          .map((preset) => turnoutTargetIdsForCountry(countryId, preset))
+          .find((ids) => ids.size > 0) ?? new Set<string>();
       for (const [domain, affinities] of Object.entries(table)) {
         for (const bucketId of Object.keys(affinities)) {
           if (!valid.has(bucketId)) offenders.push(`${countryId}.${domain}: ${bucketId}`);
