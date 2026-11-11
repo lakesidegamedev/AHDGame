@@ -7,13 +7,34 @@ import { createCrisisFromTemplate } from "./createCrisisFromTemplate";
 import { forceSpawnCrisis } from "./autoCrisisSpawn";
 import { legacyDefinitionId } from "./v2/legacyConvert";
 
+function stagesDb(stages = true) {
+  const db = createMockDb();
+  db.collection("gameConfig").findOne.mockResolvedValue({ crisisV2StagesEnabled: stages });
+  return db;
+}
+
 function inserted(db: ReturnType<typeof createMockDb>) {
   return db.collectionMocks.crises.insertOne.mock.calls[0][0];
 }
 
 describe("spawn paths create Crisis v2 instances", () => {
-  it("attaches an instance for a keyed template, firing its first step on the start turn", async () => {
+  it("leaves a crisis on the legacy engine when the stages switch is absent", async () => {
     const db = createMockDb();
+    await createCrisisFromTemplate(db as unknown as Db, {
+      template: ALL_CRISIS_TEMPLATES.banking_crisis as CrisisTemplate,
+      templateKey: "banking_crisis",
+      scope: "country",
+      countryIds: ["US"],
+      regionIds: [],
+      currentTurn: 48,
+    });
+    const crisis = inserted(db);
+    expect(crisis.v2).toBeUndefined();
+    expect(crisis.effects.length).toBeGreaterThan(0);
+  });
+
+  it("attaches an instance for a keyed template, firing its first step on the start turn", async () => {
+    const db = stagesDb();
     await createCrisisFromTemplate(db as unknown as Db, {
       template: ALL_CRISIS_TEMPLATES.banking_crisis as CrisisTemplate,
       templateKey: "banking_crisis",
@@ -34,7 +55,7 @@ describe("spawn paths create Crisis v2 instances", () => {
   });
 
   it("finds the template key by identity when a spawner omits it", async () => {
-    const db = createMockDb();
+    const db = stagesDb();
     await createCrisisFromTemplate(db as unknown as Db, {
       template: ALL_CRISIS_TEMPLATES.recession as CrisisTemplate,
       scope: "country",
@@ -46,7 +67,7 @@ describe("spawn paths create Crisis v2 instances", () => {
   });
 
   it("runs templates built at runtime on the generic definition, at their actual scope", async () => {
-    const db = createMockDb();
+    const db = stagesDb();
     await createCrisisFromTemplate(db as unknown as Db, {
       template: {
         name: "Campaign event",
@@ -70,7 +91,7 @@ describe("spawn paths create Crisis v2 instances", () => {
   });
 
   it("force-spawn passes the key so the crisis gets its own definition", async () => {
-    const db = createMockDb();
+    const db = stagesDb();
     db.collection("crisisAutoCooldowns").find.mockReturnValue({
       toArray: async () => [],
     });

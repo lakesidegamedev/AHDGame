@@ -21,9 +21,10 @@ import { getCharactersCollection } from "@/lib/db/collections/characters";
 import { getNppsCollection } from "@/lib/db/collections/npps";
 import { getStatesCollection } from "@/lib/db/collections/states";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
+import { isLiveWorldSwitchOn } from "@/lib/gameConfig/liveWorldSwitches";
 import { campaignAnchorToLocal, campaignLocalRate } from "@/lib/campaigns/campaignCurrency";
 import {
-  nationalGdpPerCapitaIndex,
+  campaignGdpPerCapitaIndex,
   requireNationalGdpPerCapita,
 } from "@/lib/campaigns/rules/gdpBaseline";
 import type { ObjectId } from "mongodb";
@@ -69,12 +70,13 @@ export async function processCaucusTax(
   // GDP-baseline era for income math: the world's reset preset, so historical
   // worlds tax against their own denomination (issue #798).
   const preset = await getGameStatePresetOrDefault(db);
-  const nationalGdpIndex = nationalGdpPerCapitaIndex(
+  const nationalGdpIndex = campaignGdpPerCapitaIndex(
     await (
       await getStatesCollection(db)
     )
       .find({}, { projection: { countryId: 1, gdp: 1, population: 1 } })
-      .toArray()
+      .toArray(),
+    { live: await isLiveWorldSwitchOn(db, "campaignLiveGdpBasisEnabled"), preset }
   );
 
   const taxedCaucuses = await caucusesCollection(db)

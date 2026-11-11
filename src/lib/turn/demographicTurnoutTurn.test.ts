@@ -554,6 +554,8 @@ describe("demographicTurnoutTurn", () => {
 
     it("does not mix same sequential party ids across countries when computing national GOTV spend", async () => {
       const db: MockDb = createMockDb();
+      // Live GDP basis; the era-table basis prices this spend at 75.
+      db.collection("gameConfig").findOne.mockResolvedValue({ campaignLiveGdpBasisEnabled: true });
       const { getDb } = await import("@/lib/mongodb");
       vi.mocked(getDb).mockResolvedValue(db as unknown as Db);
 

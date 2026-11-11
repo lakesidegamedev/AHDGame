@@ -11,7 +11,7 @@ import type {
 import { projectCharacterGeneration, calculateTaxAmount } from "@/lib/utils/fundGeneration";
 import { resolveCampaignPriceLevel } from "@/lib/campaigns/rules/priceLevel";
 import {
-  nationalGdpPerCapitaIndex,
+  campaignGdpPerCapitaIndex,
   requireNationalGdpPerCapita,
 } from "@/lib/campaigns/rules/gdpBaseline";
 import { campaignAnchorToLocal } from "@/lib/campaigns/campaignCurrency";
@@ -66,7 +66,7 @@ export async function processFundGeneration(
       const preset = await getGameStatePresetOrDefault(db);
       const gameConfig = await gameConfigCollection(db).findOne(
         { _id: "default" },
-        { projection: { campaignEraPriceLevelEnabled: 1 } }
+        { projection: { campaignEraPriceLevelEnabled: 1, campaignLiveGdpBasisEnabled: 1 } }
       );
       const priceLevel = resolveCampaignPriceLevel(
         gameConfig?.campaignEraPriceLevelEnabled,
@@ -77,7 +77,10 @@ export async function processFundGeneration(
         preloadedStateMap ??
         new Map((await (await getStatesCollection(db)).find({}).toArray()).map((s) => [s._id, s]));
 
-      const nationalGdpIndex = nationalGdpPerCapitaIndex(stateMap.values());
+      const nationalGdpIndex = campaignGdpPerCapitaIndex(stateMap.values(), {
+        live: gameConfig?.campaignLiveGdpBasisEnabled === true,
+        preset,
+      });
 
       // Use composite keys to avoid cross-country sequential ID collisions
       const parties = await politicalPartiesCollection<PoliticalPartyType>(db).find({}).toArray();

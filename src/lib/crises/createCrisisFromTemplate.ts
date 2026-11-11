@@ -1,3 +1,4 @@
+import { isLiveWorldSwitchOn } from "@/lib/gameConfig/liveWorldSwitches";
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import type { Crisis, CrisisEffect, CrisisTemplate } from "@/lib/db/types/crisis";
@@ -106,17 +107,21 @@ export async function createCrisisFromTemplate(
     autoSource: params.autoSource,
     interactionDefinition: template.interactionDefinition,
     globalResponse: params.globalResponse ?? template.globalResponse,
-    // Every crisis created here runs on Crisis v2. The first step lands on the
-    // start turn so start-turn effects fire when the crisis is spawned ahead of
-    // the crisis phase.
-    v2: createCrisisInstance(
-      legacyDefinitionForTemplate(template, params.templateKey),
-      currentTurn,
-      {
-        scope: V2_SCOPE_BY_CRISIS_SCOPE[scope],
-        evaluateOnStart: true,
-      }
-    ),
+    // With the stages switch on, the crisis runs on Crisis v2. The first step
+    // lands on the start turn so start-turn effects fire when the crisis is
+    // spawned ahead of the crisis phase. Off, the legacy engine runs it.
+    ...((await isLiveWorldSwitchOn(db, "crisisV2StagesEnabled"))
+      ? {
+          v2: createCrisisInstance(
+            legacyDefinitionForTemplate(template, params.templateKey),
+            currentTurn,
+            {
+              scope: V2_SCOPE_BY_CRISIS_SCOPE[scope],
+              evaluateOnStart: true,
+            }
+          ),
+        }
+      : {}),
     ...(template.opportunity === true ? { opportunity: true } : {}),
     ...(livingConflictEventId !== undefined ? { livingConflictEventId } : {}),
   };

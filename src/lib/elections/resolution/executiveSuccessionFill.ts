@@ -43,6 +43,8 @@ import {
 } from "@/lib/elections/rules/successionFill";
 import { vacateNonExecutiveOfficesForExecutive } from "@/lib/elections/vacateOfficesForExecutive";
 import { processSuccessions } from "@/lib/elections/resolution/executiveSuccession";
+import { processPresidentialSuccession } from "@/lib/turn/presidentialSuccession";
+import { isLiveWorldSwitchOn } from "@/lib/gameConfig/liveWorldSwitches";
 import { buildNewLeaderState } from "@/lib/turn/rulingPartyConfidence";
 import type { CountryLeaderState } from "@/lib/db/types/countryLeaderState";
 import { logger } from "@/lib/observability/logger";
@@ -468,6 +470,12 @@ export async function processSuccessionsAndFills(
   currentTurn: number,
   now: Date
 ): Promise<void> {
+  if (!(await isLiveWorldSwitchOn(db, "executiveSuccessionEnabled"))) {
+    // A world seeded before the succession watcher keeps the US
+    // President-to-VP succession it always had.
+    await processPresidentialSuccession(db);
+    return;
+  }
   await processSuccessions(db, currentTurn, now);
   await processSuccessionFills(db, currentTurn, now);
 }

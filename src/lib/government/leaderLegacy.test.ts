@@ -14,12 +14,18 @@ type Row = Record<string, unknown>;
 
 const LEADER = new ObjectId();
 
-function world(opts: { legacies?: Row[]; policies?: Row[]; crises?: Row[] } = {}) {
+function world(
+  opts: { legacies?: Row[]; policies?: Row[]; crises?: Row[]; legacyEnabled?: boolean } = {}
+) {
   const legacies: Row[] = opts.legacies ?? [];
   const crisisFind = vi.fn((_filter: Row) => ({ toArray: vi.fn(async () => opts.crises ?? []) }));
   const db = {
     collection: vi.fn((name: string) => {
       switch (name) {
+        case "gameConfig":
+          return {
+            findOne: vi.fn(async () => ({ leaderLegacyEnabled: opts.legacyEnabled ?? true })),
+          };
         case "leaderLegacies":
           return {
             findOne: vi.fn(
@@ -70,6 +76,13 @@ const departure = {
 beforeEach(() => vi.clearAllMocks());
 
 describe("recordLeaderDeparture", () => {
+  it("records nothing on a world whose leader legacy switch is off", async () => {
+    const w = world({ legacyEnabled: false });
+    expect(await recordLeaderDeparture(w.db, departure)).toBeNull();
+    expect(w.legacies).toHaveLength(0);
+    expect(createSystemNewsPost).not.toHaveBeenCalled();
+  });
+
   it("scores the term from approval and laws, stores it, and posts a news line", async () => {
     const policies = Array.from({ length: 12 }, (_, i) => ({
       _id: new ObjectId(),

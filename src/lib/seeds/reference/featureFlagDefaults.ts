@@ -116,6 +116,10 @@ export const FRESH_WORLD_GAME_CONFIG_FLAGS = {
   priceLevelEnabled: true,
   fiscalStabilizerEnabled: true,
   crisisV2EmergentEnabled: true,
+  crisisV2StagesEnabled: true,
+  executiveSuccessionEnabled: true,
+  leaderLegacyEnabled: true,
+  campaignLiveGdpBasisEnabled: true,
 } as const satisfies Partial<GameConfig>;
 
 export type FreshWorldGameConfigFlagKey = keyof typeof FRESH_WORLD_GAME_CONFIG_FLAGS;
