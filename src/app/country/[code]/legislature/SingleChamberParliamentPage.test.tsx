@@ -78,7 +78,9 @@ describe("SingleChamberParliamentPage", () => {
     await showLeadership("SCO", "Scottish Parliament");
     expect(screen.getByText(/129 MSPs · Additional Member System/)).toBeTruthy();
     await waitFor(() =>
-      expect(screen.getByText(/The First Minister is nominated by Scottish Parliament/)).toBeTruthy()
+      expect(
+        screen.getByText(/The First Minister is nominated by Scottish Parliament/)
+      ).toBeTruthy()
     );
   });
 });

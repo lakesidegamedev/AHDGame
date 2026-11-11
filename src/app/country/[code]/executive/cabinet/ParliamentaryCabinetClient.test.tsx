@@ -74,7 +74,11 @@ describe("ParliamentaryCabinetClient", () => {
 
   it.each([
     ["CA", "Cabinet of Canada", "Parliament Hill · Ministers appointed by the Prime Minister"],
-    ["QC", "Executive Council of Quebec", "Parliament Building · Ministers appointed by the Premier"],
+    [
+      "QC",
+      "Executive Council of Quebec",
+      "Parliament Building · Ministers appointed by the Premier",
+    ],
   ] as const)("renders the %s cabinet from config", async (country, title, tagline) => {
     mockFetch([]);
     const config = PARLIAMENTARY_CABINET_CONFIGS[country];
