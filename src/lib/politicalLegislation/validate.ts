@@ -6,8 +6,8 @@ import { incomeTierForTaxKey } from "@/lib/budget/rules/incomeTaxTiers";
  */
 
 import { POLITICAL_METRIC_FAMILIES } from "../politicalMetrics/families";
-import { SEED_TAX_RATES_1953, type SeedTaxType } from "./seedTaxRates";
-import type { LawCountryId, LawLevel, PoliticalLaw } from "./types";
+import { SEED_TAX_RATES_1953, SEED_TAX_RATES_PENDING, type SeedTaxType } from "./seedTaxRates";
+import type { CostAnchorCountryId, LawCountryId, LawLevel, PoliticalLaw } from "./types";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 const GDP_FRACTION_MAX = 0.12;
@@ -53,7 +53,7 @@ function copyErrors(law: PoliticalLaw): string[] {
   return errors;
 }
 
-function levelFractionErrors(law: PoliticalLaw, countryId: LawCountryId): string[] {
+function levelFractionErrors(law: PoliticalLaw, countryId: CostAnchorCountryId): string[] {
   const errors: string[] = [];
   const levels = law.levels ?? [];
   // RU and DD front-load plan investment through the infrastructure category
@@ -91,12 +91,15 @@ function levelFractionErrors(law: PoliticalLaw, countryId: LawCountryId): string
   return errors;
 }
 
-export function validateCatalog(laws: PoliticalLaw[], countryId: LawCountryId): string[] {
+export function validateCatalog(laws: PoliticalLaw[], countryId: CostAnchorCountryId): string[] {
   const errors: string[] = [];
   const cc = countryId.toLowerCase();
   const metricIds = POLITICAL_METRIC_FAMILIES.map((f) => f.id);
   const metricIdSet = new Set<string>(metricIds);
-  const seedRates = SEED_TAX_RATES_1953[countryId];
+  const seedRates: Record<string, number> =
+    SEED_TAX_RATES_1953[countryId as LawCountryId] ??
+    SEED_TAX_RATES_PENDING[countryId as keyof typeof SEED_TAX_RATES_PENDING] ??
+    {};
 
   // Id uniqueness + prefix/country consistency
   const seen = new Set<string>();
