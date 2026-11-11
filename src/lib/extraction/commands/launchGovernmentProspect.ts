@@ -23,6 +23,7 @@ import {
   PROSPECT_MAX_ACTIVE_PER_INITIATOR,
   prospectCostAnchor,
 } from "@/lib/constants/prospecting";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 export interface GovernmentProspectCosts {
   costAnchor: number;
@@ -109,8 +110,7 @@ export async function launchGovernmentProspect(
   let fundedPaymentKey = fundedClaim?.fundingKey;
   let fundedSurveyId = fundedClaim?._id;
   if (fundedClaim && fundedPaymentKey) {
-    const prior = await db
-      .collection<{ _id: string }>("bankMoneyMoves")
+    const prior = await bankMoneyMovesCollection<{ _id: string }>(db)
       .findOne({ _id: fundedPaymentKey }, { projection: { _id: 1 } });
     if (prior) {
       const resumed = await resumeSettlement(db, fundedPaymentKey);

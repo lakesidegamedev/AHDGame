@@ -19,6 +19,12 @@ export const FRONT_DOOR_COLLECTIONS = [
   "bonds",
   "centralBanks",
   "financialTxLog",
+  "bankLoans",
+  "interbankLoans",
+  "savingsAccounts",
+  "savingsLedger",
+  "ledgerEntries",
+  "bankMoneyMoves",
 ] as const;
 
 export const UNTYPED = "untyped";

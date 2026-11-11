@@ -24,6 +24,7 @@ import {
   type NppReinvestmentCashWitness,
 } from "./reinvestmentCashLedger";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { ledgerEntriesCollection } from "@/lib/db/repositories/ledgerEntries";
 
 export interface NppFoundingCashWitness {
   corporationId: ObjectId;
@@ -163,7 +164,7 @@ export async function flushNppFoundingCashWitnesses(
       (row) => keys.get(row.corporationId.toHexString()) === row.key.toHexString()
     );
     if (landed.length === 0) return;
-    await db.collection<LedgerEntry>("ledgerEntries").bulkWrite(
+    await ledgerEntriesCollection(db).bulkWrite(
       landed.map((row) => ({
         updateOne: {
           filter: { _id: row.key },

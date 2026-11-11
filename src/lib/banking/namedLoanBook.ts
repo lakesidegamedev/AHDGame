@@ -33,6 +33,7 @@ import {
 } from "@/lib/banking/loanServiceBatch";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
 
 export type LoanServiceResult = {
   interestCollected: number;
@@ -258,8 +259,7 @@ export async function serviceNamedLoanBook(
     replayed: false,
     partial: false,
   };
-  const loans = await db
-    .collection<BankLoan>("bankLoans")
+  const loans = await bankLoansCollection(db)
     .find({
       bankCorporationId: corp._id,
       borrowerType: { $in: ["character", "corporation"] },
@@ -504,7 +504,7 @@ export async function serviceNamedLoanBook(
 
   async function serviceConstructionBatch(candidates: readonly BankLoan[]): Promise<BankLoan[]> {
     const key = `loan-service-construction-batch:${corp._id.toString()}:${turn}`;
-    const bankLoans = db.collection<BankLoan>("bankLoans");
+    const bankLoans = bankLoansCollection(db);
     // The lease is taken first and names every candidate, and the locks are
     // released before it. Recovery finds a batch only through its lease, so no
     // crash between the two can leave a batch-key lock nobody can clear.

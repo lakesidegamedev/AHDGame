@@ -56,6 +56,8 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
+import { interbankLoansCollection } from "@/lib/db/repositories/interbankLoans";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -302,8 +304,7 @@ async function handleGET(_request: Request, { params }: RouteParams) {
     // even though the turn and the charter's own totalLoans ignore them.
     const loans =
       hasActiveCharter && charter
-        ? await db
-            .collection<BankLoan>("bankLoans")
+        ? await bankLoansCollection(db)
             .find({
               bankCorporationId: corporation._id,
               ...loanCharterEpochFilter(charter.charteredTurn),
@@ -315,8 +316,7 @@ async function handleGET(_request: Request, { params }: RouteParams) {
 
     const interbankLoans =
       hasActiveCharter && propTradingEnabled
-        ? await db
-            .collection<InterbankLoan>("interbankLoans")
+        ? await interbankLoansCollection(db)
             .find({
               $or: [
                 { lenderCorporationId: corporation._id },

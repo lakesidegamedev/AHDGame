@@ -41,6 +41,8 @@ import {
 } from "@/lib/banking/rules/solvency";
 import { getCorporationsCollection } from "@/lib/db/collections/corporations";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
+import { interbankLoansCollection } from "@/lib/db/repositories/interbankLoans";
 
 // Defined in the rules zone; re-exported for the turn's tests and dashboards.
 export { CONTAGION_PANIC_TURNS, FLIGHT_RATE_BY_BAND, RUN_FAILURE_COVER_FRACTION };
@@ -639,7 +641,7 @@ async function writeOffLenderSideInterbankOnFailure(
   failedCorpId: ObjectId,
   turn: number
 ): Promise<void> {
-  await db.collection<InterbankLoan>("interbankLoans").updateMany(
+  await interbankLoansCollection(db).updateMany(
     {
       lenderCorporationId: failedCorpId,
       status: "current",
@@ -666,8 +668,7 @@ async function sumLoanOutstanding(
   if (filter.lastProcessedTurn !== undefined) {
     match.lastProcessedTurn = filter.lastProcessedTurn;
   }
-  const rows = await db
-    .collection<BankLoan>("bankLoans")
+  const rows = await bankLoansCollection(db)
     .aggregate<{ total: number }>([
       { $match: match },
       { $group: { _id: null, total: { $sum: "$outstanding" } } },
@@ -682,8 +683,7 @@ async function sumInterbankDefaultsLastTurn(
   lenderCorporationId: ObjectId,
   turn: number
 ): Promise<number> {
-  const rows = await db
-    .collection<InterbankLoan>("interbankLoans")
+  const rows = await interbankLoansCollection(db)
     .aggregate<{ total: number }>([
       {
         $match: {

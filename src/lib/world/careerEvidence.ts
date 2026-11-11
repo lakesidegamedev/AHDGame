@@ -1,5 +1,6 @@
 import { ObjectId, type Db } from "mongodb";
 import { getContestRoundsCollection } from "@/lib/contests/collection";
+import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
 
 /** Durable enacted laws only. Drafts, failed bills and staff overrides earn no credit. */
 export async function loadCareerLegislation(
@@ -99,8 +100,7 @@ export async function archiveRetiredCareerLegislation(
 }
 
 export async function loadCareerLoans(db: Db, characterIds?: readonly ObjectId[]) {
-  return db
-    .collection<import("@/lib/db/types/bank").BankLoan>("bankLoans")
+  return bankLoansCollection<import("@/lib/db/types/bank").BankLoan>(db)
     .find(
       {
         borrowerType: "character",

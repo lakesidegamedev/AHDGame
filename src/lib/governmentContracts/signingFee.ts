@@ -23,6 +23,7 @@ import {
 import { signingFeeCredit } from "./rules/signingFee";
 import { ContractError } from "./eligibility";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 const logId = (key: string) => oid(createHash("sha256").update(key).digest("hex").slice(0, 24));
 export async function settleTenderSigningFee(
   db: Db,
@@ -43,8 +44,7 @@ export async function settleTenderSigningFee(
     if (!contract.signingFeeAttemptKey)
       throw new Error("Tender signing fee is missing its frozen settlement identity.");
     const key = "extraction-signing-fee:" + contract.signingFeeAttemptKey;
-    const prior = await db
-      .collection<{ _id: string }>("bankMoneyMoves")
+    const prior = await bankMoneyMovesCollection<{ _id: string }>(db)
       .findOne({ _id: key }, { projection: { _id: 1 } });
     let result;
     if (prior) result = await resumeSettlement(db, key);

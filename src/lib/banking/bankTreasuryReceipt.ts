@@ -29,6 +29,7 @@ import {
 } from "./bankTreasuryShared";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 export function reserveTransition(
   receipt: BankTreasuryTradeReceipt,
@@ -781,11 +782,9 @@ export async function runReceipt(
     charter.charteredTurn === receipt.charteredTurn &&
     charter.depositorsResolvedTurn == null;
   if (!exactActive && (receipt.side === "buy" || !sameOpenEstate || !receipt.resolutionSale)) {
-    const reserveRecord = await db
-      .collection<{ _id: string; status?: string }>("bankMoneyMoves")
+    const reserveRecord = await bankMoneyMovesCollection<{ _id: string; status?: string }>(db)
       .findOne({ _id: `bank-treasury:${receipt._id}:reserve` }, { projection: { status: 1 } });
-    const cashRecord = await db
-      .collection<{ _id: string; status?: string }>("bankMoneyMoves")
+    const cashRecord = await bankMoneyMovesCollection<{ _id: string; status?: string }>(db)
       .findOne({ _id: `bank-treasury:${receipt._id}:cash` }, { projection: { status: 1 } });
     if (reserveRecord && !cashRecord) {
       // A reservation may have landed before its journal acknowledgement.

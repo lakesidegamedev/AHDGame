@@ -12,6 +12,8 @@ import { TurnMustStopError } from "@/lib/turn/turnMustStop";
 import { planCorporateTaxPriority } from "./rules/corporateTaxPriority";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { ledgerEntriesCollection } from "@/lib/db/repositories/ledgerEntries";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 const idFor = (value: string) =>
   new ObjectId(createHash("sha256").update(value).digest("hex").slice(0, 24));
 
@@ -56,8 +58,7 @@ async function settleCorporateTaxPriorityBatch(
         (row) =>
           `corporate-tax-priority:${turn}:${row.corpId}${source === "dividend" ? ":dividend" : ""}`
       );
-      const prior = await db
-        .collection<{ _id: string }>("bankMoneyMoves")
+      const prior = await bankMoneyMovesCollection<{ _id: string }>(db)
         .find({ _id: { $in: keys } }, { session, projection: { _id: 1 } })
         .toArray();
       const done = new Set(prior.map((row) => row._id));
@@ -283,12 +284,12 @@ async function settleCorporateTaxPriorityBatch(
           throw new Error("Corporate distribution recipient unavailable");
       }
       if (ledger.length)
-        await db.collection("ledgerEntries").bulkWrite(
+        await ledgerEntriesCollection<Document>(db).bulkWrite(
           ledger.map((document) => ({ insertOne: { document } })),
           { session }
         );
       if (receipts.length)
-        await db.collection("bankMoneyMoves").bulkWrite(
+        await bankMoneyMovesCollection<Document>(db).bulkWrite(
           receipts.map((document) => ({ insertOne: { document } })),
           { session }
         );

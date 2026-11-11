@@ -135,6 +135,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import type { Document } from "mongodb";
+import { ledgerEntriesCollection } from "@/lib/db/repositories/ledgerEntries";
 
 /** Owner decision 2026-10-18: households open with about 3 turns of wages. */
 export const HOUSEHOLD_OPENING_APPROVAL = "owner 2026-10-18: household opening cash about 3 turns";
@@ -476,8 +477,7 @@ export async function runFundedProducerTurn(
         });
     }
     if (entries.length > 0)
-      await db
-        .collection<LedgerEntry>("ledgerEntries")
+      await ledgerEntriesCollection(db)
         .insertMany(entries, { ordered: false })
         .catch((error: unknown) => {
           // Duplicate ids are replays already witnessed; anything else is real.

@@ -5,6 +5,9 @@ import type { SavingsAccount } from "@/lib/db/types/savingsAccount";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
+import { interbankLoansCollection } from "@/lib/db/repositories/interbankLoans";
+import { savingsAccountsCollection } from "@/lib/db/repositories/savingsAccounts";
 
 export type TransferBankCharterResult =
   | {
@@ -214,26 +217,22 @@ async function rekeySatellites(
   const destHex = destId.toString();
   const holderPath = `currencyBalances.savingsHolder.${currency}` as const;
 
-  const loans = await db
-    .collection<BankLoan>("bankLoans")
+  const loans = await bankLoansCollection(db)
     .updateMany(
       { bankCorporationId: targetId },
       { $set: { bankCorporationId: destId, updatedAt: now } }
     );
-  const interbankLent = await db
-    .collection<InterbankLoan>("interbankLoans")
+  const interbankLent = await interbankLoansCollection(db)
     .updateMany(
       { lenderCorporationId: targetId },
       { $set: { lenderCorporationId: destId, updatedAt: now } }
     );
-  const interbankBorrowed = await db
-    .collection<InterbankLoan>("interbankLoans")
+  const interbankBorrowed = await interbankLoansCollection(db)
     .updateMany(
       { borrowerCorporationId: targetId },
       { $set: { borrowerCorporationId: destId, updatedAt: now } }
     );
-  const accounts = await db
-    .collection<SavingsAccount>("savingsAccounts")
+  const accounts = await savingsAccountsCollection(db)
     .updateMany(
       { holder: targetHex, status: { $ne: "closed" } },
       { $set: { holder: destHex, updatedAt: now } }

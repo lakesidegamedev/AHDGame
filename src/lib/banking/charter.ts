@@ -31,6 +31,7 @@ import { depositBookReturnKey } from "@/lib/banking/depositBookReturn";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
 
 /**
  * Charter capital as a multiple of the corporation founding cost.
@@ -322,8 +323,7 @@ async function issueCharterInner(
   }
   // Seed the counter from only this charter's current/arrears epoch, not a
   // stale charter counter. Pending requests and terminal loans are not exposure.
-  const survivingLoans = await db
-    .collection<BankLoan>("bankLoans")
+  const survivingLoans = await bankLoansCollection(db)
     .find(
       {
         bankCorporationId: corporationId,

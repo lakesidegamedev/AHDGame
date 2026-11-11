@@ -20,6 +20,7 @@ import {
 } from "@/lib/banking/settlementJournal";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 export interface OrganizationCashContext {
   turn: number;
@@ -93,7 +94,7 @@ export async function settleOrganizationFundedCashMove(
   if (!context.treasuryCashLedgerEnabled) {
     throw new Error("Funded organization cash move requires the cash-ledger policy");
   }
-  const journal = db.collection<{ _id: string }>("bankMoneyMoves");
+  const journal = bankMoneyMovesCollection<{ _id: string }>(db);
   if (await journal.findOne({ _id: input.key }, { projection: { _id: 1 } })) {
     return resumeSettlement(db, input.key);
   }

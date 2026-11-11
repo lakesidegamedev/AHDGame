@@ -30,6 +30,9 @@ import { ensureCentralBankPricingPhaseIn } from "@/lib/monetaryPolicy/centralBan
 import { getCharactersCollection } from "@/lib/db/collections/characters";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { savingsAccountsCollection } from "@/lib/db/repositories/savingsAccounts";
+import type { Document } from "mongodb";
+import { savingsLedgerCollection } from "@/lib/db/repositories/savingsLedger";
 
 const DEFAULT_PRIME = 2.5;
 
@@ -216,7 +219,7 @@ export async function processSavingsInterestTurn(
       await charactersCollection(db).bulkWrite(accrualOps);
     }
     if (accountAccrualOps.length > 0) {
-      await db.collection("savingsAccounts").bulkWrite(accountAccrualOps);
+      await savingsAccountsCollection<Document>(db).bulkWrite(accountAccrualOps);
     }
 
     // Write national savings balances to centralBanks for inflationRecalc to read.
@@ -354,7 +357,7 @@ export async function processSavingsInterestTurn(
         await bookCentralBankInterestCreation(db, interestPaidByCountry);
       }
       if (ledgerBatch.length > 0) {
-        await db.collection("savingsLedger").insertMany(ledgerBatch);
+        await savingsLedgerCollection<Document>(db).insertMany(ledgerBatch);
 
         // Emit savings_interest tx log entries for each quarterly credit
         const thresholds = await loadTxThresholds(db);
@@ -480,7 +483,7 @@ export async function processSavingsInterestTurn(
     ledgerBatch[index].balanceAfter -= credit.gross - credit.net;
   await bookCentralBankInterestCreation(db, legacyInterestByCountry);
   if (ledgerBatch.length > 0) {
-    await db.collection("savingsLedger").insertMany(ledgerBatch);
+    await savingsLedgerCollection<Document>(db).insertMany(ledgerBatch);
 
     // Emit savings_interest tx log entries (legacy path — per-turn credit)
     const thresholds = await loadTxThresholds(db);

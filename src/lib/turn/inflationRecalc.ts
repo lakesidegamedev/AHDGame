@@ -56,6 +56,8 @@ import {
 import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
 import { getGameStateCollection } from "@/lib/db/collections/gameState";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { savingsLedgerCollection } from "@/lib/db/repositories/savingsLedger";
+import type { Document } from "mongodb";
 
 export interface InflationRecalcOptions {
   /**
@@ -247,8 +249,7 @@ export async function runInflationRecalc(
       .toArray(),
     // 12-turn rolling savings flows. countryId on ledger entries reflects currency jurisdiction,
     // matching nationalSavingsBalance on centralBanks (both keyed by currency, not character nationality).
-    db
-      .collection("savingsLedger")
+    savingsLedgerCollection<Document>(db)
       .aggregate<{ _id: { countryId: string; type: string }; total: number }>([
         {
           $match: {

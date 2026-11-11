@@ -3,6 +3,8 @@ import { ObjectId } from "mongodb";
 import type { SavingsLedgerEntry, SavingsLedgerType } from "@/lib/db/types/savingsLedger";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { getCountryIdForCurrency } from "@/lib/constants/currencies";
+import { savingsLedgerCollection } from "@/lib/db/repositories/savingsLedger";
+import type { Document } from "mongodb";
 
 export async function insertSavingsLedgerEntry(
   db: Db,
@@ -25,7 +27,7 @@ export async function insertSavingsLedgerEntry(
     turn: params.turn,
     createdAt: new Date(),
   };
-  await db.collection("savingsLedger").insertOne(doc);
+  await savingsLedgerCollection<Document>(db).insertOne(doc);
 }
 
 export async function fetchSavingsLedgerForCharacter(
@@ -43,8 +45,7 @@ export async function fetchSavingsLedgerForCharacter(
   if (currencyCode) {
     filter.currencyCode = currencyCode;
   }
-  const rows = await db
-    .collection<SavingsLedgerEntry>("savingsLedger")
+  const rows = await savingsLedgerCollection(db)
     .find(filter)
     .sort({ createdAt: -1 })
     .limit(limit)

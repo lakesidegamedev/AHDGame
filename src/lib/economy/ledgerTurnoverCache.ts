@@ -1,6 +1,7 @@
 import type { Db } from "mongodb";
 import type { LedgerEntry } from "@/lib/ledger/types";
 import type { LedgerTurnoverRow } from "./economicVitalSigns";
+import { ledgerEntriesCollection } from "@/lib/db/repositories/ledgerEntries";
 
 /**
  * Per-turn, per-account primary-leg turnover for completed turns, so the
@@ -49,7 +50,7 @@ export async function loadLedgerTurnover(
   for (let t = windowStart; t < liveFrom; t++) cachedTurns.push(t);
 
   const cache = db.collection<LedgerTurnoverByTurnDoc>(LEDGER_TURNOVER_BY_TURN_COLLECTION);
-  const ledger = db.collection<LedgerEntry>("ledgerEntries");
+  const ledger = ledgerEntriesCollection(db);
   const [live, cached] = await Promise.all([
     ledger
       .aggregate<{

@@ -15,6 +15,7 @@ import { settlePriorCorporateCashArrears } from "./cashArrears";
 import { KeyedQueue, interleaveByKey, runInLanes } from "@/lib/turn/settlementLanes";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 export { interleaveByKey };
 
@@ -200,7 +201,7 @@ export async function settleCorporateOperatingCash(
   return withBankingTelemetryBatch(db, turn, async () => {
     // Old claimed protocols retain their exact receipts; new turns never expose
     // gross modeled earnings or let prior payables consume current withholding.
-    const legacy = await db.collection<{ _id: string }>("bankMoneyMoves").findOne(
+    const legacy = await bankMoneyMovesCollection<{ _id: string }>(db).findOne(
       {
         $or: [
           { _id: { $regex: `^corp-operating-cash:${turn}:` } },
@@ -232,10 +233,10 @@ export async function settleCorporateOperatingCashLegacy(
   }
 
   const ids = snapshots.map((snapshot) => snapshot.corpId);
-  const journals = db.collection<{
+  const journals = bankMoneyMovesCollection<{
     _id: string;
     event?: { meta?: Record<string, unknown> };
-  }>("bankMoneyMoves");
+  }>(db);
   const keys = snapshots.flatMap((snapshot) => {
     const base = `corp-operating-cash:${turn}:${snapshot.corpId.toString()}`;
     return [base, `${base}:net`, `${base}:gross`, `${base}:tax`, `${base}:arrears`];

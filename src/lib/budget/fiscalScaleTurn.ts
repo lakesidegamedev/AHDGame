@@ -28,6 +28,7 @@ import {
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import type { Document } from "mongodb";
+import { ledgerEntriesCollection } from "@/lib/db/repositories/ledgerEntries";
 
 type ScaleBudget = Pick<
   FederalBudget,
@@ -244,8 +245,7 @@ export async function collectFiscalTaxes(
       });
   }
   if (entries.length > 0)
-    await db
-      .collection<LedgerEntry>("ledgerEntries")
+    await ledgerEntriesCollection(db)
       .insertMany(entries, { ordered: false })
       .catch((error: unknown) => {
         // Duplicate ids are replays already witnessed; anything else is real.

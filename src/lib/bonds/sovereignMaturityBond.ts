@@ -33,6 +33,7 @@ import type { SovereignMaturityPlan } from "@/lib/bonds/sovereignMaturityWave";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 export interface SovereignBondMaturitySettlementInput {
   db: Db;
@@ -251,7 +252,7 @@ async function fundBankMaturityClaims(
   if (unfunded.length === 0) return null;
   // A funding attempt a crash left half-applied is finished first; the sweep
   // resumes it under the same prefix, and opening another would double fund.
-  const open = await db.collection<{ _id: string }>("bankMoneyMoves").countDocuments({
+  const open = await bankMoneyMovesCollection<{ _id: string }>(db).countDocuments({
     $or: unfunded.map((claim) => ({ _id: { $regex: `^${escapeRegex(claim.id)}:funding:` } })),
     status: "partial",
   });

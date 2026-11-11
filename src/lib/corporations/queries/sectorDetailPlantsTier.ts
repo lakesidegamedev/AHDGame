@@ -83,6 +83,7 @@ import type { EffectiveStrategyRates } from "@/lib/constants/sectorStrategies";
 import type { StateMetricMarginContribution } from "@/lib/corporations/stateMetricMarginTypes";
 import type { OwnershipMarginTerms } from "@/lib/nationalization/ownershipMarginTerms";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
 
 /** Builds the plants-tier view: capacity, own supply and freight. Null below plants. */
 export async function buildSectorDetailPlantsTier({
@@ -614,7 +615,7 @@ export async function buildSectorDetailPlantsTier({
     // Existing debt needs a repayment budget, which this operating scenario
     // does not model. Do not offer automatic sizing for an indebted company.
     const [activeLoan, activeBond] = await Promise.all([
-      db.collection<BankLoan>("bankLoans").findOne(
+      bankLoansCollection(db).findOne(
         {
           borrowerType: "corporation",
           borrowerId: corporation._id,

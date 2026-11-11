@@ -16,6 +16,7 @@ import type { LedgerEntry } from "@/lib/ledger/types";
 import type { NppCorpUpdateOp } from "./nppCashWrite";
 import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { ledgerEntriesCollection } from "@/lib/db/repositories/ledgerEntries";
 
 export interface NppReinvestmentCashWitness {
   corporationId: ObjectId;
@@ -112,7 +113,7 @@ export async function flushNppReinvestmentCashWitnesses(
         : []
     );
     if (entries.length > 0) {
-      await db.collection<LedgerEntry>("ledgerEntries").bulkWrite(
+      await ledgerEntriesCollection(db).bulkWrite(
         entries.map((entry) => ({
           updateOne: { filter: { _id: entry._id }, update: { $setOnInsert: entry }, upsert: true },
         })),

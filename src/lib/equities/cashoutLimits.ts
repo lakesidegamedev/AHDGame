@@ -39,6 +39,7 @@ import {
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
 
 export async function loadEquityCashoutLimitsStage(db: Db): Promise<number> {
   const config = await db
@@ -136,8 +137,7 @@ export async function loadCorpBookBasisById(
         { projection: { corporationId: 1, totalIssued: 1, currencyCode: 1, countryId: 1 } }
       )
       .toArray(),
-    db
-      .collection<BankLoan>("bankLoans")
+    bankLoansCollection(db)
       .find(
         {
           borrowerType: "corporation",

@@ -22,6 +22,7 @@ import { resumeSettlement, settleTransition } from "@/lib/banking/settlementJour
 import { MONEY_MOVE_COLLECTION, type MoneyMoveRecordLeg } from "@/lib/banking/moneyMove";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 /**
  * Opt-in government-side witness for an event-driven caller whose own rows do
@@ -252,13 +253,12 @@ export async function settleFundedTreasuryCompensation(
   newlySettled: boolean;
 }> {
   const settlementKey = `treasury-nationalization-compensation:${input.key}`;
-  const prior = await db
-    .collection<{
+  const prior = await bankMoneyMovesCollection<{
       _id: string;
       status?: string;
       legs?: { kind: string; amount: number; collection?: string; path?: string }[];
       event?: { meta?: { payoutAnchor?: number } };
-    }>("bankMoneyMoves")
+    }>(db)
     .findOne({ _id: settlementKey }, { projection: { status: 1, legs: 1, event: 1 } });
   if (prior) {
     const wasApplied = prior.status === "applied";
@@ -423,13 +423,12 @@ export async function settleFundedTreasuryCompensation(
     throw new Error(settled.error ?? "Funded compensation settlement is incomplete");
   }
   if (!newlySettled) {
-    const original = await db
-      .collection<{
+    const original = await bankMoneyMovesCollection<{
         _id: string;
         status?: string;
         legs?: { kind: string; amount: number; collection?: string; path?: string }[];
         event?: { meta?: { payoutAnchor?: number } };
-      }>("bankMoneyMoves")
+      }>(db)
       .findOne({ _id: transition.key }, { projection: { status: 1, legs: 1, event: 1 } });
     const frozenDebit = original?.legs?.find(
       (leg) =>

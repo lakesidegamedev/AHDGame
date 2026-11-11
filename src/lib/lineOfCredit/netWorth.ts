@@ -16,6 +16,7 @@ import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
 import { sumObligationInternal, toInternalUnits } from "./locMath";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
 
 /**
  * Total player net worth in internal units: liquid + savings + stocks + bonds.
@@ -126,8 +127,7 @@ export async function computeBankLoanDebtInternal(
   characterId: ObjectId,
   rates: Partial<Record<CurrencyCode, number>>
 ): Promise<number> {
-  const loans = await db
-    .collection<BankLoan>("bankLoans")
+  const loans = await bankLoansCollection(db)
     .find({
       borrowerType: "character",
       borrowerId: characterId,

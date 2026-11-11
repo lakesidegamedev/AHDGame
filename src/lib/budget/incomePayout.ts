@@ -29,6 +29,8 @@ import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { savingsAccountsCollection } from "@/lib/db/repositories/savingsAccounts";
+import { ledgerEntriesCollection } from "@/lib/db/repositories/ledgerEntries";
 
 export interface IncomeCredit {
   characterId: ObjectId;
@@ -595,7 +597,7 @@ export async function creditIncomeAfterTax(
           throw new Error("Income recipient changed");
       }
       if (savingsOps.length) {
-        const saved = await db.collection("savingsAccounts").bulkWrite(savingsOps, { session });
+        const saved = await savingsAccountsCollection<Document>(db).bulkWrite(savingsOps, { session });
         if (saved.matchedCount !== savingsOps.length)
           throw new Error("Income savings account unavailable");
       }
@@ -652,7 +654,7 @@ export async function creditIncomeAfterTax(
           { session }
         );
       if (ledger.length)
-        await db.collection("ledgerEntries").bulkWrite(
+        await ledgerEntriesCollection<Document>(db).bulkWrite(
           ledger.map((document) => ({ insertOne: { document } })),
           { session }
         );

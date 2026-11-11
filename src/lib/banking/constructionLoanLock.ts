@@ -10,6 +10,8 @@ import {
   loanServiceKeyTurn,
 } from "./rules/constructionBorrowerTransfer";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 /**
  * Point the loan at the borrower its site's claim names, when the site has
@@ -34,7 +36,7 @@ export async function alignConstructionBorrowerWithSite(db: Db, loan: BankLoan):
     claim.borrowerId === String(loan.borrowerId)
   )
     return;
-  await db.collection<BankLoan>("bankLoans").updateOne(
+  await bankLoansCollection(db).updateOne(
     {
       _id: loan._id,
       borrowerId: loan.borrowerId,
@@ -50,8 +52,7 @@ export async function releaseConstructionLoanLock(
   key: string
 ): Promise<void> {
   if (!loan.constructionCollateral) return;
-  await db
-    .collection<BankLoan>("bankLoans")
+  await bankLoansCollection(db)
     .updateOne(
       { _id: loan._id, constructionSettlementOwner: key },
       { $unset: { constructionSettlementOwner: "" } }
@@ -65,7 +66,7 @@ export async function acquireConstructionLoanLock(
   key: string
 ): Promise<BankLoan | null> {
   if (!loan.constructionCollateral) return loan;
-  const loans = db.collection<BankLoan>("bankLoans");
+  const loans = bankLoansCollection(db);
   const acquire = () =>
     loans.findOneAndUpdate(
       {
@@ -122,8 +123,7 @@ export async function acquireConstructionLoanLock(
     return acquire();
   }
   if (!previous.startsWith(`loan-service:${loan._id}:`)) return null;
-  const record = await db
-    .collection<{ _id: string }>("bankMoneyMoves")
+  const record = await bankMoneyMovesCollection<{ _id: string }>(db)
     .findOne({ _id: previous }, { projection: { _id: 1 } });
   if (!record) return null;
   const recovered = await resumeSettlement(db, previous);

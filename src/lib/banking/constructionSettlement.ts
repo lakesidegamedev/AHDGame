@@ -21,6 +21,7 @@ import { acquireConstructionAdmission } from "./constructionAdmission";
 import { MONEY_MOVE_COLLECTION } from "./moneyMove";
 import { settleTransition, resumeSettlement, type SettlementResult } from "./settlementJournal";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
 
 const complete = (result: SettlementResult) =>
   !result.error && (result.status === "applied" || result.status === "replayed");
@@ -61,7 +62,7 @@ export async function settleReservedConstruction(input: {
   }
 
   const loanId = new ObjectId(claim.loanId);
-  const loans = db.collection<BankLoan>("bankLoans");
+  const loans = bankLoansCollection(db);
   const loan = await loans.findOne({ _id: loanId });
   if (
     !loan?.constructionCollateral ||

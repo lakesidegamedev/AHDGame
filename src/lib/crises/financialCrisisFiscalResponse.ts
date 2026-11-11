@@ -17,6 +17,7 @@ import type { CrisisActionContext } from "./optionActions";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 export type FinancialFiscalResponse =
   "stimulus" | "austerity" | "restructure" | "sovereign_support";
@@ -81,7 +82,7 @@ export async function applyFinancialFiscalResponse(
     await ctx.db.collection<{ _id: string }>("financialCrisisFiscalActions").findOne({ _id: key })
   )
     return;
-  if (await ctx.db.collection<{ _id: string }>("bankMoneyMoves").findOne({ _id: key }))
+  if (await bankMoneyMovesCollection<{ _id: string }>(ctx.db).findOne({ _id: key }))
     throw new Error("Fiscal intervention is pending settlement recovery");
   const treasuryCashLedgerEnabled =
     response === "stimulus" || response === "sovereign_support"

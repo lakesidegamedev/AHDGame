@@ -15,6 +15,7 @@ import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { loadBankingPolicy } from "@/lib/banking/policy";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 export type FinancialCrisisBankResponse = "recapitalize" | "guarantee" | "resolve";
 
@@ -118,8 +119,7 @@ export async function applyFinancialCrisisBankResponse(
   if (prior) return;
   // A durable quote owns all legs and projections. Recover it before considering
   // a new quote from balances or charter statuses the first attempt changed.
-  const pending = await ctx.db
-    .collection<{ _id: string }>("bankMoneyMoves")
+  const pending = await bankMoneyMovesCollection<{ _id: string }>(ctx.db)
     .findOne({ _id: actionId });
   if (pending)
     throw new Error("Rescue settlement is pending recovery; funding will not be duplicated");

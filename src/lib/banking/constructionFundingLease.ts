@@ -9,6 +9,7 @@ import { MONEY_MOVE_COLLECTION } from "./moneyMove";
 import { resumeSettlement, settleTransition } from "./settlementJournal";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
 
 export async function acquireConstructionFundingLease(
   db: Db,
@@ -160,7 +161,7 @@ export async function abortUnfundedConstruction(
     { ...identity, "bankConstructionFunding.kind": "aborting" },
     { $unset: { bankConstructionFunding: "" } }
   );
-  await db.collection<BankLoan>("bankLoans").updateOne(
+  await bankLoansCollection(db).updateOne(
     {
       _id: new ObjectId(claim.loanId),
       constructionSettlementOwner: `construction:${claim.claimId}:funding`,
@@ -212,7 +213,7 @@ export async function releaseCompletedConstructionFunding(
   }
   if (claim.effects && !claim.effectsPaid) return false;
   await releaseConstructionFundingLease(db, claim);
-  await db.collection<BankLoan>("bankLoans").updateOne(
+  await bankLoansCollection(db).updateOne(
     {
       _id: new ObjectId(claim.loanId),
       constructionSettlementOwner: `construction:${claim.claimId}:funding`,

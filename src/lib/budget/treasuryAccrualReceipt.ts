@@ -3,6 +3,8 @@ import { createHash } from "node:crypto";
 import { ObjectId, type Db } from "mongodb";
 import type { FederalBudget, TreasuryAccrualReceipt } from "@/lib/db/types/budget";
 import { treasuryAccrualLegs } from "./rules/treasuryAccrual";
+import { ledgerEntriesCollection } from "@/lib/db/repositories/ledgerEntries";
+import type { Document } from "mongodb";
 
 /** One budget's accrual receipt, waiting to be witnessed in the ledger. */
 export interface TreasuryAccrualPublication {
@@ -68,5 +70,5 @@ export async function publishTreasuryAccrualReceipts(
     if (op) ops.set(op.updateOne.filter._id.toHexString(), op);
   }
   if (ops.size === 0) return;
-  await db.collection("ledgerEntries").bulkWrite([...ops.values()], { ordered: false });
+  await ledgerEntriesCollection<Document>(db).bulkWrite([...ops.values()], { ordered: false });
 }

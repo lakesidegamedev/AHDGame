@@ -85,6 +85,7 @@ import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
 
 const BANK_CHARTER_ONLY = { projection: { bankCharter: 1 } };
 
@@ -493,8 +494,7 @@ async function bankPassLockKeys(
         { projection: { _id: 1, "currencyBalances.savingsHolder": 1 } }
       )
       .toArray(),
-    db
-      .collection<BankLoan>("bankLoans")
+    bankLoansCollection(db)
       .find(
         {
           bankCorporationId: { $in: depositTakers.map((row) => row.corp._id) },
@@ -1303,8 +1303,7 @@ async function serviceNpcBulkBook(
     }
     const [bank, loans, pool] = await Promise.all([
       corporationsCollection(db).findOne({ _id: bankCorporationId }, BANK_CHARTER_ONLY),
-      db
-        .collection<BankLoan>("bankLoans")
+      bankLoansCollection(db)
         .aggregate<{ total: number }>([
           {
             $match: {
@@ -1349,8 +1348,7 @@ async function serviceNpcBulkBook(
   let writtenOff = 0;
   let shortfall = 0;
 
-  const existing = await db
-    .collection<BankLoan>("bankLoans")
+  const existing = await bankLoansCollection(db)
     .find({
       bankCorporationId,
       borrowerType: "npcBulk",

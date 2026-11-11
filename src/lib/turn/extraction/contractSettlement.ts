@@ -35,6 +35,7 @@ import {
 } from "@/lib/banking/settlementJournal";
 import { oid, type BankingTransition } from "@/lib/banking/rules/boundary";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 export interface ContractSettlementResult {
   contractsSettled: number;
@@ -147,8 +148,7 @@ function parseFrozenRoyaltyQuote(receipt: FundedRoyaltyReceipt): FrozenRoyaltyQu
 }
 
 async function loadFundedRoyaltyReceipt(db: Db, key: string): Promise<FundedRoyaltyReceipt | null> {
-  return db
-    .collection<FundedRoyaltyReceipt>("bankMoneyMoves")
+  return bankMoneyMovesCollection<FundedRoyaltyReceipt>(db)
     .findOne({ _id: key }, { projection: { _id: 1, turn: 1, event: 1 } });
 }
 
@@ -305,8 +305,7 @@ export async function settleExtractionContracts(
     ? activeContracts.map((contract) => `extraction-royalty:${contract._id.toString()}:${turn}`)
     : [];
   const royaltyReceipts = treasuryCashLedgerEnabled
-    ? await db
-        .collection<FundedRoyaltyReceipt>("bankMoneyMoves")
+    ? await bankMoneyMovesCollection<FundedRoyaltyReceipt>(db)
         .find({ _id: { $in: royaltyReceiptKeys } }, { projection: { _id: 1, turn: 1, event: 1 } })
         .toArray()
     : [];
