@@ -8,6 +8,7 @@ import { DE_MODERN_PACK } from "@/lib/countries/de/eventsModern";
 import { JP_MODERN_PACK } from "@/lib/countries/jp/eventsModern";
 import { CN_MODERN_PACK } from "@/lib/countries/cn/eventsModern";
 import { US_MODERN_PACK } from "@/lib/countries/us/eventsModern";
+import { CA_MODERN_PACK } from "@/lib/countries/ca/eventsModern";
 import { packDefinition, type PackEvent } from "./packTypes";
 
 /** Every 2027-era pack spec: decade packs, shared broadcasts and modern country packs. */
@@ -23,6 +24,7 @@ export const MODERN_PACK_SPECS: readonly PackEvent[] = [
   ...JP_MODERN_PACK,
   ...CN_MODERN_PACK,
   ...US_MODERN_PACK,
+  ...CA_MODERN_PACK,
 ];
 
 export const MODERN_PACK_DEFINITIONS = MODERN_PACK_SPECS.map(packDefinition);
