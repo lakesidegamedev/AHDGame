@@ -10,6 +10,7 @@ import type { Document } from "mongodb";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 
 export async function carryNorthernIrelandMPs(
   db: Db,
@@ -21,7 +22,7 @@ export async function carryNorthernIrelandMPs(
     { characterId: { $in: mps.flatMap((mp) => (mp.characterId ? [mp.characterId] : [])) } },
     { nppId: { $in: mps.flatMap((mp) => (mp.nppId ? [mp.nppId] : [])) } },
   ];
-  const government = await db.collection<ParliamentaryGovernment>("governmentFormations").findOne({
+  const government = await governmentFormationsCollection<ParliamentaryGovernment>(db).findOne({
     _id: "UK",
     $or: [{ pmCharacterId: holders[0].characterId }, { pmNppId: holders[1].nppId }],
   });

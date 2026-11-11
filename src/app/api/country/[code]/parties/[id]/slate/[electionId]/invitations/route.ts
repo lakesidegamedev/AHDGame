@@ -21,6 +21,7 @@ import { isPrimaryClosed } from "@/lib/elections/electionDeadlineFilters";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; electionId: string }>;
@@ -120,8 +121,7 @@ export async function POST(request: Request, { params }: RouteParams) {
         .collection<SlateCandidate>("slateCandidates")
         .find({ electionId: electionObjId, partyId }, { projection: { candidateId: 1, status: 1 } })
         .toArray(),
-      db
-        .collection<ElectionCandidate>("electionCandidates")
+      electionCandidatesCollection(db)
         .find(
           { electionId: electionObjId, party: partyId, status: "active" },
           { projection: { characterId: 1, status: 1, isNPP: 1, nppId: 1 } }

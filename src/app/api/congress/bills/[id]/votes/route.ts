@@ -25,6 +25,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 interface IndividualVote {
   id: string;
@@ -73,7 +74,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     }
 
     const db = await getDb();
-    const bill = await db.collection<Bill>("bills").findOne({ _id: new ObjectId(id) });
+    const bill = await billsCollection(db).findOne({ _id: new ObjectId(id) });
     if (!bill) return errorResponse(404, "Bill not found");
 
     // Pick the votes map for the requested chamber

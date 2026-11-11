@@ -13,6 +13,8 @@ import { getRelocationTerritory, PARTY_TERRITORY_WARNING } from "@/lib/parties/r
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 function getNPPCountry(npp: NPP): CountryId {
   return npp.countryId as CountryId;
@@ -255,8 +257,7 @@ async function validateNppStateRelocationRequest(
     return { valid: false, error: PARTY_TERRITORY_WARNING };
   }
 
-  const targetStatePartyOrg = await db
-    .collection<StatePartyOrg>("statePartyOrg")
+  const targetStatePartyOrg = await statePartyOrgCollection(db)
     .findOne({ _id: `${targetStateId}_${npp.party}` });
   const targetOrgLevel = targetStatePartyOrg?.organization ?? 0;
   const [targetStateNppCount, regionCount, partyNppCount] = await Promise.all([
@@ -303,8 +304,7 @@ async function validateNppMustBeCandidateForAction(
     return { valid: false, error: "Invalid election ID." };
   }
 
-  const cand = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const cand = await electionCandidatesCollection(db)
     .findOne(activeNppElectionCandidacyFilter(electionObjId, npp._id));
   if (!cand) {
     return {

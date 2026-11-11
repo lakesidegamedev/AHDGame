@@ -11,6 +11,7 @@ import { isSittingLeader } from "@/lib/governorOffice/isSittingLeader";
 import { officePoolTopUpStatus } from "@/lib/actions/officePoolTopUpRules";
 import type { GovernorOfficeState, GameState, LegislationType } from "@/lib/db/types";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 /**
  * Federal Executive Orders — head-of-government equivalent of Governor's
@@ -116,8 +117,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
         .toArray(),
       db.collection<GovernorOfficeState>("governorOfficeState").findOne({ countryId, stateId }),
       gameStateCollection(db).findOne({ _id: "current" }),
-      db
-        .collection<LegislationType>("legislationTypes")
+      legislationTypesCollection(db)
         .find({
           taxRateChange: { $exists: false },
           $or: [{ allowedScope: "national" }, { allowedScope: "both" }, { nationalOnly: true }],

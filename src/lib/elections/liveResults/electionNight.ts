@@ -27,6 +27,7 @@ import type { NationalParty, NationalRegion, NationalResults } from "./types";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 
 export {
   CHAMBER_LABELS,
@@ -110,8 +111,7 @@ export async function buildNationalElectionNight(
     .toArray()) as Pick<Election, "_id" | "state" | "totalSeats" | "status" | "allocationMethod">[];
   if (siblings.length < 2) return null;
 
-  const tallies = await db
-    .collection<ElectionVoteTally>("electionVoteTallies")
+  const tallies = await electionVoteTalliesCollection(db)
     .find({ electionId: { $in: siblings.map((s) => s._id) } })
     .project<
       Pick<

@@ -12,6 +12,7 @@ import {
   type AlertKind,
   type AlertRecipient,
 } from "@/lib/crises/rules/alertRules";
+import { crisesCollection } from "@/lib/db/repositories/crises";
 
 interface AlertStateRow {
   _id: string;
@@ -37,8 +38,7 @@ const COPY: Record<AlertKind, (name: string) => { title: string; message: string
  * per crisis.
  */
 export async function notifyCrisisChanges(db: Db, turn: number): Promise<number> {
-  const crises = await db
-    .collection<Crisis>("crises")
+  const crises = await crisesCollection(db)
     .find(
       { status: "active", interactionDefinition: { $exists: true } },
       {

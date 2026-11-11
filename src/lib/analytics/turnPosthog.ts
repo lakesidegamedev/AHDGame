@@ -15,6 +15,7 @@ import { gameEventEnvelope } from "./gameEventEnvelope";
 import { flushServerPosthog, getServerPosthogClient } from "./serverPosthog";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { crisesCollection } from "@/lib/db/repositories/crises";
 
 type WorldEventType = "election" | "war" | "bill_passed" | "crisis" | "record_wealth";
 
@@ -76,7 +77,7 @@ export async function captureTurnPosthog(input: {
         startTurn: turn,
         type: { $ne: "cold_war" },
       }),
-      db.collection<Crisis>("crises").countDocuments({ startTurn: turn }),
+      crisesCollection(db).countDocuments({ startTurn: turn }),
     ]);
 
     posthog.capture({

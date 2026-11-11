@@ -37,6 +37,7 @@ import { isUnionProsecutionBarred } from "@/lib/unions/unionProsecutionBar";
 import type { CountryId } from "@/lib/constants/countries";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { unionsCollection } from "@/lib/db/repositories/unions";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -59,7 +60,7 @@ async function handleGET(_request: Request, { params }: RouteParams) {
 
     const db = await getDb();
     const unionObjectId = new ObjectId(id);
-    const union = await db.collection<Union>("unions").findOne({ _id: unionObjectId });
+    const union = await unionsCollection(db).findOne({ _id: unionObjectId });
     if (!union) {
       return errorResponse(404, "Union not found");
     }
@@ -259,7 +260,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(404, "Character not found");
     }
 
-    const union = await db.collection<Union>("unions").findOne({ _id: new ObjectId(id) });
+    const union = await unionsCollection(db).findOne({ _id: new ObjectId(id) });
     if (!union) {
       return errorResponse(404, "Union not found");
     }

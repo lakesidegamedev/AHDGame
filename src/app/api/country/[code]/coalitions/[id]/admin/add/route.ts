@@ -10,6 +10,7 @@ import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { isBannedParty } from "@/lib/turn/onePartyConstraints";
 import { getCountryState } from "@/lib/countryState";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
 
 const addPartySchema = z.object({
   partySequentialId: z.number().int().positive(),
@@ -39,8 +40,7 @@ export async function POST(
 
     const db = await getDb();
 
-    const coalition = await db
-      .collection<Coalition>("coalitions")
+    const coalition = await coalitionsCollection(db)
       .findOne({ sequentialId: parseInt(id, 10), countryId });
     if (!coalition) {
       throw notFound("Coalition not found.");
@@ -82,8 +82,7 @@ export async function POST(
     };
 
     await Promise.all([
-      db
-        .collection<Coalition>("coalitions")
+      coalitionsCollection(db)
         .updateOne(
           { _id: coalition._id },
           { $push: { members: newMember }, $set: { updatedAt: now } }

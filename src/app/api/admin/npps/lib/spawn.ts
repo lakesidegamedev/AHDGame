@@ -12,6 +12,7 @@ import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficia
 import type { Document } from "mongodb";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 export async function handleSpawnNPPs(
   db: Db,
@@ -136,8 +137,7 @@ export async function handleSpawnNPPs(
     const state = pickState();
 
     const statePartyKey = `${state}_${partyIdStr}`;
-    const orgDoc = await db
-      .collection<StatePartyOrg>("statePartyOrg")
+    const orgDoc = await statePartyOrgCollection(db)
       .findOne({ _id: statePartyKey });
     const partyOrg = orgDoc?.organization ?? 50;
     const quality = calculateQualityBonus(partyOrg);

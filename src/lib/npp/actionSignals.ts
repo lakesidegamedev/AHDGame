@@ -21,6 +21,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import { getGovernmentFormationsCollection } from "@/lib/db/collections/governmentFormation";
 import { isCampaignEligibleElection } from "@/lib/campaigns/isCampaignEligible";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 /**
  * The race an NPP is currently running in, for engine 6.2 rallies (v6). Built
@@ -118,8 +119,7 @@ export async function buildNppSignalLookup(
         }
       )
       .toArray(),
-    db
-      .collection<ElectionCandidate>("electionCandidates")
+    electionCandidatesCollection(db)
       .find(
         { status: "active", nppId: { $exists: true } },
         { projection: { nppId: 1, electionId: 1, party: 1, support: 1, lastRallyTurn: 1 } }

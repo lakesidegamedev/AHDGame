@@ -14,6 +14,8 @@ import { getCountryState } from "@/lib/countryState";
 import { admitPartyToCoalition } from "@/lib/coalitions/admitParty";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
+import type { Document } from "mongodb";
 
 const acceptSchema = z.object({
   partySequentialId: z.number().int().positive(),
@@ -50,8 +52,7 @@ export async function POST(
     const db = await getDb();
 
     // Find coalition, verify caller is coalition chair
-    const coalition = await db
-      .collection<Coalition>("coalitions")
+    const coalition = await coalitionsCollection(db)
       .findOne({ sequentialId: Number(id), countryId });
     if (!coalition) {
       throw notFound("Coalition not found.");
@@ -102,7 +103,7 @@ export async function POST(
       // Remove from joinRequests and return success
       // $pull with nested object filter hits a TypeScript limitation in MongoDB's UpdateFilter
       /* eslint-disable @typescript-eslint/no-explicit-any */
-      await db.collection("coalitions").updateOne({ _id: coalition._id }, {
+      await coalitionsCollection<Document>(db).updateOne({ _id: coalition._id }, {
         $pull: { joinRequests: { partyId: requestingParty._id } },
         $set: { updatedAt: new Date() },
       } as any);

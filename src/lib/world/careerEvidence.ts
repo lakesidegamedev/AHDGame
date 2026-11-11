@@ -1,6 +1,8 @@
 import { ObjectId, type Db } from "mongodb";
 import { getContestRoundsCollection } from "@/lib/contests/collection";
 import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import type { Document } from "mongodb";
 
 /** Durable enacted laws only. Drafts, failed bills and staff overrides earn no credit. */
 export async function loadCareerLegislation(
@@ -8,8 +10,7 @@ export async function loadCareerLegislation(
   characterIds?: readonly ObjectId[]
 ): Promise<Map<string, number>> {
   const [national, state] = await Promise.all([
-    db
-      .collection("bills")
+    billsCollection<Document>(db)
       .aggregate<{ _id: string; count: number }>([
         {
           $match: {

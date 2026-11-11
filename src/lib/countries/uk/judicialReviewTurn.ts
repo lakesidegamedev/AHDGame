@@ -19,6 +19,7 @@ import {
   type JrCaseAxis,
 } from "@/lib/countries/uk/judicialReview/surpriseTemplates";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 
 export interface UkJrSurpriseCaseRecord {
   _id: ObjectId;
@@ -42,8 +43,7 @@ export interface UkJrSurpriseTurnResult {
  * Negative = left, positive = right — same convention as SCOTUS surprise.
  */
 async function resolveUkProxyCourtLean(db: Db, axis: JrCaseAxis): Promise<-1 | 0 | 1> {
-  const formation = await db
-    .collection<GovernmentFormation>("governmentFormations")
+  const formation = await governmentFormationsCollection(db)
     .findOne({ _id: "UK", status: "formed" }, { projection: { governingPartyId: 1 } });
   const partyId = formation?.governingPartyId ?? null;
 

@@ -22,6 +22,8 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
 
 /** The party holding a country's national executive, with that government's approval. */
 export interface NationalExecutiveParty {
@@ -61,8 +63,7 @@ export async function observeGovernmentAccountability(
           }
         )
         .toArray(),
-      db
-        .collection<GovernmentFormation>("governmentFormations")
+      governmentFormationsCollection(db)
         .find(
           { status: "formed" },
           {
@@ -114,12 +115,11 @@ export async function observeGovernmentAccountability(
     nppsCollection<Actor>(db)
       .find({ _id: { $in: nppIds } }, { projection: { party: 1 } })
       .toArray(),
-    db
-      .collection<{
+    coalitionsCollection<{
         sequentialId: number;
         countryId: CountryId;
         members: { partySequentialId: number }[];
-      }>("coalitions")
+      }>(db)
       .find(
         {
           sequentialId: {
@@ -305,7 +305,7 @@ export async function observeGovernmentAccountability(
       }))
     );
   if (attributionRepairs.length)
-    await db.collection<GovernmentFormation>("governmentFormations").bulkWrite(
+    await governmentFormationsCollection(db).bulkWrite(
       attributionRepairs.map(({ countryId, fields }) => ({
         updateOne: {
           filter: { _id: countryId, status: "formed" },

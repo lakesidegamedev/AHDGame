@@ -29,6 +29,7 @@ import type { GameConfig } from "@/lib/db/types/gameConfig";
 import { getStatesCollection } from "@/lib/db/collections/states";
 import { getCharactersCollection } from "@/lib/db/collections/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 /**
  * Process fund generation for all characters each turn.
@@ -80,7 +81,7 @@ export async function processFundGeneration(
       const parties = await politicalPartiesCollection<PoliticalPartyType>(db).find({}).toArray();
       const partyMap = new Map(parties.map((p) => [`${p.countryId ?? "US"}:${p.sequentialId}`, p]));
 
-      const statePartyOrgs = await db.collection<StatePartyOrg>("statePartyOrg").find({}).toArray();
+      const statePartyOrgs = await statePartyOrgCollection(db).find({}).toArray();
       const statePartyMap = new Map(
         statePartyOrgs.map((sp) => [`${sp.stateId}_${sp.partyId}`, sp])
       );
@@ -265,7 +266,7 @@ export async function processFundGeneration(
             },
           })
         );
-        await db.collection<StatePartyOrg>("statePartyOrg").bulkWrite(statePartyOps);
+        await statePartyOrgCollection(db).bulkWrite(statePartyOps);
 
         for (const [statePartyKey, amount] of stateTreasuryUpdates.entries()) {
           const sp = statePartyMap.get(statePartyKey);

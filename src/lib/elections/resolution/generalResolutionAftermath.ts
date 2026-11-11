@@ -32,6 +32,11 @@ import type { PrStvResult } from "@/lib/elections/rules/prStv";
 import type { BlocListQuota } from "@/lib/constants/blocList";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import type { Document } from "mongodb";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 
 export async function recordJapanShugiinRegionalCapacity(
   db: Db,
@@ -61,7 +66,7 @@ export async function recordJapanShugiinRegionalCapacity(
       );
     }
     const regionRuleKey = `jpShugiinResolvedRegionalRules.${election.state}`;
-    await db.collection<CountryGameState>("countryGameStates").updateOne(
+    await countryGameStatesCollection(db).updateOne(
       {
         _id: "JP",
         $or: [
@@ -185,7 +190,7 @@ export async function applyGeneralElectionAftermath({
     nationId: string;
   }>;
 }) {
-  await db.collection<ElectionVoteTally>("electionVoteTallies").updateOne(
+  await electionVoteTalliesCollection(db).updateOne(
     { electionId: election._id },
     {
       $set: {
@@ -225,8 +230,7 @@ export async function applyGeneralElectionAftermath({
 
   const winnerCandidateIds = new Set(winners.map(([id]) => id));
   const loserCandidateIds = new Set(losers);
-  await db
-    .collection("electionCandidates")
+  await electionCandidatesCollection<Document>(db)
     .updateMany(
       { _id: { $in: candidateIds.map((id) => new ObjectId(id)) } },
       { $set: { status: "withdrawn", withdrawnAt: now } }
@@ -252,8 +256,7 @@ export async function applyGeneralElectionAftermath({
   if (seatedCharIds.length > 0) seatedIdentityOr.push({ characterId: { $in: seatedCharIds } });
   if (seatedNppIds.length > 0) seatedIdentityOr.push({ nppId: { $in: seatedNppIds } });
   if (seatedIdentityOr.length > 0) {
-    await db
-      .collection<ElectionCandidate>("electionCandidates")
+    await electionCandidatesCollection(db)
       .updateMany(
         { electionId: { $ne: election._id }, status: "active", $or: seatedIdentityOr },
         { $set: { status: "withdrawn", withdrawnAt: now } }
@@ -261,7 +264,7 @@ export async function applyGeneralElectionAftermath({
   }
 
   // Clean up campaigns (primarily relevant for presidential; no-op for other types)
-  await db.collection("campaigns").deleteMany({ electionId: election._id });
+  await campaignsCollection<Document>(db).deleteMany({ electionId: election._id });
 
   // ── Presence refresh ───────────────────────────────────────────────────
   // Every party that fielded a candidate in this state-level race may now

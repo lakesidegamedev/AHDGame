@@ -8,6 +8,7 @@ import { resolveCrisisLocationName, interpolateLocation } from "./crisisLocation
 import { createCrisisInstance } from "./v2/instance";
 import { legacyDefinitionForTemplate } from "@/lib/turn/crisisV2/legacyContent";
 import type { CrisisScope } from "./v2/types";
+import { crisesCollection } from "@/lib/db/repositories/crises";
 
 const V2_SCOPE_BY_CRISIS_SCOPE: Record<Crisis["scope"], CrisisScope> = {
   region: "state",
@@ -120,7 +121,7 @@ export async function createCrisisFromTemplate(
     ...(livingConflictEventId !== undefined ? { livingConflictEventId } : {}),
   };
 
-  const result = await db.collection<Crisis>("crises").insertOne(crisis as Crisis);
+  const result = await crisesCollection(db).insertOne(crisis as Crisis);
 
   if (crisis.interactionDefinition && !params.deferInteractionUntilStart) {
     await createCrisisInteraction(db, { ...(crisis as Crisis), _id: result.insertedId });

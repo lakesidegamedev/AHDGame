@@ -18,6 +18,8 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 
 const IE_REGION_IDS = ["DUB", "KIL", "MID", "WEX", "LIM", "COR", "GAL", "DON"];
 
@@ -242,8 +244,7 @@ export async function seedIEGovernmentFormation(
   const { _id, ...formationData } = ieGovernmentFormation;
   // 1953 Dáil Éireann had 147 seats (13th Dáil). Majority: 74.
   const eraOverride = preset === "1953-default" ? { totalSeats: 147, majorityThreshold: 74 } : {};
-  await db
-    .collection<GovernmentFormation>("governmentFormations")
+  await governmentFormationsCollection(db)
     .updateOne(
       { _id },
       { $set: { ...formationData, ...eraOverride, createdAt: now, updatedAt: now } },
@@ -263,7 +264,7 @@ export async function seedIEStatePartyOrg(
   preset?: string
 ) {
   if (reset) {
-    await db.collection("statePartyOrg").deleteMany({ countryId: "IE" });
+    await statePartyOrgCollection<Document>(db).deleteMany({ countryId: "IE" });
   }
 
   let activePreset = preset;
@@ -276,8 +277,7 @@ export async function seedIEStatePartyOrg(
   const now = new Date();
   for (const org of orgs) {
     const { _id, ...orgData } = org;
-    await db
-      .collection<StatePartyOrg>("statePartyOrg")
+    await statePartyOrgCollection(db)
       .updateOne({ _id }, { $set: { ...orgData, updatedAt: now } }, { upsert: true });
   }
   log(`Seeded ${orgs.length} IE state party org records (preset: ${activePreset})`);
@@ -304,8 +304,7 @@ export async function ensureMissingIEStatePartyOrgRows(
   const orgs = await calculateIEStatePartyOrgs(db, activePreset);
 
   const ids = orgs.map((o) => o._id);
-  const existing = await db
-    .collection<StatePartyOrg>("statePartyOrg")
+  const existing = await statePartyOrgCollection(db)
     /* eslint-disable @typescript-eslint/no-explicit-any */
     .find({ _id: { $in: ids as any } } as any)
     /* eslint-enable @typescript-eslint/no-explicit-any */
@@ -316,8 +315,7 @@ export async function ensureMissingIEStatePartyOrgRows(
   if (missing.length > 0) {
     for (const org of missing) {
       const { _id, ...orgData } = org;
-      await db
-        .collection<StatePartyOrg>("statePartyOrg")
+      await statePartyOrgCollection(db)
         .updateOne(
           { _id },
           { $set: { ...orgData, updatedAt: now }, $setOnInsert: { createdAt: now } },

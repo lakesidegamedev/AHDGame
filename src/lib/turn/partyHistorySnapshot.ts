@@ -5,6 +5,7 @@ import type { PartyHistorySnapshot, StatePartyOrg } from "@/lib/db/types";
 import { getPoliticalPartiesCollection } from "@/lib/db/collections/politicalParties";
 import { getCharactersCollection } from "@/lib/db/collections/characters";
 import { getNppsCollection } from "@/lib/db/collections/npps";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 const HISTORY_CAP = 48;
 
@@ -29,8 +30,7 @@ export async function snapshotPartyHistory(db: Db, turn: number): Promise<number
       .find(countryFilter)
       .project({ sequentialId: 1, countryId: 1 })
       .toArray(),
-    db
-      .collection<StatePartyOrg>("statePartyOrg")
+    statePartyOrgCollection(db)
       .aggregate<OrgRow>([
         { $match: { countryId: { $in: partyIds } } },
         {

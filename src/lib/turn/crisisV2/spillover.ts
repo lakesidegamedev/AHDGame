@@ -40,6 +40,7 @@ import { logWireEvent } from "@/lib/wireEvent";
 import { logger } from "@/lib/observability/logger";
 import { getCrisisDefinition } from "./registry";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { crisesCollection } from "@/lib/db/repositories/crises";
 
 const COMPONENT = "crisisV2Spillover";
 
@@ -224,8 +225,7 @@ export async function loadSpilloverWorld(
 }
 
 export async function loadActiveCrisisDocs(db: Db): Promise<SpilloverCrisisDoc[]> {
-  return (await db
-    .collection<Crisis>("crises")
+  return (await crisesCollection(db)
     .find(
       { status: "active", "v2.definitionId": { $exists: true } },
       { projection: { scope: 1, countryIds: 1, regionIds: 1, v2: 1 } }
@@ -328,7 +328,7 @@ async function writeFeeds(
     }
   }
   if (writes.length === 0) return 0;
-  await db.collection<Crisis>("crises").bulkWrite(writes, { ordered: false });
+  await crisesCollection(db).bulkWrite(writes, { ordered: false });
   return feeds.length;
 }
 
@@ -400,8 +400,8 @@ async function openSpilled(
   }
   if (inserted.length === 0) return 0;
 
-  await db.collection<Crisis>("crises").insertMany(inserted, { ordered: false });
-  await db.collection<Crisis>("crises").bulkWrite(
+  await crisesCollection(db).insertMany(inserted, { ordered: false });
+  await crisesCollection(db).bulkWrite(
     [...sourceChildren].map(([sourceId, children]) => ({
       updateOne: {
         filter: { _id: new ObjectId(sourceId), status: "active" as const },

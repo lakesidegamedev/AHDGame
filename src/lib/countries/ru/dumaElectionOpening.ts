@@ -18,6 +18,7 @@ import type { RussianConstitutionalCalendar } from "./constitutionalProposals";
 import { STATE_POPULATION_FIELDS } from "@/lib/db/collections/states";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 
 export async function materializeRussianDumaElectionOpening(input: {
   db: Db;
@@ -42,7 +43,7 @@ export async function materializeRussianDumaElectionOpening(input: {
     preIterationTurns: game.preIterationTurns,
   };
   if (ru1993LegislatureStage(calendarTurn(turn, clock)) === "congress") return null;
-  const countries = db.collection<CountryGameState>("countryGameStates");
+  const countries = countryGameStatesCollection(db);
   const country = await countries.findOne(
     { _id: "RU" },
     {

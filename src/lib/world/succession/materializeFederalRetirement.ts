@@ -20,6 +20,9 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 
 type HistoricalPoliticalRow = { _id: ObjectId | string; [key: string]: unknown };
 
@@ -40,8 +43,7 @@ export async function materializeFederationFederalRetirement(input: {
     !Number.isFinite(now.getTime())
   )
     throw new Error("Federation retirement needs a transaction, application, turn and time");
-  const country = await db
-    .collection<CountryGameState>("countryGameStates")
+  const country = await countryGameStatesCollection(db)
     .findOne({ _id: sourceCountryId, dissolvedTurn: null }, { session });
   if (!country) throw new Error("Federation source country changed before dissolution");
   // Keep historical offices and cabinet memberships before vacating the source.
@@ -80,7 +82,7 @@ export async function materializeFederationFederalRetirement(input: {
     )
     .toArray();
   if (activeElectionIds.length)
-    await db.collection<ElectionCandidate>("electionCandidates").updateMany(
+    await electionCandidatesCollection(db).updateMany(
       {
         electionId: { $in: activeElectionIds.map((election) => election._id) },
         status: "active",
@@ -117,7 +119,7 @@ export async function materializeFederationFederalRetirement(input: {
     { countryId: sourceCountryId },
     { session }
   );
-  await db.collection<GovernmentFormation>("governmentFormations").updateOne(
+  await governmentFormationsCollection(db).updateOne(
     { _id: sourceCountryId },
     {
       $set: {
@@ -155,7 +157,7 @@ export async function materializeFederationFederalRetirement(input: {
     },
     { session }
   );
-  const updated = await db.collection<CountryGameState>("countryGameStates").updateOne(
+  const updated = await countryGameStatesCollection(db).updateOne(
     { _id: sourceCountryId, dissolvedTurn: null },
     {
       $set: {

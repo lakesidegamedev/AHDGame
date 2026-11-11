@@ -8,6 +8,7 @@ import {
 } from "@/lib/countries/jp/rules/shugiinElectoralLaw";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 
 /**
  * Enacted electoral law: the franchise, and how easily voters reach the rolls.
@@ -129,7 +130,7 @@ export async function applyElectoralLawProvision(
     ) {
       throw new Error("Japan Shugiin reform is unavailable before its 1994 decision window");
     }
-    const countryStates = db.collection<CountryGameState>("countryGameStates");
+    const countryStates = countryGameStatesCollection(db);
     const existing = await countryStates.findOne(
       { _id: "JP" },
       { projection: { jpShugiinElectoralMandate: 1 } }

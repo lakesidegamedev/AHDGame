@@ -7,6 +7,7 @@ import {
   withdrawNppEndorsement,
 } from "@/lib/nppEndorsements";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 interface EndorsementSummary {
   created: number;
@@ -43,8 +44,7 @@ export async function processNppEndorsements(ctx: NPPContext): Promise<Endorseme
         status: 1,
       })
       .toArray(),
-    ctx.db
-      .collection<ElectionCandidate>("electionCandidates")
+    electionCandidatesCollection(ctx.db)
       .find({ electionId: { $in: electionIds }, status: "active" })
       .toArray(),
   ]);

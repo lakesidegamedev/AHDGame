@@ -3,6 +3,7 @@ import type { NPP, Election, ElectionCandidate } from "@/lib/db/types";
 import type { Db } from "@/lib/mongodb";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 export async function handleRemoveNPPs(
   db: Db,
@@ -20,15 +21,14 @@ export async function handleRemoveNPPs(
 
   const electionIds = elections.map((e) => e._id);
 
-  const nppCandidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const nppCandidates = await electionCandidatesCollection(db)
     .find({
       electionId: { $in: electionIds },
       isNPP: true,
     })
     .toArray();
 
-  const removeResult = await db.collection<ElectionCandidate>("electionCandidates").deleteMany({
+  const removeResult = await electionCandidatesCollection(db).deleteMany({
     electionId: { $in: electionIds },
     isNPP: true,
   });

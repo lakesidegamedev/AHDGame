@@ -20,6 +20,7 @@ import { getHomeCurrency } from "@/lib/currency/characterFunds";
 import { rejectIfTurnProcessing, resolveOwnedUnion } from "./unionActions";
 import type { UnionActionResult } from "./unionActions";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { unionsCollection } from "@/lib/db/repositories/unions";
 
 /**
  * Smallest contribution worth a write. Not a balance question: it stops a
@@ -87,8 +88,7 @@ export async function fundUnionTreasury(
   }
 
   try {
-    const credited = await db
-      .collection<Union>("unions")
+    const credited = await unionsCollection(db)
       .updateOne(
         { _id: union._id },
         { $inc: { treasury: contribution }, $set: { updatedAt: new Date() } }

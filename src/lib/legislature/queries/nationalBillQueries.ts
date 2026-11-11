@@ -84,6 +84,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 const BILL_PAGE_LIMIT = 50;
 
@@ -261,15 +262,14 @@ export async function listNationalLegislatureBills(
   }
 
   const [bills, total, parties] = await Promise.all([
-    db
-      .collection<Bill>("bills")
+    billsCollection(db)
       .find(billFilter)
       .project<Bill>({ fullText: 0 })
       .sort({ proposedAt: -1 })
       .skip(skip)
       .limit(BILL_PAGE_LIMIT)
       .toArray(),
-    db.collection<Bill>("bills").countDocuments(billFilter),
+    billsCollection(db).countDocuments(billFilter),
     politicalPartiesCollection(db).find({ countryId }).toArray(),
   ]);
   const lowerKey = config.legislature.lowerChamber.key;
@@ -336,7 +336,7 @@ export async function listNationalLegislatureBills(
             countryId,
           })
           .toArray(),
-        db.collection<Bill>("bills").findOne({
+        billsCollection(db).findOne({
           sponsorId: new ObjectId(myCharacterId),
           ...buildActiveNationalBillFilter(countryId, NATIONAL_TERMINAL_STATUSES as BillStatus[]),
         }),
@@ -385,8 +385,7 @@ export async function listNationalLegislatureBills(
     BillProposalAutoFailWarning | null
   >;
 
-  const activeBillsForProvisions = await db
-    .collection<Bill>("bills")
+  const activeBillsForProvisions = await billsCollection(db)
     .find(buildActiveNationalBillFilter(countryId, NATIONAL_TERMINAL_STATUSES as BillStatus[]), {
       projection: { provisions: 1 },
     })
@@ -714,7 +713,7 @@ export async function getNationalBillDetail(
   billId: string,
   authUser: AuthUser | null
 ): Promise<BillDetail | null> {
-  const bill = await db.collection<Bill>("bills").findOne({ _id: new ObjectId(billId) });
+  const bill = await billsCollection(db).findOne({ _id: new ObjectId(billId) });
   if (!bill) return null;
 
   const { provisionsResolved, legislationTypeName, legacyDirectionLabel, legacyEffectTargetLabel } =

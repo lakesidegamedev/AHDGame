@@ -27,6 +27,7 @@ import type { CabinetSetting } from "@/lib/db/types/cabinetSetting";
 import { loadAnnualSubsidyCostMaps } from "@/lib/subsidies/subsidyBudgetCosts";
 import { COUNTRY_CONFIGS, getCountryConfig, type CountryId } from "@/lib/constants/countries";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 // ── Pure calculation ─────────────────────────────────────────────────────────
 
@@ -278,9 +279,7 @@ export async function processOnePartyRegionalBudgets(
     ]),
   ];
 
-  const legTypes = await db
-    // full-read(legislationTypes): policyOptions tables price every regional law
-    .collection<LegislationType>("legislationTypes")
+  const legTypes = await legislationTypesCollection(db)
     .find({ _id: { $in: allLegTypeIds } })
     .toArray();
   const legTypeMap = new Map(legTypes.map((lt) => [lt._id, lt]));

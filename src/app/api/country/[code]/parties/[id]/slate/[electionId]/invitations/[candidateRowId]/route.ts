@@ -10,6 +10,9 @@ import type { Election, ElectionCandidate, SlateCandidate } from "@/lib/db/types
 import { resolveSlateAuthority } from "@/lib/slateAuthority";
 import { removeWithdrawnCandidateFromTally } from "@/lib/elections/engine/tallyCleaner";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import type { Document } from "mongodb";
 
 interface RouteParams {
   params: Promise<{
@@ -82,14 +85,13 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
         return errorResponse(409, "Cannot withdraw a filed candidate from a closed race.");
       }
 
-      const filedCandidate = await db.collection<ElectionCandidate>("electionCandidates").findOne({
+      const filedCandidate = await electionCandidatesCollection(db).findOne({
         electionId: electionObjectId,
         characterId: row.candidateId,
         status: "active",
       });
       if (filedCandidate) {
-        await db
-          .collection<ElectionCandidate>("electionCandidates")
+        await electionCandidatesCollection(db)
           .updateOne(
             { _id: filedCandidate._id },
             { $set: { status: "withdrawn", withdrawnAt: now } }
@@ -99,7 +101,7 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
           electionObjectId,
           filedCandidate._id.toString()
         );
-        await db.collection("campaigns").updateOne(
+        await campaignsCollection<Document>(db).updateOne(
           {
             electionId: electionObjectId,
             candidateId: filedCandidate.characterId,

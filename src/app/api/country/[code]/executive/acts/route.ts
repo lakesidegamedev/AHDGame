@@ -15,6 +15,8 @@ import {
 import { getExecutiveSurface } from "@/lib/constants/executiveSurface";
 import type { Bill, GovernorExecutiveOrder } from "@/lib/db/types";
 import type { CabinetMember, CabinetNomination } from "@/lib/db/types/cabinet";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import type { Document } from "mongodb";
 
 const LEDGER_BILL_STATUSES = [
   "signed",
@@ -38,10 +40,7 @@ function humanizePositionId(positionId: string): string {
 async function loadExecutiveActInputs(db: Db, countryId: CountryId): Promise<ExecutiveActInputs> {
   const nationalStateId = NATIONAL_POLICY_STATE_IDS[countryId];
   const [bills, orders, nominations, cabinetMembers, types] = await Promise.all([
-    db
-      // Untyped: the country-scope filter is a dynamic query shape (same
-      // pattern as overview-counts); row typing comes from .project<> below.
-      .collection("bills")
+    billsCollection<Document>(db)
       .find({
         ...buildNationalBillCountryScopeFilter(countryId),
         status: { $in: LEDGER_BILL_STATUSES },

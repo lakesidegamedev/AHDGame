@@ -1,6 +1,7 @@
 import type { Db, ObjectId } from "mongodb";
 import type { ElectionCandidate, GovernorEndorsement } from "@/lib/db/types";
 import { applyEndorsementSupportBump } from "@/lib/elections/campaigns/supportEvents";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 export type WithdrawReason = NonNullable<GovernorEndorsement["withdrawnReason"]>;
 
@@ -30,8 +31,7 @@ export async function withdrawEndorsement(
   }
 
   if (endorsement && !endorsement.candidateIsNPP) {
-    const candidate = await db
-      .collection<ElectionCandidate>("electionCandidates")
+    const candidate = await electionCandidatesCollection(db)
       .findOne({ _id: endorsement.candidateId });
     if (candidate?.characterId) {
       await applyEndorsementSupportBump(db, candidate.characterId, true);

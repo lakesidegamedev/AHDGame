@@ -80,6 +80,9 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import type { Document } from "mongodb";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 const MS_PER_HOUR = 3_600_000;
 
@@ -222,19 +225,16 @@ export async function runPrimaryStaggerWaveIfDue(
   // per-state primary votes, and delegates all persist on electionVoteTallies.
   // Without this, primaries can enter the calendar window with no tally doc and
   // silently skip every state because the stagger phase has nowhere to record them.
-  const candidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidates = await electionCandidatesCollection(db)
     .find({ electionId: election._id, status: "active" })
     .toArray();
   if (candidates.length === 0) return null;
 
-  let tally = await db
-    .collection<ElectionVoteTally>("electionVoteTallies")
+  let tally = await electionVoteTalliesCollection(db)
     .findOne({ electionId: election._id });
   if (!tally) {
     await initPresidentVoteTally(election._id, candidates, undefined, db);
-    tally = await db
-      .collection<ElectionVoteTally>("electionVoteTallies")
+    tally = await electionVoteTalliesCollection(db)
       .findOne({ electionId: election._id });
     if (!tally) return null;
   }
@@ -318,8 +318,7 @@ export async function runPrimaryStaggerWaveIfDue(
       .collection<StateDemographics>("stateDemographics")
       .find({ _id: { $in: waveStates } })
       .toArray(),
-    db
-      .collection<StatePartyOrg>("statePartyOrg")
+    statePartyOrgCollection(db)
       .find({ stateId: { $in: waveStates } })
       .toArray(),
     db
@@ -986,7 +985,7 @@ export async function runPrimaryStaggerWaveIfDue(
   // also double-pushing (and vice versa). Momentum ($set primaryMomentum +
   // $push primaryMomentumByWave) rides the same single write so the carry and
   // the wave counter can never diverge.
-  await db.collection<ElectionVoteTally>("electionVoteTallies").updateOne(
+  await electionVoteTalliesCollection(db).updateOne(
     { electionId: election._id },
     {
       $set: {

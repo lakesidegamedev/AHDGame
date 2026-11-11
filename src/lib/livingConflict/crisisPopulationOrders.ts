@@ -13,6 +13,7 @@ import { ensureDemographicWorldEpoch } from "@/lib/demographics/worldEpoch";
 import type { ConflictCivilianLossOrder } from "./rules/civilianLoss";
 import { loadRefugeeAdmissionAuthorization } from "./refugeeReception";
 import type { RefugeeReceptionOrder } from "./rules/refugeeReception";
+import { crisesCollection } from "@/lib/db/repositories/crises";
 
 /** Deaths from a single effect never exceed this share of a country's residents. */
 export const MAX_LOSS_SHARE = 0.01;
@@ -207,6 +208,6 @@ export async function raiseCrisisPopulationOrders(
     })),
   ];
   if (ops.length === 0) return 0;
-  const written = await db.collection<Crisis>("crises").bulkWrite(ops, { ordered: true });
+  const written = await crisesCollection(db).bulkWrite(ops, { ordered: true });
   return written.modifiedCount;
 }

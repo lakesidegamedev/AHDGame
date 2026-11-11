@@ -3,6 +3,8 @@ import { missingPresetEntry } from "@/lib/seeds/contract/seedContractError";
 import type { StatePartyOrg } from "@/lib/db/types";
 import { getRuRegionOrg, getRuPartyTreasury } from "@/lib/seeds/ru/ruStatePartyOrgCalculations";
 import { getGameStatePreset } from "@/lib/db/collections/gameState";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import type { Document } from "mongodb";
 
 /**
  * USSR is single-party: CPSU (sequentialId "1") is the only party with
@@ -55,7 +57,7 @@ export async function seedRuStatePartyOrg(
   }
 
   if (reset) {
-    await db.collection("statePartyOrg").deleteMany({ countryId: "RU" });
+    await statePartyOrgCollection<Document>(db).deleteMany({ countryId: "RU" });
   }
 
   const regionOrg = getRuRegionOrg(activePreset);
@@ -90,8 +92,7 @@ export async function seedRuStatePartyOrg(
   let upserted = 0;
   for (const org of orgs) {
     const { _id, ...orgData } = org;
-    const result = await db
-      .collection<StatePartyOrg>("statePartyOrg")
+    const result = await statePartyOrgCollection(db)
       .updateOne(
         { _id },
         { $set: { ...orgData, updatedAt: now }, $setOnInsert: { createdAt: now } },

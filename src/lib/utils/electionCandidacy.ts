@@ -23,6 +23,12 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import type { Document } from "mongodb";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
 
 /**
  * Move an Independent player's live governmental candidacies onto the party
@@ -36,8 +42,7 @@ export async function transferIndependentCandidaciesToParty(
   newParty: string,
   now = new Date()
 ): Promise<{ transferredCount: number; elections: string[] }> {
-  const candidacies = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidacies = await electionCandidatesCollection(db)
     .find({
       characterId,
       isNPP: { $ne: true },
@@ -73,7 +78,7 @@ export async function transferIndependentCandidaciesToParty(
   const transferredElectionIds = [
     ...new Map(toTransfer.map((c) => [c.electionId.toString(), c.electionId])).values(),
   ];
-  const result = await db.collection<ElectionCandidate>("electionCandidates").updateMany(
+  const result = await electionCandidatesCollection(db).updateMany(
     {
       _id: { $in: candidateIds },
       status: "active",
@@ -84,7 +89,7 @@ export async function transferIndependentCandidaciesToParty(
 
   // Campaign access and party funding key off Campaign.party, so keep the
   // retained campaign in lockstep with its candidate row.
-  await db.collection("campaigns").updateMany(
+  await campaignsCollection<Document>(db).updateMany(
     {
       electionId: { $in: transferredElectionIds },
       candidateId: characterId,
@@ -96,7 +101,7 @@ export async function transferIndependentCandidaciesToParty(
   // Existing tallies denormalize each candidate's party for maps, seat
   // estimates, and result displays. Each race needs its own dynamic field so
   // unrelated tallies do not gain candidate entries from another election.
-  await db.collection("electionVoteTallies").bulkWrite(
+  await electionVoteTalliesCollection<Document>(db).bulkWrite(
     toTransfer.map((candidate) => ({
       updateMany: {
         filter: { electionId: candidate.electionId },
@@ -133,8 +138,7 @@ export async function withdrawFromMismatchedPrimaries(
   const now = new Date();
 
   // Find all active candidacies for this character where party doesn't match
-  const candidacies = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidacies = await electionCandidatesCollection(db)
     .find({
       characterId,
       status: "active",
@@ -166,8 +170,7 @@ export async function withdrawFromMismatchedPrimaries(
 
   // Withdraw the candidacies
   const candidateIds = toWithdraw.map((c) => c._id);
-  await db
-    .collection("electionCandidates")
+  await electionCandidatesCollection<Document>(db)
     .updateMany(
       { _id: { $in: candidateIds } },
       { $set: { status: "withdrawn", withdrawnAt: now } }
@@ -217,8 +220,7 @@ export async function withdrawNPPFromMismatchedPrimaries(
   const now = new Date();
 
   // Find all active candidacies for this NPP where party doesn't match
-  const candidacies = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidacies = await electionCandidatesCollection(db)
     .find({
       nppId,
       isNPP: true,
@@ -248,8 +250,7 @@ export async function withdrawNPPFromMismatchedPrimaries(
   }
 
   const candidateIds = toWithdraw.map((c) => c._id);
-  await db
-    .collection("electionCandidates")
+  await electionCandidatesCollection<Document>(db)
     .updateMany(
       { _id: { $in: candidateIds } },
       { $set: { status: "withdrawn", withdrawnAt: now } }
@@ -387,8 +388,7 @@ export async function cleanupPartyPositionsOnSwitch(
 
       // If chair was cleared, sync any coalition this party leads
       if (clearedNationalLeadership.includes("chair")) {
-        await db
-          .collection("coalitions")
+        await coalitionsCollection<Document>(db)
           .updateMany(
             { chairPartyId: nationalParty._id },
             { $set: { chairCharacterId: null, updatedAt: now } }
@@ -398,8 +398,7 @@ export async function cleanupPartyPositionsOnSwitch(
   }
 
   // 2. Clear state party leadership positions (incl. campaigner)
-  const stateOrgs = await db
-    .collection<StatePartyOrg>("statePartyOrg")
+  const stateOrgs = await statePartyOrgCollection(db)
     .find({
       partyId: oldParty,
       $or: [
@@ -433,8 +432,7 @@ export async function cleanupPartyPositionsOnSwitch(
     }
 
     if (positions.length > 0) {
-      await db
-        .collection<StatePartyOrg>("statePartyOrg")
+      await statePartyOrgCollection(db)
         .updateOne({ _id: org._id }, { $set: updates });
       clearedStateLeadership.push(`${org.stateId}: ${positions.join(", ")}`);
     }
@@ -582,8 +580,7 @@ export async function sweepPartyMismatchedCandidates(): Promise<number> {
 
   const activeElectionIds = activeElections.map((e) => e._id);
 
-  const candidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidates = await electionCandidatesCollection(db)
     .find({
       electionId: { $in: activeElectionIds },
       status: "active",
@@ -655,8 +652,7 @@ export async function sweepPartyMismatchedCandidates(): Promise<number> {
 
   // Withdraw all mismatched candidacies
   const ids = toWithdraw.map((c) => c._id);
-  await db
-    .collection("electionCandidates")
+  await electionCandidatesCollection<Document>(db)
     .updateMany({ _id: { $in: ids } }, { $set: { status: "withdrawn", withdrawnAt: now } });
 
   // Clean tallies
@@ -710,8 +706,7 @@ export async function withdrawAllActiveCandidacies(characterId: ObjectId): Promi
   const now = new Date();
 
   // 1. General / primary election candidacies
-  const generalCandidacies = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const generalCandidacies = await electionCandidatesCollection(db)
     .find({ characterId, status: "active" })
     .toArray();
 
@@ -730,8 +725,7 @@ export async function withdrawAllActiveCandidacies(characterId: ObjectId): Promi
 
     if (toWithdraw.length > 0) {
       const ids = toWithdraw.map((c) => c._id);
-      await db
-        .collection("electionCandidates")
+      await electionCandidatesCollection<Document>(db)
         .updateMany({ _id: { $in: ids } }, { $set: { status: "withdrawn", withdrawnAt: now } });
       for (const c of toWithdraw) {
         await removeWithdrawnCandidateFromTally(db, c.electionId, c._id.toString());

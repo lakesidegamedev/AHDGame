@@ -24,6 +24,8 @@ import { convertCorpCurrency } from "@/lib/corporations/convertCorpCurrency";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import type { Document } from "mongodb";
 
 export async function convertTransferredResidentsCurrency(
   db: Db,
@@ -85,8 +87,7 @@ export async function convertTransferredResidentsCurrency(
   // evacuate path deletes them, so this matches nothing on a referendum
   // transfer) hold their treasuries in the old currency. One multiplicative
   // pass per region: the region moves exactly once, so this cannot re-run.
-  await db
-    .collection("statePartyOrg")
+  await statePartyOrgCollection<Document>(db)
     .updateMany({ stateId: regionId }, { $mul: { treasury: scale }, $set: { updatedAt: now } });
 
   // Resident players' home-currency wallet converts; other currencies stay as forex.

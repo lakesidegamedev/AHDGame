@@ -8,6 +8,7 @@ import {
   UNION_PROSECUTION_MESSAGE,
 } from "@/lib/unions/unionProsecutionBar";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { unionsCollection } from "@/lib/db/repositories/unions";
 
 export type ResignUnionLeadershipResult =
   { ok: true; status: 200 } | { ok: false; status: number; error: string };
@@ -31,7 +32,7 @@ export async function resignUnionLeadership(
     return { ok: false, status: 400, error: "Invalid union ID" };
   }
   const unionObjectId = new ObjectId(unionId);
-  const union = await db.collection<Union>("unions").findOne({ _id: unionObjectId });
+  const union = await unionsCollection(db).findOne({ _id: unionObjectId });
   if (!union) {
     return { ok: false, status: 404, error: "Union not found" };
   }
@@ -48,7 +49,7 @@ export async function resignUnionLeadership(
   const now = new Date();
   await runWithOptionalTransaction(
     async (session) => {
-      await db.collection<Union>("unions").updateOne(
+      await unionsCollection(db).updateOne(
         { _id: unionObjectId },
         {
           $set: { ownerId: null, updatedAt: now },
@@ -64,7 +65,7 @@ export async function resignUnionLeadership(
       await db.collection("unionLeaderVotes").deleteMany({ unionId: unionObjectId }, { session });
     },
     async () => {
-      await db.collection<Union>("unions").updateOne(
+      await unionsCollection(db).updateOne(
         { _id: unionObjectId },
         {
           $set: { ownerId: null, updatedAt: now },

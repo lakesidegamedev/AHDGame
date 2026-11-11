@@ -38,6 +38,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import type { Document } from "mongodb";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 export type NationalBillActionInput =
   | { action: "vote"; vote: "for" | "against" | "abstain" }
@@ -180,7 +181,7 @@ export async function performNationalBillAction(
         };
       }
 
-      const voteResult = await db.collection<Bill>("bills").updateOne(
+      const voteResult = await billsCollection(db).updateOne(
         {
           _id: bill._id,
           status: "cabinet_review",
@@ -280,7 +281,7 @@ export async function performNationalBillAction(
     }
 
     if (isOtherChamber || concurrentField === "otherChamberVotes") {
-      const voteResult = await db.collection<Bill>("bills").updateOne(
+      const voteResult = await billsCollection(db).updateOne(
         // BOTH filters accept `active_both`: the upper voter reaches this branch and the
         // lower voter the one below, so teaching only one leaves half the chamber with
         // "this bill changed before your vote could be recorded".
@@ -312,7 +313,7 @@ export async function performNationalBillAction(
         "otherChamberWhippedFromVote"
       );
     } else {
-      const voteResult = await db.collection<Bill>("bills").updateOne(
+      const voteResult = await billsCollection(db).updateOne(
         {
           _id: bill._id,
           status: isConcurrent ? "active_both" : isJpOverride ? "override_shugiin" : "active",
@@ -444,7 +445,7 @@ export async function performNationalBillAction(
 
     const charKey = character._id.toString();
     const overrideWeight = memberOfEither.seatsHeld ?? 1;
-    const voteResult = await db.collection<Bill>("bills").updateOne(
+    const voteResult = await billsCollection(db).updateOne(
       { _id: bill._id, status: "veto_override" },
       buildEmbeddedVoteTallyUpdate({
         voteField: "vetoOverrideVotes",
@@ -536,7 +537,7 @@ export async function performNationalBillAction(
       };
     }
 
-    await db.collection<Bill>("bills").updateOne(
+    await billsCollection(db).updateOne(
       { _id: bill._id },
       {
         $push: { coSponsors: { characterId: character._id, characterName: character.name } },
@@ -575,7 +576,7 @@ export async function performNationalBillAction(
       };
     }
 
-    await db.collection<Bill>("bills").updateOne(
+    await billsCollection(db).updateOne(
       { _id: bill._id },
       {
         $pull: { coSponsors: { characterId: character._id } },
@@ -597,8 +598,7 @@ export async function performNationalBillAction(
         },
       };
     }
-    await db
-      .collection<Bill>("bills")
+    await billsCollection(db)
       .updateOne({ _id: bill._id }, { $set: { status: "withdrawn", updatedAt: now } });
 
     await captureBillStatusChanged({
@@ -773,7 +773,7 @@ export async function performNationalBillAction(
       };
     }
 
-    const filibusterResult = await db.collection<Bill>("bills").updateOne(
+    const filibusterResult = await billsCollection(db).updateOne(
       {
         _id: bill._id,
         "filibusterInvocations.characterId": { $ne: character._id.toString() },

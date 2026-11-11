@@ -5,6 +5,7 @@ import { applyTariffProvision, tariffProvisionFilter } from "@/lib/tariffs/tarif
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 const BASELINE_TARIFF_COUNTRIES = [
   COUNTRY_CONFIGS.US.id,
@@ -92,8 +93,7 @@ export async function reconcileSignedTariffBills(db: Db, countryId?: CountryId):
     query.countryId = countryId;
   }
 
-  const signedBills = await db
-    .collection<Bill>("bills")
+  const signedBills = await billsCollection(db)
     .find(query)
     .sort({ enactedAt: 1, updatedAt: 1, _id: 1 })
     .toArray();

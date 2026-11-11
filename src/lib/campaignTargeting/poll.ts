@@ -39,6 +39,7 @@ import {
 } from "./rules";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 export async function projectCampaignPoll(
   db: Db,
@@ -53,8 +54,7 @@ export async function projectCampaignPoll(
     countryId: character.countryId,
   });
   if (!election) return null;
-  const candidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidates = await electionCandidatesCollection(db)
     .find({
       electionId: election._id,
       status: "active",

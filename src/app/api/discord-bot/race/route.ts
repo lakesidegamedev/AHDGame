@@ -36,6 +36,9 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -127,8 +130,7 @@ export async function GET(request: Request) {
     const electionOid = election._id;
     const isPresident = election.electionType === "president";
 
-    const candidates = await db
-      .collection<ElectionCandidate>("electionCandidates")
+    const candidates = await electionCandidatesCollection(db)
       .find({ electionId: electionOid, status: "active" })
       .toArray();
 
@@ -178,9 +180,8 @@ export async function GET(request: Request) {
         .toArray()
         // A split turn holds an early and a rest row; chart one per turn.
         .then((rows) => oneRowPerTurn(rows).slice(0, 72)),
-      isPresident ? db.collection<StatePartyOrg>("statePartyOrg").find({}).toArray() : [],
-      db
-        .collection<Campaign>("campaigns")
+      isPresident ? statePartyOrgCollection(db).find({}).toArray() : [],
+      campaignsCollection(db)
         .find({ electionId: electionOid }, { projection: { _id: 1, candidateId: 1, funds: 1 } })
         .toArray(),
       gameStateCollection(db).findOne({ _id: "current" }),

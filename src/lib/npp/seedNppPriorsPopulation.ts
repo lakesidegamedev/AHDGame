@@ -70,6 +70,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 export interface SeedNppPriorsPopulationResult {
   nppsCreated: number;
@@ -257,8 +258,7 @@ export async function seedNppPriorsPopulation(
     partiesByCountry.set(p.countryId, list);
   }
 
-  const orgRows = await db
-    .collection<OrgRow>("statePartyOrg")
+  const orgRows = await statePartyOrgCollection<OrgRow>(db)
     .find(
       {},
       {

@@ -9,6 +9,7 @@ import type {
 } from "@/lib/db/types/gameState";
 import { ALL_COUNTRY_IDS } from "@/lib/constants/countries";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 
 /** Re-exported for callers that already import from this module — the
  * implementation and its full rationale live in bootstrapGameWorld.ts,
@@ -172,7 +173,7 @@ export async function forceFullAutonomy(
     { upsert: true }
   );
 
-  const countryGameStates = db.collection<CountryGameState>("countryGameStates");
+  const countryGameStates = countryGameStatesCollection(db);
   const now = new Date();
   if (!preservePlayerRail) {
     await Promise.all(

@@ -26,6 +26,7 @@ import {
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 
 const FEDERATION_LEGACY_SERVICE_TURNS_COLLECTION = "federationLegacyServiceTurns";
 
@@ -101,8 +102,7 @@ export async function materializeLegacyFederationServiceTurn(input: {
   if (!application || application.appliedOnTurn > turn)
     throw new Error("Legacy service needs an applied federation settlement");
   const sourceCountryId = application.sourceEntityId as CountryId;
-  const country = await db
-    .collection<CountryGameState>("countryGameStates")
+  const country = await countryGameStatesCollection(db)
     .findOne({ _id: sourceCountryId }, { session });
   const intent = await db
     .collection<FederationSettlementIntentRecord>("federationSettlementIntents")

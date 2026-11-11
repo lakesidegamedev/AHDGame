@@ -3,6 +3,8 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import type { Election, ElectionCandidate, ElectionVoteTally } from "@/lib/db/types";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 
 function staleCandidateIds(tally: ElectionVoteTally, activeIds: Set<string>): string[] {
   const tallyCandidateIds = new Set(Object.keys(tally.totalVotes));
@@ -34,14 +36,12 @@ export const GET = withAdminRoute(async (_auth) => {
   const electionIds = elections.map((e) => e._id);
 
   // Get all candidates for active elections
-  const candidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidates = await electionCandidatesCollection(db)
     .find({ electionId: { $in: electionIds } })
     .toArray();
 
   // Get all tallies for active elections
-  const tallies = await db
-    .collection<ElectionVoteTally>("electionVoteTallies")
+  const tallies = await electionVoteTalliesCollection(db)
     .find({ electionId: { $in: electionIds } })
     .toArray();
 
@@ -103,14 +103,12 @@ export const POST = withAdminRoute(async (_auth) => {
   const electionIds = elections.map((e) => e._id);
 
   // Get all candidates for active elections
-  const candidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidates = await electionCandidatesCollection(db)
     .find({ electionId: { $in: electionIds } })
     .toArray();
 
   // Get all tallies for active elections
-  const tallies = await db
-    .collection<ElectionVoteTally>("electionVoteTallies")
+  const tallies = await electionVoteTalliesCollection(db)
     .find({ electionId: { $in: electionIds } })
     .toArray();
 
@@ -181,7 +179,7 @@ export const POST = withAdminRoute(async (_auth) => {
       }
     }
 
-    await db.collection<ElectionVoteTally>("electionVoteTallies").updateOne(
+    await electionVoteTalliesCollection(db).updateOne(
       { electionId: tally.electionId },
       {
         $unset: unsetPaths,

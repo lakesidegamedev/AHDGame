@@ -42,6 +42,10 @@ import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficia
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 // ─── Context Types ─────────────────────────────────────────────────────────────
 
@@ -411,8 +415,7 @@ export async function loadNPPContext(now: Date, options?: NPPContextOptions): Pr
     electedOfficialsCollection(db)
       .find({ isNPP: true, nppId: { $exists: true } })
       .toArray(),
-    db
-      .collection<Bill>("bills")
+    billsCollection(db)
       .find(
         buildActiveBillFilter({
           currentTurn: optionsCurrentTurn,
@@ -432,15 +435,14 @@ export async function loadNPPContext(now: Date, options?: NPPContextOptions): Pr
         ],
       })
       .toArray(),
-    db.collection<StatePartyOrg>("statePartyOrg").find({}).toArray(),
+    statePartyOrgCollection(db).find({}).toArray(),
     politicalPartiesCollection(db).find({}).toArray(),
     // Phase 4: cross-pressure inputs. Projected to only the fields NPP
     // behavior actually reads (see NPPContext comment) — `legislationTypes`
     // averages 3.9 KB/doc unprojected vs <200 bytes for the policyOptions
     // subset, cutting ~50 MB of in-memory overhead per turn on a 200-doc
     // collection at typical JS object expansion ratios.
-    db
-      .collection<LegislationType>("legislationTypes")
+    legislationTypesCollection(db)
       .find({}, { projection: { _id: 1, policyOptions: 1 } })
       .toArray() as Promise<LegislationType[]>,
     db
@@ -542,8 +544,7 @@ export async function loadNPPContext(now: Date, options?: NPPContextOptions): Pr
 
   const [allCandidates, allActiveNPPCandidacies, whips, stateBillWhipsArr] = await Promise.all([
     primaryIds.length > 0
-      ? db
-          .collection<ElectionCandidate>("electionCandidates")
+      ? electionCandidatesCollection(db)
           .find({ electionId: { $in: primaryIds }, status: "active" })
           .toArray()
       : Promise.resolve([]),
@@ -553,8 +554,7 @@ export async function loadNPPContext(now: Date, options?: NPPContextOptions): Pr
     // mirror that global invariant, or incumbent-defense / generic fill will
     // attempt a second active insert and throw a duplicate-key error that
     // aborts the whole election-entry pass.
-    db
-      .collection<ElectionCandidate>("electionCandidates")
+    electionCandidatesCollection(db)
       .find({ isNPP: true, status: "active" })
       .project<{ nppId: import("mongodb").ObjectId }>({ nppId: 1 })
       .toArray(),

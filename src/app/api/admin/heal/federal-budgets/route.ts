@@ -26,6 +26,7 @@ import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 const FEDERAL_TAX_RATE_KEYS: ReadonlySet<keyof FederalTaxRates> = new Set([
   "incomeTax",
@@ -356,8 +357,7 @@ export async function POST() {
     let nationalHealed = 0;
 
     // Pre-fetch all legislation types with taxRateChange for rate sync
-    const taxLegTypes = await db
-      .collection<import("@/lib/db/types").LegislationType>("legislationTypes")
+    const taxLegTypes = await legislationTypesCollection<import("@/lib/db/types").LegislationType>(db)
       .find({ taxRateChange: { $exists: true } })
       .toArray();
     const taxTypeByLegId = new Map(taxLegTypes.map((lt) => [lt._id, lt.taxRateChange!.taxType]));

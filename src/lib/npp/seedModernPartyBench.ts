@@ -12,6 +12,8 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import type { Document } from "mongodb";
 
 /** Supply an unseated candidate bench for required modern default parties. */
 export async function seedModernPartyBench(
@@ -84,8 +86,7 @@ export async function seedModernPartyBench(
       );
     }
   }
-  const orgs = await db
-    .collection("statePartyOrg")
+  const orgs = await statePartyOrgCollection<Document>(db)
     .find(
       {
         countryId: { $in: [...new Set(required.map((party) => party.countryId))] },

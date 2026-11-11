@@ -33,6 +33,7 @@ import { loadBillLegislationTypes } from "@/lib/legislature/queries/loadBillLegi
 import { proposeNationalBill } from "@/lib/legislature/commands/proposeNationalBill";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { billsCollection } from "@/lib/db/repositories/bills";
 export type { BillDisplay, BillsResponse } from "@/lib/legislature/dto/billDisplay";
 
 // GET /api/congress/bills — Returns a paginated list of bills, optionally filtered by chamber and status.
@@ -72,8 +73,7 @@ export async function GET(request: Request) {
     if (statusFilter && statusFilter !== "all") query.status = statusFilter;
 
     const [bills, parties, total] = await Promise.all([
-      db
-        .collection<Bill>("bills")
+      billsCollection(db)
         .aggregate<Bill>([
           { $match: query },
           {
@@ -100,7 +100,7 @@ export async function GET(request: Request) {
         .toArray(),
       // Congress bills are US-only - filter parties by countryId to avoid cross-country collisions
       politicalPartiesCollection(db).find({ countryId: "US" }).toArray(),
-      db.collection<Bill>("bills").countDocuments(query),
+      billsCollection(db).countDocuments(query),
     ]);
 
     const partyMap = new Map(parties.map((p) => [String(p.sequentialId), p]));
@@ -168,7 +168,7 @@ export async function GET(request: Request) {
             $or: [{ countryId: "US" }, { countryId: { $exists: false } }],
             officeType: { $in: ["house", "senate"] },
           }),
-          db.collection<Bill>("bills").findOne({
+          billsCollection(db).findOne({
             sponsorId: new ObjectId(myCharacterId),
             status: { $nin: TERMINAL_STATUSES },
           }),
@@ -185,8 +185,7 @@ export async function GET(request: Request) {
     const adminOverride = !!(authUser?.isAdmin && !inCongress);
 
     // Collect blocked provisions from all active US Congress bills
-    const activeBillsForProvisions = await db
-      .collection<Bill>("bills")
+    const activeBillsForProvisions = await billsCollection(db)
       .find(
         { countryId: "US", status: { $nin: TERMINAL_STATUSES } },
         { projection: { provisions: 1 } }

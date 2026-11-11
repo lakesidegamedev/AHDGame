@@ -81,6 +81,7 @@ import type { LegislationType } from "@/lib/db/types/legislation";
 import { RESET_V2_READY } from "@/lib/resetVersions/availability";
 import { RESET_V2_COUNTRIES, resetSystemVersionsForCountry } from "@/lib/resetVersions/rules";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 export const stateEffectsAndNationalAggregationPhase: TurnPhaseAdapter = {
   key: "stateEffectsAndNationalAggregation",
@@ -91,8 +92,7 @@ export const stateEffectsAndNationalAggregationPhase: TurnPhaseAdapter = {
     // ~2.4 MB / 1,030-document collection into JS twice in the same turn.
     let legislationTypesPromise: Promise<LegislationType[]> | undefined;
     const getLegislationTypes = () => {
-      legislationTypesPromise ??= db
-        .collection<LegislationType>("legislationTypes")
+      legislationTypesPromise ??= legislationTypesCollection(db)
         // full-read(legislationTypes): both policy processors evaluate every authored effect
         .find({})
         .toArray();

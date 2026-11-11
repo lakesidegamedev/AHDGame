@@ -1,6 +1,7 @@
 import type { Db, ObjectId } from "mongodb";
 import type { Character, Union } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { unionsCollection } from "@/lib/db/repositories/unions";
 
 /**
  * Self-heal helpers for the `Character.unionLeaderOf` cache, the denormalized
@@ -49,8 +50,7 @@ export async function reconcileUnionLeaderCache(
   character: Pick<Character, "_id" | "unionLeaderOf">
 ): Promise<ObjectId | null> {
   if (!character.unionLeaderOf) return null;
-  const union = await db
-    .collection<Union>("unions")
+  const union = await unionsCollection(db)
     .findOne({ _id: character.unionLeaderOf }, { projection: { ownerId: 1 } });
   const matches = union?.ownerId && union.ownerId.toString() === character._id.toString();
   if (matches) return character.unionLeaderOf;

@@ -73,6 +73,7 @@ import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import type { Document } from "mongodb";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 /** Database-name prefix every sandbox sim world uses (`ahd_sim_<seed>`). */
 export const SIM_SANDBOX_DB_PREFIX = "ahd_sim_";
@@ -387,8 +388,7 @@ export async function materializeSyntheticActors(
   const livePartyKeys = new Set(
     persistedParties.map((p) => `${p.countryId ?? "US"}:${String(p.sequentialId)}`)
   );
-  const persistedOrgs = await db
-    .collection("statePartyOrg")
+  const persistedOrgs = await statePartyOrgCollection<Document>(db)
     .find<{
       _id: string;
       stateId: string;

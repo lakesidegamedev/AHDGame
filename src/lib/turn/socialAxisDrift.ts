@@ -5,6 +5,7 @@ import { getFullSimulationCountryIds } from "@/lib/country/countryTier";
 import { getCountryState, updateCountryState } from "@/lib/countryState";
 import { getNationalStateId } from "@/lib/policy/nationalStateId";
 import { logger } from "../observability/logger";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 /**
  * Per-law EMA pull toward the enacted option's social stance. 0.05 moves a
@@ -88,8 +89,7 @@ export async function processSocialAxisDrift(
         let counted = 0;
         if (rows.length > 0) {
           const typeIds = [...new Set(rows.map((r) => r.legislationTypeId))];
-          const types = await db
-            .collection<LegislationTypeOptionsRow>("legislationTypes")
+          const types = await legislationTypesCollection<LegislationTypeOptionsRow>(db)
             .find({ _id: { $in: typeIds } })
             .project<LegislationTypeOptionsRow>({ policyOptions: 1 })
             .toArray();

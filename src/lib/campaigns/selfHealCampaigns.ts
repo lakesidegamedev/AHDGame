@@ -3,6 +3,8 @@ import type { Campaign, Election, ElectionCandidate } from "@/lib/db/types";
 import { isCampaignEligibleElection } from "@/lib/campaigns/isCampaignEligible";
 import { ensureCampaignForCandidate } from "@/lib/campaigns/createInitialCampaign";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 
 /**
  * Standing backstop: guarantee every active player candidate in a
@@ -22,8 +24,7 @@ import { electionsCollection } from "@/lib/db/repositories/elections";
  * Returns the number of candidates created or reactivated.
  */
 export async function selfHealMissingCampaigns(db: Db, now: Date = new Date()): Promise<number> {
-  const activeCandidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const activeCandidates = await electionCandidatesCollection(db)
     .find({ status: "active" })
     .toArray();
   if (activeCandidates.length === 0) return 0;
@@ -48,8 +49,7 @@ export async function selfHealMissingCampaigns(db: Db, now: Date = new Date()): 
       eligibleElectionIds.has(candidate.electionId.toString())
   );
   if (eligibleCandidates.length === 0) return 0;
-  const existing = await db
-    .collection<Campaign>("campaigns")
+  const existing = await campaignsCollection(db)
     .find(
       {
         $or: eligibleCandidates.map((candidate) => ({

@@ -34,6 +34,7 @@ import { globalResponseRoleFor } from "@/lib/livingConflict/globalResponse";
 import { listCrises } from "@/lib/crises/queries/crisisQueries";
 import { loadCrisisV2Summaries, type CrisisV2Summary } from "@/lib/crises/queries/crisisV2View";
 import { getAvailableLevers } from "@/lib/crises/levers/queries";
+import { crisesCollection } from "@/lib/db/repositories/crises";
 
 /** Resolved crises older than this many turns drop off the board's history. */
 const HISTORY_TURNS = 48;
@@ -159,8 +160,7 @@ export async function viewerFromCharacter(
  */
 export async function countViewerCrisisActions(db: Db, characterId: ObjectId): Promise<number> {
   const [withDecision, withLevers] = await Promise.all([
-    db
-      .collection<Crisis>("crises")
+    crisesCollection(db)
       .find({ status: "active", interactionDefinition: { $exists: true } })
       .toArray(),
     getAvailableLevers(db, characterId),

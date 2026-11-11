@@ -14,6 +14,9 @@ import { heldBlocRowIds, releaseVacatedBlocSeats } from "@/lib/elections/vacated
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import type { Document } from "mongodb";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 export interface NppRelocationOutcome {
   /** Office label the NPP was vacated from, or null if they held none. */
@@ -73,8 +76,7 @@ async function withdrawNppActiveCandidacies(
   nppId: ObjectId,
   now: Date
 ): Promise<{ withdrawnGeneralElections: number }> {
-  const candidacies = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidacies = await electionCandidatesCollection(db)
     .find({ nppId, isNPP: true, status: "active" })
     .toArray();
 
@@ -92,8 +94,7 @@ async function withdrawNppActiveCandidacies(
 
   if (toWithdraw.length === 0) return { withdrawnGeneralElections: 0 };
 
-  await db
-    .collection("electionCandidates")
+  await electionCandidatesCollection<Document>(db)
     .updateMany(
       { _id: { $in: toWithdraw.map((candidate) => candidate._id) } },
       { $set: { status: "withdrawn", withdrawnAt: now } }
@@ -119,7 +120,7 @@ async function clearOldRegionStateLeadership(
 ): Promise<string[]> {
   if (!npp.party || npp.party === "independent") return [];
 
-  const oldStateOrg = await db.collection<StatePartyOrg>("statePartyOrg").findOne({
+  const oldStateOrg = await statePartyOrgCollection(db).findOne({
     partyId: npp.party,
     stateId: oldStateId,
     $or: [{ chairId: npp._id }, { viceChairId: npp._id }, { treasurerId: npp._id }],
@@ -143,8 +144,7 @@ async function clearOldRegionStateLeadership(
   }
   if (positions.length === 0) return [];
 
-  await db
-    .collection<StatePartyOrg>("statePartyOrg")
+  await statePartyOrgCollection(db)
     .updateOne({ _id: oldStateOrg._id }, { $set: updates });
   return positions;
 }

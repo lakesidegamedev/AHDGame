@@ -11,6 +11,7 @@
 import type { Db, ObjectId } from "mongodb";
 import type { ElectionCandidate } from "@/lib/db/types";
 import { SUPPORT_ENDORSEMENT_BUMP } from "@/lib/elections/engine/electionFormulaFactors";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 /**
  * Apply a `delta` Support change to every active candidate row of the
@@ -20,8 +21,7 @@ import { SUPPORT_ENDORSEMENT_BUMP } from "@/lib/elections/engine/electionFormula
  */
 async function applySupportDelta(db: Db, characterId: ObjectId, delta: number): Promise<number> {
   if (delta === 0) return 0;
-  const result = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const result = await electionCandidatesCollection(db)
     .updateMany({ characterId, status: "active" }, [
       {
         $set: {

@@ -38,6 +38,7 @@ import type { ResetLawProgramDocument } from "@/lib/resetLegislation/program";
 import { buildResetRegionalProgramClaims } from "@/lib/resetLegislation/rules/regionalClaims";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 // ── Pure calculation types ───────────────────────────────────────────────────
 
@@ -318,9 +319,7 @@ export async function processRegionalBudgets(
   //    a missing type can no longer zero a region's revenue.
   const allLegTypeIds = [...new Set(allRegionalPolicies.map((p) => p.legislationTypeId))];
 
-  const legTypes = await db
-    // full-read(legislationTypes): policyOptions tables price every state law
-    .collection<LegislationType>("legislationTypes")
+  const legTypes = await legislationTypesCollection(db)
     .find({ _id: { $in: allLegTypeIds } })
     .toArray();
   const materializedLegTypes = regionalFinanceEnabled ? withLawAdministration(legTypes) : legTypes;

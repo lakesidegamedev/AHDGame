@@ -41,6 +41,7 @@ import { recordWireEvent, type WireInput } from "@/lib/referendum/wire";
 import { WIRE_SWING_THRESHOLD } from "@/lib/constants/referendum";
 import { hostsSovereigntyReferendums } from "@/lib/referendum/rules/sovereigntyRegions";
 import { resolveWestminsterPolicy } from "@/lib/governorOffice/devolution/rules";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 /**
  * Snapshot a region's cohort baseline at campaign open, from the Layer-1
@@ -368,9 +369,9 @@ export async function processReferendumLifecycle(
       // bill; a dormant Ireland does not block the UK-side process.
       if (ref.kind === "reunification" && ref.westminsterBillId != null) {
         const [westminster, dail] = await Promise.all([
-          db.collection<Bill>("bills").findOne({ _id: ref.westminsterBillId }),
+          billsCollection(db).findOne({ _id: ref.westminsterBillId }),
           ref.dailBillId != null
-            ? db.collection<Bill>("bills").findOne({ _id: ref.dailBillId })
+            ? billsCollection(db).findOne({ _id: ref.dailBillId })
             : Promise.resolve(null),
         ]);
         const dailRequired = ref.dailBillId != null;
@@ -433,8 +434,7 @@ export async function processReferendumLifecycle(
       // Passed → secede via `secedeRegion`; failed/withdrawn/missing → cancel (no
       // cooldown, the popular vote stands); still voting → wait.
       if (ref.kind === "independence" && ref.westminsterBillId != null) {
-        const westminster = await db
-          .collection<Bill>("bills")
+        const westminster = await billsCollection(db)
           .findOne({ _id: ref.westminsterBillId });
         const billPassed = (b: Bill | null) =>
           b != null && (b.status === "signed" || b.enactedAt != null);

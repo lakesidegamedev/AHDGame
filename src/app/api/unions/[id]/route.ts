@@ -83,6 +83,8 @@ import { normalizeServiceIds } from "@/lib/unions/unionServices";
 import { clampPoliticalContributionPct } from "@/lib/unions/unionPoliticalContributions";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { unionsCollection } from "@/lib/db/repositories/unions";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -99,7 +101,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
       return errorResponse(400, "Invalid union ID");
     }
     const db = await getDb();
-    const union = await db.collection<Union>("unions").findOne({ _id: new ObjectId(id) });
+    const union = await unionsCollection(db).findOne({ _id: new ObjectId(id) });
     if (!union) {
       return errorResponse(404, "Union not found");
     }
@@ -141,8 +143,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
         .find({ unionId: union._id })
         .sort({ createdAt: -1 })
         .toArray(),
-      db
-        .collection<Bill>("bills")
+      billsCollection(db)
         .find(buildActiveNationalBillFilter(union.countryId, NATIONAL_TERMINAL_STATUSES), {
           projection: { title: 1, status: 1, proposedAt: 1 },
         })
@@ -272,8 +273,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
       ),
     ].map((id) => new ObjectId(id));
     const representingUnions = representingUnionIds.length
-      ? await db
-          .collection<Union>("unions")
+      ? await unionsCollection(db)
           .find({ _id: { $in: representingUnionIds } }, { projection: { name: 1, approval: 1 } })
           .toArray()
       : [];
@@ -308,8 +308,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     // the union's own dashboard can render "This union has endorsed/opposed: …".
     const billIds = endorsements.map((e) => e.billId);
     const bills = billIds.length
-      ? await db
-          .collection<Bill>("bills")
+      ? await billsCollection(db)
           .find({ _id: { $in: billIds } }, { projection: { title: 1 } })
           .toArray()
       : [];

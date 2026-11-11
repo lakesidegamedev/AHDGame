@@ -16,6 +16,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import type { Document } from "mongodb";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 // GET /api/country/[code]/parties — Return all political parties in the country with member counts and leadership
 // Auth: public
@@ -55,8 +56,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
 
     // Live member counts: players (non-banned) and NPPs, aggregated per party
     const orgAggPromise = includeOrg
-      ? db
-          .collection<StatePartyOrg>("statePartyOrg")
+      ? statePartyOrgCollection(db)
           .aggregate<{ _id: string; totalOrg: number }>([
             {
               $match: {

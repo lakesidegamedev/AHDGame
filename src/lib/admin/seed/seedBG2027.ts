@@ -12,6 +12,8 @@ import { bgParties } from "@/lib/countries/bg/data/bgParties";
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 
 /** Political, demographic and regional metric substrate. Demographics use the
  * modern BG Layer-1 model; metrics are authored 2027 gameplay estimates
@@ -25,7 +27,7 @@ export async function seedBG2027(
   if (preset !== "2027-default") return;
   if (reset) {
     await statesCollection<Document>(db).deleteMany({ countryId: "BG" });
-    await db.collection("statePartyOrg").deleteMany({ countryId: "BG" });
+    await statePartyOrgCollection<Document>(db).deleteMany({ countryId: "BG" });
     await db.collection("stateDemographics").deleteMany({ countryId: "BG" });
     await db.collection("stateDemographicTurnout").deleteMany({ countryId: "BG" });
     await db.collection("macroMetrics").deleteMany({ countryId: "BG" });
@@ -83,8 +85,7 @@ export async function seedBG2027(
         hasPresence: true,
         consecutiveLosses: 0,
       };
-      await db
-        .collection<StatePartyOrg>("statePartyOrg")
+      await statePartyOrgCollection(db)
         .updateOne(
           { _id },
           { $set: { ...data, updatedAt: now }, $setOnInsert: { createdAt: now } },
@@ -113,8 +114,7 @@ export async function seedBG2027(
     formedTurn: null,
     collapsedAt: null,
   };
-  await db
-    .collection<GovernmentFormation>("governmentFormations")
+  await governmentFormationsCollection(db)
     .updateOne(
       { _id: "BG" },
       { $set: { ...formation, updatedAt: now }, $setOnInsert: { createdAt: now } },

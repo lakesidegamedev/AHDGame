@@ -17,6 +17,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 // Loyalty and stubbornness have no per-turn decay, so their boosts stay flat.
 // Influence and favorability DO decay every turn (see actionRefresh), so their
@@ -117,15 +118,14 @@ export async function applyPartyInfluenceEffects(
     case "endorse_candidate": {
       if (!input.context.electionId || !input.context.candidateId) break;
 
-      const candidate = await db.collection<ElectionCandidate>("electionCandidates").findOne({
+      const candidate = await electionCandidatesCollection(db).findOne({
         _id: new ObjectId(input.context.candidateId),
         status: "active",
       });
       if (candidate) {
         const [election, candidateCountAtDecision] = await Promise.all([
           electionsCollection(db).findOne({ _id: candidate.electionId }),
-          db
-            .collection<ElectionCandidate>("electionCandidates")
+          electionCandidatesCollection(db)
             .countDocuments({ electionId: candidate.electionId, status: "active" }),
         ]);
         if (
@@ -160,13 +160,12 @@ export async function applyPartyInfluenceEffects(
 
       const electionObjId = new ObjectId(input.context.electionId);
       const filter = activeNppElectionCandidacyFilter(electionObjId, npp._id);
-      const withdrawCandidate = await db
-        .collection<ElectionCandidate>("electionCandidates")
+      const withdrawCandidate = await electionCandidatesCollection(db)
         .findOne(filter);
 
       if (!withdrawCandidate) return { withdrawApplied: false };
 
-      const updateResult = await db.collection<ElectionCandidate>("electionCandidates").updateOne(
+      const updateResult = await electionCandidatesCollection(db).updateOne(
         { _id: withdrawCandidate._id },
         {
           $set: {

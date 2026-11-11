@@ -18,6 +18,7 @@ import {
 import { getElectedOfficialsCollection } from "@/lib/db/collections/electedOfficials";
 import { getNppsCollection } from "@/lib/db/collections/npps";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 const SOURCES = ["CS", "YU", "RU"] as const;
 
@@ -91,8 +92,7 @@ export async function processFederationNpcMandates(
     .map((proposal) => proposal.billId);
   const [undecidedBills, leaders] = await Promise.all([
     rejectedBillIds.length
-      ? db
-          .collection<Bill>("bills")
+      ? billsCollection(db)
           .find(
             { _id: { $in: rejectedBillIds }, status: "failed", votesFor: 0, votesAgainst: 0 },
             { projection: { _id: 1 } }

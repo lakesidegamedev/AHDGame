@@ -58,6 +58,7 @@ export { taxSliderNpcEconomic } from "@/lib/resetLegislation/rules/taxPosition";
 import { taxSliderNpcEconomic } from "@/lib/resetLegislation/rules/taxPosition";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 export type ResolvedTaxSliderFields =
   | {
@@ -199,7 +200,7 @@ export async function stampTaxSliderProvisions<T extends StampableProvision>(
       out.push(p);
       continue;
     }
-    const lt = await db.collection<LegislationType>("legislationTypes").findOne({ _id: ltId });
+    const lt = await legislationTypesCollection(db).findOne({ _id: ltId });
     if (lt && isLegacyIncomeTax(lt))
       return { ok: false, error: "Choose a separate low, medium, or high income-tax provision." };
     if (!lt?.taxSlider) {

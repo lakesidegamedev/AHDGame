@@ -4,6 +4,7 @@ import type { ElectionCandidate } from "@/lib/db/types";
 import { activeUserIds } from "@/lib/players/playerActivity";
 import { archiveCampaignsForCandidates } from "@/lib/campaigns/archiveWithdrawnCampaigns";
 import { getCharactersCollection } from "@/lib/db/collections/characters";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 /**
  * Withdraws the active candidacies of players inactive for >96 turns, using the
@@ -20,8 +21,7 @@ export async function withdrawInactiveCandidates(
   db: Db,
   now: Date
 ): Promise<{ withdrawn: number }> {
-  const rawCandidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const rawCandidates = await electionCandidatesCollection(db)
     .find({ status: "active", isNPP: { $ne: true } })
     .project<{ _id: ObjectId; characterId: ObjectId | null; electionId: ObjectId }>({
       _id: 1,
@@ -58,8 +58,7 @@ export async function withdrawInactiveCandidates(
   }
   if (toWithdraw.length === 0) return { withdrawn: 0 };
 
-  const result = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const result = await electionCandidatesCollection(db)
     .updateMany(
       { _id: { $in: toWithdraw.map((c) => c._id) } },
       { $set: { status: "withdrawn", withdrawnAt: now } }

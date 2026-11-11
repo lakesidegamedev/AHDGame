@@ -18,6 +18,9 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import type { Document } from "mongodb";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 
 export interface RelocationOutcome {
   resignedFromOffice: string | null;
@@ -158,8 +161,7 @@ export async function performRelocation(
   // These were the defense-in-depth gap behind "relocated chair acts on
   // foreign entity" — clearing them here closes the loop at the source.
   if (countryChanged) {
-    await db
-      .collection("campaigns")
+    await campaignsCollection<Document>(db)
       .updateMany(
         { managerCharacterId: characterId },
         { $set: { managerId: null, managerCharacterId: null, updatedAt: now } }
@@ -175,7 +177,7 @@ export async function performRelocation(
     });
     // GovernmentFormation pmCharacterId — auth helper grants PM-only powers
     // based on this field, so a relocated PM must lose the title.
-    await db.collection("governmentFormations").updateMany(
+    await governmentFormationsCollection<Document>(db).updateMany(
       { pmCharacterId: characterId },
       {
         $set: {
@@ -221,7 +223,7 @@ export async function performRelocation(
   //    (always — a player can't chair the CA state party if they live in TX).
   const clearedStateLeadership: string[] = [];
   if (character.party && character.party !== "independent") {
-    const oldStateOrg = await db.collection<StatePartyOrg>("statePartyOrg").findOne({
+    const oldStateOrg = await statePartyOrgCollection(db).findOne({
       partyId: character.party,
       stateId: oldStateId,
       $or: [{ chairId: characterId }, { viceChairId: characterId }, { treasurerId: characterId }],
@@ -243,8 +245,7 @@ export async function performRelocation(
         positions.push("treasurer");
       }
       if (positions.length > 0) {
-        await db
-          .collection<StatePartyOrg>("statePartyOrg")
+        await statePartyOrgCollection(db)
           .updateOne({ _id: oldStateOrg._id }, { $set: updates });
         clearedStateLeadership.push(`${oldStateId}: ${positions.join(", ")}`);
       }

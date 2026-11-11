@@ -15,6 +15,8 @@ import { initPresidentVoteTally } from "@/lib/elections/presidential/presidentia
 import { isPrimaryEnded } from "@/lib/elections/phases";
 import type { Election, ElectionCandidate, ElectionVoteTally } from "@/lib/db/types";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -64,12 +66,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     // Ensure vote tally exists (init if missing so resolution can run)
-    const tally = await db
-      .collection<ElectionVoteTally>("electionVoteTallies")
+    const tally = await electionVoteTalliesCollection(db)
       .findOne({ electionId: electionObjectId });
     if (!tally) {
-      const candidates = await db
-        .collection<ElectionCandidate>("electionCandidates")
+      const candidates = await electionCandidatesCollection(db)
         .find({ electionId: electionObjectId, status: "active" })
         .toArray();
       if (election.electionType === "president") {

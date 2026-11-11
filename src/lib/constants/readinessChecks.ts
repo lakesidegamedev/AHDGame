@@ -2,6 +2,7 @@ import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { ReadinessCheck } from "@/lib/constants/countryReadinessExpectations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 
 /**
  * Every country expects a `governmentFormations` doc keyed by its country id.
@@ -21,8 +22,7 @@ export async function checkGovernmentFormation(
   db: Db,
   options: { createdOnFirstTurn?: boolean } = {}
 ): Promise<ReadinessCheck> {
-  const gov = await db
-    .collection<{ _id: string; status?: string; cycle?: number }>("governmentFormations")
+  const gov = await governmentFormationsCollection<{ _id: string; status?: string; cycle?: number }>(db)
     .findOne({ _id: countryId });
   if (gov) {
     return {

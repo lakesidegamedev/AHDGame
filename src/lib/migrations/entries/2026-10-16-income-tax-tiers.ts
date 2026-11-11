@@ -19,6 +19,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 import type { Document } from "mongodb";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 export const migration: Migration = {
   id: "2026-10-16-income-tax-tiers",
@@ -28,8 +29,7 @@ export const migration: Migration = {
     const [national, regional, types, policies, state, characters, imperials] = await Promise.all([
       federalBudgetCollection(db).find({}).toArray(),
       stateBudgetsCollection(db).find({}).toArray(),
-      db
-        .collection<LegislationType>("legislationTypes")
+      legislationTypesCollection(db)
         .find({
           $or: [{ "taxRateChange.taxType": "incomeTax" }, { "taxSlider.taxType": "incomeTax" }],
         })
@@ -91,7 +91,7 @@ export const migration: Migration = {
       ]);
     }
     if (clones.length)
-      await db.collection<LegislationType>("legislationTypes").bulkWrite(
+      await legislationTypesCollection(db).bulkWrite(
         clones.map((type) => ({
           updateOne: {
             filter: { _id: type._id },

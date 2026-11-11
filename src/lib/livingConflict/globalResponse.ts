@@ -80,6 +80,7 @@ import {
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { crisesCollection } from "@/lib/db/repositories/crises";
 
 /**
  * The deep module for shared world-event responses. Callers only need to ask
@@ -646,7 +647,7 @@ export async function resolveGlobalResponse(
   db: Db,
   crisisId: ObjectId
 ): Promise<ResolvedGlobalResponse | null> {
-  const crisis = await db.collection<Crisis>("crises").findOne({ _id: crisisId });
+  const crisis = await crisesCollection(db).findOne({ _id: crisisId });
   if (!crisis?.globalResponse) return null;
   const interaction = await db
     .collection<CrisisInteraction>("crisisInteractions")

@@ -15,6 +15,7 @@ import { resolveSeedPartyTier } from "@/lib/seeds/defaultPartyTiers";
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 
 const CN_REGION_IDS = ["DB", "HB", "HD", "HZ", "HN", "XN", "XB"];
 
@@ -215,8 +216,7 @@ export async function seedCNGovernmentFormation(db: Db, log: (msg: string) => vo
   const { cnGovernmentFormation } = await import("@/lib/seeds/cn/cnGovernmentFormation");
   const now = new Date();
   const { _id, ...formationData } = cnGovernmentFormation;
-  await db
-    .collection<GovernmentFormation>("governmentFormations")
+  await governmentFormationsCollection(db)
     .updateOne(
       { _id },
       { $set: { ...formationData, createdAt: now, updatedAt: now } },

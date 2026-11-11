@@ -38,6 +38,7 @@ import {
 } from "./rules/fiscalStabilizer";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 
 /** Party economic positions run on a -5..+5 scale (see formNppCabinet). */
 const PARTY_POSITION_SCALE = 5;
@@ -69,8 +70,7 @@ export async function loadRulingEconomicPositions(
 ): Promise<Map<string, number>> {
   const out = new Map<string, number>();
   if (countryIds.length === 0) return out;
-  const governments = await db
-    .collection<GovernmentFormation>("governmentFormations")
+  const governments = await governmentFormationsCollection(db)
     .find({ _id: { $in: [...countryIds] } }, { projection: { _id: 1, governingPartyId: 1 } })
     .toArray();
   const partyByCountry = new Map<string, number>();

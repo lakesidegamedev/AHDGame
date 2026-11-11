@@ -26,6 +26,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 
 export async function GET(request: Request, { params }: { params: Promise<{ code: string }> }) {
   try {
@@ -39,15 +40,14 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
     const [preset, countryState] = await Promise.all([
       getGameStatePreset(db),
       countryHasFeature("ruApi", countryId)
-        ? db
-            .collection<{
+        ? countryGameStatesCollection<{
               _id: string;
               ruSovietSuccessionSinceTurn?: number;
               ruProvisionalCongressSeats?: number;
               ruPresidencySinceTurn?: number;
               ruCongressDissolvedSinceTurn?: number;
               ruFederalAssemblySinceTurn?: number;
-            }>("countryGameStates")
+            }>(db)
             .findOne({ _id: "RU" })
         : Promise.resolve(null),
     ]);

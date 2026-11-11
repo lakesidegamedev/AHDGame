@@ -22,6 +22,8 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 interface StateEconomySector {
   type: string;
@@ -356,8 +358,7 @@ export async function loadRecommendationsForUser(
   // the "vote on a bill" suggestion never auto-completed.
   const [hasVoted, hasActiveCandidacy] = await Promise.all([
     hasVotedOnAnyBill(db, character._id),
-    db
-      .collection<ElectionCandidate>("electionCandidates")
+    electionCandidatesCollection(db)
       .countDocuments({ characterId: character._id }, { limit: 1 })
       .then((n) => n > 0),
   ]);
@@ -372,7 +373,7 @@ export async function loadRecommendationsForUser(
         })
       : null,
     character.party
-      ? db.collection<StatePartyOrg>("statePartyOrg").findOne({
+      ? statePartyOrgCollection(db).findOne({
           countryId: character.countryId,
           stateId: character.homeState,
           partyId: character.party,
@@ -448,8 +449,7 @@ export async function loadRecommendationsForUser(
   }> = [];
   if (character.party) {
     // Check state-level vacancies - only in user's home state
-    const stateOrgs = await db
-      .collection<StatePartyOrg>("statePartyOrg")
+    const stateOrgs = await statePartyOrgCollection(db)
       .find({
         partyId: character.party,
         stateId: character.homeState,

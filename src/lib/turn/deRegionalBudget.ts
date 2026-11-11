@@ -26,6 +26,7 @@ import { loadAnnualSubsidyCostMaps } from "@/lib/subsidies/subsidyBudgetCosts";
 import { getCountryConfig, type CountryId } from "@/lib/constants/countries";
 import { getStatesCollection } from "@/lib/db/collections/states";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -298,9 +299,7 @@ export async function processLaenderRegionalBudgets(
   const nationalLegTypeIds = new Set(nationalPolicies.map((p) => p.legislationTypeId));
   const allLegTypeIds = [...new Set([...regionalLegTypeIds, ...nationalLegTypeIds])];
 
-  const legTypes = await db
-    // full-read(legislationTypes): policyOptions tables price every regional law
-    .collection<LegislationType>("legislationTypes")
+  const legTypes = await legislationTypesCollection(db)
     .find({ _id: { $in: allLegTypeIds } })
     .toArray();
   const legTypeMap = new Map(legTypes.map((lt) => [lt._id, lt]));

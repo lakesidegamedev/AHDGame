@@ -18,6 +18,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 
 export const HU_1991_LIST_REPLACEMENTS_COLLECTION = "hu1991ListReplacements";
 interface ReplacementReceipt {
@@ -220,8 +221,7 @@ export async function designateHu1991ListDeputy(input: {
     }
     // Handover writes this same chamber document. A concurrent new Assembly
     // therefore forces this transaction to retry against its latest receipt.
-    const chamberLock = await db
-      .collection<{ _id: string; hu1991MandateGeneration?: number }>("governmentFormations")
+    const chamberLock = await governmentFormationsCollection<{ _id: string; hu1991MandateGeneration?: number }>(db)
       .updateOne({ _id: "HU" }, { $inc: { hu1991MandateGeneration: 1 } }, { session });
     if (chamberLock.matchedCount !== 1) throw new Error("Hungarian chamber authority is missing");
     // The shared parent write serializes different vacancies claiming one person.

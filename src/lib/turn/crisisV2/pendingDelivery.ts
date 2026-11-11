@@ -9,6 +9,7 @@ import type { Crisis } from "@/lib/db/types/crisis";
 import { logger } from "@/lib/observability/logger";
 import { settleCrisisConsequences } from "./consequences";
 import { runForcedEvents } from "./forcedEventsShell";
+import { crisesCollection } from "@/lib/db/repositories/crises";
 
 const COMPONENT = "crisisV2PendingDelivery";
 
@@ -107,8 +108,7 @@ export async function deliverPending(
         }
       : null;
   try {
-    await db
-      .collection<Crisis>("crises")
+    await crisesCollection(db)
       .updateOne(
         { _id: target.crisisId },
         remaining

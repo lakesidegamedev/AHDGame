@@ -22,6 +22,8 @@ import type { RussianAssemblySeat } from "./rules/assemblySeating";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 
 export async function materializeRussianAssemblyVacancySeating(input: {
   db: Db;
@@ -37,7 +39,7 @@ export async function materializeRussianAssemblyVacancySeating(input: {
     !Number.isFinite(now.getTime())
   )
     throw new Error("Assembly vacancy seating needs a transaction, turn and time");
-  const preview = await db.collection<CountryGameState>("countryGameStates").findOne(
+  const preview = await countryGameStatesCollection(db).findOne(
     { _id: "RU" },
     {
       session,
@@ -378,7 +380,7 @@ export async function materializeRussianAssemblyVacancySeating(input: {
     if (updated.matchedCount !== selected.length)
       throw new Error("Assembly vacancy owner changed during seating");
   }
-  const formations = db.collection<GovernmentFormation>("governmentFormations");
+  const formations = governmentFormationsCollection(db);
   const formation = await formations.findOne(
     { _id: "RU" },
     { session, projection: { coalitionPartyIds: 1, governingPartyId: 1 } }
@@ -423,7 +425,7 @@ export async function materializeRussianAssemblyVacancySeating(input: {
       { $set: { seatedOnTurn: turn } },
       { session }
     );
-  const bound = await db.collection<CountryGameState>("countryGameStates").updateOne(
+  const bound = await countryGameStatesCollection(db).updateOne(
     {
       _id: "RU",
       ruFirstDumaElectionCohortId: dumaRoot,

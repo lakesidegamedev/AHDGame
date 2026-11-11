@@ -43,6 +43,9 @@ import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficia
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 
 /**
  * Region-scoped party collections.
@@ -132,8 +135,7 @@ export async function evacuateRegionPolitics(
     const held = { countryId: fromCountryId, nppId: { $in: nppIds } };
     await electedOfficialsCollection<Document>(db).deleteMany(held);
     await db.collection("cabinetMembers").deleteMany(held);
-    const departingGovernment = await db
-      .collection<ParliamentaryGovernment>("governmentFormations")
+    const departingGovernment = await governmentFormationsCollection<ParliamentaryGovernment>(db)
       .findOne({ _id: fromCountryId, pmNppId: { $in: nppIds } });
     if (departingGovernment)
       await unformGovernmentAndVacatePM(db, fromCountryId, now, { reason: "lost-seat" });
@@ -187,8 +189,7 @@ export async function evacuateRegionPolitics(
     for (const col of ["cabinetMembers", "electedOfficials"] as const) {
       await db.collection(col).deleteMany(heldInSource);
     }
-    const departingGovernment = await db
-      .collection<ParliamentaryGovernment>("governmentFormations")
+    const departingGovernment = await governmentFormationsCollection<ParliamentaryGovernment>(db)
       .findOne({ _id: fromCountryId, pmCharacterId: { $in: playerIds } });
     if (departingGovernment)
       await unformGovernmentAndVacatePM(db, fromCountryId, now, { reason: "lost-seat" });
@@ -208,8 +209,7 @@ export async function evacuateRegionPolitics(
   // destroying them along with the state.
   if (!dissolving) {
     // The surviving parent party retains the cash of its dissolved organisation.
-    const orgs = await db
-      .collection<StatePartyOrg>("statePartyOrg")
+    const orgs = await statePartyOrgCollection(db)
       .find({ countryId: fromCountryId, stateId: regionId })
       .toArray();
     const cash = new Map<number, number>();
@@ -288,7 +288,7 @@ export async function evacuateRegionPolitics(
   const electionIds = regionElections.map((e) => e._id);
   let electionsDissolved = 0;
   if (electionIds.length > 0) {
-    await db.collection("electionCandidates").deleteMany({ electionId: { $in: electionIds } });
+    await electionCandidatesCollection<Document>(db).deleteMany({ electionId: { $in: electionIds } });
     const res = await electionsCollection<Document>(db).deleteMany({ _id: { $in: electionIds } });
     electionsDissolved = res?.deletedCount ?? 0;
   }

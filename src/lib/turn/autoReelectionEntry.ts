@@ -14,6 +14,8 @@ import { getCharactersCollection } from "@/lib/db/collections/characters";
 import { getElectedOfficialsCollection } from "@/lib/db/collections/electedOfficials";
 import { getElectionsCollection } from "@/lib/db/collections/elections";
 import { getPoliticalPartiesCollection } from "@/lib/db/collections/politicalParties";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import type { Document } from "mongodb";
 
 const EXCLUDED_TYPES = new Set(["president", "vicePresident"]);
 
@@ -92,8 +94,7 @@ export async function runAutoReelectionEntry(
     holdersFromOffice.add(characterKey);
   }
 
-  const priorCandidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const priorCandidates = await electionCandidatesCollection(db)
     .find({ characterId: { $in: characterIds } })
     .toArray();
   const priorElectionIds = [
@@ -292,7 +293,7 @@ export async function runAutoReelectionEntry(
     try {
       // Unordered: a duplicate key on one document still inserts the rest,
       // preserving the per-character tolerance the old try/catch had.
-      await db.collection("electionCandidates").insertMany(pending as never[], { ordered: false });
+      await electionCandidatesCollection<Document>(db).insertMany(pending as never[], { ordered: false });
     } catch {
       // Duplicate key or transient error - the unordered write still applied
       // everything it could, same as skipping silently per character before.

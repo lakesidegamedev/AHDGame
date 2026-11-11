@@ -152,6 +152,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 /** Assembles the cabinet position briefing payload for the viewing user. */
 export async function buildCabinetBriefing(
@@ -778,8 +779,7 @@ export async function buildCabinetBriefing(
   const departmentLegislationTypes =
     departmentProgramTypeIds.length === 0
       ? []
-      : await db
-          .collection<LegislationType>("legislationTypes")
+      : await legislationTypesCollection(db)
           .find(
             { _id: { $in: departmentProgramTypeIds } },
             { projection: { _id: 1, name: 1, policyOptions: 1 } }

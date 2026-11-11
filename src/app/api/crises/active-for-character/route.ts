@@ -26,6 +26,7 @@ import {
 import { loadCrisisV2Summaries, type CrisisV2Summary } from "@/lib/crises/queries/crisisV2View";
 import type { CampaignRequirementResult } from "@/lib/livingConflict/campaign";
 import type { CampaignCapabilitySnapshot } from "@/lib/db/types/livingConflictCampaign";
+import { crisesCollection } from "@/lib/db/repositories/crises";
 
 export interface ActiveCrisisForCharacter {
   crisis: Crisis;
@@ -70,7 +71,7 @@ export async function GET(request: Request) {
     orClauses.push({ "interactionDefinition.decisionTree.type": "collective" });
     const filter: Record<string, unknown> = { status: "active", $or: orClauses };
 
-    const crises = await db.collection<Crisis>("crises").find(filter).toArray();
+    const crises = await crisesCollection(db).find(filter).toArray();
 
     // Every crisis in this response is answered by the same character, so the
     // capability snapshot is identical across all of them. Memoised per country

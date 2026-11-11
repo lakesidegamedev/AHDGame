@@ -15,6 +15,7 @@ import { resolveSeedPartyTier } from "@/lib/seeds/defaultPartyTiers";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 /**
  * Recomputes each party's Major/Minor tier, earned-region set, demotion-warning
@@ -59,7 +60,7 @@ export async function processPartyTierTurn(
 
   const [parties, orgRows, gameState] = await Promise.all([
     politicalPartiesCollection(db).find({}).toArray(),
-    db.collection<StatePartyOrg>("statePartyOrg").find({}).toArray(),
+    statePartyOrgCollection(db).find({}).toArray(),
     gameStateCollection(db).findOne(
       { _id: "current" },
       { projection: { preset: 1, startingYear: 1 } }

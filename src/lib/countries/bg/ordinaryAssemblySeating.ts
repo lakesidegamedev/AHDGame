@@ -31,6 +31,10 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 
 interface BgAssemblyOfficeArchive {
   _id: string;
@@ -75,8 +79,7 @@ async function materializeBgOrdinaryAssembly(input: {
     preIterationActive: game.preIteration?.active,
     preIterationTurns: game.preIterationTurns,
   });
-  const country = await db
-    .collection<CountryGameState>("countryGameStates")
+  const country = await countryGameStatesCollection(db)
     .findOne(
       { _id: "BG" },
       { session, projection: { bgOrdinaryAssemblySinceTurn: 1, bgConstitution1991SinceTurn: 1 } }
@@ -111,8 +114,7 @@ async function materializeBgOrdinaryAssembly(input: {
     elections.some((row) => !regions.includes(row.state))
   )
     throw new Error("Bulgarian frozen ballot cohort is incomplete or changed");
-  const candidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidates = await electionCandidatesCollection(db)
     .find(
       { electionId: { $in: ids } },
       {
@@ -323,7 +325,7 @@ async function materializeBgOrdinaryAssembly(input: {
         })),
       { session }
     );
-  const finalizedTallies = await db.collection<ElectionVoteTally>("electionVoteTallies").bulkWrite(
+  const finalizedTallies = await electionVoteTalliesCollection(db).bulkWrite(
     elections.map((election) => ({
       updateOne: {
         filter: {
@@ -357,8 +359,7 @@ async function materializeBgOrdinaryAssembly(input: {
   );
   if (finalizedTallies.matchedCount !== 5)
     throw new Error("Bulgarian handover tally custody changed");
-  await db
-    .collection<ElectionCandidate>("electionCandidates")
+  await electionCandidatesCollection(db)
     .updateMany(
       { electionId: { $in: ids }, status: "active" },
       { $set: { status: "withdrawn", withdrawnAt: now } },
@@ -390,15 +391,14 @@ async function materializeBgOrdinaryAssembly(input: {
     { session }
   );
   if (resized.matchedCount !== 5) throw new Error("Bulgarian handover requires all five regions");
-  const formation = await db
-    .collection<GovernmentFormation>("governmentFormations")
+  const formation = await governmentFormationsCollection(db)
     .updateOne(
       { _id: "BG" },
       { $set: { totalSeats: 240, majorityThreshold: 121, updatedAt: now } },
       { session }
     );
   if (formation.matchedCount !== 1) throw new Error("Bulgarian government formation is missing");
-  await db.collection<CountryGameState>("countryGameStates").updateOne(
+  await countryGameStatesCollection(db).updateOne(
     { _id: "BG" },
     {
       $set: {

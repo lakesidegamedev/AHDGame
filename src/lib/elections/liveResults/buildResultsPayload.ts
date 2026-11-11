@@ -53,6 +53,8 @@ import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import type { Document } from "mongodb";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 
 const ENDED_STATUSES = new Set(["completed", "resolved", "cancelled"]);
 const INDEPENDENT_COLOR = "#9CA3AF";
@@ -139,11 +141,10 @@ export async function buildResultsPayload(
 ): Promise<ElectionResultsResponse> {
   const isAdmin = opts.isAdmin;
   const [candidates, tally, partyMap] = await Promise.all([
-    db
-      .collection<ElectionCandidate>("electionCandidates")
+    electionCandidatesCollection(db)
       .find({ electionId: election._id })
       .toArray(),
-    db.collection<ElectionVoteTally>("electionVoteTallies").findOne({ electionId: election._id }),
+    electionVoteTalliesCollection(db).findOne({ electionId: election._id }),
     loadPartyMap(db, election.countryId),
   ]);
 

@@ -1,5 +1,6 @@
 import { ObjectId, type Db } from "mongodb";
 import type { Bill, PlayerWhipMode } from "@/lib/db/types";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 /**
  * Build mail subject + body for a Player Whip notification based on target type.
@@ -27,8 +28,7 @@ export async function buildPlayerWhipMessage(
         notificationTitle,
       };
     }
-    const bill = await db
-      .collection<Bill>("bills")
+    const bill = await billsCollection(db)
       .findOne({ _id: targetId }, { projection: { title: 1 } });
     const title = bill?.title ?? "a bill";
     return {

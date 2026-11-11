@@ -6,6 +6,7 @@ import {
   policyFieldsFromOption,
 } from "@/lib/governorOffice/orders/revertPolicy";
 import type { Migration, MigrationResult } from "../types";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 const STATE_ID = "KAZ";
 
@@ -27,8 +28,7 @@ async function repairKazakhLawLevels(db: Db, dryRun: boolean): Promise<Migration
     .toArray();
   const legislationTypeIds = [...new Set(policies.map((policy) => policy.legislationTypeId))];
   const [legislationTypes, enactedLaws, orders] = await Promise.all([
-    db
-      .collection<LegislationType>("legislationTypes")
+    legislationTypesCollection(db)
       .find({ _id: { $in: legislationTypeIds } })
       .toArray(),
     db.collection<EnactedLaw>("enactedLaws").find({ stateId: STATE_ID }).toArray(),

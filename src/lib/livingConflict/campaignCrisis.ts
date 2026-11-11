@@ -21,6 +21,7 @@ import {
 } from "./rules/crisisV2";
 import type { LivingConflictDef, LivingConflictState } from "./types";
 import { vietnamWorldPressure, type ActiveWarSnapshot } from "./worldPressure";
+import { crisesCollection } from "@/lib/db/repositories/crises";
 
 const COMPONENT = "livingConflictCampaign";
 
@@ -97,8 +98,7 @@ export async function syncCampaignCrises(
   ensureCampaignCrisisContent();
   const ids = campaigns.map(({ def }) => campaignDefinitionId(def.key));
   if (ids.length === 0) return { opened: 0, closed: 0 };
-  const existing = await db
-    .collection<Crisis>("crises")
+  const existing = await crisesCollection(db)
     .find({ "v2.definitionId": { $in: ids } }, { projection: { status: 1, "v2.definitionId": 1 } })
     .toArray();
   const byDefinition = new Map(existing.map((row) => [row.v2?.definitionId, row]));
@@ -143,9 +143,9 @@ export async function syncCampaignCrises(
   }
   try {
     if (inserts.length > 0)
-      await db.collection<Crisis>("crises").insertMany(inserts, { ordered: false });
+      await crisesCollection(db).insertMany(inserts, { ordered: false });
     if (closeIds.length > 0) {
-      await db.collection<Crisis>("crises").updateMany(
+      await crisesCollection(db).updateMany(
         { _id: { $in: closeIds }, status: "active" },
         {
           $set: {

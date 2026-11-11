@@ -17,6 +17,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import type { Document } from "mongodb";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
 
 export interface ApplyCharacterPartyJoinArgs {
   db: Db;
@@ -245,8 +246,7 @@ export async function applyCharacterPartyJoin(
 
       // If auto-promoted to chair, sync any coalition this party leads
       if (becameChair) {
-        await db
-          .collection("coalitions")
+        await coalitionsCollection<Document>(db)
           .updateMany(
             { chairPartyId: party._id },
             { $set: { chairCharacterId: character._id, updatedAt: now } }

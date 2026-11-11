@@ -21,6 +21,9 @@ import type { Hu1991InstalledMandates } from "./rules/mandates1991";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 export const HU_2011_COUNTS_COLLECTION = "hu2011AssemblyCounts";
 export interface Hu2011AssemblyRecord {
   _id: string;
@@ -67,8 +70,7 @@ async function materializeHu2011Count(input: {
     { session, projection: { preset: 1, huAssemblyReformedAtYear: 1 } }
   );
   if (game?.preset !== "1991-default") return null;
-  const country = await db
-    .collection<CountryGameState>("countryGameStates")
+  const country = await countryGameStatesCollection(db)
     .findOne({ _id: "HU" }, { session, projection: { huElectoralSystem2011SinceTurn: 1 } });
   const polls = await electionsCollection(db)
     .find(
@@ -93,8 +95,7 @@ async function materializeHu2011Count(input: {
   const regions = await statesCollection(db)
     .find({ countryId: "HU" }, { session, projection: { _id: 1, population: 1 } })
     .toArray();
-  const candidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidates = await electionCandidatesCollection(db)
     .find(
       { electionId: { $in: polls.map((row) => row._id) } },
       {
@@ -113,8 +114,7 @@ async function materializeHu2011Count(input: {
       }
     )
     .toArray();
-  const tallies = await db
-    .collection<ElectionVoteTally>("electionVoteTallies")
+  const tallies = await electionVoteTalliesCollection(db)
     .find(
       { electionId: { $in: polls.map((row) => row._id) } },
       {
@@ -256,8 +256,7 @@ async function materializeHu2011Count(input: {
     installed: assembly.installed,
     createdAt: now,
   };
-  await db
-    .collection<ElectionVoteTally>("electionVoteTallies")
+  await electionVoteTalliesCollection(db)
     .updateMany(
       { electionId: { $in: polls.map((row) => row._id) }, finalized: false },
       { $set: { updatedAt: now } },

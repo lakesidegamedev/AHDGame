@@ -24,6 +24,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -126,8 +127,7 @@ export async function GET(request: Request) {
           isBanned: 1,
         })
         .toArray(),
-      db
-        .collection<ElectionCandidate>("electionCandidates")
+      electionCandidatesCollection(db)
         .find({ characterId: { $in: characterIds }, status: "active" })
         .toArray(),
     ]);

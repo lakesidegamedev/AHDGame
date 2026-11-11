@@ -8,6 +8,7 @@ import {
   type CountryTier,
   type CountryTierRow,
 } from "@/lib/country/rules/countryTier";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 
 export type { CountryTier } from "@/lib/country/rules/countryTier";
 
@@ -46,8 +47,7 @@ export function buildCountryTierSnapshot(docs: CountryGameState[]): CountryTierS
  * answer: the registry's own filter plus background and player-open rows.
  */
 export async function loadCountryTiers(db: Db): Promise<CountryTierSnapshot> {
-  const docs = await db
-    .collection<CountryGameState>("countryGameStates")
+  const docs = await countryGameStatesCollection(db)
     .find(
       {
         $or: [

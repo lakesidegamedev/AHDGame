@@ -26,6 +26,8 @@ import { getGameTime } from "@/lib/time/gameTime";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -59,8 +61,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     const electionOid = resolved.election._id;
     // Exclude archived campaigns (primary losers / withdrawn) from this active
     // list; the direct /campaign/[id] page still renders them for the owner.
-    const allCampaigns = await db
-      .collection<Campaign>("campaigns")
+    const allCampaigns = await campaignsCollection(db)
       // activityHistory is not returned by this endpoint (see the privileged
       // payload below), so it must not be read either: this is a list query
       // over every campaign in the election, and a campaign now keeps 200
@@ -79,8 +80,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     }
 
     // Gate on an active candidacy row, not status: "archived", which withdrawal paths must remember to set and have historically missed, leaving withdrawn candidates with live campaigns. Self-heal guarantees campaigns exist for active candidates.
-    const activeCandidacies = await db
-      .collection<ElectionCandidate>("electionCandidates")
+    const activeCandidacies = await electionCandidatesCollection(db)
       .find({ electionId: electionOid, status: "active" })
       .project<{
         characterId: ObjectId | null;

@@ -9,6 +9,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import { validateOrganization } from "@/lib/utils/partyOrg";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 // GET - Fetch party org for a state or all states
 // Returns organization data for ALL parties, defaulting to 0 for parties without records
@@ -42,8 +43,7 @@ export async function GET(request: Request) {
       }
 
       // Get existing party org records
-      const existingPartyOrg = await db
-        .collection<StatePartyOrg>("statePartyOrg")
+      const existingPartyOrg = await statePartyOrgCollection(db)
         .find({ stateId: upperStateId, countryId })
         .toArray();
 
@@ -72,8 +72,7 @@ export async function GET(request: Request) {
       });
     } else {
       // Fetch all existing records
-      const partyOrg = await db
-        .collection<StatePartyOrg>("statePartyOrg")
+      const partyOrg = await statePartyOrgCollection(db)
         .find({})
         .sort({ stateId: 1, partyId: 1 })
         .toArray();
@@ -140,7 +139,7 @@ export async function PATCH(request: Request) {
     const compoundId = `${stateId.toUpperCase()}_${partyId}`;
 
     // Update or insert
-    await db.collection<StatePartyOrg>("statePartyOrg").updateOne(
+    await statePartyOrgCollection(db).updateOne(
       { _id: compoundId },
       {
         $set: updateData,

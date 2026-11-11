@@ -3,6 +3,7 @@ import type { Election, ElectionCandidate, PlayerEndorsement } from "@/lib/db/ty
 import { applyEndorsementSupportBump } from "@/lib/elections/campaigns/supportEvents";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 /**
  * Party-alignment lifecycle for player endorsements.
@@ -67,8 +68,7 @@ async function withdrawPrimaryMisalignedRows(
     electionsCollection(db)
       .find({ _id: { $in: electionIds } })
       .toArray(),
-    db
-      .collection<ElectionCandidate>("electionCandidates")
+    electionCandidatesCollection(db)
       .find({ _id: { $in: candidateIds } })
       .toArray(),
     charactersCollection(db)

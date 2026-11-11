@@ -6,6 +6,7 @@ import {
   type ContingentElectionResult,
 } from "@/lib/elections/resolution/contingentElection";
 import { loadContingentElectionData } from "@/lib/elections/resolution/loadContingentElectionData";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 
 export async function runPresidentialContingentBallot(
   db: Db,
@@ -29,7 +30,7 @@ export async function runPresidentialContingentBallot(
   );
 
   if (contingentData.chamberSnapshot && !tally.contingentChamberSnapshot) {
-    await db.collection<ElectionVoteTally>("electionVoteTallies").updateOne(
+    await electionVoteTalliesCollection(db).updateOne(
       { electionId: election._id },
       {
         $set: {
@@ -53,7 +54,6 @@ export async function markContingentResolutionPending(
   electionId: ObjectId,
   now: Date
 ): Promise<void> {
-  await db
-    .collection<ElectionVoteTally>("electionVoteTallies")
+  await electionVoteTalliesCollection(db)
     .updateOne({ electionId }, { $set: { contingentResolutionPending: true, updatedAt: now } });
 }

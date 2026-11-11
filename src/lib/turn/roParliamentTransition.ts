@@ -19,6 +19,8 @@ import { getElectionsCollection } from "@/lib/db/collections/elections";
 import { getElectedOfficialsCollection } from "@/lib/db/collections/electedOfficials";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 
 /**
  * Seat the parliament returned by the September 1992 election once both
@@ -44,8 +46,7 @@ export async function processRoParliamentTransition(
   )
     return false;
 
-  const ready = await db
-    .collection<CountryGameState>("countryGameStates")
+  const ready = await countryGameStatesCollection(db)
     .findOne(
       { _id: "RO" },
       { projection: { roParliament1992SinceTurn: 1, roElectoralLaw1992SinceTurn: 1 } }
@@ -85,7 +86,7 @@ async function materializeRoParliamentTransition(
     }) < 96
   )
     return false;
-  const countries = db.collection<CountryGameState>("countryGameStates");
+  const countries = countryGameStatesCollection(db);
   const country = await countries.findOne(
     { _id: "RO" },
     { session, projection: { roParliament1992SinceTurn: 1, roElectoralLaw1992SinceTurn: 1 } }
@@ -282,7 +283,7 @@ async function materializeRoParliamentTransition(
     if (isNpc) await nppsCollection(db).bulkWrite(ops, { session });
     else await charactersCollection(db).bulkWrite(ops, { session });
   }
-  await db.collection<GovernmentFormation>("governmentFormations").updateOne(
+  await governmentFormationsCollection(db).updateOne(
     { _id: "RO" },
     {
       $set: {

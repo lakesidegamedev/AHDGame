@@ -23,6 +23,7 @@ import {
 import { STATE_POPULATION_FIELDS } from "@/lib/db/collections/states";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 
 export async function materializeRussianDumaConvocationOpening(input: {
   db: Db;
@@ -42,7 +43,7 @@ export async function materializeRussianDumaConvocationOpening(input: {
   )
     throw new Error("Ordinary Duma opening needs a transaction, turn and time");
   if (game.preset !== "1991-default") return null;
-  const countries = db.collection<CountryGameState>("countryGameStates");
+  const countries = countryGameStatesCollection(db);
   const country = await countries.findOne(
     { _id: "RU" },
     {
@@ -216,8 +217,7 @@ export async function openRussianDumaConvocation(
 ) {
   if (input.game.preset !== "1991-default") return null;
   // Waiting turns do not start a transaction or allocate hundreds of ids.
-  const country = await input.db
-    .collection<CountryGameState>("countryGameStates")
+  const country = await countryGameStatesCollection(input.db)
     .findOne({ _id: "RU" }, { projection: RUSSIAN_DUMA_AUTHORITY_PROJECTION });
   if (!country) return null;
   const current = await loadCurrentRussianDumaClock({ db: input.db, country, turn: input.turn });

@@ -19,6 +19,8 @@ import { HU_1991_TERRITORIAL_DISTRICTS } from "./data/electoralDistricts1991";
 import { huMixedElectoralLaw } from "./rules/electoralLaw";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 
 export const HU_1991_COUNTS_COLLECTION = "hu1991AssemblyCounts";
 export interface Hu1991AssemblyRecord {
@@ -122,8 +124,7 @@ async function materializeHu1991FirstCount(input: {
   )
     throw new Error("Hungarian certification has a changed electorate or receipt");
   const ids = elections.map((row) => row._id);
-  const tallies = await db
-    .collection<ElectionVoteTally>("electionVoteTallies")
+  const tallies = await electionVoteTalliesCollection(db)
     .find(
       { electionId: { $in: ids } },
       {
@@ -132,8 +133,7 @@ async function materializeHu1991FirstCount(input: {
       }
     )
     .toArray();
-  const candidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidates = await electionCandidatesCollection(db)
     .find(
       { electionId: { $in: ids } },
       {

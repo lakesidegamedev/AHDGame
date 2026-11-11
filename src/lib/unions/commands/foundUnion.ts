@@ -34,6 +34,7 @@ import {
 import { rejectIfTurnProcessing } from "./unionActions";
 import type { UnionActionResult } from "./unionActions";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { unionsCollection } from "@/lib/db/repositories/unions";
 
 export { MAX_UNION_NAME_LENGTH, MIN_UNION_NAME_LENGTH };
 
@@ -102,8 +103,7 @@ export async function foundUnion(
   // Duplicate check is scoped to (countryId, sectorType): the same name is
   // fine in a different country or a different industry, but two rival
   // unions organizing the same industry in the same country cannot share one.
-  const existingNames = await db
-    .collection<Union>("unions")
+  const existingNames = await unionsCollection(db)
     .find(
       { countryId: input.countryId, ...operatingSectorIdentity(input.sectorType) },
       { projection: { name: 1 } }
@@ -196,7 +196,7 @@ export async function foundUnion(
 
   const now = new Date();
   try {
-    const insertResult = await db.collection<Union>("unions").insertOne({
+    const insertResult = await unionsCollection(db).insertOne({
       _id: new ObjectId(),
       countryId: input.countryId,
       ...operatingSectorIdentity(input.sectorType),
@@ -227,7 +227,7 @@ export async function foundUnion(
       { $set: { unionLeaderOf: insertResult.insertedId, updatedAt: now } }
     );
     if (claim.modifiedCount === 0) {
-      await db.collection<Union>("unions").deleteOne({ _id: insertResult.insertedId });
+      await unionsCollection(db).deleteOne({ _id: insertResult.insertedId });
       await refundFoundingCost();
       return {
         ok: false,

@@ -42,6 +42,7 @@ import {
   loadCabinetDiscipline,
   cabinetDisciplineForParty,
 } from "@/lib/resetCabinet/loadDiscipline";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 interface ApplyWhipResult {
   fellInLine: number;
@@ -342,7 +343,7 @@ export async function applyWhipVotesToBill(
     if (abstainKey) incFields[abstainKey] = b.ab;
   }
 
-  await db.collection<Bill>("bills").updateOne(
+  await billsCollection(db).updateOne(
     { _id: bill._id, status: bill.status },
     {
       $set: setFields,

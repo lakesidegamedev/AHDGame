@@ -24,6 +24,7 @@ import type { NppForeignPolicyMode } from "@/lib/db/types";
 import { hasBillLifecycle } from "@/lib/legislature/hasBillLifecycle";
 import { foreignPolicyModeFrom } from "@/lib/nppAutonomy/foreignPolicyRollout";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 
 /**
  * The modelled members among `memberIds` that an NPP government currently runs,
@@ -55,8 +56,7 @@ export async function nppGovernedMembers(
   );
   if (modelled.length === 0) return new Set();
 
-  const formations = await db
-    .collection<GovernmentFormation>("governmentFormations")
+  const formations = await governmentFormationsCollection(db)
     .find({
       _id: { $in: modelled },
       status: "formed",

@@ -23,6 +23,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -74,7 +75,7 @@ export async function GET(request: Request, { params }: RouteParams) {
       return errorResponse(400, "Not a presidential election");
     }
 
-    const myCandidate = await db.collection<ElectionCandidate>("electionCandidates").findOne({
+    const myCandidate = await electionCandidatesCollection(db).findOne({
       electionId: election._id,
       characterId: character._id,
       status: "active",
@@ -120,8 +121,7 @@ export async function GET(request: Request, { params }: RouteParams) {
             .toArray()
         : [],
       politicalPartiesCollection(db).find({ countryId: electionCountry }).toArray(),
-      db
-        .collection<ElectionCandidate>("electionCandidates")
+      electionCandidatesCollection(db)
         // Suspended candidates (who dropped out to endorse) remain eligible as a
         // running mate — only genuinely-active candidates in this race are excluded.
         .find({

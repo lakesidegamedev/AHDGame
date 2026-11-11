@@ -13,6 +13,7 @@ import {
   SUPPORT_DECAY_PER_TURN,
 } from "@/lib/elections/engine/electionFormulaFactors";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 export interface SupportDecayResult {
   candidatesUpdated: number;
@@ -39,8 +40,7 @@ export async function processSupportDecay(
   if (activeElections.length === 0) return { candidatesUpdated: 0 };
 
   const electionIds = activeElections.map((e) => e._id);
-  const candidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidates = await electionCandidatesCollection(db)
     .find({
       electionId: { $in: electionIds },
       status: "active",
@@ -60,7 +60,7 @@ export async function processSupportDecay(
   }
   if (ops.length === 0) return { candidatesUpdated: 0 };
 
-  await db.collection<ElectionCandidate>("electionCandidates").bulkWrite(ops);
+  await electionCandidatesCollection(db).bulkWrite(ops);
 
   return { candidatesUpdated: ops.length };
 }
@@ -104,8 +104,7 @@ export async function processClearResolvedSupport(
   if (resolvedElections.length === 0) return { candidatesCleared: 0 };
 
   const resolvedElectionIds = resolvedElections.map((e) => e._id);
-  const result = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const result = await electionCandidatesCollection(db)
     .updateMany(
       { electionId: { $in: resolvedElectionIds }, support: { $exists: true } },
       { $unset: { support: "" } }

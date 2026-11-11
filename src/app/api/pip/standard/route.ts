@@ -21,6 +21,7 @@ import type { User, Notification, PoliticalParty, State, StatePartyOrg } from "@
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 export async function GET() {
   try {
@@ -60,7 +61,7 @@ export async function GET() {
           })
         : null,
       character.party
-        ? db.collection<StatePartyOrg>("statePartyOrg").findOne({
+        ? statePartyOrgCollection(db).findOne({
             stateId: character.homeState,
             partyId: character.party,
           })

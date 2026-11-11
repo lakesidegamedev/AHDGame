@@ -20,6 +20,10 @@ import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { DEFAULT_DURATIONS } from "@/lib/elections/scheduling";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import type { Document } from "mongodb";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -75,9 +79,9 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     // ── Wipe all associated data ─────────────────────────────────────────────
     const [candidatesResult, talliesResult, campaignsResult] = await Promise.all([
-      db.collection("electionCandidates").deleteMany({ electionId: electionObjectId }),
-      db.collection("electionVoteTallies").deleteMany({ electionId: electionObjectId }),
-      db.collection("campaigns").deleteMany({ electionId: electionObjectId }),
+      electionCandidatesCollection<Document>(db).deleteMany({ electionId: electionObjectId }),
+      electionVoteTalliesCollection<Document>(db).deleteMany({ electionId: electionObjectId }),
+      campaignsCollection<Document>(db).deleteMany({ electionId: electionObjectId }),
     ]);
 
     // ── Reset election document ──────────────────────────────────────────────

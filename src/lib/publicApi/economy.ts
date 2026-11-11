@@ -22,6 +22,8 @@ import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 const HISTORY_CAP = 12;
@@ -232,14 +234,13 @@ export async function queryLegislature(db: Db, country: string) {
   const bgAssembly = countryHasFeature("bgAdmin", country)
     ? await Promise.all([
         getGameStatePreset(db),
-        db
-          .collection<{
+        countryGameStatesCollection<{
             _id: string;
             bgOrdinaryAssemblySinceTurn?: number;
             bgGrandAssemblyContinuationSinceTurn?: number;
             bgConstitution1991SinceTurn?: number;
             bgGrandAssemblyDissolutionSinceTurn?: number;
-          }>("countryGameStates")
+          }>(db)
           .findOne(
             { _id: "BG" },
             {
@@ -264,8 +265,7 @@ export async function queryLegislature(db: Db, country: string) {
     politicalPartiesCollection(db)
       .find({ countryId: country } as Filter<PoliticalParty>)
       .toArray(),
-    db
-      .collection<Bill>("bills")
+    billsCollection(db)
       .find({
         countryId: country,
         status: { $in: ["floor_vote", "other_chamber"] },
@@ -273,8 +273,7 @@ export async function queryLegislature(db: Db, country: string) {
       .sort({ proposedAt: -1 })
       .limit(5)
       .toArray(),
-    db
-      .collection<Bill>("bills")
+    billsCollection(db)
       .find({
         countryId: country,
         status: { $in: ["enacted", "passed"] },

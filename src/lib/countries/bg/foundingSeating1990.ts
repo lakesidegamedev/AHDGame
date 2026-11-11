@@ -26,6 +26,9 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 
 export const BG_FOUNDING_OFFICE_ARCHIVES_COLLECTION = "bgFoundingAssemblyOfficeArchives";
 interface BgFoundingAssemblyArchive {
@@ -88,8 +91,7 @@ async function materializeBgFoundingAssemblySeating(input: {
     ).size !== 5
   )
     throw new Error("Bulgarian certified cohort is incomplete or changed");
-  const candidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidates = await electionCandidatesCollection(db)
     .find(
       { electionId: { $in: ids } },
       {
@@ -304,7 +306,7 @@ async function materializeBgFoundingAssemblySeating(input: {
       { session }
     );
   }
-  const finalizedTallies = await db.collection<ElectionVoteTally>("electionVoteTallies").bulkWrite(
+  const finalizedTallies = await electionVoteTalliesCollection(db).bulkWrite(
     elections.map((election) => ({
       updateOne: {
         filter: {
@@ -352,7 +354,7 @@ async function materializeBgFoundingAssemblySeating(input: {
   );
   if (finalizedTallies.matchedCount !== ids.length)
     throw new Error("Bulgarian handover lost tally custody");
-  await db.collection<ElectionCandidate>("electionCandidates").updateMany(
+  await electionCandidatesCollection(db).updateMany(
     { electionId: { $in: ids }, status: "active" },
     {
       $set: { status: "withdrawn", withdrawnAt: now },
@@ -387,7 +389,7 @@ async function materializeBgFoundingAssemblySeating(input: {
     { session }
   );
   if (resized.matchedCount !== 5) throw new Error("Bulgarian handover requires all five regions");
-  const formation = await db.collection<GovernmentFormation>("governmentFormations").updateOne(
+  const formation = await governmentFormationsCollection(db).updateOne(
     { _id: "BG" },
     {
       $set: { totalSeats: 400, majorityThreshold: 201, updatedAt: now },

@@ -10,6 +10,7 @@ import {
   UNION_PROSECUTION_MESSAGE,
 } from "@/lib/unions/unionProsecutionBar";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { unionsCollection } from "@/lib/db/repositories/unions";
 
 export type AcceptUnionLeadershipResult =
   { ok: true; status: 200; unionId: ObjectId } | { ok: false; status: number; error: string };
@@ -39,8 +40,7 @@ export async function acceptUnionLeadership(
     union.ownerType !== "npp" &&
     union.ownerId.toString() === character._id.toString()
   ) {
-    await db
-      .collection<Union>("unions")
+    await unionsCollection(db)
       .updateOne(
         { _id: union._id },
         { $unset: { pendingLeaderCharacterId: "" }, $set: { updatedAt: new Date() } }
@@ -71,7 +71,7 @@ export async function acceptUnionLeadership(
 
   async function install(session?: ClientSession): Promise<void> {
     const opts = session ? { session } : {};
-    const unionClaim = await db.collection<Union>("unions").updateOne(
+    const unionClaim = await unionsCollection(db).updateOne(
       { _id: union._id, pendingLeaderCharacterId: character._id },
       {
         $set: {
@@ -125,7 +125,7 @@ export async function acceptUnionLeadership(
               pendingLeaderCharacterId: character._id,
             };
             if (union.ownerType) restore.ownerType = union.ownerType;
-            await db.collection<Union>("unions").updateOne(
+            await unionsCollection(db).updateOne(
               { _id: union._id, ownerId: character._id },
               {
                 $set: restore,

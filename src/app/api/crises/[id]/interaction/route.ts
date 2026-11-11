@@ -20,6 +20,7 @@ import {
 } from "@/lib/livingConflict/globalResponse";
 import { getGameState } from "@/lib/gameState";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { crisesCollection } from "@/lib/db/repositories/crises";
 
 /**
  * GET /api/crises/[id]/interaction
@@ -39,7 +40,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     }
 
     const db = await getDb();
-    const crisis = await db.collection<Crisis>("crises").findOne({ _id: new ObjectId(id) });
+    const crisis = await crisesCollection(db).findOne({ _id: new ObjectId(id) });
     if (!crisis) {
       return errorResponse(404, "Crisis not found");
     }

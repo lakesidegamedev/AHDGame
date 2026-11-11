@@ -9,6 +9,8 @@ import { getStatesCollection } from "@/lib/db/collections/states";
 import { getElectionsCollection } from "@/lib/db/collections/elections";
 import { getElectedOfficialsCollection } from "@/lib/db/collections/electedOfficials";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 
 const HU_REFORM_SEATS = 199;
 
@@ -41,8 +43,7 @@ export async function runHuAssemblyReform(
     { projection: { preset: 1, huAssemblyReformedAtYear: 1 } }
   );
   if (game?.preset !== "1991-default" || game.huAssemblyReformedAtYear != null) return false;
-  const country = await db
-    .collection<CountryGameState>("countryGameStates")
+  const country = await countryGameStatesCollection(db)
     .findOne({ _id: "HU" }, { projection: { huElectoralSystem2011SinceTurn: 1 } });
   if (country?.huElectoralSystem2011SinceTurn == null) return false;
   return runRequiredTransaction(
@@ -138,8 +139,7 @@ export async function runHuAssemblyReform(
         })),
         { session }
       );
-      await db
-        .collection<GovernmentFormation>("governmentFormations")
+      await governmentFormationsCollection(db)
         .updateOne(
           { _id: "HU" },
           { $set: { totalSeats: HU_REFORM_SEATS, majorityThreshold: 100, updatedAt: now } },

@@ -65,6 +65,7 @@ import { isMediaOwnershipBillAvailable } from "@/lib/mediaRegulation/rules";
 import { loadUSMediaOutletDelivery } from "@/lib/mediaRegulation/turnData";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 // snapshotBillPolicyProvisions now lives in the shared provision-enrichment core
 // so the regional bill paths can call it too. Re-exported for existing importers.
@@ -177,8 +178,7 @@ export async function validateBillProvisions(
     )
   );
   const legislationTypes = requestedLegislationTypeIds.length
-    ? await db
-        .collection<LegislationType>("legislationTypes")
+    ? await legislationTypesCollection(db)
         .find({ _id: { $in: requestedLegislationTypeIds } })
         .toArray()
     : [];

@@ -8,6 +8,7 @@ import { handleRouteError } from "@/lib/api/errors";
 import { getDb } from "@/lib/mongodb";
 import type { StatePartyOrg, NPP } from "@/lib/db/types";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 interface DiagnosticResult {
   ukSpoWithNaNOrg: number;
@@ -29,8 +30,7 @@ export async function GET() {
 
     const db = await getDb();
 
-    const allUkSpos = await db
-      .collection<StatePartyOrg>("statePartyOrg")
+    const allUkSpos = await statePartyOrgCollection(db)
       .find({ countryId: "UK" })
       .toArray();
 
@@ -103,7 +103,7 @@ export async function POST() {
     if (!auth.ok) return auth.response;
 
     const db = await getDb();
-    const spoCol = db.collection<StatePartyOrg>("statePartyOrg");
+    const spoCol = statePartyOrgCollection(db);
     const nppCol = nppsCollection(db);
 
     const fixes: string[] = [];

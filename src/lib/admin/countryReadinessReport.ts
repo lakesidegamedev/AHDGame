@@ -10,6 +10,8 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 /** Best-effort preset lookup; null when the world has no gameState yet. */
 async function readPreset(db: Db): Promise<string | null> {
@@ -100,7 +102,7 @@ export async function buildCountryReadinessReport(
     detail: `Expected ≥${expect.partyMin} (${expect.partyRoster}), found ${partyCount}`,
   });
 
-  const orgCount = await db.collection("statePartyOrg").countDocuments({ countryId });
+  const orgCount = await statePartyOrgCollection<Document>(db).countDocuments({ countryId });
   checks.push({
     name: "StatePartyOrg",
     status:
@@ -176,8 +178,7 @@ export async function buildCountryReadinessReport(
   });
 
   // legislationTypes docs carry `countryScope` (lowercase id), never `countryId`.
-  const legTypeCount = await db
-    .collection("legislationTypes")
+  const legTypeCount = await legislationTypesCollection<Document>(db)
     .countDocuments({ countryScope: countryId.toLowerCase() });
   checks.push({
     name: "LegislationTypes",

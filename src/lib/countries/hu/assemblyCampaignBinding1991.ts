@@ -18,6 +18,9 @@ import { STATE_POPULATION_FIELDS } from "@/lib/db/collections/states";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import type { Document } from "mongodb";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 
 export async function materializeHu1991CampaignBinding(input: {
   db: Db;
@@ -88,8 +91,7 @@ export async function materializeHu1991CampaignBinding(input: {
       throw new Error("Hungarian frozen campaign cohort is incomplete or changed");
     return false;
   }
-  const country = await db
-    .collection<CountryGameState>("countryGameStates")
+  const country = await countryGameStatesCollection(db)
     .findOne({ _id: "HU" }, { session, projection: { huElectoralLaw1994SinceTurn: 1 } });
   const electoralLaw =
     country?.huElectoralLaw1994SinceTurn != null
@@ -156,7 +158,7 @@ export async function materializeHu1991CampaignBinding(input: {
   );
   if (result.modifiedCount !== 6)
     throw new Error("Hungarian campaign binding changed concurrently");
-  await db.collection("electionVoteTallies").updateMany(
+  await electionVoteTalliesCollection<Document>(db).updateMany(
     { electionId: { $in: elections.map((row) => row._id) }, finalized: { $ne: true } },
     {
       $set: { hungarianAssemblyBallot: true },

@@ -61,6 +61,10 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 export type {
   PollingData,
@@ -232,8 +236,7 @@ export async function resolveElections(
   // For completed/resolved elections include all candidates; for active/upcoming
   // only active ones. We handle this by fetching all and filtering per-election
   // during slicing, matching the logic in fetchDepsForElection().
-  const allCandidatesRaw = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const allCandidatesRaw = await electionCandidatesCollection(db)
     .find({ electionId: { $in: electionIds } })
     .toArray();
 
@@ -312,8 +315,7 @@ export async function resolveElections(
     politicalPartiesCollection(db)
       .find({ countryId: { $in: uniqueCountryIds } })
       .toArray(),
-    db
-      .collection<ElectionVoteTally>("electionVoteTallies")
+    electionVoteTalliesCollection(db)
       .find({ electionId: { $in: electionIds } })
       .toArray(),
     hasSingleSeat
@@ -437,16 +439,14 @@ export async function resolveElections(
           .flat()
           .sort((a, b) => new Date(a.recordedAt).getTime() - new Date(b.recordedAt).getTime())
       ),
-      db
-        .collection<Campaign>("campaigns")
+      campaignsCollection(db)
         .find(
           { electionId: { $in: electionIds } },
           { projection: { _id: 1, candidateId: 1, funds: 1, electionId: 1 } }
         )
         .toArray(),
       hasPresident
-        ? db
-            .collection<StatePartyOrg>("statePartyOrg")
+        ? statePartyOrgCollection(db)
             .find(
               {
                 countryId: {

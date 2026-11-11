@@ -26,6 +26,7 @@ import type { PoliticalParty, StatePartyOrg, StateRegistrationPool } from "@/lib
 import { NUMERIC_BSON_TYPE } from "@/lib/db/queryHelpers";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 interface SeedResult {
   presetUsed: string;
@@ -162,7 +163,7 @@ export async function seedRegistrationLanes(
         continue;
       }
       const docId = `${row.stateId}_${sequentialId}`;
-      const writeResult = await db.collection<StatePartyOrg>("statePartyOrg").updateOne(
+      const writeResult = await statePartyOrgCollection(db).updateOne(
         { _id: docId },
         {
           $set: {

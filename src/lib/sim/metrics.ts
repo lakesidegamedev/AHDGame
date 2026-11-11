@@ -29,6 +29,9 @@ import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { crisesCollection } from "@/lib/db/repositories/crises";
 
 /**
  * Read-only balance-metric aggregations over a (sandbox) world DB, for the
@@ -630,8 +633,7 @@ async function collectElectoralMetrics(db: Db): Promise<ElectoralMetrics> {
   const totalElections = elections.length;
   const resolvedElections = elections.filter((e) => e.status === "resolved").length;
 
-  const candidateCounts = await db
-    .collection("electionCandidates")
+  const candidateCounts = await electionCandidatesCollection<Document>(db)
     .aggregate<{ _id: unknown; count: number }>([
       { $match: { status: "active" } },
       { $group: { _id: "$electionId", count: { $sum: 1 } } },
@@ -661,8 +663,7 @@ async function collectElectoralMetrics(db: Db): Promise<ElectoralMetrics> {
   const resolvedIds = elections.filter((e) => e.status === "resolved").map((e) => e._id);
   const margins: number[] = [];
   if (resolvedIds.length > 0) {
-    const tallies = await db
-      .collection<ElectionVoteTally>("electionVoteTallies")
+    const tallies = await electionVoteTalliesCollection(db)
       .find({ electionId: { $in: resolvedIds } }, { projection: { totalVotes: 1 } })
       .toArray();
     for (const t of tallies) {
@@ -706,8 +707,7 @@ async function collectOfficeTurnoverMetrics(db: Db): Promise<OfficeTurnoverMetri
 
 export async function collectCrisisMetrics(db: Db): Promise<CrisisMetrics> {
   const [crises, livingConflicts] = await Promise.all([
-    db
-      .collection<Crisis>("crises")
+    crisesCollection(db)
       .find(
         {},
         {

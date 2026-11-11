@@ -12,6 +12,8 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import type { Document } from "mongodb";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -42,8 +44,7 @@ export async function GET(request: Request, { params }: RouteParams) {
       return errorResponse(404, "Not a presidential election");
     }
 
-    const existingCandidateIds = await db
-      .collection("electionCandidates")
+    const existingCandidateIds = await electionCandidatesCollection<Document>(db)
       .find({ electionId: electionObjectId, status: "active" })
       .project({ characterId: 1, nppId: 1, isNPP: 1 })
       .toArray();

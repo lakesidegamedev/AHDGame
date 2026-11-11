@@ -26,6 +26,9 @@ import { NG_ZONES } from "@/lib/elections/presidential/nigeriaPresidentialElecti
 import { planTurnSlice } from "@/lib/elections/rules/turnSlice";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 /** Approximate NG presidential turnout (share of population voting). */
 const NG_TURNOUT_RATE = NG_CAMPAIGN_TURNOUT_RATE;
@@ -41,7 +44,7 @@ export async function accumulateNGPresidentVoteTurn(
   /** "early": the half-hour results tick banks half of this turn's slice. */
   options?: { slice?: "early" }
 ): Promise<void> {
-  const tallies = db.collection<ElectionVoteTally>("electionVoteTallies");
+  const tallies = electionVoteTalliesCollection(db);
   const tally = await tallies.findOne({ electionId });
   if (!tally || tally.finalized) return;
   // Per-turn idempotency: this engine keeps no per-turn snapshot, so the tally
@@ -69,8 +72,7 @@ export async function accumulateNGPresidentVoteTurn(
     .toArray();
   const popByZone = new Map(states.map((s) => [s._id as string, s.population ?? 0]));
 
-  const orgRows = await db
-    .collection<StatePartyOrg>("statePartyOrg")
+  const orgRows = await statePartyOrgCollection(db)
     .find({ countryId: "NG" })
     .toArray();
   // (zoneId → (partyId → organization))
@@ -81,8 +83,7 @@ export async function accumulateNGPresidentVoteTurn(
     orgByZoneParty.set(row.stateId, m);
   }
 
-  const candidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidates = await electionCandidatesCollection(db)
     .find(
       { electionId, status: "active", isNPP: { $ne: true } },
       { projection: { characterId: 1, targetedAds: 1 } }

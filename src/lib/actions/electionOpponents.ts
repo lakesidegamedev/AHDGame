@@ -23,6 +23,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 /** A rival candidate as the poll and the opponent summary see them. */
 export interface OpponentForShare {
@@ -106,7 +107,7 @@ export async function getElectionOpponents(
         continue;
 
       // Check if our character is a candidate
-      const myEntry = await db.collection<ElectionCandidate>("electionCandidates").findOne({
+      const myEntry = await electionCandidatesCollection(db).findOne({
         electionId: election._id,
         characterId: charId,
         status: "active",
@@ -117,8 +118,7 @@ export async function getElectionOpponents(
       const inPrimary = !isPrimaryEnded(election, currentTurn, gameTime);
 
       // Fetch active rivals in the same contest and primary party.
-      const otherCandidates = await db
-        .collection<ElectionCandidate>("electionCandidates")
+      const otherCandidates = await electionCandidatesCollection(db)
         .find({
           electionId: election._id,
           status: "active",

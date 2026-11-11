@@ -9,6 +9,7 @@ import { primaryOpenFilter } from "@/lib/elections/electionDeadlineFilters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 /**
  * Debug endpoint to diagnose why NPPs aren't entering primaries.
@@ -51,8 +52,7 @@ export async function GET() {
     const primaryIds = openPrimaries.map((e) => e._id);
     const allCandidates =
       primaryIds.length > 0
-        ? await db
-            .collection<ElectionCandidate>("electionCandidates")
+        ? await electionCandidatesCollection(db)
             .find({ electionId: { $in: primaryIds }, status: "active" })
             .toArray()
         : [];

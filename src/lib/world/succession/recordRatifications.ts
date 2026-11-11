@@ -16,6 +16,7 @@ import {
   type FederationRatificationRecord,
 } from "./ratificationStore";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 /** Record consent after the source legislature enacts the exact mandate. An
  * interrupted run resumes without revising any participant's first decision. */
@@ -44,7 +45,7 @@ export async function recordFederationRatifications(input: {
     });
   if (!proposal || proposal.terms.sourceEntityId !== sourceCountryId)
     throw new Error("Federation ratification has no open matching proposal");
-  const bill = await db.collection<Bill>("bills").findOne({
+  const bill = await billsCollection(db).findOne({
     _id: proposal.billId,
     countryId: sourceCountryId,
     status: "signed",

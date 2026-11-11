@@ -6,6 +6,7 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { getCharacterByUserId } from "@/lib/db/characterLookup";
 import { isLabourFullMode } from "@/lib/labour/featureFlag";
 import type { Character, Union } from "@/lib/db/types";
+import { unionsCollection } from "@/lib/db/repositories/unions";
 
 export type UnionLeaderOfferContext =
   { ok: false; response: Response } | { ok: true; db: Db; character: Character; union: Union };
@@ -40,7 +41,7 @@ export async function loadUnionLeaderOffer(
     return { ok: false, response: errorResponse(404, "Character not found") };
   }
 
-  const union = await db.collection<Union>("unions").findOne({ _id: new ObjectId(id) });
+  const union = await unionsCollection(db).findOne({ _id: new ObjectId(id) });
   if (!union) {
     return { ok: false, response: errorResponse(404, "Union not found") };
   }

@@ -3,6 +3,7 @@ import type { StatePartyOrg } from "@/lib/db/types";
 import type { Migration, MigrationResult } from "../types";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
 import { calculateUKStatePartyOrgs } from "@/lib/seeds/uk/ukStatePartyOrgCalculations";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 /**
  * Give the formerly-regional UK parties an organisation row in every region.
@@ -33,8 +34,7 @@ async function backfillUKRegionalPartyOrg(db: Db, dryRun: boolean): Promise<Migr
   notes.push(`preset ${preset}: ${expected.length} expected UK statePartyOrg row(s)`);
 
   const ids = expected.map((o) => o._id);
-  const existing = await db
-    .collection<StatePartyOrg>("statePartyOrg")
+  const existing = await statePartyOrgCollection(db)
     // _id is a string composite ("REGION_partyId") — cast for the typed filter.
     /* eslint-disable @typescript-eslint/no-explicit-any */
     .find({ _id: { $in: ids as any } } as any)
@@ -71,7 +71,7 @@ async function backfillUKRegionalPartyOrg(db: Db, dryRun: boolean): Promise<Migr
     // abort the whole run on E11000; $setOnInsert makes the write a no-op on
     // a row that already exists, so the player's org survives either way.
     const { _id, ...fields } = org;
-    const result = await db.collection<StatePartyOrg>("statePartyOrg").updateOne(
+    const result = await statePartyOrgCollection(db).updateOne(
       /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
       { _id: _id as any },
       { $setOnInsert: { ...fields, createdAt: now, updatedAt: now } },

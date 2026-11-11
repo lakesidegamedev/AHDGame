@@ -16,6 +16,7 @@ import { primaryOpenFilter } from "@/lib/elections/electionDeadlineFilters";
 import { z } from "zod";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 const schema = z.object({
   method: z.union([z.literal("PR"), z.literal("WTA"), z.null()]),
@@ -68,8 +69,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const partyKey = getPartyIdString(party);
     const statePartyKey = getStatePartyOrgDocumentId(stateId, party);
-    const stateParty = await db
-      .collection<StatePartyOrg>("statePartyOrg")
+    const stateParty = await statePartyOrgCollection(db)
       .findOne({ _id: statePartyKey });
 
     // Chair/vice-chair/treasurer/national-chair/admin may change allocation.
@@ -106,7 +106,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const now = new Date();
 
-    await db.collection<StatePartyOrg>("statePartyOrg").updateOne(
+    await statePartyOrgCollection(db).updateOne(
       { _id: statePartyKey },
       method === null
         ? {

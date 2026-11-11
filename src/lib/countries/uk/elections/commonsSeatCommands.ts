@@ -16,6 +16,7 @@ import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { vacateCommonsSeat } from "@/lib/countries/uk/elections/commonsVacancyShell";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 export type CommonsSeatCommandResult =
   | { ok: true; officialId: ObjectId; vacancyId: ObjectId; label: string }
@@ -30,7 +31,7 @@ async function findHeldCommonsSeat(db: Db, character: Character): Promise<Electe
 }
 
 async function hasActiveCandidacy(db: Db, characterId: ObjectId): Promise<boolean> {
-  const row = await db.collection<ElectionCandidate>("electionCandidates").findOne({
+  const row = await electionCandidatesCollection(db).findOne({
     characterId,
     status: "active",
   });

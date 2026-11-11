@@ -20,6 +20,8 @@ import {
 } from "@/lib/admin/seed/seedNuclearPrograms";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { crisesCollection } from "@/lib/db/repositories/crises";
+import type { Document } from "mongodb";
 
 const NUCLEAR_DELIVERY_DOCTRINE_KEY = keyOf("strat", 5);
 
@@ -199,7 +201,7 @@ export async function seedColdWarFoundations(
   }
 
   if (!tensionExists) {
-    const activeCrises = await db.collection("crises").countDocuments({ status: "active" });
+    const activeCrises = await crisesCollection<Document>(db).countDocuments({ status: "active" });
     const escalationLevel =
       existingConflicts.find((conflict) => conflict.defKey === "vietnam")?.phaseLevel ?? 0;
     const warheadsByCountry = new Map(

@@ -14,6 +14,7 @@ import type { Db } from "mongodb";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 const NATIONAL_PARTY_MANAGEMENT_ACTIONS = [
   "boost_favorability",
@@ -45,8 +46,7 @@ export async function getNationalPartyInfluenceView(
   const candidates =
     electionIds.length === 0
       ? []
-      : await db
-          .collection<ElectionCandidate>("electionCandidates")
+      : await electionCandidatesCollection(db)
           .find({ electionId: { $in: electionIds }, status: "active" })
           .toArray();
 

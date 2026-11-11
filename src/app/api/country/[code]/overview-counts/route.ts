@@ -22,6 +22,8 @@ import type { Document } from "mongodb";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { unionsCollection } from "@/lib/db/repositories/unions";
 
 export type { OverviewCounts } from "@/lib/country/overviewCounts";
 
@@ -200,7 +202,7 @@ async function assembleOverviewCounts(db: Db, countryId: CountryId): Promise<Ove
     orNull(electionsCollection<Document>(db).countDocuments({ countryId, status: "active" })),
     orNull(electionsCollection<Document>(db).countDocuments({ countryId, status: "upcoming" })),
     orNull(
-      db.collection("bills").countDocuments({
+      billsCollection<Document>(db).countDocuments({
         ...buildNationalBillCountryScopeFilter(countryId),
         status: { $nin: FINAL_BILL_STATUSES },
       })
@@ -212,7 +214,7 @@ async function assembleOverviewCounts(db: Db, countryId: CountryId): Promise<Ove
         .then((bank) => bank?.primeRate ?? null)
     ),
     orNull(resolveCommandEconomyActive(db, countryId)).then((v) => v ?? false),
-    orNull(db.collection("unions").countDocuments({ countryId })),
+    orNull(unionsCollection<Document>(db).countDocuments({ countryId })),
     orNull(db.collection("referendums").countDocuments({ countryId, status: "campaigning" })),
     orNull(db.collection("referendums").countDocuments({ countryId })),
     orNull(resolveFiscalFigures(db, countryId)),

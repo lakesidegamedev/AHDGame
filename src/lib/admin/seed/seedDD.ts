@@ -15,6 +15,7 @@ import { strictEraForPreset } from "@/lib/seeds/presetSelector";
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 
 // Both Cold-War seeds (1953 + 1979) put East Germany on the modern
 // eastern-Länder codes that the unified-era FRG seeds carry under `DE`
@@ -290,8 +291,7 @@ export async function seedDDGovernmentFormation(
   const { ddGovernmentFormation } = await import("@/lib/seeds/dd/ddGovernmentFormation");
   const now = new Date();
   const { _id, ...formationData } = ddGovernmentFormation;
-  await db
-    .collection<GovernmentFormation>("governmentFormations")
+  await governmentFormationsCollection(db)
     .updateOne(
       { _id },
       { $set: { ...formationData, createdAt: now, updatedAt: now } },

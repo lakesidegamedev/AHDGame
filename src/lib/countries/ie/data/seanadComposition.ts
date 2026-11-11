@@ -4,6 +4,8 @@ import type { ElectedOfficial, PoliticalParty } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import type { Document } from "mongodb";
 
 const VOCATIONAL_SEATS = 43;
 const TAOISEACH_PICKS = 11;
@@ -132,8 +134,7 @@ export async function deriveSeanadComposition(
 
   let loyalistPartyId = "independent";
   if (cabinetPicks.length < TAOISEACH_PICKS) {
-    const formation = (await db
-      .collection("governmentFormations")
+    const formation = (await governmentFormationsCollection<Document>(db)
       .findOne({ _id: countryId as never })) as { governingPartyId?: string } | null;
     if (formation?.governingPartyId) loyalistPartyId = formation.governingPartyId;
   }

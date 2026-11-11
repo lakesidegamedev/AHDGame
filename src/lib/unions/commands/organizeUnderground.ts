@@ -19,6 +19,7 @@ import {
   type UndergroundStatus,
 } from "@/lib/unions/underground";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { unionsCollection } from "@/lib/db/repositories/unions";
 
 export type OrganizeUndergroundResult =
   | {
@@ -199,7 +200,7 @@ export async function organizeUnderground(
     };
   }
 
-  const updatedUnion = await db.collection<Union>("unions").findOneAndUpdate(
+  const updatedUnion = await unionsCollection(db).findOneAndUpdate(
     { _id: union._id },
     [
       {

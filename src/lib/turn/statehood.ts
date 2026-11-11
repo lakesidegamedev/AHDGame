@@ -34,6 +34,7 @@ import { getStatesCollection } from "@/lib/db/collections/states";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 /**
  * Canonical US seed name for each seeded abbreviation, used as a fallback when
@@ -185,7 +186,7 @@ export async function seedAdmittedStatePolitics(
       }
     );
     if (orgRows.length > 0) {
-      await db.collection<StatePartyOrg>("statePartyOrg").bulkWrite(
+      await statePartyOrgCollection(db).bulkWrite(
         orgRows.map((org) => {
           const { _id, ...body } = org;
           return {
@@ -223,7 +224,7 @@ export async function seedAdmittedStatePolitics(
       // surface that write). Update the row we already created.
       const orgId = getStatePartyOrgDocumentId(stateId, party);
       // statePartyOrg is keyed by a composite STRING id, not an ObjectId.
-      await db.collection<{ _id: string }>("statePartyOrg").updateOne(
+      await statePartyOrgCollection<{ _id: string }>(db).updateOne(
         { _id: orgId },
         {
           $set: {

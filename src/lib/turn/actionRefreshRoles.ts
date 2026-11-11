@@ -17,6 +17,8 @@ import type { PoliticalParty } from "@/lib/db/types/party";
 import { getElectedOfficialsCollection } from "@/lib/db/collections/electedOfficials";
 import { getPoliticalPartiesCollection } from "@/lib/db/collections/politicalParties";
 import { getCorporationsCollection } from "@/lib/db/collections/corporations";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 
 /** CEOs of the largest listed corporations in a country earn the major tier. */
 export const MAJOR_CEO_RANK = 10;
@@ -52,8 +54,7 @@ export interface OppositionRoles {
  */
 export async function loadOppositionRoles(db: Db): Promise<OppositionRoles> {
   const [formations, governments] = await Promise.all([
-    db
-      .collection<GovernmentFormation>("governmentFormations")
+    governmentFormationsCollection(db)
       .find(
         {},
         {
@@ -167,8 +168,7 @@ export async function loadPresidingOfficerRoles(
 
 /** Character ids of every seated state party chair. */
 export async function loadStatePartyChairIds(db: Db): Promise<Set<string>> {
-  const rows = await db
-    .collection<StatePartyOrg>("statePartyOrg")
+  const rows = await statePartyOrgCollection(db)
     .find({ chairId: { $ne: null } }, { projection: { chairId: 1 } })
     .toArray();
   return new Set(rows.flatMap((r) => (r.chairId ? [r.chairId.toString()] : [])));

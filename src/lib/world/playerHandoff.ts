@@ -41,6 +41,7 @@ import {
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 
 // ─── Role taxonomy ───────────────────────────────────────────────────────────
 
@@ -289,8 +290,7 @@ export async function enterCountryForPlayers(
     updateFields.status = "active";
   }
 
-  await db
-    .collection<CountryGameState>("countryGameStates")
+  await countryGameStatesCollection(db)
     .updateOne({ _id: countryId }, { $set: updateFields }, { upsert: true });
 
   return {
@@ -420,7 +420,7 @@ export async function exitCountryForPlayers(
     );
   }
 
-  await db.collection<CountryGameState>("countryGameStates").updateOne(
+  await countryGameStatesCollection(db).updateOne(
     { _id: countryId },
     {
       $set: {

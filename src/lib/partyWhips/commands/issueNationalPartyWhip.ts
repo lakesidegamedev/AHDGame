@@ -57,6 +57,8 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 export const nationalPartyWhipSchema = z
   .object({
@@ -269,7 +271,7 @@ async function resolveWhipTarget(
     if (!targetOid) return fail(400, "Invalid target ID");
     // Filter bills to the party's country (tolerate legacy bills without countryId)
     const billCountryFilter = { $or: [{ countryId }, { countryId: { $exists: false } }] };
-    const bill = await db.collection<Bill>("bills").findOne({
+    const bill = await billsCollection(db).findOne({
       _id: targetOid,
       status: {
         $in: ["active", "active_other", "active_both", "veto_override", "override_shugiin"],
@@ -693,8 +695,7 @@ async function issueNppWhip(
 
   let r: { fellInLine: number; ignored: number } | null = null;
   if (targetType === "bill") {
-    const bill = await db
-      .collection<Bill>("bills")
+    const bill = await billsCollection(db)
       .findOne({ _id: requireObjectId(targetOid), countryId });
     if (bill) {
       // applyWhipVotesToBill resolves NPP votes via cross-pressure, which needs
@@ -702,8 +703,7 @@ async function issueNppWhip(
       // and the current turn for the prediction snapshot.
       const [legislationType, stateDemographicsArr, gameStateDoc] = await Promise.all([
         bill.legislationTypeId
-          ? db
-              .collection<LegislationType>("legislationTypes")
+          ? legislationTypesCollection(db)
               .findOne({ _id: bill.legislationTypeId })
           : Promise.resolve(null),
         db

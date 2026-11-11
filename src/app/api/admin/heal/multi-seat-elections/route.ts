@@ -20,6 +20,8 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 
 interface MisallocatedElection {
   electionId: string;
@@ -78,8 +80,7 @@ export async function GET() {
 
     // Get vote tallies for these elections
     const [tallies, allOfficials] = await Promise.all([
-      db
-        .collection<ElectionVoteTally>("electionVoteTallies")
+      electionVoteTalliesCollection(db)
         .find({ electionId: { $in: electionIds } })
         .toArray(),
       electedOfficialsCollection(db)
@@ -204,12 +205,10 @@ export async function POST() {
 
     // Get vote tallies and candidates
     const [tallies, allCandidates] = await Promise.all([
-      db
-        .collection<ElectionVoteTally>("electionVoteTallies")
+      electionVoteTalliesCollection(db)
         .find({ electionId: { $in: electionIds } })
         .toArray(),
-      db
-        .collection<ElectionCandidate>("electionCandidates")
+      electionCandidatesCollection(db)
         .find({ electionId: { $in: electionIds } })
         .toArray(),
     ]);

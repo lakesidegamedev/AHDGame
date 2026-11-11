@@ -10,6 +10,7 @@ import { RESET_V2_COUNTRIES } from "@/lib/resetVersions/rules";
 import { RESET_V2_READY } from "@/lib/resetVersions/availability";
 import { resetSystemVersionsForCountry, type ResetVersionState } from "@/lib/resetVersions/rules";
 import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 const MAX_COMMIT_ATTEMPTS = 3;
 
@@ -102,8 +103,7 @@ async function processGeneralizedDepartmentSettlement(
   const storedTypes =
     legislationTypeIds.length === 0
       ? []
-      : await db
-          .collection<LegislationType>("legislationTypes")
+      : await legislationTypesCollection(db)
           .find(
             { _id: { $in: legislationTypeIds } },
             {

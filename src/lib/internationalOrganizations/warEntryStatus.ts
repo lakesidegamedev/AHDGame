@@ -5,6 +5,7 @@ import type { ConflictDoc } from "@/lib/db/types/conflict";
 import type { OrganizationLegislation } from "@/lib/db/types/internationalOrganization";
 import type { OrganizationSummary } from "@/lib/internationalOrganizations/service";
 import { classifyWarEntry, hostSideOf, type WarEntryStake } from "@/lib/military/warEntryPolicy";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 export interface MemberWarEntryStatus {
   countryId: string;
@@ -77,8 +78,7 @@ export async function loadBlocWarEntryStatusByDisplayOrg(
       .collection<ConflictDoc>("conflicts")
       .find({ _id: { $in: theaterIds } })
       .toArray(),
-    db
-      .collection<Bill>("bills")
+    billsCollection(db)
       .find({ "provisions.resolutionId": { $in: resolutionIds } })
       .toArray(),
   ]);

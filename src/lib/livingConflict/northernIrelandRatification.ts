@@ -19,6 +19,7 @@ import {
   northernIrelandRatificationDeltas,
 } from "./rules/northernIrelandRatification";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 export { northernIrelandRatificationDeltas } from "./rules/northernIrelandRatification";
 
@@ -36,8 +37,7 @@ export async function reconcileNorthernIrelandRatification(
   // bill collection only holds player-era bills, so its empty state alone cannot
   // erase historical consent. A new paired proposal or recorded rejection enters
   // the ordinary reconciliation path, including later relapse and renegotiation.
-  const bills = await db
-    .collection<RatificationBill>("bills")
+  const bills = await billsCollection<RatificationBill>(db)
     .find(
       { category: "northern_ireland_peace", countryId: { $in: ["UK", "IE"] } },
       { projection: { countryId: 1, status: 1, proposedTurn: 1, proposedAt: 1 } }

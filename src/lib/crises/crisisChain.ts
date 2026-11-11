@@ -11,6 +11,7 @@ import {
   VIETNAM_UNTIL_YEAR,
   vietnamTemplateKeyForLevel,
 } from "./vietnamEscalation";
+import { crisesCollection } from "@/lib/db/repositories/crises";
 
 /**
  * Chained crisis families.
@@ -53,8 +54,7 @@ export function chainTemplateKeyForLevel(family: string, level: number): string 
 
 /** True when a crisis of this family is already live (or already spawned this turn). */
 async function familyIsActive(db: Db, family: string): Promise<boolean> {
-  const live = await db
-    .collection<Crisis>("crises")
+  const live = await crisesCollection(db)
     .findOne({ "chain.family": family, status: "active" });
   return live !== null;
 }
@@ -182,7 +182,7 @@ export async function openVietnamChain(
     // never announced by it, so announce here. Dynamically imported: the turn
     // module imports this one, and a static import back would close the cycle.
     const { announceCrisisStart } = await import("@/lib/turn/crisisTurn");
-    const crisis = await db.collection<Crisis>("crises").findOne({ _id: id });
+    const crisis = await crisesCollection(db).findOne({ _id: id });
     if (crisis) await announceCrisisStart(db, crisis);
   };
 

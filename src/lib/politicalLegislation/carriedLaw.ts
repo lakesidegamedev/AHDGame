@@ -16,6 +16,8 @@
  * indexed findOne only on the table-miss path.
  */
 import type { Db } from "mongodb";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import type { Document } from "mongodb";
 
 export async function carriedLawIdFor(
   db: Db,
@@ -27,7 +29,7 @@ export async function carriedLawIdFor(
   // same way an unmapped country does, rather than throwing inside a gate whose
   // whole contract is to be skippable.
   if (!countryId || knownLawIds.length === 0) return null;
-  const carried = await db.collection("legislationTypes").findOne(
+  const carried = await legislationTypesCollection<Document>(db).findOne(
     {
       _id: { $in: [...knownLawIds] },
       countryScope: countryId.toLowerCase(),

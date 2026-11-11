@@ -45,6 +45,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 export interface StateLegislatureBillsPage {
   blockedProvisions: { legislationTypeId: string; policyOptionId: string }[];
@@ -123,8 +124,7 @@ export async function listStateLegislatureBills(
   ] as string[];
   const legislationTypes =
     legislationTypeIds.length > 0
-      ? await db
-          .collection<LegislationType>("legislationTypes")
+      ? await legislationTypesCollection(db)
           .find({ _id: { $in: legislationTypeIds } })
           .toArray()
       : [];
@@ -358,8 +358,7 @@ export async function getStateLegislatureBillDetail(
   const allLegislationTypeIds = [...new Set([...legislationTypeIds, ...provisionTypeIds])];
   const legislationTypes =
     allLegislationTypeIds.length > 0
-      ? await db
-          .collection<LegislationType>("legislationTypes")
+      ? await legislationTypesCollection(db)
           .find({ _id: { $in: allLegislationTypeIds } })
           .toArray()
       : [];

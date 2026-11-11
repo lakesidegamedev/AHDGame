@@ -19,14 +19,14 @@ import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
 import type { ProposalVoteRecord } from "@/lib/db/types/internationalOrganization";
 import { isNppAutonomyActive } from "@/lib/nppAutonomy/featureFlag";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 
 /** The head-of-government NPP that speaks for an autonomous country's ballot. */
 async function headNppFor(
   db: Db,
   countryId: CountryId
 ): Promise<{ characterId: NPP["_id"]; characterName: string } | null> {
-  const formation = await db
-    .collection<GovernmentFormation>("governmentFormations")
+  const formation = await governmentFormationsCollection(db)
     .findOne(
       { _id: countryId, status: "formed" },
       { projection: { presidentNppId: 1, pmNppId: 1 } }

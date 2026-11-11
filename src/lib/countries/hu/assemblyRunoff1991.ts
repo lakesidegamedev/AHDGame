@@ -14,6 +14,10 @@ import { hu1991RunoffCampaigns } from "./rules/assemblyCampaign1991";
 import { projectHu1991Runoff } from "./rules/campaignBallots1991";
 import { countHuMixed1991 } from "./rules/mixedElection1991";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import type { Document } from "mongodb";
 
 function stableId(key: string): ObjectId {
   return new ObjectId(createHash("sha256").update(key).digest("hex").slice(0, 24));
@@ -59,8 +63,7 @@ async function materializeHu1991RunoffOpening(input: {
     roots.some((row) => row.hungarianAssemblyRound?.receiptId !== receipt._id)
   )
     throw new Error("Hungarian first-round custody changed");
-  const candidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidates = await electionCandidatesCollection(db)
     .find(
       {
         status: "active",
@@ -144,10 +147,9 @@ async function materializeHu1991RunoffOpening(input: {
   if (updated.modifiedCount !== 1) throw new Error("Hungarian runoff opening changed concurrently");
   await electionsCollection(db).insertMany(polls, { session });
   if (renewedCandidates.length) {
-    await db
-      .collection<ElectionCandidate>("electionCandidates")
+    await electionCandidatesCollection(db)
       .insertMany(renewedCandidates, { session });
-    await db.collection<ElectionCandidate>("electionCandidates").updateMany(
+    await electionCandidatesCollection(db).updateMany(
       { _id: { $in: candidates.map((row) => row._id) }, status: "active" },
       {
         $set: { status: "withdrawn", withdrawnAt: now },
@@ -156,7 +158,7 @@ async function materializeHu1991RunoffOpening(input: {
     );
     // Campaign balances are carried on their existing rows. No new financial
     // account or second copy of the unspent campaign funds is created.
-    await db.collection("campaigns").bulkWrite(
+    await campaignsCollection<Document>(db).bulkWrite(
       renewedCandidates.map((row) => ({
         updateMany: {
           filter: {
@@ -174,7 +176,7 @@ async function materializeHu1991RunoffOpening(input: {
       { session }
     );
   }
-  await db.collection<ElectionVoteTally>("electionVoteTallies").insertMany(
+  await electionVoteTalliesCollection(db).insertMany(
     polls.map((election) => ({
       _id: stableId(`${namespace}:runoff-tally:${election.state}`),
       electionId: election._id,
@@ -248,12 +250,10 @@ async function materializeHu1991RunoffCount(input: {
     )
   )
     throw new Error("Hungarian renewed cohort binding changed");
-  const tallies = await db
-    .collection<ElectionVoteTally>("electionVoteTallies")
+  const tallies = await electionVoteTalliesCollection(db)
     .find({ electionId: { $in: ids } }, { session, projection: TALLY_WITH_LATEST_SNAPSHOT_ONLY })
     .toArray();
-  const candidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidates = await electionCandidatesCollection(db)
     .find(
       { electionId: { $in: ids } },
       {

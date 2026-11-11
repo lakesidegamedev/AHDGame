@@ -68,6 +68,9 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { crisesCollection } from "@/lib/db/repositories/crises";
+import { unionsCollection } from "@/lib/db/repositories/unions";
 
 /** Crisis actions name an operating lane; rows store its identity. */
 function laneFilter(sectorType: string) {
@@ -361,7 +364,7 @@ async function emergencyNationalizeBill(
     updatedAt: now,
   };
 
-  await db.collection<Omit<Bill, "_id">>("bills").insertOne(bill);
+  await billsCollection<Omit<Bill, "_id">>(db).insertOne(bill);
   await logWireEvent(
     "crisis_outcome",
     `EMERGENCY BILL: ${ctx.countryId} moves to nationalize the ${label} industry`
@@ -430,7 +433,7 @@ async function concessionBill(
     updatedAt: now,
   };
 
-  await db.collection<Omit<Bill, "_id">>("bills").insertOne(bill);
+  await billsCollection<Omit<Bill, "_id">>(db).insertOne(bill);
   await logWireEvent("crisis_outcome", `BILL INTRODUCED: ${ctx.countryId} moves on "${title}"`);
 }
 
@@ -555,8 +558,7 @@ async function openBargaining(ctx: CrisisActionContext, sectorType: string): Pro
   const { db } = ctx;
   const label = sectorLabelFor(sectorType);
 
-  const unions = await db
-    .collection<Union>("unions")
+  const unions = await unionsCollection(db)
     .find({ countryId: ctx.countryId as CountryId, ...laneFilter(sectorType) })
     .toArray();
   if (unions.length === 0) {
@@ -632,8 +634,7 @@ async function settleWageFloor(ctx: CrisisActionContext, sectorType: string): Pr
     return;
   }
 
-  const union = await db
-    .collection<Union>("unions")
+  const union = await unionsCollection(db)
     .findOne({ countryId: ctx.countryId as CountryId, ...laneFilter(sectorType) });
   const now = new Date();
   const SETTLEMENT_TERM_TURNS = 48;
@@ -701,7 +702,7 @@ async function spawnFollowUpCrisis(
   // One live copy per country. Two satellites both tolerating reform could each
   // cascade the same follow-up into one third country, stacking identical
   // active crises with their full effect load.
-  const already = await db.collection<Crisis>("crises").findOne(
+  const already = await crisesCollection(db).findOne(
     {
       templateKey: action.templateKey,
       status: "active",

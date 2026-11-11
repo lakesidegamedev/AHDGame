@@ -10,6 +10,8 @@ import { resignExecutiveOffice } from "@/lib/elections/resignExecutiveOffice";
 import type { ElectedOfficial } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import type { Document } from "mongodb";
 
 // POST /api/officials/[id]/resign — Resigns the authenticated character (or any official for admins) from their elected office.
 // Auth: requireBasicAuth
@@ -64,7 +66,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     // Legislative resignations are blocked during active candidacies; executive
     // resignations are allowed so a VP can step down before a contingent ballot.
     if (!isExecutiveOffice) {
-      const activeElection = await db.collection("electionCandidates").findOne({
+      const activeElection = await electionCandidatesCollection<Document>(db).findOne({
         characterId: official.characterId,
         electionId: { $exists: true },
         status: "active",

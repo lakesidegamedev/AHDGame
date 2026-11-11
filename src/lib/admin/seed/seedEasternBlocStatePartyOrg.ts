@@ -7,6 +7,8 @@ import {
   EASTERN_BLOC_STATE_PARTY_ORG,
   easternBlocOrgEra,
 } from "@/lib/seeds/shared/easternBlocStatePartyOrg";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import type { Document } from "mongodb";
 
 /**
  * Regional party-organisation seeder for the Warsaw-Pact satellites and the
@@ -41,7 +43,7 @@ export async function seedEasternBlocStatePartyOrg(
   const countryIds = Object.keys(EASTERN_BLOC_STATE_PARTY_ORG) as CountryId[];
 
   if (reset) {
-    await db.collection("statePartyOrg").deleteMany({ countryId: { $in: countryIds } });
+    await statePartyOrgCollection<Document>(db).deleteMany({ countryId: { $in: countryIds } });
   }
 
   const now = new Date();
@@ -71,8 +73,7 @@ export async function seedEasternBlocStatePartyOrg(
         consecutiveLosses: 0,
       };
       const { _id, ...orgData } = row;
-      const result = await db
-        .collection<StatePartyOrg>("statePartyOrg")
+      const result = await statePartyOrgCollection(db)
         .updateOne(
           { _id },
           { $set: { ...orgData, updatedAt: now }, $setOnInsert: { createdAt: now } },

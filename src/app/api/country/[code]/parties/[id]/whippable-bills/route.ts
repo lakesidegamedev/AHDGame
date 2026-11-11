@@ -19,6 +19,7 @@ import {
   type PlayerWhipSummaryEntry,
 } from "@/lib/partyWhips/playerWhipSummary";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -122,8 +123,7 @@ export async function GET(request: Request, { params }: RouteParams) {
       ],
     };
 
-    const activeBills = await db
-      .collection<Bill>("bills")
+    const activeBills = await billsCollection(db)
       .find({
         $and: [
           billCountryFilter,

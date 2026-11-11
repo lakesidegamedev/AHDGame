@@ -18,6 +18,8 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 
 const BR_REGION_IDS = ["NORTE", "NORDESTE", "CENTRO_OESTE", "SUDESTE", "SUL"];
 
@@ -237,8 +239,7 @@ export async function seedBRGovernmentFormation(db: Db, log: (msg: string) => vo
   const now = new Date();
   const doc = await buildBrGovernmentFormation(db, now);
   const { _id, ...formationData } = doc;
-  await db
-    .collection<GovernmentFormation>("governmentFormations")
+  await governmentFormationsCollection(db)
     .updateOne(
       { _id },
       { $set: { ...formationData, createdAt: now, updatedAt: now } },
@@ -254,7 +255,7 @@ export async function seedBRStatePartyOrg(
   preset?: string
 ) {
   if (reset) {
-    await db.collection("statePartyOrg").deleteMany({ countryId: "BR" });
+    await statePartyOrgCollection<Document>(db).deleteMany({ countryId: "BR" });
   }
 
   let activePreset = preset;
@@ -267,8 +268,7 @@ export async function seedBRStatePartyOrg(
   const now = new Date();
   for (const org of orgs) {
     const { _id, ...orgData } = org;
-    await db
-      .collection<StatePartyOrg>("statePartyOrg")
+    await statePartyOrgCollection(db)
       .updateOne({ _id }, { $set: { ...orgData, updatedAt: now } }, { upsert: true });
   }
   log(`Seeded ${orgs.length} BR state party org records (preset: ${activePreset})`);
@@ -295,8 +295,7 @@ export async function ensureMissingBRStatePartyOrgRows(
   const orgs = await calculateBRStatePartyOrgs(db, activePreset);
 
   const ids = orgs.map((o) => o._id);
-  const existing = await db
-    .collection<StatePartyOrg>("statePartyOrg")
+  const existing = await statePartyOrgCollection(db)
     /* eslint-disable @typescript-eslint/no-explicit-any */
     .find({ _id: { $in: ids as any } } as any)
     /* eslint-enable @typescript-eslint/no-explicit-any */
@@ -307,8 +306,7 @@ export async function ensureMissingBRStatePartyOrgRows(
   if (missing.length > 0) {
     for (const org of missing) {
       const { _id, ...orgData } = org;
-      await db
-        .collection<StatePartyOrg>("statePartyOrg")
+      await statePartyOrgCollection(db)
         .updateOne(
           { _id },
           { $set: { ...orgData, updatedAt: now }, $setOnInsert: { createdAt: now } },

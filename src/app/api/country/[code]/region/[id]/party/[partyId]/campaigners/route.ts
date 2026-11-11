@@ -15,6 +15,7 @@ import {
 } from "@/lib/parties/leadershipTenure";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; partyId: string }>;
@@ -65,8 +66,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     const statePartyKey = getStatePartyOrgDocumentId(stateId, party);
-    const stateParty = await db
-      .collection<StatePartyOrg>("statePartyOrg")
+    const stateParty = await statePartyOrgCollection(db)
       .findOne({ _id: statePartyKey });
     if (!stateParty) {
       return errorResponse(404, "Party has no presence in this state");
@@ -128,8 +128,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     const now = new Date();
-    await db
-      .collection<StatePartyOrg>("statePartyOrg")
+    await statePartyOrgCollection(db)
       .updateOne(
         { _id: statePartyKey },
         { $set: { campaignerId: campaignerObjectId, updatedAt: now } }

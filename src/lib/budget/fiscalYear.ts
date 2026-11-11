@@ -80,6 +80,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import type { Document } from "mongodb";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 // The current turn engine still processes fiscal-year rollover as one shared phase.
 // Pulling the anchor from country-systems makes the rule source explicit now, while
@@ -147,8 +148,7 @@ export async function processFiscalYear(
   );
   const usResetLegislationV2 =
     resetSystemVersionsForCountry(financeState, RESET_V2_READY, "US").legislation === "v2";
-  const regionalLegislationTypes = await db
-    .collection<LegislationType>("legislationTypes")
+  const regionalLegislationTypes = await legislationTypesCollection(db)
     .find(
       {
         $or: [

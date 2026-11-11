@@ -10,14 +10,14 @@ import {
   seatsFromRegionField,
 } from "@/lib/elections/scheduling/shared";
 import { roElectionSeatsForPreset } from "./rules/parliament1992";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 
 /** Romania's constituent bicameral parliament in 1991; Cold War assembly otherwise. */
 export async function ensureROElections(now: Date, inFlightTurn?: number): Promise<void> {
   const db = await getDb();
   const { ctx } = await getCurrentTurnAndCtx(db);
   if (ctx.preset === "1991-default") {
-    const country = await db
-      .collection<CountryGameState>("countryGameStates")
+    const country = await countryGameStatesCollection(db)
       .findOne(
         { _id: "RO" },
         { projection: { roElectoralLaw1992SinceTurn: 1, roParliament1992SinceTurn: 1 } }

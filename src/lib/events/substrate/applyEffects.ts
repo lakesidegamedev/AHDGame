@@ -40,6 +40,9 @@ import type { EventResolveContext } from "./types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import type { Document } from "mongodb";
 
 function isCompletedSettlement(result: SettlementResult): boolean {
   return result.status === "applied" || (result.status === "replayed" && !result.error);
@@ -584,8 +587,7 @@ export async function applyDeclarativeEffects(
         );
         // Campaign documents hold their spendable money in `funds`; every
         // campaign reader and upkeep path uses it, with or without forex.
-        await ctx.db
-          .collection("campaigns")
+        await campaignsCollection<Document>(ctx.db)
           .updateOne({ characterId, electionId }, { $inc: { funds: localDelta } });
         break;
       }
@@ -598,15 +600,13 @@ export async function applyDeclarativeEffects(
           candidateIdRaw instanceof ObjectId
             ? candidateIdRaw
             : new ObjectId(String(candidateIdRaw));
-        const candidate = await ctx.db
-          .collection<ElectionCandidate>("electionCandidates")
+        const candidate = await electionCandidatesCollection(ctx.db)
           .findOne({ _id: candidateId });
         if (!candidate) {
           break;
         }
         const next = clampStat((candidate.support ?? 50) + effect.delta);
-        await ctx.db
-          .collection<ElectionCandidate>("electionCandidates")
+        await electionCandidatesCollection(ctx.db)
           .updateOne({ _id: candidateId }, { $set: { support: next } });
         break;
       }

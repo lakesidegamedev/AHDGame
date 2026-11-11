@@ -16,6 +16,7 @@ import { getOrganizationLegislationCollection } from "@/lib/db/collections/organ
 import { captureServerGameEvent, getServerPosthogClient } from "./serverPosthog";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { crisesCollection } from "@/lib/db/repositories/crises";
 
 type Properties = Record<string, string | number | boolean>;
 const finite = (value: number | undefined) => (Number.isFinite(value) ? value! : 0);
@@ -188,8 +189,7 @@ export async function captureWorldDepthPosthog(input: {
           }
         )
         .toArray(),
-      db
-        .collection<Crisis>("crises")
+      crisesCollection(db)
         .find(
           { $or: [{ startTurn: actionWindow }, { endTurn: actionWindow, status: "resolved" }] },
           {

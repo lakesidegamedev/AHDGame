@@ -40,6 +40,8 @@ import type {
 import { ObjectId } from "mongodb";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 
 /**
  * `electionType` is intentionally an open string here rather than a hardcoded
@@ -134,8 +136,7 @@ export async function POST(request: Request) {
 
     // Get the finalized tallies for these elections
     const electionIds = recentElections.map((e) => e._id);
-    const tallies = await db
-      .collection<ElectionVoteTally>("electionVoteTallies")
+    const tallies = await electionVoteTalliesCollection(db)
       .find({ electionId: { $in: electionIds }, finalized: true })
       .toArray();
 
@@ -178,8 +179,7 @@ export async function POST(request: Request) {
       const winnerId = ranked[0]?.id;
       if (!winnerId) continue;
 
-      const winner = await db
-        .collection<ElectionCandidate>("electionCandidates")
+      const winner = await electionCandidatesCollection(db)
         .findOne({ _id: new ObjectId(winnerId) });
 
       if (winner) {

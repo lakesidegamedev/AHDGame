@@ -30,6 +30,7 @@ import { getStatesCollection } from "@/lib/db/collections/states";
 import { getPoliticalPartiesCollection } from "@/lib/db/collections/politicalParties";
 import { getCharactersCollection } from "@/lib/db/collections/characters";
 import { getNppsCollection } from "@/lib/db/collections/npps";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 /*
  * NPPs receive 2 action points per turn (vs. 3+ for player characters). The
@@ -83,7 +84,7 @@ export async function processNppFundGeneration(
   const partyBySequentialId = new Map(
     parties.map((p) => [`${p.countryId ?? "US"}:${p.sequentialId}`, p])
   );
-  const statePartyOrgs = await db.collection<StatePartyOrg>("statePartyOrg").find({}).toArray();
+  const statePartyOrgs = await statePartyOrgCollection(db).find({}).toArray();
   const statePartyMap = new Map(statePartyOrgs.map((sp) => [`${sp.stateId}_${sp.partyId}`, sp]));
 
   const characters = await (
@@ -301,7 +302,7 @@ export async function processNppFundGeneration(
         update: { $inc: { treasury: amount } },
       },
     }));
-    await db.collection<StatePartyOrg>("statePartyOrg").bulkWrite(statePartyOps);
+    await statePartyOrgCollection(db).bulkWrite(statePartyOps);
 
     for (const [statePartyKey, amount] of stateTreasuryUpdates.entries()) {
       const sp = statePartyMap.get(statePartyKey);
@@ -357,7 +358,7 @@ export async function processNppFundGeneration(
         update: { $set: { stateTaxRate: DEFAULT_NPP_STATE_TAX_RATE } },
       },
     }));
-    await db.collection<StatePartyOrg>("statePartyOrg").bulkWrite(taxRateOps);
+    await statePartyOrgCollection(db).bulkWrite(taxRateOps);
   }
 
   return { nppsProcessed, totalGenerated, totalStateTax, totalNationalTax };

@@ -4,6 +4,8 @@ import { isCampaignManagerUser, isCampaignNomineeUser } from "@/lib/campaigns/ac
 import type { Campaign, Character, ElectionCandidate } from "@/lib/db/types";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 
 export type PresenceCampaign = Pick<
   Campaign,
@@ -48,7 +50,7 @@ export async function resolvePresenceSubject(
   const { campaignId, userId, activeCharacterId } = params;
   if (!ObjectId.isValid(campaignId)) throw badRequest("Invalid campaign id");
 
-  const campaign = await db.collection<Campaign>("campaigns").findOne(
+  const campaign = await campaignsCollection(db).findOne(
     { _id: new ObjectId(campaignId) },
     {
       projection: {
@@ -81,8 +83,7 @@ export async function resolvePresenceSubject(
     throw badRequest("Campaign Presence is not available for this ticket.");
   }
 
-  const candidateRow = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidateRow = await electionCandidatesCollection(db)
     .findOne(
       { electionId: campaign.electionId, characterId: campaign.candidateId, status: "active" },
       { projection: { campaignSuspended: 1 } }

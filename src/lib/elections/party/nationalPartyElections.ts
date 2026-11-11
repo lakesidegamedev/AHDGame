@@ -49,6 +49,8 @@ import {
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
+import type { Document } from "mongodb";
 
 export {
   NATIONAL_ELECTION_DURATION_TURNS,
@@ -831,7 +833,7 @@ export async function processCompletedNationalElections(
         update: { $set: { chairCharacterId: newChairId, updatedAt: now } },
       },
     }));
-    await db.collection("coalitions").bulkWrite(coalitionOps);
+    await coalitionsCollection<Document>(db).bulkWrite(coalitionOps);
   }
 
   await Promise.all(notifications);
@@ -955,8 +957,7 @@ export async function vacateInactiveNationalLeadership(
     // when the party chair is vacated for inactivity, null the led coalition's
     // chairCharacterId so it doesn't dangle on a departed leader.
     if (vacatedChairPartyOids.length > 0) {
-      await db
-        .collection("coalitions")
+      await coalitionsCollection<Document>(db)
         .updateMany(
           { chairPartyId: { $in: vacatedChairPartyOids } },
           { $set: { chairCharacterId: null, updatedAt: now } }

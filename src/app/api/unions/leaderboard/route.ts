@@ -25,6 +25,7 @@ import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { unionsCollection } from "@/lib/db/repositories/unions";
 
 export async function GET(req: NextRequest) {
   try {
@@ -41,7 +42,7 @@ export async function GET(req: NextRequest) {
     const countryParam = req.nextUrl.searchParams.get("country")?.toUpperCase() ?? null;
 
     // Countries that actually have unions, the switcher's options.
-    const availableCountries = (await db.collection<Union>("unions").distinct("countryId"))
+    const availableCountries = (await unionsCollection(db).distinct("countryId"))
       .map((cid) => ({ countryId: cid, countryName: COUNTRY_CONFIGS[cid]?.name ?? cid }))
       .sort((a, b) => a.countryName.localeCompare(b.countryName));
 
@@ -68,7 +69,7 @@ export async function GET(req: NextRequest) {
         : {};
     // Sort is applied in JS below, once `members` (real headcount) is known,
     // it isn't a stored field, it's derived from represented sectors.
-    const unions = await db.collection<Union>("unions").find(countryFilter).toArray();
+    const unions = await unionsCollection(db).find(countryFilter).toArray();
 
     // NPP-run unions store `ownerId` against `npps`, not `characters`. Looking
     // only at characters left every NPP presidency labelled "Unknown".

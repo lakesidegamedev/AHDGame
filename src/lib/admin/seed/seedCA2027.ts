@@ -38,6 +38,7 @@ import {
   caStatePartyOrgRows,
 } from "@/lib/countries/ca/rules/opening2027";
 import { metricsToBaselines } from "./seedModernTransitionCountries";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 const PRESET = "2027-default";
 type Log = (message: string) => void;
@@ -78,7 +79,7 @@ async function clearCanada(db: Db): Promise<void> {
   const regionIds = caRegions2027.map((region) => region._id);
   await Promise.all([
     statesCollection<Document>(db).deleteMany({ countryId: "CA" }),
-    db.collection<StatePartyOrg>("statePartyOrg").deleteMany({ countryId: "CA" }),
+    statePartyOrgCollection(db).deleteMany({ countryId: "CA" }),
     db.collection<StateDemographics>("stateDemographics").deleteMany({ countryId: "CA" }),
     db.collection<Document>("stateDemographicTurnout").deleteMany({ countryId: "CA" }),
     db.collection<Document>("macroMetrics").deleteMany({ countryId: "CA" }),
@@ -169,7 +170,7 @@ async function seedPartyOrganization(db: Db, parties: PoliticalParty[]): Promise
   );
   if (rows.length === 0) return 0;
   const now = new Date();
-  await db.collection<StatePartyOrg>("statePartyOrg").bulkWrite(
+  await statePartyOrgCollection(db).bulkWrite(
     rows.map(({ _id, ...data }) => ({
       updateOne: {
         filter: { _id },

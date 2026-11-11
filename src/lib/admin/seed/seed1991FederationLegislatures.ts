@@ -11,6 +11,7 @@ import { seedFromSeats, type SeedMode } from "@/lib/npp/seedHistorical";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 const FEDERATIONS = ["CS", "YU"] as const;
 
@@ -98,8 +99,7 @@ export async function seed1991FederationLegislatures(
       politicalPartiesCollection(db)
         .find({ countryId, isDefault: true }, { projection: { name: 1, sequentialId: 1 } })
         .toArray(),
-      db
-        .collection<StatePartyOrg>("statePartyOrg")
+      statePartyOrgCollection(db)
         .find(
           { countryId, hasPresence: true },
           { projection: { stateId: 1, partyId: 1, organization: 1, hasPresence: 1 } }

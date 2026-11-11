@@ -34,6 +34,7 @@ import { loadFieldOfficeRegionMap } from "./subdivisions";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 
 export const FIELD_OFFICES_COLLECTION = "campaignFieldOffices";
 
@@ -144,7 +145,7 @@ export async function openFieldOffice(params: {
 
   // Guarded charge: affordability and the office cap are checked in the same
   // write, so two concurrent opens cannot both slip under the cap.
-  const charged = await db.collection<Campaign>("campaigns").findOneAndUpdate(
+  const charged = await campaignsCollection(db).findOneAndUpdate(
     {
       _id: campaignId,
       funds: { $gte: openLocal },
@@ -165,8 +166,7 @@ export async function openFieldOffice(params: {
     { returnDocument: "after", projection: { funds: 1, actions: 1, fieldOfficeCount: 1 } }
   );
   if (!charged) {
-    const fresh = await db
-      .collection<Campaign>("campaigns")
+    const fresh = await campaignsCollection(db)
       .findOne({ _id: campaignId }, { projection: { fieldOfficeCount: 1 } });
     if ((fresh?.fieldOfficeCount ?? 0) >= cap) {
       throw badRequest(`This race allows at most ${cap} field offices`);
@@ -195,7 +195,7 @@ export async function openFieldOffice(params: {
   } catch (err) {
     // Unique (campaignId, regionId, subdivisionId) for county scope: a
     // concurrent open of the same county lost the race. Refund it.
-    await db.collection<Campaign>("campaigns").updateOne(
+    await campaignsCollection(db).updateOne(
       { _id: campaignId },
       {
         $inc: {
@@ -267,8 +267,7 @@ export async function closeFieldOffice(params: {
     .collection<CampaignFieldOffice>(FIELD_OFFICES_COLLECTION)
     .deleteOne({ _id: officeId, campaignId });
   if (res.deletedCount === 0) throw notFound("Field office not found");
-  await db
-    .collection<Campaign>("campaigns")
+  await campaignsCollection(db)
     .updateOne(
       { _id: campaignId, fieldOfficeCount: { $gt: 0 } },
       { $inc: { fieldOfficeCount: -1 } }

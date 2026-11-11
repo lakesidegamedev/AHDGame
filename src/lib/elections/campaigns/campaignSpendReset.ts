@@ -12,6 +12,7 @@ import {
   SPEND_STOCK_DUST_CUTOFF,
   SPEND_STOCK_RETENTION,
 } from "@/lib/elections/engine/electionFormulaFactors";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 
 export interface CampaignSpendResetResult {
   campaignsReset: number;
@@ -29,7 +30,7 @@ export async function processCampaignSpendReset(
 ): Promise<CampaignSpendResetResult> {
   const db = injectedDb ?? (await getDb());
 
-  const result = await db.collection<Campaign>("campaigns").updateMany(
+  const result = await campaignsCollection(db).updateMany(
     {
       $or: [{ spendThisTurn: { $gt: 0 } }, { spendStock: { $gte: SPEND_STOCK_DUST_CUTOFF } }],
     },

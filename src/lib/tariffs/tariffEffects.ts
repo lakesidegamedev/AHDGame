@@ -24,6 +24,7 @@ import { loadFxRatesByCurrency } from "@/lib/currency/corporationCapital";
 import type { GameConfig } from "@/lib/db/types/gameConfig";
 import { getCurrentTurn } from "@/lib/currentTurn";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 function finiteRate(value: unknown): number {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
@@ -548,8 +549,7 @@ export async function fireTariffProvisionSentiment(
  * corporation-scope tariffs are skipped, matching enactment.
  */
 export async function fireFtaRescissionSentiment(db: Db, countryId: CountryId): Promise<void> {
-  const signedBills = await db
-    .collection<Bill>("bills")
+  const signedBills = await billsCollection(db)
     .find({
       countryId,
       status: "signed",

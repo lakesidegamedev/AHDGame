@@ -30,6 +30,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 // Re-uses electionLabels via the constants/countries re-export.
 // Import resolved inline above to keep this file self-contained.
@@ -139,8 +140,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
 
     const electionIds = racesInSelectedState.map((e) => e._id);
     const stateCandidates = electionIds.length
-      ? await db
-          .collection<ElectionCandidate>("electionCandidates")
+      ? await electionCandidatesCollection(db)
           .find({ electionId: { $in: electionIds }, status: "active" })
           .toArray()
       : [];

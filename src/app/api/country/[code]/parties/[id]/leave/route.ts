@@ -20,6 +20,8 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import type { Document } from "mongodb";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
 
 // POST /api/country/[code]/parties/[id]/leave — Leave a political party and become independent
 // Auth: requireAuthWithCharacter
@@ -188,8 +190,7 @@ export async function POST(
 
         // If the chair left, clear coalitionChairCharacterId for any coalition this party leads
         if (isChair) {
-          await db
-            .collection("coalitions")
+          await coalitionsCollection<Document>(db)
             .updateMany(
               { chairPartyId: party._id },
               { $set: { chairCharacterId: null, updatedAt: now } }
@@ -199,23 +200,19 @@ export async function POST(
         // Clear any state-level party leadership seats this character held. Leaving the
         // party invalidates a state chair/vice chair/treasurer seat; a stale id would
         // permanently block new appointments ("not vacant").
-        await db
-          .collection("statePartyOrg")
+        await statePartyOrgCollection<Document>(db)
           .updateMany({ chairId: characterId }, { $set: { chairId: null, updatedAt: now } });
-        await db
-          .collection("statePartyOrg")
+        await statePartyOrgCollection<Document>(db)
           .updateMany(
             { viceChairId: characterId },
             { $set: { viceChairId: null, updatedAt: now } }
           );
-        await db
-          .collection("statePartyOrg")
+        await statePartyOrgCollection<Document>(db)
           .updateMany(
             { treasurerId: characterId },
             { $set: { treasurerId: null, updatedAt: now } }
           );
-        await db
-          .collection("statePartyOrg")
+        await statePartyOrgCollection<Document>(db)
           .updateMany(
             { campaignerId: characterId },
             { $set: { campaignerId: null, updatedAt: now } }

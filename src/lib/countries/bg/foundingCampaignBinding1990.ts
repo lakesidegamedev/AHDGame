@@ -13,6 +13,8 @@ import { STATE_POPULATION_FIELDS } from "@/lib/db/collections/states";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import type { Document } from "mongodb";
 
 async function materializeBgFoundingCampaignBinding(input: {
   db: Db;
@@ -138,7 +140,7 @@ async function materializeBgFoundingCampaignBinding(input: {
   );
   if (result.modifiedCount !== 5)
     throw new Error("Bulgarian campaign binding changed concurrently");
-  await db.collection("electionVoteTallies").updateMany(
+  await electionVoteTalliesCollection<Document>(db).updateMany(
     { electionId: { $in: elections.map((row) => row._id) }, finalized: { $ne: true } },
     {
       $set: { bulgarianFoundingBallot: true },

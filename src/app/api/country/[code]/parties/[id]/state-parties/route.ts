@@ -10,6 +10,7 @@ import { buildStatePartyRows } from "@/lib/states/buildStatePartyRows";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 // GET /api/country/[code]/parties/[id]/state-parties — Aggregate per-region party data
 //   (org%, PS, treasury, registration%, lean, chair, NPP count, priority target) for the
@@ -47,8 +48,7 @@ export async function GET(
     }
 
     const states = await statesCollection(db).find({ countryId }).toArray();
-    const orgRows = await db
-      .collection<StatePartyOrg>("statePartyOrg")
+    const orgRows = await statePartyOrgCollection(db)
       .find({ partyId: partyIdStr, countryId })
       .toArray();
 

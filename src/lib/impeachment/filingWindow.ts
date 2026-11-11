@@ -4,6 +4,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import { officeKeyForElectionType } from "@/lib/utils/electionLabels";
 import { impeachmentFilingWindow } from "./rules/filingWindow";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 
 /** Career entries identify actual wins, including each consecutive term, not candidacies. */
 export async function loadImpeachmentFilingWindow(
@@ -43,8 +44,7 @@ export async function loadImpeachmentFilingWindow(
     (election) => officeKeyForElectionType(election.electionType, countryId) === office
   );
   if (!relevant.length) return impeachmentFilingWindow(currentTurn, []);
-  const tallies = await db
-    .collection<ElectionVoteTally>("electionVoteTallies")
+  const tallies = await electionVoteTalliesCollection(db)
     .find(
       { electionId: { $in: relevant.map((election) => election._id) } },
       { projection: { electionId: 1, resolvedAtTurn: 1 } }

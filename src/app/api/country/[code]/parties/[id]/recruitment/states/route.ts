@@ -20,6 +20,7 @@ import { getPartyNppCapacity, partyNppCapacityError } from "@/lib/npp/partyCapac
 import { activePartyNppFilter } from "@/lib/npp/recruitmentScope";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 // GET /api/country/[code]/parties/[id]/recruitment/states — Return eligible states with NPP slot and cost info for recruitment
 // Auth: requireAuthWithCharacter
@@ -61,8 +62,7 @@ export async function GET(
     const states = await statesCollection(db).find({ countryId: countryId }).toArray();
 
     // Get state party org for this party
-    const statePartyOrgs = await db
-      .collection<StatePartyOrg>("statePartyOrg")
+    const statePartyOrgs = await statePartyOrgCollection(db)
       .find({ partyId: partyIdStr, countryId: countryId })
       .toArray();
     const orgByState = new Map(statePartyOrgs.map((o) => [o.stateId, o]));

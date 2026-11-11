@@ -9,6 +9,8 @@ import {
   parseCoalitionCountry,
   resolveCoalitionPriorityViewer,
 } from "@/lib/coalitions/priorityApi";
+import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
+import type { Document } from "mongodb";
 
 // POST /api/country/[code]/coalitions/[id]/priorities/[priorityId]/archive â€” Coalition chair archives an active or proposed priority.
 // Auth: requireAuthWithCharacter
@@ -70,8 +72,7 @@ export async function POST(
       resolvedBy: auth.user.character._id,
     };
 
-    await db
-      .collection("coalitions")
+    await coalitionsCollection<Document>(db)
       .updateOne({ _id: context.coalition._id }, { $set: { priorities, updatedAt: now } });
 
     return NextResponse.json({

@@ -1,5 +1,6 @@
 import type { Db, ObjectId } from "mongodb";
 import type { Union, UnionOrganizer } from "@/lib/db/types";
+import { unionsCollection } from "@/lib/db/repositories/unions";
 
 export interface MyUnionNav {
   id: string;
@@ -15,8 +16,7 @@ export async function resolveMyUnionNav(
   character: { _id: ObjectId; unionLeaderOf?: ObjectId | null }
 ): Promise<MyUnionNav | null> {
   if (character.unionLeaderOf) {
-    const led = await db
-      .collection<Union>("unions")
+    const led = await unionsCollection(db)
       .findOne({ _id: character.unionLeaderOf }, { projection: { _id: 1 } });
     if (led) return { id: led._id.toString() };
   }
@@ -29,8 +29,7 @@ export async function resolveMyUnionNav(
     );
   if (!organizer) return null;
 
-  const organized = await db
-    .collection<Union>("unions")
+  const organized = await unionsCollection(db)
     .findOne({ _id: organizer.unionId }, { projection: { _id: 1 } });
   return organized ? { id: organized._id.toString() } : null;
 }

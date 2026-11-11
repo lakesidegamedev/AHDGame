@@ -28,6 +28,9 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import type { Document } from "mongodb";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 
 export interface OneElectionResult {
   resolved: boolean;
@@ -325,11 +328,9 @@ export async function resolveElectionWithZeroVotes(
   now: Date,
   currentTurn = 0
 ): Promise<OneElectionResult> {
-  await db
-    .collection<ElectionVoteTally>("electionVoteTallies")
+  await electionVoteTalliesCollection(db)
     .updateOne({ electionId: election._id }, { $set: { finalized: true, updatedAt: now } });
-  await db
-    .collection("electionCandidates")
+  await electionCandidatesCollection<Document>(db)
     .updateMany(
       { electionId: election._id, status: "active" },
       { $set: { status: "withdrawn", withdrawnAt: now } }
@@ -436,11 +437,9 @@ export async function resolveElectionWithNoRankedCandidates(
   now: Date,
   currentTurn = 0
 ): Promise<OneElectionResult> {
-  await db
-    .collection<ElectionVoteTally>("electionVoteTallies")
+  await electionVoteTalliesCollection(db)
     .updateOne({ electionId: election._id }, { $set: { finalized: true, updatedAt: now } });
-  await db
-    .collection("electionCandidates")
+  await electionCandidatesCollection<Document>(db)
     .updateMany(
       { electionId: election._id, status: "active" },
       { $set: { status: "withdrawn", withdrawnAt: now } }

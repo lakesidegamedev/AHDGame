@@ -60,6 +60,7 @@ import { RESET_V2_COUNTRIES } from "@/lib/resetVersions/rules";
 import { incomeTaxEffectOptionId } from "@/lib/budget/rules/incomeTaxPolicy";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 /**
  * Map of legislation type IDs to their documents
@@ -514,7 +515,7 @@ export async function processStatePolicyEffects(
       db.collection<StatePolicy>("statePolicies").find({}).toArray(),
       knownLegislationTypes
         ? Promise.resolve(knownLegislationTypes)
-        : db.collection<LegislationType>("legislationTypes").find({}).toArray(),
+        : legislationTypesCollection(db).find({}).toArray(),
       // SP5: merged two-store view — economic/population inputs live on macroMetrics.
       findMergedRegionMetricsMany(db, {}),
       db.collection<StateMetricBaseline>("stateBaselines").find({}).toArray(),

@@ -22,6 +22,7 @@ import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { createCrisisFromTemplate } from "@/lib/crises/createCrisisFromTemplate";
 import { warEmergencyTemplateForEventKind } from "@/lib/crises/warEmergencyCrises";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { crisesCollection } from "@/lib/db/repositories/crises";
 
 const TriggerSchema = z.object({
   countryId: z.string().min(1),
@@ -70,7 +71,7 @@ export const POST = withAdminRoute(async (_auth, request: Request) => {
 
   const crisisDefinition = warEmergencyTemplateForEventKind(kind);
   if (crisisDefinition) {
-    const alreadyActive = await db.collection<Crisis>("crises").findOne(
+    const alreadyActive = await crisesCollection(db).findOne(
       {
         templateKey: crisisDefinition.templateKey,
         status: "active",

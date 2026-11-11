@@ -6,6 +6,9 @@ import type { Campaign, Election, ElectionCandidate } from "@/lib/db/types";
 import { ObjectId } from "mongodb";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import type { Document } from "mongodb";
 
 /**
  * GET /api/admin/heal/stale-campaigns
@@ -23,8 +26,7 @@ export async function GET() {
 
     const db = await getDb();
 
-    const allCampaigns = await db
-      .collection<Campaign>("campaigns")
+    const allCampaigns = await campaignsCollection(db)
       .find({}, { projection: { activityHistory: 0 } })
       .toArray();
 
@@ -40,8 +42,7 @@ export async function GET() {
     const electionMap = new Map(elections.map((e) => [e._id.toString(), e]));
 
     // Gather all active election candidates for the referenced elections
-    const activeCandidates = await db
-      .collection<ElectionCandidate>("electionCandidates")
+    const activeCandidates = await electionCandidatesCollection(db)
       .find({
         electionId: { $in: electionIds.map((id) => new ObjectId(id)) },
         status: "active",
@@ -171,8 +172,7 @@ export async function POST() {
 
     const db = await getDb();
 
-    const allCampaigns = await db
-      .collection<Campaign>("campaigns")
+    const allCampaigns = await campaignsCollection(db)
       .find({}, { projection: { activityHistory: 0 } })
       .toArray();
 
@@ -186,8 +186,7 @@ export async function POST() {
       .toArray();
     const electionMap = new Map(elections.map((e) => [e._id.toString(), e]));
 
-    const activeCandidates = await db
-      .collection<ElectionCandidate>("electionCandidates")
+    const activeCandidates = await electionCandidatesCollection(db)
       .find({
         electionId: { $in: electionIds.map((id) => new ObjectId(id)) },
         status: "active",
@@ -241,7 +240,7 @@ export async function POST() {
       });
     }
 
-    const result = await db.collection("campaigns").deleteMany({ _id: { $in: staleIds } });
+    const result = await campaignsCollection<Document>(db).deleteMany({ _id: { $in: staleIds } });
 
     await db.collection("adminLogs").insertOne({
       action: "heal_stale_campaigns",

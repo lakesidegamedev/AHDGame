@@ -22,6 +22,9 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 export const RUSSIAN_PRESIDENTIAL_RESULTS_COLLECTION = "russianPresidentialElectionResults";
 export interface RussianPresidentialResultRecord {
   _id: string;
@@ -86,7 +89,7 @@ export async function materializeRussianPresidentialElectionResult(input: {
   const binding = election?.russianPresidentialRound;
   if (!binding || !Number.isSafeInteger(election?.endTurn) || election!.endTurn! > turn)
     throw new Error("Russian presidential ballot is not bound or completed");
-  const countries = db.collection<CountryGameState>("countryGameStates");
+  const countries = countryGameStatesCollection(db);
   const country = await countries.findOne(
     { _id: "RU" },
     { session, projection: { ruSovietSuccessionSinceTurn: 1, ruPresidencyMandateSinceTurn: 1 } }
@@ -101,7 +104,7 @@ export async function materializeRussianPresidentialElectionResult(input: {
     )
   )
     throw new Error("Russian presidential constitutional mandate changed");
-  const tallies = db.collection<ElectionVoteTally>("electionVoteTallies");
+  const tallies = electionVoteTalliesCollection(db);
   let tally = await tallies.findOne(
     { electionId, finalized: { $ne: true } },
     { session, projection: { totalVotes: 1, candidateParties: 1 } }
@@ -109,8 +112,7 @@ export async function materializeRussianPresidentialElectionResult(input: {
   if (!tally) {
     if (await tallies.findOne({ electionId }, { session, projection: { _id: 1 } }))
       throw new Error("Russian tally was finalized without a certified result");
-    const roster = await db
-      .collection<ElectionCandidate>("electionCandidates")
+    const roster = await electionCandidatesCollection(db)
       .find(
         { electionId, status: "active" },
         { session, projection: { characterName: 1, party: 1 } }
@@ -136,8 +138,7 @@ export async function materializeRussianPresidentialElectionResult(input: {
     Object.keys(tally.totalVotes).sort().join(",") !== [...candidateIds].sort().join(",")
   )
     throw new Error("Russian presidential tally does not match its registered roster");
-  const candidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidates = await electionCandidatesCollection(db)
     .find(
       { electionId, _id: { $in: candidateIds.map((id) => new ObjectId(id)) } },
       {

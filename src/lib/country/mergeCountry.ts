@@ -60,6 +60,9 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 
 export interface MergeCountryArgs {
   /** The country being absorbed. Retired when this completes. */
@@ -97,7 +100,7 @@ export async function mergeCountry(db: Db, args: MergeCountryArgs): Promise<Merg
     return { ok: false, error: "A country cannot absorb itself.", ...empty };
   }
 
-  const gameStates = db.collection<CountryGameState>("countryGameStates");
+  const gameStates = countryGameStatesCollection(db);
   const already = await gameStates.findOne({ _id: fromCountryId });
   // Idempotent: a merge that already ran is a no-op, not an error. The turn
   // phase may see the same resolved crisis more than once.
@@ -360,14 +363,12 @@ async function sweepNationalStrays(
   await db
     .collection("tariffs")
     .updateMany({ countryId: fromCountryId }, { $set: { countryId: toCountryId, updatedAt: now } });
-  await db
-    .collection("bills")
+  await billsCollection<Document>(db)
     .updateMany(
       { countryId: fromCountryId, status: { $in: NON_TERMINAL_BILL_STATUSES } },
       { $set: { status: "failed", failedAt: now, updatedAt: now } }
     );
-  await db
-    .collection("bills")
+  await billsCollection<Document>(db)
     .updateMany({ countryId: fromCountryId }, { $set: { countryId: toCountryId, updatedAt: now } });
 
   // Intelligence is PURGED, not transferred.
@@ -741,7 +742,7 @@ async function cancelAbsorbedElections(
   const ids = [...strays, ...foreign].map((e) => e._id);
   if (ids.length === 0) return 0;
 
-  await db.collection("electionCandidates").deleteMany({ electionId: { $in: ids } });
+  await electionCandidatesCollection<Document>(db).deleteMany({ electionId: { $in: ids } });
   const res = await electionsCollection<Document>(db).deleteMany({ _id: { $in: ids } });
   if ((res?.deletedCount ?? 0) > 0) {
     console.log(

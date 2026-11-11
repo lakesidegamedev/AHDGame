@@ -21,6 +21,8 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 
 const ELECTION_TYPE_LABELS: Record<string, string> = {
   president: "President",
@@ -81,8 +83,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     }
 
     // For completed elections, fetch ALL candidates (active + withdrawn) to show who ran
-    const candidates = await db
-      .collection<ElectionCandidate>("electionCandidates")
+    const candidates = await electionCandidatesCollection(db)
       .find({ electionId })
       .toArray();
 
@@ -103,7 +104,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
 
     const [state, voteTally, parties, gameState] = await Promise.all([
       statesCollection(db).findOne({ _id: election.state, countryId: election.countryId }),
-      db.collection<ElectionVoteTally>("electionVoteTallies").findOne({ electionId }),
+      electionVoteTalliesCollection(db).findOne({ electionId }),
       // Filter parties by election's country to avoid cross-country sequential ID collisions
       politicalPartiesCollection(db)
         .find({ countryId: election.countryId ?? "US" })

@@ -51,6 +51,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { crisesCollection } from "@/lib/db/repositories/crises";
 
 /** Read a country's national treasury balance (the unified fiscal cash position). */
 async function getTreasuryBalance(db: Db, countryId: string): Promise<number> {
@@ -242,7 +243,7 @@ export async function applyEffectsForCrisis(
   effects: CrisisEffect[]
 ): Promise<void> {
   if (effects.length === 0) return;
-  const crisis = await db.collection<Crisis>("crises").findOne({ _id: crisisId });
+  const crisis = await crisesCollection(db).findOne({ _id: crisisId });
   if (!crisis) return;
   const { targetStateIds, affectedCountries } = await resolveCrisisScope(db, crisis);
 
@@ -522,7 +523,7 @@ export async function submitCrisisDecision(
     throw forbidden("You are not authorized to make this decision");
   }
 
-  const crisis = await db.collection<Crisis>("crises").findOne({ _id: interaction.crisisId });
+  const crisis = await crisesCollection(db).findOne({ _id: interaction.crisisId });
   if (crisis && decisionAnsweredByLever(crisis, interaction.decisionTree, currentNode, optionId)) {
     throw conflict("This crisis is answered through its levers");
   }
@@ -971,7 +972,7 @@ export async function autoResolveCrisisInteraction(db: Db, interactionId: Object
   // applied their own effects, and non-responders simply took no action. Closing
   // the interaction must NOT apply a global default — that would re-hit every
   // country, including those that already chose. Just mark it resolved.
-  const crisis = await db.collection<Crisis>("crises").findOne({ _id: interaction.crisisId });
+  const crisis = await crisesCollection(db).findOne({ _id: interaction.crisisId });
   if (crisis && isMultiResponderNode(crisis, currentNode)) {
     if (crisis.globalResponse) {
       await resolveGlobalResponse(db, crisis._id);

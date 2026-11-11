@@ -143,6 +143,10 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 export async function _enrichElection(
   election: Election,
@@ -1393,8 +1397,7 @@ export async function fetchDepsForElection(
   if (election.status !== "completed" && election.status !== "resolved") {
     candidateQuery.status = "active";
   }
-  const candidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidates = await electionCandidatesCollection(db)
     .find(candidateQuery)
     .toArray();
 
@@ -1469,11 +1472,10 @@ export async function fetchDepsForElection(
           .then((rows) => oneRowPerTurn(rows).slice(0, 72))
       : Promise.resolve([] as PrimarySnapshot[]),
     isFull && isPresident
-      ? db.collection<StatePartyOrg>("statePartyOrg").find({}).toArray()
+      ? statePartyOrgCollection(db).find({}).toArray()
       : Promise.resolve([] as StatePartyOrg[]),
     isFull
-      ? db
-          .collection<Campaign>("campaigns")
+      ? campaignsCollection(db)
           .find(
             { electionId: electionOid },
             {
@@ -1488,7 +1490,7 @@ export async function fetchDepsForElection(
           )
           .toArray()
       : Promise.resolve([] as Campaign[]),
-    db.collection<ElectionVoteTally>("electionVoteTallies").findOne({ electionId: electionOid }),
+    electionVoteTalliesCollection(db).findOne({ electionId: electionOid }),
   ]);
 
   // Latest primary snapshot — trend charts (full view) + fallback when live

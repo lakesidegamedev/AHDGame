@@ -58,6 +58,8 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 
 const CHAMBER_TYPES = ["house", "senate"] as const;
 
@@ -84,8 +86,7 @@ async function projectChamberRace(
   if (Object.values(effectiveVotes).reduce((s, v) => s + v, 0) === 0) return [];
 
   const candidateIds = Object.keys(effectiveVotes);
-  const candidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidates = await electionCandidatesCollection(db)
     .find({ _id: { $in: candidateIds.map((id) => new ObjectId(id)) }, status: "active" })
     .toArray();
   for (const c of candidates) c.party = survivingParty(c.party) ?? c.party;
@@ -240,8 +241,7 @@ async function buildProjectedChamber(
 
   const tallies =
     races.length > 0
-      ? await db
-          .collection<ElectionVoteTally>("electionVoteTallies")
+      ? await electionVoteTalliesCollection(db)
           .find({ electionId: { $in: races.map((r) => r._id) } })
           .toArray()
       : [];
@@ -340,8 +340,7 @@ async function computeProjection(
   );
 
   const survivingParty = await loadSurvivingPartyResolver(db, countryId);
-  const candidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidates = await electionCandidatesCollection(db)
     .find({
       _id: { $in: Object.keys(electoralVotesByCandidate).map((id) => new ObjectId(id)) },
       status: "active",

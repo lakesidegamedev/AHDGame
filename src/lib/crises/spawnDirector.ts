@@ -9,6 +9,7 @@ import {
 } from "./v2/director";
 import { SPAWN_BUDGET } from "./v2/spawnBudget";
 import type { CrisisScope } from "./v2/types";
+import { crisesCollection } from "@/lib/db/repositories/crises";
 
 const SCOPE_BY_CRISIS_SCOPE: Record<Crisis["scope"], CrisisScope> = {
   region: "state",
@@ -45,8 +46,7 @@ export async function createSpawnDirector(
   budget: DirectorBudget = SPAWN_BUDGET
 ): Promise<SpawnDirector> {
   const [rows, conflicts] = await Promise.all([
-    db
-      .collection<Crisis>("crises")
+    crisesCollection(db)
       .find(
         { status: "active" },
         {

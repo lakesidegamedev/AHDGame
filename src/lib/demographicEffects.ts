@@ -68,6 +68,7 @@ import type { ResetLawProgramDocument } from "@/lib/resetLegislation/program";
 import { regionalFamilyLeanPolicies } from "@/lib/resetLegislation/familyLeanEffects";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 /**
  * Lean shift per turn at maximum policy strength (magnitude 1, state scope).
@@ -536,7 +537,7 @@ export async function processAllStateDemographics(
       .toArray(),
     knownLegislationTypes
       ? Promise.resolve(knownLegislationTypes)
-      : db.collection<LegislationType>("legislationTypes").find({}).toArray(),
+      : legislationTypesCollection(db).find({}).toArray(),
     db.collection<StateDemographics>("stateDemographics").find({}).toArray(),
     gameStateCollection(db).findOne(
       { _id: "current" },

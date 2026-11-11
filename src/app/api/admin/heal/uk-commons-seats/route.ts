@@ -17,6 +17,8 @@ import { getGameStatePreset } from "@/lib/db/collections/gameState";
 import { allocateSeats } from "@/lib/elections/resolution/seatAllocation";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 
 interface RegionDiagnostic {
   region: string;
@@ -169,12 +171,10 @@ export async function POST() {
     const electionIds = Array.from(latestByRegion.values()).map((e) => e._id);
 
     const [tallies, candidates] = await Promise.all([
-      db
-        .collection<ElectionVoteTally>("electionVoteTallies")
+      electionVoteTalliesCollection(db)
         .find({ electionId: { $in: electionIds } })
         .toArray(),
-      db
-        .collection<ElectionCandidate>("electionCandidates")
+      electionCandidatesCollection(db)
         .find({ electionId: { $in: electionIds } })
         .toArray(),
     ]);

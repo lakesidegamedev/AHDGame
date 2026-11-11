@@ -38,6 +38,7 @@ import {
 } from "@/lib/countries/uk/budget/annualBudget";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 const CHANCELLOR_POSITION_ID = "chancellor";
 
@@ -125,8 +126,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
       // The Budget's vote-vehicle bill (ticket #1268): without this the panel
       // shows a bare "tabled" state while the Commons vote is pending and the
       // Chancellor cannot tell the vote is progressing.
-      ctx.db
-        .collection<Bill>("bills")
+      billsCollection(ctx.db)
         .find(
           { countryId: "UK", category: "budget", budgetFiscalYear: ctx.fiscalYear },
           {

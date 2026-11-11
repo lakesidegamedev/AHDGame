@@ -12,6 +12,7 @@ import { hasReachedExecutiveTermLimit } from "@/lib/elections/executiveTermLimit
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import type { Document } from "mongodb";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 /**
  * For each player presidential nominee without a runningMateId, tentatively
@@ -125,13 +126,11 @@ export async function autoAssignTentativeRunningMates(
     }
   }
   if (runningMateWrites.length > 0) {
-    const result = await db
-      .collection<ElectionCandidate>("electionCandidates")
+    const result = await electionCandidatesCollection(db)
       .bulkWrite(runningMateWrites, { ordered: false });
     let confirmedNotifications = notificationAssignments;
     if (result.matchedCount !== runningMateWrites.length && notificationAssignments.length > 0) {
-      const confirmed = await db
-        .collection<ElectionCandidate>("electionCandidates")
+      const confirmed = await electionCandidatesCollection(db)
         .find(
           {
             _id: { $in: notificationAssignments.map(({ nomineeId }) => nomineeId) },

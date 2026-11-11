@@ -112,6 +112,9 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import type { Document } from "mongodb";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 type EnactableBill = Pick<
   Bill | StateBill,
@@ -494,7 +497,7 @@ export async function onBillEnacted(
         bill,
         getNationalBudgetId(budgetCountryId)
       );
-      await db.collection("bills").updateOne(
+      await billsCollection<Document>(db).updateOne(
         { _id: bill._id as unknown as ObjectId },
         {
           $set: {
@@ -679,8 +682,7 @@ export async function onBillEnacted(
   const legTypes = knownTypesAreComplete
     ? uniqueLegTypeIds.map((id) => knownLegislationTypes.get(id) as LegislationType)
     : uniqueLegTypeIds.length
-      ? await db
-          .collection<LegislationType>("legislationTypes")
+      ? await legislationTypesCollection(db)
           .find({ _id: { $in: uniqueLegTypeIds } })
           .toArray()
       : [];

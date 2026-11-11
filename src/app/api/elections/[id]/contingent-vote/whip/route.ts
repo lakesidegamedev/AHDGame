@@ -16,6 +16,8 @@ import {
 } from "@/lib/elections/contingentHouseStandings";
 import type { Coalition, ElectionVoteTally, PoliticalParty } from "@/lib/db/types";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -65,7 +67,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       message: "You cannot whip in elections from other countries",
     });
 
-    const tallies = db.collection<ElectionVoteTally>("electionVoteTallies");
+    const tallies = electionVoteTalliesCollection(db);
     const tally = await tallies.findOne(
       { electionId: election._id },
       { projection: { contingentHouseVote: 1 } }
@@ -91,8 +93,7 @@ export async function POST(request: Request, { params }: RouteParams) {
             .find({ countryId, chairId: character._id })
             .project<Pick<PoliticalParty, "sequentialId" | "name">>({ sequentialId: 1, name: 1 })
             .toArray()
-        : await db
-            .collection<Coalition>("coalitions")
+        : await coalitionsCollection(db)
             .find({ countryId, chairCharacterId: character._id })
             .project<Pick<Coalition, "sequentialId" | "name">>({ sequentialId: 1, name: 1 })
             .toArray();

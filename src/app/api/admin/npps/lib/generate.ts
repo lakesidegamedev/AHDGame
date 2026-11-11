@@ -10,6 +10,8 @@ import { DEFAULT_CANDIDATE_SUPPORT } from "@/lib/elections/engine/electionFormul
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 type PartyData = { countryId: string; partyId: string };
 
@@ -90,8 +92,7 @@ export async function handleGenerateNPPs(
       allStatePartyKeys.push(`${stateId}_${partyId}`);
     }
   }
-  const statePartyOrgDocs = await db
-    .collection<StatePartyOrg>("statePartyOrg")
+  const statePartyOrgDocs = await statePartyOrgCollection(db)
     .find({ _id: { $in: allStatePartyKeys } })
     .toArray();
   const statePartyOrgMap = new Map(statePartyOrgDocs.map((doc) => [doc._id as string, doc]));
@@ -102,16 +103,14 @@ export async function handleGenerateNPPs(
   // single-digit org). States with no org data at all keep the legacy default
   // so unseeded/test worlds still work.
   const statesWithOrgData = new Set<string>(
-    await db
-      .collection<StatePartyOrg>("statePartyOrg")
+    await statePartyOrgCollection(db)
       .distinct("stateId", { stateId: { $in: [...electionsByState.keys()] } })
   );
 
   // Pre-batch: which (electionId, partyId) pairs already have an active candidate
   const allElectionIds = elections.map((e) => e._id as import("mongodb").ObjectId);
   const allPartyIds = partiesToGenerateWithCountry.map((p) => p.partyId);
-  const existingCandidateDocs = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const existingCandidateDocs = await electionCandidatesCollection(db)
     .find(
       { electionId: { $in: allElectionIds }, party: { $in: allPartyIds }, status: "active" },
       { projection: { electionId: 1, party: 1 } }
@@ -269,7 +268,7 @@ export async function handleGenerateNPPs(
           enteredAt: new Date(),
         };
 
-        await db.collection<ElectionCandidate>("electionCandidates").insertOne(candidateEntry);
+        await electionCandidatesCollection(db).insertOne(candidateEntry);
 
         totalGenerated++;
         details.push(`${stateId} ${election.electionType} (${partyId})`);

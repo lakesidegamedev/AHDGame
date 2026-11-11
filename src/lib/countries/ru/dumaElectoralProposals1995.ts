@@ -19,6 +19,8 @@ import { GAME_STATE_PRE_ITERATION_FIELDS } from "@/lib/db/collections/gameState"
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import type { Document } from "mongodb";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 
 const RUSSIAN_DUMA_LAW_PROPOSALS_COLLECTION = "russianDumaLawProposals";
 const ID = "1991-default:ru-duma:law1995";
@@ -83,8 +85,7 @@ export async function materializeRussianDuma1995Proposal(input: {
   validClock(turn, now);
   if (!session.inTransaction()) throw new Error("Duma law needs a required transaction");
   const game = await canonicalGame(db, session);
-  const country = await db
-    .collection<CountryGameState>("countryGameStates")
+  const country = await countryGameStatesCollection(db)
     .findOne({ _id: "RU" }, { session, projection });
   if (!game || input.game.preset !== game.preset)
     throw new RussianConstitutionalDecisionConflict("other-era");
@@ -108,8 +109,7 @@ export async function materializeRussianDuma1995Proposal(input: {
   const proposals = db.collection<RussianDuma1995Proposal>(RUSSIAN_DUMA_LAW_PROPOSALS_COLLECTION);
   const prior = await proposals.findOne({ _id: ID }, { session });
   if (prior) {
-    const bill = await db
-      .collection<Bill>("bills")
+    const bill = await billsCollection(db)
       .findOne(
         { _id: prior.billId },
         { session, projection: { countryId: 1, status: 1, russianDumaElectoralMandate: 1 } }
@@ -169,7 +169,7 @@ export async function materializeRussianDuma1995Proposal(input: {
     { session, upsert: !prior }
   );
   if (prior && claim.matchedCount !== 1) throw new Error("Duma proposal changed");
-  await db.collection<Bill>("bills").insertOne(bill, { session });
+  await billsCollection(db).insertOne(bill, { session });
   return proposal;
 }
 export async function openRussianDuma1995Proposal(
@@ -196,7 +196,7 @@ function validBinding(bill: Bill, proposal: RussianDuma1995Proposal) {
   );
 }
 async function signedBill(db: Db, proposal: RussianDuma1995Proposal, session?: ClientSession) {
-  const bill = await db.collection<Bill>("bills").findOne(
+  const bill = await billsCollection(db).findOne(
     {
       _id: proposal.billId,
       countryId: "RU",
@@ -249,7 +249,7 @@ export async function authorizeRussianDuma1995Proposal(input: {
   )
     throw new Error("Duma law opening clock changed");
   const game = await canonicalGame(db, session);
-  const countries = db.collection<CountryGameState>("countryGameStates");
+  const countries = countryGameStatesCollection(db);
   const country = await countries.findOne({ _id: "RU" }, { session, projection });
   if (!game || input.game.preset !== game.preset || !availability(game, turn, country).available)
     return false;
@@ -299,8 +299,7 @@ export async function processRussianDuma1995Mandate(
     .findOne({ _id: ID, status: "open" }, { projection: { billId: 1 } });
   if (
     !proposal ||
-    !(await db
-      .collection<Bill>("bills")
+    !(await billsCollection(db)
       .findOne({ _id: proposal.billId, status: "signed" }, { projection: { _id: 1 } }))
   )
     return false;
@@ -359,8 +358,7 @@ export async function loadRussianDuma1995Decisions(
   turn: number
 ) {
   if (game.preset !== "1991-default") return [];
-  const country = await db
-    .collection<CountryGameState>("countryGameStates")
+  const country = await countryGameStatesCollection(db)
     .findOne({ _id: "RU" }, { projection });
   const allowed = availability(game, turn, country);
   if (allowed.reason === "before-date" || allowed.reason === "no-legislature") return [];
@@ -368,8 +366,7 @@ export async function loadRussianDuma1995Decisions(
     .collection<RussianDuma1995Proposal>(RUSSIAN_DUMA_LAW_PROPOSALS_COLLECTION)
     .findOne({ _id: ID }, { projection: { billId: 1, revision: 1, status: 1 } });
   const bill = proposal
-    ? await db
-        .collection<Bill>("bills")
+    ? await billsCollection(db)
         .findOne({ _id: proposal.billId }, { projection: { status: 1 } })
     : null;
   return [

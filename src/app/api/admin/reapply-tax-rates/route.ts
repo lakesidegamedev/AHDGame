@@ -16,6 +16,8 @@ import { isPolicyProvision } from "@/lib/db/types/legislation";
 import type { FederalTaxRates } from "@/lib/db/types/budget";
 import { calculateFederalRevenue, normalizeFederalTaxRates } from "@/lib/budget/revenue";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 export async function POST() {
   try {
@@ -25,11 +27,10 @@ export async function POST() {
     const db = await getDb();
 
     // Find all signed federal tax bills
-    const signedBills = await db.collection<Bill>("bills").find({ status: "signed" }).toArray();
+    const signedBills = await billsCollection(db).find({ status: "signed" }).toArray();
 
     // Get all legislation types with taxRateChange
-    const taxLegTypes = await db
-      .collection<LegislationType>("legislationTypes")
+    const taxLegTypes = await legislationTypesCollection(db)
       .find({ taxRateChange: { $exists: true } })
       .toArray();
     const taxLegTypeMap = new Map(taxLegTypes.map((lt) => [lt._id, lt]));

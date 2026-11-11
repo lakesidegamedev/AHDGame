@@ -7,6 +7,7 @@ import { adminLawTypesCreateSchema } from "@/lib/api/schemas/admin";
 import type { LegislationType } from "@/lib/db/types";
 import { legislationTypes as seedLegislationTypes } from "@/lib/seeds/reference/legislationTypes";
 import type { LegislationTypePosition } from "@/lib/db/types/legislation";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 // GET /api/admin/law-types — Lists all legislation types, merging seed definitions with admin-created overrides.
 // Auth: requireAdmin
@@ -19,8 +20,7 @@ export async function GET() {
     const db = await getDb();
 
     // Get admin-created from DB
-    const adminTypes = await db
-      .collection<LegislationType>("legislationTypes")
+    const adminTypes = await legislationTypesCollection(db)
       .find({ source: "admin" })
       .toArray();
 
@@ -80,7 +80,7 @@ export async function POST(request: Request) {
     const db = await getDb();
 
     // Check for duplicate ID
-    const existing = await db.collection<LegislationType>("legislationTypes").findOne({ _id });
+    const existing = await legislationTypesCollection(db).findOne({ _id });
     const seedExists = seedLegislationTypes.some((t) => t._id === _id);
 
     if (existing || seedExists) {
@@ -106,13 +106,12 @@ export async function POST(request: Request) {
       updatedAt: new Date(),
     };
 
-    await db.collection<LegislationType>("legislationTypes").insertOne(lawType);
+    await legislationTypesCollection(db).insertOne(lawType);
 
     // If marked as permanent, write to seed file
     if (isPermanent) {
       const { writeAdminSeedFile } = await import("@/lib/admin/seedFileGenerator");
-      const permanentTypes = await db
-        .collection<LegislationType>("legislationTypes")
+      const permanentTypes = await legislationTypesCollection(db)
         .find({ source: "admin", isPermanent: true })
         .toArray();
       await writeAdminSeedFile(permanentTypes);

@@ -7,6 +7,7 @@ import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { resolveLegislatedEmbargoes } from "@/lib/trade/reconcileEmbargoes";
 import { NATIONAL_TERMINAL_STATUSES } from "@/lib/congress/billProposalLimits";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 export const PUBLIC_TARIFF_SCOPES = [
   "economy_wide",
@@ -99,8 +100,7 @@ export async function queryTradeEmbargoes(
     } as Filter<TradeEmbargo>)
     .toArray();
 
-  const signedBills = await db
-    .collection<Bill>("bills")
+  const signedBills = await billsCollection(db)
     .find(
       {
         status: "signed",
@@ -156,8 +156,7 @@ export async function queryTradeEmbargoes(
 }
 
 async function queryPendingEmbargoBills(db: Db, country?: CountryId) {
-  const bills = await db
-    .collection<Bill>("bills")
+  const bills = await billsCollection(db)
     .find(
       {
         status: { $nin: NATIONAL_TERMINAL_STATUSES },

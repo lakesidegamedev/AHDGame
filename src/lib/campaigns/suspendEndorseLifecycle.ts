@@ -1,5 +1,6 @@
 import type { ElectionCandidate } from "@/lib/db/types";
 import { ObjectId, type Db } from "mongodb";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 /** Campaign-strength map key — matches `campaign.candidateId` (nppId for NPP campaigns). */
 export function campaignStrengthLookupKey(
@@ -21,7 +22,7 @@ export async function invalidateSuspendEndorsementsForWithdrawnCandidate(
   withdrawnElectionCandidateId: ObjectId
 ): Promise<number> {
   const now = new Date();
-  const result = await db.collection<ElectionCandidate>("electionCandidates").updateMany(
+  const result = await electionCandidatesCollection(db).updateMany(
     {
       electionId,
       status: "active",

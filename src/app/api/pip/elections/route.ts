@@ -20,6 +20,8 @@ import type {
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 
 export async function GET() {
   try {
@@ -111,8 +113,7 @@ export async function GET() {
     // Player race (auth only)
     let playerRace = null;
     if (character) {
-      const candidacy = await db
-        .collection<ElectionCandidate>("electionCandidates")
+      const candidacy = await electionCandidatesCollection(db)
         .findOne({ characterId: character._id, status: "active" });
 
       if (candidacy) {
@@ -128,12 +129,10 @@ export async function GET() {
 
           // Rank candidate by vote count from the tally
           const [allCandidates, voteTally] = await Promise.all([
-            db
-              .collection<ElectionCandidate>("electionCandidates")
+            electionCandidatesCollection(db)
               .find({ electionId: election._id, status: "active" })
               .toArray(),
-            db
-              .collection<ElectionVoteTally>("electionVoteTallies")
+            electionVoteTalliesCollection(db)
               .findOne({ electionId: election._id }),
           ]);
 

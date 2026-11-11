@@ -23,6 +23,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
 
 function partyKey(countryId: string, partyId: string): string {
   return `${countryId}:${partyId}`;
@@ -66,8 +67,7 @@ export type ContingentChamberSnapshot = NonNullable<ElectionVoteTally["contingen
 async function loadCoalitionPartners(db: Db, countryId: string): Promise<Map<string, string[]>> {
   let coalitions: Pick<Coalition, "members">[] = [];
   try {
-    coalitions = await db
-      .collection<Coalition>("coalitions")
+    coalitions = await coalitionsCollection(db)
       .find({ countryId: countryId as CountryId })
       .project<Pick<Coalition, "members">>({ members: 1 })
       .toArray();

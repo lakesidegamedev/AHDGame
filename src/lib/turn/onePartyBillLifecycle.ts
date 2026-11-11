@@ -74,6 +74,7 @@ import {
   type Hu2011ElectoralProposal,
 } from "@/lib/countries/hu/electoralProposals2011";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 
 const DEMOCRATIC_1991_COUNTRIES: readonly CountryId[] = ["PL", "CS", "HU", "RO", "BG", "YU"];
 
@@ -103,8 +104,7 @@ export async function processOnePartyBillLifecycleForCountry(
     // These registry entries also host the democratic 1991 institutions.
     // Other converted one-party countries keep their existing conversion guard.
     if (preset === "1991-default" && DEMOCRATIC_1991_COUNTRIES.includes(countryId)) {
-      const state = await db
-        .collection<CountryGameState>("countryGameStates")
+      const state = await countryGameStatesCollection(db)
         .findOne({ _id: countryId }, { projection: { dissolvedTurn: 1 } });
       if (state?.dissolvedTurn != null) return { enacted: 0, failed: 0 };
       const lifecycle = buildConfiguredCountryBillLifecycle(countryId, preset);

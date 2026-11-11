@@ -125,6 +125,7 @@ import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficia
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 const MIN_BASE_ACTIONS_PER_TURN = 4;
 
@@ -187,7 +188,7 @@ async function getCharacterData() {
         })()
       : Promise.resolve(null),
     hasParty
-      ? db.collection<StatePartyOrg>("statePartyOrg").findOne({ _id: statePartyKey })
+      ? statePartyOrgCollection(db).findOne({ _id: statePartyKey })
       : Promise.resolve(null),
     corporationsCollection(db).findOne(
       {

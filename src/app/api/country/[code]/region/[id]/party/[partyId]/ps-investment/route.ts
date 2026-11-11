@@ -14,6 +14,7 @@ import {
 } from "@/lib/turn/politicalStrength/strengthConstants";
 import type { State, StatePartyOrg } from "@/lib/db/types";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; partyId: string }>;
@@ -122,8 +123,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const statePartyKey = getStatePartyOrgDocumentId(stateId, party);
     stageStartedAt = Date.now();
-    const stateParty = await db
-      .collection<StatePartyOrg>("statePartyOrg")
+    const stateParty = await statePartyOrgCollection(db)
       .findOne({ _id: statePartyKey });
     timings.orgReadMs += Date.now() - stageStartedAt;
     if (!stateParty) {
@@ -147,8 +147,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const now = new Date();
     stageStartedAt = Date.now();
-    await db
-      .collection<StatePartyOrg>("statePartyOrg")
+    await statePartyOrgCollection(db)
       .updateOne(
         { _id: statePartyKey },
         { $set: { psInvestmentBudget: parsed.data.budget, updatedAt: now } }

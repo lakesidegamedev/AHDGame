@@ -17,6 +17,7 @@ import { formatElectionTypeLabel, MULTI_SEAT_TYPES } from "@/lib/utils/electionL
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 export async function updatePoliticianPagesAfterElection(
   db: Db,
@@ -30,8 +31,7 @@ export async function updatePoliticianPagesAfterElection(
 ): Promise<void> {
   if (election.status !== "completed") return;
 
-  const candidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidates = await electionCandidatesCollection(db)
     .find({ _id: { $in: candidateIds.map((id) => new ObjectId(id)) } })
     .toArray();
 

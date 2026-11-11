@@ -20,6 +20,7 @@ import type { Election, ElectionCandidate, NPP } from "@/lib/db/types";
 import { getCountryConfig } from "@/lib/constants/countries";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 /** Minimum candidates per party per race. Races below this get filled. */
 const MIN_CANDIDATES_PER_PARTY = 1;
@@ -52,8 +53,7 @@ export async function POST() {
     const electionIds = elections.map((e) => e._id);
 
     // All active candidates grouped by election+party
-    const candidates = await db
-      .collection<ElectionCandidate>("electionCandidates")
+    const candidates = await electionCandidatesCollection(db)
       .find({ electionId: { $in: electionIds }, status: "active" })
       .toArray();
 
@@ -150,8 +150,7 @@ export async function POST() {
     }
 
     if (toInsert.length > 0) {
-      await db
-        .collection<ElectionCandidate>("electionCandidates")
+      await electionCandidatesCollection(db)
         .insertMany(toInsert as ElectionCandidate[]);
     }
 

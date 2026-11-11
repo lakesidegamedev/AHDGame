@@ -39,6 +39,7 @@ import {
 } from "@/lib/canvassing/eligibility";
 import { getGameTime } from "@/lib/time/gameTime";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 
 const COST_ACTIONS = 1;
 
@@ -196,7 +197,7 @@ export async function POST(req: NextRequest) {
     const usingSurrogate = mateEligibility.ok && mateEligibility.stateId === stateId;
     let surrogateCampaignId: ObjectId | null = null;
     if (usingSurrogate && mateEligibility.ok) {
-      const ticketCampaign = await db.collection<Campaign>("campaigns").findOne(
+      const ticketCampaign = await campaignsCollection(db).findOne(
         {
           electionId: mateEligibility.electionId,
           candidateId: mateEligibility.nomineeCharacterId,

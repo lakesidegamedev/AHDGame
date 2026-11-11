@@ -64,6 +64,8 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 /**
  * What `runSeed`'s reset branch deletes, and how far.
@@ -581,8 +583,7 @@ export async function runSeed(
 
   // State party org
   for (const org of statePartyOrg) {
-    await db
-      .collection<StatePartyOrg>("statePartyOrg")
+    await statePartyOrgCollection(db)
       .updateOne(
         { _id: org._id },
         { $set: { ...org, updatedAt: now }, $setOnInsert: { createdAt: now } },
@@ -654,8 +655,7 @@ export async function runSeed(
     "immigration", // Split into border_security_enforcement + legal_immigration_visas
     "medicare", // Redundant with federal_healthcare_funding and drug_pricing_medicare
   ];
-  const deleteResult = await db
-    .collection<LegislationType>("legislationTypes")
+  const deleteResult = await legislationTypesCollection(db)
     .deleteMany({ _id: { $in: DEPRECATED_TYPE_IDS } });
   if (deleteResult.deletedCount > 0) {
     log(`Deleted ${deleteResult.deletedCount} deprecated legislation types`);
@@ -675,7 +675,7 @@ export async function runSeed(
     })),
   ];
   if (allLegislationTypes.length > 0) {
-    await db.collection<LegislationType>("legislationTypes").bulkWrite(
+    await legislationTypesCollection(db).bulkWrite(
       allLegislationTypes.map((lt) => ({
         updateOne: { filter: { _id: lt._id }, update: { $set: lt }, upsert: true },
       })),
@@ -750,8 +750,7 @@ export async function runSeed(
   await statesCollection<Document>(db)
     .createIndex({ region: 1 })
     .catch(() => {});
-  await db
-    .collection("statePartyOrg")
+  await statePartyOrgCollection<Document>(db)
     .createIndex({ stateId: 1 })
     .catch(() => {});
   log("Indexes ensured");

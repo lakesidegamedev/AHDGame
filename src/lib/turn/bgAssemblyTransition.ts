@@ -24,6 +24,8 @@ import {
 import { getStatesCollection } from "@/lib/db/collections/states";
 import { getElectionsCollection } from "@/lib/db/collections/elections";
 import { getElectedOfficialsCollection } from "@/lib/db/collections/electedOfficials";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 type Calendar = Pick<GameState, "preset" | "preIteration" | "preIterationTurns">;
 function clock(game: Calendar, turn: number) {
   return calendarTurn(turn, {
@@ -41,8 +43,7 @@ export async function processBgAssemblyTransition(
   if (!Number.isSafeInteger(turn) || turn < 1 || !Number.isFinite(now.getTime()))
     throw new Error("Bulgarian handover needs a valid turn and time");
   if (clock(game, turn) < BG_ORDINARY_ASSEMBLY_START_TURN) return false;
-  const ready = await db
-    .collection<CountryGameState>("countryGameStates")
+  const ready = await countryGameStatesCollection(db)
     .findOne({ _id: "BG" }, { projection: { bgOrdinaryAssemblySinceTurn: 1, dissolvedTurn: 1 } });
   if (!ready || ready.dissolvedTurn != null || ready.bgOrdinaryAssemblySinceTurn != null)
     return false;
@@ -62,7 +63,7 @@ async function materializeBgLegacyHandover(
   ).findOne({ _id: "current" }, { session, projection: GAME_STATE_PRE_ITERATION_FIELDS });
   if (game?.preset !== "1991-default" || clock(game, turn) < BG_ORDINARY_ASSEMBLY_START_TURN)
     return false;
-  const countries = db.collection<CountryGameState>("countryGameStates");
+  const countries = countryGameStatesCollection(db);
   const country = await countries.findOne(
     { _id: "BG" },
     { session, projection: { bgOrdinaryAssemblySinceTurn: 1, dissolvedTurn: 1 } }
@@ -123,7 +124,7 @@ async function materializeBgLegacyHandover(
     { session }
   );
   if (updated.matchedCount !== ids.length) throw new Error("Bulgarian handover regions changed");
-  const formation = await db.collection<GovernmentFormation>("governmentFormations").updateOne(
+  const formation = await governmentFormationsCollection(db).updateOne(
     { _id: "BG" },
     {
       $set: {

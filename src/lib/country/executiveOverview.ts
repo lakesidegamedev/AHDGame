@@ -50,6 +50,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 
 /**
  * Coerce a character id that is typed `ObjectId` but may have been persisted as
@@ -229,15 +230,14 @@ async function handleParliamentary(countryId: CountryId) {
   const [world, countryState] = await Promise.all([
     gameStateCollection<{ _id: string; preset?: string }>(db).findOne({ _id: "current" }),
     countryHasFeature("ruLib", countryId)
-      ? db
-          .collection<{
+      ? countryGameStatesCollection<{
             _id: string;
             ruSovietSuccessionSinceTurn?: number;
             ruProvisionalCongressSeats?: number;
             ruPresidencySinceTurn?: number;
             ruCongressDissolvedSinceTurn?: number;
             ruFederalAssemblySinceTurn?: number;
-          }>("countryGameStates")
+          }>(db)
           .findOne({ _id: "RU" })
       : Promise.resolve(null),
   ]);

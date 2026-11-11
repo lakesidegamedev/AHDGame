@@ -29,6 +29,7 @@ import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 export const ELECTION_DURATION_TURNS = 72; // 72 turns = 72 hours
 
@@ -99,7 +100,7 @@ async function ensureResidentTerritorialPartyOrgs(
   );
   if (missingOrgs.length === 0) return statePartyOrgs;
 
-  await db.collection<StatePartyOrg>("statePartyOrg").bulkWrite(
+  await statePartyOrgCollection(db).bulkWrite(
     missingOrgs.map((org) => ({
       updateOne: {
         filter: { _id: org._id },
@@ -179,7 +180,7 @@ export async function createMissingElections(
 
   const [parties, initialStatePartyOrgs, activeElections, usPolitics] = await Promise.all([
     politicalPartiesCollection(db).find({}).toArray(),
-    db.collection<StatePartyOrg>("statePartyOrg").find(scopedStatePartyOrgQuery).toArray(),
+    statePartyOrgCollection(db).find(scopedStatePartyOrgQuery).toArray(),
     db
       .collection<StatePartyElection>("statePartyElections")
       .find(scopedActiveElectionQuery)
@@ -407,8 +408,7 @@ export async function processCompletedElections(
         },
       ])
       .toArray(),
-    db
-      .collection<StatePartyOrg>("statePartyOrg")
+    statePartyOrgCollection(db)
       .find({ _id: { $in: endedElections.map((e) => `${e.stateId}_${e.partyId}`) } })
       .toArray(),
   ]);
@@ -627,7 +627,7 @@ export async function processCompletedElections(
     );
 
   if (orgOps.length > 0) {
-    await db.collection<StatePartyOrg>("statePartyOrg").bulkWrite(orgOps);
+    await statePartyOrgCollection(db).bulkWrite(orgOps);
   }
   await Promise.all(notifications);
 
@@ -670,8 +670,7 @@ export async function vacateInactiveLeadership(
   const now = new Date(effectiveNow);
 
   // 1. Orgs with at least one occupied seat.
-  const orgs = await db
-    .collection<StatePartyOrg>("statePartyOrg")
+  const orgs = await statePartyOrgCollection(db)
     .find({
       $or: [
         { chairId: { $ne: null } },
@@ -765,7 +764,7 @@ export async function vacateInactiveLeadership(
   }
 
   if (orgOps.length > 0) {
-    await db.collection<StatePartyOrg>("statePartyOrg").bulkWrite(orgOps);
+    await statePartyOrgCollection(db).bulkWrite(orgOps);
     await Promise.all(notifications);
     console.log(`[StatePartyElections] Vacated ${vacated} inactive leadership seat(s)`);
   }

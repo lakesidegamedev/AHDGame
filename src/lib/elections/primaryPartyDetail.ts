@@ -66,6 +66,10 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 export type { PrimaryPartyDetail, PrimaryViewerCampaign };
 
@@ -143,11 +147,10 @@ export async function loadPrimaryPartyData(
   const partyKey = party.sequentialId.toString();
 
   const [candidates, tally] = await Promise.all([
-    db
-      .collection<ElectionCandidate>("electionCandidates")
+    electionCandidatesCollection(db)
       .find({ electionId: election._id, party: partyKey, status: "active" })
       .toArray(),
-    db.collection<ElectionVoteTally>("electionVoteTallies").findOne({ electionId: election._id }),
+    electionVoteTalliesCollection(db).findOne({ electionId: election._id }),
   ]);
 
   // Each candidate's chosen display colour lives on their campaign.
@@ -155,8 +158,7 @@ export async function loadPrimaryPartyData(
     .map((c) => (c.isNPP ? c.nppId : c.characterId))
     .filter((id): id is NonNullable<typeof id> => id != null);
   const campaigns = candidateKeys.length
-    ? await db
-        .collection<Campaign>("campaigns")
+    ? await campaignsCollection(db)
         .find({ electionId: election._id, candidateId: { $in: candidateKeys } })
         .project<{ candidateId: (typeof candidateKeys)[number]; color?: string | null }>({
           candidateId: 1,
@@ -189,8 +191,7 @@ export async function loadPrimaryPartyData(
   const charMap = new Map(chars.map((c) => [c._id.toString(), c]));
   const nppMap = new Map(npps.map((n) => [n._id.toString(), n]));
 
-  const partyOrgs = await db
-    .collection<StatePartyOrg>("statePartyOrg")
+  const partyOrgs = await statePartyOrgCollection(db)
     .find({ countryId, partyId: partyKey })
     .toArray();
   const orgMap = new Map<string, number>();

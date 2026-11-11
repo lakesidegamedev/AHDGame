@@ -40,6 +40,8 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 interface CandidateElection {
   election: Election;
@@ -173,8 +175,7 @@ export async function getCharacterById(characterId: string) {
     const hasParty = character.party && character.party !== "independent";
     const statePartyKey = hasParty ? `${character.homeState}_${character.party}` : null;
 
-    const activeOrUpcomingCandidaciesPromise = db
-      .collection<ElectionCandidate>("electionCandidates")
+    const activeOrUpcomingCandidaciesPromise = electionCandidatesCollection(db)
       .find({
         characterId: character._id,
         status: "active",
@@ -241,7 +242,7 @@ export async function getCharacterById(characterId: string) {
         }
       ),
       statePartyKey
-        ? db.collection<StatePartyOrg>("statePartyOrg").findOne({ _id: statePartyKey })
+        ? statePartyOrgCollection(db).findOne({ _id: statePartyKey })
         : Promise.resolve(null),
       gameStateCollection(db).findOne({ _id: "current" }),
       fetchPartyHistory(db, character._id),

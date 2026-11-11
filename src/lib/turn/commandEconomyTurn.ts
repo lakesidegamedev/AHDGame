@@ -64,6 +64,7 @@ import { getCorporateSectorsCollection } from "@/lib/db/collections/corporateSec
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import type { Document } from "mongodb";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 
 /**
  * Command-economy macro turn phase. Advances shortage-economy state on
@@ -96,8 +97,7 @@ export async function processCommandEconomyTurn(
   // Per-country command posture from the NPP governing brain (commandStance):
   // second-economy tolerance + the P1 Gosbank levers (credit aggressiveness,
   // budget softness, government reformism). Absent → global / constant defaults.
-  const formations = await db
-    .collection<GovernmentFormation>("governmentFormations")
+  const formations = await governmentFormationsCollection(db)
     .find({}, { projection: { _id: 1, commandStance: 1, governingPartyId: 1 } })
     .toArray();
   const toleranceByCountry = new Map<string, number>();

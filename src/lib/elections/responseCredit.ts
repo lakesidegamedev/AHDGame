@@ -40,6 +40,9 @@ import {
   CREDIT_WINDOW_TURNS,
   type ResponseCreditCandidate,
 } from "@/lib/elections/engine/economicReferendum";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import type { Document } from "mongodb";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 /**
  * Which referendum component a metric feeds, and which sign of `ratePerTurn`
@@ -165,16 +168,14 @@ export async function loadResponseCredit(
     .filter((id): id is ObjectId => id != null);
 
   const [legTypes, laws, bills, historyDoc] = await Promise.all([
-    db
-      .collection<LegislationType>("legislationTypes")
+    legislationTypesCollection(db)
       .find({ _id: { $in: typeIds } }, { projection: { name: 1, policyOptions: 1 } })
       .toArray(),
     db
       .collection<EnactedLaw>("enactedLaws")
       .find({ billId: { $in: billIds } })
       .toArray(),
-    db
-      .collection("bills")
+    billsCollection<Document>(db)
       .find({ _id: { $in: billIds } }, { projection: { title: 1, budgetValidation: 1 } })
       .toArray(),
     db.collection("macroMetricsHistory").findOne({ _id: nationalDocId as never }),

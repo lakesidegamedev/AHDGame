@@ -12,6 +12,7 @@ import {
 import { runWithOptionalTransaction } from "@/lib/db/runWithOptionalTransaction";
 import type { Campaign, StateDemographicTurnout } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 
 export interface CanvassTurnoutWrite {
   /** `_id` of the state demographic turnout document. */
@@ -99,7 +100,7 @@ export async function applyCanvassSpend(
   }
 
   const characters = charactersCollection(db);
-  const campaigns = db.collection<Campaign>("campaigns");
+  const campaigns = campaignsCollection(db);
   const turnout = db.collection<StateDemographicTurnout>("stateDemographicTurnout");
   const receipts = await getMoneyFlowReceiptsCollection(db);
   const now = new Date();

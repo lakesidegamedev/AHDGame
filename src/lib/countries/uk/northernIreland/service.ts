@@ -17,6 +17,7 @@ import {
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 export async function loadNorthernIrelandSignal(db: Db): Promise<NorthernIrelandSignal | null> {
   return db
@@ -82,8 +83,7 @@ export async function reconcileNorthernIrelandGovernance(
         { _id: { $in: ids }, status: { $in: ["active", "upcoming"] } },
         { $set: { status: "cancelled", updatedAt: now } }
       );
-      await db
-        .collection<ElectionCandidate>("electionCandidates")
+      await electionCandidatesCollection(db)
         .updateMany(
           { electionId: { $in: ids }, status: "active" },
           { $set: { status: "withdrawn", withdrawnAt: now } }

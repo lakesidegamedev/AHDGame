@@ -49,6 +49,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 /** Player books refit per category to their authored opening composition, by world year. */
 const OPENING_COMPOSITION_REFIT: Readonly<Partial<Record<number, readonly LawCountryId[]>>> = {
@@ -429,7 +430,7 @@ async function calibratePlayerOpeningPrograms(
         };
       });
     if (typeOps.length > 0)
-      await db.collection<LegislationType>("legislationTypes").bulkWrite(typeOps);
+      await legislationTypesCollection(db).bulkWrite(typeOps);
     await refreshNationalBudgetRevenue(db, [budgetId]);
     log(`Calibrated ${year} ${countryId} program expense fractions by ${scaleNote}`);
   }

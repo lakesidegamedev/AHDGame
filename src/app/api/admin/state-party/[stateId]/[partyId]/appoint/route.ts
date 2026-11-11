@@ -24,6 +24,7 @@ import {
 } from "@/lib/elections/party/statePartyElections";
 import type { StatePartyElectionPosition, StatePartyOrg, AdminLog } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 interface RouteParams {
   params: Promise<{ stateId: string; partyId: string }>;
@@ -83,8 +84,7 @@ export const POST = withAdminRoute(async (auth, request: Request, { params }: Ro
   }
 
   // Get current holder so we can notify removal
-  const org = await db
-    .collection<StatePartyOrg>("statePartyOrg")
+  const org = await statePartyOrgCollection(db)
     .findOne({ _id: `${stateId}_${partyId}` as unknown as string });
 
   const previousHolderId: ObjectId | null = org?.[field] ?? null;
@@ -102,8 +102,7 @@ export const POST = withAdminRoute(async (auth, request: Request, { params }: Ro
   }
 
   // Update statePartyOrg (elections continue running - winner will take position when election completes)
-  await db
-    .collection<StatePartyOrg>("statePartyOrg")
+  await statePartyOrgCollection(db)
     .updateOne(
       { _id: `${stateId}_${partyId}` as unknown as string },
       { $set: { ...leadershipReset, [field]: newHolderId, updatedAt: now } }

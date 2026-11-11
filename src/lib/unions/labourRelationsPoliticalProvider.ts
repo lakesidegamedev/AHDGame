@@ -15,6 +15,7 @@ import { isLabourFullMode } from "@/lib/labour/featureFlag";
 import type { PoliticalMetricId } from "@/lib/politicalMetrics/types";
 import { normalizeServiceIds, servicesWorkerSecurityNudge } from "./unionServices";
 import { loadFundedUnionServices, UNION_SERVICE_FUNDING_PROJECTION } from "./unionServiceFunding";
+import { unionsCollection } from "@/lib/db/repositories/unions";
 
 /** Political attention fades unless a dispute escalates again. */
 export const LABOUR_DISPUTE_DECAY = 0.9;
@@ -175,8 +176,7 @@ export async function loadLabourRelationsPoliticalNudgesByCountry(
       .toArray(),
     // Only unions with a recorded payment can produce service nudges.
     // The selected slate can differ from the already purchased entitlement.
-    db
-      .collection<Union>("unions")
+    unionsCollection(db)
       .find(
         { suspended: { $ne: true }, serviceReceipts: { $exists: true } },
         { projection: { countryId: 1, ...UNION_SERVICE_FUNDING_PROJECTION } }

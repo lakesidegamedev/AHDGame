@@ -12,6 +12,7 @@ import { buildProportionalChamberSeats } from "@/lib/seeds/proportionalChamberSe
 import { getGameStatePreset } from "@/lib/db/collections/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 /**
  * Economy-tier ("ECON") democracies enabled for live economy + NPP politics but
@@ -181,7 +182,7 @@ export async function seedEconTierRostersForCountry(
   const now = new Date();
   const orgRows = seedOrgRows ? buildEconTierStatePartyOrgRows(countryId, regionIds, parties) : [];
   if (orgRows.length > 0) {
-    await db.collection<StatePartyOrg>("statePartyOrg").bulkWrite(
+    await statePartyOrgCollection(db).bulkWrite(
       orgRows.map((row) => {
         const { _id, ...rest } = row;
         return {

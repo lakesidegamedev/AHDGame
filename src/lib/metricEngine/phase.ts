@@ -131,6 +131,7 @@ import { EDU_SPEND_HALF_SAT } from "./registry/education";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 
 /** Default unemployment when a state has no prior reading (matches gdpGrowth.ts `?? 4.5`). */
 const DEFAULT_UNEMPLOYMENT = 4.5;
@@ -409,8 +410,7 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
     // and their potential growth was near-uniform. Non-playable regions are
     // absent from this map and keep the legacy read untouched.
     loadPoliticalMacroInputs(db, turn),
-    db
-      .collection<{ _id: string; status?: string }>("countryGameStates")
+    countryGameStatesCollection<{ _id: string; status?: string }>(db)
       .find({ status: "active" })
       .project<{ _id: string }>({ _id: 1 })
       .toArray(),

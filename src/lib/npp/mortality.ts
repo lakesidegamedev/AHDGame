@@ -37,6 +37,8 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 
 export {
   annualDeathProbability,
@@ -67,8 +69,7 @@ export interface NppMortalityResult {
  */
 async function loadLeaderTerms(db: Db, now: Date): Promise<Map<string, number | null>> {
   const [formations, leaderStates] = await Promise.all([
-    db
-      .collection<GovernmentFormation>("governmentFormations")
+    governmentFormationsCollection(db)
       .find({ status: "formed" }, { projection: { pmNppId: 1, presidentNppId: 1, hosNppId: 1 } })
       .toArray(),
     db
@@ -324,8 +325,7 @@ export async function processNppMortality(
       }
     );
 
-    await db
-      .collection<ElectionCandidate>("electionCandidates")
+    await electionCandidatesCollection(db)
       .updateMany(
         { nppId: npp._id, status: "active" },
         { $set: { status: "withdrawn", withdrawnAt: now } }
@@ -345,8 +345,7 @@ export async function processNppMortality(
         idField === "presidentNppId"
           ? { presidentName: replacement.name, pmName: replacement.name }
           : { [nameField]: replacement.name };
-      await db
-        .collection<GovernmentFormation>("governmentFormations")
+      await governmentFormationsCollection(db)
         .updateMany(
           { [idField]: npp._id },
           { $set: { ...succession, ...nameUpdates, [idField]: replacement._id } }

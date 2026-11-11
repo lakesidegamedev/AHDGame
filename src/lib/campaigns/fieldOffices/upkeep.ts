@@ -10,6 +10,7 @@ import type { Campaign, CampaignFieldOffice, Election } from "@/lib/db/types";
 import { FIELD_OFFICES_COLLECTION } from "./commands";
 import { getFieldOfficeCostAnchor, getFieldOfficeRules } from "./rules";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 
 export interface FieldOfficeUpkeepResult {
   campaignsCharged: number;
@@ -42,8 +43,7 @@ export async function processFieldOfficeUpkeep(db: Db): Promise<FieldOfficeUpkee
     ...new Map(offices.map((o) => [o.electionId.toString(), o.electionId])).values(),
   ];
   const [campaigns, elections, rates, priceLevel, preset] = await Promise.all([
-    db
-      .collection<Campaign>("campaigns")
+    campaignsCollection(db)
       .find({ _id: { $in: campaignIds } }, { projection: { funds: 1, status: 1 } })
       .toArray(),
     electionsCollection(db)
@@ -126,7 +126,7 @@ export async function processFieldOfficeUpkeep(db: Db): Promise<FieldOfficeUpkee
 
   if (close.length > 0) await officesCol.deleteMany({ _id: { $in: close } });
   if (campaignOps.length > 0) {
-    await db.collection<Campaign>("campaigns").bulkWrite(campaignOps, { ordered: false });
+    await campaignsCollection(db).bulkWrite(campaignOps, { ordered: false });
   }
   return result;
 }

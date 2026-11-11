@@ -3,6 +3,7 @@ import type { Bill, Corporation, CorporateSector, PendingNationalization } from 
 import type { BillStatus, NationalizeProvision } from "@/lib/db/types/legislation";
 import { inferCountryIdFromStateId } from "@/lib/congress/resolveBillCountryId";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 /**
  * Bill statuses that count as "still in process" — a nationalization bill in one
@@ -44,8 +45,7 @@ export async function matchActiveNationalizationBills(
   sectorIdStr: ReadonlySet<string>,
   typeToSectorIds: ReadonlyMap<string, ObjectId[]>
 ): Promise<MatchedNationalizationBill[]> {
-  const bills = await db
-    .collection<Bill>("bills")
+  const bills = await billsCollection(db)
     .find({
       status: { $in: Array.from(ACTIVE_BILL_STATUSES) },
       provisions: { $elemMatch: { type: "nationalize" } },

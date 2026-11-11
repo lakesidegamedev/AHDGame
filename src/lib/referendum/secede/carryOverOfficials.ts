@@ -12,6 +12,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import type { Document } from "mongodb";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 
 export interface CarryOverOfficialsResult {
   msps: number;
@@ -48,7 +49,7 @@ export async function carryOverOfficials(
     ...departing.flatMap((row) => (row.nppId ? [row.nppId] : [])),
   ];
   const holders = [{ characterId: { $in: characterIds } }, { nppId: { $in: nppIds } }];
-  const government = await db.collection<ParliamentaryGovernment>("governmentFormations").findOne({
+  const government = await governmentFormationsCollection<ParliamentaryGovernment>(db).findOne({
     _id: fromCountryId,
     $or: [{ pmCharacterId: { $in: characterIds } }, { pmNppId: { $in: nppIds } }],
   });
@@ -93,7 +94,7 @@ export async function carryOverOfficials(
     }
   );
   const seats = getCountryConfig(toCountryId).legislature.lowerChamber.seats;
-  await db.collection<ParliamentaryGovernment>("governmentFormations").updateOne(
+  await governmentFormationsCollection<ParliamentaryGovernment>(db).updateOne(
     { _id: toCountryId },
     {
       $set: {

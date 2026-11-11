@@ -42,6 +42,8 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 export type { PartyInfluenceCalculation } from "./partyExecutorCalculations";
 export type { ExecutePartyInfluenceInput } from "./partyExecutorTypes";
@@ -140,8 +142,7 @@ async function executeStatePartyInfluenceCore(
   }
 
   const statePartyKey = `${input.stateId}_${input.partyId}`;
-  const statePartyOrg = await db
-    .collection<StatePartyOrg>("statePartyOrg")
+  const statePartyOrg = await statePartyOrgCollection(db)
     .findOne({ _id: statePartyKey });
   const npp = await nppsCollection(db).findOne({ _id: input.nppId });
   const party = await findPartyForInfluence(db, input);
@@ -220,8 +221,7 @@ async function executeStatePartyInfluenceCore(
   // Guarded by `$exists:false` → idempotent under concurrent spends.
   if (statePartyOrg.nppActionPoints == null) {
     const apCap = nppActionPointCap("state", resolvePartyTier(party));
-    await db
-      .collection<StatePartyOrg>("statePartyOrg")
+    await statePartyOrgCollection(db)
       .updateOne(
         { _id: statePartyKey, nppActionPoints: { $exists: false } },
         { $set: { nppActionPoints: apCap } }
@@ -229,7 +229,7 @@ async function executeStatePartyInfluenceCore(
     statePartyOrg.nppActionPoints = apCap;
   }
 
-  const resourceDebit = await db.collection<StatePartyOrg>("statePartyOrg").updateOne(
+  const resourceDebit = await statePartyOrgCollection(db).updateOne(
     {
       _id: statePartyKey,
       nppActionPoints: { $gte: totalActionCost },
@@ -271,7 +271,7 @@ async function executeStatePartyInfluenceCore(
     outcome === "success" &&
     effectResult.withdrawApplied === false
   ) {
-    await db.collection<StatePartyOrg>("statePartyOrg").updateOne(
+    await statePartyOrgCollection(db).updateOne(
       { _id: statePartyKey },
       {
         $inc: { nppActionPoints: totalActionCost, treasury: totalFundCost },
@@ -416,8 +416,7 @@ async function executeNationalPartyInfluenceCore(
   const gameState = await gameStateCollection(db).findOne({ _id: "current" });
   const currentTurn = gameState?.currentTurn || 1;
   const statePartyKey = `${npp.homeState}_${input.partyId}`;
-  const statePartyOrg = await db
-    .collection<StatePartyOrg>("statePartyOrg")
+  const statePartyOrg = await statePartyOrgCollection(db)
     .findOne({ _id: statePartyKey });
   const organizationLevel = statePartyOrg?.organization || 50;
   // Fund lever retired — NPP work no longer spends treasury, so no fund bonus.
@@ -697,8 +696,7 @@ export async function getStatePartyInfluenceOptions(
   const nppIds = npps.map((npp) => npp._id);
   const candidacies =
     nppIds.length > 0
-      ? await db
-          .collection<ElectionCandidate>("electionCandidates")
+      ? await electionCandidatesCollection(db)
           .find({
             nppId: { $in: nppIds },
             status: "active",
@@ -834,8 +832,7 @@ export async function getNationalPartyInfluenceOptions(party: PoliticalParty): P
   const allStatePartyKeys = stateIds.map((id) => `${id}_${partyId}`);
   const statePartyOrgs =
     allStatePartyKeys.length > 0
-      ? await db
-          .collection<StatePartyOrg>("statePartyOrg")
+      ? await statePartyOrgCollection(db)
           .find({ _id: { $in: allStatePartyKeys } })
           .toArray()
       : [];
@@ -845,8 +842,7 @@ export async function getNationalPartyInfluenceOptions(party: PoliticalParty): P
   const nppIds = npps.map((npp) => npp._id);
   const candidacies =
     nppIds.length > 0
-      ? await db
-          .collection<ElectionCandidate>("electionCandidates")
+      ? await electionCandidatesCollection(db)
           .find({ nppId: { $in: nppIds }, status: "active" })
           .toArray()
       : [];

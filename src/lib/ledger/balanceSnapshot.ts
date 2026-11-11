@@ -21,6 +21,7 @@ import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParti
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 export const BALANCE_SNAPSHOTS_COLLECTION = "balanceSnapshots";
 export const BALANCE_CHECKPOINTS_COLLECTION = "balanceSnapshotCheckpoints";
@@ -347,11 +348,11 @@ async function collectBalanceState(
   // --- State parties: treasury (native, converted to ₳) --------------------
   // `_id` is the composite `${stateId}_${partySequentialId}` key the dues and
   // transfer rows carry in `meta.statePartyKey`, so it is the account ref.
-  const stateParties = db.collection<{
+  const stateParties = statePartyOrgCollection<{
     _id: string;
     countryId?: string;
     treasury?: number;
-  }>("statePartyOrg");
+  }>(db);
   const statePartyCursor = stateParties.find({}, { projection: { countryId: 1, treasury: 1 } });
   for await (const sp of statePartyCursor) {
     if (typeof sp.treasury !== "number") continue;

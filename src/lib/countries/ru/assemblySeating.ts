@@ -22,6 +22,8 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 export const RUSSIAN_ASSEMBLY_SEATINGS_COLLECTION = "russianAssemblySeatings";
 export const RUSSIAN_ASSEMBLY_ARCHIVES_COLLECTION = "russianAssemblyOfficeArchives";
 export interface RussianAssemblySeatingRecord {
@@ -230,7 +232,7 @@ export async function materializeRussianAssemblySeating(input: {
     })),
     { session }
   );
-  const formations = db.collection<GovernmentFormation>("governmentFormations");
+  const formations = governmentFormationsCollection(db);
   const formation = await formations.findOne(
     { _id: "RU" },
     { session, projection: { coalitionPartyIds: 1, governingPartyId: 1 } }
@@ -278,7 +280,7 @@ export async function materializeRussianAssemblySeating(input: {
       { $set: { seatedOnTurn: turn } },
       { session }
     );
-  const activated = await db.collection<CountryGameState>("countryGameStates").updateOne(
+  const activated = await countryGameStatesCollection(db).updateOne(
     {
       _id: "RU",
       ruFederalAssemblySinceTurn: { $exists: false },

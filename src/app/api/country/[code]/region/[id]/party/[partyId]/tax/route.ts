@@ -13,6 +13,7 @@ import {
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; partyId: string }>;
@@ -64,8 +65,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const partyKey = getPartyIdString(party);
     const statePartyKey = getStatePartyOrgDocumentId(stateId, party);
-    const stateParty = await db
-      .collection<StatePartyOrg>("statePartyOrg")
+    const stateParty = await statePartyOrgCollection(db)
       .findOne({ _id: statePartyKey });
 
     // Check authorization: admin, national chair, state chair, vice chair, or state treasurer
@@ -85,7 +85,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const now = new Date();
 
     // Update or create the state party org
-    await db.collection<StatePartyOrg>("statePartyOrg").updateOne(
+    await statePartyOrgCollection(db).updateOne(
       { _id: statePartyKey },
       {
         $set: {

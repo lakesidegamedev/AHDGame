@@ -10,6 +10,7 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { getGameTime } from "@/lib/time/gameTime";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
 
 const DISBAND_VOTE_DURATION_HOURS = 24;
 const DISBAND_VOTE_DURATION_MS = DISBAND_VOTE_DURATION_HOURS * 60 * 60 * 1000;
@@ -45,8 +46,7 @@ export async function POST(
     const db = await getDb();
     const gameTime = await getGameTime();
 
-    const coalition = await db
-      .collection<Coalition>("coalitions")
+    const coalition = await coalitionsCollection(db)
       .findOne({ sequentialId, countryId });
     if (!coalition) {
       throw notFound("Coalition not found.");
@@ -78,8 +78,7 @@ export async function POST(
       votes: [],
     };
 
-    await db
-      .collection<Coalition>("coalitions")
+    await coalitionsCollection(db)
       .updateOne({ _id: coalition._id }, { $set: { disbandVote, updatedAt: now } });
 
     // Notify all member party chairs

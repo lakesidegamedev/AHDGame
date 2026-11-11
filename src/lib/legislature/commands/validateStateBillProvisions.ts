@@ -29,6 +29,7 @@ import type { LawChoice } from "@/lib/resetLegislation/rules/eligibility";
 import { resetTaxesFor } from "@/lib/resetLegislation/taxCatalog";
 import { resolveResetTaxProvisionFields } from "@/lib/resetLegislation/resolveTaxProvision";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 export type ValidateStateBillProvisionsResult =
   | {
@@ -357,8 +358,7 @@ export async function validateStateBillProvisions(
         return { ok: false, status: 400, error: "A v2 bill cannot repeat a tax instrument." };
       }
       const legislationTypes = reviewedTaxes.length
-        ? await db
-            .collection<LegislationType>("legislationTypes")
+        ? await legislationTypesCollection(db)
             .find({
               _id: { $in: reviewedTaxes.map(({ provision }) => provision.legislationTypeId) },
             })

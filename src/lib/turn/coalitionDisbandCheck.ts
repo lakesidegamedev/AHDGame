@@ -5,6 +5,7 @@ import type { PoliticalParty } from "@/lib/db/types/party";
 import { getGameState } from "@/lib/gameState";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
 
 export async function resolveExpiredDisbandVotes(referenceNow = new Date()): Promise<{
   resolved: number;
@@ -17,8 +18,7 @@ export async function resolveExpiredDisbandVotes(referenceNow = new Date()): Pro
 
   // Find coalitions with expired disband votes. Prefer the game-clock turn
   // deadline; fall back to date for legacy coalitions pre-dating the turn migration.
-  const expiredCoalitions = await db
-    .collection<Coalition>("coalitions")
+  const expiredCoalitions = await coalitionsCollection(db)
     .find({
       disbandVote: { $ne: null },
       $or: [
@@ -79,12 +79,11 @@ export async function resolveExpiredDisbandVotes(referenceNow = new Date()): Pro
         });
       }
 
-      await db.collection<Coalition>("coalitions").deleteOne({ _id: coalition._id });
+      await coalitionsCollection(db).deleteOne({ _id: coalition._id });
       disbanded++;
     } else {
       // Vote failed — clear the disbandVote
-      await db
-        .collection<Coalition>("coalitions")
+      await coalitionsCollection(db)
         .updateOne({ _id: coalition._id }, { $set: { disbandVote: null, updatedAt: now } });
     }
   }

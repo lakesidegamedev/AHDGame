@@ -2,11 +2,12 @@ import type { Db } from "mongodb";
 import type { LegislationType } from "@/lib/db/types";
 import type { Migration, MigrationResult } from "../types";
 import { successorTaxTypes } from "@/lib/resetLegislation/successorTaxTypes";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 /** Add missing tax definitions without changing any live rate or policy. */
 async function backfillSuccessorTaxTypes(db: Db, dryRun: boolean): Promise<MigrationResult> {
   const notes: string[] = [];
-  const collection = db.collection<LegislationType>("legislationTypes");
+  const collection = legislationTypesCollection(db);
   const existing = await collection
     .find({ _id: { $in: successorTaxTypes.map((t) => t._id) } }, { projection: { _id: 1 } })
     .toArray();

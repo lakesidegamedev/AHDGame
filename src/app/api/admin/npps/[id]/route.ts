@@ -14,6 +14,7 @@ import type { NPP } from "@/lib/db/types";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import type { Document } from "mongodb";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -35,7 +36,7 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
     await Promise.all([
       nppsCollection<Document>(db).deleteOne({ _id: nppId }),
       electedOfficialsCollection<Document>(db).deleteMany({ nppId }),
-      db.collection("electionCandidates").deleteMany({ nppId }),
+      electionCandidatesCollection<Document>(db).deleteMany({ nppId }),
     ]);
 
     return NextResponse.json({ success: true });

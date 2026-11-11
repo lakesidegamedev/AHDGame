@@ -39,6 +39,9 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 const NEUTRAL_PARTY_COLOR = "#6b6b7a";
 
@@ -96,7 +99,7 @@ export async function getStateOverview(
     metricsDoc,
     gameStateDoc,
   ] = await Promise.all([
-    db.collection<StatePartyOrg>("statePartyOrg").find({ countryId, stateId }).toArray(),
+    statePartyOrgCollection(db).find({ countryId, stateId }).toArray(),
     politicalPartiesCollection(db).find({ countryId }).toArray(),
     statesCollection(db).findOne({ _id: stateId, countryId }),
     getRegionalExecutive(db, countryId, stateId),
@@ -283,12 +286,10 @@ async function buildElectionDerived(args: {
 
   const electionIds = activeElections.map((e) => e._id);
   const [candidates, tallies] = await Promise.all([
-    db
-      .collection<ElectionCandidate>("electionCandidates")
+    electionCandidatesCollection(db)
       .find({ electionId: { $in: electionIds }, status: "active" })
       .toArray(),
-    db
-      .collection<ElectionVoteTally>("electionVoteTallies")
+    electionVoteTalliesCollection(db)
       .find({ electionId: { $in: electionIds } })
       .toArray(),
   ]);

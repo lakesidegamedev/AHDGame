@@ -14,6 +14,8 @@ import { planBg1991ListReplacements, type Bg1991ListReplacement } from "./rules/
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 
 export const BG_1991_LIST_REPLACEMENTS_COLLECTION = "bg1991ListReplacements";
 interface ReplacementReceipt {
@@ -33,10 +35,7 @@ function stableId(key: string) {
 }
 
 async function readParent(db: Db, turn: number, session?: ClientSession, full = false) {
-  const country = await db
-    .collection<{ _id: string; bgOrdinaryAssemblySinceTurn?: number; dissolvedTurn?: number }>(
-      "countryGameStates"
-    )
+  const country = await countryGameStatesCollection<{ _id: string; bgOrdinaryAssemblySinceTurn?: number; dissolvedTurn?: number }>(db)
     .findOne(
       { _id: "BG" },
       { session, projection: { bgOrdinaryAssemblySinceTurn: 1, dissolvedTurn: 1 } }
@@ -165,8 +164,7 @@ export async function advanceBg1991ListVacancies(
       unavailablePersonIds: unavailable,
     });
     if (!placements.length) return 0;
-    const chamber = await db
-      .collection<{ _id: string; bg1991MandateGeneration?: number }>("governmentFormations")
+    const chamber = await governmentFormationsCollection<{ _id: string; bg1991MandateGeneration?: number }>(db)
       .updateOne({ _id: "BG" }, { $inc: { bg1991MandateGeneration: 1 } }, { session });
     if (chamber.matchedCount !== 1) throw new Error("Bulgarian chamber authority is missing");
     const lock = await db

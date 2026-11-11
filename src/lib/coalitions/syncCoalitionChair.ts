@@ -19,6 +19,7 @@
 import type { Db, ObjectId } from "mongodb";
 import type { Coalition, PoliticalParty } from "@/lib/db/types";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
 
 /**
  * Re-syncs every coalition led by `partyId` to point at the party's
@@ -42,8 +43,7 @@ export async function syncCoalitionChairsForParty(
   // legitimate sync target, not a skip case.
   if (!party) return 0;
   const newChairId = party.chairId ?? null;
-  const result = await db
-    .collection<Coalition>("coalitions")
+  const result = await coalitionsCollection(db)
     .updateMany(
       { chairPartyId: partyId, chairCharacterId: { $ne: newChairId } as unknown as ObjectId },
       { $set: { chairCharacterId: newChairId as ObjectId, updatedAt: now } }
@@ -64,8 +64,7 @@ export async function syncCoalitionChairsForParty(
  * sweep catches paths added later that forget to.
  */
 export async function reconcileAllCoalitionChairs(db: Db, now: Date = new Date()): Promise<number> {
-  const coalitions = await db
-    .collection<Coalition>("coalitions")
+  const coalitions = await coalitionsCollection(db)
     .find({}, { projection: { _id: 1, chairPartyId: 1, chairCharacterId: 1 } })
     .toArray();
   if (coalitions.length === 0) return 0;
@@ -103,6 +102,6 @@ export async function reconcileAllCoalitionChairs(db: Db, now: Date = new Date()
       },
     };
   });
-  await db.collection<Coalition>("coalitions").bulkWrite(ops);
+  await coalitionsCollection(db).bulkWrite(ops);
   return mismatches.length;
 }

@@ -15,6 +15,10 @@ import { brazilPresidentialRules, decideBrazilPresidency } from "./rules/preside
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import type { Document } from "mongodb";
 
 const followupId = (source: string) =>
   new ObjectId(
@@ -29,7 +33,7 @@ export async function resolveBrazilPresidentialElection(
   turn: number
 ): Promise<boolean> {
   if (tally?.finalized && !tally.executiveSeatingPending) {
-    await db.collection("campaigns").deleteMany({ electionId: election._id });
+    await campaignsCollection<Document>(db).deleteMany({ electionId: election._id });
     await captureElectionResultSnapshot(db, election, now);
     return true;
   }
@@ -39,8 +43,7 @@ export async function resolveBrazilPresidentialElection(
   );
   if (!game?.preset) throw new Error("Brazil presidency requires the active preset");
   const mode = election.brazilPresidentialMode ?? brazilPresidentialRules(game.preset).mode;
-  const candidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidates = await electionCandidatesCollection(db)
     .find({
       electionId: election._id,
       ...(tally?.brazilPresidentialResult ? {} : { status: "active" }),
@@ -75,7 +78,7 @@ export async function resolveBrazilPresidentialElection(
   if (!tally) {
     await initElectionVoteTally(election._id, candidates, "BR", { byParty: {}, recordedAt: now });
   }
-  await db.collection<ElectionVoteTally>("electionVoteTallies").updateOne(
+  await electionVoteTalliesCollection(db).updateOne(
     { electionId: election._id },
     {
       $set: {
@@ -93,8 +96,7 @@ export async function resolveBrazilPresidentialElection(
     );
     if (finalists.some((c) => !c)) throw new Error("Brazil runoff lost a certified finalist");
     // Release the old active candidacies before opening the fresh ballot.
-    await db
-      .collection<ElectionCandidate>("electionCandidates")
+    await electionCandidatesCollection(db)
       .updateMany(
         { electionId: election._id, status: "active" },
         { $set: { status: "withdrawn", withdrawnAt: now } }
@@ -107,11 +109,9 @@ export async function resolveBrazilPresidentialElection(
       enteredAt: now,
     }));
     for (const candidate of nextCandidates)
-      await db
-        .collection<ElectionCandidate>("electionCandidates")
+      await electionCandidatesCollection(db)
         .updateOne({ _id: candidate._id }, { $setOnInsert: candidate }, { upsert: true });
-    const existingTally = await db
-      .collection<ElectionVoteTally>("electionVoteTallies")
+    const existingTally = await electionVoteTalliesCollection(db)
       .findOne({ electionId });
     if (!existingTally)
       await initElectionVoteTally(electionId, nextCandidates, "BR", {
@@ -152,14 +152,13 @@ export async function resolveBrazilPresidentialElection(
       now,
       turn,
     });
-    await db
-      .collection<ElectionCandidate>("electionCandidates")
+    await electionCandidatesCollection(db)
       .updateMany(
         { electionId: election._id, status: "active" },
         { $set: { status: "withdrawn", withdrawnAt: now } }
       );
   }
-  await db.collection<ElectionVoteTally>("electionVoteTallies").updateOne(
+  await electionVoteTalliesCollection(db).updateOne(
     { electionId: election._id },
     {
       $set: {
@@ -170,7 +169,7 @@ export async function resolveBrazilPresidentialElection(
       },
     }
   );
-  await db.collection("campaigns").deleteMany({ electionId: election._id });
+  await campaignsCollection<Document>(db).deleteMany({ electionId: election._id });
   await captureElectionResultSnapshot(db, election, now);
   return true;
 }

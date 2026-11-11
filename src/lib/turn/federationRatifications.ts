@@ -9,6 +9,7 @@ import {
   FEDERATION_SETTLEMENT_APPLICATIONS_COLLECTION,
   type FederationSettlementApplicationRecord,
 } from "@/lib/world/succession/runtimeEntities";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 /** Run after the ordinary bill lifecycle: only a signed settlement mandate
  * can trigger autonomous decisions, and replay preserves the first decision. */
@@ -39,8 +40,7 @@ export async function processFederationRatifications(
         { projection: { sourceEntityId: 1 } }
       )
       .toArray(),
-    db
-      .collection<Bill>("bills")
+    billsCollection(db)
       .find(
         { _id: { $in: proposals.map((proposal) => proposal.billId) } },
         { projection: { _id: 1, status: 1, federationSettlementMandate: 1 } }

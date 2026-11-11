@@ -27,6 +27,9 @@ import { resolveRussianCouncilAccumulatedCohort } from "./rules/councilCohort";
 import { hasAuthorizedPostSovietTransition } from "./rules/postSovietTransition";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 
 export async function materializeRussianCouncilRepeatResult(input: {
   db: Db;
@@ -76,7 +79,7 @@ export async function materializeRussianCouncilRepeatResult(input: {
     { _id: "current" },
     { session, projection: { preset: 1 } }
   );
-  const countries = db.collection<CountryGameState>("countryGameStates");
+  const countries = countryGameStatesCollection(db);
   const country = await countries.findOne(
     { _id: "RU" },
     {
@@ -185,7 +188,7 @@ export async function materializeRussianCouncilRepeatResult(input: {
   }));
   const combined = resolveRussianCouncilRepeat({ previous: previous.ballots, replacements });
   const outcomes = new Map(combined.result.map((row) => [row.electionId, row.decision.outcome]));
-  const finalized = await db.collection<ElectionVoteTally>("electionVoteTallies").bulkWrite(
+  const finalized = await electionVoteTalliesCollection(db).bulkWrite(
     loaded.counted.map((row) => {
       const ballot = replacements.find((ballot) => ballot.id === row.electionId.toHexString())!;
       return {
@@ -226,8 +229,7 @@ export async function materializeRussianCouncilRepeatResult(input: {
   );
   if (resolved.matchedCount !== cohort.length)
     throw new Error("Council repeat ballots changed during certification");
-  const retired = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const retired = await electionCandidatesCollection(db)
     .updateMany(
       { electionId: { $in: opening.electionIds }, status: "active" },
       { $set: { status: "withdrawn", withdrawnAt: now } },

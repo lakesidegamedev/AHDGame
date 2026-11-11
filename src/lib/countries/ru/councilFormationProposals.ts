@@ -15,6 +15,8 @@ import {
   russianCouncilCompositionAvailable,
   type RussianCouncilCompositionMode,
 } from "./rules/councilComposition";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 export const RUSSIAN_COUNCIL_FORMATION_PROPOSALS_COLLECTION = "russianCouncilFormationProposals";
 export interface RussianCouncilFormationProposal {
   _id: string;
@@ -103,7 +105,7 @@ export async function loadEnactedRussianCouncilFormation(input: {
     proposal.openedOnTurn > mandate.sinceTurn
   )
     throw new Error("Council formation lacks its actual enactment receipt");
-  const bill = await db.collection<Bill>("bills").findOne(
+  const bill = await billsCollection(db).findOne(
     {
       _id: proposal.billId,
       countryId: "RU",
@@ -133,8 +135,7 @@ export async function materializeRussianCouncilFormationProposal(input: {
   const { db, session, game, turn, now, mode } = input;
   if (!session.inTransaction() || !Number.isFinite(now.getTime()))
     throw new Error("Council formation needs a transaction and time");
-  const country = await db
-    .collection<CountryGameState>("countryGameStates")
+  const country = await countryGameStatesCollection(db)
     .findOne({ _id: "RU" }, { session, projection });
   const available = availability(game, turn, mode, country);
   if (!available.available) throw new RussianConstitutionalDecisionConflict(available.reason);
@@ -144,8 +145,7 @@ export async function materializeRussianCouncilFormationProposal(input: {
   const id = `1991-default:ru-council:${mode}`;
   const old = await proposals.findOne({ _id: id }, { session });
   if (old) {
-    const bill = await db
-      .collection<Bill>("bills")
+    const bill = await billsCollection(db)
       .findOne(
         { _id: old.billId },
         { session, projection: { countryId: 1, status: 1, russianCouncilFormationMandate: 1 } }
@@ -210,7 +210,7 @@ export async function materializeRussianCouncilFormationProposal(input: {
     { session, upsert: !old }
   );
   if (old && written.matchedCount !== 1) throw new Error("Council proposal changed before opening");
-  await db.collection<Bill>("bills").insertOne(bill, { session });
+  await billsCollection(db).insertOne(bill, { session });
   return proposal;
 }
 export async function openRussianCouncilFormationProposal(
@@ -250,7 +250,7 @@ export async function authorizeRussianCouncilFormation(input: {
     proposal.openedOnTurn > turn
   )
     throw new Error("Council formation proposal identity changed");
-  const bill = await db.collection<Bill>("bills").findOne(
+  const bill = await billsCollection(db).findOne(
     {
       _id: proposal.billId,
       countryId: "RU",
@@ -269,7 +269,7 @@ export async function authorizeRussianCouncilFormation(input: {
     binding.mode !== proposal.mode
   )
     throw new Error("Signed Council law does not match its proposal");
-  const countries = db.collection<CountryGameState>("countryGameStates");
+  const countries = countryGameStatesCollection(db);
   const country = await countries.findOne({ _id: "RU" }, { session, projection });
   if (!availability(game, turn, proposal.mode, country).available) return false;
   const claimed = await countries.updateOne(
@@ -307,8 +307,7 @@ export async function loadRussianCouncilFormationDecisions(
   turn: number
 ) {
   if (game.preset !== "1991-default" || clock(game, turn) < 237) return [];
-  const country = await db
-    .collection<CountryGameState>("countryGameStates")
+  const country = await countryGameStatesCollection(db)
     .findOne({ _id: "RU" }, { projection });
   if (country?.ruFederalAssemblySinceTurn == null) return [];
   const modes: RussianCouncilCompositionMode[] = ["regionalHeads", "regionalDelegates"];
@@ -320,8 +319,7 @@ export async function loadRussianCouncilFormationDecisions(
     )
     .toArray();
   const bills = proposals.length
-    ? await db
-        .collection<Bill>("bills")
+    ? await billsCollection(db)
         .find({ _id: { $in: proposals.map((row) => row.billId) } }, { projection: { status: 1 } })
         .toArray()
     : [];

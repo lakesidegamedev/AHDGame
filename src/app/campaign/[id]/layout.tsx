@@ -9,6 +9,7 @@ import { getSiteUrl } from "@/lib/siteMetadata";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -47,8 +48,7 @@ export async function generateMetadata({
   if (!ObjectId.isValid(id)) return {};
 
   const db = await getDb();
-  const campaign = await db
-    .collection<Campaign>("campaigns")
+  const campaign = await campaignsCollection(db)
     .findOne(
       { _id: new ObjectId(id) },
       { projection: { electionId: 1, candidateId: 1, candidateIsNPP: 1 } }

@@ -55,6 +55,7 @@ import { captureBillStatusChanged } from "@/lib/analytics/billStatusAnalytics";
 import { resolveRevisionDelay } from "./rules";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 export interface BillLifecycleResult {
   billsProcessed: number;
@@ -276,8 +277,7 @@ export async function runBillLifecycle(
   // ── A. Activate lingering "proposed" bills into the first chamber stage. ──
   // Opt-in per config: US does this as a safety net; UK/others never had it.
   if (config.activateProposed && firstChamber) {
-    const proposed = await db
-      .collection<Bill>("bills")
+    const proposed = await billsCollection(db)
       .find({
         $and: [billCountryScope(config)],
         status: "proposed",
@@ -290,7 +290,7 @@ export async function runBillLifecycle(
       const chamberType = firstChamber.officeTypeFor(bill);
       // Activation is a plain update (matches the legacy processor); the atomic
       // claim guards the vote-closing transitions, not this idempotent step.
-      await db.collection<Bill>("bills").updateOne(
+      await billsCollection(db).updateOne(
         { _id: bill._id },
         {
           $set: {
@@ -377,8 +377,7 @@ async function closeOverrideStage(
     ],
     originChamber: { $in: config.originChambers },
   };
-  const expired = await db
-    .collection<Bill>("bills")
+  const expired = await billsCollection(db)
     .find(expiredFilter as Filter<Bill>)
     .toArray();
   if (expired.length === 0) return;
@@ -513,8 +512,7 @@ async function closeExecutiveStage(
     ],
     originChamber: { $in: config.originChambers },
   };
-  const expired = await db
-    .collection<Bill>("bills")
+  const expired = await billsCollection(db)
     .find(expiredFilter as Filter<Bill>)
     .toArray();
 
@@ -571,8 +569,7 @@ async function closeChamberVoteStage(
     ],
     originChamber: { $in: config.originChambers },
   };
-  const expired = await db
-    .collection<Bill>("bills")
+  const expired = await billsCollection(db)
     .find(expiredFilter as Filter<Bill>)
     .toArray();
 
@@ -948,8 +945,7 @@ async function closeConcurrentVoteStage(
     originChamber: { $in: config.originChambers },
   };
 
-  const expired = await db
-    .collection<Bill>("bills")
+  const expired = await billsCollection(db)
     .find(expiredFilter as Filter<Bill>)
     .toArray();
   const bills = expired.map((storedBill) => ({

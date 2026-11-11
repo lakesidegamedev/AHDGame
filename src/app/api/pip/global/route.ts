@@ -20,6 +20,7 @@ import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficia
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import type { Document } from "mongodb";
+import { crisesCollection } from "@/lib/db/repositories/crises";
 
 // Derive primary legislature officeType from country config — avoids hardcoding per-country strings
 function getPrimaryOfficeType(countryId: CountryId): string {
@@ -56,8 +57,7 @@ export async function GET() {
         .find(enabledCountries ? { countryId: { $in: enabledCountries } } : {})
         .project({ _id: 1, name: 1, color: 1, countryId: 1 })
         .toArray() as Promise<Pick<PoliticalParty, "_id" | "name" | "color" | "countryId">[]>,
-      db
-        .collection<Crisis>("crises")
+      crisesCollection(db)
         .find({ status: "active" })
         .sort({ createdAt: -1 })
         .limit(5)

@@ -12,6 +12,7 @@ import {
 } from "./debateSessionLifecycle";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 const CHALLENGE_THRESHOLD = Math.round(DEBATE_CHALLENGE_CHANCE * 100);
 
@@ -45,8 +46,7 @@ export async function processDebateChallenges(
   }
 
   // 3. Active candidacies grouped by election.
-  const candidacies = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidacies = await electionCandidatesCollection(db)
     .find({ status: "active" })
     .toArray();
   const byElection = new Map<string, ElectionCandidate[]>();

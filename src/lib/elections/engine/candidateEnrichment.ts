@@ -24,6 +24,7 @@ import type { StatePartyOrg } from "@/lib/db/types/statePartyOrg";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 // ─── Fetch & enrich candidate stats ──────────────────────────────────────────
 
@@ -125,8 +126,7 @@ export async function loadCandidateEnrichmentPreload(
     preloadedStatePartyChairRows
       ? Promise.resolve(preloadedStatePartyChairRows)
       : characterIds.length
-        ? db
-            .collection<StatePartyOrg>("statePartyOrg")
+        ? statePartyOrgCollection(db)
             .find({ chairId: { $in: characterIds } }, { projection: { chairId: 1, stateId: 1 } })
             .toArray()
         : Promise.resolve([] as Pick<StatePartyOrg, "chairId" | "stateId">[]),
@@ -288,8 +288,7 @@ export async function fetchEnrichedCandidates(
     options?.preload
       ? Promise.resolve(options.preload.statePartyChairRows)
       : characterIds.length > 0
-        ? db
-            .collection<StatePartyOrg>("statePartyOrg")
+        ? statePartyOrgCollection(db)
             .find({ chairId: { $in: characterIds } }, { projection: { chairId: 1, stateId: 1 } })
             .toArray()
         : Promise.resolve([] as Pick<StatePartyOrg, "chairId" | "stateId">[]),

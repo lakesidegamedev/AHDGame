@@ -6,6 +6,7 @@ import type { Db, ObjectId } from "mongodb";
 import { editorialAudienceFavorabilityNudge, type EditorialPosition } from "./rules";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 interface ActiveElection {
   _id: ObjectId;
@@ -64,8 +65,7 @@ export async function applyMediaEditorialEffects(args: {
   const electionById = new Map(
     relevantElections.map((election) => [String(election._id), election])
   );
-  const candidates = await db
-    .collection<ActiveCandidate>("electionCandidates")
+  const candidates = await electionCandidatesCollection<ActiveCandidate>(db)
     .find(
       { electionId: { $in: relevantElections.map((election) => election._id) }, status: "active" },
       {

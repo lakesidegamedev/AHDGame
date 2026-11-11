@@ -11,6 +11,7 @@ import { getNationalDocId } from "@/lib/constants/nationalScope";
 import { FADE_TURNS, marketAdjustmentApproval } from "./approvalRules";
 import { MARKET_ADJUSTMENT_TEMPLATE_KEY } from "./template";
 import { MARKET_ADJUSTMENT_SIGNALS } from "./signals";
+import { crisesCollection } from "@/lib/db/repositories/crises";
 
 /** marketAdjustmentStage at which the unemployment term counts. */
 const UNEMPLOYMENT_TERM_STAGE = 2;
@@ -45,8 +46,7 @@ export async function loadMarketAdjustmentEffects(
 ): Promise<Map<string, MarketAdjustmentEffect>> {
   const out = new Map<string, MarketAdjustmentEffect>();
   if (!(stage >= 1)) return out;
-  const crises = await db
-    .collection<Crisis>("crises")
+  const crises = await crisesCollection(db)
     .find(
       {
         templateKey: MARKET_ADJUSTMENT_TEMPLATE_KEY,

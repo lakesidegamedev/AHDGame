@@ -12,6 +12,8 @@ import { applyEffectsForCrisis } from "@/lib/crises/interactionEngine";
 import { proposeCrisisAidBill } from "@/lib/legislature/commands/proposeCrisisAidBill";
 import { logWireEvent } from "@/lib/wireEvent";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { crisesCollection } from "@/lib/db/repositories/crises";
+import type { Document } from "mongodb";
 
 export interface SubmitCrisisAidPledgeInput {
   interactionId: ObjectId;
@@ -123,7 +125,7 @@ export async function submitCrisisAidPledge(
   await applyCrisisEffects(db, senderEffects, [], [input.senderCountryId]);
 
   // 4. File the appropriation bill under the id the commitment already names.
-  const crisis = await db.collection("crises").findOne({ _id: interaction.crisisId });
+  const crisis = await crisesCollection<Document>(db).findOne({ _id: interaction.crisisId });
   const crisisName = (crisis as { name?: string } | null)?.name ?? "a foreign crisis";
   await proposeCrisisAidBill(db, {
     billId,

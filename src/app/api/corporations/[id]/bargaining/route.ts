@@ -10,6 +10,7 @@ import {
   getBargainingMediationAvailability,
   isCollectiveAgreementActive,
 } from "@/lib/unions/bargaining";
+import { unionsCollection } from "@/lib/db/repositories/unions";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -48,8 +49,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
       (unionId) => unionObjectIds.find((candidate) => candidate.toString() === unionId)!
     );
     const unions = unionIds.length
-      ? await db
-          .collection<Union>("unions")
+      ? await unionsCollection(db)
           .find({ _id: { $in: unionIds } }, { projection: { name: 1 } })
           .toArray()
       : [];

@@ -7,6 +7,7 @@ import { findPartyBySequentialId } from "@/lib/db/partyLookup";
 import { isSameCountry } from "@/lib/api/sameCountry";
 import { CROSS_COUNTRY_ACTION_MESSAGE } from "@/lib/api/crossCountryGuard";
 import { resolveSpenderScopeEligibility } from "@/lib/parties/access";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; partyId: string }>;
@@ -51,7 +52,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     return NextResponse.json({ ok: false, reason: "missing-row", message: "Party not found" });
   }
 
-  const spenderRow = await db.collection<StatePartyOrg>("statePartyOrg").findOne({
+  const spenderRow = await statePartyOrgCollection(db).findOne({
     countryId,
     stateId: upperRegionId,
     partyId: String(spenderParty.sequentialId),

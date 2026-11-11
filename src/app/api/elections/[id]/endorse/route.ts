@@ -15,6 +15,7 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { isActivePlayerEndorsementDuplicateKey } from "@/lib/elections/duplicateKey";
 import { assertSameCountry } from "@/lib/api/sameCountry";
 import { applyEndorsementSupportBump } from "@/lib/elections/campaigns/supportEvents";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -61,7 +62,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     });
 
     // Verify candidate exists in this election
-    const candidate = await db.collection<ElectionCandidate>("electionCandidates").findOne({
+    const candidate = await electionCandidatesCollection(db).findOne({
       _id: candidateObjectId,
       electionId: electionObjectId,
       status: "active",
@@ -87,7 +88,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       );
     }
 
-    const ownCandidacy = await db.collection<ElectionCandidate>("electionCandidates").findOne({
+    const ownCandidacy = await electionCandidatesCollection(db).findOne({
       electionId: electionObjectId,
       characterId: character._id,
       status: "active",
@@ -117,8 +118,7 @@ export async function POST(request: Request, { params }: RouteParams) {
         .find({ characterId: character._id, electionId: electionObjectId, isActive: true })
         .toArray();
       for (const prior of priorEndorsements) {
-        const priorCandidate = await db
-          .collection<ElectionCandidate>("electionCandidates")
+        const priorCandidate = await electionCandidatesCollection(db)
           .findOne({ _id: prior.candidateId });
         if (priorCandidate && !priorCandidate.isNPP && priorCandidate.characterId) {
           await applyEndorsementSupportBump(db, priorCandidate.characterId, true);
@@ -281,8 +281,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
       const candidateIds: ObjectId[] = activeEndorsements.map((e) => e.candidateId);
       const candidateRows =
         candidateIds.length > 0
-          ? await db
-              .collection<ElectionCandidate>("electionCandidates")
+          ? await electionCandidatesCollection(db)
               .find({
                 electionId: electionObjectId,
                 _id: { $in: candidateIds },

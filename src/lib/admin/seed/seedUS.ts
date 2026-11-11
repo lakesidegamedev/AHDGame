@@ -1,5 +1,6 @@
 import type { Db } from "mongodb";
 import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 
 /**
  * US seed steps.
@@ -13,8 +14,7 @@ export async function seedUSGovernmentFormation(db: Db, log: (msg: string) => vo
   const { usGovernmentFormation } = await import("@/lib/seeds/us/usGovernmentFormation");
   const now = new Date();
   const { _id, ...formationData } = usGovernmentFormation;
-  await db
-    .collection<GovernmentFormation>("governmentFormations")
+  await governmentFormationsCollection(db)
     .updateOne(
       { _id },
       { $set: { ...formationData, createdAt: now, updatedAt: now } },

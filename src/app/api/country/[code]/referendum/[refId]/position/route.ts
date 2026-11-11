@@ -12,6 +12,7 @@ import { canDeclarePartyPosition } from "@/lib/parties/access";
 import { declarePartyPosition, withdrawPartyPosition } from "@/lib/referendum/partyPositions";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 // POST /api/country/[code]/referendum/[refId]/position
 // Auth: requireHumanSessionWithCharacter; must be the acting party's regional or
@@ -59,8 +60,7 @@ export async function POST(
     }
     const [partyDoc, stateParty] = await Promise.all([
       politicalPartiesCollection(db).findOne({ countryId, sequentialId: Number(partyId) }),
-      db
-        .collection<StatePartyOrg>("statePartyOrg")
+      statePartyOrgCollection(db)
         .findOne({ countryId, stateId: ref.regionId, partyId: String(partyId) }),
     ]);
     if (!partyDoc) {

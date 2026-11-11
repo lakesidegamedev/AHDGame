@@ -58,6 +58,7 @@ import { caretakerBlocksBill, CARETAKER_BILL_MESSAGE } from "@/lib/elections/rul
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 const VOTING_DURATION_HOURS = 24;
 const VOTING_DURATION_MS = VOTING_DURATION_HOURS * 60 * 60 * 1000;
@@ -281,7 +282,7 @@ export async function proposeNationalBill(
     const proposalBlockingStatuses = config.legislature.bicameral
       ? ([...NATIONAL_TERMINAL_STATUSES, "passed_origin", "active_other"] as BillStatus[])
       : (NATIONAL_TERMINAL_STATUSES as BillStatus[]);
-    const existingActiveBill = await db.collection<Bill>("bills").findOne({
+    const existingActiveBill = await billsCollection(db).findOne({
       sponsorId: character._id,
       ...buildActiveNationalBillFilter(countryId, proposalBlockingStatuses),
     });
@@ -408,7 +409,7 @@ export async function proposeNationalBill(
       updatedAt: now,
     };
     try {
-      const result = await db.collection<Omit<Bill, "_id">>("bills").insertOne(natBill);
+      const result = await billsCollection<Omit<Bill, "_id">>(db).insertOne(natBill);
       if (!partySponsor && !usingAdminOverride)
         await awardBillSponsored(authUser.userId, character._id);
       if (usingSovereignOverride) {
@@ -734,7 +735,7 @@ export async function proposeNationalBill(
   };
 
   try {
-    const result = await db.collection<Omit<Bill, "_id">>("bills").insertOne(bill);
+    const result = await billsCollection<Omit<Bill, "_id">>(db).insertOne(bill);
     if (!partySponsor && !usingAdminOverride)
       await awardBillSponsored(authUser.userId, character._id);
     if (usingSovereignOverride) {

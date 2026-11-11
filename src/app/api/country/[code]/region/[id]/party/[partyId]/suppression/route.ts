@@ -22,6 +22,7 @@ import {
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
 import { isValidPartyTurnoutTarget } from "@/lib/demographics/partyTurnoutTargetResolver";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; partyId: string }>;
@@ -96,8 +97,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const partyKey = getPartyIdString(party);
     const statePartyKey = getStatePartyOrgDocumentId(stateId, party);
-    const stateParty = await db
-      .collection<StatePartyOrg>("statePartyOrg")
+    const stateParty = await statePartyOrgCollection(db)
       .findOne({ _id: statePartyKey });
 
     // Authorization: admin, national chair, state chair, vice chair, or state treasurer

@@ -8,6 +8,9 @@ import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
 import type { ElectionCandidate } from "@/lib/db/types";
 import { removeWithdrawnCandidateFromTally } from "@/lib/elections/engine/tallyCleaner";
 import { resolveElectionRouteParam } from "@/lib/elections/electionParamResolution";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import type { Document } from "mongodb";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -67,7 +70,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     // Find the candidate entry
-    const candidate = await db.collection<ElectionCandidate>("electionCandidates").findOne({
+    const candidate = await electionCandidatesCollection(db).findOne({
       electionId: electionObjectId,
       characterId: character._id,
       status: "active",
@@ -80,7 +83,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     // Update the candidate status to withdrawn
     const now = new Date();
-    await db.collection("electionCandidates").updateOne(
+    await electionCandidatesCollection<Document>(db).updateOne(
       { _id: candidate._id },
       {
         $set: {
@@ -97,7 +100,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     // Archive (not delete) the candidate's campaign so a re-entry can reactivate
     // it. Hard deletion only happens when the election resolves.
     if (candidate.characterId) {
-      await db.collection("campaigns").updateOne(
+      await campaignsCollection<Document>(db).updateOne(
         {
           electionId: electionObjectId,
           candidateId: candidate.characterId,

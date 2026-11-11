@@ -13,6 +13,7 @@ import {
 import { runWithOptionalTransaction } from "@/lib/db/runWithOptionalTransaction";
 import type { Campaign, PrimaryStateAction } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 
 export interface StateAttackSpendInput {
   characterId: ObjectId;
@@ -82,7 +83,7 @@ export async function applyStateAttackSpend(
   }
 
   const characters = charactersCollection(db);
-  const campaigns = db.collection<Campaign>("campaigns");
+  const campaigns = campaignsCollection(db);
   const actions = db.collection<PrimaryStateAction>("primaryStateActions");
   const receipts = await getMoneyFlowReceiptsCollection(db);
   const actionId = keyedInsertId(key, "state-attack");

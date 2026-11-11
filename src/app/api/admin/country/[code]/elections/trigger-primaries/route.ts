@@ -49,6 +49,8 @@ import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParti
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import type { Document } from "mongodb";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 export async function POST(request: Request, { params }: { params: Promise<{ code: string }> }) {
   try {
@@ -96,8 +98,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
 
     for (const election of inPrimary) {
       // Fetch all active candidates for this election
-      const candidates = await db
-        .collection<ElectionCandidate>("electionCandidates")
+      const candidates = await electionCandidatesCollection(db)
         .find({ electionId: election._id, status: "active" })
         .toArray();
 
@@ -124,8 +125,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
       }
 
       if (duplicateIds.length > 0) {
-        await db
-          .collection("electionCandidates")
+        await electionCandidatesCollection<Document>(db)
           .updateMany(
             { _id: { $in: duplicateIds.map((id) => new ObjectId(id)) } },
             { $set: { status: "withdrawn", withdrawnAt: now } }
@@ -148,8 +148,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
       }
 
       // Re-fetch active candidates after dedup
-      const activeCandidates = await db
-        .collection<ElectionCandidate>("electionCandidates")
+      const activeCandidates = await electionCandidatesCollection(db)
         .find({ electionId: election._id, status: "active" })
         .toArray();
 
@@ -203,7 +202,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
                 .find({ _id: { $in: nppIds } })
                 .toArray()
             : [],
-          db.collection<StatePartyOrg>("statePartyOrg").find({}).toArray(),
+          statePartyOrgCollection(db).find({}).toArray(),
         ]);
         charMap = new Map(chars.map((c) => [c._id.toString(), c]));
         _nppMap = new Map(npps.map((n) => [n._id.toString(), n]));
@@ -285,8 +284,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
 
       if (loserIds.length > 0) {
         const { ObjectId } = await import("mongodb");
-        await db
-          .collection("electionCandidates")
+        await electionCandidatesCollection<Document>(db)
           .updateMany(
             { _id: { $in: loserIds.map((id) => new ObjectId(id)) } },
             { $set: { status: "withdrawn", withdrawnAt: now } }
@@ -310,8 +308,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
       }
 
       // ── 3c. Initialize vote tally for the general election ────────────────
-      const generalCandidates = await db
-        .collection<ElectionCandidate>("electionCandidates")
+      const generalCandidates = await electionCandidatesCollection(db)
         .find({ electionId: election._id, status: "active" })
         .toArray();
 

@@ -17,6 +17,7 @@ import {
 } from "@/lib/api/schemas/settings";
 import type { StatePartyOrg } from "@/lib/db/types";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -153,8 +154,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     if (config.storage === "statePartyOrg") {
       // tax → a scalar field on every state-party org row for this party+country.
-      const result = await db
-        .collection<StatePartyOrg>("statePartyOrg")
+      const result = await statePartyOrgCollection(db)
         .updateMany(
           { countryId, partyId: partyKey },
           { $set: { [config.field]: value, updatedAt: now } }
@@ -164,8 +164,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       // org building / suppression → the partyBudget collection. Reuse the exact
       // per-state writer (savePartyBudgetForScope) for every existing chapter so
       // the merge / legacy-countryId semantics match the per-state route exactly.
-      const chapters = await db
-        .collection<StatePartyOrg>("statePartyOrg")
+      const chapters = await statePartyOrgCollection(db)
         .find({ countryId, partyId: partyKey }, { projection: { stateId: 1 } })
         .toArray();
       const budgetCollection = await getPartyBudgetCollection();

@@ -2,6 +2,7 @@ import type { Db, ObjectId } from "mongodb";
 import type { Election, ElectionVoteTally, PoliticalParty } from "@/lib/db/types";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 
 /**
  * County drift from the world's own history.
@@ -89,8 +90,7 @@ async function statePviForRace(
   countryId: string,
   electionId: ObjectId
 ): Promise<Map<string, number> | null> {
-  const tally = await db
-    .collection<ElectionVoteTally>("electionVoteTallies")
+  const tally = await electionVoteTalliesCollection(db)
     .findOne({ electionId }, { projection: { totalVotesByUnit: 1, candidateParties: 1 } });
   const byUnit = tally?.totalVotesByUnit;
   if (!byUnit || !tally.candidateParties) return null;

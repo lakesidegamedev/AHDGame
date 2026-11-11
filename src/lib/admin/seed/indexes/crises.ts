@@ -1,5 +1,7 @@
 import type { Db } from "mongodb";
 import { ensureIndex } from "./helpers";
+import { crisesCollection } from "@/lib/db/repositories/crises";
+import type { Document } from "mongodb";
 
 /**
  * Indexes for the crises collection:
@@ -104,8 +106,7 @@ export async function seedCrisisIndexes(db: Db, log: (msg: string) => void) {
   // dropped explicitly first: ensureIndex tolerates "already exists" errors,
   // which would otherwise silently keep the old options forever.
   const legacyLivingEvent = (
-    await db
-      .collection("crises")
+    await crisesCollection<Document>(db)
       .indexes()
       .catch(() => [])
   ).find(
@@ -114,8 +115,7 @@ export async function seedCrisisIndexes(db: Db, log: (msg: string) => void) {
       !("partialFilterExpression" in index && index.partialFilterExpression)
   );
   if (legacyLivingEvent) {
-    await db
-      .collection("crises")
+    await crisesCollection<Document>(db)
       .dropIndex("crises_living_event")
       .catch(() => {});
     log("  - crises.crises_living_event (dropped legacy sparse version)");

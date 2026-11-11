@@ -2,6 +2,7 @@ import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { OrgRegLedger, PoliticalParty, StatePartyOrg } from "@/lib/db/types";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 export interface StateRegLedgerResult {
   seeded: boolean;
@@ -38,7 +39,7 @@ export async function getStateRegLedger(
   const lookback = args.lookbackTurns ?? REG_LEDGER_LOOKBACK_TURNS;
 
   const [rows, parties] = await Promise.all([
-    db.collection<StatePartyOrg>("statePartyOrg").find({ countryId, stateId }).toArray(),
+    statePartyOrgCollection(db).find({ countryId, stateId }).toArray(),
     politicalPartiesCollection(db).find({ countryId }).toArray(),
   ]);
 

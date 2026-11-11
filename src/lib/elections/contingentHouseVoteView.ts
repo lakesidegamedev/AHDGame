@@ -23,6 +23,7 @@ import {
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
 
 export interface ContingentHouseVoteViewCandidate {
   id: string;
@@ -138,8 +139,7 @@ export async function buildContingentHouseVoteView(
         chairId: 1,
       })
       .toArray(),
-    db
-      .collection<Coalition>("coalitions")
+    coalitionsCollection(db)
       .find({ countryId })
       .project<Pick<Coalition, "sequentialId" | "name" | "chairCharacterId">>({
         sequentialId: 1,

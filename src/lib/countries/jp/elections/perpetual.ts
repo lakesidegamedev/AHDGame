@@ -17,6 +17,7 @@ import { ensureChamberElections } from "@/lib/elections/scheduling/chamberSpawne
 import { JP_SANGIIN_SPEC, JP_SHUGIIN_SPEC } from "./chamberSpecs";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 
 /**
  * Ensure every JP region has an active or upcoming Shugiin election.
@@ -29,8 +30,7 @@ import { electionsCollection } from "@/lib/db/repositories/elections";
  */
 export async function ensureJPElections(now: Date, inFlightTurn?: number): Promise<void> {
   const db = await getDb();
-  const jpCountryState = await db
-    .collection<CountryGameState>("countryGameStates")
+  const jpCountryState = await countryGameStatesCollection(db)
     .findOne({ _id: "JP" }, { projection: { jpShugiinElectoralMandate: 1 } });
   await ensureChamberElections(JP_SHUGIIN_SPEC, now, inFlightTurn, {
     extra: jpCountryState?.jpShugiinElectoralMandate,

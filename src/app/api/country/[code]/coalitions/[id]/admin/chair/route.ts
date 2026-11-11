@@ -8,6 +8,7 @@ import type { Coalition } from "@/lib/db/types/coalition";
 import type { PoliticalParty } from "@/lib/db/types/party";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
 
 const appointChairSchema = z.object({
   partySequentialId: z.number().int().positive(),
@@ -37,8 +38,7 @@ export async function POST(
 
     const db = await getDb();
 
-    const coalition = await db
-      .collection<Coalition>("coalitions")
+    const coalition = await coalitionsCollection(db)
       .findOne({ sequentialId: parseInt(id, 10), countryId });
     if (!coalition) {
       throw notFound("Coalition not found.");
@@ -60,7 +60,7 @@ export async function POST(
 
     const now = new Date();
 
-    await db.collection<Coalition>("coalitions").updateOne(
+    await coalitionsCollection(db).updateOne(
       { _id: coalition._id },
       {
         $set: {

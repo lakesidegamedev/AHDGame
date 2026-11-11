@@ -26,6 +26,7 @@ import { politicalValueForLegacyMetric } from "@/lib/politicalLegislation/margin
 import { legacyValueFromPoliticalScore } from "@/lib/politicalMetrics/derive/legacyInversion";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 const DECAY_FACTOR = getPolicyDecayFactor();
 
@@ -164,8 +165,7 @@ export async function computeStateTickRates(
       legTypeMap = new Map(preloaded.legTypeMap);
     } else {
       const legTypes = uniqueLegTypeIds.length
-        ? await db
-            .collection<LegislationType>("legislationTypes")
+        ? await legislationTypesCollection(db)
             .find({ _id: { $in: uniqueLegTypeIds } })
             .toArray()
         : [];
@@ -347,8 +347,7 @@ export async function computeAllNationalMetricTickRates(
   ]);
   const legislationTypeIds = [...new Set(policyDocs.map((policy) => policy.legislationTypeId))];
   const legislationTypes = legislationTypeIds.length
-    ? await db
-        .collection<LegislationType>("legislationTypes")
+    ? await legislationTypesCollection(db)
         .find({ _id: { $in: legislationTypeIds } })
         .toArray()
     : [];

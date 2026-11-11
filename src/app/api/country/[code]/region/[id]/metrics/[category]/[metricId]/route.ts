@@ -25,6 +25,7 @@ import { getMetricDefinition } from "@/lib/constants/metricDefinitions";
 import { pushesValueUp } from "@/lib/utils/policyDirection";
 import { MIRROR_CONTROLLED_METRIC_IDS } from "@/lib/metricEngine/fiscalMirror";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 type AffectingPolicy = {
   name: string;
@@ -164,8 +165,7 @@ export async function GET(
 
       // Affecting policies from national scope
       const uniqueLegTypeIds = [...new Set(nationalPoliciesArr.map((p) => p.legislationTypeId))];
-      const legTypes = await db
-        .collection<LegislationType>("legislationTypes")
+      const legTypes = await legislationTypesCollection(db)
         .find({ _id: { $in: uniqueLegTypeIds } })
         .toArray();
       const legTypeMap = new Map(legTypes.map((lt) => [lt._id, lt]));
@@ -317,8 +317,7 @@ export async function GET(
       })),
     ];
     const uniqueLegTypeIds = [...new Set(allActivePolicies.map((p) => p.legislationTypeId))];
-    const legTypes = await db
-      .collection<LegislationType>("legislationTypes")
+    const legTypes = await legislationTypesCollection(db)
       .find({ _id: { $in: uniqueLegTypeIds } })
       .toArray();
     const legTypeMap = new Map(legTypes.map((lt) => [lt._id, lt]));

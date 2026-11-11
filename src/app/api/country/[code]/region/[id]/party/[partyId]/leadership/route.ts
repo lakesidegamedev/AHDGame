@@ -21,6 +21,7 @@ import {
 } from "@/lib/parties/leadershipTenure";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; partyId: string }>;
@@ -76,7 +77,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     // Get or create state party org record
     const statePartyOrgId = getStatePartyOrgDocumentId(stateId, party);
-    const statePartyOrg = await db.collection<StatePartyOrg>("statePartyOrg").findOne({
+    const statePartyOrg = await statePartyOrgCollection(db).findOne({
       _id: statePartyOrgId,
     });
 
@@ -222,7 +223,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     if (position !== "treasurer" && !("treasurerId" in leadershipReset))
       setOnInsertFields.treasurerId = null;
 
-    await db.collection<StatePartyOrg>("statePartyOrg").updateOne(
+    await statePartyOrgCollection(db).updateOne(
       { _id: statePartyOrgId },
       {
         $set: {

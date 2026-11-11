@@ -10,6 +10,7 @@ import { appendActionGrantLog } from "./actionGrantLog";
 import { getPoliticalPartiesCollection } from "@/lib/db/collections/politicalParties";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 /*
  * Reference infamy level at which the infamy penalty reaches its configured
@@ -167,8 +168,7 @@ export async function processPartyInfluenceTurn(
 
   // State-party leadership — chairs / vice chairs accumulate partyInfluence
   // (which feeds presidential primary standing). Build sets keyed by character id.
-  const statePartyOrgs = await db
-    .collection<StatePartyOrg>("statePartyOrg")
+  const statePartyOrgs = await statePartyOrgCollection(db)
     .find(
       {
         $or: [{ chairId: { $ne: null } }, { viceChairId: { $ne: null } }],

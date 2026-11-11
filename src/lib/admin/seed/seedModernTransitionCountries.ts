@@ -19,6 +19,8 @@ import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 
 export type ModernTransitionCountryId = "PL" | "RO" | "RU" | "BG";
 
@@ -439,7 +441,7 @@ export async function seedModernTransitionStatePartyOrg(
     return;
   }
   if (reset) {
-    await db.collection("statePartyOrg").deleteMany({ countryId });
+    await statePartyOrgCollection<Document>(db).deleteMany({ countryId });
   }
   const bundle = await loadRegionBundle(countryId);
   const parties = await politicalPartiesCollection(db)
@@ -467,8 +469,7 @@ export async function seedModernTransitionStatePartyOrg(
         consecutiveLosses: 0,
       };
       const { _id, ...orgData } = row;
-      await db
-        .collection<StatePartyOrg>("statePartyOrg")
+      await statePartyOrgCollection(db)
         .updateOne(
           { _id },
           { $set: { ...orgData, updatedAt: now }, $setOnInsert: { createdAt: now } },
@@ -515,8 +516,7 @@ export async function seedModernTransitionGovernmentFormation(
     formedTurn: null,
     collapsedAt: null,
   };
-  await db
-    .collection<GovernmentFormation>("governmentFormations")
+  await governmentFormationsCollection(db)
     .updateOne(
       { _id: countryId },
       { $set: { ...formation, updatedAt: now }, $setOnInsert: { createdAt: now } },

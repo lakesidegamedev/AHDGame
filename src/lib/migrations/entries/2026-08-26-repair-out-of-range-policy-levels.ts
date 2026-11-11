@@ -3,6 +3,7 @@ import type { GovernorExecutiveOrder, LegislationType, StatePolicy } from "@/lib
 import type { Migration, MigrationResult } from "../types";
 import { ladderBounds } from "@/lib/legislature/policyLadder";
 import { policyFieldsFromOption } from "@/lib/governorOffice/orders/revertPolicy";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 /**
  * Clamp policy levels that exceed their legislation type's ladder.
@@ -38,8 +39,7 @@ async function repairOutOfRangePolicyLevels(db: Db, dryRun: boolean): Promise<Mi
       ...orders.map((o) => o.legislationTypeId),
     ]),
   ];
-  const types = (await db
-    .collection<LegislationType>("legislationTypes")
+  const types = (await legislationTypesCollection(db)
     .find({ _id: { $in: referencedIds } })
     .toArray()) as LegislationType[];
   const optionsById = new Map(types.map((t) => [String(t._id), t.policyOptions ?? []]));

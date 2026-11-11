@@ -12,6 +12,7 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { requirePlayerTransfersEnabled } from "@/lib/api/requirePlayerTransfers";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
 
 const transferSchema = z.object({
   partySequentialId: z.number().int().positive(),
@@ -50,8 +51,7 @@ export async function POST(
     if (transferGuard) return transferGuard;
 
     // Find coalition
-    const coalition = await db
-      .collection<Coalition>("coalitions")
+    const coalition = await coalitionsCollection(db)
       .findOne({ sequentialId: Number(id), countryId });
     if (!coalition) {
       throw notFound("Coalition not found.");
@@ -84,7 +84,7 @@ export async function POST(
 
     const now = new Date();
 
-    await db.collection<Coalition>("coalitions").updateOne(
+    await coalitionsCollection(db).updateOne(
       { _id: coalition._id },
       {
         $set: {

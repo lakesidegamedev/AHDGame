@@ -54,6 +54,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { unionsCollection } from "@/lib/db/repositories/unions";
 
 function campaignResult(campaign: BargainingCampaign): Extract<UnionActionResult, { ok: true }> {
   return {
@@ -788,7 +789,7 @@ export async function persistUnionBargainingEscalation(
   const cost = plan.cashCost;
 
   const campaignCollection = db.collection<BargainingCampaign>("bargainingCampaigns");
-  const unionCollection = db.collection<Union>("unions");
+  const unionCollection = unionsCollection(db);
   const sectorCollection = corporateSectorsCollection(db);
   const claimCampaign = async (session?: ClientSession) => {
     const result = await campaignCollection.updateOne(
