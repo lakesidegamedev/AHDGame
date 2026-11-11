@@ -52,7 +52,7 @@ import type { Document } from "mongodb";
 
 /** Player books refit per category to their authored opening composition, by world year. */
 const OPENING_COMPOSITION_REFIT: Readonly<Partial<Record<number, readonly LawCountryId[]>>> = {
-  1991: ["US", "UK"],
+  1991: ["US", "UK", "JP"],
   2027: ["CA"],
 };
 
