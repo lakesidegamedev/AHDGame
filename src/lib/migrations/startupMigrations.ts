@@ -44,6 +44,7 @@ import { runMigrations, type RunSummary } from "./runner";
 import { migration as jpLawLeanEffects } from "./entries/2026-11-09-jp-law-lean-effects";
 import { migration as financialTxLogTurnOrderIndex } from "./entries/2026-11-10-financial-tx-log-turn-order-index";
 import { migration as bucketApprovalsRename } from "./entries/2026-11-11-bucket-approvals-rename";
+import { migration as regionGroupDriftToBuckets } from "./entries/2026-11-11-region-group-drift-to-buckets";
 import { migration as scotusCareerAchievements } from "./entries/2026-10-16-scotus-career-achievements";
 import type { Migration } from "./types";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
@@ -124,6 +125,9 @@ export const REQUIRED_STARTUP_MIGRATIONS: readonly Migration[] = [
   // Character and NPP group approvals move to the field this build reads;
   // until they do, every approval reads as empty in elections and polls.
   bucketApprovalsRename,
+  // Regional voter drift moves to the census overlay this build reads; until it
+  // does, every region's leans read as the seeded census.
+  regionGroupDriftToBuckets,
 ];
 
 /** Index metadata can disappear on reset even when migration markers survive. */
