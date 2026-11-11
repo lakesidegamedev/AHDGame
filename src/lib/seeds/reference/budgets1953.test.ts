@@ -244,7 +244,7 @@ describe("1953 budget seeds — day-1 fiscal balance (fiscal-scale audit, 2026-0
   });
 });
 
-describe("1953 budget seeds — CN/JP spending-category calibration (fiscal audit F-11)", () => {
+describe("1953 budget seeds — CN spending-category calibration (fiscal audit F-11)", () => {
   // CN and JP both seed real spending-law catalogs (unlike ES/HU/PL/RO/YU/BG/
   // BLR/CS/BAL, which fall back to baselineSpendingByCategory wholesale — see
   // the AT/FI/FR/GR/IT/SE/TR describe block below, which used to be in this
@@ -276,15 +276,6 @@ describe("1953 budget seeds — CN/JP spending-category calibration (fiscal audi
     }
   });
 
-  it("JP's every authored baseline category (except the 'other' catch-all) matches an actual seeded law category", () => {
-    const jp = configByCountry("JP");
-    const actualCats = new Set(lawsFor("JP").map((l) => l.budgetCategory));
-    for (const key of Object.keys(jp.baselineSpendingByCategory)) {
-      if (key === "other") continue;
-      expect(actualCats.has(key), `JP baselineSpendingByCategory key "${key}"`).toBe(true);
-    }
-  });
-
   it("CN's 'infrastructure' laws (First-Five-Year-Plan heavy industry) sum to the authored 1953 baseline, not the thin modern-era-catalog default", () => {
     const cn = configByCountry("CN");
     const infraLaws = lawsFor("CN").filter((l) => l.budgetCategory === "infrastructure");
@@ -302,30 +293,6 @@ describe("1953 budget seeds — CN/JP spending-category calibration (fiscal audi
     expect(healthLaws.length).toBeGreaterThan(0);
     const share = healthLaws.reduce((s, l) => s + (l.gdpPerCapitaMultiplier ?? 0), 0);
     expect(share * cn.gdp).toBeCloseTo(cn.baselineSpendingByCategory.health, -2);
-  });
-
-  it("JP's 'infrastructure' laws (reconstruction public works) sum to the authored 1953 baseline (key renamed from the never-matching 'publicWorks')", () => {
-    const jp = configByCountry("JP");
-    const infraLaws = lawsFor("JP").filter((l) => l.budgetCategory === "infrastructure");
-    expect(infraLaws.length).toBeGreaterThan(0);
-    const share = infraLaws.reduce((s, l) => s + (l.gdpPerCapitaMultiplier ?? 0), 0);
-    expect(share * jp.gdp).toBeCloseTo(jp.baselineSpendingByCategory.infrastructure, -2);
-  });
-
-  it("JP's 'social' laws sum to the authored 1953 baseline (key renamed from the never-matching 'socialSecurity')", () => {
-    const jp = configByCountry("JP");
-    const socialLaws = lawsFor("JP").filter((l) => l.budgetCategory === "social");
-    expect(socialLaws.length).toBeGreaterThan(0);
-    const share = socialLaws.reduce((s, l) => s + (l.gdpPerCapitaMultiplier ?? 0), 0);
-    expect(share * jp.gdp).toBeCloseTo(jp.baselineSpendingByCategory.social, -2);
-  });
-
-  it("JP's isGrant Local Allocation Tax Act prices to the authored baselineStateGrants, not its thin modern-era-catalog share", () => {
-    const jp = configByCountry("JP");
-    const grantLaws = lawsFor("JP").filter((l) => l.isGrant);
-    expect(grantLaws.length).toBeGreaterThan(0);
-    const share = grantLaws.reduce((s, l) => s + (l.gdpPerCapitaMultiplier ?? 0), 0);
-    expect(share * jp.gdp).toBeCloseTo(jp.baselineStateGrants, -2);
   });
 
   it("CN's total booked spending (runtime era-cost path) lands in the command-economy 25-40% of GDP band, not the pre-fix <10%", () => {
@@ -348,28 +315,6 @@ describe("1953 budget seeds — CN/JP spending-category calibration (fiscal audi
     const pctGdp = (100 * total) / cn.gdp;
     expect(pctGdp).toBeGreaterThan(25);
     expect(pctGdp).toBeLessThan(40);
-  });
-
-  it("JP's total booked spending (runtime era-cost path) lands near the documented real ~18-20% of GDP, not the pre-fix <10%", () => {
-    const jp = configByCountry("JP");
-    const total = lawsFor("JP").reduce((sum, law) => {
-      if (!isLegislationTypeActive(law.legislationTypeId, 1953)) return sum;
-      const cost = calculateEnactedLawAnnualCost(
-        law as unknown as Parameters<typeof calculateEnactedLawAnnualCost>[0],
-        {
-          budgetCapacity: 0,
-          gdp: jp.gdp,
-          population: jp.population,
-          countryId: "JP",
-          nationalGdpPerCapita: jp.gdp / jp.population,
-          year: 1953,
-        }
-      );
-      return Number.isFinite(cost) ? sum + cost : sum; // JP's grant IS a real spend line
-    }, 0);
-    const pctGdp = (100 * total) / jp.gdp;
-    expect(pctGdp).toBeGreaterThan(15);
-    expect(pctGdp).toBeLessThan(22);
   });
 });
 

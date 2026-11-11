@@ -2,7 +2,7 @@ import type { LegislationType } from "@/lib/db/types";
 import { successorTaxTypes } from "@/lib/resetLegislation/successorTaxTypes";
 import { expandIncomeTaxTypes } from "@/lib/budget/incomeTaxCatalog";
 import { withEraCosts } from "@/lib/era/legislationCostCatalog";
-import { jpLegislationTypes } from "@/lib/countries/jp/data/jpLegislationTypes";
+import { jpRegionalLevers } from "@/lib/countries/jp/data/jpRegionalLevers";
 import { ieLegislationTypes } from "../ie/ieLegislationTypes";
 import { cnLegislationTypes } from "../cn/cnLegislationTypes";
 import { ngLegislationTypes } from "../ng/ngLegislationTypes";
@@ -33,8 +33,7 @@ import { redistrictingLegislationTypes } from "@/lib/countries/us/data/redistric
 const rawLegislationTypes: LegislationType[] = [
   // US state redistricting levers: mechanical, read by id from statePolicies.
   ...redistrictingLegislationTypes,
-  // ── Japan legislation types ───────────────────────────────────────────────
-  ...jpLegislationTypes,
+  ...jpRegionalLevers,
   // ── Ireland legislation types ─────────────────────────────────────────────
   ...ieLegislationTypes,
   // ── China legislation types ───────────────────────────────────────────────

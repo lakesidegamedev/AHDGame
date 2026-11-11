@@ -3,7 +3,6 @@ import type { LegislationType } from "@/lib/db/types";
 import { legislationTypes } from "./legislationTypes";
 import { cnLegislationTypes } from "../cn/cnLegislationTypes";
 import { ieLegislationTypes } from "../ie/ieLegislationTypes";
-import { jpLegislationTypes } from "@/lib/countries/jp/data/jpLegislationTypes";
 
 /**
  * §4.7 infrastructure spending sweep guard (P2c). The infrastructure metrics are
@@ -71,12 +70,7 @@ function readoutHits(lt: LegislationType): string[] {
 }
 
 describe("§4.7 infrastructure spending sweep", () => {
-  const all = [
-    ...legislationTypes,
-    ...cnLegislationTypes,
-    ...ieLegislationTypes,
-    ...jpLegislationTypes,
-  ];
+  const all = [...legislationTypes, ...cnLegislationTypes, ...ieLegislationTypes];
 
   it("no generic infrastructure-FUNDING law targets a spend-driven infra readout", () => {
     const offenders: string[] = [];

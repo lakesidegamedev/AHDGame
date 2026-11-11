@@ -13,7 +13,7 @@ import type { StateMetricBaseline } from "@/lib/db/types/statePolicy";
 /**
  * Legislative metric simulation — EDUCATION category, 240 turns.
  *
- * Law: Japan's education funding law (jp_education_funding), the
+ * Law: Ireland's education funding law (ie_education_funding), the
  * highest-investment option (effectDirection +1). A funding law works through the
  * education BUDGET (budgetCategory: education) — the outcome nodes read
  * `spending.education` directly — so enacting it is modelled as the spend rising from
@@ -25,7 +25,7 @@ import type { StateMetricBaseline } from "@/lib/db/types/statePolicy";
 const TURNS = 240;
 const TPY = 48;
 
-const law = legislationTypes.find((l) => l._id === "jp_education_funding");
+const law = legislationTypes.find((l) => l._id === "ie_education_funding");
 const invest = law?.policyOptions?.find((o) => o.effectDirection === 1);
 
 const baselineDoc: StateMetricBaseline = {
@@ -50,7 +50,7 @@ const HIGHER_BETTER: NodeId[] = [
 
 describe("legislation sim: education (education funding law, 240 turns)", () => {
   it("the seed law and its top-investment option exist", () => {
-    expect(law, "jp_education_funding present").toBeTruthy();
+    expect(law, "ie_education_funding present").toBeTruthy();
     expect(invest, "an investment (effectDirection +1) option exists").toBeTruthy();
   });
 

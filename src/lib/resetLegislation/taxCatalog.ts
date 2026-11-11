@@ -41,14 +41,14 @@ export interface ResetTaxDefinition {
 }
 
 const federal: ReadonlyArray<[string, string, ResetTaxType, string, string, string]> = [
-  ["T01", "Income tax", "incomeTax", "us.tax.incomeTax", "uk.tax.incomeTax", "jp_income_tax_rate"],
+  ["T01", "Income tax", "incomeTax", "us.tax.incomeTax", "uk.tax.incomeTax", "jp.tax.incomeTax"],
   [
     "T02",
     "Domestic corporate tax",
     "domesticCorporateTax",
     "us.tax.domesticCorporateTax",
     "uk.tax.domesticCorporateTax",
-    "jp_domestic_corporation_tax",
+    "jp.tax.domesticCorporateTax",
   ],
   [
     "T03",
@@ -56,7 +56,7 @@ const federal: ReadonlyArray<[string, string, ResetTaxType, string, string, stri
     "foreignCorporateTax",
     "us.tax.foreignCorporateTax",
     "uk.tax.foreignCorporateTax",
-    "jp_foreign_corporation_tax",
+    "jp.tax.foreignCorporateTax",
   ],
   [
     "T04",
@@ -64,7 +64,7 @@ const federal: ReadonlyArray<[string, string, ResetTaxType, string, string, stri
     "payrollTax",
     "us.tax.payrollTax",
     "uk.tax.payrollTax",
-    "jp_social_insurance",
+    "jp.tax.payrollTax",
   ],
   [
     "T05",
@@ -72,9 +72,9 @@ const federal: ReadonlyArray<[string, string, ResetTaxType, string, string, stri
     "salesTax",
     "us.tax.salesTax",
     "uk.tax.salesTax",
-    "jp_consumption_tax",
+    "jp.tax.salesTax",
   ],
-  ["T06", "Tariffs", "tariffs", "us.tax.tariffs", "uk.tax.tariffs", "jp_customs_tariff"],
+  ["T06", "Tariffs", "tariffs", "us.tax.tariffs", "uk.tax.tariffs", "jp.tax.tariffs"],
 ];
 
 const treasurySeat: Record<ResetCountry, string> = {

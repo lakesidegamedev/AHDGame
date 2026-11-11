@@ -44,6 +44,14 @@ export const JP_NATIONAL_BUDGET_1979: NationalBudgetSeedConfig = {
   baselineStateGrants: 10_000_000_000_000,
   policyDefaults: COUNTRY_POLICY_CONFIGS.jp.defaults,
   policyOptionOverrides: COUNTRY_POLICY_CONFIGS.jp.optionIndexes,
+  taxRateOverrides: {
+    incomeTax: 25,
+    domesticCorporateTax: 23,
+    foreignCorporateTax: 19,
+    payrollTax: 15,
+    tariffs: 0,
+    salesTax: 10,
+  },
   taxPolicyIds: {
     incomeTax: "jp_income_tax_rate",
     domesticCorporateTax: "jp_domestic_corporation_tax",

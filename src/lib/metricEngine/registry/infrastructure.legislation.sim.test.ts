@@ -13,7 +13,7 @@ import type { StateMetricBaseline } from "@/lib/db/types/statePolicy";
 /**
  * Legislative metric simulation — INFRASTRUCTURE category, 240 turns.
  *
- * Law: Japan's rail transport law (jp_rail_transport), high-investment
+ * Law: Ireland's rail transport law (ie_transport_rail), high-investment
  * option (effectDirection +1). The infrastructure outcome nodes read
  * `spending.infrastructure` directly, so enacting the funding law is modelled as the
  * spend rising from the empirically-confirmed real US baseline (~$1,238/capita —
@@ -26,7 +26,7 @@ import type { StateMetricBaseline } from "@/lib/db/types/statePolicy";
 const TURNS = 240;
 const TPY = 48;
 
-const law = legislationTypes.find((l) => l._id === "jp_rail_transport");
+const law = legislationTypes.find((l) => l._id === "ie_transport_rail");
 const invest = law?.policyOptions?.find((o) => o.effectDirection === 1);
 
 const baselineDoc: StateMetricBaseline = {
@@ -51,7 +51,7 @@ const HIGHER_BETTER: NodeId[] = [
 
 describe("legislation sim: infrastructure (rail transport law, 240 turns)", () => {
   it("the seed law and its high-investment option exist", () => {
-    expect(law, "jp_rail_transport present").toBeTruthy();
+    expect(law, "ie_transport_rail present").toBeTruthy();
     expect(invest, "an investment (effectDirection +1) option exists").toBeTruthy();
   });
 

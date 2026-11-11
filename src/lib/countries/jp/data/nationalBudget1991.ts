@@ -45,6 +45,14 @@ export const JP_NATIONAL_BUDGET_1991: NationalBudgetSeedConfig = {
   baselineStateGrants: 14_000_000_000_000,
   policyDefaults: COUNTRY_POLICY_CONFIGS_1991.jp.defaults,
   policyOptionOverrides: COUNTRY_POLICY_CONFIGS_1991.jp.optionIndexes,
+  taxRateOverrides: {
+    incomeTax: 35,
+    domesticCorporateTax: 37,
+    foreignCorporateTax: 37,
+    payrollTax: 12,
+    tariffs: 0,
+    salesTax: 3,
+  },
   taxPolicyIds: {
     incomeTax: "jp_income_tax_rate",
     domesticCorporateTax: "jp_domestic_corporation_tax",

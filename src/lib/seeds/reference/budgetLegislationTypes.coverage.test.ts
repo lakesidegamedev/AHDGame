@@ -18,7 +18,6 @@ import { describe, expect, it } from "vitest";
 
 import { legislationTypes } from "./legislationTypes";
 import { SEED_FISCAL_LEVERS } from "./seedFiscalLadders";
-import { jpLegislationTypes } from "@/lib/countries/jp/data/jpLegislationTypes";
 import { ieLegislationTypes } from "@/lib/seeds/ie/ieLegislationTypes";
 import { cnLegislationTypes } from "@/lib/seeds/cn/cnLegislationTypes";
 
@@ -26,7 +25,6 @@ import { getNationalBudgetSeedConfigsForPreset, generateDefaultEnactedLaws } fro
 
 const allBudgetLegislationTypes = [
   ...legislationTypes,
-  ...jpLegislationTypes,
   ...ieLegislationTypes,
   ...cnLegislationTypes,
 ];

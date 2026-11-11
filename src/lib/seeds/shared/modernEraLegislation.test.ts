@@ -122,7 +122,7 @@ describe("2027 to 2050 law types", () => {
     }
   });
 
-  it("retires the automation tax and the work culture law when their successors open", () => {
+  it("retires the automation tax when its successor opens", () => {
     for (const spec of MODERN_ERA_LEGISLATURE_SPECS) {
       const tax = `${spec.prefix}_automation_tax`;
       const dividend = `${spec.prefix}_automation_dividend`;
@@ -133,11 +133,6 @@ describe("2027 to 2050 law types", () => {
       // Retired from filing, not from force: budgets, effects and seeds still see it.
       expect(isLegislationTypeActive(tax, 2045), tax).toBe(true);
     }
-    expect(LEGISLATION_ERA_UNTIL.jp_work_culture_reform).toBe(2040);
-    expect(isLegislationTypeFileable("jp_work_culture_reform", 2039)).toBe(true);
-    expect(isLegislationTypeFileable("jp_work_culture_reform", 2040)).toBe(false);
-    expect(isLegislationTypeActive("jp_work_culture_reform", 2040)).toBe(true);
-    expect(isLegislationTypeFileable("jp_four_day_week", 2040)).toBe(true);
   });
 
   it("is eligible for NPP sponsorship: national, with a seven-option ladder", () => {

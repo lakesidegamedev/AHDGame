@@ -161,7 +161,10 @@ describe("admin electorate priorities API", () => {
     { ...selection, secondary: selection.secondary.slice(0, 2) },
     { ...selection, secondary: [...selection.secondary, selection.secondary[0]] },
     { ...selection, primary: { ...selection.primary, policyOptionId: "missing" } },
-    { ...selection, primary: { lawTypeId: "jp_pension", policyOptionId: "jp_pension_opt_2" } },
+    {
+      ...selection,
+      primary: { lawTypeId: "jp.health.socialInsurance.primary", policyOptionId: "l3" },
+    },
     { ...selection, primary: selection.secondary[0] },
   ])(
     "rejects missing/extra secondary slots, foreign laws, unknown levels and duplicate laws",

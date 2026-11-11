@@ -1,4 +1,5 @@
 import type { NationalBudgetSeedConfig } from "@/lib/seeds/reference/budgets";
+import { SEED_TAX_RATES_1953 } from "@/lib/politicalLegislation/seedTaxRates";
 import { COUNTRY_POLICY_CONFIGS_1953 } from "@/lib/seeds/reference/basePolicies1953";
 
 // ── Japan FY1953 — post-Occupation recovery / Korean War boom ───────────────
@@ -36,28 +37,17 @@ export const JP_NATIONAL_BUDGET_1953: NationalBudgetSeedConfig = {
   },
   creditRating: "BB", // recently independent; below investment-grade internationally
   baselineSpendingByCategory: {
-    // Key is "social" (not "socialSecurity") — matches jp_family_policy /
-    // jp_pension / jp_gender_equality / jp_work_culture_reform's actual
-    // legislationType.budgetCategory. The old "socialSecurity" key never
-    // matched any JP law's category, so this line was a phantom that never
-    // reached BASELINE_OVERRIDE_CATEGORIES or the runtime spend (fiscal
-    // audit F-11).
     social: 556_000_000, // minimal; National Pension not until 1961
     healthcare: 500_000_000, // national health insurance being built
     education: 972_000_000, // big priority; Showa era mass education
     defense: 250_000_000, // SDF very small; Article 9; ~1% GNP
-    // Key is "infrastructure" (not "publicWorks") — matches
-    // jp_rail_transport / jp_disaster_preparedness / jp_regional_transport /
-    // jp_regional_utilities's actual budgetCategory. The old "publicWorks"
-    // key never matched, so this reconstruction-infrastructure line was
-    // invisible to BOTH the runtime spend AND resolveInfraEnvelope's
-    // `baselineSpendingByCategory.infrastructure` read (fiscal audit F-11).
     infrastructure: 1_670_000_000, // massive reconstruction infrastructure
     other: 1_670_000_000,
   },
   baselineStateGrants: 1_110_000_000, // 地方交付税 (Local Allocation Tax) — see GRANT_OVERRIDE_COUNTRIES
   policyDefaults: COUNTRY_POLICY_CONFIGS_1953.jp.defaults,
   policyOptionOverrides: COUNTRY_POLICY_CONFIGS_1953.jp.optionIndexes,
+  seedTaxRatesOverride: SEED_TAX_RATES_1953.JP,
   taxPolicyIds: {
     incomeTax: "jp_income_tax_rate",
     domesticCorporateTax: "jp_domestic_corporation_tax",

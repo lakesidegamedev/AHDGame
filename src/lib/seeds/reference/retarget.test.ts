@@ -14,7 +14,6 @@ const byId = new Map(legislationTypes.map((t) => [t._id, t]));
  * is handled by Spec A's WAIVER). Name-only smells, kept as-is.
  */
 const RETARGETED: Record<string, string> = {
-  jp_rd_investment: "rdIntensity",
   ie_immigration_asylum: "migrationRate",
   ie_regional_health: "physicianRate",
   ie_peat_bog_policy: "protectedLand",

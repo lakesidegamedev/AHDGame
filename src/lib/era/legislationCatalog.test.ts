@@ -41,8 +41,8 @@ describe("legislation era resolvers", () => {
   });
 
   it("era-universal types are explicit 'always', not gaps", () => {
-    expect(LEGISLATION_ERA.jp_pension).toBe("always");
-    expect(isLegislationTypeActive("jp_pension", 1900)).toBe(true);
+    expect(LEGISLATION_ERA.ie_agricultural_subsidies).toBe("always");
+    expect(isLegislationTypeActive("ie_agricultural_subsidies", 1900)).toBe(true);
   });
 });
 
@@ -70,10 +70,7 @@ describe("untilYear: filing closes, enacted laws stay in force", () => {
       "clean_power_standard",
     ];
     expect(Object.keys(LEGISLATION_ERA_UNTIL).sort()).toEqual(
-      [
-        ...prefixes.flatMap((prefix) => slugs.map((slug) => `${prefix}_${slug}`)),
-        "jp_work_culture_reform",
-      ].sort()
+      prefixes.flatMap((prefix) => slugs.map((slug) => `${prefix}_${slug}`)).sort()
     );
     expect(LEGISLATION_ERA_UNTIL[typeId]).toBeUndefined();
   });

@@ -3,7 +3,6 @@ import type { LegislationType } from "@/lib/db/types";
 import { legislationTypes } from "./legislationTypes";
 import { cnLegislationTypes } from "../cn/cnLegislationTypes";
 import { ieLegislationTypes } from "../ie/ieLegislationTypes";
-import { jpLegislationTypes } from "@/lib/countries/jp/data/jpLegislationTypes";
 
 /**
  * §4.7 healthcare spending sweep guard (P2b). These healthcare outcomes are
@@ -66,12 +65,7 @@ function readoutHits(lt: LegislationType): string[] {
 }
 
 describe("§4.7 healthcare spending sweep", () => {
-  const all = [
-    ...legislationTypes,
-    ...cnLegislationTypes,
-    ...ieLegislationTypes,
-    ...jpLegislationTypes,
-  ];
+  const all = [...legislationTypes, ...cnLegislationTypes, ...ieLegislationTypes];
 
   it("no healthcare-FUNDING law targets a spend-driven healthcare readout", () => {
     const offenders: string[] = [];

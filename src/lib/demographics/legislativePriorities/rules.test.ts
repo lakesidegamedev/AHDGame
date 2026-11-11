@@ -64,8 +64,8 @@ describe("electorate legislative priorities", () => {
       "uk.infrastructure.publicHousing.primary"
     );
     expect(primary("UK", "SCO", "education:degree_plus")).toBe("uk.sec.universityGrants");
-    expect(primary("JP", "KAN", "age:senior")).toBe("jp_pension");
-    expect(primary("JP", "SHI", "age:senior")).toBe("jp_elder_care");
+    expect(primary("JP", "KAN", "age:senior")).toBe("jp.health.socialInsurance.primary");
+    expect(primary("JP", "SHI", "age:senior")).toBe("jp.sec.pensionCoverageExtension");
   });
 
   it("distinguishes groups in the same region", () => {
