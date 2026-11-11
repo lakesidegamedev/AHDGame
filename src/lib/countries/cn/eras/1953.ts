@@ -23,6 +23,7 @@ export const CN_1953: CountryEraOverride = {
       centralTransferPerCapita: 2.77,
       defaultTaxRate: 25,
       primaryTaxLegislationKey: "cn.tax.domesticCorporateTax",
+      savedWorldPrimaryTaxLegislationKey: "cn_enterprise_income_tax",
       resourceTaxLegislationKey: "cn_provincial_resource_tax",
       resourceExtractionRatio: 0.03,
       businessTaxConsumptionRatio: 0.5,
