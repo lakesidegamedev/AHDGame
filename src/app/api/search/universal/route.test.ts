@@ -149,9 +149,9 @@ describe("GET /api/search/universal proposable legislation", () => {
   it("surfaces the Universal Banking Charter Act option by its own name (#1751)", async () => {
     const { bankingSeparationLegislationTypes } =
       await import("@/lib/seeds/shared/bankingSeparationLegislation");
-    await setEnabledCountries(["US"]);
+    await setEnabledCountries(["JP"]);
     seedLegislationTypes(
-      bankingSeparationLegislationTypes.filter((t) => t._id === "us_banking_separation")
+      bankingSeparationLegislationTypes.filter((t) => t._id === "jp_banking_separation")
     );
 
     const bills = await billResults("universal charter");
@@ -160,7 +160,7 @@ describe("GET /api/search/universal proposable legislation", () => {
     expect(bills[0].title).toBe("Universal Banking Charter Act");
     expect(bills[0].subtitle).toContain("Banking Separation Act");
     expect(bills[0].subtitle).toContain("propose in the legislature");
-    expect(bills[0].href).toBe("/congress");
+    expect(bills[0].href).toBe("/country/jp/legislature");
   });
 
   it("matches a law type by its own name when no option matches", async () => {
@@ -186,23 +186,23 @@ describe("GET /api/search/universal proposable legislation", () => {
   it("scopes legislation to enabled countries and links non-US legislatures", async () => {
     const { bankingSeparationLegislationTypes } =
       await import("@/lib/seeds/shared/bankingSeparationLegislation");
-    await setEnabledCountries(["UK"]);
+    await setEnabledCountries(["FR"]);
     // Seed what the scoped DB query would return (MockDb does not filter).
     seedLegislationTypes(
-      bankingSeparationLegislationTypes.filter((t) => t._id === "uk_banking_separation")
+      bankingSeparationLegislationTypes.filter((t) => t._id === "fr_banking_separation")
     );
 
     const bills = await billResults("universal charter");
 
     expect(bills).toHaveLength(1);
     expect(bills[0].title).toBe("Universal Banking Charter Act");
-    expect(bills[0].href).toBe("/country/uk/legislature");
+    expect(bills[0].href).toBe("/country/fr/legislature");
 
     // And the query itself carries the scope gate so Mongo filters in prod.
     const findArg = db.collectionMocks.legislationTypes!.find.mock.calls.at(-1)?.[0] as {
       $and: unknown[];
     };
-    expect(JSON.stringify(findArg.$and)).toContain('"countryScope":{"$in":["uk"]}');
+    expect(JSON.stringify(findArg.$and)).toContain('"countryScope":{"$in":["fr"]}');
     expect(JSON.stringify(findArg.$and)).not.toContain("$exists");
   });
 
@@ -226,17 +226,17 @@ describe("GET /api/search/universal proposable legislation", () => {
   });
 
   it("hides legislation that is not active in the current era", async () => {
-    await setEnabledCountries(["US"]);
+    await setEnabledCountries(["JP"]);
     seedLegislationTypes([
       {
-        _id: "us_paid_family_leave",
-        name: "Paid Family Leave",
-        description: "A synthetic family leave statute.",
-        countryScope: "us",
+        _id: "jp_ai_liability_act",
+        name: "AI Liability Act",
+        description: "A synthetic AI liability statute.",
+        countryScope: "jp",
         policyOptions: [],
       },
     ]);
-    // us_paid_family_leave unlocks in 1993; the world is still in 1950.
+    // jp_ai_liability_act is a modern law; the world is still in 1950.
     db.collection("gameState");
     db.collectionMocks.gameState!.findOne.mockResolvedValue({
       _id: "current",
@@ -244,6 +244,6 @@ describe("GET /api/search/universal proposable legislation", () => {
       currentYear: 1950,
     });
 
-    expect(await billResults("family leave")).toHaveLength(0);
+    expect(await billResults("ai liability")).toHaveLength(0);
   });
 });
