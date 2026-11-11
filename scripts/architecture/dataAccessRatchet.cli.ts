@@ -29,7 +29,7 @@ if (mode === "init") {
     console.error(`${r.file}: ${r.metric} ${r.baseline} -> ${r.current}`);
   if (regressions.length) {
     console.error(
-      "Data access ratchet failed: use the typed getter in src/lib/db/collections, and give every .collection() call a document type."
+      "Data access ratchet failed: open collections through their repository in src/lib/db/repositories (add one for a new collection), never with a direct .collection() call."
     );
     process.exit(1);
   }

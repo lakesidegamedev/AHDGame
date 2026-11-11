@@ -24,16 +24,17 @@ describe("data access counter", () => {
     });
     expect(countAccess('db\n  .collection("newThing")\n  .find({});', "src/lib/x.ts")).toEqual({
       untyped: 1,
+      unlisted: 1,
     });
   });
-  it("leaves getter calls, other collections and dynamic names off the direct counter", () => {
+  it("counts unlisted literal names and dynamic names, and ignores getter calls and comments", () => {
     const source = [
       "const a = await getCharactersCollection(db);",
       'db.collection<Bond>("newThing").find({});',
       "db.collection<Doc>(name).find({});",
       '// db.collection("characters") in a comment',
     ].join("\n");
-    expect(countAccess(source, "src/lib/x.ts")).toEqual({});
+    expect(countAccess(source, "src/lib/x.ts")).toEqual({ unlisted: 1, dynamic: 1 });
   });
   it("exempts the getter modules from the direct counter only", () => {
     expect(countAccess('db.collection("states");', "src/lib/db/collections/states.ts")).toEqual({
