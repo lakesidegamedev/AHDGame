@@ -66,6 +66,7 @@ import { US_NATIONAL_BUDGET_2023 } from "@/lib/countries/us/data/nationalBudget2
 import { US_NATIONAL_BUDGET_2027 } from "@/lib/countries/us/data/nationalBudget2027";
 import { HU_NATIONAL_BUDGET_2027 } from "@/lib/countries/hu/data/nationalBudget2027";
 import { BG_NATIONAL_BUDGET_2027 } from "@/lib/countries/bg/data/nationalBudget2027";
+import { CA_NATIONAL_BUDGET_2027 } from "@/lib/countries/ca/data/nationalBudget2027";
 import { US_NATIONAL_BUDGET_2007 } from "@/lib/countries/us/data/nationalBudget2007";
 import { US_NATIONAL_BUDGET_1999 } from "@/lib/countries/us/data/nationalBudget1999";
 import { US_NATIONAL_BUDGET_1991 } from "@/lib/countries/us/data/nationalBudget1991";
@@ -298,7 +299,8 @@ type SupportedBudgetCountryId =
   | "BLR"
   | "UKR"
   | "CS"
-  | "BAL";
+  | "BAL"
+  | "CA";
 type SupportedNationalBudget = Omit<FederalBudget, "updatedAt">;
 
 export interface NationalBudgetSeedConfig {
@@ -344,7 +346,8 @@ export interface NationalBudgetSeedConfig {
     | "ROL"
     | "YUD"
     | "BGL"
-    | "CSK";
+    | "CSK"
+    | "CAD";
   economicFactors: SupportedNationalBudget["economicFactors"];
   taxBaseRatios: {
     taxableIncome: number;
@@ -628,6 +631,7 @@ import { BLR_ECONOMY } from "@/lib/countries/blr/economy";
 import { UKR_ECONOMY } from "@/lib/countries/ukr/economy";
 import { BAL_ECONOMY } from "@/lib/countries/bal/economy";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { tierFor } from "@/lib/world/eraRoster";
 
 /**
  * Authored historical fiscal baselines for 1953 (Korean War defense shares,
@@ -944,7 +948,7 @@ function sovereignDefaultBudgetFields(): Pick<
   };
 }
 
-function buildNationalBudgetSeed(config: NationalBudgetSeedConfig): SupportedNationalBudget {
+export function buildNationalBudgetSeed(config: NationalBudgetSeedConfig): SupportedNationalBudget {
   const taxBases = buildTaxBases(config);
   const typesById = new Map(
     budgetLegislationTypes.map((legislationType) => [legislationType._id, legislationType] as const)
@@ -2198,6 +2202,7 @@ export const NATIONAL_BUDGET_SEED_CONFIGS_2027: NationalBudgetSeedConfig[] = [
   US_NATIONAL_BUDGET_2027,
   HU_NATIONAL_BUDGET_2027,
   BG_NATIONAL_BUDGET_2027,
+  CA_NATIONAL_BUDGET_2027,
 ];
 
 // Authored independently for FY2007 — not derived from 2019/2023/1991 configs.
@@ -2719,7 +2724,10 @@ function getUncalibratedNationalBudgetSeedConfigsForPreset(
         convertEuroMemberBudgetsFor2027(
           overlayNationalBudgetConfigs(
             getUncalibratedNationalBudgetSeedConfigsForPreset("2023-default"),
-            NATIONAL_BUDGET_SEED_CONFIGS_2027,
+            // Authored rows can lead the roster; an absent country seeds nothing.
+            NATIONAL_BUDGET_SEED_CONFIGS_2027.filter(
+              (config) => tierFor("2027-default", config.countryId) !== "absent"
+            ),
             2027
           )
         )
@@ -2734,7 +2742,24 @@ function getUncalibratedNationalBudgetSeedConfigsForPreset(
  * the UK) before any envelope fit, keyed by the v2 law book's budget keys.
  */
 export function getAuthoredNationalSpending1991(countryId: string): Record<string, number> | null {
-  const config = NATIONAL_BUDGET_SEED_CONFIGS_1991.find((row) => row.countryId === countryId);
+  return getAuthoredNationalSpending(countryId, 1991);
+}
+
+/**
+ * A country's authored opening composition for a world year, keyed by the v2
+ * law book's budget keys, or null when that year has no authored row for it.
+ */
+export function getAuthoredNationalSpending(
+  countryId: string,
+  year: number
+): Record<string, number> | null {
+  const rows =
+    year === 1991
+      ? NATIONAL_BUDGET_SEED_CONFIGS_1991
+      : year === 2027
+        ? NATIONAL_BUDGET_SEED_CONFIGS_2027
+        : [];
+  const config = rows.find((row) => row.countryId === countryId);
   return config ? { ...config.baselineSpendingByCategory } : null;
 }
 
