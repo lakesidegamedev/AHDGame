@@ -65,7 +65,7 @@ export interface PoliticalLaw {
    * metricId/slug camelCase; the countryId FIELD stays uppercase.
    */
   id: string;
-  countryId: LawCountryId;
+  countryId: CostAnchorCountryId;
   kind: "primary" | "secondary" | "tax";
   /**
    * primary: exactly one entry, weight 1, metricId matching the id.

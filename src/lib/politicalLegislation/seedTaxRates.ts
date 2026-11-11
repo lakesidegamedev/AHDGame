@@ -9,7 +9,7 @@
  * the authored taxBaseRatios (turnover-tax anchor ≈₽240B).
  */
 
-import type { LawCountryId } from "./types";
+import type { CostAnchorCountryId, LawCountryId } from "./types";
 
 const SEED_TAX_TYPES = [
   "incomeTax",
@@ -52,6 +52,23 @@ export const SEED_TAX_RATES_1953: Record<LawCountryId, Record<SeedTaxType, numbe
     foreignCorporateTax: 60,
     payrollTax: 8, // social-insurance contribution share
     salesTax: 28, // product levy — the revenue anchor
+    tariffs: 0,
+  },
+};
+
+/**
+ * Effective opening rates for countries whose law book is authored but not yet
+ * on the playable roster. Folds into SEED_TAX_RATES_1953 when the roster widens.
+ */
+export const SEED_TAX_RATES_PENDING: Partial<
+  Record<Exclude<CostAnchorCountryId, LawCountryId>, Record<SeedTaxType, number>>
+> = {
+  DE: {
+    incomeTax: 38,
+    domesticCorporateTax: 30,
+    foreignCorporateTax: 30,
+    payrollTax: 12,
+    salesTax: 19,
     tariffs: 0,
   },
 };
