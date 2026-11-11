@@ -571,6 +571,18 @@ export const CAPABILITY_INVENTORY: Readonly<Record<string, CapabilityOverride | 
       present: true,
       evidence: "US wiki material is complete.",
     },
+    "2027-default:CA:bespokeEvents": {
+      present: true,
+      evidence: "Canada has a modern event pack (pree.ca.*) from 2027.",
+    },
+    "2027-default:CA:artAssets": {
+      present: true,
+      evidence: "Canada has Parliament Hill and Bank of Canada hero images and a seal.",
+    },
+    "2027-default:CA:wikiMaterial": {
+      present: true,
+      evidence: "The ca-overview wiki page covers Parliament, provinces and Quebec.",
+    },
   });
 
 function inventoryKey(presetId: string, countryId: CountryId, capabilityId: CapabilityId): string {

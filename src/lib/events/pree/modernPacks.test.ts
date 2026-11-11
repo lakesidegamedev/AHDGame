@@ -113,11 +113,11 @@ describe("2027 world PREE packs", () => {
   });
 
   it("scopes modern country packs to their own country from 2027", () => {
-    const eligible = (countryId: "UK" | "DE" | "JP" | "CN", year: number) =>
+    const eligible = (countryId: "UK" | "DE" | "JP" | "CN" | "CA", year: number) =>
       filterEligibleTemplates(approved(), ctx({ countryId }), null, 10, year)
         .map((e) => e.definition)
         .filter((d) => d.kind.startsWith(`pree.${countryId.toLowerCase()}.`));
-    for (const country of ["UK", "DE", "JP", "CN"] as const) {
+    for (const country of ["UK", "DE", "JP", "CN", "CA"] as const) {
       const pack = MODERN_PACK_SPECS.filter((s) =>
         s.kind.startsWith(`pree.${country.toLowerCase()}.`)
       );
