@@ -68,6 +68,8 @@ import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import type { Document } from "mongodb";
 
 export interface CorporationDissolutionResult {
   bondRecoveryPool: number;
@@ -252,8 +254,7 @@ export async function executeCorporationBondDefaultDissolution(
           .toArray()
       : [],
     imperialShareholderIds.length > 0
-      ? db
-          .collection<ImperialCharacter>("imperialCharacters")
+      ? imperialCharactersCollection(db)
           .find({ _id: { $in: imperialShareholderIds } }, { projection: { _id: 1, name: 1 } })
           .toArray()
       : [],
@@ -438,8 +439,7 @@ export async function executeCorporationBondDefaultDissolution(
   if (imperialAll.size > 0) {
     const forexEnabled = await isForexEnabled();
     const imperialIds = [...imperialAll].map((id) => new ObjectId(id));
-    const imperialDocs = await db
-      .collection<ImperialCharacter>("imperialCharacters")
+    const imperialDocs = await imperialCharactersCollection(db)
       .find({ _id: { $in: imperialIds } })
       .project<Pick<ImperialCharacter, "_id" | "countryId">>({ _id: 1, countryId: 1 })
       .toArray();
@@ -509,7 +509,7 @@ export async function executeCorporationBondDefaultDissolution(
         },
       };
     });
-    await db.collection("imperialCharacters").bulkWrite(imperialOps);
+    await imperialCharactersCollection<Document>(db).bulkWrite(imperialOps);
   }
 
   if (corpBondPay.size > 0) {

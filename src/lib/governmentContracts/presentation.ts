@@ -11,11 +11,11 @@ import type { StateResourceCapacity } from "@/lib/db/types/stateResourceCapacity
 import type { GovernmentTender } from "./types";
 import { extractionCapacityQuote, type ContractCurrencyQuote } from "./rules/presentation";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 export async function contractCurrencyQuotes(db: Db, countryId: CountryId, preset?: string) {
   const [rates, budget] = await Promise.all([
-    db
-      .collection<ExchangeRate>("exchangeRates")
+    exchangeRatesCollection(db)
       .find({}, { projection: { currencyCode: 1, rate: 1 } })
       .toArray(),
     federalBudgetCollection<{ countryId: string; currencyCode?: CurrencyCode }>(db).findOne(

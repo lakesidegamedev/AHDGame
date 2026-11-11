@@ -15,6 +15,7 @@ import type { ResetCountry } from "./fundingOwner";
 import { resetTaxesFor, type TaxScope } from "./taxCatalog";
 import { taxRateBoundsFromExistingOptions, validateExactTaxRate } from "./rules/taxRate";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 
 /**
  * Resolve an exact-rate tax provision offered by the reviewed legislation
@@ -124,8 +125,7 @@ async function loadCurrentRate(
   if (scope === "regional") {
     const normalizedRegionId = regionId?.trim().toUpperCase();
     if (!normalizedRegionId) return null;
-    const budget = await db
-      .collection<StateBudget>("stateBudgets")
+    const budget = await stateBudgetsCollection(db)
       .findOne(
         { _id: normalizedRegionId, countryId: countryId as StateBudget["countryId"] },
         { projection: { taxRates: 1 } }

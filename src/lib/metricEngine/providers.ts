@@ -24,6 +24,8 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 export interface SectorRevenueTax {
   /** Per-state owned-sector revenue (FX-normalized to ₳) + growth rate. */
@@ -154,8 +156,7 @@ export async function sectorRevenueTaxProvider(db: Db, turn = 0): Promise<Sector
         taxRates: 1,
       })
       .toArray(),
-    db
-      .collection<StateBudget>("stateBudgets")
+    stateBudgetsCollection(db)
       .find({})
       .project<Pick<StateBudget, "_id" | "taxRates">>({
         taxRates: 1,
@@ -423,8 +424,7 @@ export async function fiscalTradeInputsProvider(db: Db): Promise<Map<string, Fis
         economicFactors: 1,
       })
       .toArray(),
-    db
-      .collection<ExchangeRate>("exchangeRates")
+    exchangeRatesCollection(db)
       .find({})
       .project<Pick<ExchangeRate, "_id" | "countryId" | "rate" | "baseRate">>({
         countryId: 1,

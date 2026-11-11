@@ -30,6 +30,7 @@ import {
 } from "@/lib/character/newCharacterTransferBarrier";
 import type { CurrencyOrder, Character, TradeHistoryEntry, PlayerMail } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { currencyOrdersCollection } from "@/lib/db/repositories/currencyOrders";
 
 interface RouteParams {
   params: Promise<{ requestId: string }>;
@@ -59,8 +60,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const db = await getDb();
     const character = auth.user.character;
 
-    const order = await db
-      .collection<CurrencyOrder>("currencyOrders")
+    const order = await currencyOrdersCollection(db)
       .findOne({ _id: new ObjectId(requestId) });
 
     if (!order) throw notFound("Trade request not found");
@@ -82,8 +82,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
       await runWithOptionalTransaction(
         async (session) => {
-          const claimedOrder = await db
-            .collection<CurrencyOrder>("currencyOrders")
+          const claimedOrder = await currencyOrdersCollection(db)
             .findOneAndUpdate(
               { _id: order._id, status: "open" },
               { $set: { status: "processing", updatedAt: now } },
@@ -96,8 +95,7 @@ export async function POST(request: Request, { params }: RouteParams) {
             { $inc: refundInc },
             { session }
           );
-          const cancelResult = await db
-            .collection<CurrencyOrder>("currencyOrders")
+          const cancelResult = await currencyOrdersCollection(db)
             .updateOne(
               { _id: order._id, status: "processing" },
               { $set: { status: "cancelled", updatedAt: now } },
@@ -108,8 +106,7 @@ export async function POST(request: Request, { params }: RouteParams) {
           }
         },
         async () => {
-          const claimedOrder = await db
-            .collection<CurrencyOrder>("currencyOrders")
+          const claimedOrder = await currencyOrdersCollection(db)
             .findOneAndUpdate(
               { _id: order._id, status: "open" },
               { $set: { status: "processing", updatedAt: now } },
@@ -139,8 +136,7 @@ export async function POST(request: Request, { params }: RouteParams) {
               throw new Error("Escrow refund did not apply");
             }
 
-            const cancelResult = await db
-              .collection<CurrencyOrder>("currencyOrders")
+            const cancelResult = await currencyOrdersCollection(db)
               .updateOne(
                 { _id: order._id, status: "processing" },
                 { $set: { status: "cancelled", updatedAt: now } }
@@ -155,7 +151,7 @@ export async function POST(request: Request, { params }: RouteParams) {
               { _id: order.characterId },
               refundStamp
             );
-            await db.collection<CurrencyOrder>("currencyOrders").updateOne(
+            await currencyOrdersCollection(db).updateOne(
               { _id: order._id, status: "processing" },
               {
                 $set: {
@@ -325,7 +321,7 @@ export async function POST(request: Request, { params }: RouteParams) {
         if (value === undefined) removedFields[field] = "";
         else restoredFields[field] = value;
       }
-      const filledResult = await db.collection<CurrencyOrder>("currencyOrders").updateOne(
+      const filledResult = await currencyOrdersCollection(db).updateOne(
         { _id: order._id, status: "filled" },
         {
           $set: restoredFields,
@@ -334,8 +330,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       );
       if (filledResult.matchedCount > 0) return;
 
-      const processingResult = await db
-        .collection<CurrencyOrder>("currencyOrders")
+      const processingResult = await currencyOrdersCollection(db)
         .updateOne(
           { _id: order._id, status: "processing" },
           { $set: { status: "open", updatedAt: new Date() } }
@@ -347,8 +342,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     await runWithOptionalTransaction(
       async (session) => {
-        const claimedOrder = await db
-          .collection<CurrencyOrder>("currencyOrders")
+        const claimedOrder = await currencyOrdersCollection(db)
           .findOneAndUpdate(
             { _id: order._id, status: "open" },
             { $set: { status: "processing", updatedAt: now } },
@@ -378,7 +372,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
         await distributeSpreadFees(session);
 
-        const fillResult = await db.collection<CurrencyOrder>("currencyOrders").updateOne(
+        const fillResult = await currencyOrdersCollection(db).updateOne(
           { _id: order._id, status: "processing" },
           {
             $set: {
@@ -399,8 +393,7 @@ export async function POST(request: Request, { params }: RouteParams) {
         });
       },
       async () => {
-        const claimedOrder = await db
-          .collection<CurrencyOrder>("currencyOrders")
+        const claimedOrder = await currencyOrdersCollection(db)
           .findOneAndUpdate(
             { _id: order._id, status: "open" },
             { $set: { status: "processing", updatedAt: now } },
@@ -421,8 +414,7 @@ export async function POST(request: Request, { params }: RouteParams) {
             { $inc: targetDebitAndCreditInc }
           );
           if (targetUpdate.modifiedCount === 0) {
-            await db
-              .collection<CurrencyOrder>("currencyOrders")
+            await currencyOrdersCollection(db)
               .updateOne(
                 { _id: order._id, status: "processing" },
                 { $set: { status: "open", updatedAt: new Date() } }
@@ -441,7 +433,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
           spreadFeesApplied = await distributeSpreadFees();
 
-          const fillResult = await db.collection<CurrencyOrder>("currencyOrders").updateOne(
+          const fillResult = await currencyOrdersCollection(db).updateOne(
             { _id: order._id, status: "processing" },
             {
               $set: {

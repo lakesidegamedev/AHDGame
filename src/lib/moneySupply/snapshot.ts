@@ -34,6 +34,8 @@ import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParti
 import type { Document } from "mongodb";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 export { PERSONS_PER_HOUSEHOLD, HOUSEHOLD_LIQUID_RATIO, HOUSEHOLD_SAVINGS_RATIO };
 
@@ -174,12 +176,10 @@ export async function snapshotMoneySupply(db: Db, turn: number): Promise<number>
     // Fund cash is ₳ (every fund leg is, since the currency SSOT fix), so it
     // converts into a native figure with the same rate table everything else
     // uses. That was the blocker on counting it at all.
-    db
-      .collection<{ _id: unknown; cashAnchor?: number; anchorCurrencyCode?: string }>("indexFunds")
+    indexFundsCollection<{ _id: unknown; cashAnchor?: number; anchorCurrencyCode?: string }>(db)
       .find({}, { projection: { cashAnchor: 1, anchorCurrencyCode: 1 } })
       .toArray(),
-    db
-      .collection<{ currencyCode: string; rate: number }>("exchangeRates")
+    exchangeRatesCollection<{ currencyCode: string; rate: number }>(db)
       .find({}, { projection: { currencyCode: 1, rate: 1 } })
       .toArray(),
     db

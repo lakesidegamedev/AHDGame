@@ -26,6 +26,7 @@ import {
 } from "@/lib/character/newCharacterTransferBarrier";
 import type { CurrencyOrder, GameConfig, PlayerMail } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { currencyOrdersCollection } from "@/lib/db/repositories/currencyOrders";
 
 const directTradeSchema = z
   .object({
@@ -148,8 +149,7 @@ export async function POST(request: Request) {
           );
         }
 
-        const result: InsertOneResult<CurrencyOrder> = await db
-          .collection<CurrencyOrder>("currencyOrders")
+        const result: InsertOneResult<CurrencyOrder> = await currencyOrdersCollection(db)
           .insertOne(order as CurrencyOrder, { session });
         requestId = result.insertedId;
       },
@@ -166,8 +166,7 @@ export async function POST(request: Request) {
         }
 
         try {
-          const result: InsertOneResult<CurrencyOrder> = await db
-            .collection<CurrencyOrder>("currencyOrders")
+          const result: InsertOneResult<CurrencyOrder> = await currencyOrdersCollection(db)
             .insertOne(order as CurrencyOrder);
           requestId = result.insertedId;
         } catch (error) {

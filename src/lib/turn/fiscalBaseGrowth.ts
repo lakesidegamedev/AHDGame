@@ -32,6 +32,7 @@ import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
 import { getStatesCollection } from "@/lib/db/collections/states";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 
 /* Applies 1/TURNS_PER_YEAR of the annual wage/trade/gdp rates to tax bases
  * each turn, so bases and accrued revenue track the live economy instead of
@@ -126,7 +127,7 @@ export async function processFiscalBaseGrowth(
   const db = await getDb();
   const [allFederalBudgets, stateBudgets, allStateMetrics, states, gameConfig] = await Promise.all([
     (await getFederalBudgetCollection(db)).find({}).toArray(),
-    db.collection<StateBudget>("stateBudgets").find({}).toArray(),
+    stateBudgetsCollection(db).find({}).toArray(),
     db.collection<StateMetrics>("macroMetrics").find({}).toArray(),
     (await getStatesCollection(db)).find({}).toArray(),
     db
@@ -335,7 +336,7 @@ export async function processFiscalBaseGrowth(
         statesProcessed += 1;
       }
       if (stateOps.length > 0) {
-        await db.collection<StateBudget>("stateBudgets").bulkWrite(stateOps);
+        await stateBudgetsCollection(db).bulkWrite(stateOps);
       }
     })
   );

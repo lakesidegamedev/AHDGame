@@ -34,6 +34,7 @@ import { withCorporationSettlementLock } from "@/lib/corporations/settlementLock
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -306,8 +307,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
 
           if (imperialIncs.size > 0) {
             const ids = [...imperialIncs.keys()].map((entryId) => new ObjectId(entryId));
-            const docs = await db
-              .collection<ImperialCharacter>("imperialCharacters")
+            const docs = await imperialCharactersCollection(db)
               .find({ _id: { $in: ids } }, so)
               .project<Pick<ImperialCharacter, "_id" | "countryId" | "name">>({
                 _id: 1,

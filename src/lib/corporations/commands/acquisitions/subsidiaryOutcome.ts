@@ -28,6 +28,8 @@ import {
   type SubsidiaryBlock,
 } from "./rules/subsidiaryOutcome";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import type { Document } from "mongodb";
 
 const SYSTEM_USER_ID = "000000000000000000000000";
 
@@ -168,7 +170,7 @@ export async function transferTargetEquityToAcquirer(
   // Index funds keep no position in a corporation nobody else can own. Paid
   // holdings were pulled with their payout leg; this only sweeps dust holdings
   // whose payout rounded to nothing, so no fund is left holding phantom shares.
-  await db.collection("indexFunds").updateMany({ "holdings.corporationId": input.targetId }, {
+  await indexFundsCollection<Document>(db).updateMany({ "holdings.corporationId": input.targetId }, {
     $pull: { holdings: { corporationId: input.targetId } },
   } as never);
   return true;

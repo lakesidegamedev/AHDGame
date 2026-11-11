@@ -4,6 +4,7 @@ import type { FederalBudget, StateBudget } from "@/lib/db/types/budget";
 import { NATIONAL_SCOPE_IDS } from "@/lib/constants/nationalScope";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 
 /** Budget categories the engine consumes as spending channels (P2+/P3+). */
 const SPENDING_CHANNEL_CATEGORIES = [
@@ -105,8 +106,7 @@ export async function spendingProvider(db: Db): Promise<SpendingRollup> {
         gdp: 1,
       })
       .toArray(),
-    db
-      .collection<StateBudget>("stateBudgets")
+    stateBudgetsCollection(db)
       .find({})
       .project<Pick<StateBudget, "_id" | "spending">>({ spending: 1 })
       .toArray(),

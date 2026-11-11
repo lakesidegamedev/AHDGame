@@ -15,6 +15,8 @@ import { sovereignBondCapError } from "@/lib/bonds/holderCap";
 import { creditBondPool, loadBondQuote, advanceBondPoolSnapshot } from "@/lib/bonds/marketPool";
 import { BOND_MARKET_POOLS_COLLECTION } from "@/lib/db/types/bondMarketPool";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import type { Document } from "mongodb";
 
 export type PurchaseBondUnitsForFundResult =
   | {
@@ -42,8 +44,7 @@ async function atomicallyDebitFundCashAnchor(
 ): Promise<{ ok: true; newCashAnchor: number } | { ok: false }> {
   if (!Number.isFinite(amountAnchor) || amountAnchor <= 0) return { ok: false };
   const rounded = Math.round(amountAnchor * 100) / 100;
-  const result = await db
-    .collection<IndexFund>("indexFunds")
+  const result = await indexFundsCollection(db)
     .findOneAndUpdate(
       { _id: fundId, cashAnchor: { $gte: rounded + minimumRemainingCashAnchor } },
       { $inc: { cashAnchor: -rounded }, $set: { updatedAt: new Date() } },
@@ -56,8 +57,7 @@ async function atomicallyDebitFundCashAnchor(
 async function refundFundCashAnchor(db: Db, fundId: ObjectId, amountAnchor: number): Promise<void> {
   if (!Number.isFinite(amountAnchor) || amountAnchor <= 0) return;
   const rounded = Math.round(amountAnchor * 100) / 100;
-  await db
-    .collection("indexFunds")
+  await indexFundsCollection<Document>(db)
     .updateOne({ _id: fundId }, { $inc: { cashAnchor: rounded }, $set: { updatedAt: new Date() } });
 }
 
@@ -387,8 +387,7 @@ export async function settleBondPurchasesInTransaction(
     });
   }
 
-  const debited = await db
-    .collection<IndexFund>("indexFunds")
+  const debited = await indexFundsCollection(db)
     .bulkWrite(debits, { ordered: true, session });
   if (debited.matchedCount !== debits.length) throw new BondBatchGuardMiss("fund cash");
 

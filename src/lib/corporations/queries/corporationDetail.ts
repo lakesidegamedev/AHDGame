@@ -44,6 +44,7 @@ import { buildPhysicalPnl } from "./corporationDetail/physicalPnl";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import { unplacedIpoShares } from "@/lib/corporations/rules/dividendShares";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
 
 export async function loadCorporationDetailView(args: {
   db: Db;
@@ -75,8 +76,7 @@ export async function loadCorporationDetailView(args: {
       .collection<ShareListing>("shareListings")
       .find({ corporationId: corporation._id, status: "open" })
       .toArray(),
-    db
-      .collection<ShareOrder>("shareOrders")
+    shareOrdersCollection(db)
       .find({
         corporationId: corporation._id,
         type: "sell",

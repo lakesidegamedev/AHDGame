@@ -14,6 +14,7 @@ import type {
 import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 /**
  * Brazil's bondholders were force-converted out of BRL at a rate the engine
@@ -388,7 +389,7 @@ async function loadRecipients(
 }
 
 async function loadRatesByCurrency(db: Db): Promise<Map<string, number>> {
-  const rates = await db.collection<ExchangeRate>("exchangeRates").find({}).toArray();
+  const rates = await exchangeRatesCollection(db).find({}).toArray();
   return new Map(rates.map((rate) => [String(rate.currencyCode), rate.rate]));
 }
 

@@ -1,14 +1,14 @@
 import type { IndexFund } from "@/lib/db/types/indexFund";
 import { resolveFundMandate } from "@/lib/indexFunds/mandate";
 import type { Migration } from "../types";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 
 export const migration: Migration = {
   id: "2026-10-12-fund-mandates",
   description: "Persist compatible index mandates and legacy sponsor seed contracts.",
   idempotent: true,
   async execute(db, ctx) {
-    const funds = await db
-      .collection<IndexFund>("indexFunds")
+    const funds = await indexFundsCollection(db)
       .find(
         {
           $or: [
@@ -37,7 +37,7 @@ export const migration: Migration = {
     }));
     const result =
       !ctx.dryRun && operations.length
-        ? await db.collection<IndexFund>("indexFunds").bulkWrite(operations)
+        ? await indexFundsCollection(db).bulkWrite(operations)
         : null;
     return {
       documentsScanned: funds.length,

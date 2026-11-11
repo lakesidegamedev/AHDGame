@@ -49,6 +49,7 @@ import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 
 interface RouteParams {
   params: Promise<{ bondId: string }>;
@@ -289,7 +290,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
       if (isImperialMode) {
         // ── Imperial character buy path ──────────────────────────────
-        const imperial = await db.collection<ImperialCharacter>("imperialCharacters").findOne({
+        const imperial = await imperialCharactersCollection(db).findOne({
           _id: userDoc!.activeImperialCharacterId!,
           userId: new ObjectId(user.userId),
         });

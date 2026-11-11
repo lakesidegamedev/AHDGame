@@ -22,6 +22,8 @@ import { emitTx, loadTxThresholds } from "@/lib/financialTxLog/emit";
 import type { TxThresholds } from "@/lib/db/types/financialTxLog";
 import { insertFundTransaction } from "@/lib/indexFunds/fundQueries";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import type { Document } from "mongodb";
 
 export interface SellFundBondsResult {
   proceedsAnchor: number;
@@ -107,8 +109,7 @@ export async function sellFundBondHoldingsForCash(
 
     const proceedsAnchor =
       Math.round(corpCapitalToAnchor(proceedsLocal, currency, rate) * 100) / 100;
-    await db
-      .collection("indexFunds")
+    await indexFundsCollection<Document>(db)
       .updateOne(
         { _id: fund._id },
         { $inc: { cashAnchor: proceedsAnchor }, $set: { updatedAt: now } }

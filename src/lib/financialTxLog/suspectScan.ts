@@ -4,6 +4,7 @@ import type { FinancialTxLogEntry, FinancialSuspectFlag } from "@/lib/db/types/f
 import type { PortfolioHistory, SystemSettings } from "@/lib/db/types";
 import type { ExchangeRate } from "@/lib/db/types/exchangeRate";
 import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 interface ScanConfig {
   windowTurns: number; // default 6 — coarse pair-velocity / round-trip window
@@ -380,7 +381,7 @@ export async function runFinancialSuspectScan(db: Db, currentTurn: number): Prom
       }
 
       if (charSubjectIds.size > 0 || corpSubjectIds.size > 0) {
-        const exchangeRates = await db.collection<ExchangeRate>("exchangeRates").find({}).toArray();
+        const exchangeRates = await exchangeRatesCollection(db).find({}).toArray();
         const ratesByCurrency = new Map<string, number>();
         for (const r of exchangeRates) {
           ratesByCurrency.set(r.currencyCode as string, r.rate);

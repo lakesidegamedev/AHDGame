@@ -52,6 +52,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { savingsLedgerCollection } from "@/lib/db/repositories/savingsLedger";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 const SAVINGS_FLOW_WINDOW_TURNS = 12;
 
@@ -131,7 +132,7 @@ export async function loadInflationDiagnostics(
     tariffExposureSnapshot,
   ] = await Promise.all([
     centralBanksCollection(db).find({}).toArray(),
-    db.collection<ExchangeRate>("exchangeRates").find({}).toArray(),
+    exchangeRatesCollection(db).find({}).toArray(),
     loadCommodityPressureSnapshots(db, currentTurn),
     savingsLedgerCollection(db)
       .aggregate<{ _id: { countryId: string; type: string }; total: number }>([

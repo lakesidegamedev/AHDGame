@@ -21,6 +21,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 
 function regionIncomePopulation(
   state: Pick<State, "_id" | "countryId">,
@@ -62,8 +63,7 @@ export async function refreshIncomeTaxShares(db: Db): Promise<void> {
     federalBudgetCollection(db)
       .find({}, { projection: { countryId: 1, taxRates: 1 } })
       .toArray(),
-    db
-      .collection<StateBudget>("stateBudgets")
+    stateBudgetsCollection(db)
       .find({}, { projection: { countryId: 1, taxRates: 1 } })
       .toArray(),
   ]);
@@ -115,5 +115,5 @@ export async function refreshIncomeTaxShares(db: Db): Promise<void> {
       };
     });
   if (nationalOps.length) await federalBudgetCollection(db).bulkWrite(nationalOps);
-  if (regionalOps.length) await db.collection<StateBudget>("stateBudgets").bulkWrite(regionalOps);
+  if (regionalOps.length) await stateBudgetsCollection(db).bulkWrite(regionalOps);
 }

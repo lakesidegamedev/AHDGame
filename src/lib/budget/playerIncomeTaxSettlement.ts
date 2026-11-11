@@ -19,6 +19,9 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { ledgerEntriesCollection } from "@/lib/db/repositories/ledgerEntries";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 interface Payer {
   ownerCollection: Assessment["ownerCollection"];
@@ -114,7 +117,7 @@ async function deliver(db: Db, original: Batch): Promise<void> {
     const regularOps = operations("characters"),
       imperialOps = operations("imperialCharacters");
     if (regularOps.length) await charactersCollection<Document>(db).bulkWrite(regularOps);
-    if (imperialOps.length) await db.collection("imperialCharacters").bulkWrite(imperialOps);
+    if (imperialOps.length) await imperialCharactersCollection<Document>(db).bulkWrite(imperialOps);
     const [regularProof, imperialProof] = await Promise.all([
       charactersCollection<{ _id: ObjectId; incomeTaxBatchReceipt?: IncomeTaxBatchReceipt }>(db)
         .find(
@@ -128,10 +131,7 @@ async function deliver(db: Db, original: Batch): Promise<void> {
           { projection: { incomeTaxBatchReceipt: 1 } }
         )
         .toArray(),
-      db
-        .collection<{ _id: ObjectId; incomeTaxBatchReceipt?: IncomeTaxBatchReceipt }>(
-          "imperialCharacters"
-        )
+      imperialCharactersCollection<{ _id: ObjectId; incomeTaxBatchReceipt?: IncomeTaxBatchReceipt }>(db)
         .find(
           {
             _id: {
@@ -259,13 +259,12 @@ async function deliver(db: Db, original: Batch): Promise<void> {
       },
     }));
     if (nationalOps.length) await federalBudgetCollection(db).bulkWrite(nationalOps);
-    if (regionalOps.length) await db.collection<StateBudget>("stateBudgets").bulkWrite(regionalOps);
+    if (regionalOps.length) await stateBudgetsCollection(db).bulkWrite(regionalOps);
     const [nationalProof, regionalProof] = await Promise.all([
       federalBudgetCollection(db)
         .find({ _id: { $in: [...national.keys()] } }, { projection: { incomeTaxBatchReceipt: 1 } })
         .toArray(),
-      db
-        .collection<StateBudget>("stateBudgets")
+      stateBudgetsCollection(db)
         .find({ _id: { $in: [...regional.keys()] } }, { projection: { incomeTaxBatchReceipt: 1 } })
         .toArray(),
     ]);
@@ -555,8 +554,7 @@ export async function settlePlayerIncomeTaxAssessments(
         { projection: { "currencyBalances.personal": 1, cashOnHand: 1 } }
       )
       .toArray(),
-    db
-      .collection<WalletDoc>("imperialCharacters")
+    imperialCharactersCollection<WalletDoc>(db)
       .find(
         {
           _id: {
@@ -577,7 +575,7 @@ export async function settlePlayerIncomeTaxAssessments(
   ]);
   const rates: Record<string, number> = {};
   if (forexEnabled) {
-    const quotes = await db.collection<ExchangeRate>("exchangeRates").find({}).toArray();
+    const quotes = await exchangeRatesCollection(db).find({}).toArray();
     for (const quote of quotes)
       if (Number.isFinite(quote.rate) && quote.rate > 0) rates[quote.currencyCode] = quote.rate;
   }

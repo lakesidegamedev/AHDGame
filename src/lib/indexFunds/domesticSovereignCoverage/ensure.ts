@@ -29,6 +29,7 @@ import {
 } from "@/lib/indexFunds/domesticSovereignCoverage/rules";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 
 export interface EnsureDomesticCoverageResult {
   /** Sorted country ids ensured this pass (inserted now, not merely planned). */
@@ -56,8 +57,7 @@ export async function ensureDomesticSovereignBondFunds(
       defaulted: { $ne: true },
     })
   ).flatMap((value) => (typeof value === "string" && value.length > 0 ? [value] : []));
-  const serviceableFunds = await db
-    .collection<IndexFund>("indexFunds")
+  const serviceableFunds = await indexFundsCollection(db)
     .find(
       { $or: [{ status: "active" }, { status: "paused", pauseReason: "backing_ratio" }] },
       { projection: { countryId: 1, anchorCurrencyCode: 1, scope: 1 } }
@@ -87,8 +87,7 @@ export async function ensureDomesticSovereignBondFunds(
   );
   const existingSlugs = new Set(
     (
-      await db
-        .collection<IndexFund>("indexFunds")
+      await indexFundsCollection(db)
         .find({ slug: { $in: seeds.map((seed) => seed.slug) } }, { projection: { slug: 1 } })
         .toArray()
     ).map((fund) => fund.slug)
@@ -98,7 +97,7 @@ export async function ensureDomesticSovereignBondFunds(
 
   const now = new Date();
   const ensured: string[] = [];
-  const funds = db.collection<IndexFund>("indexFunds");
+  const funds = indexFundsCollection(db);
   const positions = db.collection<IndexFundPosition>("indexFundPositions");
   for (const seed of missing) {
     const fundId = new ObjectId();

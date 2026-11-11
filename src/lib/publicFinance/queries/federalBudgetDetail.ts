@@ -38,6 +38,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 
 /** One point on the fiscal-year trend series (stat strip compare + debt sparkline). */
 export interface FyHistoryPoint {
@@ -423,8 +424,7 @@ export async function loadFederalBudgetDetail(params: {
   const liveGdpUnits = liveNationalGdpUnits(states);
   const stateIds = states.map((state) => state._id);
   const [stateBudgets, regionalBudgets] = await Promise.all([
-    db
-      .collection<StateBudget>("stateBudgets")
+    stateBudgetsCollection(db)
       .find({ stateId: { $in: stateIds } })
       .toArray(),
     isParliamentarySystem(COUNTRY_CONFIGS[budgetCountryId])

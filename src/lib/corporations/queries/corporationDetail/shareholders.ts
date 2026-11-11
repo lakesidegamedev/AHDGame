@@ -11,6 +11,8 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import type { Document } from "mongodb";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 
 /**
  * Shareholder display context: CEO + every named holder class.
@@ -39,7 +41,7 @@ export async function loadShareholderContext(db: Db, corporation: Corporation) {
   const isImperialCeo = corporation.ceoType === "imperial";
   const isNppCeo = corporation.ceoType === "npp";
   const ceoPromise = isImperialCeo
-    ? db.collection("imperialCharacters").findOne(
+    ? imperialCharactersCollection<Document>(db).findOne(
         { _id: corporation.ceoId },
         {
           projection: {
@@ -107,8 +109,7 @@ export async function loadShareholderContext(db: Db, corporation: Corporation) {
           .toArray()
       : Promise.resolve([] as Character[]),
     imperialShareholderIds.length > 0
-      ? db
-          .collection("imperialCharacters")
+      ? imperialCharactersCollection<Document>(db)
           .find(
             { _id: { $in: imperialShareholderIds } },
             {
@@ -139,10 +140,7 @@ export async function loadShareholderContext(db: Db, corporation: Corporation) {
           .toArray()
       : Promise.resolve([] as { _id: ObjectId; name: string }[]),
     fundShareholderIds.length > 0
-      ? db
-          .collection<Pick<IndexFund, "_id" | "name" | "slug" | "scope" | "countryId">>(
-            "indexFunds"
-          )
+      ? indexFundsCollection<Pick<IndexFund, "_id" | "name" | "slug" | "scope" | "countryId">>(db)
           .find(
             { _id: { $in: fundShareholderIds } },
             { projection: { _id: 1, name: 1, slug: 1, scope: 1, countryId: 1 } }

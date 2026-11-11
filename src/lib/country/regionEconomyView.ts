@@ -70,6 +70,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 
 type AuthedViewer = Awaited<ReturnType<typeof getAuthUser>>;
 
@@ -122,8 +123,7 @@ export async function buildRegionEconomyResponse({
     let corp: Corporation | null = null;
 
     if (userDoc?.activeCharacterType === "imperial" && userDoc.activeImperialCharacterId) {
-      const imperial = await db
-        .collection<ImperialCharacter>("imperialCharacters")
+      const imperial = await imperialCharactersCollection(db)
         .findOne({ _id: userDoc.activeImperialCharacterId, userId: new ObjectId(user.userId) });
       if (imperial) {
         corp = await corporationsCollection(db).findOne(
@@ -301,8 +301,7 @@ export async function buildRegionEconomyResponse({
           .toArray()
       : [],
     imperialCeoIds.length > 0
-      ? db
-          .collection<ImperialCharacter>("imperialCharacters")
+      ? imperialCharactersCollection(db)
           .find({ _id: { $in: imperialCeoIds } })
           .project<{
             _id: import("mongodb").ObjectId;

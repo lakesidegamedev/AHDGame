@@ -16,6 +16,9 @@ import type { Migration } from "../types";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import type { Document } from "mongodb";
 
 export const migration: Migration = {
   id: "2026-10-16-income-tax-tiers",
@@ -24,7 +27,7 @@ export const migration: Migration = {
   async execute(db, ctx) {
     const [national, regional, types, policies, state, characters, imperials] = await Promise.all([
       federalBudgetCollection(db).find({}).toArray(),
-      db.collection<StateBudget>("stateBudgets").find({}).toArray(),
+      stateBudgetsCollection(db).find({}).toArray(),
       db
         .collection<LegislationType>("legislationTypes")
         .find({
@@ -34,8 +37,7 @@ export const migration: Migration = {
       db.collection<StatePolicy>("statePolicies").find({}).toArray(),
       gameStateCollection<{ _id: string; currentTurn: number }>(db).findOne({ _id: "current" }),
       charactersCollection(db).countDocuments({ incomeTaxStartTurn: { $exists: false } }),
-      db
-        .collection("imperialCharacters")
+      imperialCharactersCollection<Document>(db)
         .countDocuments({ incomeTaxStartTurn: { $exists: false } }),
     ]);
     for (const budget of [...national, ...regional])
@@ -168,7 +170,7 @@ export const migration: Migration = {
         },
       },
     ]);
-    await db.collection("imperialCharacters").updateMany({}, [
+    await imperialCharactersCollection<Document>(db).updateMany({}, [
       {
         $set: {
           initialIncomeTier: { $ifNull: ["$initialIncomeTier", "high"] },

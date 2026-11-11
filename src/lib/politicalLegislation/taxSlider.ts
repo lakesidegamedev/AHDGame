@@ -57,6 +57,7 @@ export function validateTaxSliderProposal(
 export { taxSliderNpcEconomic } from "@/lib/resetLegislation/rules/taxPosition";
 import { taxSliderNpcEconomic } from "@/lib/resetLegislation/rules/taxPosition";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 
 export type ResolvedTaxSliderFields =
   | {
@@ -124,8 +125,7 @@ export async function resolveTaxSliderProvisionFields(
     if (!stateId) {
       return { ok: false, error: "A state is required for state tax legislation." };
     }
-    const stateBudget = await db
-      .collection<StateBudget>("stateBudgets")
+    const stateBudget = await stateBudgetsCollection(db)
       .findOne(
         { _id: stateId, countryId: countryId.toUpperCase() as CountryId },
         { projection: { taxRates: 1 } }

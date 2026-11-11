@@ -5,6 +5,7 @@ import { BOND_MARKET_POOLS_COLLECTION } from "@/lib/db/types/bondMarketPool";
 import { BOND_POOL_M2_SHARE } from "@/lib/bonds/marketPool";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 /**
  * Opening balance sheet for the bond market pools.
@@ -17,8 +18,7 @@ import { bondsCollection } from "@/lib/db/repositories/bonds";
  */
 async function seedBondMarketPools(db: Db, ctx: MigrationContext): Promise<MigrationResult> {
   const [exchangeRateRows, bondCurrencyRows, latestSnapshot] = await Promise.all([
-    db
-      .collection<{ currencyCode?: string }>("exchangeRates")
+    exchangeRatesCollection<{ currencyCode?: string }>(db)
       .find({}, { projection: { currencyCode: 1 } })
       .toArray(),
     bondsCollection<{ currencyCode?: string }>(db)

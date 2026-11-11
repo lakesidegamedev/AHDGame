@@ -26,6 +26,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import type { Document } from "mongodb";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 
 /** A unique index that constrains `field`, as the fuse needs to see it. */
 interface UniqueIndexOverField {
@@ -363,8 +364,7 @@ export async function mergeRegion(db: Db, args: MergeRegionArgs): Promise<MergeR
   // half of the city it started with while holding the population, the sectors
   // and the seats of both. Unsetting it hands the next revenue pass the merged
   // region, which is the figure it should have been reading all along.
-  await db
-    .collection<Record<string, unknown>>("stateBudgets")
+  await stateBudgetsCollection<Record<string, unknown>>(db)
     .updateOne({ _id: toRegionId } as Record<string, unknown>, {
       $unset: { taxBases: "" },
       $set: { updatedAt: now },

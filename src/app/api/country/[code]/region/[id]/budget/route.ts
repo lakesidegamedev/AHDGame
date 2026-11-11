@@ -24,6 +24,7 @@ import { calculateFiscalYear } from "@/lib/budget/fiscalYear";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import type { Document } from "mongodb";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 
 export async function GET(
   request: Request,
@@ -85,7 +86,7 @@ async function serveRegionalBudget(
     .findOne({ _id: stateId, countryId });
 
   if (!regionalBudget) {
-    let fallbackStateBudget = await db.collection<StateBudget>("stateBudgets").findOne({
+    let fallbackStateBudget = await stateBudgetsCollection(db).findOne({
       _id: stateId,
       countryId,
     });
@@ -205,8 +206,7 @@ async function serveStateBudget(
   countryId: CountryId,
   grantLabel: string
 ) {
-  const stateBudget = await db
-    .collection<StateBudget>("stateBudgets")
+  const stateBudget = await stateBudgetsCollection(db)
     .findOne({ _id: stateId, countryId });
   if (!stateBudget) {
     return errorResponse(404, "State budget not found");

@@ -15,6 +15,7 @@ import { resolveGameYear } from "@/lib/era/era";
 import { planEuroSettlement, type EuroMonetaryUnion } from "./rules";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 export async function loadEuroMonetaryUnion(db: Db): Promise<EuroMonetaryUnion | undefined> {
   const state = await gameStateCollection(db).findOne(
@@ -105,8 +106,7 @@ export async function reconcileEuroMonetaryUnion(
         .collection<OrganizationMembership>("organizationMemberships")
         .find({ organizationId: "EU" }, { projection: { countryId: 1 } })
         .toArray(),
-      db
-        .collection<ExchangeRate>("exchangeRates")
+      exchangeRatesCollection(db)
         .find({}, { projection: { currencyCode: 1, rate: 1 } })
         .toArray(),
       centralBanksCollection(db)

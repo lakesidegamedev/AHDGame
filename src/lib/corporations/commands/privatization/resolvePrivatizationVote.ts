@@ -32,6 +32,7 @@ import { unplacedIpoShares } from "@/lib/corporations/rules/dividendShares";
 import { getNppsCollection } from "@/lib/db/collections/npps";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 
 export interface ResolveInput {
   db: Db;
@@ -280,7 +281,7 @@ export async function resolvePrivatizationVote(input: ResolveInput): Promise<Res
     } else if (holder.fundId) {
       const rate = fxByCurrency?.get(vote.lockedBuyoutCurrency as CurrencyCode) ?? 1;
       const payoutAnchor = rate > 0 ? payout / rate : payout;
-      await db.collection<IndexFund>("indexFunds").updateOne({ _id: holder.fundId }, {
+      await indexFundsCollection(db).updateOne({ _id: holder.fundId }, {
         $inc: { cashAnchor: payoutAnchor },
         $pull: { holdings: { corporationId: corp._id } },
         $set: { updatedAt: now },

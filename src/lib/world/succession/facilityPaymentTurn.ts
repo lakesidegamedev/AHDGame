@@ -24,6 +24,7 @@ import {
   validateAppliedEntityStates,
 } from "./runtimeEntities";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 const FEDERATION_FACILITY_PAYMENT_TURNS_COLLECTION = "federationFacilityPaymentTurns";
 interface PaymentFirm {
@@ -197,8 +198,7 @@ export async function materializeFacilityPaymentTurn(input: {
         .filter((code): code is CurrencyCode => !!code)
     ),
   ];
-  const rates = await db
-    .collection<{ currencyCode: CurrencyCode; rate: number }>("exchangeRates")
+  const rates = await exchangeRatesCollection<{ currencyCode: CurrencyCode; rate: number }>(db)
     .find({ currencyCode: { $in: codes } }, { session, projection: { currencyCode: 1, rate: 1 } })
     .toArray();
   const rateByCode = new Map(rates.map((rate) => [rate.currencyCode, rate.rate]));

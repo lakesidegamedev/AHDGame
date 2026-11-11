@@ -8,6 +8,7 @@ import { getTotalPersonalWealth } from "@/lib/currency/characterFunds";
 import { computeLocDebtInternal } from "@/lib/lineOfCredit/netWorth";
 import { corpLiquidCapitalToAnchor, fxRateForCorpFromMap } from "@/lib/currency/corporationCapital";
 import { getPublicShareQuote } from "@/lib/corporations/marketQuote";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 
 /**
  * ONE definition of a character's net worth, in ₳.
@@ -251,8 +252,7 @@ export async function loadFundValueByCharacter(
     .toArray();
   if (positions.length === 0) return new Map();
   const fundIds = [...new Map(positions.map((p) => [p.fundId.toString(), p.fundId])).values()];
-  const funds = await db
-    .collection<{ _id: ObjectId; quotedNav?: number }>("indexFunds")
+  const funds = await indexFundsCollection<{ _id: ObjectId; quotedNav?: number }>(db)
     .find({ _id: { $in: fundIds } }, { projection: { quotedNav: 1 } })
     .toArray();
   const navByFundId = new Map(funds.map((f) => [f._id.toString(), f.quotedNav ?? 0]));

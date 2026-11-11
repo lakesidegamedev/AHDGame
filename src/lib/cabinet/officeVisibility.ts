@@ -12,6 +12,7 @@ import type { ElectedOfficial } from "@/lib/db/types/officials";
 import { getCabinetMembersCollection } from "@/lib/db/collections/cabinetMembers";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 
 /** Why a viewer may see a cabinet office. Null when they may not. */
 export type CabinetOfficeViewerRole =
@@ -160,8 +161,7 @@ export async function resolveCabinetOfficeVisibility(
     // A country may borrow another's crown, in which case the imperial character
     // is filed under the source country.
     const crownCountryId = config.imperialSharedWith ?? countryId;
-    const monarch = await db
-      .collection<{ userId: ObjectId; countryId: CountryId }>("imperialCharacters")
+    const monarch = await imperialCharactersCollection<{ userId: ObjectId; countryId: CountryId }>(db)
       .findOne(
         { countryId: crownCountryId, userId: new ObjectId(viewerUserId) },
         { projection: { _id: 1 } }

@@ -250,9 +250,9 @@ export async function readBalances(w: AcquisitionWorld): Promise<WorldBalances> 
   const acquirer = await w.memory.collection("corporations").findOne({ _id: w.acq });
   const charA = await memoryCollection(w, "characters").findOne({ _id: w.charA });
   const charB = await memoryCollection(w, "characters").findOne({ _id: w.charB });
-  const imperial = await w.memory.collection("imperialCharacters").findOne({ _id: w.imperial });
+  const imperial = await memoryCollection(w, "imperialCharacters").findOne({ _id: w.imperial });
   const corpHolder = await w.memory.collection("corporations").findOne({ _id: w.corpHolder });
-  const fund = await w.memory.collection("indexFunds").findOne({ _id: w.fund });
+  const fund = await memoryCollection(w, "indexFunds").findOne({ _id: w.fund });
   const treasury = await w.memory.collection("federalBudget").findOne({ countryId: "US" });
   const target = await w.memory.collection("corporations").findOne({ _id: w.tgt });
   const acquirerSectors = await memoryCollection(w, "corporateSectors").countDocuments({

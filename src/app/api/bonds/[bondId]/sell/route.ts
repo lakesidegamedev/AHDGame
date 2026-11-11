@@ -49,6 +49,8 @@ import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 interface RouteParams {
   params: Promise<{ bondId: string }>;
@@ -475,8 +477,7 @@ export async function POST(request: Request, { params }: RouteParams) {
         return errorResponse(403, "Only the CEO can sell bonds for a corporation");
       }
 
-      const bondRateDoc = await db
-        .collection<ExchangeRate>("exchangeRates")
+      const bondRateDoc = await exchangeRatesCollection(db)
         .findOne({ currencyCode: bondCurrency });
       const bondFxRate = bondRateDoc?.rate && bondRateDoc.rate > 0 ? bondRateDoc.rate : 1;
       const proceedsAnchor = corpCapitalToAnchor(proceedsLocal, bondCurrency, bondFxRate);
@@ -599,7 +600,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       userDoc?.activeCharacterType === "imperial" && !!userDoc?.activeImperialCharacterId;
 
     if (isImperialMode) {
-      const imperial = await db.collection<ImperialCharacter>("imperialCharacters").findOne({
+      const imperial = await imperialCharactersCollection(db).findOne({
         _id: userDoc.activeImperialCharacterId!,
         userId: new ObjectId(user.userId),
       });
@@ -647,8 +648,7 @@ export async function POST(request: Request, { params }: RouteParams) {
           );
           if (!poolDebit.ok) throw await poolDepthRefusal();
 
-          const payoutResult = await db
-            .collection<ImperialCharacter>("imperialCharacters")
+          const payoutResult = await imperialCharactersCollection(db)
             .updateOne({ _id: imperial._id }, payoutUpdate, { session });
           if (payoutResult.matchedCount === 0) {
             throw notFound("Imperial character not found");

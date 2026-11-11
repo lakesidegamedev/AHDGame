@@ -9,6 +9,7 @@ import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
 import { optimizeImage, IMAGE_PRESETS } from "@/lib/imageOptimize";
 import { isR2Enabled, uploadFile, deleteByPrefix } from "@/lib/r2";
 import { parseFormData } from "@/lib/api/validate";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const MAX_SIZE = 2 * 1024 * 1024; // 2 MB
@@ -51,8 +52,7 @@ export async function POST(request: Request) {
       return errorResponse(400, "No imperial character found for this account");
     }
 
-    const imperial = await db
-      .collection<ImperialCharacter>("imperialCharacters")
+    const imperial = await imperialCharactersCollection(db)
       .findOne({ _id: user.activeImperialCharacterId, userId: new ObjectId(authUser.userId) });
 
     if (!imperial) {
@@ -103,8 +103,7 @@ export async function POST(request: Request) {
       url = `/api/uploads/coat-of-arms/${filename}`;
     }
 
-    await db
-      .collection<ImperialCharacter>("imperialCharacters")
+    await imperialCharactersCollection(db)
       .updateOne({ _id: imperial._id }, { $set: { coatOfArmsUrl: url, updatedAt: new Date() } });
 
     return NextResponse.json({ url });

@@ -8,6 +8,8 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { displayCurrencyPreferenceSchema } from "@/lib/api/schemas/settings";
 import type { User } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import type { Document } from "mongodb";
 
 // PATCH /api/settings/display-currency — Saves the player's currency display preference to their
 // active regular or imperial character, matching the currently selected mode.
@@ -49,8 +51,7 @@ export async function PATCH(request: Request) {
     const update = { $set: { displayCurrencyPreference, updatedAt: new Date() } };
     let matchedCount = 0;
     if (userDoc.activeCharacterType === "imperial" && userDoc.activeImperialCharacterId) {
-      const result = await db
-        .collection("imperialCharacters")
+      const result = await imperialCharactersCollection<Document>(db)
         .updateOne(
           { _id: userDoc.activeImperialCharacterId, userId: new ObjectId(auth.user.userId) },
           update

@@ -16,6 +16,7 @@ import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 export const MAX_GLOBAL_SOVEREIGN_ISSUES_PER_PASS = 48;
 
@@ -149,10 +150,7 @@ export async function loadFundBondCandidateCache(db: Db): Promise<FundBondCandid
           .find({ _id: { $in: corporationIds } }, { projection: { creditRatingSnapshot: 1 } })
           .toArray()
       : Promise.resolve([] as Array<{ _id: ObjectId; creditRatingSnapshot?: string }>),
-    db
-      .collection<{ currencyCode?: string; rate?: number; capitalControls?: boolean }>(
-        "exchangeRates"
-      )
+    exchangeRatesCollection<{ currencyCode?: string; rate?: number; capitalControls?: boolean }>(db)
       .find({})
       .project({ currencyCode: 1, rate: 1, capitalControls: 1 })
       .toArray(),

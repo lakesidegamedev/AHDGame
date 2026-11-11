@@ -53,6 +53,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 /**
  * Bounded step toward the target: 0.5x the gap, clamped to [-1.75, +0.75].
@@ -234,7 +235,7 @@ export async function processNppChairAutoRate(
   let fxShift = 0;
   let fxMove: number | null = null;
   if (!commonIndicators && (await nppAutonomyAtLeast(db, countryId, NPP_ENGINE_LEVEL))) {
-    const fx = await db.collection<ExchangeRate>("exchangeRates").findOne(
+    const fx = await exchangeRatesCollection(db).findOne(
       { _id: countryId },
       {
         projection: {
@@ -359,7 +360,7 @@ export async function processNppCurrencyDefence(
   if (isBankGovernmentControlled(bank, countryId, startingYear)) return "none";
   if (!(await nppAutonomyAtLeast(db, countryId, NPP_ENGINE_LEVEL))) return "none";
 
-  const fx = await db.collection<ExchangeRate>("exchangeRates").findOne(
+  const fx = await exchangeRatesCollection(db).findOne(
     { _id: countryId },
     {
       projection: {
@@ -385,8 +386,7 @@ export async function processNppCurrencyDefence(
   const now = new Date();
 
   if (action === "release" && band) {
-    await db
-      .collection<ExchangeRate>("exchangeRates")
+    await exchangeRatesCollection(db)
       .updateOne(
         { _id: countryId, "interventionPolicy.setAtTurn": band.setAtTurn },
         { $set: { interventionPolicy: null, updatedAt: now } }
@@ -416,8 +416,7 @@ export async function processNppCurrencyDefence(
     recentInterventions: [],
   };
   // Only into an empty slot: a band a person set between the read and now wins.
-  await db
-    .collection<ExchangeRate>("exchangeRates")
+  await exchangeRatesCollection(db)
     .updateOne(
       { _id: countryId, interventionPolicy: null },
       { $set: { interventionPolicy: policy, updatedAt: now } }

@@ -19,6 +19,8 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 export const BALANCE_SNAPSHOTS_COLLECTION = "balanceSnapshots";
 export const BALANCE_CHECKPOINTS_COLLECTION = "balanceSnapshotCheckpoints";
@@ -44,8 +46,7 @@ export const BALANCE_CHECKPOINTS_COLLECTION = "balanceSnapshotCheckpoints";
  */
 
 async function loadAnchorRates(db: Db): Promise<Map<string, number>> {
-  const rates = await db
-    .collection<{ currencyCode: string; rate: number }>("exchangeRates")
+  const rates = await exchangeRatesCollection<{ currencyCode: string; rate: number }>(db)
     .find({}, { projection: { currencyCode: 1, rate: 1 } })
     .toArray();
   return new Map(rates.map((r) => [r.currencyCode, r.rate]));
@@ -289,11 +290,11 @@ async function collectBalanceState(
   // ledger does not carry; only the cash leg is a money balance. Every fund
   // cash write carries a fund-subject ledger row against this key, so those
   // flows do not read as divergences.
-  const funds = db.collection<{
+  const funds = indexFundsCollection<{
     _id: ObjectId;
     anchorCurrencyCode?: CurrencyCode;
     cashAnchor?: number;
-  }>("indexFunds");
+  }>(db);
   const fundCursor = funds.find({}, { projection: { anchorCurrencyCode: 1, cashAnchor: 1 } });
   for await (const fund of fundCursor) {
     if (typeof fund.cashAnchor !== "number") continue;

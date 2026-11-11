@@ -41,6 +41,7 @@ import type {
 } from "@/lib/db/types/currencyOrder";
 import { recordAudit } from "@/lib/audit/recordAudit";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { currencyOrdersCollection } from "@/lib/db/repositories/currencyOrders";
 
 /** A claim older than this with no live owner may be finished or undone. */
 export const FILL_CLAIM_STALE_MS = 5 * 60 * 1000;
@@ -176,7 +177,7 @@ export async function claimFillWithIntent(
   intent: ProcessingFillIntent,
   now: Date
 ): Promise<CurrencyOrder | null> {
-  return db.collection<CurrencyOrder>("currencyOrders").findOneAndUpdate(
+  return currencyOrdersCollection(db).findOneAndUpdate(
     claimFilter,
     {
       $set: {
@@ -362,7 +363,7 @@ export async function applyFillLegs(
   // Final flip, guarded on the pre-fill state. Clearing the intent in the
   // same write makes replay-after-success a no-op: the order is no longer
   // `processing` with this key.
-  const flipRes = await db.collection<CurrencyOrder>("currencyOrders").updateOne(
+  const flipRes = await currencyOrdersCollection(db).updateOne(
     { _id: orderOid, status: "processing", filledAmount: intent.filledAmountBefore },
     {
       $set: { status: intent.newStatus, updatedAt: now },
@@ -477,7 +478,7 @@ async function takeRecoveryOwnership(
           "processingFill.recoveryKey": { $exists: false },
         }
   ) as Filter<CurrencyOrder>;
-  const res = await db.collection<CurrencyOrder>("currencyOrders").updateOne(filter, {
+  const res = await currencyOrdersCollection(db).updateOne(filter, {
     $set: { "processingFill.recoveryKey": token, "processingFill.recoveryAt": now },
   });
   return res.matchedCount === 1 ? token : null;
@@ -519,7 +520,7 @@ export async function recoverFillClaim(
   orderId: ObjectId,
   now: Date = new Date()
 ): Promise<RecoverFillOutcome> {
-  const order = await db.collection<CurrencyOrder>("currencyOrders").findOne({ _id: orderId });
+  const order = await currencyOrdersCollection(db).findOne({ _id: orderId });
   if (
     !order ||
     order.status !== "processing" ||
@@ -563,7 +564,7 @@ export async function recoverFillClaim(
     auditFillRecovery(intent, "completed");
     return { outcome: "completed", fillAmount: intent.fillAmount, orderStatus: intent.newStatus };
   }
-  const reread = await db.collection<CurrencyOrder>("currencyOrders").findOne({ _id: orderId });
+  const reread = await currencyOrdersCollection(db).findOne({ _id: orderId });
   if (orderCompleted(reread, intent)) {
     return { outcome: "completed", fillAmount: intent.fillAmount, orderStatus: intent.newStatus };
   }
@@ -575,7 +576,7 @@ export async function recoverFillClaim(
     // retry the guarded flip once under ownership instead of undoing.
     const owned = await takeRecoveryOwnership(db, reread ?? order, intent, now);
     if (!owned) return { outcome: "recovery-in-progress" };
-    const flip = await db.collection<CurrencyOrder>("currencyOrders").updateOne(
+    const flip = await currencyOrdersCollection(db).updateOne(
       { _id: orderId, status: "processing", filledAmount: intent.filledAmountBefore },
       {
         $set: { status: intent.newStatus, updatedAt: now },
@@ -587,7 +588,7 @@ export async function recoverFillClaim(
       auditFillRecovery(intent, "completed");
       return { outcome: "completed", fillAmount: intent.fillAmount, orderStatus: intent.newStatus };
     }
-    const settled = await db.collection<CurrencyOrder>("currencyOrders").findOne({ _id: orderId });
+    const settled = await currencyOrdersCollection(db).findOne({ _id: orderId });
     if (orderCompleted(settled, intent)) {
       return { outcome: "completed", fillAmount: intent.fillAmount, orderStatus: intent.newStatus };
     }
@@ -598,13 +599,13 @@ export async function recoverFillClaim(
   const owned = await takeRecoveryOwnership(db, reread ?? order, intent, now);
   if (!owned) return { outcome: "recovery-in-progress" };
   // Re-verify under ownership: a concurrent recoverer may have finished.
-  const current = await db.collection<CurrencyOrder>("currencyOrders").findOne({ _id: orderId });
+  const current = await currencyOrdersCollection(db).findOne({ _id: orderId });
   if (orderCompleted(current, intent)) {
     return { outcome: "completed", fillAmount: intent.fillAmount, orderStatus: intent.newStatus };
   }
   const ownedState = await verifyFillLegs(db, intent);
   if (allLegsApplied(ownedState)) {
-    const flip = await db.collection<CurrencyOrder>("currencyOrders").updateOne(
+    const flip = await currencyOrdersCollection(db).updateOne(
       { _id: orderId, status: "processing", filledAmount: intent.filledAmountBefore },
       {
         $set: { status: intent.newStatus, updatedAt: now },
@@ -705,7 +706,7 @@ export async function restoreFillClaim(
   intent: ProcessingFillIntent,
   now: Date = new Date()
 ): Promise<void> {
-  const restored = await db.collection<CurrencyOrder>("currencyOrders").updateOne(
+  const restored = await currencyOrdersCollection(db).updateOne(
     { _id: new ObjectId(intent.orderId), status: "processing", processingFillKey: intent.key },
     {
       $set: { status: intent.statusBefore, updatedAt: now },
@@ -739,8 +740,7 @@ export async function recoverStaleFillClaims(
     rolledBack: [],
     unresolvable: [],
   };
-  const stuck = await db
-    .collection<CurrencyOrder>("currencyOrders")
+  const stuck = await currencyOrdersCollection(db)
     .find({ status: "processing", processingFillKey: { $exists: true } })
     .limit(FILL_RECOVERY_SCAN_LIMIT)
     .toArray();

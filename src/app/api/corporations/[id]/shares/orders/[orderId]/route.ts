@@ -13,6 +13,8 @@ import {
 } from "@/lib/corporations/cancelShareOrder";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 
 interface RouteParams {
   params: Promise<{ id: string; orderId: string }>;
@@ -48,8 +50,7 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
       return errorResponse(400, "Invalid order ID");
     }
 
-    const order = await db
-      .collection<ShareOrder>("shareOrders")
+    const order = await shareOrdersCollection(db)
       .findOne({ _id: new ObjectId(orderId) });
 
     if (!order) {
@@ -70,7 +71,7 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
     let charId: ObjectId;
 
     if (isImperialMode) {
-      const imperial = await db.collection<ImperialCharacter>("imperialCharacters").findOne({
+      const imperial = await imperialCharactersCollection(db).findOne({
         _id: userDoc!.activeImperialCharacterId!,
         userId: new ObjectId(auth.user.userId),
       });

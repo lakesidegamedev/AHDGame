@@ -29,6 +29,7 @@ import {
   recordMarketMakerRefusal,
 } from "./marketMakerReceipt";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 interface MarketMakerTradeParams {
   /** Stable accepted income-event identity for garnished residual conversions. */
@@ -273,8 +274,8 @@ async function executeMarketMakerTradeInner(
         params.quoteContext.union,
       ] as const)
     : await Promise.all([
-        db.collection<ExchangeRate>("exchangeRates").findOne({ _id: fromCountryId }),
-        db.collection<ExchangeRate>("exchangeRates").findOne({ _id: toCountryId }),
+        exchangeRatesCollection(db).findOne({ _id: fromCountryId }),
+        exchangeRatesCollection(db).findOne({ _id: toCountryId }),
         loadEuroMonetaryUnion(db),
       ]);
 

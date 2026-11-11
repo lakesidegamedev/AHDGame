@@ -48,6 +48,7 @@ import {
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 interface HistoryPoint {
   turn: number;
@@ -169,7 +170,7 @@ export async function buildCountryEconomyOutlook(
         })
         .toArray(),
       getGameState(db),
-      db.collection<ExchangeRate>("exchangeRates").findOne({ _id: countryId }),
+      exchangeRatesCollection(db).findOne({ _id: countryId }),
       exchangeApiKey
         ? db
             .collection<StockExchangeSnapshot>("stockExchangeSnapshots")

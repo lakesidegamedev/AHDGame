@@ -16,6 +16,7 @@ import { loadOpenOrdersEscrowByFundId, loadQueuedRedemptionUnitsByFundId } from 
 import { computeHoldingsValueAnchor } from "../fundAllocation";
 import { feeDecision, markedFundBacking } from "./rules/accounting";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 export { feeDecision } from "./rules/accounting";
 
 export interface ExpenseFeeOutcome {
@@ -42,8 +43,7 @@ export async function chargeSponsorExpenseFees(
   const now = new Date();
   return withSessionDb(db, async (tx) => {
     const outcome = { ...empty };
-    const current = await tx
-      .collection<IndexFund>("indexFunds")
+    const current = await indexFundsCollection(tx)
       .find(
         {
           _id: { $in: ids },
@@ -168,7 +168,7 @@ export async function chargeSponsorExpenseFees(
       outcome.totalFeeAnchor += feeAnchor;
     }
     if (!receipts.length) return outcome;
-    const debits = await tx.collection<IndexFund>("indexFunds").bulkWrite(fundUpdates);
+    const debits = await indexFundsCollection(tx).bulkWrite(fundUpdates);
     if (debits.matchedCount !== receipts.length) throw new Error("Fund fee debit failed");
     const credits = await corporationsCollection(tx).bulkWrite(sponsorUpdates);
     if (credits.matchedCount !== receipts.length) throw new Error("Sponsor fee credit failed");

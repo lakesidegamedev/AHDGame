@@ -21,6 +21,8 @@ import { getBankId } from "@/lib/centralBank/helpers";
 import { getCharactersCollection } from "@/lib/db/collections/characters";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { currencyOrdersCollection } from "@/lib/db/repositories/currencyOrders";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 // ── Limit order processing ──────────────────────────────────────────────────
 
@@ -67,7 +69,7 @@ export async function processTriggeredLimitOrders(
   // Claims carrying a peer-fill intent are EXCLUDED from the blind reset: a
   // fill may already have moved money, and resetting to open would strand it.
   // Those go through intent recovery (finish or undo) instead.
-  await db.collection<CurrencyOrder>("currencyOrders").updateMany(
+  await currencyOrdersCollection(db).updateMany(
     {
       status: "processing",
       updatedAt: { $lt: new Date(now.getTime() - 2 * MS_PER_TURN) },
@@ -78,12 +80,11 @@ export async function processTriggeredLimitOrders(
   await recoverStaleFillClaims(db, now);
 
   // Load current rates into a map for quick lookup
-  const rates = await db.collection<ExchangeRate>("exchangeRates").find({}).toArray();
+  const rates = await exchangeRatesCollection(db).find({}).toArray();
   const rateMap = new Map(rates.map((r) => [r.currencyCode, r.rate]));
 
   // Find open/partial limit orders, sorted by creation date (FIFO)
-  const openOrders = await db
-    .collection<CurrencyOrder>("currencyOrders")
+  const openOrders = await currencyOrdersCollection(db)
     .find({
       type: "limit",
       status: { $in: ["open", "partial"] },
@@ -126,8 +127,7 @@ export async function processTriggeredLimitOrders(
     // ── Atomic claim: open/partial → processing ───────────────────────────
     // This is the idempotency guard. If the process crashes after this point
     // the order stays in "processing", not "open", and will not be replayed.
-    const claimResult = await db
-      .collection<CurrencyOrder>("currencyOrders")
+    const claimResult = await currencyOrdersCollection(db)
       .updateOne(
         { _id: order._id, status: { $in: ["open", "partial"] } },
         { $set: { status: "processing" as const, updatedAt: now } }
@@ -239,8 +239,7 @@ export async function processTriggeredLimitOrders(
         source: "limit_order",
       } as TradeHistoryEntry);
 
-      await db
-        .collection<CurrencyOrder>("currencyOrders")
+      await currencyOrdersCollection(db)
         .updateOne({ _id: order._id }, { $set: { status: "expired" as const, updatedAt: now } });
       continue;
     }
@@ -265,7 +264,7 @@ export async function processTriggeredLimitOrders(
     const newFilledAmount = order.filledAmount + remainingAmount;
     const newStatus = newFilledAmount >= order.amount ? "filled" : "partial";
 
-    await db.collection<CurrencyOrder>("currencyOrders").updateOne(
+    await currencyOrdersCollection(db).updateOne(
       { _id: order._id },
       {
         $set: {
@@ -298,7 +297,7 @@ export async function processTriggeredLimitOrders(
  * Stamped credits make an interrupted batch safe to retry on the next turn.
  */
 export async function expireStaleOrders(db: Db, currentTurn: number, now: Date): Promise<number> {
-  const orders = db.collection<CurrencyOrder>("currencyOrders");
+  const orders = currencyOrdersCollection(db);
   const transitionResult = await orders.updateMany(
     { status: { $in: ["open", "partial"] }, expiresAtTurn: { $lte: currentTurn } },
     { $set: { status: "expired" as const, expiryRefundState: "pending", updatedAt: now } }

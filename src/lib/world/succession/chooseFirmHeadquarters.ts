@@ -28,6 +28,7 @@ import {
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 export interface ChosenFederationHeadquarters {
   countryId: CountryId;
@@ -83,8 +84,7 @@ async function lockConversion(
   const needed = [
     ...new Set([fromCurrency, toCurrency].filter((code): code is CurrencyCode => !!code)),
   ];
-  const rates = await db
-    .collection<ExchangeRate>("exchangeRates")
+  const rates = await exchangeRatesCollection(db)
     .find({ currencyCode: { $in: needed } })
     .toArray();
   const byCode = new Map(rates.map((rate) => [rate.currencyCode, rate.rate]));

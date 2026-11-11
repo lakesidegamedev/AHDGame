@@ -29,6 +29,7 @@ import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import { loadInflationVsTarget } from "@/lib/monetaryGovernance/inflationGap";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 type PrimeRateActor = {
   userId: string;
@@ -155,8 +156,7 @@ async function updatePrimeRateInner(params: {
   // never set: the promise to defend a corridor is the commitment.
   let fxCommitment: { regime: "float" | "peg" | "band"; capitalControls: boolean } | null = null;
   if (!isAdmin) {
-    const fxDoc = await db
-      .collection<ExchangeRate>("exchangeRates")
+    const fxDoc = await exchangeRatesCollection(db)
       .findOne(
         { countryId: bankHomeCountryId },
         { projection: { fxRegime: 1, capitalControls: 1, interventionPolicy: 1 } }

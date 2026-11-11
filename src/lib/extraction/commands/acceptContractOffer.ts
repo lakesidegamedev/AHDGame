@@ -23,6 +23,7 @@ import { oid, type BankingTransition } from "@/lib/banking/rules/boundary";
 import { treasuryAnchorValuation } from "@/lib/budget/rules/treasuryAccrual";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 
 export type AcceptContractResult =
   | { ok: true; status: 200; activatedTurn: number; expiresTurn: number; signingFeeLocal: number }
@@ -60,8 +61,7 @@ export async function acceptContractOffer(
   const possibleFundedFee = treasuryCashLedgerEnabled && feeAnchor > 0;
   const stateTreasuryFallback =
     possibleFundedFee && contract.grantedByLevel === "state"
-      ? !(await db
-          .collection<StateBudget>("stateBudgets")
+      ? !(await stateBudgetsCollection(db)
           .findOne(
             { _id: contract.stateId, countryId: contract.countryId },
             { projection: { _id: 1 } }
@@ -310,7 +310,7 @@ export async function acceptContractOffer(
         if (!fundedTreasuryFee) await creditTreasury(db, countryId, feeIssuerLocal);
         creditedNationalTreasury = true;
       } else {
-        const stateCredit = await db.collection<StateBudget>("stateBudgets").updateOne(
+        const stateCredit = await stateBudgetsCollection(db).updateOne(
           { _id: contract.stateId, countryId },
           {
             $inc: { "revenue.resourceRoyalties": feeIssuerLocal, "revenue.total": feeIssuerLocal },

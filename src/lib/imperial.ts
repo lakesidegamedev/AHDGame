@@ -1,5 +1,7 @@
 import { COUNTRY_CONFIGS, isImperialCountry, type CountryId } from "./constants/countries";
 import type { Db } from "mongodb";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import type { Document } from "mongodb";
 
 export interface ImperialConfig {
   titles: { male: string; female: string; nonbinary: string };
@@ -104,8 +106,7 @@ export async function fetchImperialPossessive(
   const config = COUNTRY_CONFIGS[countryId];
   const resolvedCountryId = config?.imperialSharedWith ?? countryId;
 
-  const imperial = await db
-    .collection("imperialCharacters")
+  const imperial = await imperialCharactersCollection<Document>(db)
     .findOne({ countryId: resolvedCountryId }, { projection: { gender: 1 } });
 
   if (!imperial?.gender) return fallback;

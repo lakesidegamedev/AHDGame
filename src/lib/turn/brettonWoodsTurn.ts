@@ -40,6 +40,7 @@ import {
 import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 export interface BrettonWoodsTurnResult {
   /** Always true: the phase runs every turn. Kept for the phase telemetry shape. */
@@ -78,8 +79,7 @@ export async function processBrettonWoodsTurn(
 
   // Small rows, but rateHistory is chart ballast this phase never reads —
   // project the six fields the transition actually uses.
-  const rateDocs = await db
-    .collection<ExchangeRate>("exchangeRates")
+  const rateDocs = await exchangeRatesCollection(db)
     .find(
       {},
       {
@@ -219,7 +219,7 @@ export async function processBrettonWoodsTurn(
     })),
   ];
   if (ops.length > 0) {
-    await db.collection<ExchangeRate>("exchangeRates").bulkWrite(ops);
+    await exchangeRatesCollection(db).bulkWrite(ops);
   }
 
   return {

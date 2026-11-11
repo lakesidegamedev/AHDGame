@@ -24,6 +24,7 @@ import { signingFeeCredit } from "./rules/signingFee";
 import { ContractError } from "./eligibility";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 const logId = (key: string) => oid(createHash("sha256").update(key).digest("hex").slice(0, 24));
 export async function settleTenderSigningFee(
   db: Db,
@@ -57,8 +58,7 @@ export async function settleTenderSigningFee(
       const sourceLocal = anchorToCorpLiquidCapital(amount, corp, sourceRate);
       const stateBudget =
         contract.grantedByLevel === "state"
-          ? await db
-              .collection<StateBudget>("stateBudgets")
+          ? await stateBudgetsCollection(db)
               .findOne(
                 { _id: contract.stateId, countryId: contract.countryId },
                 { projection: { _id: 1 } }

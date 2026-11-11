@@ -12,6 +12,8 @@ import type { AltCluster, AltLink } from "@/lib/db/types/altDetection";
 import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
 import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import type { Document } from "mongodb";
 
 const DOSSIER_MAX_SESSIONS = 25;
 const DOSSIER_MAX_FINANCIAL_ROWS = 50;
@@ -334,7 +336,7 @@ function maskSessionRow(row: DossierSessionRow, isAdmin: boolean): DossierSessio
 async function loadCharacterSubjectIds(db: Db, userId: ObjectId): Promise<ObjectId[]> {
   const [characters, imperial] = await Promise.all([
     charactersCollection(db).find({ userId }).project({ _id: 1 }).toArray(),
-    db.collection("imperialCharacters").find({ userId }).project({ _id: 1 }).toArray(),
+    imperialCharactersCollection<Document>(db).find({ userId }).project({ _id: 1 }).toArray(),
   ]);
   return [...characters, ...imperial].map((doc) => doc._id as ObjectId);
 }

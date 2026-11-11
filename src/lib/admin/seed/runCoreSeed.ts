@@ -63,6 +63,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 
 /**
  * What `runSeed`'s reset branch deletes, and how far.
@@ -315,7 +316,7 @@ export async function runSeed(
   if (!reset) {
     const stateCount = await statesCollection<Document>(db).countDocuments();
     const nationalBudgetCount = await federalBudgetCollection(db).countDocuments();
-    const stateBudgetCount = await db.collection("stateBudgets").countDocuments();
+    const stateBudgetCount = await stateBudgetsCollection<Document>(db).countDocuments();
     const formulaGrantCount = await db.collection("formulaGrants").countDocuments();
     const budgetsSeeded = nationalBudgetCount > 0 && stateBudgetCount > 0 && formulaGrantCount > 0;
 

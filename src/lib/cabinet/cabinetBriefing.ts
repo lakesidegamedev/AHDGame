@@ -151,6 +151,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 /** Assembles the cabinet position briefing payload for the viewing user. */
 export async function buildCabinetBriefing(
@@ -699,7 +700,7 @@ export async function buildCabinetBriefing(
     const financeBank =
       bank ?? (await centralBanksCollection(db).findOne({ _id: getBankId(countryId) }));
     const [fx, opDoc] = await Promise.all([
-      db.collection<ExchangeRate>("exchangeRates").findOne({ _id: countryId }),
+      exchangeRatesCollection(db).findOne({ _id: countryId }),
       getTreasuryOperationsCollection(db).findOne({ _id: countryId }),
     ]);
     const fxPolicy = fx ? effectiveInterventionPolicy(fx) : null;

@@ -105,6 +105,10 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import type { Document } from "mongodb";
+import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 
 type TakeoverTxInput = Omit<FinancialTxLogEntry, "_id" | "expiresAt" | "flagged">;
 
@@ -585,8 +589,7 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
               )
             );
           } else if (sh.imperialCharacterId) {
-            const ich = await db
-              .collection<ImperialCharacter>("imperialCharacters")
+            const ich = await imperialCharactersCollection(db)
               .findOne({ _id: sh.imperialCharacterId });
             if (!ich) continue;
             const home =
@@ -629,7 +632,7 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
                   )
                 )
               : undefined;
-            await db.collection<ImperialCharacter>("imperialCharacters").updateOne(
+            await imperialCharactersCollection(db).updateOne(
               { _id: sh.imperialCharacterId },
               {
                 $inc: buildPersonalBalanceInc(
@@ -706,8 +709,7 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
           if (fundPayout <= 0) continue;
 
           // Credit fund's cashAnchor with the takeover payout
-          await db
-            .collection("indexFunds")
+          await indexFundsCollection<Document>(db)
             .updateOne(
               { _id: fundId },
               { $inc: { cashAnchor: fundPayout }, $set: { updatedAt: now } }
@@ -719,8 +721,7 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
           });
 
           // Remove the target corp from the fund's holdings ledger
-          await db
-            .collection("indexFunds")
+          await indexFundsCollection<Document>(db)
             .updateOne({ _id: fundId, "holdings.corporationId": target._id }, [
               {
                 $set: {
@@ -737,8 +738,7 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
             ]);
         }
 
-        await db
-          .collection<ShareOrder>("shareOrders")
+        await shareOrdersCollection(db)
           .updateMany(
             { corporationId: target._id, status: "open" },
             { $set: { status: "cancelled", updatedAt: now } }

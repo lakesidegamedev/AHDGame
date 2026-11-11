@@ -43,6 +43,8 @@ import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
 import { canRedeemSponsorUnits } from "./sponsorship/sponsorUnits";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import type { Document } from "mongodb";
 
 export async function tradeCorporationFund(
   db: Db,
@@ -204,7 +206,7 @@ export async function tradeCorporationFund(
                       : { $set: { avgNavAnchor: priorPosition.avgNavAnchor } }
                   );
             });
-            const credited = await db.collection("indexFunds").updateOne(
+            const credited = await indexFundsCollection<Document>(db).updateOne(
               { _id: fund._id, status: "active", quotedNav: fund.quotedNav },
               {
                 $inc: { unitSupply: order.units, cashAnchor: amountAnchor },
@@ -215,8 +217,7 @@ export async function tradeCorporationFund(
             if (!credited.matchedCount)
               throw badRequest("Fund quote changed; reload before trading");
             undo.push(() =>
-              db
-                .collection("indexFunds")
+              indexFundsCollection<Document>(db)
                 .updateOne(
                   { _id: fund._id },
                   { $inc: { unitSupply: -order.units, cashAnchor: -amountAnchor } }
@@ -230,8 +231,7 @@ export async function tradeCorporationFund(
               balanceAfter,
             };
           } else {
-            const currentFund = await db
-              .collection<IndexFund>("indexFunds")
+            const currentFund = await indexFundsCollection(db)
               .findOne({ _id: fund._id }, options);
             if (!currentFund) throw badRequest("Fund no longer exists");
             if (!(await canRedeemSponsorUnits(db, currentFund, corporationId, options)))
@@ -248,7 +248,7 @@ export async function tradeCorporationFund(
             if (!prior || prior.units < order.units)
               throw badRequest("Insufficient corporation fund units");
             const liability = await getQueuedRedemptionLiabilityAnchor(db, fund._id);
-            const debitedFund = await db.collection("indexFunds").updateOne(
+            const debitedFund = await indexFundsCollection<Document>(db).updateOne(
               {
                 _id: fund._id,
                 status: { $ne: "delisted" },
@@ -267,8 +267,7 @@ export async function tradeCorporationFund(
                 "Fund cash is unavailable or the quote changed. Units remain invested; retry after the fund cycle."
               );
             undo.push(() =>
-              db
-                .collection("indexFunds")
+              indexFundsCollection<Document>(db)
                 .updateOne(
                   { _id: fund._id },
                   { $inc: { unitSupply: order.units, cashAnchor: amountAnchor } }

@@ -20,6 +20,8 @@ import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 type AnyDoc = Document & { _id: ObjectId | string; countryId: string };
 
@@ -77,12 +79,11 @@ export async function applyEraCurrencyTopology(
       );
     }
 
-    const stateBudgets = (await db
-      .collection("stateBudgets")
+    const stateBudgets = (await stateBudgetsCollection<Document>(db)
       .find({ countryId })
       .toArray()) as AnyDoc[];
     if (stateBudgets.length > 0 && needsFiscalConversion) {
-      await db.collection<AnyDoc>("stateBudgets").bulkWrite(
+      await stateBudgetsCollection<AnyDoc>(db).bulkWrite(
         stateBudgets.map((doc) => ({
           updateOne: {
             filter: { _id: doc._id },
@@ -170,7 +171,7 @@ export async function applyEraCurrencyTopology(
       );
     }
 
-    await db.collection<Document & { _id: string }>("exchangeRates").updateOne(
+    await exchangeRatesCollection<Document & { _id: string }>(db).updateOne(
       { _id: countryId },
       {
         $set: {

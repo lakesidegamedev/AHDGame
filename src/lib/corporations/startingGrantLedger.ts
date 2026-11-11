@@ -10,6 +10,7 @@ import { accountId, mintSinkAccount } from "@/lib/ledger/accounts";
 import { emitLedgerEntries } from "@/lib/ledger/emit";
 import { ledgerTurnFromClock } from "@/lib/ledger/ledgerTurn";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 export async function witnessCorporationStartingGrant(
   db: Db,
@@ -36,8 +37,7 @@ export async function witnessCorporationStartingGrant(
             { projection: { currentTurn: 1 } }
           )
         : Promise.resolve(null),
-      db
-        .collection<{ currencyCode: string; rate: number }>("exchangeRates")
+      exchangeRatesCollection<{ currencyCode: string; rate: number }>(db)
         .findOne({ currencyCode: input.currencyCode }, { projection: { rate: 1 } }),
     ]);
     const turn =

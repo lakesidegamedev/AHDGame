@@ -19,6 +19,8 @@ import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { cancelFundShareOrder } from "@/lib/indexFunds/fundShareOrders";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 
 type CancelResult = { ok: true } | { ok: false; error: string };
 
@@ -43,8 +45,7 @@ export function actorMayCancelShareOrder(
 }
 
 async function restoreOrderToOpen(db: Db, orderId: ShareOrder["_id"]) {
-  await db
-    .collection<ShareOrder>("shareOrders")
+  await shareOrdersCollection(db)
     .updateOne(
       { _id: orderId, status: "cancelled" },
       { $set: { status: "open", updatedAt: new Date() } }
@@ -90,8 +91,7 @@ export async function cancelShareOrderAndRefund(db: Db, order: ShareOrder): Prom
         // dissolved/deleted, the escrow can't be refunded — but leaving the
         // order open blocks restructures and market maintenance on the target.
         // Cancel without refund and move on.
-        const claim = await db
-          .collection<ShareOrder>("shareOrders")
+        const claim = await shareOrdersCollection(db)
           .updateOne(claimFilter, { $set: { status: "cancelled", updatedAt: now } });
         if (claim.matchedCount === 0) return { ok: false, error: "Order is not open" };
         return { ok: true };
@@ -104,8 +104,7 @@ export async function cancelShareOrderAndRefund(db: Db, order: ShareOrder): Prom
         placerFxRate
       );
 
-      const claim = await db
-        .collection<ShareOrder>("shareOrders")
+      const claim = await shareOrdersCollection(db)
         .updateOne(claimFilter, { $set: { status: "cancelled", updatedAt: now } });
       if (claim.matchedCount === 0) return { ok: false, error: "Order is not open" };
 
@@ -160,8 +159,7 @@ export async function cancelShareOrderAndRefund(db: Db, order: ShareOrder): Prom
     ).findOne({ _id: orderCharacterId }, { projection: { countryId: 1, name: 1 } });
     let collectionName: "characters" | "imperialCharacters" = "characters";
     if (!charDoc) {
-      const imperialDoc = await db
-        .collection<ImperialCharacter>("imperialCharacters")
+      const imperialDoc = await imperialCharactersCollection(db)
         .findOne({ _id: order.characterId }, { projection: { countryId: 1, name: 1 } });
       if (imperialDoc) {
         charDoc = imperialDoc;
@@ -172,8 +170,7 @@ export async function cancelShareOrderAndRefund(db: Db, order: ShareOrder): Prom
       // Preserve cleanup flows even when the buyer record has already been deleted.
       // The escrow is no longer recoverable, but leaving the order open blocks
       // restructures and market maintenance on an otherwise orphaned document.
-      const claim = await db
-        .collection<ShareOrder>("shareOrders")
+      const claim = await shareOrdersCollection(db)
         .updateOne(claimFilter, { $set: { status: "cancelled", updatedAt: now } });
       if (claim.matchedCount === 0) return { ok: false, error: "Order is not open" };
       return { ok: true };
@@ -192,8 +189,7 @@ export async function cancelShareOrderAndRefund(db: Db, order: ShareOrder): Prom
     }
     const refundInHome = refundAnchor * charFxRate;
 
-    const claim = await db
-      .collection<ShareOrder>("shareOrders")
+    const claim = await shareOrdersCollection(db)
       .updateOne(claimFilter, { $set: { status: "cancelled", updatedAt: now } });
     if (claim.matchedCount === 0) return { ok: false, error: "Order is not open" };
 
@@ -236,8 +232,7 @@ export async function cancelShareOrderAndRefund(db: Db, order: ShareOrder): Prom
     return { ok: true };
   }
 
-  const claim = await db
-    .collection<ShareOrder>("shareOrders")
+  const claim = await shareOrdersCollection(db)
     .updateOne(claimFilter, { $set: { status: "cancelled", updatedAt: now } });
   if (claim.matchedCount === 0) return { ok: false, error: "Order is not open" };
 

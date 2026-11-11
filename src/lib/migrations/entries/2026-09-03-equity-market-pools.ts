@@ -5,12 +5,12 @@ import { EQUITY_MARKET_POOLS_COLLECTION } from "@/lib/db/types/equityMarketPool"
 import { EQUITY_POOL_M2_SHARE } from "@/lib/equities/marketPool";
 import type { Migration, MigrationContext, MigrationResult } from "../types";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 /** Seed the real cash counterpart to existing corporation public-float inventory. */
 async function seedEquityMarketPools(db: Db, ctx: MigrationContext): Promise<MigrationResult> {
   const [rateRows, corporationCurrencies, latestSnapshot] = await Promise.all([
-    db
-      .collection<{ currencyCode?: string }>("exchangeRates")
+    exchangeRatesCollection<{ currencyCode?: string }>(db)
       .find({}, { projection: { currencyCode: 1 } })
       .toArray(),
     corporationsCollection<{ liquidCurrencyCode?: string }>(db)

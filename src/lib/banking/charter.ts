@@ -32,6 +32,8 @@ import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import type { Document } from "mongodb";
 
 /**
  * Charter capital as a multiple of the corporation founding cost.
@@ -192,7 +194,7 @@ export async function checkCharterEligibility(
     reasons.push("Resolve the failed bank estate before rechartering");
   }
 
-  const sponsoredFundCount = await db.collection("indexFunds").countDocuments({
+  const sponsoredFundCount = await indexFundsCollection<Document>(db).countDocuments({
     sponsorCorporationId: corporation._id,
     status: { $ne: "delisted" },
   });
@@ -682,8 +684,7 @@ export async function previewCharterSwitch(
   if (corporation.bankUnderwritingFunding) blockers.push("underwriting_settlement");
   if (
     !bankMayManageFunds({ status: "active", type: targetType }) &&
-    (await db
-      .collection("indexFunds")
+    (await indexFundsCollection<Document>(db)
       .countDocuments({ sponsorCorporationId: corporation._id, status: { $ne: "delisted" } })) > 0
   )
     blockers.push("sponsored_funds");

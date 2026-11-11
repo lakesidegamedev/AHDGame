@@ -21,6 +21,7 @@ import {
   type MoneyFlowStepRef,
 } from "@/lib/db/nonAtomicMoneyFlow";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 
 /** Cap-table entry discriminator inside `corporations.shareholders`. */
 export type ShareFillCapEntryField =
@@ -524,7 +525,7 @@ function makeHoldingsDebitStep(
   pricePerShareAnchor: number,
   now: Date
 ): MoneyFlowStep {
-  const funds = db.collection<HoldingAccount>("indexFunds");
+  const funds = indexFundsCollection<HoldingAccount>(db);
   return {
     name: "fund-holdings-debit",
     apply: async () => {
@@ -599,7 +600,7 @@ export async function applyHoldingsCreditKeyed(
   pricePerShareAnchor: number,
   now: Date
 ): Promise<MoneyFlowLegOutcome> {
-  const funds = db.collection<HoldingAccount>("indexFunds");
+  const funds = indexFundsCollection<HoldingAccount>(db);
   const safePrice = Number.isFinite(pricePerShareAnchor) ? Math.max(0, pricePerShareAnchor) : 0;
   const attemptInc = async (): Promise<MoneyFlowLegOutcome> => {
     const live = await funds.findOne<FundHoldingsRead>({ _id: fundId } as Filter<HoldingAccount>, {
@@ -675,7 +676,7 @@ export async function revertHoldingsCreditKeyed(
   pricePerShareAnchor: number,
   now: Date
 ): Promise<MoneyFlowLegOutcome> {
-  const funds = db.collection<HoldingAccount>("indexFunds");
+  const funds = indexFundsCollection<HoldingAccount>(db);
   const live = await funds.findOne<FundHoldingsRead>({ _id: fundId } as Filter<HoldingAccount>, {
     projection: { holdings: 1 },
   });

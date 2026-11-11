@@ -123,6 +123,8 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 const MIN_BASE_ACTIONS_PER_TURN = 4;
 
@@ -137,8 +139,7 @@ async function getCharacterData() {
 
   // Redirect to imperial profile when in imperial mode
   if (userDoc?.activeCharacterType === "imperial" && userDoc.activeImperialCharacterId) {
-    const imperial = await db
-      .collection<ImperialCharacter>("imperialCharacters")
+    const imperial = await imperialCharactersCollection(db)
       .findOne(
         { _id: userDoc.activeImperialCharacterId, userId: new ObjectId(user.userId) },
         { projection: { sequentialId: 1 } }
@@ -240,7 +241,7 @@ async function getCharacterData() {
     const homeCurrency = getHomeCurrency(character, gameState?.preset);
     const anchorCountry = getCountryIdForCurrency(homeCurrency);
     const rateDoc = forexEnabled
-      ? await db.collection<ExchangeRate>("exchangeRates").findOne({ _id: anchorCountry })
+      ? await exchangeRatesCollection(db).findOne({ _id: anchorCountry })
       : null;
     onboardingChecklist = {
       steps: checklist.steps,

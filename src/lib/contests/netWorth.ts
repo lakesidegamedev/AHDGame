@@ -22,6 +22,7 @@ import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 
 const add = (m: Map<string, number>, key: string, value: number) =>
   m.set(key, (m.get(key) ?? 0) + value);
@@ -83,8 +84,7 @@ export async function loadCharacterNetWorths(
     }
   }
   if (positions.length > 0) {
-    const funds = await db
-      .collection<IndexFund>("indexFunds")
+    const funds = await indexFundsCollection(db)
       .find(
         { _id: { $in: [...new Set(positions.map((p) => p.fundId))] } },
         { projection: { quotedNav: 1 } }

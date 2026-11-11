@@ -15,6 +15,7 @@ import {
 } from "@/lib/resetFinance/rules/regionalOpeningBoard";
 import type { ResetOpeningCountry } from "@/lib/resetFinance/opening1991";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 
 export async function seedOpeningLawBoards1991(
   db: Db,
@@ -45,8 +46,7 @@ export async function seedOpeningLawBoards1991(
     throw new Error("The seeded 1991 regions do not match v2 regional fiscal claims");
   }
   const ukBudgetRows = countries.includes("UK")
-    ? await db
-        .collection<StateBudget>("stateBudgets")
+    ? await stateBudgetsCollection(db)
         .find(
           { countryId: "UK" },
           {

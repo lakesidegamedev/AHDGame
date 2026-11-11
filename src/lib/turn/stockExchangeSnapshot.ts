@@ -84,6 +84,8 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import type { Document } from "mongodb";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 
 const EXCHANGE_NAMES: Record<string, string> = getExchangeNamesMap();
 
@@ -184,8 +186,7 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
               .toArray()
           : Promise.resolve([]),
         imperialCeoIds.length > 0
-          ? database
-              .collection("imperialCharacters")
+          ? imperialCharactersCollection<Document>(database)
               .find({ _id: { $in: imperialCeoIds } })
               .project<{ _id: ObjectId; name: string; avatarUrl?: string; sequentialId?: number }>({
                 _id: 1,
@@ -481,8 +482,7 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
               }
             )
             .toArray(),
-          database
-            .collection<StateBudget>("stateBudgets")
+          stateBudgetsCollection(database)
             .find(
               {},
               {

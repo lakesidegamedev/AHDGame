@@ -24,6 +24,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 export async function loadCountrySovereignSnapshot(
   db: Db,
@@ -49,8 +50,7 @@ export async function loadCountrySovereignSnapshot(
     .find({ countryId: countryCode as CountryId })
     .toArray();
 
-  const exchangeRate = await db
-    .collection<ExchangeRate>("exchangeRates")
+  const exchangeRate = await exchangeRatesCollection(db)
     .findOne({ _id: countryCode });
 
   // Phase 3 — entity-participation inputs. Run in parallel since they're
@@ -166,8 +166,7 @@ export async function loadCountrySovereignSnapshots(
       .collection<PoliticalMetricsDoc>("politicalMetrics")
       .find({ countryId: { $in: known } }, { projection: { countryId: 1, values: 1 } })
       .toArray(),
-    db
-      .collection<ExchangeRate>("exchangeRates")
+    exchangeRatesCollection(db)
       .find({ _id: { $in: known } } as never, { projection: { rate: 1, rateHistory: 1 } })
       .toArray(),
     corporationsCollection<{ _id: ObjectId }>(db).findOne(

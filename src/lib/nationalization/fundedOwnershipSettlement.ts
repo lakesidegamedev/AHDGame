@@ -26,6 +26,8 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 
 /**
  * Distribute a ₳-denominated shareholder pool pro-rata across every bucket:
@@ -83,8 +85,7 @@ export async function settleFundedWholeCorpShareholderPool(
         },
       })
       .toArray(),
-    db
-      .collection<ImperialCharacter>("imperialCharacters")
+    imperialCharactersCollection(db)
       .find({
         _id: {
           $in: personalRows
@@ -96,8 +97,7 @@ export async function settleFundedWholeCorpShareholderPool(
     corporationsCollection(db)
       .find({ _id: { $in: corpRows.map((row) => new ObjectId(row.corporationId)) } })
       .toArray(),
-    db
-      .collection<IndexFund>("indexFunds")
+    indexFundsCollection(db)
       .find({ _id: { $in: fundRows.map((row) => new ObjectId(row.fundId)) } })
       .toArray(),
     getNppsCollection(db).then((npps) =>

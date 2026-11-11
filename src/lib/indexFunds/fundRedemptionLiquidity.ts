@@ -34,6 +34,7 @@ import {
   type FloatAuditContext,
 } from "./fundFloatTradePlan";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 
 export type HoldingSaleInput = {
   corporationId: ObjectId;
@@ -292,8 +293,7 @@ export async function sellFundHoldingsForRedemptionCash(
     });
     if (!saleResult) {
       // A compensated refusal consumes a generation but must not block other holdings.
-      const current = await settlementDb
-        .collection<SettlementFund>("indexFunds")
+      const current = await indexFundsCollection<SettlementFund>(settlementDb)
         .findOne({ _id: fund._id }, { projection: { floatSettlementGeneration: 1 } });
       settlementGeneration = current?.floatSettlementGeneration ?? settlementGeneration;
       continue;

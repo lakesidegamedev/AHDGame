@@ -18,6 +18,7 @@ import {
 } from "./rules/propForexFees";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 export async function loadPropForexFeeQuote(
   db: Db,
@@ -27,8 +28,7 @@ export async function loadPropForexFeeQuote(
   units: number,
   turn: number
 ) {
-  const docs = await db
-    .collection<ExchangeRate>("exchangeRates")
+  const docs = await exchangeRatesCollection(db)
     .find(
       { currencyCode: { $in: [currencyCode, foreignCurrency] } },
       {

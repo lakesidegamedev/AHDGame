@@ -4,6 +4,8 @@ import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError } from "@/lib/api/errors";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import type { Document } from "mongodb";
 
 async function releaseFundHeldShares(db: Awaited<ReturnType<typeof getDb>>): Promise<{
   corporations: number;
@@ -89,7 +91,7 @@ export async function DELETE() {
     ]);
 
     const [fundResult, posResult, txnResult, snapResult, redeemResult] = await Promise.all([
-      db.collection("indexFunds").deleteMany({}),
+      indexFundsCollection<Document>(db).deleteMany({}),
       db.collection("indexFundPositions").deleteMany({}),
       db.collection("indexFundTransactions").deleteMany({}),
       db.collection("indexFundSnapshots").deleteMany({}),

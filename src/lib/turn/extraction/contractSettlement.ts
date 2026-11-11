@@ -36,6 +36,7 @@ import {
 import { oid, type BankingTransition } from "@/lib/banking/rules/boundary";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 
 export interface ContractSettlementResult {
   contractsSettled: number;
@@ -288,8 +289,7 @@ export async function settleExtractionContracts(
     loadFxRatesByCurrency(db),
     loadTxThresholds(db),
     treasuryCashLedgerEnabled
-      ? db
-          .collection<StateBudget>("stateBudgets")
+      ? stateBudgetsCollection(db)
           .find({ _id: { $in: [...new Set(activeContracts.map((contract) => contract.stateId))] } })
           .toArray()
       : Promise.resolve([] as StateBudget[]),
@@ -702,7 +702,7 @@ export async function settleExtractionContracts(
         // State issuer → persistent state-budget royalty revenue line. $inc both
         // the dedicated field and total; calculateStateRevenue preserves + refolds
         // resourceRoyalties on the annual recompute so this survives.
-        const stateCredit = await db.collection<StateBudget>("stateBudgets").updateOne(
+        const stateCredit = await stateBudgetsCollection(db).updateOne(
           { _id: contract.stateId, countryId },
           {
             $inc: { "revenue.resourceRoyalties": amountLocal, "revenue.total": amountLocal },

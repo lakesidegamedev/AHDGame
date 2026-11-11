@@ -25,6 +25,7 @@ import { COUNTRY_CURRENCY_MAP, eraRateForCurrency } from "@/lib/constants/curren
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import type { ExchangeRate } from "@/lib/db/types";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 // Re-exported so server-side callers keep importing them from here. The
 // definitions live in the client-safe module because two client components need
 // them, and this file reaches `mongodb` — see corpWalletSpend.ts.
@@ -221,7 +222,7 @@ export async function getCorpFxRate(db: Db, corp: CorpCapitalCurrencyInfo): Prom
   const code = resolveCorpLiquidCurrencyCode(corp);
   // Only pre-forex corps (no resolvable code) skip conversion. USD is forex-active.
   if (!code) return 1.0;
-  const doc = await db.collection<ExchangeRate>("exchangeRates").findOne({ currencyCode: code });
+  const doc = await exchangeRatesCollection(db).findOne({ currencyCode: code });
   if (doc?.rate && doc.rate > 0) return doc.rate;
   return (await eraFallbackRate(db, code)) ?? 1.0;
 }
@@ -233,7 +234,7 @@ export async function getCorpFxRate(db: Db, corp: CorpCapitalCurrencyInfo): Prom
  * rate, then 1.0.
  */
 export async function getCurrencyFxRate(db: Db, code: CurrencyCode): Promise<number> {
-  const doc = await db.collection<ExchangeRate>("exchangeRates").findOne({ currencyCode: code });
+  const doc = await exchangeRatesCollection(db).findOne({ currencyCode: code });
   if (doc?.rate && doc.rate > 0) return doc.rate;
   return (await eraFallbackRate(db, code)) ?? 1.0;
 }
@@ -252,7 +253,7 @@ export async function getSectorHostFxRate(
 ): Promise<number> {
   const code = resolveSectorHostCurrencyCode(sector, corp);
   if (!code) return 1.0;
-  const doc = await db.collection<ExchangeRate>("exchangeRates").findOne({ currencyCode: code });
+  const doc = await exchangeRatesCollection(db).findOne({ currencyCode: code });
   if (doc?.rate && doc.rate > 0) return doc.rate;
   return (await eraFallbackRate(db, code)) ?? 1.0;
 }
@@ -329,8 +330,7 @@ export async function loadFxRatesByCurrency(db: Db): Promise<Map<CurrencyCode, n
   }
 
   if (!fxRateCachePromise) {
-    fxRateCachePromise = db
-      .collection<ExchangeRate>("exchangeRates")
+    fxRateCachePromise = exchangeRatesCollection(db)
       .find({})
       .toArray()
       .then((docs) => {

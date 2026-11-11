@@ -32,6 +32,8 @@ import type { CorporationLookups, CorpSnapshot } from "./types";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 
 /**
  * v2: persist the per-state labour wage index (+ v2-3b: automation index) to
@@ -425,8 +427,7 @@ export async function updateCorporateTaxBases(args: {
     new Set([...domesticIncomeByOperatingState.keys(), ...foreignIncomeByOperatingState.keys()])
   );
   if (operatingStates.length > 0) {
-    const operatingStateBudgets = await db
-      .collection<StateBudget>("stateBudgets")
+    const operatingStateBudgets = await stateBudgetsCollection(db)
       .find({ _id: { $in: operatingStates } }, { projection: { _id: 1, stateGdp: 1 } })
       .toArray();
     const stateTaxBaseOps: AnyBulkWriteOperation<StateBudget>[] = operatingStateBudgets.map(
@@ -453,7 +454,7 @@ export async function updateCorporateTaxBases(args: {
       }
     );
     if (stateTaxBaseOps.length > 0) {
-      await db.collection<StateBudget>("stateBudgets").bulkWrite(stateTaxBaseOps);
+      await stateBudgetsCollection(db).bulkWrite(stateTaxBaseOps);
     }
   }
 
@@ -654,8 +655,7 @@ export async function emitCorporationTurnTx(args: {
           .toArray()
       : Promise.resolve([] as Pick<Character, "_id" | "name">[]),
     allImperialIds.length > 0
-      ? db
-          .collection<ImperialCharacter>("imperialCharacters")
+      ? imperialCharactersCollection(db)
           .find({ _id: { $in: allImperialIds } }, { projection: { _id: 1, name: 1 } })
           .toArray()
       : Promise.resolve([] as Pick<ImperialCharacter, "_id" | "name">[]),

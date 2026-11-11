@@ -3,6 +3,7 @@ import type { IndexFund, IndexFundPosition } from "@/lib/db/types";
 import { INDEX_FUND_INITIAL_NAV } from "@/lib/indexFunds/unitAccounting";
 import type { Migration, MigrationContext, MigrationResult } from "../types";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 
 type FundState = Pick<
   IndexFund,
@@ -28,8 +29,7 @@ async function repairOrphanIndexFundState(db: Db, ctx: MigrationContext): Promis
     .toArray();
   const liveIds = new Set(liveCorporations.map((corporation) => corporation._id.toString()));
 
-  const funds = await db
-    .collection<FundState>("indexFunds")
+  const funds = await indexFundsCollection<FundState>(db)
     .find(
       {},
       {
@@ -170,7 +170,7 @@ async function repairOrphanIndexFundState(db: Db, ctx: MigrationContext): Promis
   }
   let updated = 0;
   if (fundOps.length > 0) {
-    const result = await db.collection<FundState>("indexFunds").bulkWrite(fundOps);
+    const result = await indexFundsCollection<FundState>(db).bulkWrite(fundOps);
     updated = result.modifiedCount;
   }
   return { documentsScanned: funds.length, documentsUpdated: updated, notes };

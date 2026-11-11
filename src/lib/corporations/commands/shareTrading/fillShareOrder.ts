@@ -76,6 +76,9 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 
 interface RouteParams {
   params: Promise<{ id: string; orderId: string }>;
@@ -119,8 +122,7 @@ export async function fillShareOrder(request: Request, { params }: RouteParams) 
       return errorResponse(400, "Invalid order ID");
     }
 
-    const loadedOrder = await db
-      .collection<ShareOrder>("shareOrders")
+    const loadedOrder = await shareOrdersCollection(db)
       .findOne({ _id: new ObjectId(orderId) });
 
     if (!loadedOrder) return errorResponse(404, "Order not found");
@@ -166,7 +168,7 @@ export async function fillShareOrder(request: Request, { params }: RouteParams) 
     let fillerCreated: { createdTurn?: number | null; createdAt?: Date | string | null };
 
     if (isImperialFiller) {
-      const imperial = await db.collection<ImperialCharacter>("imperialCharacters").findOne({
+      const imperial = await imperialCharactersCollection(db).findOne({
         _id: userDoc!.activeImperialCharacterId!,
         userId: new ObjectId(auth.user.userId),
       });
@@ -272,7 +274,7 @@ export async function fillShareOrder(request: Request, { params }: RouteParams) 
     const currentTurn = await getCurrentTurn(db);
     const sellerFund =
       order.type === "sell" && order.placerFundId
-        ? await db.collection<IndexFund>("indexFunds").findOne({ _id: order.placerFundId })
+        ? await indexFundsCollection(db).findOne({ _id: order.placerFundId })
         : null;
     if (order.type === "sell" && order.placerFundId && !sellerFund) {
       return errorResponse(404, "Liquidity-provider fund not found");
@@ -389,8 +391,7 @@ export async function fillShareOrder(request: Request, { params }: RouteParams) 
           : sh.characterId?.toString() === fillerId.toString()
       );
       const fillerOwnedShares = fillerEntry?.shares ?? 0;
-      const openSellOrders = await db
-        .collection<ShareOrder>("shareOrders")
+      const openSellOrders = await shareOrdersCollection(db)
         .find({
           corporationId: corporation._id,
           characterId: fillerId,
@@ -562,7 +563,7 @@ export async function fillShareOrder(request: Request, { params }: RouteParams) 
       })
     );
 
-    const claimedOrder = await db.collection<ShareOrder>("shareOrders").findOneAndUpdate(
+    const claimedOrder = await shareOrdersCollection(db).findOneAndUpdate(
       {
         ...buildShareFillClaimFilter(order._id, shares),
         sharesRemaining: order.sharesRemaining,
@@ -601,8 +602,7 @@ export async function fillShareOrder(request: Request, { params }: RouteParams) 
       if (order.lastShareFillKey === undefined) {
         restoreUpdate.$unset = { ...restoreUpdate.$unset, lastShareFillKey: "" };
       }
-      await db
-        .collection<ShareOrder>("shareOrders")
+      await shareOrdersCollection(db)
         .updateOne({ _id: order._id, activeShareFillKey: fillKey }, restoreUpdate);
     };
 

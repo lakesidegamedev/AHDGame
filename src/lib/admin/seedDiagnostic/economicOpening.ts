@@ -28,12 +28,14 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import type { Document } from "mongodb";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 export async function checkEconomicOpening(db: Db, preset: string): Promise<SeedDiagnosticCheck[]> {
   if (preset !== "1991-default") return [];
   const [fx, banks, budgets, corporations, sectors, resources, macro, bonds, funds] =
     await Promise.all([
-      db.collection<ExchangeRate>("exchangeRates").find({}).toArray(),
+      exchangeRatesCollection(db).find({}).toArray(),
       centralBanksCollection<{ countryId: string; primeRate: number }>(db).find({}).toArray(),
       federalBudgetCollection(db).find({}).toArray(),
       corporationsCollection(db).find({}).toArray(),
@@ -41,7 +43,7 @@ export async function checkEconomicOpening(db: Db, preset: string): Promise<Seed
       db.collection<StateResourceCapacity>("stateResourceCapacity").find({}).toArray(),
       db.collection<MacroCountryState>("macroCountries").find({}).toArray(),
       bondsCollection(db).find({ issuerType: "sovereign", defaulted: false }).toArray(),
-      db.collection("indexFunds").find({}).toArray(),
+      indexFundsCollection<Document>(db).find({}).toArray(),
     ]);
   const checks: SeedDiagnosticCheck[] = [];
   const assert = (scope: string, metric: string, valid: boolean, note?: string) => {

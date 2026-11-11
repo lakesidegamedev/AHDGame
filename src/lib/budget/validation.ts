@@ -30,6 +30,7 @@ import { resolveNationalGdpPerCapita, resolveNationalMedianIncome } from "./spen
 import { getEraContext } from "@/lib/era/context";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 
 /** Era year for the cost basis; defensive so a mock db (no gameState) ⇒ flag off. */
 async function resolveEraYear(db: Db): Promise<number | null> {
@@ -201,7 +202,7 @@ export async function validateStateBudgetImpact(
     : null;
   const stateBudget = regionalBudget
     ? null
-    : await db.collection<StateBudget>("stateBudgets").findOne({ _id: stateId, countryId });
+    : await stateBudgetsCollection(db).findOne({ _id: stateId, countryId });
   if (!regionalBudget && !stateBudget) {
     return { allowed: true, costAmount: 0, newTotalSpending: 0 };
   }

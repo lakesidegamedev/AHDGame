@@ -4,6 +4,7 @@ import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError } from "@/lib/api/errors";
 import type { ShareListing, ShareOrder } from "@/lib/db/types";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
 
 /**
  * POST /api/admin/heal/corporation-shares
@@ -24,8 +25,7 @@ export async function POST() {
     // Legacy unflagged character orders retain holdings and must not count twice.
     // Open listings also debit at creation and belong in the issued-share total.
     const reservedByCorp = new Map<string, number>();
-    const openSellOrders = await db
-      .collection<ShareOrder>("shareOrders")
+    const openSellOrders = await shareOrdersCollection(db)
       .find({
         type: "sell",
         status: "open",

@@ -23,6 +23,7 @@ import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 function resolveCountryId(character: Pick<Character, "countryId">): CountryId {
   return character.countryId as CountryId;
@@ -273,7 +274,7 @@ export async function GET(request: Request) {
       // Fetch exchange rates for accurate cross-currency wealth comparison
       const rateMap = forexEnabled
         ? (Object.fromEntries(
-            (await db.collection<ExchangeRate>("exchangeRates").find({}).toArray()).map((r) => [
+            (await exchangeRatesCollection(db).find({}).toArray()).map((r) => [
               r.currencyCode,
               r.rate,
             ])

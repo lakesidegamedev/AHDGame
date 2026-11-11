@@ -26,6 +26,7 @@ import { computeAccountedShares } from "@/lib/corporations/shareInvariant";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { errorResponse } from "@/lib/api/errors";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
 
 export const resolveCharName = async (
   db: Db,
@@ -295,8 +296,7 @@ export async function checkTotalSharesAfterFill(db: Db, corporationId: ObjectId)
         .collection<ShareListing>("shareListings")
         .find({ corporationId, status: "open" })
         .toArray(),
-      db
-        .collection<ShareOrder>("shareOrders")
+      shareOrdersCollection(db)
         .find({
           corporationId,
           type: "sell",

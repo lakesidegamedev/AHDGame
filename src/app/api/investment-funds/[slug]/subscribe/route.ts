@@ -47,6 +47,8 @@ import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { subscribeIndexFundSchema } from "@/lib/api/schemas/indexFunds";
 import { recordAudit } from "@/lib/audit/recordAudit";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import type { Document } from "mongodb";
 
 class FundQuoteMovedError extends Error {}
 
@@ -241,7 +243,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
           // Increment fund unit supply and cash anchor.
           // A national fund is re-marked each tick; the units were priced at the
           // quote read above, so a moved NAV must not take this credit.
-          const credit = await db.collection("indexFunds").updateOne(
+          const credit = await indexFundsCollection<Document>(db).updateOne(
             {
               _id: fund._id,
               ...(fund.nationalIndex ? { quotedNav: fund.quotedNav } : {}),
@@ -283,7 +285,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
           // Reverse in the exact reverse of the apply order.
           if (fundCredited) {
             await compensate(async () => {
-              await db.collection("indexFunds").updateOne(
+              await indexFundsCollection<Document>(db).updateOne(
                 { _id: fund._id },
                 {
                   $inc: { unitSupply: -units, cashAnchor: -totalCostAnchor },

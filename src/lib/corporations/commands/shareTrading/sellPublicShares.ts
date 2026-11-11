@@ -71,6 +71,8 @@ import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
 import { fillBestBuyOrderForMarketSell } from "@/lib/corporations/commands/shareTrading/fillBestBuyOrder";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -215,7 +217,7 @@ export async function sellPublicShares(request: Request, { params }: RouteParams
       // Corp sell path — resolve CEO from correct collection
       let ceoId: ObjectId;
       if (isImperialMode) {
-        const imperial = await db.collection<ImperialCharacter>("imperialCharacters").findOne({
+        const imperial = await imperialCharactersCollection(db).findOne({
           _id: userDoc!.activeImperialCharacterId!,
           userId: new ObjectId(basicAuth.user.userId),
         });
@@ -405,7 +407,7 @@ export async function sellPublicShares(request: Request, { params }: RouteParams
 
     if (isImperialMode) {
       // ── Imperial character sell path ────────────────────────────
-      const imperial = await db.collection<ImperialCharacter>("imperialCharacters").findOne({
+      const imperial = await imperialCharactersCollection(db).findOne({
         _id: userDoc!.activeImperialCharacterId!,
         userId: new ObjectId(basicAuth.user.userId),
       });
@@ -595,7 +597,7 @@ export async function sellPublicShares(request: Request, { params }: RouteParams
             )
           )
         : undefined;
-      const sellerCredit = await db.collection<ImperialCharacter>("imperialCharacters").updateOne(
+      const sellerCredit = await imperialCharactersCollection(db).updateOne(
         { _id: imperial._id },
         {
           $inc: {
@@ -746,8 +748,7 @@ export async function sellPublicShares(request: Request, { params }: RouteParams
     // (see orders POST — character path). Subtract their remaining quantity from
     // the available pool so a market sell can't race a pending limit order and
     // later produce phantom shares when the limit order silently fills.
-    const openCharSellOrders = await db
-      .collection<ShareOrder>("shareOrders")
+    const openCharSellOrders = await shareOrdersCollection(db)
       .find({
         corporationId: corporation._id,
         characterId: charDoc._id,

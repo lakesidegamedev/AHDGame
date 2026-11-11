@@ -4,6 +4,7 @@ import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import { corporateTaxApprovalForCountry } from "@/lib/resetLegislation/rules/voterReactions";
 import type { FiscalScope } from "./types";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 
 /** Undefined preserves legacy display for other types; empty means no known reaction. */
 export async function corporateTaxApprovalPreview(
@@ -23,8 +24,7 @@ export async function corporateTaxApprovalPreview(
           { projection: { taxRates: 1, taxRatePhaseIn: 1 } }
         )
       : scope.scope === "region"
-        ? await db
-            .collection<StateBudget>("stateBudgets")
+        ? await stateBudgetsCollection(db)
             .findOne(
               { _id: scope.regionId, countryId: scope.countryId },
               { projection: { taxRates: 1 } }

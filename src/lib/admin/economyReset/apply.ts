@@ -64,6 +64,8 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 type Log = (message: string) => void;
 
@@ -146,8 +148,7 @@ async function phaseHolders(db: Db, plan: EconomyResetPlan): Promise<void> {
       },
     }))
   );
-  const imperials = await db
-    .collection<Document>("imperialCharacters")
+  const imperials = await imperialCharactersCollection<Document>(db)
     .find({}, { projection: { initialIncomeTier: 1 } })
     .toArray();
   await bulk(
@@ -504,11 +505,10 @@ async function phaseReseedPrices(db: Db, plan: EconomyResetPlan, log: Log): Prom
   // A federation that dissolved may have moved to a new currency; the seed
   // table only knows the preset's opening one, so the live code is kept.
   const dissolved = await loadDissolvedFederations(db, plan.preset);
-  const liveCodes = await db
-    .collection<{ _id: string; currencyCode: string }>("exchangeRates")
+  const liveCodes = await exchangeRatesCollection<{ _id: string; currencyCode: string }>(db)
     .find({ _id: { $in: dissolved } }, { projection: { currencyCode: 1 } })
     .toArray();
-  await db.collection("exchangeRates").deleteMany({});
+  await exchangeRatesCollection<Document>(db).deleteMany({});
   await centralBanksCollection(db).updateMany(
     {},
     { $set: { ...CENTRAL_BANK_HISTORY_RESET, updatedAt: new Date() } }
@@ -516,7 +516,7 @@ async function phaseReseedPrices(db: Db, plan: EconomyResetPlan, log: Log): Prom
   const { seedForex } = await import("@/lib/admin/seed/seedForex");
   await seedForex(db, log, plan.preset);
   if (liveCodes.length > 0)
-    await db.collection<{ _id: string; currencyCode: string }>("exchangeRates").bulkWrite(
+    await exchangeRatesCollection<{ _id: string; currencyCode: string }>(db).bulkWrite(
       liveCodes.map((row) => ({
         updateOne: {
           filter: { _id: row._id },
@@ -551,8 +551,7 @@ async function phaseWitness(
         { projection: { legs: 1 } }
       )
       .toArray(),
-    db
-      .collection<{ currencyCode: string; rate: number }>("exchangeRates")
+    exchangeRatesCollection<{ currencyCode: string; rate: number }>(db)
       .find({}, { projection: { currencyCode: 1, rate: 1 } })
       .toArray(),
   ]);

@@ -14,6 +14,7 @@ import {
   type MetricLawSettlement,
 } from "./rules/lawDelivery";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 
 export async function loadMetricLawDelivery(
   db: Db,
@@ -109,8 +110,7 @@ export async function loadMetricLawDelivery(
           .toArray()
       : Promise.resolve([]),
     us.length
-      ? db
-          .collection<StateBudget>("stateBudgets")
+      ? stateBudgetsCollection(db)
           .find(
             { _id: { $in: us }, countryId: "US" },
             { projection: { _id: 1, countryId: 1, regionalProgramSettlements: 1 } }

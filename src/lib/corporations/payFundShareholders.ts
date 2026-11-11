@@ -7,6 +7,7 @@ import type {
   NppShareholderPayoutRow,
 } from "@/lib/bonds/corporateBondDefault";
 import { getNppsCollection } from "@/lib/db/collections/npps";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 
 /**
  * Pay index-fund shareholders their ₳ slice of a wound-down corporation's
@@ -49,8 +50,7 @@ export async function payFundShareholderRows(
     ledger && fundRows.length > 0
       ? new Map(
           (
-            await db
-              .collection<IndexFund>("indexFunds")
+            await indexFundsCollection(db)
               .find(
                 {
                   _id: {
@@ -66,7 +66,7 @@ export async function payFundShareholderRows(
   let totalPaidAnchor = 0;
   for (const row of fundRows) {
     if (row.payout <= 0) continue;
-    await db.collection<IndexFund>("indexFunds").updateOne(
+    await indexFundsCollection(db).updateOne(
       { _id: new ObjectId(row.fundId) },
       {
         $inc: { cashAnchor: row.payout },

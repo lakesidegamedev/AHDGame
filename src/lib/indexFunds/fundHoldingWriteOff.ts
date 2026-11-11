@@ -9,6 +9,7 @@ import {
   updateFundHoldings,
 } from "@/lib/indexFunds/fundQueries";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 
 export interface DeadHoldingWriteOffResult {
   /** Holdings removed at zero because the corporation no longer exists. */
@@ -122,8 +123,7 @@ export async function writeOffFundHoldingsInDissolvedCorporation(
   corporationId: ObjectId,
   now: Date
 ): Promise<{ fundCount: number; writtenOffValueAnchor: number }> {
-  const funds = await db
-    .collection<IndexFund>("indexFunds")
+  const funds = await indexFundsCollection(db)
     .find(
       { "holdings.corporationId": corporationId },
       { projection: { _id: 1, quotedNav: 1, holdings: 1 } }
@@ -154,7 +154,7 @@ export async function writeOffFundHoldingsInDissolvedCorporation(
   }
 
   if (fundIds.length > 0) {
-    await db.collection<IndexFund>("indexFunds").updateMany({ _id: { $in: fundIds } }, {
+    await indexFundsCollection(db).updateMany({ _id: { $in: fundIds } }, {
       $pull: { holdings: { corporationId } },
       $set: { updatedAt: now },
     } as unknown as UpdateFilter<IndexFund>);

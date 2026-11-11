@@ -79,6 +79,7 @@ import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import type { Document } from "mongodb";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 
 // The current turn engine still processes fiscal-year rollover as one shared phase.
 // Pulling the anchor from country-systems makes the rule source explicit now, while
@@ -781,8 +782,7 @@ async function processStateFiscalYear(
   legislationTypeMap: ReadonlyMap<string, LegislationType> = new Map(),
   resetPrograms: readonly ResetLawProgramDocument[] = []
 ): Promise<void> {
-  const stateBudget = await db
-    .collection<StateBudget>("stateBudgets")
+  const stateBudget = await stateBudgetsCollection(db)
     .findOne({ _id: stateId, countryId });
   if (!stateBudget) {
     // State budget doesn't exist yet, skip
@@ -819,7 +819,7 @@ async function processStateFiscalYear(
         : newStateGdp * (1 + economicFactors.gdpGrowth / 100);
 
     // Update tax bases in DB before revenue calculation
-    await db.collection<StateBudget>("stateBudgets").updateOne(
+    await stateBudgetsCollection(db).updateOne(
       { _id: stateId, countryId },
       {
         $set: {
@@ -941,7 +941,7 @@ async function processStateFiscalYear(
   // Update balance (accumulated surplus/deficit over time)
   const newBalance = (stateBudget.balance ?? 0) + surplus;
 
-  await db.collection<StateBudget>("stateBudgets").updateOne(
+  await stateBudgetsCollection(db).updateOne(
     { _id: stateId, countryId },
     {
       $set: {
@@ -1035,8 +1035,7 @@ export async function saveFiscalYearSnapshot(
       .toArray(),
     // Scope the budget fetch to the same country so a cross-country state-ID
     // collision (e.g. CN HB / DE HB) can't surface the wrong budget below.
-    db
-      .collection<StateBudget>("stateBudgets")
+    stateBudgetsCollection(db)
       .find({ countryId } as Record<string, unknown>)
       .toArray(),
   ]);

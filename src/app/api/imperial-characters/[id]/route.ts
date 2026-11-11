@@ -5,6 +5,7 @@ import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
 import { getImperialTitle } from "@/lib/imperial";
 import { fetchBordersByUserIds } from "@/lib/db/patreonBorders";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 
 /**
  * GET /api/imperial-characters/[id] — Fetch imperial character by sequential ID.
@@ -20,8 +21,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     }
 
     const db = await getDb();
-    const imperial = await db
-      .collection<ImperialCharacter>("imperialCharacters")
+    const imperial = await imperialCharactersCollection(db)
       .findOne({ sequentialId });
 
     if (!imperial) {

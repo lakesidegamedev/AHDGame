@@ -41,6 +41,9 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { resolveCorpLiquidCurrencyCode } from "@/lib/currency/corporationCapital";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import type { Document } from "mongodb";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -250,8 +253,7 @@ export async function POST(request: Request, { params }: RouteParams) {
               .toArray()
           : Promise.resolve([] as { _id: ObjectId; name: string }[]),
         imperialIds.length > 0
-          ? db
-              .collection<ImperialCharacter>("imperialCharacters")
+          ? imperialCharactersCollection(db)
               .find({ _id: { $in: imperialIds } })
               .project<{ _id: ObjectId; name: string }>({ name: 1 })
               .toArray()
@@ -359,15 +361,14 @@ export async function POST(request: Request, { params }: RouteParams) {
     // apart on every split).
     const fundSyncs = planFundHoldingSplitSync(newShareholders, oldTotal, targetTotalShares);
     for (const sync of fundSyncs) {
-      await db
-        .collection("indexFunds")
+      await indexFundsCollection<Document>(db)
         .updateOne(
           { _id: sync.fundId, "holdings.corporationId": corporation._id },
           { $set: { "holdings.$.shares": sync.newShares, updatedAt: now } }
         );
       // Scale per-share cost basis only where it exists, so a missing field is
       // never coerced to 0 by $mul.
-      await db.collection("indexFunds").updateOne(
+      await indexFundsCollection<Document>(db).updateOne(
         {
           _id: sync.fundId,
           holdings: {
@@ -412,8 +413,7 @@ export async function POST(request: Request, { params }: RouteParams) {
               .toArray()
           : Promise.resolve([] as { _id: ObjectId; name: string }[]),
         ownerIds.imperialIds.size > 0
-          ? db
-              .collection<ImperialCharacter>("imperialCharacters")
+          ? imperialCharactersCollection(db)
               .find({
                 _id: { $in: [...ownerIds.imperialIds].map((s) => new ObjectId(s)) },
               })
@@ -429,8 +429,7 @@ export async function POST(request: Request, { params }: RouteParams) {
               .toArray()
           : Promise.resolve([] as { _id: ObjectId; name: string }[]),
         ownerIds.fundIds.size > 0
-          ? db
-              .collection("indexFunds")
+          ? indexFundsCollection<Document>(db)
               .find({
                 _id: { $in: [...ownerIds.fundIds].map((s) => new ObjectId(s)) },
               })

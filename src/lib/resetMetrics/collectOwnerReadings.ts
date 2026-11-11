@@ -56,6 +56,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 
 let openingCalibrationCache: {
   gross: ReturnType<typeof openingGrossPurchasingInputs1991>;
@@ -284,8 +285,7 @@ export async function collectResetMetricOwnerReadings(
     ]),
   ];
   const modeledRegionalTaxes = modeledCountryIds.length
-    ? await db
-        .collection<StateBudget>("stateBudgets")
+    ? await stateBudgetsCollection(db)
         .find(
           { _id: { $in: regionalIds }, countryId: { $in: modeledCountryIds } },
           { projection: { _id: 1, countryId: 1, taxRates: 1 } }

@@ -30,6 +30,7 @@ import { listCharacterPositions, listFundsByIds } from "@/lib/indexFunds/fundQue
 import { enrichFundPositions } from "@/lib/indexFunds/fundPortfolioView";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 
 // The current corporation is read here, so this endpoint must never serve a
 // stale body: a positive max-age let the browser return a pre-founding
@@ -64,8 +65,7 @@ export async function GET(request?: Request) {
       .collection<User>("users")
       .findOne({ _id: new ObjectId(authUser.userId) });
     if (userDoc?.activeCharacterType === "imperial" && userDoc.activeImperialCharacterId) {
-      const imperial = await db
-        .collection<ImperialCharacter>("imperialCharacters")
+      const imperial = await imperialCharactersCollection(db)
         .findOne({ _id: userDoc.activeImperialCharacterId, userId: new ObjectId(authUser.userId) });
 
       if (imperial) {

@@ -36,6 +36,8 @@ import {
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import type { Document } from "mongodb";
 
 const FUND_TX = "indexFundTransactions";
 
@@ -116,8 +118,7 @@ export async function charterFund(db: Db, input: CharterFundInput): Promise<Char
   const name = input.name.trim();
 
   const eligibility = await fundCreationEligibility(db, sponsor, {
-    replay: !!(await db
-      .collection("indexFunds")
+    replay: !!(await indexFundsCollection<Document>(db)
       .findOne({ slug: sponsoredFundSlug(tickerSymbol), sponsorCorporationId: sponsor._id })),
   });
   if (eligibility) return { ok: false, status: 403, error: eligibility };
@@ -139,8 +140,7 @@ async function commitCharter(
       error: "Corporation ownership changed. Reload before creating a fund.",
     };
   const eligibility = await fundCreationEligibility(db, sponsor, {
-    replay: !!(await db
-      .collection("indexFunds")
+    replay: !!(await indexFundsCollection<Document>(db)
       .findOne({ slug: sponsoredFundSlug(tickerSymbol), sponsorCorporationId: sponsor._id })),
   });
   if (eligibility) return { ok: false, status: 403, error: eligibility };
@@ -217,7 +217,7 @@ async function commitCharter(
   if (invalid) return { ok: false, status: 400, error: invalid };
   const { currentTurn } = input;
   const slug = sponsoredFundSlug(tickerSymbol);
-  const prior = await db.collection<IndexFund>("indexFunds").findOne({ slug });
+  const prior = await indexFundsCollection(db).findOne({ slug });
   if (
     prior &&
     prior.seedAccounting === "paid_units" &&
@@ -237,8 +237,8 @@ async function commitCharter(
   // Ticker must not collide with an existing fund OR an existing corporation:
   // the two share a namespace on every market surface in the game.
   const [tickerTaken, slugTaken, corpTickerTaken] = await Promise.all([
-    db.collection<IndexFund>("indexFunds").countDocuments({ tickerSymbol }),
-    db.collection<IndexFund>("indexFunds").countDocuments({ slug }),
+    indexFundsCollection(db).countDocuments({ tickerSymbol }),
+    indexFundsCollection(db).countDocuments({ slug }),
     corporationsCollection(db).countDocuments({ tickerSymbol }),
   ]);
   if (tickerTaken > 0 || slugTaken > 0 || corpTickerTaken > 0)

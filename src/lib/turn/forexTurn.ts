@@ -72,6 +72,7 @@ import {
 } from "./forexLimitOrders";
 import { getCharactersCollection } from "@/lib/db/collections/characters";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 export interface ForexTurnResult {
   countriesUpdated: number;
@@ -174,8 +175,7 @@ export async function processForexTurn(
   const volumes = await computeCurrencyVolumes(db, currentTurn, euroUnion);
 
   // Pre-fetch all existing exchange rates in one query
-  const existingRateDocs = await db
-    .collection<ExchangeRate>("exchangeRates")
+  const existingRateDocs = await exchangeRatesCollection(db)
     .find({ _id: { $in: activeCountries } })
     .toArray();
   const rateMap = new Map(existingRateDocs.map((r) => [r._id, r]));
@@ -281,7 +281,7 @@ export async function processForexTurn(
         sellVolume24: 0,
         updatedAt: now,
       };
-      await db.collection<ExchangeRate>("exchangeRates").insertOne(existingRate);
+      await exchangeRatesCollection(db).insertOne(existingRate);
     }
 
     const macro = extractMacroInputs(bank);
@@ -510,7 +510,7 @@ export async function processForexTurn(
       for (const key of ["rate", "macroTarget", "rateHistory", "interventionPolicy"])
         delete setFields[key];
     }
-    await db.collection<ExchangeRate>("exchangeRates").updateOne(
+    await exchangeRatesCollection(db).updateOne(
       { _id: countryId },
       {
         $set: setFields,
@@ -558,7 +558,7 @@ export async function processForexTurn(
       });
     }
     if (writes.length) {
-      const result = await db.collection<ExchangeRate>("exchangeRates").bulkWrite(writes);
+      const result = await exchangeRatesCollection(db).bulkWrite(writes);
       if (result.matchedCount !== writes.length)
         throw new Error("A euro member quotation could not be persisted");
       countriesUpdated += writes.length;

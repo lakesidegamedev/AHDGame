@@ -167,6 +167,8 @@ import { getGameStateCollection } from "@/lib/db/collections/gameState";
 import { TREATY_TRADE_DIRECTIVE_KEYS } from "@/lib/trade/rules/treatyTrade";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 export interface CommodityPriceTurnResult {
   commoditiesUpdated: number;
@@ -387,8 +389,7 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
         }
       )
       .toArray(),
-    db
-      .collection<ExchangeRate>("exchangeRates")
+    exchangeRatesCollection(db)
       .find({})
       .project<Pick<ExchangeRate, "_id" | "currencyCode" | "rate">>({ currencyCode: 1, rate: 1 })
       .toArray(),
@@ -427,8 +428,7 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
         }
       )
       .toArray(),
-    db
-      .collection<StateBudget>("stateBudgets")
+    stateBudgetsCollection(db)
       .find({}, { projection: { stateId: 1, stateGdp: 1 } })
       .toArray(),
   ]);

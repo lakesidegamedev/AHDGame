@@ -35,6 +35,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 export class TreasuryReserveTransferRejected extends Error {
   constructor(
@@ -170,8 +171,7 @@ async function prepare(db: Db, command: Command): Promise<void> {
   };
   const projections: TransitionProjection[] = [];
   const [rate, state, thresholds, cadence] = await Promise.all([
-    db
-      .collection<{ currencyCode: string; rate: number }>("exchangeRates")
+    exchangeRatesCollection<{ currencyCode: string; rate: number }>(db)
       .findOne({ currencyCode: currency }, { projection: { rate: 1 } }),
     gameStateCollection<{ _id: string; preset?: string }>(db).findOne(
       { _id: "current" },

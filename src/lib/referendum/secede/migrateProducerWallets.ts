@@ -7,6 +7,7 @@ import { emitLedgerEntries } from "@/lib/ledger/emit";
 import type { LedgerEntryInput } from "@/lib/ledger/types";
 import { splitProducerWallets, remapProducerPayables } from "./rules/producerWallets";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 /** Called inside the enclosing independence transaction, before the old region is removed. */
 export async function migrateProducerWallets(
@@ -44,8 +45,7 @@ export async function migrateProducerWallets(
     if (pending.pendingMoneyMoveReceipt || pending.pendingSettlementProjection)
       throw new Error("A producer wallet payment must settle before independence");
   }
-  const rates = await db
-    .collection<ExchangeRate>("exchangeRates")
+  const rates = await exchangeRatesCollection(db)
     .find(
       { currencyCode: { $in: [...new Set(source.map((row) => row.currency as CurrencyCode))] } },
       { projection: { currencyCode: 1, rate: 1 } }

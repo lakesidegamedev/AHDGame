@@ -1,5 +1,6 @@
 import { ObjectId, type Db } from "mongodb";
 import type { IndexFund } from "@/lib/db/types";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 
 const REDEMPTION_LOCK_TTL_MS = 20 * 60 * 1000;
 
@@ -15,7 +16,7 @@ export async function claimFundRedemptionLock(
 ): Promise<(() => Promise<void>) | null> {
   const token = new ObjectId();
   const expiresAt = new Date(now.getTime() + REDEMPTION_LOCK_TTL_MS);
-  const claim = await db.collection<IndexFund>("indexFunds").updateOne(
+  const claim = await indexFundsCollection(db).updateOne(
     {
       _id: fundId,
       $or: [{ redemptionLock: { $exists: false } }, { "redemptionLock.expiresAt": { $lte: now } }],
@@ -30,8 +31,7 @@ export async function claimFundRedemptionLock(
   if (claim.matchedCount === 0) return null;
 
   return async () => {
-    await db
-      .collection<IndexFund>("indexFunds")
+    await indexFundsCollection(db)
       .updateOne(
         { _id: fundId, "redemptionLock.token": token },
         { $unset: { redemptionLock: "" }, $set: { updatedAt: new Date() } }

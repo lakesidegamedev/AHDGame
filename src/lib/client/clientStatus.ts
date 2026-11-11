@@ -64,6 +64,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 
 // GET /api/client-status — Returns status bar enrichment data (funds, corp, election stats, income).
 // Auth: requireBasicAuth
@@ -115,8 +116,7 @@ export async function handleClientStatus(request: Request) {
       user?.activeCharacterType === "imperial" && !!user?.activeImperialCharacterId;
 
     if (isImperialMode) {
-      const imperial = await db
-        .collection<ImperialCharacter>("imperialCharacters")
+      const imperial = await imperialCharactersCollection(db)
         .findOne({ _id: user!.activeImperialCharacterId!, userId: new ObjectId(userId) });
       if (!imperial) {
         return NextResponse.json(

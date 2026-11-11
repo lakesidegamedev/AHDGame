@@ -20,6 +20,7 @@ import { loadViewerCharacter } from "./viewerContext";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 
 export interface OfficeDashboardWidgetData {
   scope: "state" | "nation";
@@ -71,8 +72,7 @@ async function stateOffice(
       : null,
     parliamentary
       ? null
-      : db
-          .collection<StateBudget>("stateBudgets")
+      : stateBudgetsCollection(db)
           .findOne({ _id: stateId, countryId }, { projection: { revenue: 1, spending: 1 } }),
   ]);
   if (!state) return null;

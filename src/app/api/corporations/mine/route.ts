@@ -6,6 +6,7 @@ import { getCorporationsCollection } from "@/lib/db/collections/corporations";
 import type { User, ImperialCharacter } from "@/lib/db/types";
 import { corporationPathIdFromDoc } from "@/lib/api/corporations/resolveQuery";
 import { handleRouteError } from "@/lib/api/errors";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 
 export const dynamic = "force-dynamic";
 
@@ -37,8 +38,7 @@ export async function GET(request: Request) {
     const imperial = user.activeCharacterType === "imperial";
     const character = imperial
       ? user.activeImperialCharacterId
-        ? await db
-            .collection<ImperialCharacter>("imperialCharacters")
+        ? await imperialCharactersCollection(db)
             .findOne({ _id: user.activeImperialCharacterId, userId }, { projection: { _id: 1 } })
         : null
       : await (

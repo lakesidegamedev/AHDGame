@@ -12,6 +12,8 @@ import { frozenPoolCashPerFace } from "@/lib/budget/rules/fiscalScale";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 
 export interface SovereignMaturityCashLeg {
   collection: string;
@@ -168,9 +170,9 @@ export async function resolveSovereignMaturityPayoutLegs(
   for (const id of (
     await Promise.all([
       liveIds("characters", charactersCollection<{ _id: unknown }>(db)),
-      liveIds("imperialCharacters", db.collection<{ _id: unknown }>("imperialCharacters")),
+      liveIds("imperialCharacters", imperialCharactersCollection<{ _id: unknown }>(db)),
       liveIds("corporations", corporationsCollection<{ _id: unknown }>(db)),
-      liveIds("indexFunds", db.collection<{ _id: unknown }>("indexFunds")),
+      liveIds("indexFunds", indexFundsCollection<{ _id: unknown }>(db)),
       liveIds("npps", nppsCollection<{ _id: unknown }>(db)),
     ])
   ).flat())
