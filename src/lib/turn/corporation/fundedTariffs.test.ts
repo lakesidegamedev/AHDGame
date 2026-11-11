@@ -3,8 +3,12 @@ import { producerMoveLedgerLegs } from "@/lib/market/producerMarket/liveFundingR
 import { applySettlementClose, type EconomyResult } from "@/lib/market/producerMarket/settlement";
 import type { ProducerTradeReceipt } from "@/lib/market/producerMarket/rules";
 import { importTariffKey } from "@/lib/market/producerMarket/tariffRules";
+import { NO_AUTOMATION_POLICY } from "@/lib/automationPolicy/rules";
+import type { CorporateSector } from "@/lib/db/types";
+import { ObjectId } from "mongodb";
 import {
   collectionsAtClose,
+  plantLevies,
   tariffCollectorScopes,
   tariffImporters,
   tariffsAtClose,
@@ -244,5 +248,29 @@ describe("funded tariffs on the turn", () => {
       rateOf: () => 1,
     });
     expect(moves.map((m) => m.kind)).toEqual(["producer_tariff_treasury"]);
+  });
+});
+
+describe("automation levy by plant", () => {
+  const sectorId = new ObjectId();
+  const sector = {
+    _id: sectorId,
+    countryId: "US",
+    strategyId: "humanoid_robotics",
+    transitionFromStrategyId: "standard",
+    transitionStartTurn: 200,
+  } as unknown as CorporateSector;
+  const lookups = {
+    sectorsByCorp: new Map([["corp", [sector]]]),
+    automationPolicyByCountry: new Map([["US", { ...NO_AUTOMATION_POLICY, automationTax: 4 }]]),
+  };
+  const planSector = new Map([["plan", sectorId.toHexString()]]);
+
+  it("charges nothing while the automated method is still being built", () => {
+    expect(plantLevies(planSector, lookups, 150).size).toBe(0);
+  });
+
+  it("charges the levy once the automated method is running", () => {
+    expect(plantLevies(planSector, lookups, 200).get("plan")?.penalty).toBeGreaterThan(0);
   });
 });

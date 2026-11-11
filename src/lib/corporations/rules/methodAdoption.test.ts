@@ -7,6 +7,7 @@ import {
   methodAdoptionSurchargeFraction,
   methodBuildDelayTurns,
   methodTransitionStartTurn,
+  operatingMethodId,
 } from "./methodAdoption";
 
 const withBuild = Object.entries(SECTOR_STRATEGIES).flatMap(([sector, list]) =>
@@ -49,5 +50,33 @@ describe("method adoption", () => {
       methodTransitionStartTurn({ currentTurn: 50, strategy: { buildTurns: 12 }, headstart: 0 })
     ).toBe(50);
     expect(methodTransitionStartTurn({ currentTurn: 50, strategy: {}, headstart: 6 })).toBe(44);
+  });
+});
+
+describe("operating method", () => {
+  const robots = SECTOR_STRATEGIES.manufacturing?.find((s) => s.id === "humanoid_robotics");
+
+  it("is the old method while the new one is still being built", () => {
+    expect(robots?.buildTurns).toBeGreaterThan(STRATEGY_TRANSITION_TURNS);
+    const start = methodTransitionStartTurn({ currentTurn: 100, strategy: robots!, headstart: 0 });
+    const sector = {
+      strategyId: "humanoid_robotics",
+      transitionFromStrategyId: "standard",
+      transitionStartTurn: start,
+    };
+    expect(operatingMethodId(sector, 101)).toBe("standard");
+    expect(operatingMethodId(sector, start - 1)).toBe("standard");
+    expect(operatingMethodId(sector, start)).toBe("humanoid_robotics");
+  });
+
+  it("is the chosen method outside a build wait", () => {
+    expect(operatingMethodId({ strategyId: "lean" }, 5)).toBe("lean");
+    expect(
+      operatingMethodId(
+        { strategyId: "lean", transitionFromStrategyId: "standard", transitionStartTurn: 4 },
+        5
+      )
+    ).toBe("lean");
+    expect(operatingMethodId({ strategyId: null }, 5)).toBeNull();
   });
 });

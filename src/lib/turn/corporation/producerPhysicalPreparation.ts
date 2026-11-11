@@ -1,5 +1,5 @@
 /** Prepare work, recipes and plant constraints before any product money is moved. */
-import { automationLabourFactor } from "@/lib/societyPressures/rules/automation";
+import { operatingCrewFactor } from "@/lib/societyPressures/rules/automation";
 import { presetUsesSocietyPressures } from "@/lib/societyPressures/preset";
 import { producerInputBidLimit } from "@/lib/market/producerMarket/inputBidRules";
 import {
@@ -612,7 +612,7 @@ export function prepareProducerPhysicalSector(input: {
     labourDemandWageIndexByState: env.labourDemandWageIndexByState,
     wageLevel: sector.wageLevel,
     labourPerUnitFactor: lawAdjustedLabourFactor(
-      automationLabourFactor(sector.strategyId, presetUsesSocietyPressures(lookups.preset)),
+      operatingCrewFactor(sector, currentTurn, presetUsesSocietyPressures(lookups.preset)),
       lookups.automationPolicyByCountry,
       countryId
     ),

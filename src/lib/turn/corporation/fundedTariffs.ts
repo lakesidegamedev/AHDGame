@@ -30,6 +30,7 @@ import {
 } from "@/lib/market/producerMarket/levyCloseRules";
 import { automationLevyInputPenalty } from "@/lib/automationPolicy/rules";
 import { automationPolicyFor } from "@/lib/automationPolicy/policies";
+import { operatingMethodId } from "@/lib/corporations/rules/methodAdoption";
 import type { ProducerWalletScope } from "./producerWallets";
 import type { CorporationLookups } from "./types";
 
@@ -123,7 +124,8 @@ export function tariffsAtClose(input: {
 /** The levy each plant owes on its input purchases, by plan id. */
 export function plantLevies(
   planSector: ReadonlyMap<string, string>,
-  lookups: Pick<CorporationLookups, "sectorsByCorp" | "automationPolicyByCountry">
+  lookups: Pick<CorporationLookups, "sectorsByCorp" | "automationPolicyByCountry">,
+  currentTurn: number
 ): Map<string, PlantLevy> {
   const { sectorsByCorp, automationPolicyByCountry: policyByCountry } = lookups;
   const sectorById = new Map(
@@ -136,7 +138,7 @@ export function plantLevies(
     if (!sector?.countryId) continue;
     const penalty = automationLevyInputPenalty(
       automationPolicyFor(policyByCountry, sector.countryId),
-      sector.strategyId
+      operatingMethodId(sector, currentTurn)
     );
     if (penalty > 0) out.set(planId, { countryId: sector.countryId, penalty });
   }

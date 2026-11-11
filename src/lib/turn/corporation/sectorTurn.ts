@@ -1,4 +1,4 @@
-import { automationLabourFactor } from "@/lib/societyPressures/rules/automation";
+import { operatingCrewFactor } from "@/lib/societyPressures/rules/automation";
 import { corporateGrowthWithPayables } from "./rules/corporateTaxPriority";
 /**
  * Sector operations turn owned capacity into sales, jobs and operating profit.
@@ -817,7 +817,7 @@ export function processSector(
     labourDemandWageIndexByState: env.labourDemandWageIndexByState,
     wageLevel: labour.wagesEnabled ? sector.wageLevel : 1,
     labourPerUnitFactor: lawAdjustedLabourFactor(
-      automationLabourFactor(sector.strategyId, env.automationDisplacedByState !== undefined),
+      operatingCrewFactor(sector, currentTurn, env.automationDisplacedByState !== undefined),
       lookups.automationPolicyByCountry,
       sector.countryId ?? corp.countryId
     ),
