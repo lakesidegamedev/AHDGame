@@ -11,6 +11,8 @@ type Refusal = "self" | "truce" | "cooldown" | "no_resilience_data";
 interface TargetView {
   countryId: string;
   refusal: Refusal | null;
+  /** Set when the service has nothing to stand down against this target. */
+  standDownRefusal?: "self" | "truce" | "no_operation" | null;
   odds: {
     successChance: number;
     attributionIfSuccess: number;
@@ -146,7 +148,7 @@ export function CyberOperationsPanel({
         </button>
         <button
           type="button"
-          disabled={busy || !target}
+          disabled={busy || !target || !!selected?.standDownRefusal}
           onClick={() => submit("stand_down")}
           className="rounded border border-card-border px-3 py-2 text-sm text-foreground disabled:opacity-50"
         >

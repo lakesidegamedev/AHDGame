@@ -18,7 +18,7 @@ import { getAllCountryAccess } from "@/lib/countryAccess";
 import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
 import { getIntelligenceOpLogCollection } from "@/lib/db/collections/intelligence";
 import { operationCost } from "@/lib/intelligence/cost";
-import { cyberOdds, cyberOperationRefusal } from "@/lib/cyber/operations";
+import { cyberOdds, cyberOperationRefusal, cyberStandDownRefusal } from "@/lib/cyber/operations";
 import { loadCyberResilience } from "@/lib/cyber/resilience";
 import {
   CYBER_OPERATION_TYPE,
@@ -131,16 +131,12 @@ export async function GET(_request: Request, { params }: IntelligenceRouteParams
         (r) => r.ownerCountryId === targetId || r.targetCountryId === targetId
       );
       const targetResilience = resilienceOf.get(targetId) ?? null;
-      const refusal = cyberOperationRefusal(
-        countryId,
-        targetId,
-        foldCyberPairHistory(pairRows, countryId),
-        targetResilience,
-        turn
-      );
+      const history = foldCyberPairHistory(pairRows, countryId);
+      const refusal = cyberOperationRefusal(countryId, targetId, history, targetResilience, turn);
       return {
         countryId: targetId,
         refusal,
+        standDownRefusal: cyberStandDownRefusal(countryId, targetId, history, turn),
         odds:
           targetResilience === null || refusal === "no_resilience_data"
             ? null
