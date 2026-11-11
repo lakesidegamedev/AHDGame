@@ -1,18 +1,9 @@
 /**
- * Canada's thirteen provincial and territorial legislatures.
- *
- * Seats: each legislature's size at its most recent general election before
- * 2027 (Elections Ontario, Elections Quebec, Elections BC, Elections Alberta,
- * Elections Saskatchewan, Elections Manitoba, Elections Nova Scotia, Elections
- * New Brunswick, Elections NL, Elections PEI, Elections Yukon, Elections NWT,
- * Elections Nunavut). 780 in total.
- *
- * Next election: the calendar year of each legislature's next fixed-date
- * general election after January 2027, under its own fixed-date law.
- *
- * The Northwest Territories and Nunavut run consensus government without
- * parties; the game contests their seats between parties like every other
- * legislature.
+ * Canada's provincial and territorial legislatures: seats at each one's last
+ * general election before 2027 (780 in total, from each provincial elections
+ * agency), and the year of its next fixed-date general election after January
+ * 2027. NWT and Nunavut run consensus government; the game contests them by
+ * party like the rest.
  */
 export const CA_PROVINCIAL_LEGISLATURES: Readonly<
   Record<string, { seats: number; nextElectionYear: number }>

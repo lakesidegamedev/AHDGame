@@ -112,7 +112,10 @@ export const CA_REGION_NAMES: Record<string, string> = {
   CA_NU: "Nunavut",
 };
 
-/** Map registry. The regional map is authored with the player-facing page. */
+/**
+ * Map registry for the commodity maps, which have no Canadian region view yet.
+ * The country map page draws provinces from `data/canadaGeometry.ts`.
+ */
 export const CA_MAP_REGISTRY: CountryMapConfig = {
   countryId: "CA",
   name: "Canada",
