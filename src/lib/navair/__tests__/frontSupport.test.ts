@@ -4,9 +4,9 @@ import {
   frontSupportFor,
   casWeightFor,
   interdictionFor,
-  canLandMarines,
+  marinesSustained,
   NO_SUPPORT,
-  MARINE_LANDING_THRESHOLD,
+  MARINE_SUSTAINMENT_SEA_CONTROL,
   INTERDICTION,
 } from "../frontSupport";
 import { channelKey, emptyChannels } from "../channels";
@@ -114,16 +114,15 @@ describe("frontSupportFor", () => {
   });
 });
 
-describe("canLandMarines", () => {
-  it("refuses an opposed landing into contested water", () => {
-    // Allowing this at parity would make amphibious assault the default answer to any
-    // coastal front.
-    expect(canLandMarines(50)).toBe(false);
-    expect(canLandMarines(MARINE_LANDING_THRESHOLD - 1)).toBe(false);
+describe("marinesSustained", () => {
+  it("reports marines as cut off once sea control drops below the sustainment line", () => {
+    expect(marinesSustained(0)).toBe(false);
+    expect(marinesSustained(MARINE_SUSTAINMENT_SEA_CONTROL - 1)).toBe(false);
   });
 
-  it("allows it once the water is genuinely held", () => {
-    expect(canLandMarines(MARINE_LANDING_THRESHOLD)).toBe(true);
+  it("reports them supplied at and above the line, including contested water", () => {
+    expect(marinesSustained(MARINE_SUSTAINMENT_SEA_CONTROL)).toBe(true);
+    expect(marinesSustained(50)).toBe(true);
   });
 });
 

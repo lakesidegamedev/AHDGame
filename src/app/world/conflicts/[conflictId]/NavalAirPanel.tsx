@@ -51,9 +51,9 @@ export function NavalAirPanel({ data }: { data: NavalAirPanelData }) {
       )}
 
       <p className="mt-3 text-xs text-neutral-400">
-        {data.canLandMarines
-          ? "You hold enough of the water to put marines ashore here."
-          : "Not enough sea control to land marines here."}
+        {data.marinesSustained
+          ? "Your marines here are supplied across the water and fight at full strength."
+          : "Too little sea control to supply your marines here. They fight as light infantry."}
       </p>
     </section>
   );
