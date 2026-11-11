@@ -5,7 +5,7 @@ summary: >-
   New 2027 worlds now include Canada as a playable country alongside the
   United States.
 tags: [canada]
-badges: [content]
+badges: [minor]
 areas: [backend, frontend]
 ---
 

@@ -5,7 +5,7 @@ summary: >-
   Canada's Prime Minister's office and central bank pages now use photos of
   Parliament Hill and the Bank of Canada instead of the flag.
 tags: [canada]
-badges: [content]
+badges: [minor]
 areas: [frontend]
 ---
 

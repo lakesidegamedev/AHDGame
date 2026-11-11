@@ -5,7 +5,7 @@ summary: >-
   The strategy picker now quotes the full price of switching to a late-game
   method and says how long the old method keeps running while it is built.
 tags: [corporations, research]
-badges: [fix]
+badges: [patch]
 areas: [frontend, backend]
 ---
 

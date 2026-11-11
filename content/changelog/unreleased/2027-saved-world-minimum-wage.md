@@ -5,7 +5,7 @@ summary: >-
   In worlds started before Japan and Germany moved to their new law books, the
   minimum wage those countries already enacted still sets the wage floor.
 tags: [labour, legislation]
-badges: [fix]
+badges: [patch]
 areas: [engine]
 ---
 

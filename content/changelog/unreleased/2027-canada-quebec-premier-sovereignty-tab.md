@@ -5,7 +5,7 @@ summary: >-
   The Premier of Quebec can set a stance on sovereignty, and the sovereignty
   mood now shifts votes in Quebec elections.
 tags: [canada, referendum, elections]
-badges: [content]
+badges: [minor]
 areas: [backend, frontend]
 ---
 

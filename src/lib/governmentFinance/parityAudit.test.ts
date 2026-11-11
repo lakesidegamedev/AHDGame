@@ -16,8 +16,9 @@ describe("legislative parity audit", () => {
     expect(audit.countries.map((country) => [country.countryId, country.lawCount])).toEqual([
       ["US", 168],
       ["UK", 154],
-      // Includes the thirty-two 2027 to 2050 laws.
-      ["JP", 221],
+      // The one law book, the two regional taxes, banking separation and the
+      // three mechanical laws.
+      ["JP", 158],
     ]);
     expect(audit.countries.every((country) => country.missingAdministration.length === 0)).toBe(
       true
