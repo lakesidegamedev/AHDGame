@@ -8,10 +8,13 @@ vi.mock("@/lib/gameConfig/liveWorldSwitches", () => ({
 const launch = vi.fn(async () => ({ ok: true }));
 const standDown = vi.fn(async () => ({ ok: true }));
 const pairHistory = vi.fn(async () => ({ lastOperationTurn: null, truceUntilTurn: null }));
+const pairHistories = vi.fn(async () => new Map());
 vi.mock("@/lib/cyber/runCyberOperation", () => ({
   launchCyberOperation: launch,
   standDownCyber: standDown,
   loadCyberPairHistory: pairHistory,
+  loadCyberPairHistories: pairHistories,
+  cyberPairKey: (a: string, t: string) => `${a}>${t}`,
   loadCyberCrisisTargets: vi.fn(async () => new Set<string>()),
   loadCyberLaunchTurns: vi.fn(async () => []),
 }));
@@ -55,7 +58,7 @@ describe("cyber operations switch on computer-run governments", () => {
     const result = await applyScriptedCyber(db, [PLAN as never], 500);
     expect(result).toEqual({ launched: 0, standDowns: 0 });
     expect(tension).not.toHaveBeenCalled();
-    expect(pairHistory).not.toHaveBeenCalled();
+    expect(pairHistories).not.toHaveBeenCalled();
     expect(launch).not.toHaveBeenCalled();
   });
 });

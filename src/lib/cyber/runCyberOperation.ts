@@ -87,22 +87,26 @@ export function foldCyberPairHistory(
   return { lastOperationTurn, truceUntilTurn };
 }
 
-/** Latest operation by `attackerId` against `targetId`, and the latest truce in either direction. */
-export async function loadCyberPairHistory(
+/** Map key for one attacker and target pair. */
+export function cyberPairKey(attackerId: string, targetId: string): string {
+  return `${attackerId}>${targetId}`;
+}
+
+/**
+ * Pair history for many attacker and target pairs in one read, keyed by `cyberPairKey`.
+ * Each pair folds its own rows in both directions.
+ */
+export async function loadCyberPairHistories(
   db: Db,
-  attackerId: string,
-  targetId: string
-): Promise<CyberPairHistory> {
+  pairs: readonly { attackerId: string; targetId: string }[]
+): Promise<Map<string, CyberPairHistory>> {
+  const histories = new Map<string, CyberPairHistory>();
+  if (pairs.length === 0) return histories;
+  const ids = [...new Set(pairs.flatMap((p) => [p.attackerId, p.targetId]))] as CountryId[];
   const log = await getIntelligenceOpLogCollection(db);
   const rows = (await log
     .find(
-      {
-        domain: "cyber",
-        $or: [
-          { ownerCountryId: attackerId as CountryId, targetCountryId: targetId as CountryId },
-          { ownerCountryId: targetId as CountryId, targetCountryId: attackerId as CountryId },
-        ],
-      },
+      { domain: "cyber", ownerCountryId: { $in: ids }, targetCountryId: { $in: ids } },
       {
         projection: {
           ownerCountryId: 1,
@@ -114,7 +118,25 @@ export async function loadCyberPairHistory(
       }
     )
     .toArray()) as CyberLogRow[];
-  return foldCyberPairHistory(rows, attackerId);
+  for (const { attackerId, targetId } of pairs) {
+    const pairRows = rows.filter(
+      (r) =>
+        (r.ownerCountryId === attackerId && r.targetCountryId === targetId) ||
+        (r.ownerCountryId === targetId && r.targetCountryId === attackerId)
+    );
+    histories.set(cyberPairKey(attackerId, targetId), foldCyberPairHistory(pairRows, attackerId));
+  }
+  return histories;
+}
+
+/** Latest operation by `attackerId` against `targetId`, and the latest truce in either direction. */
+export async function loadCyberPairHistory(
+  db: Db,
+  attackerId: string,
+  targetId: string
+): Promise<CyberPairHistory> {
+  const histories = await loadCyberPairHistories(db, [{ attackerId, targetId }]);
+  return histories.get(cyberPairKey(attackerId, targetId))!;
 }
 
 /** Countries among `countryIds` that have a Cyber Attack crisis running right now. */

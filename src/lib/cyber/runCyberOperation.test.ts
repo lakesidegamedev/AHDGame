@@ -77,8 +77,14 @@ const db = {
 } as unknown as Db;
 
 const { CYBER_REFUSAL_TEXT } = await import("./operations");
-const { foldCyberPairHistory, launchCyberOperation, loadCyberCrisisTargets, standDownCyber } =
-  await import("./runCyberOperation");
+const {
+  cyberPairKey,
+  foldCyberPairHistory,
+  launchCyberOperation,
+  loadCyberCrisisTargets,
+  loadCyberPairHistories,
+  standDownCyber,
+} = await import("./runCyberOperation");
 
 beforeEach(() => {
   crises.length = 0;
@@ -282,6 +288,35 @@ describe("standDownCyber", () => {
       expect(blocked).toMatchObject({ ok: false, status: 409 });
     }
     expect(await standDownCyber(db, "CN", "US", 12)).toMatchObject({ ok: false });
+  });
+});
+
+describe("loadCyberPairHistories", () => {
+  it("folds each pair from its own rows in one read", async () => {
+    logRows.push(
+      { ownerCountryId: "CN", targetCountryId: "US", opType: "cyber_operation", turn: 40 },
+      {
+        ownerCountryId: "RU",
+        targetCountryId: "US",
+        opType: "cyber_stand_down",
+        turn: 41,
+        truceUntilTurn: 60,
+      },
+      { ownerCountryId: "RU", targetCountryId: "GB", opType: "cyber_operation", turn: 42 }
+    );
+    const histories = await loadCyberPairHistories(db, [
+      { attackerId: "CN", targetId: "US" },
+      { attackerId: "RU", targetId: "US" },
+    ]);
+    expect(histories.get(cyberPairKey("CN", "US"))).toEqual({
+      lastOperationTurn: 40,
+      truceUntilTurn: null,
+    });
+    expect(histories.get(cyberPairKey("RU", "US"))).toEqual({
+      lastOperationTurn: null,
+      truceUntilTurn: 60,
+    });
+    expect((await loadCyberPairHistories(db, [])).size).toBe(0);
   });
 });
 

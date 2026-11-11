@@ -11,9 +11,10 @@ import { getColdWarTension } from "@/lib/coldwar/tension";
 import { CYBER_SCRIPTED_HAWKISHNESS, planScriptedCyberOperation } from "@/lib/cyber/operations";
 import { loadCyberResilience } from "@/lib/cyber/resilience";
 import {
+  cyberPairKey,
   launchCyberOperation,
   loadCyberCrisisTargets,
-  loadCyberPairHistory,
+  loadCyberPairHistories,
   standDownCyber,
 } from "@/lib/cyber/runCyberOperation";
 import { isLiveWorldSwitchOn } from "@/lib/gameConfig/liveWorldSwitches";
@@ -37,26 +38,39 @@ export async function applyScriptedCyber(
     return { launched: 0, standDowns: 0 };
   }
   const tension = (await getColdWarTension(db)).value;
-  const crisisTargets = await loadCyberCrisisTargets(
-    db,
-    candidates.map((p) => rivalLeaderOf(p.state.bloc, p.countryId)!)
-  );
+  const pairs = candidates.map((plan) => ({
+    plan,
+    attackerId: plan.countryId,
+    targetId: rivalLeaderOf(plan.state.bloc, plan.countryId)!,
+  }));
+  const [crisisTargets, histories] = await Promise.all([
+    loadCyberCrisisTargets(
+      db,
+      pairs.map((p) => p.targetId)
+    ),
+    loadCyberPairHistories(db, pairs),
+  ]);
+  // A dovish government with no history has nothing to decide.
+  const deciding = pairs.flatMap((pair) => {
+    const history = histories.get(cyberPairKey(pair.attackerId, pair.targetId))!;
+    const hawkish = pair.plan.state.stance.hawkishness >= CYBER_SCRIPTED_HAWKISHNESS;
+    return hawkish || history.lastOperationTurn !== null ? [{ ...pair, history }] : [];
+  });
+  if (deciding.length === 0) return { launched: 0, standDowns: 0 };
+  const resilience = await loadCyberResilience(db, [...new Set(deciding.map((p) => p.targetId))]);
+  const resilienceById = new Map(resilience.map((row) => [row.countryId, row.resilience]));
   let launched = 0;
   let standDowns = 0;
-  for (const plan of candidates) {
-    const targetId = rivalLeaderOf(plan.state.bloc, plan.countryId)!;
-    const hawkish = plan.state.stance.hawkishness >= CYBER_SCRIPTED_HAWKISHNESS;
-    const history = await loadCyberPairHistory(db, plan.countryId, targetId);
-    // A dovish government with no history has nothing to decide.
-    if (!hawkish && history.lastOperationTurn === null) continue;
-    const [target] = await loadCyberResilience(db, [targetId]);
+  // The launch shell re-reads the pair and the target, so a decision made on
+  // this tick's snapshot cannot outrun an earlier launch in the same loop.
+  for (const { plan, targetId, history } of deciding) {
     const decision = planScriptedCyberOperation({
       attackerId: plan.countryId,
       hawkishness: plan.state.stance.hawkishness,
       rivalLeaderId: targetId,
       tension,
       history,
-      targetResilience: target?.resilience ?? null,
+      targetResilience: resilienceById.get(targetId) ?? null,
       turn,
       decisionRoll: scriptedRoll(plan.countryId, turn),
       targetCrisisActive: crisisTargets.has(targetId),
