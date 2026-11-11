@@ -4,7 +4,7 @@
  * not metric-moving programs, so they stay outside the political law book.
  */
 import type { LegislationType } from "@/lib/db/types";
-import { policyOptions } from "./policyOptionHelpers";
+import { policyOptions } from "@/lib/seeds/reference/policyOptionHelpers";
 
 function weightedTargets(
   primary: { category: string; metric: string },
