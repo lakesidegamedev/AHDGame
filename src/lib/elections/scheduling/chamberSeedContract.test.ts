@@ -65,7 +65,8 @@ function gapsFor(spec: ChamberSpec, preset: (typeof SEED_PRESET_IDS)[number]): s
       for (const chamberClass of spec.classes ? ([1, 2] as const) : [undefined]) {
         seatsForRegion(spec, String(region._id), region, preset, chamberClass);
       }
-      if (spec.regionAnchor && spec.regionAnchor(String(region._id), preset) === undefined) {
+      const ctx = { startingYear: Number.parseInt(preset, 10), preset };
+      if (spec.regionAnchor && spec.regionAnchor(String(region._id), preset, ctx) === undefined) {
         throw new Error(`no cycle anchor for ${String(region._id)}`);
       }
     } catch (error) {

@@ -90,7 +90,7 @@
     ],
     "electionSystems": {
       "lowerChamber": "pr_hareQuota",
-      "subNationalChamber": "fptp",
+      "subNationalChamber": "pr_hareQuota",
       "subNationalExecutive": "parliamentary",
       "headOfGovernment": "parliamentary",
       "headOfState": "ceremonial"

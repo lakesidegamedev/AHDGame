@@ -64,7 +64,9 @@ export const CA_CONFIG: CountryConfig = {
     // Regions elect many MPs each, so seats are allocated by regional vote share
     // (the same approximation the UK Commons uses), not by one winner per region.
     lowerChamber: "pr_hareQuota",
-    subNationalChamber: "fptp",
+    // Provincial legislatures elect many members per region too, so they use
+    // the same regional vote-share allocation as the Commons.
+    subNationalChamber: "pr_hareQuota",
     subNationalExecutive: "parliamentary",
     headOfGovernment: "parliamentary",
     headOfState: "ceremonial",
@@ -73,7 +75,7 @@ export const CA_CONFIG: CountryConfig = {
     key: "provincialLegislature",
     name: "Provincial Legislature",
     shortName: "Provincial Legislature",
-    seats: 778,
+    seats: 780,
     description:
       "Elected members of the provincial and territorial legislatures, on fixed four-year terms.",
     regionalModel: true,

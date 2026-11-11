@@ -71,6 +71,7 @@ export const POSITION_BY_ELECTION_TYPE: Readonly<Record<string, ElectionPosition
   stateSenate: "subNationalChamber",
   regionalCouncil: "subNationalChamber",
   landtag: "subNationalChamber",
+  provincialLegislature: "subNationalChamber",
   landAssembly: "subNationalChamber",
   peoplesCongress: "subNationalChamber",
   republicSupremeSoviet: "subNationalChamber",

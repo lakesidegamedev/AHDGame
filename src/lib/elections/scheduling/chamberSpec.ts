@@ -1,7 +1,7 @@
 import type { AnyBulkWriteOperation } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import { DEFAULT_DURATIONS } from "@/lib/constants/electionDurations";
-import type { CycleAnchors } from "@/lib/elections/cycleAnchorContext";
+import type { CycleAnchorContext, CycleAnchors } from "@/lib/elections/cycleAnchorContext";
 import type { Election } from "@/lib/db/types";
 
 /** What a region without a seat value gets: one seat, or an error that stops the phase. */
@@ -94,7 +94,11 @@ export interface ChamberSpec {
    * Cycle-1 end turn per region, replacing the preset anchor. A region it
    * returns nothing for makes the spawner throw.
    */
-  regionAnchor?: (regionId: string, preset: string | undefined) => number | undefined;
+  regionAnchor?: (
+    regionId: string,
+    preset: string | undefined,
+    ctx: CycleAnchorContext
+  ) => number | undefined;
   /** Spawn without the batched Discord announcement. */
   silent?: boolean;
   hooks?: ChamberHooks;

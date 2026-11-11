@@ -3,7 +3,12 @@ import type { CountryElectionPhaseEntry } from "@/lib/turn/countryPhases";
 import type { SpawnElectionsResult } from "@/lib/elections/scheduling/registry";
 import { CA_MAJOR_DEFAULT_PARTIES } from "./data/caParties";
 import { CA_COMMONS_SEATS_PER_REGION, CA_SENATE_SEATS_PER_REGION } from "./data/caRegions2027";
-import { ensureCAElections, ensureCAPremierElections } from "./elections/perpetual";
+import { CA_PROVINCIAL_SEATS } from "./data/caProvincialLegislatures";
+import {
+  ensureCAElections,
+  ensureCAPremierElections,
+  ensureCAProvincialElections,
+} from "./elections/perpetual";
 
 const sum = (table: Readonly<Record<string, number>>): number =>
   Object.values(table).reduce((a, b) => a + b, 0);
@@ -20,13 +25,15 @@ const sum = (table: Readonly<Record<string, number>>): number =>
  */
 const spawn = async (now: Date, currentTurn?: number): Promise<SpawnElectionsResult> => {
   await ensureCAElections(now, currentTurn);
+  await ensureCAProvincialElections(now, currentTurn);
   await ensureCAPremierElections(now, currentTurn);
-  return { message: "CA Commons and Premier continuity check complete." };
+  return { message: "CA Commons, provincial legislature and Premier continuity check complete." };
 };
 
 /** Election turn phases, in the order `countryPhases.ts` declares them. */
 const phases: CountryElectionPhaseEntry[] = [
   { name: "caElections", fn: ensureCAElections },
+  { name: "caProvincialElections", fn: ensureCAProvincialElections },
   { name: "caPremierElections", fn: ensureCAPremierElections },
 ];
 
@@ -38,12 +45,14 @@ export const CA_ELECTIONS: CountryElections = {
     byChamber: {
       caCommons: CA_COMMONS_SEATS_PER_REGION,
       caSenate: CA_SENATE_SEATS_PER_REGION,
+      provincialLegislature: CA_PROVINCIAL_SEATS,
     },
     totals: {
       caCommons: sum(CA_COMMONS_SEATS_PER_REGION),
       caSenate: sum(CA_SENATE_SEATS_PER_REGION),
+      provincialLegislature: sum(CA_PROVINCIAL_SEATS),
     },
   },
 };
 
-export { ensureCAElections, ensureCAPremierElections };
+export { ensureCAElections, ensureCAPremierElections, ensureCAProvincialElections };

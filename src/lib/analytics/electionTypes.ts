@@ -56,6 +56,7 @@ export const ANALYTICS_ELECTION_TYPES: ReadonlySet<string> = new Set([
   "caCommons",
   "snap_caCommons",
   "special_caCommons",
+  "provincialLegislature",
   "nationalrat",
   "eduskunta",
   "vouli",
