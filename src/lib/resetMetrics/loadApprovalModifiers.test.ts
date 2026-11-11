@@ -6,6 +6,7 @@ import { loadPoliticalApprovalBases } from "@/lib/politicalLegislation/political
 import { loadResetApprovalModifiers } from "./loadApprovalModifiers";
 import { RESET_V2_SEED_REVISION } from "@/lib/resetVersions/rules";
 import type { GameState } from "@/lib/db/types/gameState";
+import type { ResetMetricSnapshot } from "./rules/snapshot";
 const boards = buildOpeningMetricSnapshots1991("approval-test", 1).filter(
   (board) => board.countryId === "UK"
 );
@@ -115,6 +116,30 @@ describe("Metrics v2 approval source", () => {
     db.collection("gameState").findOne.mockResolvedValue({ ...game, currentTurn: 9 } as GameState);
     db.collection("resetMetricSnapshots").find().toArray.mockResolvedValue(behind);
     await expect(loadPoliticalApprovalBases(db as unknown as Db, "UK")).rejects.toThrow();
+  });
+  it("judges lag per country when prefetched boards span several countries", async () => {
+    const later = { ...game, currentTurn: 4 } as GameState;
+    const ids = states.map((state) => state._id);
+    const other = boards.map((board) => ({
+      ...board,
+      _id: board._id.replace("UK:", "DE:"),
+      countryId: "DE",
+      asOfTurn: 3,
+    }));
+    const uk = (rows: readonly unknown[]) =>
+      loadResetApprovalModifiers(
+        db as unknown as Db,
+        "UK",
+        ids,
+        later,
+        undefined,
+        rows as ResetMetricSnapshot[],
+        []
+      );
+    const behind = boards.map((board) => ({ ...board, asOfTurn: 2 }));
+    expect((await uk([...behind, ...other]))!.metrics.length).toBe(ids.length);
+    const mixed = behind.map((board, i) => (i === 0 ? { ...board, asOfTurn: 3 } : board));
+    await expect(uk([...mixed, ...other])).rejects.toThrow();
   });
   it("does not query the v2 collection when the country is not activated", async () => {
     const count = db.collection("resetMetricSnapshots").find.mock.calls.length;
