@@ -29,6 +29,8 @@ import { COUNTRY_CONFIGS, getCountryConfig, type CountryId } from "@/lib/constan
 import { statesCollection } from "@/lib/db/repositories/states";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { resolvePrimaryTaxRate } from "./rules/primaryTaxRate";
 
 // ── Pure calculation ─────────────────────────────────────────────────────────
 
@@ -283,10 +285,24 @@ export async function processOnePartyRegionalBudgets(
     .toArray();
   const legTypeMap = new Map(legTypes.map((lt) => [lt._id, lt]));
 
-  const eitPolicy = nationalPolicies.find(
-    (p) => p.legislationTypeId === budgetKnobs.primaryTaxLegislationKey
+  const enactedTax = (legislationTypeId: string | undefined) => {
+    const policy = legislationTypeId
+      ? nationalPolicies.find((p) => p.legislationTypeId === legislationTypeId)
+      : undefined;
+    return policy
+      ? { policyOptionId: policy.policyOptionId, law: legTypeMap.get(policy.legislationTypeId) }
+      : undefined;
+  };
+  const nationalBudget = await federalBudgetCollection(db).findOne(
+    { _id: countryId },
+    { projection: { taxRates: 1 } }
   );
-  const eitRate = getTaxRateFromPolicy(eitPolicy, legTypeMap) || budgetKnobs.defaultTaxRate;
+  const eitRate = resolvePrimaryTaxRate({
+    current: enactedTax(budgetKnobs.primaryTaxLegislationKey),
+    legacy: enactedTax(budgetKnobs.savedWorldPrimaryTaxLegislationKey),
+    nationalRate: nationalBudget?.taxRates?.domesticCorporateTax,
+    defaultRate: budgetKnobs.defaultTaxRate,
+  });
 
   const nationalPopulation = regions.reduce((sum, r) => sum + r.population, 0);
 

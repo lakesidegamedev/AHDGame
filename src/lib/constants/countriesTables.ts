@@ -514,6 +514,8 @@ export interface CountryConfig {
     defaultTaxRate: number;
     /** legislationTypeId of the primary regional tax (CN: cn.tax.domesticCorporateTax). */
     primaryTaxLegislationKey: string;
+    /** Old-book primary tax a saved world may still have enacted (CN: cn_enterprise_income_tax). */
+    savedWorldPrimaryTaxLegislationKey?: string;
     /**
      * legislationTypeId of an optional per-region resource tax. When set, the
      * processor reads each region's enacted policy rate and feeds it into the
