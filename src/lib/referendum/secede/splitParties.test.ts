@@ -138,4 +138,66 @@ describe("splitParties", () => {
     // Region party-ledger history dissolved.
     expect(cols.partyBudget).toHaveLength(0);
   });
+  it("merges slates that collide on (country, party, election) once parties become independent", async () => {
+    const { db, cols } = seedWorld();
+    const slate = (_id: string, partyId: string, electionId: string) => ({
+      _id,
+      countryId: "SCO",
+      partyId,
+      electionId,
+    });
+    cols.recruitmentSlates = [
+      slate("s20e1", "20", "e1"),
+      slate("s21e1", "21", "e1"),
+      slate("s22e1", "22", "e1"),
+      slate("s20e2", "20", "e2"),
+      slate("s22e2", "22", "e2"),
+      slate("sIndE3", "independent", "e3"),
+      slate("s21e3", "21", "e3"),
+    ];
+    const cand = (_id: string, slateId: string, candidateId: string) => ({
+      _id,
+      slateId,
+      candidateId,
+      countryId: "SCO",
+      partyId: "22",
+    });
+    cols.slateCandidates = [
+      cand("c1", "s21e1", "A"),
+      cand("c2", "s22e1", "B"),
+      cand("c3", "s22e1", "A"), // duplicates A on the survivor s21e1
+      cand("c4", "s22e2", "C"),
+      cand("c5", "s21e3", "D"),
+      cand("c6", "s20e1", "A"), // wholesale slate keeps its own candidates
+    ];
+
+    await splitParties(db, "SCO", "UK", "SCO");
+
+    const keys = cols.recruitmentSlates.map((r) => `${r.countryId}|${r.partyId}|${r.electionId}`);
+    expect(new Set(keys).size).toBe(keys.length);
+    expect(cols.recruitmentSlates.find((r) => r._id === "s20e1")!.partyId).toBe("1");
+    expect(cols.recruitmentSlates.find((r) => r._id === "s20e2")!.partyId).toBe("1");
+    for (const e of ["e1", "e2", "e3"])
+      expect(
+        cols.recruitmentSlates.filter((r) => r.partyId === "independent" && r.electionId === e)
+      ).toHaveLength(1);
+    // e1: earliest id wins; e2: only s22e2 remains; e3: the untouched independent row wins.
+    expect(cols.recruitmentSlates.map((r) => r._id).sort()).toEqual(
+      ["s20e1", "s20e2", "s21e1", "s22e2", "sIndE3"].sort()
+    );
+
+    const on = (slateId: string) =>
+      cols.slateCandidates
+        .filter((c) => c.slateId === slateId)
+        .map((c) => c.candidateId)
+        .sort();
+    expect(on("s21e1")).toEqual(["A", "B"]); // duplicate A collapsed, B preserved
+    expect(on("s22e2")).toEqual(["C"]);
+    expect(on("sIndE3")).toEqual(["D"]);
+    expect(on("s20e1")).toEqual(["A"]);
+    expect(cols.slateCandidates).toHaveLength(5);
+    expect(cols.slateCandidates.every((c) => c.partyId === "independent" || c._id === "c6")).toBe(
+      true
+    );
+  });
 });

@@ -13,7 +13,7 @@ import { splitPartyOrgReserves } from "./rules/partyOrganization";
  * are NOT migrated here — `carryOverOfficials` (the next step) applies the
  * returned `idMap` to them. Idempotent: re-running once reconciled is a no-op.
  */
-import { type Db } from "mongodb";
+import type { AnyBulkWriteOperation, Db, Document, ObjectId } from "mongodb";
 import { getCountryConfig, type CountryId } from "@/lib/constants/countries";
 import type { PoliticalParty } from "@/lib/db/types/party";
 import type { StatePartyOrg } from "@/lib/db/types/statePartyOrg";
@@ -328,10 +328,86 @@ export async function splitParties(
         },
       }))
     );
+  const targetPartyId = (row: { countryId?: unknown; party?: unknown; partyId?: unknown }) => {
+    const id = row.partyId ?? row.party;
+    return row.countryId === toCountryId && plan.idMap[Number(id)] != null
+      ? String(plan.idMap[Number(id)])
+      : "independent";
+  };
+  // Remapping partyId to "independent" collapses every non-carried party's slate onto one unique
+  // key (countryId, partyId, electionId). Keep one slate per key, fold the rest's candidates into it.
+  const mergeCollidingSlates = async (
+    rows: Array<{ _id: unknown; countryId?: unknown; partyId?: unknown; electionId?: unknown }>
+  ): Promise<Set<string>> => {
+    const slates = db.collection("recruitmentSlates");
+    const selected = new Set(rows.map((row) => String(row._id)));
+    const untouched = (
+      await slates
+        .find({ countryId: { $in: [toCountryId, fromCountryId] }, partyId: "independent" })
+        .toArray()
+    ).filter((row) => !selected.has(String(row._id)));
+    const key = (row: Record<string, unknown>, partyId: string) =>
+      JSON.stringify([row.countryId, partyId, String(row.electionId)]);
+    const groups = new Map<string, Array<{ _id: unknown; rank: number }>>();
+    const add = (k: string, _id: unknown, rank: number) => {
+      const group = groups.get(k) ?? [];
+      group.push({ _id, rank });
+      groups.set(k, group);
+    };
+    for (const row of untouched) add(key(row, "independent"), row._id, 0);
+    for (const row of rows) {
+      const target = targetPartyId(row);
+      add(key(row, target), row._id, String(row.partyId) === target ? 1 : 2);
+    }
+    const losers = new Set<string>();
+    const merges: Array<{ survivor: unknown; rest: unknown[] }> = [];
+    for (const group of groups.values()) {
+      if (group.length < 2) continue;
+      group.sort((a, b) => a.rank - b.rank || (String(a._id) < String(b._id) ? -1 : 1));
+      const [survivor, ...rest] = group;
+      merges.push({ survivor: survivor._id, rest: rest.map((r) => r._id) });
+      for (const loser of rest) losers.add(String(loser._id));
+    }
+    if (!merges.length) return losers;
+    // One read for every slate involved, then fold candidates in memory and write in bulk.
+    const involved = merges.flatMap((m) => [m.survivor, ...m.rest]) as ObjectId[];
+    const candidateRows = await db
+      .collection("slateCandidates")
+      .find({ slateId: { $in: involved } })
+      .toArray();
+    const bySlate = new Map<string, typeof candidateRows>();
+    for (const c of candidateRows) {
+      const list = bySlate.get(String(c.slateId)) ?? [];
+      list.push(c);
+      bySlate.set(String(c.slateId), list);
+    }
+    const moveOps: AnyBulkWriteOperation<Document>[] = [];
+    const dupeIds: unknown[] = [];
+    for (const { survivor, rest } of merges) {
+      const kept = new Set((bySlate.get(String(survivor)) ?? []).map((c) => String(c.candidateId)));
+      for (const loser of rest) {
+        for (const c of bySlate.get(String(loser)) ?? []) {
+          if (kept.has(String(c.candidateId))) {
+            dupeIds.push(c._id);
+            continue;
+          }
+          kept.add(String(c.candidateId));
+          moveOps.push({
+            updateOne: { filter: { _id: c._id }, update: { $set: { slateId: survivor } } },
+          });
+        }
+      }
+    }
+    if (moveOps.length) await db.collection("slateCandidates").bulkWrite(moveOps);
+    if (dupeIds.length)
+      await db.collection("slateCandidates").deleteMany({ _id: { $in: dupeIds as ObjectId[] } });
+    await slates.deleteMany({ _id: { $in: merges.flatMap((m) => m.rest) as ObjectId[] } });
+    return losers;
+  };
   const remapRoster = async (
     collection: "recruitmentSlates" | "statePartyCandidates" | "slateCandidates"
   ) => {
-    const rows = await db
+    let rows = await db
       .collection(collection)
       .find(
         {
@@ -343,9 +419,13 @@ export async function splitParties(
             },
           ],
         },
-        { projection: { _id: 1, countryId: 1, party: 1, partyId: 1 } }
+        { projection: { _id: 1, countryId: 1, party: 1, partyId: 1, electionId: 1 } }
       )
       .toArray();
+    if (collection === "recruitmentSlates") {
+      const losers = await mergeCollidingSlates(rows);
+      rows = rows.filter((row) => !losers.has(String(row._id)));
+    }
     if (rows.length)
       await db.collection(collection).bulkWrite(
         rows.map((row) => ({
