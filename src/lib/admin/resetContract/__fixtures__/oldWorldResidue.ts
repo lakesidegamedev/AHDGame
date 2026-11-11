@@ -24,7 +24,6 @@ export const OLD_WORLD_RUNTIME_ROWS: Readonly<Record<string, Record<string, unkn
   settlementCrises: { status: "active" },
   elections: { status: "active", countryId: "US" },
   electionCandidates: { status: "running" },
-  bills: { status: "in_committee" },
   stateBills: { status: "introduced" },
   speakerLeadershipBallots: { round: 2 },
   senateLeadershipBallots: { round: 1 },

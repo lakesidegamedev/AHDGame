@@ -155,7 +155,8 @@ export async function loadOldCatalogueEvidence(
     .find({ legislationTypeId: { $in: old } }, { projection: { _id: 1, legislationTypeId: 1 } })
     .toArray();
   for (const row of bills)
-    evidence.push({ collection: "bills", id: String(row._id), lawIds: [row.legislationTypeId] });
+    if (row.legislationTypeId)
+      evidence.push({ collection: "bills", id: String(row._id), lawIds: [row.legislationTypeId] });
   const overrides = await electoratePriorityOverridesCollection(db)
     .find({}, { projection: { _id: 1, priorities: 1 } })
     .toArray();

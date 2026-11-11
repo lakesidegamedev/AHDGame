@@ -71,7 +71,11 @@ export interface EconomyResetSource {
    * Kept political collections that still name a retired-catalogue law id. The
    * economy reset never replaces the law book, so any hit needs a world reset.
    */
-  retiredLawEvidence: { collection: string; id: string; lawIds: string[] }[];
+  retiredLawEvidence: ReadonlyArray<{
+    collection: string;
+    id: string;
+    lawIds: ReadonlyArray<string>;
+  }>;
   campaignRates: CampaignCurrencyRates;
   /** Live local-per-anchor rate by currency. */
   anchorRates: Record<string, number>;
