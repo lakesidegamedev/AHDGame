@@ -9,6 +9,7 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 import { accountId, mintSinkAccount } from "@/lib/ledger/accounts";
 import { emitLedgerEntries } from "@/lib/ledger/emit";
 import { ledgerTurnFromClock } from "@/lib/ledger/ledgerTurn";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export async function witnessCorporationStartingGrant(
   db: Db,
@@ -30,9 +31,10 @@ export async function witnessCorporationStartingGrant(
     if (config?.ledgerShadow !== true) return;
     const [state, quote] = await Promise.all([
       input.turn === undefined
-        ? db
-            .collection<{ _id: string; currentTurn: number }>("gameState")
-            .findOne({ _id: "current" }, { projection: { currentTurn: 1 } })
+        ? gameStateCollection<{ _id: string; currentTurn: number }>(db).findOne(
+            { _id: "current" },
+            { projection: { currentTurn: 1 } }
+          )
         : Promise.resolve(null),
       db
         .collection<{ currencyCode: string; rate: number }>("exchangeRates")

@@ -68,6 +68,7 @@ import { buildExtractionAndPortfolioLookups } from "./buildLookupsExtraction";
 import { loadAutomationPolicies } from "@/lib/automationPolicy/policies";
 import { presetUsesSocietyPressures } from "@/lib/societyPressures/preset";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export async function buildCorporationLookups(
   db: Db,
@@ -752,9 +753,7 @@ export async function buildCorporationLookups(
         db
           .collection<{ _id: string; commandEconomyEnabled?: boolean }>("gameConfig")
           .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } }),
-        db
-          .collection<GameState>("gameState")
-          .findOne({ _id: "current" }, { projection: { currentYear: 1 } }),
+        gameStateCollection(db).findOne({ _id: "current" }, { projection: { currentYear: 1 } }),
         getRegisteredCountryIds(db),
       ]);
       const curtainEnabled = curtainCfg?.commandEconomyEnabled === true;

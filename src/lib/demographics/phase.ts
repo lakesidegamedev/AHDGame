@@ -95,6 +95,8 @@ import {
   estimateConscriptionEffects,
   type ConscriptionPolicy,
 } from "./conscription";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import type { Document } from "mongodb";
 
 /** Per-region net internal-migration change capped per turn (circuit-breaker). */
 const MAX_INTERNAL_CHANGE_FRACTION = 0.05;
@@ -227,12 +229,10 @@ export async function runDemographicFlows(
   if (prior) return prior;
   // A missing receipt is safe to replan only when this marker proves the
   // interrupted phase used freeze-before-write rather than the legacy path.
-  const attempt = await db
-    .collection<GameState>("gameState")
-    .updateOne(
-      { _id: "current", worldEpochId },
-      { $set: { demographicFlowAttempt: { worldEpochId, turn } } }
-    );
+  const attempt = await gameStateCollection(db).updateOne(
+    { _id: "current", worldEpochId },
+    { $set: { demographicFlowAttempt: { worldEpochId, turn } } }
+  );
   if (attempt.matchedCount !== 1)
     throw new Error("Population world identity changed before planning");
   // SP5: population/economic inputs live on macroMetrics; the healthcare
@@ -260,7 +260,7 @@ export async function runDemographicFlows(
       db.collection<RegionDemographics>("regionDemographics").find({}).toArray(),
       db.collection<State>("states").find({}).toArray(),
       db.collection("macroMetrics").find({}).project<MetricsDoc>(METRICS_PROJECTION).toArray(),
-      db.collection("gameState").findOne<
+      gameStateCollection<Document>(db).findOne<
         {
           votingAgeEligible?: number;
           votingAgeEligibleByCountry?: Partial<Record<string, number>>;

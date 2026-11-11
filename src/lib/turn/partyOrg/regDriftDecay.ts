@@ -38,6 +38,7 @@ import {
   type SurplusPartyDelta,
   type SurplusPartyView,
 } from "@/lib/parties/surplusSourcing";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 // Re-exported so existing importers (and tests) keep their entry point while
 // the implementation lives in the DB-free `surplusSourcing` module.
@@ -624,16 +625,14 @@ export async function processRegDriftDecay(
 
   // Enacted registration-access law is national and constant across the turn,
   // so it joins the once-per-phase reads rather than being fetched per pool.
-  const gs = await db
-    .collection<{
-      _id: string;
-      registrationAccessBias?: number;
-      registrationAccessBiasByCountry?: Partial<Record<string, number>>;
-    }>("gameState")
-    .findOne(
-      { _id: "current" },
-      { projection: { registrationAccessBias: 1, registrationAccessBiasByCountry: 1 } }
-    );
+  const gs = await gameStateCollection<{
+    _id: string;
+    registrationAccessBias?: number;
+    registrationAccessBiasByCountry?: Partial<Record<string, number>>;
+  }>(db).findOne(
+    { _id: "current" },
+    { projection: { registrationAccessBias: 1, registrationAccessBiasByCountry: 1 } }
+  );
   /**
    * Per country — electoral law is national law. The legacy global field is the
    * fallback so a world written before the map existed still resolves, but a

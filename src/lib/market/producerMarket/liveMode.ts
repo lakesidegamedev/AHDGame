@@ -8,6 +8,7 @@
  * Each turn also claims its path once, so no turn can run both.
  */
 import type { Db } from "mongodb";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export type ProducerPath = "legacy" | "funded";
 
@@ -57,9 +58,10 @@ export async function loadProducerPath(
   input: { turn: number; worldEpoch: string | null | undefined; liveFromTurn: unknown }
 ): Promise<ProducerPath> {
   const [state, latch] = await Promise.all([
-    db
-      .collection<{ _id: string; producerOpening?: ProducerOpeningMarker }>("gameState")
-      .findOne({ _id: "current" }, { projection: { producerOpening: 1 } }),
+    gameStateCollection<{ _id: string; producerOpening?: ProducerOpeningMarker }>(db).findOne(
+      { _id: "current" },
+      { projection: { producerOpening: 1 } }
+    ),
     input.worldEpoch
       ? db
           .collection("producerEconomyTurns")

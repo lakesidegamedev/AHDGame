@@ -20,6 +20,7 @@ import type {
   NationalPartyElection,
 } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; slug: string }>;
@@ -81,9 +82,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
 
     if (!activeElection && latestElection.length === 0) {
       const [gameState, activeNationalChairElection] = await Promise.all([
-        db
-          .collection<GameState>("gameState")
-          .findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
+        gameStateCollection(db).findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
         db.collection<NationalPartyElection>("nationalPartyElections").findOne({
           partyId,
           countryId,

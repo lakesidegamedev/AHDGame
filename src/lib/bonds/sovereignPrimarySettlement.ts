@@ -25,6 +25,7 @@ import {
   fiscalScaleStageActive,
 } from "@/lib/budget/rules/fiscalScale";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export interface PrimaryAccountingContext {
   ledgerShadow: boolean;
@@ -122,9 +123,10 @@ export async function loadPrimaryAccounting(db: Db): Promise<PrimaryAccountingCo
       .collection<{ currencyCode: string; rate: number }>("exchangeRates")
       .find({}, { projection: { currencyCode: 1, rate: 1 } })
       .toArray(),
-    db
-      .collection<{ _id: string; preset?: string }>("gameState")
-      .findOne({ _id: "current" }, { projection: { preset: 1 } }),
+    gameStateCollection<{ _id: string; preset?: string }>(db).findOne(
+      { _id: "current" },
+      { projection: { preset: 1 } }
+    ),
     resolveLedgerTurn(db),
   ]);
   const poolScale = await loadPoolCashPerFaceByCountry(db, config?.fiscalScaleStage);

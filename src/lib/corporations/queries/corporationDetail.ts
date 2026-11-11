@@ -43,6 +43,7 @@ import { buildShareholderList, loadShareholderContext } from "./corporationDetai
 import { buildPhysicalPnl } from "./corporationDetail/physicalPnl";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import { unplacedIpoShares } from "@/lib/corporations/rules/dividendShares";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export async function loadCorporationDetailView(args: {
   db: Db;
@@ -54,8 +55,7 @@ export async function loadCorporationDetailView(args: {
 
   const refDataPromise = getTurnReferenceData(db, currentTurn);
   // Funded-market transition window, for the sector rows' transition panel.
-  const openingPromise = db
-    .collection<GameState>("gameState")
+  const openingPromise = gameStateCollection(db)
     .findOne({ _id: "current" }, { projection: { worldEpochId: 1, producerOpening: 1 } })
     .then((g) =>
       g?.producerOpening && g.producerOpening.worldEpoch === g.worldEpochId

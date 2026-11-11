@@ -6,6 +6,7 @@ import type { RegionDemographics } from "@/lib/db/types/regionDemographics";
 import type { State } from "@/lib/db/types/state";
 import { RESET_V2_READY } from "@/lib/resetVersions/availability";
 import { resetSystemVersionsForCountry } from "@/lib/resetVersions/rules";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export interface DemographicsV2Preload {
   regionDemographicsByState: Map<string, RegionDemographics>;
@@ -82,7 +83,7 @@ export async function loadElectionRegionDemographicsV2(input: {
 }
 
 export function loadElectionDemographicsGameState(db: Db): Promise<GameState | null> {
-  return db.collection<GameState>("gameState").findOne(
+  return gameStateCollection(db).findOne(
     { _id: "current" },
     {
       projection: {

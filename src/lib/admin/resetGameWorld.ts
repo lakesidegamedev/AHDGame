@@ -47,6 +47,8 @@ import {
 } from "@/lib/resetVersions/rules";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import type { Document } from "mongodb";
 
 /**
  * Runtime collections that `resetGameWorld` handles with bespoke logic instead
@@ -336,7 +338,7 @@ export async function resetGameWorld(
   const selectedState =
     options.versionSelectionSnapshot !== undefined
       ? options.versionSelectionSnapshot
-      : await db.collection<GameState>("gameState").findOne(
+      : await gameStateCollection(db).findOne(
           { _id: "current" },
           {
             projection: {
@@ -374,9 +376,10 @@ export async function resetGameWorld(
   let seasonRecaps: Map<string, CharacterRecap> | null = null;
   let recapIteration: GameIteration | undefined;
   if (!options.deleteProfiles) {
-    const gsForRecap = await db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: { iteration: 1, currentTurn: 1 } });
+    const gsForRecap = await gameStateCollection(db).findOne(
+      { _id: "current" },
+      { projection: { iteration: 1, currentTurn: 1 } }
+    );
     if (gsForRecap) {
       recapIteration = gsForRecap.iteration;
       // A recap is a keepsake, not a precondition: if the build fails the reset
@@ -408,7 +411,7 @@ export async function resetGameWorld(
   // before the sweep and while the outgoing anchor and parties still exist.
   // Freezing after the sweep stamped empty collections, so every reset since
   // the sweep became manifest-driven erased the finished world's office history.
-  const outgoing = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+  const outgoing = await gameStateCollection(db).findOne({ _id: "current" });
   if (outgoing?.iteration) {
     const outgoingAnchor = {
       currentTurn: outgoing.currentTurn ?? 1,
@@ -669,7 +672,7 @@ export async function resetGameWorld(
 
   // Rebuild rather than patch: every outgoing field that is neither written
   // above nor on the keep list goes, including fields no type declares.
-  const outgoingState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+  const outgoingState = await gameStateCollection(db).findOne({ _id: "current" });
   const rebuild = planGameStateRebuild(
     Object.keys(outgoingState ?? {}),
     Object.keys(gameStateUpdate),
@@ -677,15 +680,13 @@ export async function resetGameWorld(
     Object.keys(gameStateUnset)
   );
   const rebuildUnset = Object.fromEntries(rebuild.unset.map((field) => [field, ""] as const));
-  await db
-    .collection<GameState>("gameState")
-    .updateOne(
-      { _id: "current" },
-      rebuild.unset.length > 0
-        ? { $set: gameStateUpdate, $unset: rebuildUnset }
-        : { $set: gameStateUpdate },
-      { upsert: true }
-    );
+  await gameStateCollection(db).updateOne(
+    { _id: "current" },
+    rebuild.unset.length > 0
+      ? { $set: gameStateUpdate, $unset: rebuildUnset }
+      : { $set: gameStateUpdate },
+    { upsert: true }
+  );
 
   // `gameState` is exempt from the manifest-driven sweep (it is re-initialized in
   // place), and the update above is filtered to `_id: "current"` — so ANY other
@@ -696,8 +697,7 @@ export async function resetGameWorld(
   // only non-`current` id written to this collection anywhere in `src/`, but the
   // filter is deliberately generic so a future squatter can't reintroduce the
   // same class of bug. Runs AFTER the upsert so `current` always exists first.
-  await db
-    .collection("gameState")
+  await gameStateCollection<Document>(db)
     // Untyped collection — GameState's `_id` is the literal "current", which
     // doesn't type-check against a `$ne` filter.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

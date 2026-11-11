@@ -8,6 +8,7 @@ import { getLowerChamberOfficeType } from "@/lib/legislature/chamberOfficeType";
 import { getStatesCollection } from "@/lib/db/collections/states";
 import { getElectionsCollection } from "@/lib/db/collections/elections";
 import { getElectedOfficialsCollection } from "@/lib/db/collections/electedOfficials";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const HU_REFORM_SEATS = 199;
 
@@ -35,9 +36,10 @@ export async function runHuAssemblyReform(
   now: Date
 ): Promise<boolean> {
   if (currentYear < 2012) return false;
-  const game = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { preset: 1, huAssemblyReformedAtYear: 1 } });
+  const game = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { preset: 1, huAssemblyReformedAtYear: 1 } }
+  );
   if (game?.preset !== "1991-default" || game.huAssemblyReformedAtYear != null) return false;
   const country = await db
     .collection<CountryGameState>("countryGameStates")
@@ -45,12 +47,10 @@ export async function runHuAssemblyReform(
   if (country?.huElectoralSystem2011SinceTurn == null) return false;
   return runRequiredTransaction(
     async (session) => {
-      const current = await db
-        .collection<GameState>("gameState")
-        .findOne(
-          { _id: "current" },
-          { session, projection: { preset: 1, huAssemblyReformedAtYear: 1 } }
-        );
+      const current = await gameStateCollection(db).findOne(
+        { _id: "current" },
+        { session, projection: { preset: 1, huAssemblyReformedAtYear: 1 } }
+      );
       if (current?.preset !== "1991-default" || current.huAssemblyReformedAtYear != null)
         return false;
       const regions = await (
@@ -145,13 +145,11 @@ export async function runHuAssemblyReform(
           { $set: { totalSeats: HU_REFORM_SEATS, majorityThreshold: 100, updatedAt: now } },
           { session }
         );
-      const changed = await db
-        .collection<GameState>("gameState")
-        .updateOne(
-          { _id: "current", huAssemblyReformedAtYear: { $exists: false } },
-          { $set: { huAssemblyReformedAtYear: currentYear, updatedAt: now } },
-          { session }
-        );
+      const changed = await gameStateCollection(db).updateOne(
+        { _id: "current", huAssemblyReformedAtYear: { $exists: false } },
+        { $set: { huAssemblyReformedAtYear: currentYear, updatedAt: now } },
+        { session }
+      );
       if (changed.modifiedCount !== 1) throw new Error("Hungarian Assembly completion changed");
       return true;
     },

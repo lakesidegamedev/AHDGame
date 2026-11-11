@@ -9,6 +9,7 @@ import { withAdminAuth } from "@/lib/api/withAdminAuth";
 import { handleRouteError } from "@/lib/api/errors";
 import type { CommodityPrice, CommodityPriceHistory, GameState } from "@/lib/db/types";
 import { computeCommodityPressureRatio } from "@/lib/constants/commodities";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export const GET = withAdminAuth(async (_auth, request: Request) => {
   try {
@@ -21,9 +22,7 @@ export const GET = withAdminAuth(async (_auth, request: Request) => {
     const db = await getDb();
     const [prices, gameState] = await Promise.all([
       db.collection<CommodityPrice>("commodityPrices").find({}).toArray(),
-      db
-        .collection<GameState>("gameState")
-        .findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
+      gameStateCollection(db).findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
     ]);
 
     const currentTurn = gameState?.currentTurn ?? 0;

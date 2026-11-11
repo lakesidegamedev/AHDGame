@@ -22,6 +22,7 @@ import type { GameState } from "@/lib/db/types";
 import { resolveCountryCurrencyCode } from "@/lib/currency/govBudgetFields";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const querySchema = z.object({
   countryId: countryIdSchema,
@@ -82,9 +83,7 @@ export async function GET(request: Request) {
     // Live budget request
     const [budget, gameState, centralBank] = await Promise.all([
       federalBudgetCollection(db).findOne({ _id: budgetId }),
-      db
-        .collection<GameState>("gameState")
-        .findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
+      gameStateCollection(db).findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
       centralBanksCollection(db).findOne({ countryId }, { projection: { primeRate: 1 } }),
     ]);
 

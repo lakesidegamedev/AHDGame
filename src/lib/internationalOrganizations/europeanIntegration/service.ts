@@ -18,13 +18,14 @@ import {
   reconcileEuropeanTreaty,
   type EuropeanIntegrationState,
 } from "./rules";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export async function ensureEuropeanIntegrationState(
   db: Db,
   preset: string,
   hasEuropeanMembers: boolean
 ): Promise<EuropeanIntegrationState> {
-  const states = db.collection<GameState>("gameState");
+  const states = gameStateCollection(db);
   const state = await states.findOne(
     { _id: "current" },
     { projection: { currentTurn: 1, europeanIntegration: 1 } }
@@ -62,7 +63,7 @@ export async function ensureEuropeanIntegrationState(
 
 export async function loadEuropeanTreatyContext(db: Db, turn?: number) {
   const [world, memberships] = await Promise.all([
-    db.collection<GameState>("gameState").findOne(
+    gameStateCollection(db).findOne(
       { _id: "current" },
       {
         projection: {
@@ -120,7 +121,7 @@ async function mutateEuropeanState(
     if (!context) return false;
     const next = decide(context);
     if (next === context.state) return false;
-    const result = await db.collection<GameState>("gameState").updateOne(
+    const result = await gameStateCollection(db).updateOne(
       {
         _id: "current",
         "europeanIntegration.revision": context.state.revision ?? { $exists: false },

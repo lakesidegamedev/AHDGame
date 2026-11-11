@@ -33,6 +33,7 @@ import type {
 } from "./types";
 import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export interface CompensationProblem {
   field: string;
@@ -293,9 +294,10 @@ export function compileCompensationDefect(spec: CompensationSpec): Defect {
 
     if (applied.length > 0) {
       const thresholds = await loadTxThresholds(db);
-      const state = await db
-        .collection<{ _id: string; currentTurn?: number }>("gameState")
-        .findOne({ _id: "current" }, { projection: { currentTurn: 1 } });
+      const state = await gameStateCollection<{ _id: string; currentTurn?: number }>(db).findOne(
+        { _id: "current" },
+        { projection: { currentTurn: 1 } }
+      );
       const createdAt = creditMode ? ctx.now : new Date(spec.movedAt as string);
       // Rows carry the clock as their display turn; the ledger entry belongs
       // to the turn whose closing snapshot saw the money move.

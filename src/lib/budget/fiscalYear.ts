@@ -76,6 +76,8 @@ import { RESET_V2_READY } from "@/lib/resetVersions/availability";
 import { resetSystemVersionsForCountry } from "@/lib/resetVersions/rules";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import type { Document } from "mongodb";
 
 // The current turn engine still processes fiscal-year rollover as one shared phase.
 // Pulling the anchor from country-systems makes the rule source explicit now, while
@@ -130,7 +132,7 @@ export async function processFiscalYear(
     return;
   }
 
-  const financeState = await db.collection<GameState>("gameState").findOne(
+  const financeState = await gameStateCollection(db).findOne(
     { _id: "current" },
     {
       projection: {
@@ -1006,9 +1008,10 @@ export async function saveFiscalYearSnapshot(
 
   let turn = preloaded?.currentTurn;
   if (turn === undefined) {
-    const gameState = await db
-      .collection("gameState")
-      .findOne({ _id: "current" } as Record<string, unknown>, { projection: { currentTurn: 1 } });
+    const gameState = await gameStateCollection<Document>(db).findOne(
+      { _id: "current" } as Record<string, unknown>,
+      { projection: { currentTurn: 1 } }
+    );
     turn = (gameState as { currentTurn?: number } | null)?.currentTurn ?? 0;
   }
 

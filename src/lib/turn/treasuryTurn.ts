@@ -68,6 +68,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /** Concurrent country settlements; a shared payee or pool still orders them. */
 const TREASURY_LANES = 8;
@@ -141,7 +142,7 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
     centralBanksCollection(db)
       .find({}, { projection: { countryId: 1 } })
       .toArray(),
-    db.collection<GameState>("gameState").findOne(
+    gameStateCollection(db).findOne(
       { _id: "current" },
       {
         projection: {

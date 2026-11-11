@@ -69,6 +69,7 @@ import {
   loadPoliticalApprovalBases,
 } from "@/lib/politicalLegislation/politicalApprovalProvider";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * The cabinet's own drag on national approval, as modifiers.
@@ -847,7 +848,7 @@ export async function snapshotApprovalHistory(
   // One gameState read per country per turn: the live year and the seats created
   // by legislation decide how many cabinet seats exist right now. No seats
   // registered for the country leaves the set undefined (binary penalty).
-  const gameStateDoc = await db.collection<GameState>("gameState").findOne(
+  const gameStateDoc = await gameStateCollection(db).findOne(
     { _id: "current" },
     {
       projection: {

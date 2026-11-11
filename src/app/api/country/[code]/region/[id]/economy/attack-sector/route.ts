@@ -27,6 +27,7 @@ import {
 } from "@/lib/corporations/commands/plantSectorSplitAttempt";
 import { emitTx } from "@/lib/financialTxLog/emit";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const attackSectorSchema = z.object({ sectorId: z.string().length(24) });
 
@@ -51,7 +52,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const db = await getDb();
-    const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+    const gameState = await gameStateCollection(db).findOne({ _id: "current" });
     if (gameState?.corporationActionsPaused) {
       return errorResponse(403, "Corporation actions are currently paused");
     }

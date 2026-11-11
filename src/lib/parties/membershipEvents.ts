@@ -2,6 +2,7 @@ import { ObjectId, type Db } from "mongodb";
 import type { Character, GameState, PartyMembershipEvent, PoliticalParty } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { recordAudit } from "@/lib/audit/recordAudit";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export interface PartyEventSnapshots {
   oldPartyCountryId: CountryId | null;
@@ -60,9 +61,10 @@ export async function emitPartyMembershipEvent(
     const turn =
       args.turn ??
       (
-        await args.db
-          .collection<GameState>("gameState")
-          .findOne({ _id: "current" }, { projection: { currentTurn: 1 } })
+        await gameStateCollection(args.db).findOne(
+          { _id: "current" },
+          { projection: { currentTurn: 1 } }
+        )
       )?.currentTurn ??
       0;
 

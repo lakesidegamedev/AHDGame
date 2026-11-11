@@ -24,6 +24,7 @@ import { loadRussianAssemblyRepeatTerm } from "./assemblyRepeatTerm";
 import { loadPendingRussianCouncilOwners } from "./pendingCouncilMandates";
 import { russianDumaConvocationOfficeCompatible } from "./rules/dumaConvocation";
 import { decideRussianDumaFiling } from "./rules/assemblyFiling";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 export async function validateRussianDumaPlayerFiling(input: {
   db: Db;
   election: Election;
@@ -35,9 +36,10 @@ export async function validateRussianDumaPlayerFiling(input: {
   registrationOrder: number;
 }) {
   const { db, election, character, turn, registrationOrder } = input;
-  const game = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { preset: 1 } });
+  const game = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { preset: 1 } }
+  );
   const country = await db.collection<CountryGameState>("countryGameStates").findOne(
     { _id: "RU" },
     {

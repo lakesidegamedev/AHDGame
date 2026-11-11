@@ -18,6 +18,7 @@ import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { getGameTime } from "@/lib/time/gameTime";
 import type { Election, GameState } from "@/lib/db/types";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const TURN_MS = 60 * 60 * 1000; // turns fire every hour
 
@@ -31,7 +32,7 @@ export async function POST() {
 
     const db = await getDb();
 
-    const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+    const gameState = await gameStateCollection(db).findOne({ _id: "current" });
 
     if (!gameState) {
       return errorResponse(404, "Game state not found");

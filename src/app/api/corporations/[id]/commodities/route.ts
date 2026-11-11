@@ -32,6 +32,7 @@ import type { CommodityFlow } from "@/lib/db/types/commodityFlow";
 import type { CommodityType } from "@/lib/constants/commodities";
 import type { GameState } from "@/lib/db/types/gameState";
 import type { SupplyAgreement } from "@/lib/db/types/supplyAgreement";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -150,12 +151,10 @@ export async function GET(request: Request, { params }: RouteParams) {
       worldPreset,
       supplyAgreements,
     ] = await Promise.all([
-      db
-        .collection<GameState>("gameState")
-        .findOne(
-          { _id: "current" },
-          { projection: { currentTurn: 1, currentYear: 1, hardwareInputReliefStartTurn: 1 } }
-        ),
+      gameStateCollection(db).findOne(
+        { _id: "current" },
+        { projection: { currentTurn: 1, currentYear: 1, hardwareInputReliefStartTurn: 1 } }
+      ),
       db
         .collection<State>("states")
         .find({ _id: { $in: stateIds } })

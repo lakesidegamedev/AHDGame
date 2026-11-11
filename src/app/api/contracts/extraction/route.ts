@@ -19,6 +19,7 @@ import { activeExtractionContractFilter } from "@/lib/db/collections/extractionC
 import { isContractIssuanceEnabled } from "@/lib/extraction/featureFlag";
 import type { GameState } from "@/lib/db/types/gameState";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const grantSchema = z.object({
   stateId: z.string().min(1),
@@ -142,7 +143,7 @@ export async function POST(request: Request) {
       return statusResponse(409, { overAllocated: true, needsConfirmation: true });
     }
 
-    const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+    const gameState = await gameStateCollection(db).findOne({ _id: "current" });
     const currentTurn = gameState?.currentTurn ?? 0;
 
     const result = await db.collection("extractionContracts").insertOne({

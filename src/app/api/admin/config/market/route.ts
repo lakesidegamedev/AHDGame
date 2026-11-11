@@ -20,6 +20,7 @@ import {
   validateInterventionActivation,
   type EconomicInterventionPlan,
 } from "@/lib/economy/interventionGovernance";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 // Enum derived from the canonical order so route validation can never drift
 // from the client selector or the engine.
@@ -460,7 +461,7 @@ export async function PATCH(request: Request) {
     if (typeof mediaRegulationEnabled === "boolean")
       governorSet.mediaRegulationEnabled = mediaRegulationEnabled;
 
-    const gameState = db.collection<GameState>("gameState");
+    const gameState = gameStateCollection(db);
     const snapshot = (enabled: boolean) => ({
       enabled,
       marketSystemMode: mode,

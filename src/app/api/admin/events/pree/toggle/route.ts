@@ -5,6 +5,7 @@ import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import type { GameState } from "@/lib/db/types";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const bodySchema = z.object({
   enabled: z.boolean(),
@@ -31,7 +32,7 @@ export async function POST(request: Request) {
       set.playerRandomEventsEnabledAt = now;
     }
 
-    await db.collection<GameState>("gameState").updateOne(
+    await gameStateCollection(db).updateOne(
       { _id: "current" },
       parsed.data.enabled
         ? { $set: set }

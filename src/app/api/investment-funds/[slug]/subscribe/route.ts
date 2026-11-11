@@ -46,6 +46,7 @@ import { logIndexFundSubscribeActivity } from "@/lib/indexFunds/fundTxLog";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { subscribeIndexFundSchema } from "@/lib/api/schemas/indexFunds";
 import { recordAudit } from "@/lib/audit/recordAudit";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 class FundQuoteMovedError extends Error {}
 
@@ -160,7 +161,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
       let subscribeSpreadCharged = 0;
       let subscribeConversion: ExplicitPayConversion | undefined;
       if (forexEnabled) {
-        const gs = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+        const gs = await gameStateCollection(db).findOne({ _id: "current" });
         if (payCurrency && payCurrency !== fundCurrency) {
           const convertResult = await convertForExplicitPay(db, {
             character,

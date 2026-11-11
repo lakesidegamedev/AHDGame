@@ -109,6 +109,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 type EnactableBill = Pick<
   Bill | StateBill,
@@ -507,9 +508,7 @@ export async function onBillEnacted(
         }
       );
       if (validation.warning === "DEBT_CEILING_EXCEEDED") {
-        const budgetGateGameState = await db
-          .collection<GameState>("gameState")
-          .findOne({ _id: "current" });
+        const budgetGateGameState = await gameStateCollection(db).findOne({ _id: "current" });
         await triggerDebtCeilingCrisis(
           db,
           budgetGateGameState?.currentYear ?? new Date().getFullYear()
@@ -689,7 +688,7 @@ export async function onBillEnacted(
   );
 
   // Fetch fiscal year from game state
-  const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+  const gameState = await gameStateCollection(db).findOne({ _id: "current" });
   const fiscalYear = gameState?.currentYear ?? new Date().getFullYear();
 
   // Collect all "for" voters from both chambers
@@ -778,11 +777,10 @@ export async function onBillEnacted(
   const proposalPayerId =
     bill.proposalPayerId ?? bill.proposedByGovernor?.characterId ?? bill.sponsorId;
   if (proposalPayerId && (bill.proposalNpiCost || bill.proposalActionCost)) {
-    const sponsor = await charactersCollection(db)
-      .findOne(
-        { _id: proposalPayerId },
-        { projection: { actions: 1, nationalInfluence: 1, stats: 1 } }
-      );
+    const sponsor = await charactersCollection(db).findOne(
+      { _id: proposalPayerId },
+      { projection: { actions: 1, nationalInfluence: 1, stats: 1 } }
+    );
     if (sponsor) {
       const refundNpi = bill.proposalNpiCost ?? 0;
       const refundActions = bill.proposalActionCost ?? 0;
@@ -1137,8 +1135,7 @@ async function applyBucketImpactsToVoters(
   if (validObjectIds.length === 0) return;
 
   // Update characters
-  await charactersCollection(db)
-    .updateMany({ _id: { $in: validObjectIds } }, { $inc: incUpdates });
+  await charactersCollection(db).updateMany({ _id: { $in: validObjectIds } }, { $inc: incUpdates });
 
   // Update NPPs (some voter IDs might be NPPs)
   await db

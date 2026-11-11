@@ -24,6 +24,7 @@ import { countryFiscalBase } from "@/lib/politicalLegislation/fiscalBase";
 import { resolveMergeFxScale } from "./mergeFxScale";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export interface MergeNationalFiscArgs {
   fromCountryId: CountryId;
@@ -268,9 +269,10 @@ export async function mergeNationalFisc(
       // is the pricing country's live band, which for the survivor may differ
       // from the band each side priced at before the merge. Both the population
       // and the band change fold into the term's factor.
-      const gs = await db
-        .collection<GameState>("gameState")
-        .findOne({ _id: "current" as const }, { projection: { incomeBandIndexByCountry: 1 } });
+      const gs = await gameStateCollection(db).findOne(
+        { _id: "current" as const },
+        { projection: { incomeBandIndexByCountry: 1 } }
+      );
       const liveBandTo = gs?.incomeBandIndexByCountry?.[toCountryId] ?? mergeBases.toIncomeBand;
 
       const stamp = { from: fromCountryId, to: toCountryId, turn: currentTurn };

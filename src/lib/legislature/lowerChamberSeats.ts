@@ -30,6 +30,7 @@ import {
 } from "@/lib/countries/ro/rules/parliament1992";
 import { japanShugiinCurrentChamberCapacity } from "@/lib/countries/jp/rules/shugiinElectoralLaw";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /** Active world preset, when present — drives era-conditional chamber sizes. */
 async function readActivePreset(db: Db): Promise<string | undefined> {
@@ -50,9 +51,9 @@ export async function getLiveLowerChamberSeats(db: Db, countryId: CountryId): Pr
   // Once the 2014 reform stamps the world, the re-apportioned region documents
   // carry the live 199-seat chamber and override that initial config size.
   if (countryHasFeature("huLib", countryId)) {
-    const reform = await db
-      .collection<{ _id: string; huAssemblyReformedAtYear?: number }>("gameState")
-      .findOne({ _id: "current" }, { projection: { huAssemblyReformedAtYear: 1 } });
+    const reform = await gameStateCollection<{ _id: string; huAssemblyReformedAtYear?: number }>(
+      db
+    ).findOne({ _id: "current" }, { projection: { huAssemblyReformedAtYear: 1 } });
     if (reform?.huAssemblyReformedAtYear) {
       const regions = await db
         .collection<State>("states")

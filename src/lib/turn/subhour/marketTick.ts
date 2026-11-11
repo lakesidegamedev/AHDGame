@@ -5,6 +5,7 @@ import { applyPriceMultipliers } from "@/lib/corporations/applyPriceMultipliers"
 import { recomputeSharePricesAfterBondTurn } from "@/lib/turn/corporation/recomputeSharePrices";
 import { generateStockExchangeSnapshots } from "@/lib/turn/stockExchangeSnapshot";
 import { runInAuditContext } from "@/lib/observability/context";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export interface MarketTickResult {
   turn: number;
@@ -33,7 +34,7 @@ export async function runMarketTick(
 ): Promise<MarketTickResult | null> {
   const database = db ?? (await getDb());
   const started = Date.now();
-  const state = await database.collection<GameState>("gameState").findOne(
+  const state = await gameStateCollection(database).findOne(
     { _id: "current" },
     {
       projection: {
@@ -63,9 +64,10 @@ export async function runMarketTick(
     );
     const { updated, pulseCount } = await applyPriceMultipliers(database);
     await generateStockExchangeSnapshots(turn, database);
-    await database
-      .collection<GameState>("gameState")
-      .updateOne({ _id: "current" }, { $set: { lastMarketTickAt: now } });
+    await gameStateCollection(database).updateOne(
+      { _id: "current" },
+      { $set: { lastMarketTickAt: now } }
+    );
     return {
       turn,
       corpsRepriced,

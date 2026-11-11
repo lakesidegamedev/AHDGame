@@ -38,6 +38,7 @@ import { getSeatIdFromElection } from "@/lib/seats";
 import type { GameTimeContext } from "@/lib/time/gameTime";
 import { hasElectionStarted, isElectionEnded } from "@/lib/elections/phases";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * NG elections run once Nigeria is off "coming-soon". Gated on the RUNTIME
@@ -140,7 +141,7 @@ export async function withElectionGameStateSnapshot<T>(
 export async function readCurrentTurnAndCtx(
   db: Awaited<ReturnType<typeof import("@/lib/mongodb").getDb>>
 ): Promise<TurnAndCtx> {
-  const gs = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+  const gs = await gameStateCollection(db).findOne({ _id: "current" });
   const ctx = cycleAnchorContextFromGameState(gs);
   return {
     currentTurn: gs?.currentTurn ?? 1,

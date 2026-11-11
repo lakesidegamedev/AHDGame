@@ -21,6 +21,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import type { GameConfig, GameState, User } from "@/lib/db/types";
 import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const marketOrderSchema = z
   .object({
@@ -62,7 +63,7 @@ export async function POST(request: Request) {
 
     const { fromCurrency, toCurrency, amount } = parsed.data;
     const db = await getDb();
-    const gs = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+    const gs = await gameStateCollection(db).findOne({ _id: "current" });
     const currentTurn = gs?.currentTurn ?? 0;
 
     // Mirror /api/forex/exchange — refuse non-convertible command currencies.

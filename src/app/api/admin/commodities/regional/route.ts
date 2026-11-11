@@ -11,6 +11,7 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { countryIdSchema } from "@/lib/api/schemas/country";
 import type { CommodityPrice, CommodityPriceHistory, GameState, State } from "@/lib/db/types";
 import { computeCommodityPressureRatio } from "@/lib/constants/commodities";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const querySchema = z.object({
   countryId: countryIdSchema,
@@ -31,9 +32,7 @@ export const GET = withAdminAuth(async (_auth, request: Request) => {
 
     const [prices, gameState] = await Promise.all([
       db.collection<CommodityPrice>("commodityPrices").find({}).toArray(),
-      db
-        .collection<GameState>("gameState")
-        .findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
+      gameStateCollection(db).findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
     ]);
 
     const currentTurn = gameState?.currentTurn ?? 0;

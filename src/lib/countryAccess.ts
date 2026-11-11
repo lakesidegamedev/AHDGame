@@ -30,6 +30,7 @@ import {
   type CountryRequirementLevel,
 } from "@/lib/world/countryRequirementLevel";
 import { NPP_AUTONOMY_LEVEL_RANK } from "@/lib/nppAutonomy/levels";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export interface CountryAccess {
   enabledForPlayers: boolean;
@@ -73,9 +74,10 @@ export interface CountryAccess {
  * dependency-free `levels` module so it can never fall behind a new tier.
  */
 async function readGlobalNppLevelRank(db: Db): Promise<number> {
-  const doc = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { nppAutonomyLevel: 1, nppAutonomyEnabled: 1 } });
+  const doc = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { nppAutonomyLevel: 1, nppAutonomyEnabled: 1 } }
+  );
   const level = doc?.nppAutonomyLevel ?? (doc?.nppAutonomyEnabled === true ? "v0" : "off");
   return NPP_AUTONOMY_LEVEL_RANK[level] ?? 0;
 }

@@ -34,6 +34,7 @@ import {
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export async function loadCommandEconomyDashboard(
   db: Db,
@@ -46,9 +47,10 @@ export async function loadCommandEconomyDashboard(
     db
       .collection<GameConfig>("gameConfig")
       .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } }),
-    db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: { currentYear: 1, currentTurn: 1 } }),
+    gameStateCollection(db).findOne(
+      { _id: "current" },
+      { projection: { currentYear: 1, currentTurn: 1 } }
+    ),
   ]);
   const enabled = gameConfig?.commandEconomyEnabled === true;
   if (!enabled) return null;

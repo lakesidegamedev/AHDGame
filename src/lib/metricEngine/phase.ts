@@ -129,6 +129,7 @@ import {
 import { fundingResponse } from "./spendingChannel";
 import { EDU_SPEND_HALF_SAT } from "./registry/education";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /** Default unemployment when a state has no prior reading (matches gdpGrowth.ts `?? 4.5`). */
 const DEFAULT_UNEMPLOYMENT = 4.5;
@@ -277,7 +278,7 @@ function finite(value: unknown): number | undefined {
  */
 export async function runMetricEngine(db: Db, turn: number): Promise<number> {
   // Era envelopes: live year for the metric era catalog's engine clamps.
-  const eraGameState = await db.collection<import("@/lib/db/types").GameState>("gameState").findOne(
+  const eraGameState = await gameStateCollection<import("@/lib/db/types").GameState>(db).findOne(
     { _id: "current" },
     {
       projection: {

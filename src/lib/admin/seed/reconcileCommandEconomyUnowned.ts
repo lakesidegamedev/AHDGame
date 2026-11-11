@@ -28,6 +28,7 @@ import { generateCountryOwnedSeedData } from "@/lib/seeds/reference/budgets";
 import { loadWorldPreset } from "@/lib/currency/gdpAnchorRate";
 import { NUMERIC_BSON_TYPE } from "@/lib/db/queryHelpers";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export interface ReconcileCommandEconomyUnownedResult {
   commandCountries: CountryId[];
@@ -73,9 +74,10 @@ export async function reconcileCommandEconomyUnowned(
     db
       .collection<GameConfig>("gameConfig")
       .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } }),
-    db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" as never }, { projection: { currentYear: 1 } }),
+    gameStateCollection(db).findOne(
+      { _id: "current" as never },
+      { projection: { currentYear: 1 } }
+    ),
     opts.preset ? Promise.resolve(opts.preset) : loadWorldPreset(db),
   ]);
 

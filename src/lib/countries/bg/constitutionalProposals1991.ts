@@ -38,6 +38,7 @@ import {
 } from "./rules/assemblyClock1991";
 import { turnToWallClock } from "@/lib/elections/canonicalCycle";
 import { canRebindBg1991PrimaryCohort } from "./rules/primaryHandover1991";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export const BG_1991_PROPOSALS_COLLECTION = "bg1991ConstitutionalProposals";
 const ID = "1991-default:bg-constitutional:constitution1991";
@@ -61,12 +62,10 @@ export interface Bg1991ConstitutionalProposal {
 export class Bg1991ConstitutionalConflict extends Error {}
 
 async function availability(db: Db, game: Calendar, turn: number, session?: ClientSession) {
-  const current = await db
-    .collection<GameState>("gameState")
-    .findOne(
-      { _id: "current" },
-      { session, projection: { preset: 1, preIteration: 1, preIterationTurns: 1 } }
-    );
+  const current = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { session, projection: { preset: 1, preIteration: 1, preIterationTurns: 1 } }
+  );
   const runtime = await db
     .collection<CountryState>("countryState")
     .findOne({ _id: "BG" }, { session, projection: { governmentType: 1 } });

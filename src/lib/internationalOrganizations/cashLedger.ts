@@ -19,6 +19,7 @@ import {
   type SettlementResult,
 } from "@/lib/banking/settlementJournal";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export interface OrganizationCashContext {
   turn: number;
@@ -223,9 +224,10 @@ export async function loadOrganizationCashContext(
     const treasuryCashLedgerEnabled = config?.treasuryCashLedgerEnabled === true;
     if (!ledgerShadowEnabled && !treasuryCashLedgerEnabled) return null;
     const [state, rates, budgets, funds, custom] = await Promise.all([
-      db
-        .collection<{ _id: string; currentTurn: number; preset?: string }>("gameState")
-        .findOne({ _id: "current" }, { projection: { currentTurn: 1, preset: 1 } }),
+      gameStateCollection<{ _id: string; currentTurn: number; preset?: string }>(db).findOne(
+        { _id: "current" },
+        { projection: { currentTurn: 1, preset: 1 } }
+      ),
       db
         .collection<{ currencyCode: string; rate: number }>("exchangeRates")
         .find({}, { projection: { currencyCode: 1, rate: 1 } })

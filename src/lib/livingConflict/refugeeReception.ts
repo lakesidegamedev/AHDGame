@@ -22,6 +22,7 @@ import {
   type RefugeeReceptionResult,
 } from "./rules/refugeeReception";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const REFUGEE_RECEPTION_HISTORY = "refugeeReceptionHistory";
 interface RefugeeReceptionHistory extends RefugeeReceptionResult {
@@ -109,7 +110,7 @@ export async function prepareRefugeeReceptionOrder(
   )
     throw new Error("Invalid authored refugee reception");
   const [gameState, states, conflict, budget, authorization] = await Promise.all([
-    db.collection<GameState>("gameState").findOne(
+    gameStateCollection(db).findOne(
       { _id: "current" },
       {
         projection: {
@@ -289,12 +290,10 @@ export async function materializeRefugeeReceptionResults(
 
 /** One world read and one projected obligation read, shared by the national budget sweep. */
 export async function loadRefugeeServiceCosts(db: Db): Promise<Record<string, number>> {
-  const world = await db
-    .collection<GameState>("gameState")
-    .findOne(
-      { _id: "current" },
-      { projection: { worldEpochId: 1, currentTurn: 1, isProcessing: 1, processingTargetTurn: 1 } }
-    );
+  const world = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { worldEpochId: 1, currentTurn: 1, isProcessing: 1, processingTargetTurn: 1 } }
+  );
   if (!world?.worldEpochId) return {};
   const turn =
     world.isProcessing === true

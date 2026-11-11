@@ -19,6 +19,7 @@ import {
 } from "./rules/presidentialResult";
 import { hasAuthorizedPostSovietTransition } from "./rules/postSovietTransition";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 export const RUSSIAN_PRESIDENTIAL_RESULTS_COLLECTION = "russianPresidentialElectionResults";
 export interface RussianPresidentialResultRecord {
   _id: string;
@@ -69,9 +70,10 @@ export async function materializeRussianPresidentialElectionResult(input: {
       throw new Error("Russian result identity changed");
     return previous;
   }
-  const game = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { session, projection: { preset: 1 } });
+  const game = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { session, projection: { preset: 1 } }
+  );
   if (game?.preset !== "1991-default")
     throw new Error("No 1991 Russian presidential mandate in this world");
   const elections = db.collection<Election>("elections");

@@ -26,6 +26,7 @@ import {
 import { POLITICAL_METRIC_COUNTRY_IDS } from "@/lib/politicalMetrics/types";
 import { NON_PLAYABLE_BOARD_COUNTRY_IDS } from "@/lib/politicalMetrics/seeds/nonPlayableBoardsSchema";
 import { approvalComponent, electorateLean } from "./politicalApproval";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * Every country whose political metrics come from the board: the four
@@ -84,7 +85,7 @@ export async function loadPoliticalApprovalBases(
   // non-playable's board sits at a different level per era, so the wrong
   // intercept would lurch its approval.
   const [gameState, states] = await Promise.all([
-    db.collection<GameState>("gameState").findOne(
+    gameStateCollection(db).findOne(
       { _id: "current" },
       {
         projection: {

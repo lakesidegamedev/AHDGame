@@ -76,6 +76,7 @@ import { assertCeoAcquisitionWithinCap } from "@/lib/corporations/ceoShareAcquis
 import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -489,7 +490,7 @@ export async function buyPublicShares(request: Request, { params }: RouteParams)
       // wallets via autoConvertForPurchase (matches bond buy flow).
       let imperialConversion: ExplicitPayConversion | undefined;
       if (forexEnabled) {
-        const gs = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+        const gs = await gameStateCollection(db).findOne({ _id: "current" });
         if (payCurrency && payCurrency !== imperialHomeCurrency) {
           const convertResult = await convertForExplicitPay(db, {
             character: imperial,
@@ -738,7 +739,7 @@ export async function buyPublicShares(request: Request, { params }: RouteParams)
     let charSpreadCharged = 0;
     let charConversion: ExplicitPayConversion | undefined;
     if (forexEnabled) {
-      const gs = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+      const gs = await gameStateCollection(db).findOne({ _id: "current" });
       if (payCurrency && payCurrency !== homeCurrency) {
         const convertResult = await convertForExplicitPay(db, {
           character: charDoc,

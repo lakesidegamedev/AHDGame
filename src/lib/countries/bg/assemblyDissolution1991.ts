@@ -17,14 +17,16 @@ import {
   passesBgContinuedAssemblyDissolution,
   bgContinuedAssemblyDissolutionAvailability,
 } from "./rules/constitutionalDecision1991";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export const BG_CONTINUED_ASSEMBLY_DISSOLUTION_ID =
   "1991-default:bg-constitutional:dissolution1991";
 async function availability(db: Db, turn: number, session?: ClientSession) {
   const readGame = () =>
-    db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { session, projection: { preset: 1, preIteration: 1 } });
+    gameStateCollection(db).findOne(
+      { _id: "current" },
+      { session, projection: { preset: 1, preIteration: 1 } }
+    );
   const readCountry = () =>
     db.collection<CountryGameState>("countryGameStates").findOne(
       { _id: "BG" },

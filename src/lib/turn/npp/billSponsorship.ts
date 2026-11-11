@@ -86,6 +86,7 @@ import type { Bill } from "@/lib/db/types";
 import type { NPP } from "@/lib/db/types";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * Conservative catalog of legislation types that are clearly market-liberalizing
@@ -787,7 +788,7 @@ export async function processNppBillSponsorship(ctx: NPPContext): Promise<number
         { _id: "default" },
         { projection: { commandEconomyEnabled: 1, mediaRegulationEnabled: 1, marketSystemMode: 1 } }
       ),
-    db.collection<GameState>("gameState").findOne(
+    gameStateCollection(db).findOne(
       { _id: "current" },
       {
         projection: {

@@ -21,6 +21,7 @@ import { isSeatActive } from "@/lib/cabinet/rosterEra";
 import { resolveGameYear } from "@/lib/era/era";
 import { cabinetActionFunding } from "@/lib/resetCabinet/rules/actionFunding";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const bodySchema = z.object({ actionId: z.string().min(1).max(120) }).strict();
 interface RouteParams {
@@ -66,7 +67,7 @@ export async function POST(request: Request, { params }: RouteParams) {
         };
       }
       const actorId = member.characterId.toString();
-      const gameState = await db.collection<GameState>("gameState").findOne(
+      const gameState = await gameStateCollection(db).findOne(
         { _id: "current" },
         {
           session,

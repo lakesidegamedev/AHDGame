@@ -48,6 +48,7 @@ import {
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 interface RouteParams {
   params: Promise<{ bondId: string }>;
@@ -433,9 +434,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     // appetite for the issuer.
     const quote = await loadBondQuote(db, bond);
     const proceedsLocal = units * quote.bidPerUnit;
-    const turnDoc = await db
-      .collection<{ _id: string; currentTurn?: number }>("gameState")
-      .findOne({ _id: "current" }, { projection: { currentTurn: 1 } });
+    const turnDoc = await gameStateCollection<{ _id: string; currentTurn?: number }>(db).findOne(
+      { _id: "current" },
+      { projection: { currentTurn: 1 } }
+    );
     const currentTurn = turnDoc?.currentTurn ?? 0;
 
     // Depth check before any holder-side write. The gated debit inside each

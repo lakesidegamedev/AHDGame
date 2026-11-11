@@ -122,6 +122,7 @@ import {
   validateRankedBallots,
 } from "@/lib/elections/rules/prStv";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 // ─── Accumulate one turn of votes into a tally ───────────────────────────────
 
@@ -278,7 +279,7 @@ export async function accumulateVoteTurn(
       db
         .collection<StateRegistrationPool>("stateRegistrationPool")
         .findOne({ stateId, countryId: election.countryId }),
-      db.collection<GameState>("gameState").findOne(
+      gameStateCollection(db).findOne(
         { _id: "current" },
         {
           projection: {

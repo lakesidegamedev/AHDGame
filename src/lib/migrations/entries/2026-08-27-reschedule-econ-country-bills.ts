@@ -1,5 +1,6 @@
 import type { Db, Document, Filter } from "mongodb";
 import type { Migration, MigrationResult } from "../types";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const COUNTRY_IDS = ["FR", "IT", "ES", "SE", "TR", "AT", "FI", "GR", "BR", "NG"];
 const VOTE_TURNS = 24;
@@ -105,9 +106,10 @@ function expiredFilter(stage: RepairStage, currentTurn: number, now: Date): Filt
 }
 
 async function rescheduleStrandedBills(db: Db, dryRun: boolean): Promise<MigrationResult> {
-  const gameState = await db
-    .collection<{ _id: string; currentTurn: number }>("gameState")
-    .findOne({ _id: "current" }, { projection: { currentTurn: 1 } });
+  const gameState = await gameStateCollection<{ _id: string; currentTurn: number }>(db).findOne(
+    { _id: "current" },
+    { projection: { currentTurn: 1 } }
+  );
   const currentTurn = gameState?.currentTurn ?? 1;
   const now = new Date();
   let scanned = 0;

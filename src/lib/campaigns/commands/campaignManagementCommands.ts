@@ -38,6 +38,7 @@ import {
 import { emitRallyWire } from "@/lib/elections/raceWireEmit";
 import { CAMPAIGN_ACTIVITY_HISTORY_CAP } from "@/lib/campaigns/constants/activityHistory";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export async function appointCampaignManager(params: {
   db: Db;
@@ -707,9 +708,9 @@ export async function assertCampaignActorForSurrogate(
 }
 
 export async function getCurrentTurn(db: Db): Promise<number> {
-  const gameState = await db
-    .collection<{ _id: string; currentTurn?: number }>("gameState")
-    .findOne({ _id: "current" });
+  const gameState = await gameStateCollection<{ _id: string; currentTurn?: number }>(db).findOne({
+    _id: "current",
+  });
   return gameState?.currentTurn ?? 0;
 }
 

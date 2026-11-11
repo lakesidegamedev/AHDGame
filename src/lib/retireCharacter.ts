@@ -46,6 +46,7 @@ import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * Core retirement function: snapshots a character, cleans up all gameplay
@@ -277,9 +278,10 @@ export async function retireCharacter(
   // Read only office facts before retirement removes the holder references.
   // Batch by collection; telemetry failures never affect the retirement.
   const telemetryOffices = await Promise.all([
-    db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: { currentTurn: 1, iteration: 1 } }),
+    gameStateCollection(db).findOne(
+      { _id: "current" },
+      { projection: { currentTurn: 1, iteration: 1 } }
+    ),
     db
       .collection<ElectedOfficial>("electedOfficials")
       .find({ characterId }, { projection: { officeType: 1, countryId: 1, party: 1 } })
@@ -532,8 +534,7 @@ export async function retireCharacter(
     deletedAt: now,
   });
 
-  const retiredCharacterResult = await charactersCollection(db)
-    .deleteOne({ _id: characterId });
+  const retiredCharacterResult = await charactersCollection(db).deleteOne({ _id: characterId });
 
   await db.collection("users").updateOne(
     { _id: userId },

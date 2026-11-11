@@ -4,6 +4,7 @@ import { RESET_V2_READY } from "@/lib/resetVersions/availability";
 import { RESET_V2_COUNTRIES, resetSystemVersionsForCountry } from "@/lib/resetVersions/rules";
 import type { ResetCabinetActionState } from "./rules/actionState";
 import { combineActiveActionEffects, type TemporaryTargetEffect } from "./rules/actions";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /** One projected country batch, including callers that do not already hold gameState. */
 export async function loadCabinetGameplayEffects(
@@ -13,7 +14,7 @@ export async function loadCabinetGameplayEffects(
 ): Promise<TemporaryTargetEffect[]> {
   const game =
     existingGameState === undefined
-      ? await db.collection<GameState>("gameState").findOne(
+      ? await gameStateCollection(db).findOne(
           { _id: "current" },
           {
             projection: {

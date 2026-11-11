@@ -25,6 +25,7 @@ import { loadRussianCouncilCertificationInputs } from "./councilCertificationInp
 import { resolveRussianCouncilRepeat } from "./rules/councilRepeat";
 import { resolveRussianCouncilAccumulatedCohort } from "./rules/councilCohort";
 import { hasAuthorizedPostSovietTransition } from "./rules/postSovietTransition";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export async function materializeRussianCouncilRepeatResult(input: {
   db: Db;
@@ -70,9 +71,10 @@ export async function materializeRussianCouncilRepeatResult(input: {
       throw new Error("Council repeat result identity changed");
     return replay;
   }
-  const game = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { session, projection: { preset: 1 } });
+  const game = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { session, projection: { preset: 1 } }
+  );
   const countries = db.collection<CountryGameState>("countryGameStates");
   const country = await countries.findOne(
     { _id: "RU" },

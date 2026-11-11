@@ -18,6 +18,7 @@
  */
 import type { Db } from "mongodb";
 import { randomUUID } from "node:crypto";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 type Env = Record<string, string | undefined>;
 
@@ -202,11 +203,14 @@ export async function runTurnRequestTick(input: {
   // A scheduled turn already holds the lock: leave the request queued rather
   // than claim it and fail on the lock. A stale lock (dead holder) does not
   // block; processTurn's own recovery takes it over.
-  const gs = await input.db
-    .collection<{ _id: string; isProcessing?: boolean; processingHeartbeatAt?: Date | null }>(
-      "gameState"
-    )
-    .findOne({ _id: "current" }, { projection: { isProcessing: 1, processingHeartbeatAt: 1 } });
+  const gs = await gameStateCollection<{
+    _id: string;
+    isProcessing?: boolean;
+    processingHeartbeatAt?: Date | null;
+  }>(input.db).findOne(
+    { _id: "current" },
+    { projection: { isProcessing: 1, processingHeartbeatAt: 1 } }
+  );
   const lockHeartbeat = gs?.processingHeartbeatAt
     ? new Date(gs.processingHeartbeatAt).getTime()
     : 0;

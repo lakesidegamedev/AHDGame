@@ -8,6 +8,7 @@ import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { getNationalIdentity } from "@/lib/constants/nationalIdentity";
 import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /** Canonical "is this a state-owned National Corporation" reader. */
 export function isStateOwned(
@@ -101,9 +102,10 @@ export async function ensurePrimaryNationalCorporation(
   // resolves through the era-blind map, byte-identical to before. The
   // preset is read inline (not via loadWorldPreset) to keep this
   // widely-imported module off the heavy readiness-contract import chain.
-  const gameState = await db
-    .collection<{ _id: string; preset?: string | null }>("gameState")
-    .findOne({ _id: "current" }, { projection: { preset: 1 } });
+  const gameState = await gameStateCollection<{ _id: string; preset?: string | null }>(db).findOne(
+    { _id: "current" },
+    { projection: { preset: 1 } }
+  );
   const preset =
     gameState?.preset && gameState.preset.trim().length > 0
       ? gameState.preset

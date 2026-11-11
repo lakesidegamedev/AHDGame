@@ -13,6 +13,7 @@ import {
   aggregateNationalMetricValue,
 } from "./nationalMetrics/rules";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * Plausible range for the back-solved income-band index at world start. A seed
@@ -68,7 +69,7 @@ export async function computeNationalMetrics(db: Db, turn?: number): Promise<voi
     db.collection<State>("states").find({}).toArray(),
     db.collection<StateMetrics>("macroMetrics").find({}).toArray(),
     federalBudgetCollection(db).find({}).toArray(),
-    db.collection<GameState>("gameState").findOne(
+    gameStateCollection(db).findOne(
       { _id: "current" },
       {
         projection: {
@@ -319,6 +320,6 @@ export async function computeNationalMetrics(db: Db, turn?: number): Promise<voi
   if (eraOn && Object.keys(incomeBandIndexByCountry).length > 0) {
     const set: Record<string, unknown> = { incomeBandIndexByCountry };
     if (baselinesChanged) set.eraGdpPerCapitaBaseline = gdpPcBaselines;
-    await db.collection<GameState>("gameState").updateOne({ _id: "current" }, { $set: set });
+    await gameStateCollection(db).updateOne({ _id: "current" }, { $set: set });
   }
 }

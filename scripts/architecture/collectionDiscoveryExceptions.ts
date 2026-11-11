@@ -91,7 +91,7 @@ export const LEGACY_DYNAMIC_COLLECTION_SITES: readonly LegacyDynamicCollectionSi
     file: "src/lib/admin/resetContract/residueScan.ts",
     owner: "runResidueScan",
     argument: "collection",
-    scopeHash: "981892cb2daaaa87f7d5af75c829291655a198c5d293d25f4773ee8e218877b0",
+    scopeHash: "0cb9eb9034ebb289bc9b1c94111beea39877bfcaf3332c9c431226b238ff95d7",
     count: 3,
     reason: "The residue scan reads the manifest categories and its own fixed turn-stamp list.",
   },
@@ -587,7 +587,7 @@ export const LEGACY_DYNAMIC_COLLECTION_SITES: readonly LegacyDynamicCollectionSi
     file: "src/lib/retention/retention.ts",
     owner: "runRetention",
     argument: "policy.collection",
-    scopeHash: "f4971b307f971bd515806c9e770f72bbd434b87e1aec5c8729e22f5239364831",
+    scopeHash: "27838f533a59b4f516142164f646b33a4d848443c380663c15f316bf4fdbffd3",
     count: 1,
     reason:
       "The named persistence operation receives its collection from a repository-owned caller.",

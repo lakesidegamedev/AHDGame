@@ -36,6 +36,7 @@ import type { GameState } from "@/lib/db/types/gameState";
 import { RESET_V2_READY } from "@/lib/resetVersions/availability";
 import { resetSystemVersionsForCountry } from "@/lib/resetVersions/rules";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const VOTING_DURATION_HOURS = NPP_BILL_VOTING_DURATION_HOURS;
 
@@ -81,7 +82,7 @@ export async function proposeNppNationalBill(
   // ── One-party-state banned-party guard ─────────────────────────────────────
   const [runtimeState, resetState] = await Promise.all([
     getCountryState(db, countryId),
-    db.collection<GameState>("gameState").findOne(
+    gameStateCollection(db).findOne(
       { _id: "current" },
       {
         projection: {

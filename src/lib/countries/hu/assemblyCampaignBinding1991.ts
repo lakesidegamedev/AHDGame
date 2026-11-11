@@ -15,6 +15,7 @@ import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { scalePoolToRegistered } from "@/lib/elections/rules/registration";
 import { HU_1991_TERRITORIAL_DISTRICTS } from "./data/electoralDistricts1991";
 import { STATE_POPULATION_FIELDS } from "@/lib/db/collections/states";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export async function materializeHu1991CampaignBinding(input: {
   db: Db;
@@ -30,9 +31,10 @@ export async function materializeHu1991CampaignBinding(input: {
     !Number.isFinite(now.getTime())
   )
     throw new Error("Hungarian campaign binding needs an active transaction, cycle and time");
-  const game = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { session, projection: { preset: 1 } });
+  const game = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { session, projection: { preset: 1 } }
+  );
   if (game?.preset !== "1991-default") return false;
   const elections = await db
     .collection<Election>("elections")
@@ -171,9 +173,10 @@ export async function bindHu1991Campaigns(
   now: Date,
   cycles?: readonly number[]
 ): Promise<number> {
-  const game = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { preset: 1 } });
+  const game = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { preset: 1 } }
+  );
   if (game?.preset !== "1991-default") return 0;
   const unbound = await db
     .collection<Election>("elections")

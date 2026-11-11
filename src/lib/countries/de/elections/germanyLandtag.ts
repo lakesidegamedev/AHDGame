@@ -44,6 +44,7 @@ import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { captureElectionWon } from "@/lib/analytics/electionAnalytics";
 import { captureOfficeTransition } from "@/lib/analytics/officeTransitionAnalytics";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const LANDTAG_THRESHOLD = 0.05;
 
@@ -52,7 +53,7 @@ async function getCurrentTurnAndCtx(db: Db): Promise<{
   ctx: import("@/lib/elections/cycleAnchorContext").CycleAnchorContext;
   preset: string;
 }> {
-  const gs = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+  const gs = await gameStateCollection(db).findOne({ _id: "current" });
   const { cycleAnchorContextFromGameState } = await import("@/lib/elections/cycleAnchorContext");
   return {
     currentTurn: gs?.currentTurn ?? 1,

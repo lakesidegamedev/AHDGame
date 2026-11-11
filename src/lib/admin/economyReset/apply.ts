@@ -61,6 +61,7 @@ import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 type Log = (message: string) => void;
 
@@ -127,7 +128,7 @@ async function dropIfExists(db: Db, name: EconomyResetFullWipeCollection): Promi
 }
 
 function gameState(db: Db) {
-  return db.collection<GameState>("gameState");
+  return gameStateCollection(db);
 }
 
 // --- Phases ----------------------------------------------------------------

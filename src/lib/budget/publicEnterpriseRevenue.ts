@@ -34,6 +34,7 @@ import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
 import { CORPORATE_SECTOR_LEAN_FIELDS } from "@/lib/db/collections/corporateSectors";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * Safety ceiling for a SYNTHETIC *scaled* national corp's per-turn budget impact,
@@ -123,9 +124,7 @@ export async function loadPlantsBudgetContext(
     return { plantsEnabled: false, currentTurn: null, rampTurns: MARKET_REALIZATION_RAMP_TURNS };
   }
   const [state, config] = await Promise.all([
-    db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
+    gameStateCollection(db).findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
     db
       .collection<GameConfig>("gameConfig")
       .findOne({ _id: "default" }, { projection: { marketGovernorRampTurns: 1 } }),
@@ -486,9 +485,10 @@ export async function estimateCountryOwnedBudgetNetLocal(
   // grant can exist (plants tier), so nothing else pays for it.
   const grantYear = plants.plantsEnabled
     ? ((
-        await db
-          .collection<GameState>("gameState")
-          .findOne({ _id: "current" }, { projection: { currentYear: 1 } })
+        await gameStateCollection(db).findOne(
+          { _id: "current" },
+          { projection: { currentYear: 1 } }
+        )
       )?.currentYear ?? null)
     : null;
   // Dynamic import: a static one closes the cycle budget/revenue →

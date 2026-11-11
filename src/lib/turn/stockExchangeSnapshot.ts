@@ -79,6 +79,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const EXCHANGE_NAMES: Record<string, string> = getExchangeNamesMap();
 
@@ -556,18 +557,18 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
       // Live era year for the metric existence gate on margin signals. Fetched AFTER the main
       // corp/sector fetches so call-order-sensitive test harnesses keep their
       // queued collection mocks aligned.
-      const eraGameState = await database
-        .collection<import("@/lib/db/types").GameState>("gameState")
-        .findOne(
-          { _id: "current" },
-          {
-            projection: {
-              currentYear: 1,
-              currentTurn: 1,
-              startingYear: 1,
-            },
-          }
-        );
+      const eraGameState = await gameStateCollection<import("@/lib/db/types").GameState>(
+        database
+      ).findOne(
+        { _id: "current" },
+        {
+          projection: {
+            currentYear: 1,
+            currentTurn: 1,
+            startingYear: 1,
+          },
+        }
+      );
       const eraYear = eraGameState ? resolveGameYear(eraGameState) : null;
 
       // FX rates — needed for anchor-normalizing cross-currency bond cash flows below.

@@ -15,6 +15,7 @@ import { getOrganizationProposalsCollection } from "@/lib/db/collections/organiz
 import { getOrganizationLegislationCollection } from "@/lib/db/collections/organizationLegislation";
 import { captureServerGameEvent, getServerPosthogClient } from "./serverPosthog";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 type Properties = Record<string, string | number | boolean>;
 const finite = (value: number | undefined) => (Number.isFinite(value) ? value! : 0);
@@ -35,9 +36,10 @@ export async function captureWorldDepthPosthog(input: {
   try {
     const { db, turn } = input;
     const actionWindow = { $gte: Math.max(0, turn - 1), $lte: turn };
-    const currentWorld = await db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: { worldEpochStartedAt: 1, preset: 1 } });
+    const currentWorld = await gameStateCollection(db).findOne(
+      { _id: "current" },
+      { projection: { worldEpochStartedAt: 1, preset: 1 } }
+    );
     let worldEpochStartedAt = currentWorld?.worldEpochStartedAt;
     if (!worldEpochStartedAt && currentWorld?.preset) {
       // Older gameState documents predate worldEpochStartedAt. The reset-run

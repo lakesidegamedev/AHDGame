@@ -14,6 +14,7 @@ import type {
   VerifyResult,
 } from "../types";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * Remediation for the Greenbaum Group incident (sequential 493).
@@ -71,9 +72,10 @@ const markerOf = (doc: CorpDoc | null) => doc?.remediation?.[DEFECT_ID];
 async function currentTurn(db: Db): Promise<number> {
   return (
     (
-      await db
-        .collection<{ _id: string; currentTurn?: number }>("gameState")
-        .findOne({ _id: "current" }, { projection: { currentTurn: 1 } })
+      await gameStateCollection<{ _id: string; currentTurn?: number }>(db).findOne(
+        { _id: "current" },
+        { projection: { currentTurn: 1 } }
+      )
     )?.currentTurn ?? 0
   );
 }

@@ -44,6 +44,7 @@ import {
 } from "@/lib/constants/sectorStrategies";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
 import { withFundedNationalBalances } from "@/lib/market/producerMarket/loadFundedCountryBooks";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export interface CountrySectorMixEntry {
   type: OperatingSectorType;
@@ -468,9 +469,10 @@ export async function aggregateCountrySectorMix(
       loadFxRatesByCurrency(db),
       loadWorldPreset(db),
       getMarketSystemModeForDb(db),
-      db
-        .collection<GameState>("gameState")
-        .findOne({ _id: "current" }, { projection: { currentTurn: 1, worldEpochId: 1 } }),
+      gameStateCollection(db).findOne(
+        { _id: "current" },
+        { projection: { currentTurn: 1, worldEpochId: 1 } }
+      ),
       db.collection<CommodityPrice>("commodityPrices").find({}).toArray(),
     ]);
   // The national gap reads the funded country book of the prices' turn when

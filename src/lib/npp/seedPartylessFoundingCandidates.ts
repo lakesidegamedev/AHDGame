@@ -8,6 +8,7 @@ import { generateUniqueNPPName } from "./nameGenerator";
 import { selectPoliticianImage, weightedRandomEthnicity } from "./generator";
 import { NPP_ECONOMY_DEFAULTS } from "./economyDefaults";
 import { generateDefaultPersonality } from "./seedHistorical";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /** Marker used only to make this bootstrap-created independent pool idempotent. */
 export const PARTYLESS_FOUNDING_PRIOR_MARKER = "foundingIndependent";
@@ -37,12 +38,10 @@ export async function seedPartylessFoundingCandidates(
     throw new Error("Partyless founding candidates are supported only for 1991-default");
   }
 
-  const gameState = await db
-    .collection<GameState>("gameState")
-    .findOne(
-      { _id: "current" },
-      { projection: { preset: 1, startingPartiesMode: 1, preIteration: 1 } }
-    );
+  const gameState = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { preset: 1, startingPartiesMode: 1, preIteration: 1 } }
+  );
   if (
     gameState?.preset !== "1991-default" ||
     gameState.startingPartiesMode !== "none" ||

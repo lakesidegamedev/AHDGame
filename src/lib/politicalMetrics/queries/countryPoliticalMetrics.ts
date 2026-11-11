@@ -39,6 +39,7 @@ import {
   type PoliticalMetricId,
   type PoliticalMetricsCountryId,
 } from "../types";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export interface CountryPoliticalMetricsResponse {
   /** Which registry this is; the views branch display on it. */
@@ -133,7 +134,7 @@ export async function loadCountryPoliticalMetrics(
       .collection<State>("states")
       .find({ countryId }, { projection: { name: 1, population: 1, gdp: 1 } })
       .toArray(),
-    db.collection<GameState>("gameState").findOne(
+    gameStateCollection(db).findOne(
       { _id: "current" },
       {
         projection: {

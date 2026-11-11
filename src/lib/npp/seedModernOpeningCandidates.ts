@@ -18,6 +18,7 @@ import { isNationwideDirectExecutiveElection } from "@/lib/elections/nationwideE
 import { canPartyFieldInState } from "@/lib/turn/nppEntryLogic";
 import { DEFAULT_CANDIDATE_SUPPORT } from "@/lib/elections/engine/electionFormulaFactors";
 import { generateNPP, type NPPGenerationContext } from "./generator";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /** Called only by fresh historical bootstrap, never by a turn or reference refresh. */
 export async function seedModernOpeningCandidates(
@@ -27,9 +28,10 @@ export async function seedModernOpeningCandidates(
   log: (message: string) => void = () => {}
 ): Promise<number> {
   if (preset !== "1991-default" && preset !== "2019-default") return 0;
-  const gs = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { currentTurn: 1, startingPartiesMode: 1 } });
+  const gs = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { currentTurn: 1, startingPartiesMode: 1 } }
+  );
   const access = await getAllCountryAccess(db);
   const races = await db
     .collection<Election>("elections")

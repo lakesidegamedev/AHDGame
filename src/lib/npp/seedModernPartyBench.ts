@@ -8,6 +8,7 @@ import type { Counter, GameState, NPP, PoliticalParty } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { getAllCountryAccess } from "@/lib/countryAccess";
 import { generateNPP, type NPPGenerationContext } from "./generator";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /** Supply an unseated candidate bench for required modern default parties. */
 export async function seedModernPartyBench(
@@ -17,9 +18,10 @@ export async function seedModernPartyBench(
 ): Promise<number> {
   if (preset !== "1991-default" && preset !== "2019-default") return 0;
   const access = await getAllCountryAccess(db);
-  const state = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { startingPartiesMode: 1 } });
+  const state = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { startingPartiesMode: 1 } }
+  );
   const noParties = state?.startingPartiesMode === "none";
   const parties = (
     await db

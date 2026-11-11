@@ -23,6 +23,7 @@ import {
   type LongHorizonTelemetryReport,
 } from "@/lib/telemetry/longHorizon/telemetry";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 // Static sim-harness parameters — the "conditions we specified" for a run.
 // Source-of-truth lives in scripts/sim/runWorld.ts (country allowlist,
@@ -490,7 +491,7 @@ export async function collectExperimentsReport(
       )
       .toArray(),
     collectBalanceMetrics(db),
-    db.collection<GameState>("gameState").findOne({ _id: "current" }),
+    gameStateCollection(db).findOne({ _id: "current" }),
     db.collection("gameConfig").findOne({ _id: "default" as never }),
     options.runId
       ? db.collection<Record<string, unknown>>("simRuns").findOne(

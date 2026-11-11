@@ -48,6 +48,7 @@ import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 interface RouteParams {
   params: Promise<{ bondId: string }>;
@@ -93,9 +94,10 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(404, "Bond not found");
     }
 
-    const turnDoc = await db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: { currentTurn: 1 } });
+    const turnDoc = await gameStateCollection(db).findOne(
+      { _id: "current" },
+      { projection: { currentTurn: 1 } }
+    );
     const currentTurn = turnDoc?.currentTurn ?? 0;
 
     if (bond.matured) {
@@ -338,7 +340,7 @@ export async function POST(request: Request, { params }: RouteParams) {
         // Currency conversion for imperial characters
         let imperialConversion: ExplicitPayConversion | undefined;
         if (forexEnabled) {
-          const gs = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+          const gs = await gameStateCollection(db).findOne({ _id: "current" });
           if (payCurrency && payCurrency !== bondCurrency) {
             const convertResult = await convertForExplicitPay(db, {
               character: imperial,
@@ -496,7 +498,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       let playerSpreadCharged = 0;
       let playerConversion: ExplicitPayConversion | undefined;
       if (forexEnabled) {
-        const gs = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+        const gs = await gameStateCollection(db).findOne({ _id: "current" });
         if (payCurrency && payCurrency !== bondCurrency) {
           const convertResult = await convertForExplicitPay(db, {
             character,

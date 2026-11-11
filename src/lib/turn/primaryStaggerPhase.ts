@@ -77,6 +77,7 @@ import { getCharactersCollection } from "@/lib/db/collections/characters";
 import { getNppsCollection } from "@/lib/db/collections/npps";
 import { getElectionsCollection } from "@/lib/db/collections/elections";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const MS_PER_HOUR = 3_600_000;
 
@@ -205,15 +206,13 @@ export async function runPrimaryStaggerWaveIfDue(
 
   // Active preset drives per-state delegate rescaling (delegates track each
   // state's EV weight, which is 1990-census in a 1991 game).
-  const gsForDelegates = await db
-    .collection<{
-      _id: string;
-      preset?: string;
-      currentYear?: number;
-      currentTurn?: number;
-      startingYear?: number;
-    }>("gameState")
-    .findOne({ _id: "current" });
+  const gsForDelegates = await gameStateCollection<{
+    _id: string;
+    preset?: string;
+    currentYear?: number;
+    currentTurn?: number;
+    startingYear?: number;
+  }>(db).findOne({ _id: "current" });
   const delegatePreset = gsForDelegates?.preset;
   const eraYear = eraYearContextFromGameState(gsForDelegates);
 

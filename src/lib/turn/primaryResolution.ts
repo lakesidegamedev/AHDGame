@@ -101,6 +101,7 @@ import { hasBankedGeneralTurn } from "@/lib/elections/rules/turnSlice";
 import { getElectionsCollection } from "@/lib/db/collections/elections";
 import { getStatesCollection } from "@/lib/db/collections/states";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export type { ElectionSweepScope } from "./electionSweepScope";
 export { recordPrimarySnapshots } from "./primarySnapshots";
@@ -262,9 +263,10 @@ export async function resolvePrimariesIfNeeded(
   // once for the whole resolution pass; only presidential races consume it.
   const presPreset = hasPresident
     ? (
-        await db
-          .collection<{ _id: string; preset?: string }>("gameState")
-          .findOne({ _id: "current" }, { projection: { preset: 1 } })
+        await gameStateCollection<{ _id: string; preset?: string }>(db).findOne(
+          { _id: "current" },
+          { projection: { preset: 1 } }
+        )
       )?.preset
     : undefined;
 

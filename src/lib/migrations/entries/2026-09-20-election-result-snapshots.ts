@@ -8,6 +8,7 @@ import {
 import type { ElectionResultSnapshot } from "@/lib/db/types/electionResultSnapshot";
 import type { Election, GameState } from "@/lib/db/types";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const ENDED = ["completed", "resolved"] as const;
 
@@ -59,9 +60,7 @@ export const migration: Migration = {
       );
     }
 
-    const gameState = await db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" } as never);
+    const gameState = await gameStateCollection(db).findOne({ _id: "current" } as never);
     const currentTurn = gameState?.currentTurn ?? 0;
 
     const ended = await db

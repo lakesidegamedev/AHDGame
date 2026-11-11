@@ -28,6 +28,7 @@ import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export interface IncomeCredit {
   characterId: ObjectId;
@@ -78,12 +79,10 @@ export async function creditIncomeAfterTax(
   const fingerprint = hash(JSON.stringify(credits));
   return runRequiredTransaction(
     async (session) => {
-      const state = await db
-        .collection<GameState>("gameState")
-        .findOne(
-          { _id: "current" },
-          { session, projection: { resetWorldId: 1, forexEnabled: 1, stockHoldingTaxStartTurn: 1 } }
-        );
+      const state = await gameStateCollection(db).findOne(
+        { _id: "current" },
+        { session, projection: { resetWorldId: 1, forexEnabled: 1, stockHoldingTaxStartTurn: 1 } }
+      );
       const worldId = state?.resetWorldId ?? "legacy";
       const key = `income-payout:${worldId}:${turn}:${source}`;
       const receipts = db.collection<PayoutReceipt>("playerIncomeTaxBatches");

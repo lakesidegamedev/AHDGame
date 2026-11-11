@@ -54,6 +54,7 @@ import {
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { getRegionOfficialBuckets } from "@/lib/legislature/chamberOfficeType";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 interface Props {
   params: Promise<{ code: string; id: string }>;
@@ -121,9 +122,10 @@ async function renderUKRegion(regionCode: string) {
     getRegionTurnout(stateId, "UK"),
     getStateOverview(db, { countryId: "UK", stateId }),
     // Independent of every other query — batch it instead of a trailing RTT (O2).
-    db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: { preset: 1, currentYear: 1, startingYear: 1 } }),
+    gameStateCollection(db).findOne(
+      { _id: "current" },
+      { projection: { preset: 1, currentYear: 1, startingYear: 1 } }
+    ),
     db
       .collection<StateDemographics>("demographicDefaults")
       .findOne(
@@ -346,9 +348,10 @@ async function renderGenericRegion(countryId: CountryId, regionCode: string) {
     getStateOverview(db, { countryId, stateId }),
     getStatePartyBudgets(db, countryId, stateId),
     getStateRegLedger(db, { countryId, stateId }),
-    db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: { preset: 1, currentYear: 1, startingYear: 1 } }),
+    gameStateCollection(db).findOne(
+      { _id: "current" },
+      { projection: { preset: 1, currentYear: 1, startingYear: 1 } }
+    ),
     db
       .collection<GameConfig>("gameConfig")
       .findOne({ _id: "default" }, { projection: { regionalConditionsOverviewEnabled: 1 } }),

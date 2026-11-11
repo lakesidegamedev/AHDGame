@@ -13,6 +13,7 @@ import {
   requestTurns,
   TURN_WORKER_HEARTBEAT_STALE_MS,
 } from "./turnWorkerHandoff";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export async function queueAdminTurns(
   db: Db,
@@ -34,9 +35,10 @@ export async function queueAdminTurns(
   // heartbeat means it is alive and busy, not gone.
   let online = status.online;
   if (!online) {
-    const gs = await db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: { isProcessing: 1, processingHeartbeatAt: 1 } });
+    const gs = await gameStateCollection(db).findOne(
+      { _id: "current" },
+      { projection: { isProcessing: 1, processingHeartbeatAt: 1 } }
+    );
     const hb = gs?.processingHeartbeatAt ? new Date(gs.processingHeartbeatAt).getTime() : 0;
     online = gs?.isProcessing === true && now.getTime() - hb <= TURN_WORKER_HEARTBEAT_STALE_MS;
   }

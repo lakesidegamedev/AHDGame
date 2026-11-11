@@ -14,6 +14,7 @@ import type {
 } from "../types";
 import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 // Frozen turn-601 waterfall resolution: vault plus USD insurance fund
 // paid the household book into the central bank. The 22,150.23 household
@@ -336,9 +337,10 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
   const id = new ObjectId(CORPORATION_ID);
   const turn =
     (
-      await db
-        .collection<{ _id: string; currentTurn?: number }>("gameState")
-        .findOne({ _id: "current" }, { projection: { currentTurn: 1 } })
+      await gameStateCollection<{ _id: string; currentTurn?: number }>(db).findOne(
+        { _id: "current" },
+        { projection: { currentTurn: 1 } }
+      )
     )?.currentTurn ?? 0;
 
   // Claim the marker BEFORE the money moves; the journal key is the second

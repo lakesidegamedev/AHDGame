@@ -67,6 +67,7 @@ import type { GameState } from "@/lib/db/types/gameState";
 import { calculatePlantSectorSplit } from "@/lib/corporations/plantSectorSplit";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 type AuthedViewer = Awaited<ReturnType<typeof getAuthUser>>;
 
@@ -195,9 +196,10 @@ export async function buildRegionEconomyResponse({
   // engine compounds each region's GDP by that region's own rate, so only a
   // GDP-weighted aggregate is consistent, and the national doc already is one.
   // See lib/country/nationalGdpGrowth.
-  const growthGameState = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { currentYear: 1, currentTurn: 1 } });
+  const growthGameState = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { currentYear: 1, currentTurn: 1 } }
+  );
   const nationalGdpGrowth = await loadNationalGdpGrowth(
     db,
     countryId,

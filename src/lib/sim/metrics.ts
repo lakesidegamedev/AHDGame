@@ -22,6 +22,8 @@ import { collectEconomyTelemetry, type EconomyTelemetry } from "@/lib/sim/econom
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import type { Document } from "mongodb";
 
 /**
  * Read-only balance-metric aggregations over a (sandbox) world DB, for the
@@ -880,7 +882,7 @@ async function collectCapacityMetrics(db: Db): Promise<CapacityMetrics> {
 }
 
 export async function collectBalanceMetrics(db: Db): Promise<BalanceReport> {
-  const gameState = await db.collection("gameState").findOne({ _id: "current" as never });
+  const gameState = await gameStateCollection<Document>(db).findOne({ _id: "current" as never });
   const turn = (gameState?.currentTurn as number | undefined) ?? 0;
 
   const [

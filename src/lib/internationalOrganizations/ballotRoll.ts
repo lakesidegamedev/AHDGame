@@ -23,6 +23,7 @@ import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
 import type { NppForeignPolicyMode } from "@/lib/db/types";
 import { hasBillLifecycle } from "@/lib/legislature/hasBillLifecycle";
 import { foreignPolicyModeFrom } from "@/lib/nppAutonomy/foreignPolicyRollout";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * The modelled members among `memberIds` that an NPP government currently runs,
@@ -41,9 +42,10 @@ export async function nppGovernedMembers(
    */
   memberIds: readonly string[] | (() => Promise<readonly string[]>)
 ): Promise<Set<CountryId>> {
-  const rollout = await db
-    .collection<{ _id: string; nppForeignPolicyMode?: NppForeignPolicyMode }>("gameState")
-    .findOne({ _id: "current" }, { projection: { nppForeignPolicyMode: 1 } });
+  const rollout = await gameStateCollection<{
+    _id: string;
+    nppForeignPolicyMode?: NppForeignPolicyMode;
+  }>(db).findOne({ _id: "current" }, { projection: { nppForeignPolicyMode: 1 } });
   if (foreignPolicyModeFrom(rollout?.nppForeignPolicyMode) !== "active") return new Set();
 
   const ids = typeof memberIds === "function" ? await memberIds() : memberIds;

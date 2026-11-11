@@ -32,6 +32,7 @@ import { russianDumaConvocationOfficeCompatible } from "./rules/dumaConvocation"
 import { planRussianAssemblyVacancySeating } from "./rules/assemblyVacancySeating";
 import type { RussianCouncilCompositionSeating } from "./councilCompositionSeating";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export async function materializeRussianDumaConvocationSeating(input: {
   db: Db;
@@ -47,9 +48,10 @@ export async function materializeRussianDumaConvocationSeating(input: {
     !Number.isFinite(now.getTime())
   )
     throw new Error("Ordinary Duma seating needs an active transaction, turn and time");
-  const game = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { session, projection: { preset: 1 } });
+  const game = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { session, projection: { preset: 1 } }
+  );
   if (game?.preset !== "1991-default") return false;
   const country = await db
     .collection<CountryGameState>("countryGameStates")

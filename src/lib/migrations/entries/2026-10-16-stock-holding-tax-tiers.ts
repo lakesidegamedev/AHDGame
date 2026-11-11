@@ -35,6 +35,7 @@ import { resolveCorpLiquidCurrencyCode } from "@/lib/currency/corporationCapital
 import type { Migration, MigrationContext, MigrationResult } from "../types";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export const STOCK_HOLDING_MIGRATION_ID = "2026-10-16-stock-holding-tax-tiers";
 function ownerKey(
@@ -91,7 +92,7 @@ async function migrate(db: Db, ctx: MigrationContext): Promise<MigrationResult> 
     throw new Error("Recover pending listing fills before migrating stock holdings");
   const [state, corps, orders, listings, history, exchange, national, regional, types, policies] =
     await Promise.all([
-      db.collection<GameState>("gameState").findOne({ _id: "current" }),
+      gameStateCollection(db).findOne({ _id: "current" }),
       corporationsCollection(db)
         .find(
           {},
@@ -428,7 +429,7 @@ async function migrate(db: Db, ctx: MigrationContext): Promise<MigrationResult> 
     }
   }
   if (policyOps.length) await db.collection<StatePolicy>("statePolicies").bulkWrite(policyOps);
-  const activation = await db.collection<GameState>("gameState").updateOne(
+  const activation = await gameStateCollection(db).updateOne(
     {
       _id: "current",
       currentTurn: turn,
@@ -454,7 +455,7 @@ export const migration: Migration = {
   async execute(db, ctx) {
     if (ctx.dryRun) return migrate(db, ctx);
     const acquiredAt = new Date();
-    const lock = await db.collection<GameState>("gameState").updateOne(
+    const lock = await gameStateCollection(db).updateOne(
       { _id: "current", isActive: false, isProcessing: { $ne: true } },
       {
         $set: {
@@ -470,8 +471,7 @@ export const migration: Migration = {
         "Pause the world and finish the active turn before applying stock holding taxes"
       );
     const timer = setInterval(() => {
-      void db
-        .collection<GameState>("gameState")
+      void gameStateCollection(db)
         .updateOne(
           { _id: "current", processingKind: "stockTaxMigration", processingStartedAt: acquiredAt },
           { $set: { processingHeartbeatAt: new Date() } }
@@ -485,7 +485,7 @@ export const migration: Migration = {
       return result;
     } finally {
       clearInterval(timer);
-      await db.collection<GameState>("gameState").updateOne(
+      await gameStateCollection(db).updateOne(
         { _id: "current", processingKind: "stockTaxMigration", processingStartedAt: acquiredAt },
         {
           $set: {

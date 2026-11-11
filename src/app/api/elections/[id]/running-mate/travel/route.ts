@@ -25,6 +25,7 @@ import { getGameTime } from "@/lib/time/gameTime";
 import type { Campaign, ElectionCandidate, GameState } from "@/lib/db/types";
 import { z } from "zod";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const schema = z.object({
   stateId: z.string().min(1),
@@ -56,9 +57,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     const { id: electionId } = await params;
 
     const db = await getDb();
-    const gameState = await db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: { preset: 1 } });
+    const gameState = await gameStateCollection(db).findOne(
+      { _id: "current" },
+      { projection: { preset: 1 } }
+    );
     const validStates = new Set(getElectoralVoteUnits(gameState?.preset).map((u) => u.stateId));
     if (!validStates.has(stateId)) {
       return errorResponse(400, "Invalid US state code");

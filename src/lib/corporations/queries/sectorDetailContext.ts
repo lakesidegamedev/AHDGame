@@ -42,6 +42,7 @@ import type { Db, WithId } from "mongodb";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /** Reads the state, country, tariff, sibling and market context for one sector. */
 export async function loadSectorDetailContext({
@@ -246,7 +247,7 @@ export async function loadSectorDetailContext({
           }
         )
         .toArray(),
-      db.collection<GameState>("gameState").findOne({ _id: "current" }),
+      gameStateCollection(db).findOne({ _id: "current" }),
     ]);
   const totalCorpSectors = allCorpSectors.length;
   // SP4 §4a: political margin overlay for playable regions (null elsewhere).

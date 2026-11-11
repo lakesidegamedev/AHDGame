@@ -4,6 +4,7 @@ import type { Migration, MigrationResult } from "../types";
 import type { PoliticalMetricsDoc } from "@/lib/db/types/politicalMetrics";
 import { getRegionalTexture1953 } from "@/lib/politicalMetrics/seeds/regionalTexture1953";
 import { POLITICAL_METRIC_COUNTRY_IDS, type PoliticalMetricId } from "@/lib/politicalMetrics/types";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const PRESET = "1953-default";
 const STARTING_YEAR = 1953;
@@ -30,9 +31,11 @@ const MIGRATION_ID = "2026-09-17-playable-region-texture-residuals";
  * - idempotent via the stamp field; dry runs read only.
  */
 async function backfillPlayableTextureResiduals(db: Db, dryRun: boolean): Promise<MigrationResult> {
-  const gameState = await db
-    .collection<{ _id: string; preset?: string; startingYear?: number }>("gameState")
-    .findOne({ _id: "current" }, { projection: { preset: 1, startingYear: 1 } });
+  const gameState = await gameStateCollection<{
+    _id: string;
+    preset?: string;
+    startingYear?: number;
+  }>(db).findOne({ _id: "current" }, { projection: { preset: 1, startingYear: 1 } });
   if (gameState?.preset !== PRESET) {
     return { notes: [`skipped: active preset is ${String(gameState?.preset ?? "unknown")}`] };
   }

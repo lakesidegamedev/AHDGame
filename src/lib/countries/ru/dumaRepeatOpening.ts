@@ -32,6 +32,7 @@ import {
 import { hasAuthorizedPostSovietTransition } from "./rules/postSovietTransition";
 import { GAME_STATE_PRE_ITERATION_FIELDS } from "@/lib/db/collections/gameState";
 import { STATE_POPULATION_FIELDS } from "@/lib/db/collections/states";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export const RUSSIAN_DUMA_REPEAT_OPENINGS_COLLECTION = "russianDumaRepeatOpenings";
 export interface RussianDumaRepeatOpeningRecord {
@@ -70,9 +71,10 @@ export async function materializeRussianDumaRepeatOpening(input: {
     !Number.isFinite(now.getTime())
   )
     throw new Error("Duma repeats need a transaction, turn and time");
-  const game = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { session, projection: GAME_STATE_PRE_ITERATION_FIELDS });
+  const game = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { session, projection: GAME_STATE_PRE_ITERATION_FIELDS }
+  );
   if (game?.preset !== "1991-default") return null;
   const country = await db.collection<CountryGameState>("countryGameStates").findOne(
     { _id: "RU" },

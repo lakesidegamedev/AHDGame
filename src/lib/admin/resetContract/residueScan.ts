@@ -16,6 +16,8 @@ import {
 } from "@/lib/admin/resetContract/rules/residueScan";
 import type { GameState } from "@/lib/db/types/gameState";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import type { Document } from "mongodb";
 
 /**
  * Runtime collections a reset deliberately leaves documents in. Every other
@@ -135,7 +137,7 @@ export async function runResidueScan(
       });
   }
 
-  const state = await db.collection<GameState>("gameState").findOne(
+  const state = await gameStateCollection(db).findOne(
     { _id: "current" },
     {
       projection: Object.fromEntries(
@@ -145,8 +147,7 @@ export async function runResidueScan(
       ),
     }
   );
-  const others = await db
-    .collection("gameState")
+  const others = await gameStateCollection<Document>(db)
     .find({ _id: { $ne: "current" } } as never, { projection: { _id: 1 } })
     .toArray();
   const fields = (state ?? {}) as Record<string, unknown>;

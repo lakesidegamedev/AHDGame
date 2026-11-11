@@ -13,6 +13,7 @@ import { corpCapitalToAnchor, loadFxRatesByCurrency } from "@/lib/currency/corpo
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export const GET = withAdminAuth(async (_auth, request: Request) => {
   try {
@@ -27,9 +28,7 @@ export const GET = withAdminAuth(async (_auth, request: Request) => {
 
     const [bonds, gameState, fxByCurrency] = await Promise.all([
       bondsCollection(db).find(filter).toArray(),
-      db
-        .collection<GameState>("gameState")
-        .findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
+      gameStateCollection(db).findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
       loadFxRatesByCurrency(db),
     ]);
 

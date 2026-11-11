@@ -19,6 +19,7 @@ import { producerPlanningWarnings } from "./planningRules";
 import { scopeNeutralBook } from "./shadowCarryRules";
 import { producerCashTransition, type ProducerCashBinding } from "./cashSettlementRules";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 type EconomyInput = Parameters<typeof advanceProducerEconomy>[0];
 export type EconomyResult = ReturnType<typeof advanceProducerEconomy>;
@@ -440,27 +441,25 @@ export async function assertProducerTurnFence(
   worldEpoch: string,
   turn: number
 ): Promise<void> {
-  const state = await db
-    .collection<{
-      _id: string;
-      worldEpochId?: string;
-      isActive?: boolean;
-      isProcessing?: boolean;
-      processingKind?: string | null;
-      processingTargetTurn?: number;
-    }>("gameState")
-    .findOne(
-      { _id: "current" },
-      {
-        projection: {
-          worldEpochId: 1,
-          isActive: 1,
-          isProcessing: 1,
-          processingKind: 1,
-          processingTargetTurn: 1,
-        },
-      }
-    );
+  const state = await gameStateCollection<{
+    _id: string;
+    worldEpochId?: string;
+    isActive?: boolean;
+    isProcessing?: boolean;
+    processingKind?: string | null;
+    processingTargetTurn?: number;
+  }>(db).findOne(
+    { _id: "current" },
+    {
+      projection: {
+        worldEpochId: 1,
+        isActive: 1,
+        isProcessing: 1,
+        processingKind: 1,
+        processingTargetTurn: 1,
+      },
+    }
+  );
   if (
     state?.worldEpochId !== worldEpoch ||
     state.isActive !== true ||

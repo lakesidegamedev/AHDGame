@@ -43,6 +43,7 @@ import type {
   TelemetryEffectiveManifest,
   TelemetryActorConfiguration,
 } from "./rules";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /** Run manifest row (`simRuns`), read best-effort from the same database. */
 interface SimRunManifest {
@@ -92,7 +93,7 @@ export async function resolveLongHorizonContext(
   turn: number
 ): Promise<LongHorizonContext | null> {
   const [gameState, simRun, officials, formations] = await Promise.all([
-    db.collection<GameState>("gameState").findOne({ _id: "current" as never }),
+    gameStateCollection(db).findOne({ _id: "current" as never }),
     db
       .collection<SimRunManifest>("simRuns")
       .findOne(

@@ -25,6 +25,7 @@ import { jpParties } from "@/lib/countries/jp/data/jpParties";
 import { getEnabledCountryIdsFromDb } from "@/lib/countryAccess";
 import { retainsDefaultPartyNameReservation } from "./rules/defaultNameReservation";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * Names + abbreviations reserved for preset-gated default parties (e.g.
@@ -209,12 +210,10 @@ export async function draftCharter(input: DraftCharterInput, db: Db): Promise<Dr
   let reservationGame:
     Pick<GameState, "preset" | "startingPartiesMode" | "currentTurn"> | null | undefined;
   if (reservedConflict) {
-    reservationGame = await db
-      .collection<GameState>("gameState")
-      .findOne(
-        { _id: "current" },
-        { projection: { preset: 1, startingPartiesMode: 1, currentTurn: 1 } }
-      );
+    reservationGame = await gameStateCollection(db).findOne(
+      { _id: "current" },
+      { projection: { preset: 1, startingPartiesMode: 1, currentTurn: 1 } }
+    );
     const emptyStart =
       reservationGame?.preset === "1991-default" && reservationGame.startingPartiesMode === "none";
     const playerCountry =
@@ -256,9 +255,9 @@ export async function draftCharter(input: DraftCharterInput, db: Db): Promise<Dr
     input.currentTurn ??
     reservationGame?.currentTurn ??
     (
-      await db
-        .collection<{ _id: string; currentTurn?: number }>("gameState")
-        .findOne({ _id: "current" })
+      await gameStateCollection<{ _id: string; currentTurn?: number }>(db).findOne({
+        _id: "current",
+      })
     )?.currentTurn ??
     null;
   const expiresOnTurn = currentTurn != null ? computeCharterDeadlineTurn(currentTurn) : null;

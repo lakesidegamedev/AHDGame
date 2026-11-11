@@ -17,6 +17,7 @@ import {
   ADDRESS_BODY_MAX_LENGTH,
 } from "@/lib/constants/governorOffice";
 import type { GameState } from "@/lib/db/types";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 // POST /api/country/[code]/region/[id]/office/address — Deliver a State of the State address.
 // Auth: requireHumanSessionWithCharacter; must be the office-holder.
@@ -60,9 +61,10 @@ export async function POST(
     // a stale bucket is accepted, charged, and applied to no voters.
     const targetId = parsed.data.targetDemographicGroupId;
     if (targetId) {
-      const gs = await db
-        .collection<{ _id: string; preset?: string }>("gameState")
-        .findOne({ _id: "current" }, { projection: { preset: 1 } });
+      const gs = await gameStateCollection<{ _id: string; preset?: string }>(db).findOne(
+        { _id: "current" },
+        { projection: { preset: 1 } }
+      );
       if (!isTargetValidForCountry(targetId, countryId, gs?.preset ?? null)) {
         return errorResponse(400, "Unknown demographic target");
       }
@@ -113,7 +115,7 @@ export async function GET(
       .sort({ deliveredAtTurn: -1 })
       .limit(1)
       .toArray();
-    const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+    const gameState = await gameStateCollection(db).findOne({ _id: "current" });
     const currentTurn = gameState?.currentTurn ?? 0;
     const last = recent[0] ?? null;
     return NextResponse.json({

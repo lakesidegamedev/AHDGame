@@ -52,6 +52,7 @@ import {
 } from "@/lib/onePartyState/rulingPartyPriorities";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 type PartyRowMeta = {
   seqKey: string;
@@ -139,8 +140,7 @@ export async function OnePartyExecutiveHub({ countryId }: { countryId: CountryId
     : null;
   let president: Character | null = null;
   if (presidentOfficial?.characterId) {
-    president = await charactersCollection(db)
-      .findOne({ _id: presidentOfficial.characterId });
+    president = await charactersCollection(db).findOne({ _id: presidentOfficial.characterId });
   }
 
   // Chamber-leadership offices (CN: NPCSC Chairman, CPPCC Chairman) — read-only
@@ -387,9 +387,9 @@ export async function OnePartyExecutiveHub({ countryId }: { countryId: CountryId
     !govFormation.activeVoteId
   ) {
     const NO_CONFIDENCE_COOLDOWN_TURNS = 48;
-    const gameState = await db
-      .collection<{ _id: string; currentTurn: number }>("gameState")
-      .findOne({ _id: "current" });
+    const gameState = await gameStateCollection<{ _id: string; currentTurn: number }>(db).findOne({
+      _id: "current",
+    });
     const currentTurn = gameState?.currentTurn ?? 0;
 
     const lastVote = await getNoConfidenceVotesCollection(db)

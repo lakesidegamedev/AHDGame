@@ -71,6 +71,7 @@ import {
 } from "@/lib/market/unownedHeadroom";
 import { attackCostAnchorUnderPlants, resolveWorldYear } from "@/lib/corporations/capacityCapture";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const splitSchema = z.object({
   sectorType: z.enum(OPERATING_SECTOR_TYPES),
@@ -105,7 +106,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const db = await getDb();
 
     // Block sector splits when corporation actions are paused by admin
-    const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+    const gameState = await gameStateCollection(db).findOne({ _id: "current" });
     if (gameState?.corporationActionsPaused) {
       return errorResponse(403, "Corporation actions are currently paused");
     }

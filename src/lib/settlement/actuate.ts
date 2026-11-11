@@ -56,6 +56,7 @@ import {
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import type { Document } from "mongodb";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export interface ActuationResult {
   actuated: boolean;
@@ -232,9 +233,10 @@ export async function actuateSettlementOutcome(
       countryFiscalBase(db, target),
       countryFiscalBase(db, challenger),
     ]);
-    const gs = await db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: { incomeBandIndexByCountry: 1 } });
+    const gs = await gameStateCollection(db).findOne(
+      { _id: "current" },
+      { projection: { incomeBandIndexByCountry: 1 } }
+    );
     mergeBases = {
       fromGdp: fromBase.gdp,
       fromPopulation: fromBase.population,
@@ -325,12 +327,10 @@ export async function actuateSettlementOutcome(
   //
   //     Year through `yearOfTurn` (calendar, not raw turn) for the schedule
   //     fallback.
-  const gameStateDoc = await db
-    .collection<GameState>("gameState")
-    .findOne(
-      { _id: "current" },
-      { projection: { startingYear: 1, preIteration: 1, preIterationTurns: 1 } }
-    );
+  const gameStateDoc = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { startingYear: 1, preIteration: 1, preIterationTurns: 1 } }
+  );
   const currentYear = yearOfTurn(currentTurn, gameStateDoc?.startingYear ?? STARTING_YEAR, {
     preIterationActive: gameStateDoc?.preIteration?.active,
     preIterationTurns: gameStateDoc?.preIterationTurns,
@@ -476,16 +476,14 @@ async function clearCabinetPointers(
   const nppIds = ministers.map((m) => m.nppId).filter(Boolean) as ObjectId[];
 
   if (characterIds.length > 0) {
-    await charactersCollection<Document>(db)
-      .updateMany(
-        { _id: { $in: characterIds }, "currentOffice.type": "parliamentaryCabinet" },
-        { $set: { currentOffice: null, updatedAt: now }, $unset: { cabinetPosition: "" } }
-      );
-    await charactersCollection<Document>(db)
-      .updateMany(
-        { _id: { $in: characterIds }, "currentOffice.type": { $ne: null } },
-        { $unset: { cabinetPosition: "" }, $set: { updatedAt: now } }
-      );
+    await charactersCollection<Document>(db).updateMany(
+      { _id: { $in: characterIds }, "currentOffice.type": "parliamentaryCabinet" },
+      { $set: { currentOffice: null, updatedAt: now }, $unset: { cabinetPosition: "" } }
+    );
+    await charactersCollection<Document>(db).updateMany(
+      { _id: { $in: characterIds }, "currentOffice.type": { $ne: null } },
+      { $unset: { cabinetPosition: "" }, $set: { updatedAt: now } }
+    );
   }
 
   if (nppIds.length > 0) {
@@ -639,7 +637,10 @@ async function retireNationalRemnants(
     // field.
     const standDown = { $set: { currentOffice: null, updatedAt: now } };
     if (absorbedGov.pmCharacterId) {
-      await charactersCollection<Document>(db).updateOne({ _id: absorbedGov.pmCharacterId }, standDown);
+      await charactersCollection<Document>(db).updateOne(
+        { _id: absorbedGov.pmCharacterId },
+        standDown
+      );
     }
     if (absorbedGov.pmNppId) {
       await db.collection("npps").updateOne({ _id: absorbedGov.pmNppId }, standDown);

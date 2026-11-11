@@ -21,6 +21,7 @@ import {
   russianDumaRootFilter,
 } from "./dumaConvocationAuthority";
 import { hasAuthorizedPostSovietTransition } from "./rules/postSovietTransition";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export const RUSSIAN_DUMA_RESULTS_COLLECTION = "russianDumaElectionResults";
 export interface RussianDumaResultRecord {
@@ -73,9 +74,10 @@ export async function materializeRussianDumaElectionResult(input: {
       throw new Error("Russian Duma result identity changed");
     return previous;
   }
-  const game = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { session, projection: { preset: 1 } });
+  const game = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { session, projection: { preset: 1 } }
+  );
   if (game?.preset !== "1991-default") throw new Error("No first-Duma mandate in this world");
   const countries = db.collection<CountryGameState>("countryGameStates");
   const country = await countries.findOne(

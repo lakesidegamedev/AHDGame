@@ -36,6 +36,7 @@ import type {
 } from "../types";
 import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * Whole plants conversion (one time, between turns, before
@@ -306,15 +307,16 @@ interface WorldFacts {
 }
 
 async function loadWorld(db: Db): Promise<WorldFacts> {
-  const gs = await db
-    .collection<{
-      _id: string;
-      currentTurn?: number;
-      currentYear?: number;
-      isProcessing?: boolean;
-      preset?: string | null;
-    }>("gameState")
-    .findOne({}, { projection: { currentTurn: 1, currentYear: 1, isProcessing: 1, preset: 1 } });
+  const gs = await gameStateCollection<{
+    _id: string;
+    currentTurn?: number;
+    currentYear?: number;
+    isProcessing?: boolean;
+    preset?: string | null;
+  }>(db).findOne(
+    {},
+    { projection: { currentTurn: 1, currentYear: 1, isProcessing: 1, preset: 1 } }
+  );
   const turn = gs?.currentTurn ?? 0;
   return {
     turn,

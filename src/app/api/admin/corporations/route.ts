@@ -18,6 +18,7 @@ import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export async function GET() {
   try {
@@ -31,9 +32,7 @@ export async function GET() {
       charactersCollection(db)
         .find({}, { projection: { _id: 1, name: 1 } })
         .toArray(),
-      db
-        .collection<GameState>("gameState")
-        .findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
+      gameStateCollection(db).findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
       loadValuationFxRates(db),
     ]);
     const currentTurn = gameState?.currentTurn ?? 0;

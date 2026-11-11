@@ -18,6 +18,7 @@ import { coalesceHuModernCampaignActors } from "./rules/campaignActors2011";
 import { buildHuModernAssembly } from "./rules/modernAssembly2011";
 import type { Hu1991AssemblyRecord } from "./assemblyCount1991";
 import type { Hu1991InstalledMandates } from "./rules/mandates1991";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 export const HU_2011_COUNTS_COLLECTION = "hu2011AssemblyCounts";
 export interface Hu2011AssemblyRecord {
   _id: string;
@@ -59,12 +60,10 @@ async function materializeHu2011Count(input: {
   const id = `HU:mixed2011:${cycle}`;
   const existing = await journal.findOne({ _id: id }, { session });
   if (existing) return existing;
-  const game = await db
-    .collection<GameState>("gameState")
-    .findOne(
-      { _id: "current" },
-      { session, projection: { preset: 1, huAssemblyReformedAtYear: 1 } }
-    );
+  const game = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { session, projection: { preset: 1, huAssemblyReformedAtYear: 1 } }
+  );
   if (game?.preset !== "1991-default") return null;
   const country = await db
     .collection<CountryGameState>("countryGameStates")

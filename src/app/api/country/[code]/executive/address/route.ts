@@ -19,6 +19,7 @@ import {
 } from "@/lib/constants/governorOffice";
 import type { GameState, GovernorAddress, GovernorOfficeState } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * National (head-of-government) addresses — country leader's equivalent of
@@ -63,9 +64,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
     // here, not in the schema, because the valid set depends on the preset.
     const targetId = parsed.data.targetDemographicGroupId;
     if (targetId) {
-      const gs = await db
-        .collection<{ _id: string; preset?: string }>("gameState")
-        .findOne({ _id: "current" }, { projection: { preset: 1 } });
+      const gs = await gameStateCollection<{ _id: string; preset?: string }>(db).findOne(
+        { _id: "current" },
+        { projection: { preset: 1 } }
+      );
       if (!isTargetValidForCountry(targetId, countryId, gs?.preset ?? null)) {
         return errorResponse(400, "Unknown demographic target");
       }
@@ -120,7 +122,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
         .sort({ deliveredAtTurn: -1 })
         .limit(1)
         .toArray(),
-      db.collection<GameState>("gameState").findOne({ _id: "current" }),
+      gameStateCollection(db).findOne({ _id: "current" }),
       characterId ? charactersCollection(db).findOne({ _id: characterId }) : Promise.resolve(null),
     ]);
 

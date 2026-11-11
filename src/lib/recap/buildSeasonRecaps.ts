@@ -29,6 +29,7 @@ import type {
   RecapRankedStat,
 } from "./types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /** Bill statuses that count as "passed" (enacted) for the recap. */
 const PASSED_BILL_STATUSES = ["signed", "enrolled", "veto_override", "override_shugiin"];
@@ -402,9 +403,10 @@ export async function buildSeasonRecaps(
   // Money symbols as this world's era showed them (1953 DM, not euros).
   let era: Pick<GameState, "preset" | "eurozoneEnabled"> | null = null;
   try {
-    era = await db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: { preset: 1, eurozoneEnabled: 1 } });
+    era = await gameStateCollection(db).findOne(
+      { _id: "current" },
+      { projection: { preset: 1, eurozoneEnabled: 1 } }
+    );
   } catch (err) {
     if (requireComplete) throw err;
   }

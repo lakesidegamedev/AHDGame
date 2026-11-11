@@ -14,6 +14,7 @@ import { MARKETIZATION_SCHEDULE, plannedShare } from "@/lib/constants/commandEco
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import { presentPlannedEconomy } from "@/lib/economy/presentPlannedEconomy";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export async function GET() {
   try {
@@ -24,9 +25,10 @@ export async function GET() {
     const scheduledIds = Object.keys(MARKETIZATION_SCHEDULE) as CountryId[];
 
     const [gameState, gameConfig, budgets] = await Promise.all([
-      db
-        .collection<GameState>("gameState")
-        .findOne({ _id: "current" }, { projection: { currentYear: 1, currentTurn: 1 } }),
+      gameStateCollection(db).findOne(
+        { _id: "current" },
+        { projection: { currentYear: 1, currentTurn: 1 } }
+      ),
       db
         .collection<GameConfig>("gameConfig")
         .findOne(

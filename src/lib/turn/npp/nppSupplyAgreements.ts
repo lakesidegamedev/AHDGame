@@ -47,6 +47,7 @@ import {
 } from "@/lib/market/commodityMarketScope";
 import { supplyAgreementSectorsInScope } from "@/lib/corporations/supplyAgreementCapacity";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /** Fill below this: the seller cannot move output and will discount to lock a buyer. */
 export const NPP_CONTRACT_GLUT_FILL = 0.5;
@@ -1114,9 +1115,7 @@ export async function processNppSupplyAgreements(
       }>("commodityPrices")
       .find({})
       .toArray(),
-    db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: { currentYear: 1 } }),
+    gameStateCollection(db).findOne({ _id: "current" }, { projection: { currentYear: 1 } }),
     db
       .collection<TradeEmbargo>("tradeEmbargoes")
       .find(

@@ -16,6 +16,7 @@ import {
   isPoliticalApprovalCountry,
   loadPoliticalApprovalBases,
 } from "@/lib/politicalLegislation/politicalApprovalProvider";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export interface RegionalApprovalData {
   approval: number;
@@ -50,7 +51,7 @@ export async function getRegionalApprovalData(
   if (allMetrics.length === 0) return null;
 
   const nationalAverages = computeNationalAveragesFromMetrics(allMetrics);
-  const gameState = await db.collection<GameState>("gameState").findOne(
+  const gameState = await gameStateCollection(db).findOne(
     { _id: "current" },
     {
       projection: {

@@ -16,6 +16,7 @@ import { SECTOR_STRATEGIES, STRATEGY_COOLDOWN_TURNS } from "@/lib/constants/sect
 import { isExtractionStrategyZeroYield } from "@/lib/corporations/extractionStrategyAvailability";
 import { industryConversionFields } from "@/lib/corporations/retooling/conversion";
 import { freeTransitionConversion } from "@/lib/market/producerMarket/transitionRules";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 interface RouteParams {
   params: Promise<{ id: string; sectorId: string }>;
@@ -44,12 +45,10 @@ export async function convertSectorIndustryCore(
     db
       .collection<CorporateSector>("corporateSectors")
       .findOne({ _id: input.sectorId, corporationId: input.corporationId }),
-    db
-      .collection<GameState>("gameState")
-      .findOne(
-        { _id: "current" },
-        { projection: { currentTurn: 1, worldEpochId: 1, producerOpening: 1 } }
-      ),
+    gameStateCollection(db).findOne(
+      { _id: "current" },
+      { projection: { currentTurn: 1, worldEpochId: 1, producerOpening: 1 } }
+    ),
   ]);
   if (!sector) return { ok: false, status: 404, error: "Sector not found" };
   const currentTurn = gameState?.currentTurn ?? 0;

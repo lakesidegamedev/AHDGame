@@ -57,6 +57,7 @@ import {
   type RenewalParty,
   type SplinterPlan,
 } from "./rules/partyRenewal";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /** Renewal looks for newly resolved cycles this often. */
 export const PARTY_RENEWAL_CHECK_INTERVAL_TURNS = 6;
@@ -118,12 +119,10 @@ export async function processPartyRenewal(
 ): Promise<PartyRenewalSummary> {
   const summary: PartyRenewalSummary = { countries: 0, splinters: 0, foundings: 0, folds: 0 };
   if (currentTurn % PARTY_RENEWAL_CHECK_INTERVAL_TURNS !== 0) return summary;
-  const game = await db
-    .collection<GameState>("gameState")
-    .findOne(
-      { _id: "current" },
-      { projection: { nppPartyRenewalEnabled: 1, preset: 1, resetWorldId: 1 } }
-    );
+  const game = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { nppPartyRenewalEnabled: 1, preset: 1, resetWorldId: 1 } }
+  );
   if (game?.nppPartyRenewalEnabled !== true) return summary;
   const preset = game.preset;
 

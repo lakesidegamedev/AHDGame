@@ -40,6 +40,8 @@ import {
   normalizeMarketRecoveryStage,
 } from "@/lib/market/marketRecoveryStages";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import type { Document } from "mongodb";
 
 /** A standalone AI company: not player, caretaker, state-owned or a subsidiary. */
 export function isStandaloneAiCompany(corp: Corporation): boolean {
@@ -435,9 +437,10 @@ export async function processOffTypeHandover(db: Db, turn: number) {
     db
       .collection("gameConfig")
       .findOne({ _id: "default" as never }, { projection: { marketRecoveryStage: 1 } }),
-    db
-      .collection("gameState")
-      .findOne({ _id: "current" as never }, { projection: { currentYear: 1 } }),
+    gameStateCollection<Document>(db).findOne(
+      { _id: "current" as never },
+      { projection: { currentYear: 1 } }
+    ),
   ]);
   const stage = normalizeMarketRecoveryStage(config?.marketRecoveryStage);
   if (!marketRecoveryStageActive(stage, MARKET_RECOVERY_STAGE.AI_OFF_TYPE_HANDOVER)) {

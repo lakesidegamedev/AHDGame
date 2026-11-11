@@ -21,6 +21,7 @@ import { BG_FOUNDING_COUNTS_COLLECTION, type BgFoundingAssemblyRecord } from "./
 import { settleBgFoundingMandates } from "./rules/foundingMandates1990";
 import { BG_1990_REGION_CAPACITY } from "./data/foundingDistricts1990";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export const BG_FOUNDING_OFFICE_ARCHIVES_COLLECTION = "bgFoundingAssemblyOfficeArchives";
 interface BgFoundingAssemblyArchive {
@@ -54,9 +55,10 @@ async function materializeBgFoundingAssemblySeating(input: {
   const journal = db.collection<BgFoundingAssemblyRecord>(BG_FOUNDING_COUNTS_COLLECTION);
   const receipt = await journal.findOne({ _id: `BG:founding1990:${cycle}` }, { session });
   if (!receipt || receipt.seatedAtTurn != null || receipt.count.kind !== "certified") return false;
-  const game = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { session, projection: { preset: 1 } });
+  const game = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { session, projection: { preset: 1 } }
+  );
   if (game?.preset !== "1991-default") throw new Error("No native Bulgarian mandate in this world");
   const ids = [...receipt.electionIds, ...(receipt.runoffElectionIds ?? [])].map(
     (id) => new ObjectId(id)

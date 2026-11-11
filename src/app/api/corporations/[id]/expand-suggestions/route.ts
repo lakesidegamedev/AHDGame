@@ -65,6 +65,7 @@ import {
 } from "@/lib/market/retailDemandTransition";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -132,7 +133,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     if (ceoCheck) return ceoCheck;
 
     const plantsMode = marketAtLeast(await getMarketSystemModeForDb(db), "plants");
-    const gameStateDoc = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+    const gameStateDoc = await gameStateCollection(db).findOne({ _id: "current" });
     const currentTurn = gameStateDoc?.currentTurn ?? 0;
 
     // Greenfield Retail builds are deliberately unavailable while the legacy

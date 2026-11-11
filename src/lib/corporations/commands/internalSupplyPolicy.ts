@@ -25,6 +25,7 @@ import { TURNS_PER_DAY } from "@/lib/constants/corporations";
 import { ownSiteSupplySummary } from "@/lib/corporations/rules/ownSiteSupplySummary";
 import type { CorporateSector, GameConfig, GameState } from "@/lib/db/types";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export const internalSupplyPolicySchema = z
   .object({
@@ -60,9 +61,7 @@ export async function internalSupplyPolicy(request: Request, { params }: Params)
           projection: { groupSupplyCoordinationEnabled: 1, producerMarketLiveFromTurn: 1 },
         }
       ),
-      db
-        .collection<GameState>("gameState")
-        .findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
+      gameStateCollection(db).findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
     ]);
     const groupCoordinationActive =
       mode === "plants" && config?.groupSupplyCoordinationEnabled === true;

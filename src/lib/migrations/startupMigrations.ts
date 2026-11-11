@@ -45,6 +45,7 @@ import { migration as jpLawLeanEffects } from "./entries/2026-11-09-jp-law-lean-
 import { migration as financialTxLogTurnOrderIndex } from "./entries/2026-11-10-financial-tx-log-turn-order-index";
 import { migration as scotusCareerAchievements } from "./entries/2026-10-16-scotus-career-achievements";
 import type { Migration } from "./types";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * Small, audited allowlist of migrations that must accompany application boot.
@@ -170,9 +171,9 @@ export async function runRequiredStartupMigrations(db: Db): Promise<RunSummary> 
     dryRun: false,
   });
   const summaries = [initial, indexes];
-  const state = await db
-    .collection<{ _id: string; preset?: string; currentTurn?: number }>("gameState")
-    .findOne({ _id: "current" }, { projection: { preset: 1, currentTurn: 1 } });
+  const state = await gameStateCollection<{ _id: string; preset?: string; currentTurn?: number }>(
+    db
+  ).findOne({ _id: "current" }, { projection: { preset: 1, currentTurn: 1 } });
   // A reset preserves historical markers but removes opening pool rows.
   // Bootstrap only the new 1991 world; never refill an existing cash pool.
   if (state?.preset === "1991-default" && state.currentTurn === 1) {

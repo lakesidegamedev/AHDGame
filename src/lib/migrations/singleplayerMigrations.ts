@@ -21,6 +21,7 @@ import { MIGRATIONS } from "./registry";
 import { runMigrations, type RunSummary } from "./runner";
 import { runRequiredStartupMigrations } from "./startupMigrations";
 import type { Migration, MigrationMarker } from "./types";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const COLLECTION = "migrationsRun";
 
@@ -77,9 +78,11 @@ export async function stampSingleplayerBaseline(db: Db): Promise<number> {
  * migrate: creating one stamps the baseline.
  */
 export async function migrateSingleplayerWorld(db: Db): Promise<RunSummary | null> {
-  const world = await db
-    .collection<{ _id: string; worldEpochId?: string; currentTurn?: number }>("gameState")
-    .findOne({ _id: "current" }, { projection: { _id: 1, worldEpochId: 1, currentTurn: 1 } });
+  const world = await gameStateCollection<{
+    _id: string;
+    worldEpochId?: string;
+    currentTurn?: number;
+  }>(db).findOne({ _id: "current" }, { projection: { _id: 1, worldEpochId: 1, currentTurn: 1 } });
   if (!world) return null;
 
   const stamped = await db

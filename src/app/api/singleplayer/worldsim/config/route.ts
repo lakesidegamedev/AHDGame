@@ -13,6 +13,7 @@ import {
 } from "@/lib/constants/countries";
 import { getWorldEntityPresetManifest } from "@/lib/world/worldEntityManifest";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export const dynamic = "force-dynamic";
 
@@ -33,7 +34,7 @@ export async function GET(request: Request) {
   try {
     const db = await getDb();
     const [state, singleplayerConfig, enabledIds] = await Promise.all([
-      db.collection<GameState>("gameState").findOne(
+      gameStateCollection(db).findOne(
         { _id: "current" },
         {
           projection: {

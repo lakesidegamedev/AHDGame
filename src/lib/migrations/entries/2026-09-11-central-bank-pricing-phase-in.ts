@@ -1,6 +1,7 @@
 import type { Db } from "mongodb";
 import type { GameConfig } from "@/lib/db/types";
 import type { Migration, MigrationResult } from "../types";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export const migration: Migration = {
   id: "2026-09-11-central-bank-pricing-phase-in",
@@ -20,9 +21,10 @@ export const migration: Migration = {
       return { documentsScanned: 1, documentsUpdated: 0, notes: ["rollout is already anchored"] };
     }
 
-    const gameState = await db
-      .collection<{ _id: string; currentTurn?: number }>("gameState")
-      .findOne({ _id: "current" }, { projection: { currentTurn: 1 } });
+    const gameState = await gameStateCollection<{ _id: string; currentTurn?: number }>(db).findOne(
+      { _id: "current" },
+      { projection: { currentTurn: 1 } }
+    );
     const currentTurn =
       typeof gameState?.currentTurn === "number" && Number.isFinite(gameState.currentTurn)
         ? gameState.currentTurn

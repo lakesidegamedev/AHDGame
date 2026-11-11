@@ -1,5 +1,6 @@
 import type { Db } from "mongodb";
 import type { Migration, MigrationContext, MigrationResult } from "../types";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * Make already-placed plant build orders deliver progressively.
@@ -16,9 +17,10 @@ import type { Migration, MigrationContext, MigrationResult } from "../types";
  */
 async function run(db: Db, ctx: MigrationContext): Promise<MigrationResult> {
   // Keyed by the string "current"; see the note in the 1953 heal migration.
-  const gs = await db
-    .collection<{ _id: string; currentTurn?: number }>("gameState")
-    .findOne({ _id: "current" }, { projection: { currentTurn: 1 } });
+  const gs = await gameStateCollection<{ _id: string; currentTurn?: number }>(db).findOne(
+    { _id: "current" },
+    { projection: { currentTurn: 1 } }
+  );
   const currentTurn = gs?.currentTurn;
   if (typeof currentTurn !== "number" || !Number.isFinite(currentTurn)) {
     throw new Error("smooth-legacy-build-orders: gameState.currentTurn is missing or not a number");

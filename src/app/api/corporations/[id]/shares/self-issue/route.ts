@@ -41,6 +41,7 @@ import {
 } from "@/lib/financialTxLog/atomicCashGuard";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -196,7 +197,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     let ceoDoc = await db.collection(collectionName).findOne({ _id: ceoCharId });
 
     if (forexEnabled && ceoDoc) {
-      const gs = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+      const gs = await gameStateCollection(db).findOne({ _id: "current" });
       const convertResult = await autoConvertForPurchase(db, {
         character: ceoDoc as PersonalWealthHolder & { _id: ObjectId },
         requiredCurrency: homeCurrency,

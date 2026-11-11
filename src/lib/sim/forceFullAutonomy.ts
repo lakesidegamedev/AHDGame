@@ -8,6 +8,7 @@ import type {
   NppForeignPolicyStage,
 } from "@/lib/db/types/gameState";
 import { ALL_COUNTRY_IDS } from "@/lib/constants/countries";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /** Re-exported for callers that already import from this module — the
  * implementation and its full rationale live in bootstrapGameWorld.ts,
@@ -79,7 +80,7 @@ export async function forceFullAutonomy(
   foreignPolicyStage: NppForeignPolicyStage = "war",
   preservePlayerRail = false
 ): Promise<void> {
-  await db.collection<GameState>("gameState").updateOne(
+  await gameStateCollection(db).updateOne(
     { _id: "current" },
     {
       $set: {

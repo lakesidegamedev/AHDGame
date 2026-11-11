@@ -17,6 +17,7 @@ import {
 } from "@/lib/world/succession/runtimeEntities";
 import { getElectedOfficialsCollection } from "@/lib/db/collections/electedOfficials";
 import { getNppsCollection } from "@/lib/db/collections/npps";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const SOURCES = ["CS", "YU", "RU"] as const;
 
@@ -38,9 +39,10 @@ export async function processFederationNpcMandates(
   // the year rolls over, the year this phase is handed can run ahead of it, so
   // judge eligibility on the stored year too; otherwise the proposal throws
   // and takes the whole government formation phase down with it.
-  const stored = await db
-    .collection<{ _id: string; currentYear?: number }>("gameState")
-    .findOne({ _id: "current" }, { projection: { currentYear: 1 } });
+  const stored = await gameStateCollection<{ _id: string; currentYear?: number }>(db).findOne(
+    { _id: "current" },
+    { projection: { currentYear: 1 } }
+  );
   const year = Number.isSafeInteger(stored?.currentYear)
     ? (stored?.currentYear as number)
     : currentYear;

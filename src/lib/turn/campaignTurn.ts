@@ -5,7 +5,7 @@ import {
 import * as Sentry from "@sentry/nextjs";
 import { getDb } from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
-import type { UpdateFilter } from "mongodb";
+import type { Document, UpdateFilter } from "mongodb";
 import type { Campaign, Election, ElectionCandidate } from "@/lib/db/types";
 import { calculateCampaignIncome } from "@/lib/campaigns/income";
 import { campaignActionsPerTurn, cappedCampaignActionGrant } from "@/lib/campaigns/actions";
@@ -298,7 +298,7 @@ export async function processCampaignTurn(turnNumber: number): Promise<CampaignT
         const nppIds = campaigns.filter((c) => c.candidateIsNPP).map((c) => c.candidateId);
         const [characterDocs, nppDocs] = await Promise.all([
           characterIds.length > 0
-            ? charactersCollection(db)
+            ? charactersCollection<Document>(db)
                 .find({ _id: { $in: characterIds } })
                 .toArray()
             : Promise.resolve([]),

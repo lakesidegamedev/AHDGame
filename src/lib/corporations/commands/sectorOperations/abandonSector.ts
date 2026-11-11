@@ -31,6 +31,7 @@ import {
 } from "@/lib/corporations/securedConstructionProperty";
 import { abandonBankImpact } from "@/lib/banking/capacityAllocation";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 interface RouteParams {
   params: Promise<{ id: string; sectorId: string }>;
@@ -191,7 +192,7 @@ export async function abandonSector(request: Request, { params }: RouteParams) {
       if (!refundDone) {
         const queue: SectorBuildOrder[] = Array.isArray(sector.buildQueue) ? sector.buildQueue : [];
         if (queue.length > 0) {
-          const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+          const gameState = await gameStateCollection(db).findOne({ _id: "current" });
           const currentTurn = gameState?.currentTurn ?? 0;
           const refundableAnchor =
             queueUndeliveredCost(queue, currentTurn) * CAPACITY_BUILD_CANCEL_REFUND;

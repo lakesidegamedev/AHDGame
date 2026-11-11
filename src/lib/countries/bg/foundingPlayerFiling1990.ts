@@ -14,6 +14,7 @@ import {
   bgFoundingOpenNominationDistricts,
 } from "./rules/foundingRenewal1990";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 export const BG_FOUNDING_FILING_LOCKS_COLLECTION = "bgFoundingAssemblyFilingLocks";
 export type BgFoundingFilingFailure =
   | "invalid-ballot"
@@ -78,9 +79,10 @@ export async function materializeBgFoundingPlayerFiling(input: {
       await import("./constituencyByElectionPlayerFiling1991");
     return materializeBgGrandPartialPlayerFiling(input);
   }
-  const game = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { session, projection: { preset: 1, currentTurn: 1 } });
+  const game = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { session, projection: { preset: 1, currentTurn: 1 } }
+  );
   if (
     !election ||
     game?.preset !== "1991-default" ||

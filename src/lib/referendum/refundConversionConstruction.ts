@@ -25,6 +25,7 @@ import { quoteConversionConstructionRefund } from "./rules/constructionRefund";
 import { cancelConversionUnderwriting } from "@/lib/banking/cancelConversionUnderwriting";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { loadWholePlantsOn } from "@/lib/corporations/wholePlants/stage";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 async function cancelSecuredBuild(
   db: Db,
@@ -134,7 +135,7 @@ export async function refundConversionConstruction(
   // Foreign sector owners keep their unrelated corporate underwriting; only their local builds cancel.
   await cancelConversionUnderwriting(db, ids, turn);
   const fx = await loadFxRatesByCurrency(db);
-  const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+  const gameState = await gameStateCollection(db).findOne({ _id: "current" });
   const era = getEraUnitScale(resolvePresetIdFromGameState(gameState));
   const sectorOps: AnyBulkWriteOperation<CorporateSector>[] = [];
   const refunds = new Map<string, number>();

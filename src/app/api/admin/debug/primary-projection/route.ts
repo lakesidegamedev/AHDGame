@@ -39,6 +39,7 @@ import {
 } from "@/lib/constants/primaryCalendar";
 import { ELECTORAL_VOTE_UNITS } from "@/lib/constants/states";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const ALL_STATE_IDS = [...new Set(ELECTORAL_VOTE_UNITS.map((u) => u.stateId))];
 
@@ -233,9 +234,9 @@ export async function GET(req: Request) {
 
     const candidateIds = candidates.map((c) => c._id.toString());
     // Per-state delegate counts rescale by the active preset's EV apportionment.
-    const gsForDelegates = await db
-      .collection<{ _id: string; preset?: string }>("gameState")
-      .findOne({ _id: "current" });
+    const gsForDelegates = await gameStateCollection<{ _id: string; preset?: string }>(db).findOne({
+      _id: "current",
+    });
     const delegatePreset = gsForDelegates?.preset;
     const totalDelegates = getTotalDelegatesForFamily(family, delegatePreset);
     const summary = summarizePrimaryProjection({

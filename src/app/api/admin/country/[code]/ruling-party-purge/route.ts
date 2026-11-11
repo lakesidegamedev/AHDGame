@@ -22,6 +22,7 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import type { PurgeEvent, PurgeSeverity } from "@/lib/turn/rulingPartyPriorities";
 import { PURGE_SEVERITY_DELTA } from "@/lib/turn/rulingPartyPriorities";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const PURGE_BODY_SCHEMA = z.object({
   severity: z.enum(["minor", "regional", "senior", "faction", "extreme"]),
@@ -50,9 +51,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
   const { severity, reason, targetCount } = parsed.data;
 
   const db = await getDb();
-  const gameState = await db
-    .collection<{ _id: string; currentTurn: number }>("gameState")
-    .findOne({ _id: "current" });
+  const gameState = await gameStateCollection<{ _id: string; currentTurn: number }>(db).findOne({
+    _id: "current",
+  });
   const currentTurn = gameState?.currentTurn ?? 0;
 
   const purgeDoc: PurgeEvent = {

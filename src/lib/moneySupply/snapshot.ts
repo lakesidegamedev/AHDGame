@@ -28,6 +28,7 @@ import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export { PERSONS_PER_HOUSEHOLD, HOUSEHOLD_LIQUID_RATIO, HOUSEHOLD_SAVINGS_RATIO };
 
@@ -57,9 +58,11 @@ export async function snapshotMoneySupply(db: Db, turn: number): Promise<number>
     config?.privateBankingEnabled === true &&
     config?.bankConstructionFinanceEnabled === true;
 
-  const gameState = await db
-    .collection<{ _id: string; preset?: string; worldEpochId?: string }>("gameState")
-    .findOne({ _id: "current" }, { projection: { preset: 1, worldEpochId: 1 } });
+  const gameState = await gameStateCollection<{
+    _id: string;
+    preset?: string;
+    worldEpochId?: string;
+  }>(db).findOne({ _id: "current" }, { projection: { preset: 1, worldEpochId: 1 } });
   const preset = gameState?.preset ?? DEFAULT_SEED_PRESET;
   const currencyFor = (countryId: CountryId) => homeCurrency(countryId, preset);
   let banks = await centralBanksCollection(db).find({}).toArray();

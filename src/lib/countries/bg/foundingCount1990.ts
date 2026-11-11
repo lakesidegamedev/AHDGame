@@ -13,6 +13,7 @@ import { projectBgFoundingBallots } from "./rules/foundingBallots1990";
 import { countBgFoundingElection, type BgFoundingCount } from "./rules/foundingCount1990";
 import { BG_1990_LIST_DISTRICTS } from "./data/foundingDistricts1990";
 import type { BgFoundingBallots } from "./rules/foundingBallots1990";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export const BG_FOUNDING_COUNTS_COLLECTION = "bgFoundingAssemblyCounts";
 export interface BgFoundingAssemblyRecord {
@@ -71,9 +72,10 @@ async function materializeBgFoundingFirstCount(input: {
   const journal = db.collection<BgFoundingAssemblyRecord>(BG_FOUNDING_COUNTS_COLLECTION);
   const saved = await journal.findOne({ _id: receiptId }, { session });
   if (saved) return saved;
-  const game = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { session, projection: { preset: 1 } });
+  const game = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { session, projection: { preset: 1 } }
+  );
   if (game?.preset !== "1991-default") return null;
   const elections = await db
     .collection<Election>("elections")

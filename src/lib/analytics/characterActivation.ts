@@ -1,6 +1,7 @@
 import type { Db } from "mongodb";
 import type { GameState } from "@/lib/db/types";
 import { gameIterationId } from "./gameEventEnvelope";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 interface ActivationRecord {
   _id: string;
@@ -18,9 +19,7 @@ export async function rememberCharacterActivation(
   metadata: { createdTurn: number; startingNationId: string; characterCount: number }
 ): Promise<void> {
   try {
-    const state = await db
-      .collection<GameState>("gameState")
-      .findOne({}, { projection: { iteration: 1 } });
+    const state = await gameStateCollection(db).findOne({}, { projection: { iteration: 1 } });
     const id = `character-activation:${gameIterationId(state?.iteration)}:${characterId}`;
     await db.collection<ActivationRecord>("analyticsRecords").updateOne(
       { _id: id },
@@ -42,7 +41,7 @@ export async function rememberCharacterActivation(
 /** Atomic cross-browser claim. The caller verifies ownership and current consent. */
 export async function claimCharacterActivation(db: Db, characterId: string) {
   try {
-    const state = await db.collection<GameState>("gameState").findOne(
+    const state = await gameStateCollection(db).findOne(
       {},
       {
         projection: { iteration: 1, currentTurn: 1 },

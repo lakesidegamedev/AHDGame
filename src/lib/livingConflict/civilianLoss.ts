@@ -15,6 +15,7 @@ import {
   type ConflictCivilianLossOrder,
   type ConflictCivilianLossResult,
 } from "./rules/civilianLoss";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const CONFLICT_CIVILIAN_LOSS_HISTORY = "conflictCivilianLossHistory";
 interface CivilianLossHistory extends ConflictCivilianLossResult {
@@ -54,7 +55,7 @@ export async function prepareConflictCivilianLossOrder(
     throw new Error("Invalid authored civilian loss");
   requestedConflictCivilianLoss(spec, 0);
   const [world, states] = await Promise.all([
-    db.collection<GameState>("gameState").findOne(
+    gameStateCollection(db).findOne(
       { _id: "current" },
       {
         projection: {

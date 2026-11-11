@@ -59,6 +59,7 @@ import { resetStateRuntimeFields } from "@/lib/admin/seed/resetStateRuntimeField
 import { clearReferenceForRebuild } from "@/lib/admin/seed/referenceRebuildClear";
 import { runResidueScan } from "@/lib/admin/resetContract/residueScan";
 import { formatResidueViolation } from "@/lib/admin/resetContract/rules/residueScan";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export interface ResetAndBootstrapOptions {
   /** 1991 only: leave political offices vacant for player-created parties. */
@@ -213,7 +214,7 @@ export async function resetAndBootstrapGameWorld(
 
   // Reject a staged but unsupported v2 reset before the seal changes the
   // running world. A failed preflight must leave v1 playable.
-  const selectedState = await db.collection<GameState>("gameState").findOne(
+  const selectedState = await gameStateCollection(db).findOne(
     { _id: "current" },
     {
       projection: {
@@ -258,9 +259,10 @@ export async function resetAndBootstrapGameWorld(
   //    existing doc untouched — so the world would run forever on a gameState
   //    with no currentTurn, preset, or startingYear. A database with no
   //    gameState has no turn cron to stop anyway.
-  await db
-    .collection<GameState>("gameState")
-    .updateOne({ _id: "current" }, { $set: { isActive: false, updatedAt: new Date() } });
+  await gameStateCollection(db).updateOne(
+    { _id: "current" },
+    { $set: { isActive: false, updatedAt: new Date() } }
+  );
   collect("World sealed for reset — maintenance mode on, turn processing stopped");
 
   // 0b) Open the run's audit row NOW, before anything is destroyed.
@@ -413,12 +415,10 @@ export async function resetAndBootstrapGameWorld(
       if (run.status(false) !== "succeeded") {
         throw new Error("Cannot certify metrics v2 after a partial reset");
       }
-      const freshState = await db
-        .collection<GameState>("gameState")
-        .findOne(
-          { _id: "current" },
-          { projection: { resetWorldId: 1, currentTurn: 1, metricsSystemVersion: 1 } }
-        );
+      const freshState = await gameStateCollection(db).findOne(
+        { _id: "current" },
+        { projection: { resetWorldId: 1, currentTurn: 1, metricsSystemVersion: 1 } }
+      );
       if (
         freshState?.metricsSystemVersion !== "v2" ||
         typeof freshState.resetWorldId !== "string" ||
@@ -433,7 +433,7 @@ export async function resetAndBootstrapGameWorld(
         freshState.resetWorldId,
         freshState.currentTurn
       );
-      const stamped = await db.collection<GameState>("gameState").updateOne(
+      const stamped = await gameStateCollection(db).updateOne(
         {
           _id: "current",
           resetWorldId: freshState.resetWorldId,
@@ -452,7 +452,7 @@ export async function resetAndBootstrapGameWorld(
       if (run.status(false) !== "succeeded") {
         throw new Error("Cannot certify legislation v2 after a partial reset");
       }
-      const freshState = await db.collection<GameState>("gameState").findOne(
+      const freshState = await gameStateCollection(db).findOne(
         { _id: "current" },
         {
           projection: {
@@ -480,7 +480,7 @@ export async function resetAndBootstrapGameWorld(
         freshState.resetWorldId,
         freshState.currentTurn
       );
-      const stamped = await db.collection<GameState>("gameState").updateOne(
+      const stamped = await gameStateCollection(db).updateOne(
         {
           _id: "current",
           resetWorldId: freshState.resetWorldId,
@@ -499,7 +499,7 @@ export async function resetAndBootstrapGameWorld(
       if (run.status(false) !== "succeeded") {
         throw new Error("Cannot certify Cabinet v2 after a partial reset");
       }
-      const freshState = await db.collection<GameState>("gameState").findOne(
+      const freshState = await gameStateCollection(db).findOne(
         { _id: "current" },
         {
           projection: {
@@ -528,7 +528,7 @@ export async function resetAndBootstrapGameWorld(
         freshState.resetWorldId,
         freshState.currentTurn
       );
-      const stamped = await db.collection<GameState>("gameState").updateOne(
+      const stamped = await gameStateCollection(db).updateOne(
         {
           _id: "current",
           resetWorldId: freshState.resetWorldId,
@@ -547,7 +547,7 @@ export async function resetAndBootstrapGameWorld(
       if (run.status(false) !== "succeeded") {
         throw new Error("Cannot certify demographics v2 after a partial reset");
       }
-      const freshState = await db.collection<GameState>("gameState").findOne(
+      const freshState = await gameStateCollection(db).findOne(
         { _id: "current" },
         {
           projection: {
@@ -571,7 +571,7 @@ export async function resetAndBootstrapGameWorld(
         freshState.resetWorldId,
         freshState.currentTurn
       );
-      const stamped = await db.collection<GameState>("gameState").updateOne(
+      const stamped = await gameStateCollection(db).updateOne(
         {
           _id: "current",
           resetWorldId: freshState.resetWorldId,

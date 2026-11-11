@@ -9,6 +9,7 @@ import { getHouseSeats, isUsElectoralState } from "@/lib/constants/states";
 import { MS_PER_TURN, SENATE_STAGGER_TURNS } from "@/lib/constants/turnTime";
 import { cycleAnchorContextFromGameState } from "@/lib/elections/cycleAnchorContext";
 import { electionToLarpYear } from "@/lib/utils/formatters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 // POST /api/admin/officials/init — Initializes elected official positions and cycle-1 elections for senate, house, or executive offices.
 // Auth: requireAdmin
@@ -77,7 +78,7 @@ export async function POST(request: Request) {
     // Active preset drives House apportionment (1950 vs 1990 vs 2020 census) and
     // the era statehood roster. Read BEFORE the state filter — the apportionment
     // map is what defines statehood — and reused below for cycle-1 anchoring.
-    const presetGameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+    const presetGameState = await gameStateCollection(db).findOne({ _id: "current" });
     const presetHouseSeats = getHouseSeats(presetGameState?.preset);
 
     // Only full electoral states, and only those the ACTIVE preset apportions.

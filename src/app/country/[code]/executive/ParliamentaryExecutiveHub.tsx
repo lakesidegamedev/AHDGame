@@ -56,6 +56,7 @@ import { getNhsState } from "@/lib/countries/uk/nhs/nhsStore";
 import { NhsQualityTile } from "@/components/uk/nhs/NhsQualityTile";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 type PartyRowMeta = {
   seqKey: string;
@@ -133,8 +134,7 @@ export async function ParliamentaryExecutiveHub({ countryId }: { countryId: Coun
       positionId: surface.deputyPlaque.cabinetPositionId,
     });
     if (deputyMember?.characterId) {
-      deputyCharacter = await charactersCollection(db)
-        .findOne({ _id: deputyMember.characterId });
+      deputyCharacter = await charactersCollection(db).findOne({ _id: deputyMember.characterId });
     }
   }
 
@@ -259,9 +259,9 @@ export async function ParliamentaryExecutiveHub({ countryId }: { countryId: Coun
     !govFormation.activeVoteId
   ) {
     const NO_CONFIDENCE_COOLDOWN_TURNS = 48;
-    const gameState = await db
-      .collection<{ _id: string; currentTurn: number }>("gameState")
-      .findOne({ _id: "current" });
+    const gameState = await gameStateCollection<{ _id: string; currentTurn: number }>(db).findOne({
+      _id: "current",
+    });
     const currentTurn = gameState?.currentTurn ?? 0;
 
     const lastVote = await getNoConfidenceVotesCollection(db)
@@ -358,8 +358,9 @@ export async function ParliamentaryExecutiveHub({ countryId }: { countryId: Coun
     parlGov
   );
   if (oppositionResult) {
-    oppositionLeaderChar = await charactersCollection(db)
-      .findOne({ _id: oppositionResult.chairId });
+    oppositionLeaderChar = await charactersCollection(db).findOne({
+      _id: oppositionResult.chairId,
+    });
     oppositionPartyDoc = oppositionResult.partyDoc;
   }
 

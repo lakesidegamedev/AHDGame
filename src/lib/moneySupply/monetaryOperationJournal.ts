@@ -42,6 +42,7 @@ import { releaseMonetaryCommandReservation } from "./commandReservation";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const COLLECTION = "monetaryOperationCommands";
 export class MonetaryOperationRejected extends Error {}
@@ -216,9 +217,10 @@ async function prepare(db: Db, command: Command): Promise<Receipt> {
         db
           .collection<{ currencyCode: string; rate: number }>("exchangeRates")
           .findOne({ currencyCode: receipt.currency }, { projection: { rate: 1 } }),
-        db
-          .collection<{ _id: string; preset?: string }>("gameState")
-          .findOne({ _id: "current" }, { projection: { preset: 1 } }),
+        gameStateCollection<{ _id: string; preset?: string }>(db).findOne(
+          { _id: "current" },
+          { projection: { preset: 1 } }
+        ),
       ]);
       const valuation = treasuryAnchorValuation({
         countryId: command.countryId,

@@ -18,6 +18,7 @@ import {
   foreignPolicyStageFrom,
 } from "./foreignPolicyRollout";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export interface AutonomousWarCommandResult {
   acted: boolean;
@@ -136,16 +137,14 @@ export async function mobilizeImmediateWarEntry(
 }
 
 async function activeForAutonomousWar(db: Db, countryId: CountryId): Promise<boolean> {
-  const rollout = await db
-    .collection<{
-      _id: string;
-      nppForeignPolicyMode?: "off" | "shadow" | "active";
-      nppForeignPolicyStage?: "votes" | "proposals" | "trade" | "support" | "war";
-    }>("gameState")
-    .findOne(
-      { _id: "current" },
-      { projection: { nppForeignPolicyMode: 1, nppForeignPolicyStage: 1 } }
-    );
+  const rollout = await gameStateCollection<{
+    _id: string;
+    nppForeignPolicyMode?: "off" | "shadow" | "active";
+    nppForeignPolicyStage?: "votes" | "proposals" | "trade" | "support" | "war";
+  }>(db).findOne(
+    { _id: "current" },
+    { projection: { nppForeignPolicyMode: 1, nppForeignPolicyStage: 1 } }
+  );
   return (
     foreignPolicyModeFrom(rollout?.nppForeignPolicyMode) === "active" &&
     foreignPolicyActionAllowed(

@@ -26,6 +26,8 @@ import {
   planBackgroundForeignPolicy,
   type ForeignPolicyPlan,
 } from "./backgroundForeignPolicy";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import type { Document } from "mongodb";
 
 export interface MacroCountryTurnResult {
   countriesConsidered: number;
@@ -64,9 +66,10 @@ export async function processMacroCountryTurn(
     (country) => isActiveMacroCountry(country) && isMacroTickTurn(turn, country.entityId)
   );
   if (due.length > 0) {
-    const config = await db
-      .collection("gameState")
-      .findOne({ _id: "current" as never }, { projection: { currentYear: 1, resetWorldId: 1 } });
+    const config = await gameStateCollection<Document>(db).findOne(
+      { _id: "current" as never },
+      { projection: { currentYear: 1, resetWorldId: 1 } }
+    );
     // 2027 background countries: national politics, budget state and index (#5702).
     const nationContext = await loadBackgroundNationContext(db, due, {
       year: config?.currentYear,

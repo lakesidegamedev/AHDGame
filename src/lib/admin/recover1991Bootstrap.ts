@@ -10,6 +10,8 @@ import { createResetRunRecord } from "./resetRunRecord";
 import { captureSeedBaseline, formatDiagnosticSummary, runSeedDiagnostic } from "./seedDiagnostic";
 import { seedPartylessFoundingCandidates } from "@/lib/npp/seedPartylessFoundingCandidates";
 import { invalidateGameTimeCache } from "@/lib/time/gameTime";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import type { Document } from "mongodb";
 
 const EMPTY_COLLECTIONS = [
   "characters",
@@ -27,7 +29,7 @@ export class BootstrapRecoveryConflict extends Error {}
 
 export async function preview1991BootstrapRecovery(db: Db, runId: string) {
   const [state, config, audit, counts] = await Promise.all([
-    db.collection("gameState").findOne({ _id: "current" as never }),
+    gameStateCollection<Document>(db).findOne({ _id: "current" as never }),
     db.collection("gameConfig").findOne({ _id: "default" as never }),
     db.collection("adminLogs").findOne({ "resetRun.runId": runId }),
     Promise.all(
@@ -129,7 +131,7 @@ export async function recover1991Bootstrap(
     // player runtime were verified empty above; bootstrap rebuilds the pool.
     const cleared = await db.collection("unownedSectors").deleteMany({});
     log(`Recovery cleared ${cleared.deletedCount} stale unowned markets; teardown is not repeated`);
-    const clock = await db.collection("gameState").updateOne(
+    const clock = await gameStateCollection<Document>(db).updateOne(
       {
         _id: "current" as never,
         preset: "1991-default",

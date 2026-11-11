@@ -18,6 +18,7 @@ import {
 } from "@/lib/politicalLegislation/politicalApprovalProvider";
 import { approvalCoattailMultiplier, coattailMultiplierMapToPct } from "./coattailMagnitude";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * A down-ballot general qualifies for the governor coattail when:
@@ -125,7 +126,7 @@ export async function resolveGovExecutiveApproval(
   const [allMetrics, groupsByState, gameStateDoc] = await Promise.all([
     findMergedRegionMetricsMany(db, { countryId }),
     loadElectorateGroups(db, { countryId, _id: stateId.toUpperCase() }),
-    db.collection<GameState>("gameState").findOne({ _id: "current" }),
+    gameStateCollection(db).findOne({ _id: "current" }),
   ]);
   const nationalAverages = computeNationalAveragesFromMetrics(allMetrics);
   const preset = gameStateDoc?.preset ?? DEFAULT_SEED_PRESET;

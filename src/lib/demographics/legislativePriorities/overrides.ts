@@ -21,6 +21,7 @@ import {
   type PriorityLaw,
 } from "./rules";
 import type { PriorityTarget } from "./schema";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export function priorityOverrideId({ countryId, regionId, bucketId }: PriorityTarget): string {
   return `${countryId}:${regionId}:${bucketId}`;
@@ -86,9 +87,10 @@ export async function getPriorityEditorData(db: Db, target: PriorityTarget) {
 /** Editor/restoration defaults use exactly the region page's year and bucket leans. */
 export async function loadPriorityDefaults(db: Db, target: PriorityTarget) {
   const [world, defaults] = await Promise.all([
-    db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: { preset: 1, currentYear: 1, startingYear: 1 } }),
+    gameStateCollection(db).findOne(
+      { _id: "current" },
+      { projection: { preset: 1, currentYear: 1, startingYear: 1 } }
+    ),
     db
       .collection<StateDemographics>("demographicDefaults")
       .findOne(

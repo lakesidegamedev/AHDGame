@@ -43,6 +43,7 @@ import { getBankId } from "@/lib/centralBank/helpers";
 import { isMoneySupplyEnabledFromConfig } from "@/lib/moneySupply/featureFlag";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 // ── Tuning constants ─────────────────────────────────────────────────────────
 
@@ -737,12 +738,10 @@ export async function calculateCountryInflation(
   // Both reads gate the command-economy early return below, and neither depends
   // on the other, so they share one round-trip.
   const [gameState, gc] = await Promise.all([
-    db
-      .collection<GameState>("gameState")
-      .findOne(
-        { _id: "current" },
-        { projection: { currentYear: 1, startingYear: 1, currentTurn: 1 } }
-      ),
+    gameStateCollection(db).findOne(
+      { _id: "current" },
+      { projection: { currentYear: 1, startingYear: 1, currentTurn: 1 } }
+    ),
     // Command-economy CPI is administered (held at the era target), not market-driven.
     db
       .collection<GameConfig>("gameConfig")

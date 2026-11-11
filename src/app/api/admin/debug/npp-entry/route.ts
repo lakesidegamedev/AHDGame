@@ -6,6 +6,7 @@ import type { Election, ElectionCandidate, NPP, GameState } from "@/lib/db/types
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
 import { getRacePriority, isNPPAvailable } from "@/lib/turn/nppEntryLogic";
 import { primaryOpenFilter } from "@/lib/elections/electionDeadlineFilters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * Debug endpoint to diagnose why NPPs aren't entering primaries.
@@ -22,7 +23,7 @@ export async function GET() {
     const db = await getDb();
 
     // Get game time (same calculation as processTurn)
-    const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+    const gameState = await gameStateCollection(db).findOne({ _id: "current" });
     const lastProcessed = gameState?.lastTurnProcessed
       ? new Date(gameState.lastTurnProcessed)
       : new Date();

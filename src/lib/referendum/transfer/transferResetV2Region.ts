@@ -10,6 +10,7 @@ import {
   transferResetV2LawToIreland,
   transferResetV2MetricToIreland,
 } from "./rules/resetV2Transfer";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /** Move Northern Ireland's world-bound v2 regional boards into Ireland. */
 export async function transferResetV2RegionToIreland(
@@ -18,7 +19,7 @@ export async function transferResetV2RegionToIreland(
   scale = 1
 ): Promise<void> {
   if (regionId !== "NIR") return;
-  const gameState = await db.collection<GameState>("gameState").findOne(
+  const gameState = await gameStateCollection(db).findOne(
     { _id: "current" },
     {
       projection: {

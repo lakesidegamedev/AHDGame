@@ -51,6 +51,7 @@ import { resolvePersonalFunds } from "../playCost";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export interface DossierPaymentView {
   mode: SettlementPaymentMode;
@@ -391,9 +392,10 @@ export async function loadGermanQuestionDossier(
   const crisis = await crises.findOne({ status: "open" });
   if (!crisis) return null;
 
-  const gameState = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { currentTurn: 1, nextScheduledTurn: 1 } });
+  const gameState = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { currentTurn: 1, nextScheduledTurn: 1 } }
+  );
   const turn = gameState?.currentTurn ?? 0;
 
   const rules = settlementRulesFor(crisis);
@@ -531,11 +533,10 @@ export async function loadGermanQuestionDossier(
   // renders disabled here instead of looking live and being refused by the
   // route. `resolvePersonalFunds` short-circuits the FX lookup for free plays,
   // so this costs at most one rate read for the whole board.
-  const character = await charactersCollection(db)
-    .findOne(
-      { _id: characterId },
-      { projection: { actions: 1, funds: 1, currencyBalances: 1, countryId: 1 } }
-    );
+  const character = await charactersCollection(db).findOne(
+    { _id: characterId },
+    { projection: { actions: 1, funds: 1, currencyBalances: 1, countryId: 1 } }
+  );
   const personalCost = new Map<string, { local: number; balance: number }>();
   if (character) {
     for (const play of personalCatalogue) {

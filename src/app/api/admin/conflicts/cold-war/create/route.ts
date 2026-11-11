@@ -21,6 +21,7 @@ import { getWorldEntityPresetManifest } from "@/lib/world/worldEntityManifest";
 import { createConflict } from "@/lib/military/createConflict";
 import { validateColdWarConflict } from "@/lib/military/validateCreateConflict";
 import { conflictExists } from "@/lib/db/collections/conflicts";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const sideSchema = z.object({
   label: z.string().min(1).max(80),
@@ -53,9 +54,10 @@ function toSide(input: z.infer<typeof sideSchema>): ConflictSide {
 
 export const POST = withAdminRoute(async (_auth, request: Request) => {
   const db = await getDb();
-  const gs = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { currentTurn: 1, preset: 1 } });
+  const gs = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { currentTurn: 1, preset: 1 } }
+  );
 
   const parsed = await parseJsonBody(request, bodySchema);
   if (!parsed.success) {

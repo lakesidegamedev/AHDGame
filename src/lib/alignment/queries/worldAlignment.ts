@@ -26,6 +26,7 @@ import {
   type NationStanding,
 } from "./nationStanding";
 import { loadAlignmentTopology } from "../topology";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export type { LedgerPole };
 
@@ -70,7 +71,7 @@ const STATUS_ORDER: Record<AlignmentStatus, number> = {
 };
 
 export async function loadWorldAlignment(db: Db): Promise<WorldAlignmentView> {
-  const gs = await db.collection<GameState>("gameState").findOne(
+  const gs = await gameStateCollection(db).findOne(
     { _id: "current" },
     {
       projection: {

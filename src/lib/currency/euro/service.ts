@@ -14,11 +14,13 @@ import type { OrganizationMembership } from "@/lib/db/types/internationalOrganiz
 import { resolveGameYear } from "@/lib/era/era";
 import { planEuroSettlement, type EuroMonetaryUnion } from "./rules";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export async function loadEuroMonetaryUnion(db: Db): Promise<EuroMonetaryUnion | undefined> {
-  const state = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { euroMonetaryUnion: 1 } });
+  const state = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { euroMonetaryUnion: 1 } }
+  );
   return state?.euroMonetaryUnion;
 }
 
@@ -66,7 +68,7 @@ export async function reconcileEuroMonetaryUnion(
   db: Db,
   turn: number
 ): Promise<EuroMonetaryUnion | undefined> {
-  const states = db.collection<GameState>("gameState");
+  const states = gameStateCollection(db);
   for (let attempt = 0; attempt < 3; attempt++) {
     const state = await states.findOne(
       { _id: "current" },

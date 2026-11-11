@@ -3,6 +3,7 @@ import type { GameState } from "@/lib/db/types/gameState";
 import { RESET_V2_READY } from "@/lib/resetVersions/availability";
 import { resetSystemVersionsForCountry, type ResetV2Readiness } from "@/lib/resetVersions/rules";
 import { buildResetMetricSnapshot, type ResetMetricSnapshot } from "./rules/snapshot";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export type ResetMetricBoardRead =
   | { status: "not_enabled" }
@@ -16,7 +17,7 @@ export async function readResetMetricBoard(
   regionId?: string,
   ready: ResetV2Readiness = RESET_V2_READY
 ): Promise<ResetMetricBoardRead> {
-  const gameState = await db.collection<GameState>("gameState").findOne(
+  const gameState = await gameStateCollection(db).findOne(
     { _id: "current" },
     {
       projection: {

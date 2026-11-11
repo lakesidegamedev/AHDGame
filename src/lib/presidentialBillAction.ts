@@ -16,6 +16,7 @@ import { billChamberVoteSplits } from "@/lib/charts/voteSplitChart";
 import { claimStatusTransition } from "@/lib/turn/atomicClaim";
 import { captureBillStatusChanged } from "@/lib/analytics/billStatusAnalytics";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const OVERRIDE_WINDOW_HOURS = 24;
 const OVERRIDE_WINDOW_MS = OVERRIDE_WINDOW_HOURS * 60 * 60 * 1000;
@@ -63,7 +64,7 @@ export async function executePresidentialBillAction(
       }
 
       if (budgetResult.warning === "DEBT_CEILING_EXCEEDED") {
-        const gameState = await db.collection<GameState>("gameState").findOne({ _id: "main" });
+        const gameState = await gameStateCollection(db).findOne({ _id: "main" });
         await triggerDebtCeilingCrisis(db, gameState?.currentYear || 2024);
       }
     }
@@ -84,7 +85,7 @@ export async function executePresidentialBillAction(
         error: "This bill is not awaiting presidential action.",
       };
     }
-    const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+    const gameState = await gameStateCollection(db).findOne({ _id: "current" });
     const currentTurn = gameState?.currentTurn ?? 1;
     await captureBillStatusChanged({
       db,
@@ -151,7 +152,7 @@ export async function executePresidentialBillAction(
     return { success: true, message: `"${bill.title}" has been signed into law.` };
   } else {
     const trimmedVetoMessage = vetoMessage?.trim();
-    const vetoGameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+    const vetoGameState = await gameStateCollection(db).findOne({ _id: "current" });
     const vetoTurn = vetoGameState?.currentTurn ?? 1;
     // Atomically claim the enrolled→veto_override transition so a concurrent
     // action cannot open a second override window and re-announce the veto.

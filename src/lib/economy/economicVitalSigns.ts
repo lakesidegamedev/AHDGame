@@ -45,6 +45,7 @@ import {
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 export {
   summarizeLedgerTurnover,
   computeEconomicVitalSigns,
@@ -388,11 +389,9 @@ export async function snapshotEconomicVitalSigns(
     db
       .collection<GameConfig>("gameConfig")
       .findOne({ _id: "default" }, { projection: { indexFundBondLiquidityEnabled: 1 } }),
-    db
-      .collection<{ _id: string; preset?: string; hardwareInputReliefStartTurn?: number }>(
-        "gameState"
-      )
-      .findOne({ _id: "current" }, { projection: { preset: 1, hardwareInputReliefStartTurn: 1 } }),
+    gameStateCollection<{ _id: string; preset?: string; hardwareInputReliefStartTurn?: number }>(
+      db
+    ).findOne({ _id: "current" }, { projection: { preset: 1, hardwareInputReliefStartTurn: 1 } }),
   ]);
   const fxByCurrency = new Map(exchangeRates.map((row) => [row.currencyCode, row.rate]));
   if (!fxByCurrency.has("USD")) fxByCurrency.set("USD", 1);

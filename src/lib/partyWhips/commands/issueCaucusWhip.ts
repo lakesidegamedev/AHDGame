@@ -48,6 +48,7 @@ import type {
   WhipIssuerRole,
 } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export const caucusWhipSchema = z
   .object({
@@ -698,9 +699,7 @@ export async function issueCaucusWhip({
             },
           })
           .toArray(),
-        db
-          .collection<GameState>("gameState")
-          .findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
+        gameStateCollection(db).findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
       ]);
       const stateDemographicsByState = new Map(stateDemographicsArr.map((row) => [row._id, row]));
       const result = await applyWhipVotesToBill(

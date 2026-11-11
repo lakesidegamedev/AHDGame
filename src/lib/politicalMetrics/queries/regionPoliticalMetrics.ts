@@ -56,6 +56,7 @@ import {
   type MetricLegislationInfo,
   type MetricModifiersInfo,
 } from "./metricsAssembly";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /** First calendar year of the information era for indicator-list selection. */
 const MODERN_INDICATORS_FROM_YEAR = 1990;
@@ -167,7 +168,7 @@ export async function loadRegionPoliticalMetrics(
       .collection<State>("states")
       .find({ countryId }, { projection: { name: 1, population: 1, gdp: 1 } })
       .toArray(),
-    db.collection<GameState>("gameState").findOne(
+    gameStateCollection(db).findOne(
       { _id: "current" },
       {
         projection: {

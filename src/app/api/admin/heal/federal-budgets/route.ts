@@ -23,6 +23,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import type { FederalTaxRates } from "@/lib/db/types/budget";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const FEDERAL_TAX_RATE_KEYS: ReadonlySet<keyof FederalTaxRates> = new Set([
   "incomeTax",
@@ -256,9 +257,10 @@ export async function POST() {
     // ── Step 1: Re-seed enacted laws from current legislation type definitions ──
     // Fixes stale cost fields left by previous seeds
     const { generateDefaultEnactedLaws } = await import("@/lib/seeds/reference/budgets");
-    const gameState = await db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: { preset: 1, startingYear: 1 } });
+    const gameState = await gameStateCollection(db).findOne(
+      { _id: "current" },
+      { projection: { preset: 1, startingYear: 1 } }
+    );
     const preset =
       gameState?.preset ??
       ((gameState?.startingYear ?? 2019) <= 1991 ? "1991-default" : "2019-default");

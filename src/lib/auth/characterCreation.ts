@@ -56,6 +56,7 @@ import { withPartyTerritoryMutation } from "@/lib/parties/territoryMutation";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import type { Document } from "mongodb";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const MIN_STARTING_DONOR_BASE_LEVEL = 1;
 
@@ -117,9 +118,9 @@ export async function createCharacterForAccount(userId: string, data: CreateChar
 
   const singleplayerConfig = isSingleplayer()
     ? (
-        await db
-          .collection<{ _id: string; singleplayerConfig?: SingleplayerConfig }>("gameState")
-          .findOne({ _id: "current" }, { projection: { singleplayerConfig: 1 } })
+        await gameStateCollection<{ _id: string; singleplayerConfig?: SingleplayerConfig }>(
+          db
+        ).findOne({ _id: "current" }, { projection: { singleplayerConfig: 1 } })
       )?.singleplayerConfig
     : undefined;
   if (singleplayerConfig?.mode === "head-of-state") {
@@ -470,8 +471,9 @@ export async function createCharacterForAccount(userId: string, data: CreateChar
 
     // Reward referrer: +10 actions, +$500k personal capital, increment referralCount
     if (isReferred && userDoc?.referredBy) {
-      const referrerChar = await charactersCollection<Document>(db)
-        .findOne({ userId: userDoc.referredBy });
+      const referrerChar = await charactersCollection<Document>(db).findOne({
+        userId: userDoc.referredBy,
+      });
       if (referrerChar) {
         const referrerCountry = (referrerChar.countryId as string) ?? "US";
         const referrerCurrency = getSeedCurrencyCode(referrerCountry as CountryId, worldPreset);
@@ -501,10 +503,9 @@ export async function createCharacterForAccount(userId: string, data: CreateChar
         // Clamp the post-bonus total at the referrer's Energy-scaled action cap
         // (matches actionRefresh), not the static baseline.
         const referrerCap = energyActionLimits(referrerChar.stats?.energy ?? STAT_MIN).cap;
-        await charactersCollection<Document>(db)
-          .updateOne({ _id: referrerChar._id }, [
-            { $set: { actions: { $min: [referrerCap, "$actions"] } } },
-          ]);
+        await charactersCollection<Document>(db).updateOne({ _id: referrerChar._id }, [
+          { $set: { actions: { $min: [referrerCap, "$actions"] } } },
+        ]);
       }
     }
 

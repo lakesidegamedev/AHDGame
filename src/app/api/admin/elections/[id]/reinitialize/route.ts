@@ -18,6 +18,7 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import type { Election, GameState } from "@/lib/db/types";
 import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { DEFAULT_DURATIONS } from "@/lib/elections/scheduling";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -64,7 +65,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     // ── Determine correct LARP election year from current game turn ──────────
-    const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+    const gameState = await gameStateCollection(db).findOne({ _id: "current" });
     const currentTurn = gameState?.currentTurn ?? 1;
     const startingYear = gameState?.startingYear ?? STARTING_YEAR;
     const currentGameYear = startingYear + Math.floor((currentTurn - 1) / TURNS_PER_YEAR);

@@ -36,6 +36,7 @@ import { loadOrganizationContributions } from "./organizationContributions";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /** One point on the fiscal-year trend series (stat strip compare + debt sparkline). */
 export interface FyHistoryPoint {
@@ -260,9 +261,7 @@ export async function loadFederalBudgetDetail(params: {
     if (!snapshot) return { ok: false as const, status: 404, error: "Snapshot not found" };
 
     const [snapshotGameState, snapshotGameConfig] = await Promise.all([
-      db
-        .collection<GameState>("gameState")
-        .findOne({ _id: "current" }, { projection: { currentYear: 1 } }),
+      gameStateCollection(db).findOne({ _id: "current" }, { projection: { currentYear: 1 } }),
       db
         .collection<GameConfig>("gameConfig")
         .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } }),
@@ -309,12 +308,10 @@ export async function loadFederalBudgetDetail(params: {
 
   const [storedNationalBudgetDoc, gameState, centralBank, gameConfig] = await Promise.all([
     federalBudgetCollection(db).findOne({ _id: budgetId }),
-    db
-      .collection<GameState>("gameState")
-      .findOne(
-        { _id: "current" },
-        { projection: { currentTurn: 1, currentYear: 1, startingYear: 1 } }
-      ),
+    gameStateCollection(db).findOne(
+      { _id: "current" },
+      { projection: { currentTurn: 1, currentYear: 1, startingYear: 1 } }
+    ),
     centralBanksCollection(db).findOne(
       COUNTRY_CONFIGS[countryId].centralBank.sharedBankId
         ? { _id: COUNTRY_CONFIGS[countryId].centralBank.sharedBankId }

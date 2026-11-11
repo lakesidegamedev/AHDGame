@@ -7,6 +7,7 @@ import { resolveGameYear } from "@/lib/era/era";
 import { isNppOwned } from "@/lib/corporations/nppOwned";
 import type { Migration, MigrationContext, MigrationResult } from "../types";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 type NppTechRow = Pick<
   Corporation,
@@ -14,12 +15,10 @@ type NppTechRow = Pick<
 >;
 
 async function backfillNppTechBaselines(db: Db, ctx: MigrationContext): Promise<MigrationResult> {
-  const gameState = await db
-    .collection<GameState>("gameState")
-    .findOne(
-      { _id: "current" },
-      { projection: { currentYear: 1, currentTurn: 1, startingYear: 1 } }
-    );
+  const gameState = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { currentYear: 1, currentTurn: 1, startingYear: 1 } }
+  );
   const currentYear = resolveGameYear(gameState ?? {}) ?? STARTING_YEAR;
   const corporations = await corporationsCollection<NppTechRow>(db)
     .find({ ceoType: "npp" })

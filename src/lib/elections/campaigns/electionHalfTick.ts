@@ -5,6 +5,7 @@ import {
   accumulateGeneralElectionVotes,
   recordPrimarySnapshots,
 } from "@/lib/turn/primaryResolution";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * Half-hour election results tick. Between hourly turns, bank the early half
@@ -20,12 +21,10 @@ import {
  */
 export async function runElectionHalfTick(now: Date = new Date()): Promise<number | null> {
   const db = await getDb();
-  const state = await db
-    .collection<GameState>("gameState")
-    .findOne(
-      { _id: "current" },
-      { projection: { currentTurn: 1, isActive: 1, isProcessing: 1, fastMode: 1 } }
-    );
+  const state = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { currentTurn: 1, isActive: 1, isProcessing: 1, fastMode: 1 } }
+  );
   if (!state?.isActive || state.isProcessing || state.fastMode) return null;
   const turn = state.currentTurn + 1;
   await runInAuditContext(`election-half-tick:${turn}`, async () => {

@@ -34,6 +34,7 @@ import {
 } from "./rules/campaignBallots1991";
 import { TALLY_WITH_LATEST_SNAPSHOT_ONLY } from "@/lib/elections/engine/tallyProjections";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 export const HU_1991_BY_ELECTIONS_COLLECTION = "hu1991ConstituencyByElections";
 export interface Hu1991ByElectionRecord {
   _id: string;
@@ -105,12 +106,10 @@ async function materializeHu1991ByElectionOpening(input: {
 }): Promise<string[]> {
   const { db, session, turn, now } = input;
   assertTransaction(session, turn, now);
-  const game = await db
-    .collection<GameState>("gameState")
-    .findOne(
-      { _id: "current" },
-      { session, projection: { preset: 1, huAssemblyReformedAtYear: 1 } }
-    );
+  const game = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { session, projection: { preset: 1, huAssemblyReformedAtYear: 1 } }
+  );
   if (game?.preset !== "1991-default") return [];
   const parent = await db
     .collection<Hu1991AssemblyRecord>(HU_1991_COUNTS_COLLECTION)
@@ -411,9 +410,10 @@ async function materializeHu1991ByElectionResolution(input: {
       { seatedAtTurn: { $exists: true } },
       { session, sort: { seatedAtTurn: -1 }, projection: { _id: 1 } }
     );
-  const game = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { session, projection: { huAssemblyReformedAtYear: 1 } });
+  const game = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { session, projection: { huAssemblyReformedAtYear: 1 } }
+  );
   const currentChamber =
     game?.huAssemblyReformedAtYear == null && latestParent?._id === job.parentReceiptId;
   if (!currentChamber || turn >= job.termEndTurn) {

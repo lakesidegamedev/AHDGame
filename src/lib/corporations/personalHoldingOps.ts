@@ -20,6 +20,7 @@ import {
   type ShareHoldingTerms,
 } from "./rules/holdingTerms";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export interface PersonalHoldingChange {
   /** Turn shells supply their already-loaded activation flag. */
@@ -60,9 +61,10 @@ export async function updatePersonalHolding(input: {
   const options = input.session ? { session: input.session } : {};
   const state =
     change.trackingEnabled === undefined
-      ? await db
-          .collection<{ _id: string; stockHoldingTaxStartTurn?: number }>("gameState")
-          .findOne({ _id: "current" }, { projection: { stockHoldingTaxStartTurn: 1 }, ...options })
+      ? await gameStateCollection<{ _id: string; stockHoldingTaxStartTurn?: number }>(db).findOne(
+          { _id: "current" },
+          { projection: { stockHoldingTaxStartTurn: 1 }, ...options }
+        )
       : null;
   const active =
     change.trackingEnabled ??

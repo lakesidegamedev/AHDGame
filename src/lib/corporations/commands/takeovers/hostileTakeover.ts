@@ -102,6 +102,7 @@ import { getCorporationsCollection } from "@/lib/db/collections/corporations";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 type TakeoverTxInput = Omit<FinancialTxLogEntry, "_id" | "expiresAt" | "flagged">;
 
@@ -175,9 +176,10 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
     const db = await getDb();
     const turnGuard = await rejectDuringTurn(db);
     if (turnGuard) return turnGuard;
-    const stockTaxState = await db
-      .collection<{ _id: string; stockHoldingTaxStartTurn?: number }>("gameState")
-      .findOne({ _id: "current" }, { projection: { stockHoldingTaxStartTurn: 1 } });
+    const stockTaxState = await gameStateCollection<{
+      _id: string;
+      stockHoldingTaxStartTurn?: number;
+    }>(db).findOne({ _id: "current" }, { projection: { stockHoldingTaxStartTurn: 1 } });
     const corpGuard = await requireCorporationActionsEnabled(db);
     if (corpGuard) return corpGuard;
 

@@ -19,6 +19,7 @@ import {
   shareTradeAnchorValue,
 } from "@/lib/currency/corporationCapital";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * Distribute a dissolving corp's holdings in OTHER corps IN-KIND, pro-rata to
@@ -40,9 +41,10 @@ export async function distributeCrossEquityInKind(
 ): Promise<void> {
   const [fxByCurrency, activation] = await Promise.all([
     loadFxRatesByCurrency(db),
-    db
-      .collection<{ _id: string; stockHoldingTaxStartTurn?: number }>("gameState")
-      .findOne({ _id: "current" }, { projection: { stockHoldingTaxStartTurn: 1 } }),
+    gameStateCollection<{ _id: string; stockHoldingTaxStartTurn?: number }>(db).findOne(
+      { _id: "current" },
+      { projection: { stockHoldingTaxStartTurn: 1 } }
+    ),
   ]);
   const trackingEnabled =
     activation?.stockHoldingTaxStartTurn !== undefined &&

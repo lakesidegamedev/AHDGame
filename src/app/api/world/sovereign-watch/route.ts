@@ -19,6 +19,7 @@ import { loadNationalGdpGrowth } from "@/lib/country/nationalGdpGrowth";
 import { federalSurplus } from "@/lib/budget/federalSurplus";
 import { resolveRatioGdp } from "@/lib/budget/gdpDenominator";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 interface SovereignWatchRow {
   countryCode: CountryId;
@@ -39,9 +40,10 @@ export async function GET() {
   const codes: CountryId[] = COUNTRY_ORDER;
   // Hoisted out of the per-country fan-out: the year cannot change mid-request,
   // so this is one read for the whole route rather than one per country.
-  const gameStateForGrowth = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { currentYear: 1 } });
+  const gameStateForGrowth = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { currentYear: 1 } }
+  );
 
   // Parallel fan-out — small N (~8 countries) keeps this manageable. Each
   // country: snapshot load → demand calc → DSA calc + budget read for

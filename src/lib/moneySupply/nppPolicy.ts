@@ -33,6 +33,7 @@ import { isMoneySupplyEnabledFromConfig } from "./featureFlag";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 interface NppMonetaryConditions {
   inflation: number;
@@ -147,12 +148,10 @@ export async function processNppMonetaryOperations(
   // Era START year for the government-control gate below, resolved once for the
   // whole sweep — `isBankGovernmentControlledLive` costs an uncached gameState
   // read per call.
-  const gameState = await db
-    .collection<GameState>("gameState")
-    .findOne(
-      { _id: "current" },
-      { projection: { startingYear: 1, preset: 1, euroMonetaryUnion: 1 } }
-    );
+  const gameState = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { startingYear: 1, preset: 1, euroMonetaryUnion: 1 } }
+  );
   const startingYear =
     gameState?.startingYear ?? getStartingYearForPreset(gameState?.preset ?? DEFAULT_SEED_PRESET);
   const union = gameState?.euroMonetaryUnion;

@@ -7,6 +7,7 @@ import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError, notFound, badRequest } from "@/lib/api/errors";
 import { schemas } from "@/lib/api/validate";
 import type { GameState } from "@/lib/db/types/gameState";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -17,7 +18,7 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
     if (!schemas.objectId.safeParse(id).success) throw badRequest("Invalid contract ID");
 
     const db = await getDb();
-    const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+    const gameState = await gameStateCollection(db).findOne({ _id: "current" });
     const currentTurn = gameState?.currentTurn ?? 0;
 
     const result = await db

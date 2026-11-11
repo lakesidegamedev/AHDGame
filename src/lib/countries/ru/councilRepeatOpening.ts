@@ -30,6 +30,7 @@ import { loadRussianAssemblyRepeatTerm } from "./assemblyRepeatTerm";
 import { hasAuthorizedPostSovietTransition } from "./rules/postSovietTransition";
 import { GAME_STATE_PRE_ITERATION_FIELDS } from "@/lib/db/collections/gameState";
 import { STATE_POPULATION_FIELDS } from "@/lib/db/collections/states";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export async function materializeRussianCouncilRepeatOpening(input: {
   db: Db;
@@ -49,9 +50,10 @@ export async function materializeRussianCouncilRepeatOpening(input: {
     !Number.isFinite(now.getTime())
   )
     throw new Error("Council repeats need a transaction, turn and time");
-  const game = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { session, projection: GAME_STATE_PRE_ITERATION_FIELDS });
+  const game = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { session, projection: GAME_STATE_PRE_ITERATION_FIELDS }
+  );
   if (game?.preset !== "1991-default") return null;
   const countries = db.collection<CountryGameState>("countryGameStates");
   const country = await countries.findOne(

@@ -13,6 +13,7 @@
 import type { Db, Document, UpdateFilter } from "mongodb";
 import type { GameConfig } from "@/lib/db/types/gameConfig";
 import type { GameState } from "@/lib/db/types/gameState";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /** Funded rules a rebuilt economy starts with, keyed from its last legacy turn. */
 export function fundedSwitchGameConfigUpdate(currentTurn: number): UpdateFilter<GameConfig> {
@@ -72,12 +73,10 @@ export async function applyFundedSwitch(
   db: Db,
   options: ApplyFundedSwitchOptions
 ): Promise<ApplyFundedSwitchResult> {
-  const state = await db
-    .collection<GameState>("gameState")
-    .findOne(
-      { _id: "current" },
-      { projection: { worldEpochId: 1, currentTurn: 1, producerOpening: 1 } }
-    );
+  const state = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { worldEpochId: 1, currentTurn: 1, producerOpening: 1 } }
+  );
   if (!state || state.worldEpochId !== options.expectedWorldEpoch)
     throw new Error("The expected world is not the live world");
   const currentTurn = state.currentTurn;

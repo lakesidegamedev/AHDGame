@@ -63,6 +63,7 @@ import { getDesignatedSectorTypes } from "./strategicSectors";
 import { isSittingLeader } from "@/lib/governorOffice/isSittingLeader";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /** Human-readable label for a `category.field` metric path (region-aware). */
 function mandateMetricLabel(path: string, stateId?: string): string {
@@ -361,7 +362,7 @@ export async function buildNationalCorporationView(
   // summary, so the view model has to carry the physical figures. Read once.
   const plantsMode = marketAtLeast(await getMarketSystemModeForDb(db), "plants");
   const currentTurnForBuilds = plantsMode
-    ? ((await db.collection<GameState>("gameState").findOne({ _id: "current" }))?.currentTurn ?? 0)
+    ? ((await gameStateCollection(db).findOne({ _id: "current" }))?.currentTurn ?? 0)
     : 0;
 
   const viewSectors: NatViewSector[] = sectors.map((s) => {

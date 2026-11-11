@@ -47,6 +47,7 @@ import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export type CommodityGlobalDeltaPreview = {
   commodity: CommodityType;
@@ -238,14 +239,12 @@ export async function previewQuickDissolve(
     ).length + ((corporation.publicFloat ?? 0) > 0 ? 1 : 0);
   const ceoIsSoleShareholder = totalRealHolders <= 1 && !!ceoRow;
 
-  const gameState = await db
-    .collection<{
-      _id: string;
-      currentTurn: number;
-      preset?: string;
-      stateGdpAnchoredDemand?: boolean;
-    }>("gameState")
-    .findOne({ _id: "current" });
+  const gameState = await gameStateCollection<{
+    _id: string;
+    currentTurn: number;
+    preset?: string;
+    stateGdpAnchoredDemand?: boolean;
+  }>(db).findOne({ _id: "current" });
   const currentTurn = gameState?.currentTurn ?? 0;
 
   const gdpPhaseConfig = await db

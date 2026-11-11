@@ -20,6 +20,8 @@ import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import type { Document } from "mongodb";
 
 /**
  * Post-run economy telemetry.
@@ -586,7 +588,7 @@ async function collectCorpHealth(db: Db): Promise<CorpHealthTelemetry> {
 }
 
 async function collectEraCosts(db: Db): Promise<EraCostTelemetry> {
-  const gs = await db.collection("gameState").findOne({ _id: "current" as never });
+  const gs = await gameStateCollection<Document>(db).findOne({ _id: "current" as never });
   const g = (gs ?? {}) as Record<string, unknown>;
   const config = await db
     .collection("gameConfig")
@@ -777,7 +779,7 @@ async function collectMarket(db: Db): Promise<MarketTelemetry> {
       .collection("shareListings")
       .find({}, { projection: { status: 1, sharesListed: 1, sharesRemaining: 1 } })
       .toArray(),
-    db.collection("gameState").findOne({ _id: "current" as never }),
+    gameStateCollection<Document>(db).findOne({ _id: "current" as never }),
   ]);
   if (
     sectors.length === 0 &&
@@ -884,8 +886,7 @@ async function collectMarket(db: Db): Promise<MarketTelemetry> {
  * already-completed run's metrics step.
  */
 export async function collectEconomyTelemetry(db: Db): Promise<EconomyTelemetry> {
-  const gs = await db
-    .collection("gameState")
+  const gs = await gameStateCollection<Document>(db)
     .findOne({ _id: "current" as never })
     .catch(() => null);
   const currentTurn = num((gs as Record<string, unknown> | null)?.["currentTurn"]);

@@ -11,6 +11,7 @@ import {
 } from "@/lib/financialTxLog/atomicCashGuard";
 import { emitTx } from "@/lib/financialTxLog/emit";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * The casino house bank.
@@ -56,9 +57,10 @@ export async function resolveCasinoPlayer(db: Db, discordId: string): Promise<Re
   if (!character) {
     return { ok: false, status: 404, error: "User has no character. Create a character first." };
   }
-  const gameState = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { preset: 1 } });
+  const gameState = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { preset: 1 } }
+  );
   const currency = getHomeCurrency(character, gameState?.preset);
   const rate = await getCurrencyFxRate(db, currency);
   return {

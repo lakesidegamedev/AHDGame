@@ -118,6 +118,7 @@ import {
   type EndorsementOrgLink,
 } from "@/lib/campaigns/endorsementActivation";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /** Vote multiplier applied in a state when its sitting governor has endorsed
  *  the candidate. Half of the VP-home-state effect — a real in-state lift
@@ -209,9 +210,9 @@ export async function initPresidentVoteTally(
   if (countryId === COUNTRY_CONFIGS.US.id) {
     // Live (census-updated) EV units; equals the seed until a census reapportions
     // (P1d-2). Must match the unit set accumulatePresidentVoteTurn uses.
-    const gsDoc = await db
-      .collection<{ _id: string; preset?: string; currentYear?: number }>("gameState")
-      .findOne({ _id: "current" }, { projection: { preset: 1, currentYear: 1 } });
+    const gsDoc = await gameStateCollection<{ _id: string; preset?: string; currentYear?: number }>(
+      db
+    ).findOne({ _id: "current" }, { projection: { preset: 1, currentYear: 1 } });
     // The live year, not just the preset: the DC (1961) and ME/NE district
     // (1972/1992) gates key on it. Without it a 1953 world at 1965 ran a
     // 530-vote college and never gave DC its three.
@@ -401,7 +402,7 @@ export async function accumulatePresidentVoteTurn(
   // match the unit set initPresidentVoteTally bucketed (P1d-2). The state set
   // is derived from the same live list so an era without DC, or before a
   // state's admission, does not accumulate a unit that cannot cast a vote.
-  const gsDoc = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+  const gsDoc = await gameStateCollection(db).findOne({ _id: "current" });
   const { electoralVoteUnits } = await loadApportionment(db, gsDoc?.preset, gsDoc?.currentYear);
   const uniqueStateIds = [...new Set(electoralVoteUnits.map((u) => u.stateId))];
   // Live era clock.

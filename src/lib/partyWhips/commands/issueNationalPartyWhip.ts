@@ -54,6 +54,7 @@ import { recordAudit } from "@/lib/audit/recordAudit";
 import { inferWhipIssuerRole } from "@/lib/partyWhips/issuerRole";
 import { buildPlayerWhipMessage } from "./playerWhipMessage";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export const nationalPartyWhipSchema = z
   .object({
@@ -719,9 +720,7 @@ async function issueNppWhip(
             },
           })
           .toArray(),
-        db
-          .collection<GameState>("gameState")
-          .findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
+        gameStateCollection(db).findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
       ]);
       const stateDemographicsByState = new Map(stateDemographicsArr.map((s) => [s._id, s]));
       r = await applyWhipVotesToBill(

@@ -26,6 +26,7 @@ import { hasReachedExecutiveTermLimit } from "@/lib/elections/executiveTermLimit
 import { isNationwideDirectExecutiveElection } from "@/lib/elections/nationwideExecutive";
 import { getAllCountryAccess } from "@/lib/countryAccess";
 import { getChallengerSupplyPolicy } from "./rules/challengerSupply";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * Directly-elected SINGLE-SEAT offices that need a bench challenger to be
@@ -157,9 +158,10 @@ const MAX_CHALLENGERS_PER_TURN = 400;
 export async function processChallengerGeneration(now: Date): Promise<number> {
   const db = await getDb();
 
-  const gs = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { currentTurn: 1, preIteration: 1 } });
+  const gs = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { currentTurn: 1, preIteration: 1 } }
+  );
   const currentTurn = gs?.currentTurn;
   const founding = gs?.preIteration?.active === true;
 

@@ -50,6 +50,7 @@ import { getGameState } from "@/lib/gameState";
 import type { Impeachment } from "@/lib/db/types/impeachment";
 import { getBillWhipWindowStart } from "@/lib/congress/billWhipPhase";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; partyId: string }>;
@@ -328,9 +329,7 @@ export async function POST(request: Request, { params }: RouteParams) {
               },
             })
             .toArray(),
-          db
-            .collection<GameState>("gameState")
-            .findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
+          gameStateCollection(db).findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
         ]);
         const stateDemographicsByState = new Map(stateDemographicsArr.map((s) => [s._id, s]));
         const r = await applyWhipVotesToStateBill(
@@ -375,9 +374,7 @@ export async function POST(request: Request, { params }: RouteParams) {
               },
             })
             .toArray(),
-          db
-            .collection<GameState>("gameState")
-            .findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
+          gameStateCollection(db).findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
         ]);
         const stateDemographicsByState = new Map(stateDemographicsArr.map((s) => [s._id, s]));
         const r = await applyWhipVotesToBill(

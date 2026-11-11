@@ -30,6 +30,7 @@ import { createCrisisInstance } from "./v2/instance";
 import { SPAWN_PRIORITY } from "./v2/spawnBudget";
 import { legacyDefinitionFor } from "@/lib/turn/crisisV2/legacyContent";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 interface ResilienceRow {
   _id: string;
@@ -220,7 +221,7 @@ export async function processAutoDisasterSpawn(
   // ones. They carry no window today, so this is a no-op for the current
   // catalogue — but it means a future era-bound disaster (an industrial or
   // nuclear one, say) cannot be added here and silently escape the gate.
-  const gs = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+  const gs = await gameStateCollection(db).findOne({ _id: "current" });
   const currentYear = gs?.currentYear;
   const eligibleTemplates = disasterTemplatesForCountry(countryId).filter(({ template }) =>
     isTemplateAllowedInYear(template, currentYear)

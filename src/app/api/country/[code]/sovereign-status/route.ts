@@ -18,6 +18,7 @@ import { loadNationalGdpGrowth } from "@/lib/country/nationalGdpGrowth";
 import type { GameState } from "@/lib/db/types/gameState";
 import type { SovereignCrisisDecision } from "@/lib/db/types/sovereignCrisisDecision";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 interface RouteParams {
   params: Promise<{ code: string }>;
@@ -51,9 +52,10 @@ export async function GET(_req: Request, { params }: RouteParams) {
   // from the rate every other page shows (UK: -5.32 stored against +6.24 live).
   // A forward-looking gauge must use the forward-looking number.
   // See lib/country/nationalGdpGrowth.
-  const gameStateForGrowth = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { currentYear: 1 } });
+  const gameStateForGrowth = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { currentYear: 1 } }
+  );
   const liveGdpGrowth = await loadNationalGdpGrowth(db, upperCode, gameStateForGrowth?.currentYear);
 
   // Phase 11a: forward-looking sustainability gauge. Pure math; reads from

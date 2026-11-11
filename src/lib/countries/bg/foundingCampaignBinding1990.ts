@@ -10,6 +10,7 @@ import { scalePoolToRegistered } from "@/lib/elections/rules/registration";
 import { BG_1990_LIST_DISTRICTS } from "./data/foundingDistricts1990";
 import { isBgOrdinaryCapacity } from "./rules/assemblyTransition";
 import { STATE_POPULATION_FIELDS } from "@/lib/db/collections/states";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 async function materializeBgFoundingCampaignBinding(input: {
   db: Db;
@@ -25,9 +26,10 @@ async function materializeBgFoundingCampaignBinding(input: {
     !Number.isFinite(now.getTime())
   )
     throw new Error("Bulgarian campaign binding needs an active transaction, cycle and time");
-  const game = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { session, projection: { preset: 1 } });
+  const game = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { session, projection: { preset: 1 } }
+  );
   if (game?.preset !== "1991-default") return false;
   const elections = await db
     .collection<Election>("elections")
@@ -153,9 +155,10 @@ export async function bindBgFoundingCampaigns(
   now: Date,
   cycles?: readonly number[]
 ): Promise<number> {
-  const game = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { preset: 1 } });
+  const game = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { preset: 1 } }
+  );
   if (game?.preset !== "1991-default") return 0;
   const unbound = await db
     .collection<Election>("elections")

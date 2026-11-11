@@ -19,6 +19,7 @@ import {
   summarizeSeatCycle,
   type SeatCycleInput,
 } from "@/lib/campaignManager/rules";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const paramsSchema = z.object({ id: z.string().min(1).max(128) });
 
@@ -140,7 +141,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
         .toArray(),
       // Only legacy rows without a baked year need the preset's anchors.
       elections.some((e) => e.electionYear == null)
-        ? db.collection<GameState>("gameState").findOne(
+        ? gameStateCollection(db).findOne(
             { _id: "current" },
             {
               projection: { startingYear: 1, preset: 1, preIterationTurns: 1, preIteration: 1 },
