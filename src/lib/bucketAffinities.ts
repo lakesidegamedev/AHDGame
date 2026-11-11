@@ -4,6 +4,7 @@ import { IE_DOMAIN_BUCKET_AFFINITIES } from "@/lib/countries/ie/data/ieBucketAff
 import { JP_DOMAIN_BUCKET_AFFINITIES } from "@/lib/countries/jp/data/jpBucketAffinities";
 import { DE_DOMAIN_BUCKET_AFFINITIES } from "@/lib/countries/de/data/deBucketAffinities";
 import { CN_DOMAIN_BUCKET_AFFINITIES } from "@/lib/countries/cn/data/cnBucketAffinities";
+import { CA_DOMAIN_BUCKET_AFFINITIES } from "@/lib/countries/ca/data/caBucketAffinities";
 /**
  * Domain affinities in the Layer-1 census-bucket vocabulary.
  *
@@ -34,6 +35,7 @@ export const DOMAIN_BUCKET_AFFINITIES: Record<string, Record<string, Record<stri
   JP: JP_DOMAIN_BUCKET_AFFINITIES,
   DE: DE_DOMAIN_BUCKET_AFFINITIES,
   CN: CN_DOMAIN_BUCKET_AFFINITIES,
+  CA: CA_DOMAIN_BUCKET_AFFINITIES,
 };
 
 /**

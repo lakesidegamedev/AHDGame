@@ -209,8 +209,7 @@ export const CA_LEGISLATIVE_PROCESS: LegislativeProcess = {
 };
 
 export const CA_ORDERS_OF_BATTLE: OrderOfBattleEntry[] = [
-  { branchId: "army", type: "Infantry Brigade Group", count: 3 },
-  { branchId: "army", type: "Armored Regiment", count: 1 },
+  { branchId: "army", type: "Mechanized Brigade", count: 3 },
   { branchId: "army", type: "Artillery Regiment", count: 2 },
   { branchId: "navy", type: "Frigate Squadron", count: 3 },
   { branchId: "navy", type: "Attack Submarine", count: 2 },

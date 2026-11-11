@@ -22,6 +22,7 @@ import { TR_GEOGRAPHY } from "@/lib/countries/tr/geography";
 import { GR_GEOGRAPHY } from "@/lib/countries/gr/geography";
 import { AT_GEOGRAPHY } from "@/lib/countries/at/geography";
 import { FI_GEOGRAPHY } from "@/lib/countries/fi/geography";
+import { CA_GEOGRAPHY } from "@/lib/countries/ca/geography";
 
 export type { MetricPresetBundle };
 type PresetBundles = Partial<Record<ResetPresetId, MetricPresetBundle>>;
@@ -58,6 +59,7 @@ export const METRIC_PRESET_BUNDLES: Partial<Record<CountryId, PresetBundles>> = 
   AT: AT_GEOGRAPHY.metricPresets,
   FI: FI_GEOGRAPHY.metricPresets,
   GR: GR_GEOGRAPHY.metricPresets,
+  CA: CA_GEOGRAPHY.metricPresets,
 };
 
 /**

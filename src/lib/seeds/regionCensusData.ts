@@ -49,6 +49,7 @@ import { WAL_GEOGRAPHY } from "@/lib/countries/wal/geography";
 import { BLR_GEOGRAPHY } from "@/lib/countries/blr/geography";
 import { UKR_GEOGRAPHY } from "@/lib/countries/ukr/geography";
 import { BAL_GEOGRAPHY } from "@/lib/countries/bal/geography";
+import { CA_GEOGRAPHY } from "@/lib/countries/ca/geography";
 
 export const CENSUS_BUNDLES: Partial<Record<CountryId, PresetBundles>> = {
   PL: PL_GEOGRAPHY.censusBundles,
@@ -93,6 +94,7 @@ export const CENSUS_BUNDLES: Partial<Record<CountryId, PresetBundles>> = {
   // the former UK Scotland/Wales aggregate).
   SCO: SCO_GEOGRAPHY.censusBundles,
   WAL: WAL_GEOGRAPHY.censusBundles,
+  CA: CA_GEOGRAPHY.censusBundles,
 };
 
 /**
