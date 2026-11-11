@@ -2,7 +2,11 @@ import type { Db } from "mongodb";
 import type { State } from "@/lib/db/types/state";
 import { primaryMetrics } from "./catalog";
 import { aggregateNationalMetricObservations } from "./rules/nationalAggregation";
-import { buildResetMetricSnapshot, type ResetMetricSnapshot } from "./rules/snapshot";
+import {
+  buildResetMetricSnapshot,
+  normalizeNationalMetricBoard,
+  type ResetMetricSnapshot,
+} from "./rules/snapshot";
 import type { OpeningMetricObservation } from "./rules/openingObservation";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { resetMetricSnapshotsCollection } from "@/lib/db/repositories/resetMetricSnapshots";
@@ -65,7 +69,8 @@ export async function readNationalMetricRollup(
   }
 
   try {
-    const regionalReadings = regionalBoards.map((board) => {
+    const regionalReadings = regionalBoards.map((stored) => {
+      const board = normalizeNationalMetricBoard(stored);
       if (
         board.worldId !== nationalBoard.worldId ||
         board.countryId !== nationalBoard.countryId ||

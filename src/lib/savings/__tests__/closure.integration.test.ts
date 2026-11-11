@@ -223,4 +223,39 @@ describe("departing owner savings", () => {
       )?.externalBroadMoney
     ).toBe(1000);
   });
+
+  it("closes one currency and leaves the legacy fields for the currency change to convert", async () => {
+    seedAccount();
+    const OTHER = new ObjectId();
+    memory.seed("savingsAccounts", [
+      {
+        _id: OTHER,
+        ownerType: "character",
+        ownerId: OWNER,
+        currency: "EUR",
+        holder: "centralBank",
+        balance: 40,
+        status: "open",
+        version: 1,
+        accruedInterest: 0,
+        interestEarned: 0,
+        openedTurn: 1,
+      },
+    ]);
+    await closeCharacterSavings(db, OWNER, { currency: "USD", keepLegacyProjection: true });
+    expect(await db.collection("savingsAccounts").findOne({ _id: ACCOUNT })).toMatchObject({
+      balance: 0,
+      status: "closed",
+    });
+    expect(await db.collection("savingsAccounts").findOne({ _id: OTHER })).toMatchObject({
+      balance: 40,
+      status: "open",
+    });
+    // The legacy balance is still there for the re-denomination to move.
+    expect(
+      await db
+        .collection<{ _id: ObjectId; currencyBalances: { savings: { USD: number } } }>("characters")
+        .findOne({ _id: OWNER })
+    ).toMatchObject({ currencyBalances: { savings: { USD: 100 } } });
+  });
 });

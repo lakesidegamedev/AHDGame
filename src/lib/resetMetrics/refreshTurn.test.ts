@@ -50,6 +50,46 @@ function ownerReadings(
 }
 
 describe("v2 metric turn persistence shell", () => {
+  it("repairs converted observations before owner reads and persists normalized metadata", async () => {
+    const db = createMockDb();
+    const stored = structuredClone(boards);
+    const nir = stored.find((b) => b._id === "UK:NIR")!;
+    nir._id = "IE:NIR";
+    nir.countryId = "IE";
+    nir.observations["03"] = {
+      ...nir.observations["03"],
+      definitionVersion: 2,
+      countryBasis: { countryId: "UK", coverageKey: "old-uk", measurementTurn: 1, value: 20 },
+    };
+    db.collection("resetMetricSnapshots").find.mockReturnValue({
+      toArray: vi.fn().mockResolvedValue(stored),
+    });
+    db.collection("resetMetricSnapshots").bulkWrite.mockResolvedValue({
+      matchedCount: stored.length,
+    });
+    await refreshResetMetricSnapshotsTurn({
+      db: db as unknown as Db,
+      gameState: state,
+      turn: 2,
+      ready,
+      ownerReadings: async (current) => {
+        expect(
+          current.find((b) => b._id === "IE:NIR")!.observations["03"].definitionVersion
+        ).toBeUndefined();
+        const readings = ownerReadings(current);
+        return readings;
+      },
+    });
+    const operations = db.collection("resetMetricSnapshots").bulkWrite.mock.calls[0][0];
+    const operation = operations.find(
+      (op: { updateOne: { filter: { _id: string } } }) => op.updateOne.filter._id === "IE:NIR"
+    );
+    expect(operation.updateOne.update.$set["observations.03"].definitionVersion).toBeUndefined();
+    expect(operation.updateOne.update.$set["observations.03"].status).toBe("proxy");
+    expect(operation.updateOne.update.$set).not.toHaveProperty("history");
+    expect(stored.find((b) => b._id === "IE:NIR")!.observations["03"].definitionVersion).toBe(2);
+  });
+
   it("refreshes and unsets legacy national BSON-null region ids in the existing batch", async () => {
     const db = createMockDb();
     const stored = boards.map((board) => ({
