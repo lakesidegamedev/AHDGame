@@ -14,6 +14,7 @@ import { MS_PER_TURN } from "@/lib/constants/turnTime";
 import { brazilPresidentialRules, decideBrazilPresidency } from "./rules/presidential";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 const followupId = (source: string) =>
   new ObjectId(
@@ -117,7 +118,7 @@ export async function resolveBrazilPresidentialElection(
         byParty: {},
         recordedAt: now,
       });
-    await db.collection<Election>("elections").updateOne(
+    await electionsCollection(db).updateOne(
       { _id: electionId },
       {
         $setOnInsert: {

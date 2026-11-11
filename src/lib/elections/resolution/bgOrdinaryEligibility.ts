@@ -13,11 +13,11 @@ import {
 import { bgNationwideEligibleParties } from "@/lib/countries/bg/rules/ordinaryElection";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 /** Read the full 1991 slate once before any regional race is seated. */
 export async function readBgOrdinaryEligibleParties(db: Db): Promise<ReadonlySet<string> | null> {
-  const elections = await db
-    .collection<Election>("elections")
+  const elections = await electionsCollection(db)
     .find({ countryId: "BG", electionType: "nationalAssembly", cycle: 1 })
     .toArray();
   const tallies = await db
@@ -84,8 +84,7 @@ export async function readBgOrdinaryElectionPlan(
   const key = `BG:ordinary:${cycle}`;
   const saved = await journal.findOne({ _id: key });
   if (saved) return saved.plan;
-  const elections = await db
-    .collection<Election>("elections")
+  const elections = await electionsCollection(db)
     .find(
       { countryId: "BG", electionType: "nationalAssembly", cycle },
       { projection: { state: 1, status: 1, totalSeats: 1 } }

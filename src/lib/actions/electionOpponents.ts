@@ -22,6 +22,7 @@ import {
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 /** A rival candidate as the poll and the opponent summary see them. */
 export interface OpponentForShare {
@@ -74,8 +75,7 @@ export async function getElectionOpponents(
     const charId = character._id;
 
     // Find elections in their home state that are active and in general phase
-    const elections = await db
-      .collection<Election>("elections")
+    const elections = await electionsCollection(db)
       .find({
         countryId: character.countryId,
         state: { $in: [character.homeState, character.countryId] },

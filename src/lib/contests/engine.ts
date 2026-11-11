@@ -75,6 +75,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 type PlayerCharacter = Pick<
   Character,
@@ -411,8 +412,7 @@ async function loadKingmakerCalls(
   world: ContestWorld,
   round: Pick<ContestRound, "startTurn" | "startedAt">
 ): Promise<Map<string, number>> {
-  const elections = await db
-    .collection<Election>("elections")
+  const elections = await electionsCollection(db)
     .find(
       {
         status: { $in: ["completed", "resolved"] },

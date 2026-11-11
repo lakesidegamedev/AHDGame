@@ -15,6 +15,7 @@ import { getGameTime } from "@/lib/time/gameTime";
 import { primaryOpenFilter } from "@/lib/elections/electionDeadlineFilters";
 import { z } from "zod";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 const schema = z.object({
   method: z.union([z.literal("PR"), z.literal("WTA"), z.null()]),
@@ -90,7 +91,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     // Admins may override — their action is logged separately. The goal is to
     // prevent a chair from flipping allocation mid-primary to game outcomes.
     const { currentTurn, effectiveNow } = await getGameTime();
-    const activePresPrimary = await db.collection<Election>("elections").findOne({
+    const activePresPrimary = await electionsCollection(db).findOne({
       countryId,
       electionType: "president",
       status: "active",

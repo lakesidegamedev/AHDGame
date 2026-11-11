@@ -3,6 +3,7 @@ import type { Db } from "mongodb";
 import type { Character, Election, ElectionCandidate, State } from "@/lib/db/types";
 import { forbidden } from "@/lib/api/errors";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 async function standingAdRegions(db: Db, owner: Character) {
   const candidates = await db
@@ -14,7 +15,7 @@ async function standingAdRegions(db: Db, owner: Character) {
     .toArray();
   const presidential =
     candidates.length > 0 &&
-    (await db.collection<Election>("elections").findOne(
+    (await electionsCollection(db).findOne(
       {
         _id: { $in: candidates.map((candidate) => candidate.electionId) },
         countryId: owner.countryId,

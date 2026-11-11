@@ -27,6 +27,7 @@ import type { Document } from "mongodb";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export async function POST(request: Request, { params }: { params: Promise<{ partyId: string }> }) {
   try {
@@ -83,8 +84,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ par
       // Pull from active/upcoming election candidate lists (matches the pattern
       // in src/app/api/admin/npps/lib/remove.ts — completed elections are left
       // alone for historical accuracy).
-      const liveElections = await db
-        .collection<Election>("elections")
+      const liveElections = await electionsCollection(db)
         .find({ countryId: partyCountryId, status: { $in: ["upcoming", "active"] } })
         .project<{ _id: Election["_id"] }>({ _id: 1 })
         .toArray();

@@ -120,6 +120,7 @@ import {
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 /** Vote multiplier applied in a state when its sitting governor has endorsed
  *  the candidate. Half of the VP-home-state effect — a real in-state lift
@@ -202,9 +203,10 @@ export async function initPresidentVoteTally(
 
   // Unit keys must match the accumulator's country. US-only units seeded
   // into a non-US tally create 56 phantom zero-vote unit keys.
-  const election = await db
-    .collection<Election>("elections")
-    .findOne({ _id: electionId }, { projection: { countryId: 1 } });
+  const election = await electionsCollection(db).findOne(
+    { _id: electionId },
+    { projection: { countryId: 1 } }
+  );
   const countryId = election?.countryId ?? "US";
 
   let unitIds: string[];
@@ -376,7 +378,7 @@ export async function accumulatePresidentVoteTurn(
       .collection<ElectionCandidate>("electionCandidates")
       .find({ electionId, status: "active" })
       .toArray(),
-    db.collection<Election>("elections").findOne({ _id: electionId }),
+    electionsCollection(db).findOne({ _id: electionId }),
   ]);
 
   if (!tally || !tally.totalVotesByUnit || candidates.length === 0 || !election?.endTime) return;

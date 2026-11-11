@@ -2,6 +2,7 @@ import { ObjectId, type Db } from "mongodb";
 import type { Election, ElectionCandidate, PlayerEndorsement } from "@/lib/db/types";
 import { applyEndorsementSupportBump } from "@/lib/elections/campaigns/supportEvents";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 /**
  * Party-alignment lifecycle for player endorsements.
@@ -63,8 +64,7 @@ async function withdrawPrimaryMisalignedRows(
   );
 
   const [elections, candidates, endorsers] = await Promise.all([
-    db
-      .collection<Election>("elections")
+    electionsCollection(db)
       .find({ _id: { $in: electionIds } })
       .toArray(),
     db

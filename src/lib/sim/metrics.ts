@@ -26,6 +26,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import type { Document } from "mongodb";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 /**
  * Read-only balance-metric aggregations over a (sandbox) world DB, for the
@@ -622,8 +623,7 @@ async function collectWealthMetrics(db: Db): Promise<WealthMetrics> {
 }
 
 async function collectElectoralMetrics(db: Db): Promise<ElectoralMetrics> {
-  const elections = await db
-    .collection<Election>("elections")
+  const elections = await electionsCollection(db)
     .find({}, { projection: { status: 1 } })
     .toArray();
   const totalElections = elections.length;

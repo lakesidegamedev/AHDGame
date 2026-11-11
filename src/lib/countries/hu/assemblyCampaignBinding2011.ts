@@ -20,6 +20,7 @@ import { hu2014RegionSeats } from "@/lib/turn/huAssemblyReform";
 import { huAssemblyElectionSystem } from "./rules/electoralTransition2011";
 import { STATE_POPULATION_FIELDS } from "@/lib/db/collections/states";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export async function bindHu2011Campaigns(db: Db, game: GameState, turn: number, now: Date) {
   if (game.preset !== "1991-default") return false;
@@ -37,7 +38,7 @@ export async function bindHu2011Campaigns(db: Db, game: GameState, turn: number,
     }) !== "mixed-2011-v1"
   )
     return false;
-  const pending = await db.collection<Election>("elections").findOne(
+  const pending = await electionsCollection(db).findOne(
     {
       countryId: "HU",
       electionType: "nationalAssembly",
@@ -74,8 +75,7 @@ async function materializeHu2011PrimaryCohorts(
   session: ClientSession,
   authorizedOnTurn?: number
 ) {
-  const polls = await db
-    .collection<Election>("elections")
+  const polls = await electionsCollection(db)
     .find(
       {
         countryId: "HU",
@@ -201,7 +201,7 @@ async function materializeHu2011PrimaryCohorts(
   const capacities = hu2014RegionSeats(regions);
   if (Object.keys(capacities).length !== 6)
     throw new Error("Modern Hungarian binding needs six regions");
-  const changed = await db.collection<Election>("elections").bulkWrite(
+  const changed = await electionsCollection(db).bulkWrite(
     eligible.map((row) => ({
       updateOne: {
         filter: {

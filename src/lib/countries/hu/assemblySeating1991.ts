@@ -24,6 +24,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 const HU_1991_OFFICE_ARCHIVES_COLLECTION = "hu1991AssemblyOfficeArchives";
 interface Hu1991AssemblyArchive {
@@ -65,8 +66,7 @@ async function materializeHu1991AssemblySeating(input: {
   const ids = [...receipt.electionIds, ...(receipt.runoffElectionIds ?? [])].map(
     (id) => new ObjectId(id)
   );
-  const elections = await db
-    .collection<Election>("elections")
+  const elections = await electionsCollection(db)
     .find(
       {
         _id: { $in: ids },
@@ -345,7 +345,7 @@ async function materializeHu1991AssemblySeating(input: {
     },
     { session }
   );
-  const finalizedElections = await db.collection<Election>("elections").bulkWrite(
+  const finalizedElections = await electionsCollection(db).bulkWrite(
     elections.map((row) => ({
       updateOne: {
         filter: { _id: row._id, status: { $in: ["completed", "resolved"] } },

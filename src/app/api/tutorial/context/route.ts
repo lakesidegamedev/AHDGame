@@ -18,6 +18,7 @@ import type { TutorialFacts } from "@/lib/tutorial/facts";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 /**
  * GET /api/tutorial/context — live world numbers for the tutorial coach.
@@ -72,7 +73,7 @@ async function handleGET() {
           ),
         // The collection is "politicalParties", not "parties" (seedManifest.ts).
         politicalPartiesCollection(db).countDocuments({ countryId }),
-        db.collection<Election>("elections").countDocuments({
+        electionsCollection(db).countDocuments({
           countryId,
           state: character.homeState,
           status: { $in: ["upcoming", "active"] },

@@ -29,6 +29,7 @@ import { NEUTRAL_STAT } from "@/lib/stats/statsConstants";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export class DirectActionBalanceConflictError extends Error {}
 
@@ -133,9 +134,7 @@ export async function applyNppDirectAction(
       return { error: "Selected candidacy is not active.", status: 400 } as const;
     }
 
-    const election = await db
-      .collection<Election>("elections")
-      .findOne({ _id: candidacy.electionId });
+    const election = await electionsCollection(db).findOne({ _id: candidacy.electionId });
     if (!election) {
       return { error: "Selected candidacy is not active.", status: 400 } as const;
     }
@@ -240,9 +239,10 @@ export async function applyNppDirectAction(
         .findOne({ _id: candidacyOid, status: "active" }, session ? { session } : undefined);
       if (candidacy) {
         const [election, candidateCountAtDecision] = await Promise.all([
-          db
-            .collection<Election>("elections")
-            .findOne({ _id: candidacy.electionId }, session ? { session } : undefined),
+          electionsCollection(db).findOne(
+            { _id: candidacy.electionId },
+            session ? { session } : undefined
+          ),
           db
             .collection<ElectionCandidate>("electionCandidates")
             .countDocuments(

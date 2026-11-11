@@ -53,6 +53,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 /**
  * Whether to show the "Campaign Manager" navbar link. Returns true for: admins,
@@ -127,12 +128,10 @@ export async function GET() {
     const rawToken = cookieStore.get(AUTH_COOKIE_NAME)?.value;
 
     // Start president election + game-state queries immediately — both needed regardless of auth state
-    const presidentElectionPromise = db
-      .collection<Election>("elections")
-      .findOne(
-        { electionType: "president", state: "US", status: { $in: ["active", "upcoming"] } },
-        { projection: { _id: 1, seatId: 1 } }
-      );
+    const presidentElectionPromise = electionsCollection(db).findOne(
+      { electionType: "president", state: "US", status: { $in: ["active", "upcoming"] } },
+      { projection: { _id: 1, seatId: 1 } }
+    );
     /**
      * Is there a settlement crisis to LOOK at? The German Question is
      * admin-started and can be closed again, so the nav link only stands over a
@@ -484,7 +483,7 @@ export async function GET() {
 
       if (myCandidate) {
         // Fetch the election doc for the link label — lightweight findOne, no vote tallies
-        const election = await db.collection<Election>("elections").findOne(
+        const election = await electionsCollection(db).findOne(
           {
             _id: myCandidate.electionId,
             status: { $in: ["upcoming", "active", "completed"] },

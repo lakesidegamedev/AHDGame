@@ -14,6 +14,7 @@ import { captureWorldDepthPosthog } from "./worldDepthAnalytics";
 import { gameEventEnvelope } from "./gameEventEnvelope";
 import { flushServerPosthog, getServerPosthogClient } from "./serverPosthog";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 type WorldEventType = "election" | "war" | "bill_passed" | "crisis" | "record_wealth";
 
@@ -65,8 +66,7 @@ export async function captureTurnPosthog(input: {
           { projection: { eventType: 1, countryId: 1, billId: 1, billScope: 1 } }
         )
         .toArray(),
-      db
-        .collection<Election>("elections")
+      electionsCollection(db)
         .find(
           { endTurn: turn, status: { $in: ["completed", "resolved"] } },
           { projection: { countryId: 1 } }

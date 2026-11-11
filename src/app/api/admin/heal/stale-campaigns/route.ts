@@ -5,6 +5,7 @@ import { handleRouteError } from "@/lib/api/errors";
 import type { Campaign, Election, ElectionCandidate } from "@/lib/db/types";
 import { ObjectId } from "mongodb";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 /**
  * GET /api/admin/heal/stale-campaigns
@@ -33,8 +34,7 @@ export async function GET() {
 
     // Gather all referenced election IDs
     const electionIds = [...new Set(allCampaigns.map((c) => c.electionId.toString()))];
-    const elections = await db
-      .collection<Election>("elections")
+    const elections = await electionsCollection(db)
       .find({ _id: { $in: electionIds.map((id) => new ObjectId(id)) } })
       .toArray();
     const electionMap = new Map(elections.map((e) => [e._id.toString(), e]));
@@ -181,8 +181,7 @@ export async function POST() {
     }
 
     const electionIds = [...new Set(allCampaigns.map((c) => c.electionId.toString()))];
-    const elections = await db
-      .collection<Election>("elections")
+    const elections = await electionsCollection(db)
       .find({ _id: { $in: electionIds.map((id) => new ObjectId(id)) } })
       .toArray();
     const electionMap = new Map(elections.map((e) => [e._id.toString(), e]));

@@ -14,6 +14,7 @@ import { SLATE_ASSIGNMENT_CAP } from "@/lib/slateAssignmentCap";
 import { getSlateAcceptanceStatBonus } from "@/lib/slateAuthority";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 /**
  * List all slates owned by a (countryId, partyId). Active by default; pass
@@ -148,8 +149,7 @@ export async function listStateAssignedCandidateIds(
   }
 ): Promise<string[]> {
   const liveElectionIds = (
-    await db
-      .collection<Election>("elections")
+    await electionsCollection(db)
       .find({
         countryId,
         state,
@@ -253,8 +253,7 @@ async function loadTemplateElections(
   const ids = Array.from(new Set(slates.map((slate) => slate.electionId.toString()))).map(
     (id) => new ObjectId(id)
   );
-  const elections = await db
-    .collection<Election>("elections")
+  const elections = await electionsCollection(db)
     .find({ _id: { $in: ids } })
     .project<TemplateElection>({ _id: 1, cycle: 1, senateClass: 1, chamberClass: 1 })
     .toArray();

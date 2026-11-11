@@ -20,6 +20,7 @@ import type { Hu1991AssemblyRecord } from "./assemblyCount1991";
 import type { Hu1991InstalledMandates } from "./rules/mandates1991";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 export const HU_2011_COUNTS_COLLECTION = "hu2011AssemblyCounts";
 export interface Hu2011AssemblyRecord {
   _id: string;
@@ -69,8 +70,7 @@ async function materializeHu2011Count(input: {
   const country = await db
     .collection<CountryGameState>("countryGameStates")
     .findOne({ _id: "HU" }, { session, projection: { huElectoralSystem2011SinceTurn: 1 } });
-  const polls = await db
-    .collection<Election>("elections")
+  const polls = await electionsCollection(db)
     .find(
       { countryId: "HU", electionType: "nationalAssembly", cycle },
       { session, projection: { state: 1, status: 1, hungarianModernAssembly: 1 } }

@@ -7,6 +7,7 @@ import { getEnabledCountryIds } from "@/lib/countryAccess";
 import type { Election, ElectionCandidate, PoliticalParty } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 // GET /api/discord-bot/elections — Returns active and upcoming elections with candidate lists, optionally filtered by country or state.
 // Auth: requireAdminOrApiKey
@@ -53,8 +54,7 @@ export async function GET(request: Request) {
 
     const db = await getDb();
 
-    const elections = await db
-      .collection<Election>("elections")
+    const elections = await electionsCollection(db)
       .find(query)
       .sort({ endTime: 1 })
       .limit(20)

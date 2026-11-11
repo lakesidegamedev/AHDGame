@@ -22,6 +22,7 @@ import {
 } from "./dumaConvocationAuthority";
 import { hasAuthorizedPostSovietTransition } from "./rules/postSovietTransition";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export const RUSSIAN_DUMA_RESULTS_COLLECTION = "russianDumaElectionResults";
 export interface RussianDumaResultRecord {
@@ -107,7 +108,7 @@ export async function materializeRussianDumaElectionResult(input: {
     throw new Error("The first-Duma constitutional mandate changed");
   const authority = await loadRussianDumaAuthority({ db, session, country, root: cohortId, turn });
   if (!authority) throw new Error("Duma campaign authority changed");
-  const elections = db.collection<Election>("elections");
+  const elections = electionsCollection(db);
   const cohort = await elections
     .find(
       { countryId: "RU", "russianDumaRound.cohortId": cohortId },

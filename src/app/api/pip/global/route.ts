@@ -18,6 +18,8 @@ import type { ElectedOfficial, PoliticalParty } from "@/lib/db/types";
 import type { Crisis } from "@/lib/db/types/crisis";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import type { Document } from "mongodb";
 
 // Derive primary legislature officeType from country config — avoids hardcoding per-country strings
 function getPrimaryOfficeType(countryId: CountryId): string {
@@ -63,8 +65,7 @@ export async function GET() {
       // Active election counts per country
       Promise.all(
         countriesToShow.map((cId) =>
-          db
-            .collection("elections")
+          electionsCollection<Document>(db)
             .countDocuments({ countryId: cId, status: { $in: ["active", "upcoming"] } })
             .then((count) => [cId, count] as [CountryId, number])
         )

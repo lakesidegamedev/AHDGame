@@ -11,6 +11,7 @@ import { generateDefaultPersonality } from "./seedHistorical";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 /** Marker used only to make this bootstrap-created independent pool idempotent. */
 export const PARTYLESS_FOUNDING_PRIOR_MARKER = "foundingIndependent";
@@ -61,8 +62,9 @@ export async function seedPartylessFoundingCandidates(
     .find({ countryId: { $in: enabled } }, { projection: { _id: 1, countryId: 1 } })
     .toArray();
   const regions = new Set(states.map((state) => `${state.countryId}:${state._id}`));
-  const elections = await db
-    .collection<Pick<Election, "_id" | "countryId" | "state" | "electionType">>("elections")
+  const elections = await electionsCollection<
+    Pick<Election, "_id" | "countryId" | "state" | "electionType">
+  >(db)
     .find({ cycle: 0, countryId: { $in: enabled } })
     .project({ _id: 1, countryId: 1, state: 1, electionType: 1 })
     .toArray();

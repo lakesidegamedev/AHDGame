@@ -48,6 +48,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 const LANDTAG_THRESHOLD = 0.05;
 
@@ -107,8 +108,7 @@ export async function ensureDEMinisterPresidentElections(
     .toArray();
   if (deLaender.length === 0) return;
 
-  const liveElections = await db
-    .collection<Election>("elections")
+  const liveElections = await electionsCollection(db)
     .find({
       countryId: "DE",
       electionType: "ministerPresident",
@@ -117,8 +117,7 @@ export async function ensureDEMinisterPresidentElections(
     .toArray();
   const liveMP = new Set(liveElections.map((e) => e.state));
 
-  const completedElections = await db
-    .collection<Election>("elections")
+  const completedElections = await electionsCollection(db)
     .find({
       countryId: "DE",
       electionType: "ministerPresident",
@@ -133,8 +132,7 @@ export async function ensureDEMinisterPresidentElections(
 
   // Sync against any active/upcoming Landtag election for the same Land —
   // MP election timing mirrors the Landtag's (same primaryEndTime, endTime).
-  const liveLandtagElections = await db
-    .collection<Election>("elections")
+  const liveLandtagElections = await electionsCollection(db)
     .find({
       countryId: "DE",
       electionType: "landtag",
@@ -247,17 +245,14 @@ export async function ensureDEMinisterPresidentElections(
     state: e.state,
     status: { $in: ["active", "upcoming"] as ElectionStatus[] },
   }));
-  const existing = await db
-    .collection<Election>("elections")
+  const existing = await electionsCollection(db)
     .find({ $or: orFilters }, { projection: { state: 1 } })
     .toArray();
   const existingStates = new Set(existing.map((e) => e.state));
   const toActuallyInsert = toInsert.filter((e) => !existingStates.has(e.state));
 
   if (toActuallyInsert.length > 0) {
-    await db
-      .collection<Election>("elections")
-      .insertMany(toActuallyInsert.map(withCampaignRules) as Election[]);
+    await electionsCollection(db).insertMany(toActuallyInsert.map(withCampaignRules) as Election[]);
     console.log(
       `[Turn] ensureDEMinisterPresidentElections: spawned ${toActuallyInsert.length} missing MP election(s)`
     );

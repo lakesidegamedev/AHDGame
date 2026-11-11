@@ -42,6 +42,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 const MIN_BASE_ACTIONS_PER_TURN = 4;
 
@@ -309,7 +310,7 @@ async function findNearestElection(
     .findOne({ characterId: character._id, status: "active" });
 
   if (candidacy) {
-    const election = await db.collection<Election>("elections").findOne({
+    const election = await electionsCollection(db).findOne({
       _id: candidacy.electionId,
       status: { $in: ["upcoming", "active"] },
     });
@@ -334,7 +335,7 @@ async function findNearestElection(
   }
 
   // Fallback: nearest active election in the player's home state or nationally
-  const election = await db.collection<Election>("elections").findOne(
+  const election = await electionsCollection(db).findOne(
     {
       status: { $in: ["upcoming", "active"] },
       $or: [{ state: character.homeState }, { state: "National" }],

@@ -20,6 +20,7 @@ import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { isPrimaryClosed } from "@/lib/elections/electionDeadlineFilters";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; electionId: string }>;
@@ -70,9 +71,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const partyId = String(party.sequentialId);
     const electionObjId = new ObjectId(electionId);
-    const election = await db
-      .collection<Election>("elections")
-      .findOne({ _id: electionObjId, countryId });
+    const election = await electionsCollection(db).findOne({ _id: electionObjId, countryId });
     if (!election) return errorResponse(404, "Election not found");
     const authority = await resolveSlateAuthority({
       db,
@@ -222,8 +221,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     const sameStateSlateIds = (
-      await db
-        .collection<Election>("elections")
+      await electionsCollection(db)
         .find({ countryId, state: election.state, status: { $in: ["upcoming", "active"] } })
         .project<Pick<Election, "_id">>({ _id: 1 })
         .toArray()

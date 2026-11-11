@@ -47,6 +47,8 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import type { Document } from "mongodb";
 
 export async function POST(request: Request, { params }: { params: Promise<{ code: string }> }) {
   try {
@@ -76,7 +78,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
     };
     if (state) query.state = state;
 
-    const inPrimary = await db.collection<Election>("elections").find(query).toArray();
+    const inPrimary = await electionsCollection(db).find(query).toArray();
 
     if (inPrimary.length === 0) {
       return NextResponse.json({
@@ -323,7 +325,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
     // ── 4. Advance primaries ─────────────────────────────────────────────────
     // Set primaryEndTurn = currentTurn so the turn-first resolver treats the
     // primary as closed this turn (primaryEndTime kept for display/fallback).
-    await db.collection("elections").updateMany(
+    await electionsCollection<Document>(db).updateMany(
       { _id: { $in: electionIds } },
       {
         $set: {

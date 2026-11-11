@@ -38,6 +38,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 export const HU_1991_BY_ELECTIONS_COLLECTION = "hu1991ConstituencyByElections";
 export interface Hu1991ByElectionRecord {
   _id: string;
@@ -86,13 +87,11 @@ async function cancelByElection(
       { $set: { completedAtTurn: turn } },
       { session }
     );
-  await db
-    .collection<Election>("elections")
-    .updateMany(
-      { _id: { $in: ids } },
-      { $set: { status: "cancelled", resolving: false, updatedAt: now } },
-      { session }
-    );
+  await electionsCollection(db).updateMany(
+    { _id: { $in: ids } },
+    { $set: { status: "cancelled", resolving: false, updatedAt: now } },
+    { session }
+  );
   await db
     .collection<ElectionCandidate>("electionCandidates")
     .updateMany(
@@ -136,13 +135,11 @@ async function materializeHu1991ByElectionOpening(input: {
       { $set: { completedAtTurn: turn } },
       { session }
     );
-    await db
-      .collection<Election>("elections")
-      .updateMany(
-        { _id: { $in: ids } },
-        { $set: { status: "cancelled", resolving: false, updatedAt: now } },
-        { session }
-      );
+    await electionsCollection(db).updateMany(
+      { _id: { $in: ids } },
+      { $set: { status: "cancelled", resolving: false, updatedAt: now } },
+      { session }
+    );
     await db
       .collection<ElectionCandidate>("electionCandidates")
       .updateMany(
@@ -162,7 +159,7 @@ async function materializeHu1991ByElectionOpening(input: {
     return [];
   }
   if (turn + 4 >= parent.seatedAtTurn + 192) return [];
-  const ordinary = await db.collection<Election>("elections").findOne(
+  const ordinary = await electionsCollection(db).findOne(
     {
       countryId: "HU",
       electionType: "nationalAssembly",
@@ -346,7 +343,7 @@ async function materializeHu1991ByElectionOpening(input: {
     },
     { session }
   );
-  await db.collection<Election>("elections").insertMany(polls, { session });
+  await electionsCollection(db).insertMany(polls, { session });
   if (candidates.length)
     await db
       .collection<ElectionCandidate>("electionCandidates")
@@ -421,8 +418,7 @@ async function materializeHu1991ByElectionResolution(input: {
     return job.electionIds.length;
   }
 
-  const polls = await db
-    .collection<Election>("elections")
+  const polls = await electionsCollection(db)
     .find({ _id: { $in: job.activeElectionIds.map((id) => new ObjectId(id)) } }, { session })
     .toArray();
   if (
@@ -597,7 +593,7 @@ async function materializeHu1991ByElectionResolution(input: {
       },
       { session }
     );
-    await db.collection<Election>("elections").insertMany(renewed, { session });
+    await electionsCollection(db).insertMany(renewed, { session });
     if (renewedCandidates.length) {
       await db
         .collection<ElectionCandidate>("electionCandidates")
@@ -862,13 +858,11 @@ async function materializeHu1991ByElectionResolution(input: {
       })),
       { session }
     );
-  await db
-    .collection<Election>("elections")
-    .updateMany(
-      { _id: { $in: job.electionIds.map((id) => new ObjectId(id)) } },
-      { $set: { status: "resolved", resolving: false, updatedAt: now } },
-      { session }
-    );
+  await electionsCollection(db).updateMany(
+    { _id: { $in: job.electionIds.map((id) => new ObjectId(id)) } },
+    { $set: { status: "resolved", resolving: false, updatedAt: now } },
+    { session }
+  );
   await db
     .collection<ElectionCandidate>("electionCandidates")
     .updateMany(

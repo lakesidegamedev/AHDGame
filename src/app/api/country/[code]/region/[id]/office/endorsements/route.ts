@@ -13,6 +13,7 @@ import {
 import { getOfficeHolderRow } from "@/lib/governorOffice/queries";
 import { createEndorsement } from "@/lib/governorOffice/endorsements/createEndorsement";
 import type { GovernorEndorsement, Election, ElectionCandidate } from "@/lib/db/types";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 // POST /api/country/[code]/region/[id]/office/endorsements — Endorse a candidate.
 // Auth: requireHumanSessionWithCharacter; must be the office-holder.
@@ -83,14 +84,15 @@ export async function GET(
     // governor's state, so fetch them separately and merge — matches the SSR
     // path in office/page.tsx.
     const [scopedElections, presidentialElection] = await Promise.all([
-      db
-        .collection<Election>("elections")
+      electionsCollection(db)
         .find({ state: stateId, countryId, status: "active", electionType: { $in: allowedTypes } })
         .toArray(),
       allowedTypes.includes("president")
-        ? db
-            .collection<Election>("elections")
-            .findOne({ electionType: "president", countryId, status: "active" })
+        ? electionsCollection(db).findOne({
+            electionType: "president",
+            countryId,
+            status: "active",
+          })
         : Promise.resolve(null),
     ]);
     const elections: Election[] = presidentialElection

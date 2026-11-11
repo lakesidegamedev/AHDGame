@@ -1,5 +1,6 @@
 import type { Db, ObjectId } from "mongodb";
 import type { CharacterStateOrg, Election, ElectionCandidate } from "@/lib/db/types";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 /**
  * One candidate in the live presidential race, with their Campaign Presence
@@ -27,12 +28,10 @@ export interface RacePresenceEntry {
  * should treat as "hide the selector" rather than an error.
  */
 export async function loadRacePresence(db: Db, viewerId: ObjectId): Promise<RacePresenceEntry[]> {
-  const election = await db
-    .collection<Election>("elections")
-    .findOne(
-      { countryId: "US", electionType: "president", status: { $in: ["upcoming", "active"] } },
-      { projection: { _id: 1 } }
-    );
+  const election = await electionsCollection(db).findOne(
+    { countryId: "US", electionType: "president", status: { $in: ["upcoming", "active"] } },
+    { projection: { _id: 1 } }
+  );
   if (!election) return [];
 
   const runners = await db

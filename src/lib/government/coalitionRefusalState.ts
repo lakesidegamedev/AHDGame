@@ -15,6 +15,7 @@ import {
   type CoalitionRefusal,
 } from "./rules/coalitionRefusals";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 /** Seats keyed by party abbreviation instead of sequential id. */
 function seatsByAbbreviation(
@@ -41,7 +42,7 @@ async function latestFinishedElectionKey(
   preset: string | undefined
 ): Promise<string | null> {
   const electionType = getLowerChamberOfficeType(countryId, preset);
-  const elections = db.collection<Election>("elections");
+  const elections = electionsCollection(db);
   const latest = await elections.findOne(
     { countryId, electionType, status: { $in: ["completed", "resolved"] } },
     { sort: { cycle: -1 }, projection: { cycle: 1 } }

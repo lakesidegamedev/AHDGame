@@ -16,6 +16,7 @@ import {
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 export const BG_FOUNDING_FILING_LOCKS_COLLECTION = "bgFoundingAssemblyFilingLocks";
 export type BgFoundingFilingFailure =
   | "invalid-ballot"
@@ -72,9 +73,7 @@ export async function materializeBgFoundingPlayerFiling(input: {
     !Number.isFinite(now.getTime())
   )
     throw new Error("Bulgarian filing needs an active transaction and time");
-  const election = await db
-    .collection<Election>("elections")
-    .findOne({ _id: electionId }, { session });
+  const election = await electionsCollection(db).findOne({ _id: electionId }, { session });
   if (election?.bulgarianFoundingRound?.byElection) {
     const { materializeBgGrandPartialPlayerFiling } =
       await import("./constituencyByElectionPlayerFiling1991");

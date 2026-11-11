@@ -88,6 +88,7 @@ import { getGameStateCollection } from "@/lib/db/collections/gameState";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export { HOUSE_SEATS, UK_COMMONS_SEATS };
 export { spawnHouseElection, spawnCommonsElection };
@@ -697,12 +698,10 @@ export async function resolveGeneralElections(
               if (!(capacity > 0))
                 throw new Error("Hungary mixed race has no regional seat capacity");
               if (election.totalSeats !== capacity) {
-                await db
-                  .collection<Election>("elections")
-                  .updateOne(
-                    { _id: election._id, status: "completed" },
-                    { $set: { totalSeats: capacity, updatedAt: now } }
-                  );
+                await electionsCollection(db).updateOne(
+                  { _id: election._id, status: "completed" },
+                  { $set: { totalSeats: capacity, updatedAt: now } }
+                );
                 election.totalSeats = capacity;
               }
             }
@@ -745,7 +744,7 @@ export async function resolveGeneralElections(
   // regions. Reconcile only after every race in the cycle has resolved.
   for (const [cycle, plan] of huMixedPlans) {
     if (!plan) continue;
-    const pending = await db.collection<Election>("elections").countDocuments({
+    const pending = await electionsCollection(db).countDocuments({
       countryId: "HU",
       electionType: "nationalAssembly",
       cycle,

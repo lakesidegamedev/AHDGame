@@ -16,6 +16,7 @@ import {
 } from "./rules";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export async function loadNorthernIrelandSignal(db: Db): Promise<NorthernIrelandSignal | null> {
   return db
@@ -44,8 +45,7 @@ export async function reconcileNorthernIrelandGovernance(
   // alone cannot abolish them; only a negotiated settlement takes ownership.
   if (!current.northernIrelandPeace && startingYear >= 1999 && posture === "unsettled") return;
   if (current.northernIrelandPeace?.posture === posture) return;
-  const elections = await db
-    .collection<Election>("elections")
+  const elections = await electionsCollection(db)
     .find(
       { countryId: "UK", state: "NIR", electionType: { $in: ["governor", "regionalCouncil"] } },
       { projection: { electionType: 1, cycle: 1 } }
@@ -65,8 +65,7 @@ export async function reconcileNorthernIrelandGovernance(
   if (!next.regions.NIR.active) {
     const now = new Date();
     await vacateUKRegionalExecutives(db, ["NIR"], now);
-    const unfinished = await db
-      .collection<Election>("elections")
+    const unfinished = await electionsCollection(db)
       .find(
         {
           countryId: "UK",
@@ -79,12 +78,10 @@ export async function reconcileNorthernIrelandGovernance(
       .toArray();
     const ids = unfinished.map((e) => e._id);
     if (ids.length) {
-      await db
-        .collection<Election>("elections")
-        .updateMany(
-          { _id: { $in: ids }, status: { $in: ["active", "upcoming"] } },
-          { $set: { status: "cancelled", updatedAt: now } }
-        );
+      await electionsCollection(db).updateMany(
+        { _id: { $in: ids }, status: { $in: ["active", "upcoming"] } },
+        { $set: { status: "cancelled", updatedAt: now } }
+      );
       await db
         .collection<ElectionCandidate>("electionCandidates")
         .updateMany(

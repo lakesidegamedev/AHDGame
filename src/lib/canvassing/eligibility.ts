@@ -2,6 +2,7 @@ import type { Db, ObjectId } from "mongodb";
 import type { Character, ElectionCandidate, Election } from "@/lib/db/types";
 import { getGameTime } from "@/lib/time/gameTime";
 import { isPrimaryEnded, isCampaignUpgradeGeneralPhase } from "@/lib/elections/phases";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export type CanvassEligibility =
   | { ok: true; stateId: string; source: "home" | "travel" | "primaryCampaign" }
@@ -81,8 +82,7 @@ export async function resolveRunningMateCanvassState(
 
   const electionIds = mateRows.map((row) => row.electionId);
   const gameTime = await getGameTime();
-  const elections = await db
-    .collection<Election>("elections")
+  const elections = await electionsCollection(db)
     .find({ _id: { $in: electionIds }, electionType: "president", status: "active" })
     .toArray();
 
@@ -128,8 +128,7 @@ async function findActivePresidentialCandidacy(
   if (candidates.length === 0) return null;
 
   const electionIds = candidates.map((c) => c.electionId);
-  const elections = await db
-    .collection<Election>("elections")
+  const elections = await electionsCollection(db)
     .find({
       _id: { $in: electionIds },
       electionType: "president",

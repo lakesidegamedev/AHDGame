@@ -13,6 +13,7 @@ import { resolvePartyTier } from "@/lib/parties/partyTier";
 import type { Db } from "mongodb";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 const NATIONAL_PARTY_MANAGEMENT_ACTIONS = [
   "boost_favorability",
@@ -32,8 +33,7 @@ export async function getNationalPartyInfluenceView(
   const activeElections =
     statesWithNpps.length === 0
       ? []
-      : await db
-          .collection<Election>("elections")
+      : await electionsCollection(db)
           .find({
             countryId,
             state: { $in: statesWithNpps },

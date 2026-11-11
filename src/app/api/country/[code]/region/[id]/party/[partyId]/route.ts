@@ -52,6 +52,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; partyId: string }>;
@@ -342,7 +343,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const primaryAllocationEffective: "PR" | "WTA" =
       primaryAllocation ?? getDefaultPrimaryAllocation(stateId, family);
     const primaryAllocationIsExplicit = primaryAllocation !== null;
-    const activePresPrimary = await db.collection<Election>("elections").findOne({
+    const activePresPrimary = await electionsCollection(db).findOne({
       countryId,
       electionType: "president",
       status: "active",

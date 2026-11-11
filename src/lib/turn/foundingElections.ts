@@ -1,6 +1,8 @@
 import type { Db } from "mongodb";
 import { isBackgroundInPreset } from "@/lib/world/eraRoster";
 import { COUNTRY_ELECTION_PHASES } from "@/lib/turn/countryPhases";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import type { Document } from "mongodb";
 
 /**
  * Election families that `bootstrapGameWorld` offers an explicit opt-out for.
@@ -86,7 +88,7 @@ export async function spawnFoundingElections(
   const attempted = perCountry.reduce((sum, c) => sum + c.attempted, 0);
   const failed = perCountry.reduce((sum, c) => sum + c.failed, 0);
 
-  const foundingRaces = await db.collection("elections").countDocuments({ cycle: 0 });
+  const foundingRaces = await electionsCollection<Document>(db).countDocuments({ cycle: 0 });
   log(
     `Founding spawn sweep: ${attempted} family/families across ${
       Object.keys(COUNTRY_ELECTION_PHASES).length

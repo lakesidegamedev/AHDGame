@@ -1,5 +1,6 @@
 import type { Db, ObjectId } from "mongodb";
 import type { Election, ElectionCandidate } from "@/lib/db/types";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 /**
  * While an election is `completed`, general resolution may not have run yet — candidates
@@ -34,8 +35,7 @@ export async function findBlockingActiveCandidacy(
   if (relevant.length === 0) return null;
 
   // Single batched query instead of N individual findOne calls.
-  const elections = await db
-    .collection<Election>("elections")
+  const elections = await electionsCollection(db)
     .find({ _id: { $in: relevant.map((c) => c.electionId) } })
     .toArray();
   const electionById = new Map(elections.map((e) => [e._id.toHexString(), e]));

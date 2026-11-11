@@ -31,6 +31,7 @@ import type { WithId } from "mongodb";
 import type { PrStvResult } from "@/lib/elections/rules/prStv";
 import type { BlocListQuota } from "@/lib/constants/blocList";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export async function recordJapanShugiinRegionalCapacity(
   db: Db,
@@ -85,9 +86,10 @@ export async function recordJapanShugiinRegionalCapacity(
   } catch (error) {
     // Empty-race helpers already mark the election resolved. Keep a failed
     // capacity write eligible for retry, including the finalized-tally path.
-    await db
-      .collection<Election>("elections")
-      .updateOne({ _id: election._id }, { $set: { status: "completed", updatedAt: now } });
+    await electionsCollection(db).updateOne(
+      { _id: election._id },
+      { $set: { status: "completed", updatedAt: now } }
+    );
     throw error;
   }
 }
@@ -111,9 +113,10 @@ export async function reconcileGermanElection(
       await triggerBundestagspraesidentElectionAfterReconcile(db, now);
     }
   } catch (error) {
-    await db
-      .collection<Election>("elections")
-      .updateOne({ _id: election._id }, { $set: { status: "completed", updatedAt: now } });
+    await electionsCollection(db).updateOne(
+      { _id: election._id },
+      { $set: { status: "completed", updatedAt: now } }
+    );
     throw error;
   }
 }
@@ -327,12 +330,10 @@ export async function applyGeneralElectionAftermath({
     await spawnCommonsElection(db, election, now);
   }
   await recordJapanShugiinRegionalCapacity(db, election, currentTurn, now);
-  await db
-    .collection<Election>("elections")
-    .updateOne(
-      { _id: election._id },
-      { $set: { status: "resolved" satisfies ElectionStatus, updatedAt: now } }
-    );
+  await electionsCollection(db).updateOne(
+    { _id: election._id },
+    { $set: { status: "resolved" satisfies ElectionStatus, updatedAt: now } }
+  );
   await Promise.all(
     winnerAnalytics
       .filter(
@@ -389,7 +390,7 @@ export async function applyGeneralElectionAftermath({
     election.electionType === "npcDelegate"
   ) {
     try {
-      const remaining = await db.collection<Election>("elections").countDocuments({
+      const remaining = await electionsCollection(db).countDocuments({
         countryId: "CN",
         electionType: "npcDelegate",
         cycle: election.cycle,
@@ -429,7 +430,7 @@ export async function applyGeneralElectionAftermath({
     ].includes(regularRuType)
   ) {
     try {
-      const remaining = await db.collection<Election>("elections").countDocuments({
+      const remaining = await electionsCollection(db).countDocuments({
         countryId: "RU",
         electionType: election.electionType,
         cycle: election.cycle,

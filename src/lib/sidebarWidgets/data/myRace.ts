@@ -5,6 +5,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import { getRegionalBillAssentTitleForState } from "@/lib/constants/countryOfficesClient";
 import { formatElectionTypeLabel } from "@/lib/utils/electionLabels";
 import { loadViewerCharacter, loadWidgetGameState, turnsUntil } from "./viewerContext";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export interface MyRaceWidgetData {
   electionId: string;
@@ -50,7 +51,7 @@ export async function loadMyRace(
   if (!candidacy) return null;
 
   const [election, tally, campaign, gameState] = await Promise.all([
-    db.collection<Election>("elections").findOne(
+    electionsCollection(db).findOne(
       { _id: candidacy.electionId, status: { $in: ["upcoming", "active"] } },
       {
         projection: {

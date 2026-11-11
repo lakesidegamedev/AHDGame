@@ -15,6 +15,7 @@ import {
 } from "@/lib/db/types/electionResultSnapshot";
 import type { Election, GameState } from "@/lib/db/types";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 const ENDED_STATUSES = new Set(["completed", "resolved", "cancelled"]);
 
@@ -33,7 +34,7 @@ async function handleGet(
 
     const db = await getDb();
     const [election, gameState, user] = await Promise.all([
-      db.collection<Election>("elections").findOne({ _id: new ObjectId(id) }),
+      electionsCollection(db).findOne({ _id: new ObjectId(id) }),
       gameStateCollection(db).findOne(
         { _id: "current" },
         {

@@ -1,5 +1,6 @@
 import type { Db, ObjectId } from "mongodb";
 import type { Election, ElectionCandidate } from "@/lib/db/types";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 /**
  * Shared preload for the two endorsement-withdrawal turn phases.
@@ -34,8 +35,7 @@ export async function preloadEndorsementTargets(
   const candidateIds = dedupe(endorsements.map((e) => e.candidateId));
 
   const [elections, candidates] = await Promise.all([
-    db
-      .collection<Election>("elections")
+    electionsCollection(db)
       .find({ _id: { $in: electionIds } }, { projection: { status: 1 } })
       .toArray(),
     db

@@ -21,6 +21,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export type { OverviewCounts } from "@/lib/country/overviewCounts";
 
@@ -196,8 +197,8 @@ async function assembleOverviewCounts(db: Db, countryId: CountryId): Promise<Ove
       })
     ),
     orNull(countPoliticians(db, countryId)),
-    orNull(db.collection("elections").countDocuments({ countryId, status: "active" })),
-    orNull(db.collection("elections").countDocuments({ countryId, status: "upcoming" })),
+    orNull(electionsCollection<Document>(db).countDocuments({ countryId, status: "active" })),
+    orNull(electionsCollection<Document>(db).countDocuments({ countryId, status: "upcoming" })),
     orNull(
       db.collection("bills").countDocuments({
         ...buildNationalBillCountryScopeFilter(countryId),

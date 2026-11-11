@@ -15,6 +15,7 @@ import { bindHu2011Campaigns } from "./assemblyCampaignBinding2011";
 import { huAssemblyElectionSystem } from "./rules/electoralTransition2011";
 import { calendarTurn } from "@/lib/utils/gameDate";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 /** Hungary National Assembly. */
 export async function ensureHUElections(now: Date, inFlightTurn?: number): Promise<void> {
@@ -52,7 +53,7 @@ export async function ensureHUElections(now: Date, inFlightTurn?: number): Promi
     if (Number.isSafeInteger(turn) && turn > 0) await advanceHu1991ListVacancy(db, turn, now);
     // Completed first rounds and their second rounds still belong to the same
     // mandate. Wait for whole-Assembly handover before scheduling a new term.
-    const pending = await db.collection<Election>("elections").findOne(
+    const pending = await electionsCollection(db).findOne(
       {
         countryId: "HU",
         electionType: "nationalAssembly",
@@ -70,7 +71,7 @@ export async function ensureHUElections(now: Date, inFlightTurn?: number): Promi
     }
   }
   if (game?.preset === "1991-default") {
-    const activeByElection = await db.collection<Election>("elections").findOne(
+    const activeByElection = await electionsCollection(db).findOne(
       {
         countryId: "HU",
         electionType: "nationalAssembly",

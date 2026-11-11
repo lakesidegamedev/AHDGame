@@ -31,6 +31,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 /**
  * Maximum accepted `q` length (after trimming). Longer queries are rejected
@@ -248,11 +249,7 @@ export async function runUniversalSearch({
   if (enabledCountries) {
     electionsQuery.countryId = { $in: enabledCountries };
   }
-  const elections = await db
-    .collection<Election>("elections")
-    .find(electionsQuery)
-    .limit(5)
-    .toArray();
+  const elections = await electionsCollection(db).find(electionsQuery).limit(5).toArray();
 
   for (const election of elections) {
     let electionTitle = "";

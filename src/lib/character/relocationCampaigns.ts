@@ -5,6 +5,7 @@ import type {
   StatePartyCandidate,
   StatePartyElection,
 } from "@/lib/db/types";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 /**
  * Summarize the candidacies that a relocation will auto-withdraw.
@@ -26,7 +27,7 @@ export async function getActiveCandidacySummary(
   let generalElections = 0;
   if (generalRows.length > 0) {
     const electionIds = [...new Set(generalRows.map((r) => r.electionId))];
-    const openCount = await db.collection<Election>("elections").countDocuments({
+    const openCount = await electionsCollection(db).countDocuments({
       _id: { $in: electionIds },
       status: { $in: ["upcoming", "active", "completed"] },
     });

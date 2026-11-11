@@ -68,6 +68,7 @@ import { getUKRegionalCouncilCycle1EndTurn } from "@/lib/elections/ukRegionalCou
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 /**
  * Derive the canonical LARP end-turn, primary-end-turn, and start-turn for
@@ -227,8 +228,7 @@ export const POST = withAdminRoute(async (_auth) => {
   //
   // Wrapped in try-catch so failures here don't block core recalibration.
   try {
-    const recentCompleted = await db
-      .collection<Election>("elections")
+    const recentCompleted = await electionsCollection(db)
       .find({ status: { $in: ["completed", "resolved"] } })
       .sort({ updatedAt: -1 })
       .limit(500)
@@ -295,7 +295,7 @@ export const POST = withAdminRoute(async (_auth) => {
     }
 
     if (reactivateOps.length > 0) {
-      await db.collection<Election>("elections").bulkWrite(reactivateOps);
+      await electionsCollection(db).bulkWrite(reactivateOps);
     }
     if (skippedAlreadyResolved > 0) {
       console.log(
@@ -310,8 +310,7 @@ export const POST = withAdminRoute(async (_auth) => {
   // If an election's cycle is too high for the current turn, renumber it.
   // Wrapped in try-catch so failures here don't block the core recalibration.
   try {
-    const allActive = await db
-      .collection<Election>("elections")
+    const allActive = await electionsCollection(db)
       .find({ status: { $in: ["active", "upcoming"] } })
       .toArray();
 
@@ -394,7 +393,7 @@ export const POST = withAdminRoute(async (_auth) => {
     }
 
     if (renumberOps.length > 0) {
-      await db.collection<Election>("elections").bulkWrite(renumberOps);
+      await electionsCollection(db).bulkWrite(renumberOps);
     }
     if (toDeletePremature.length > 0) {
       await db
@@ -403,15 +402,14 @@ export const POST = withAdminRoute(async (_auth) => {
       await db
         .collection("electionVoteTallies")
         .deleteMany({ electionId: { $in: toDeletePremature } });
-      await db.collection<Election>("elections").deleteMany({ _id: { $in: toDeletePremature } });
+      await electionsCollection(db).deleteMany({ _id: { $in: toDeletePremature } });
     }
   } catch (err) {
     console.error("[Recalibrate] Step 0b (cycle renumbering) failed:", err);
   }
 
   // ── Step 1: Recalibrate all active/upcoming elections ────────────────
-  const elections = await db
-    .collection<Election>("elections")
+  const elections = await electionsCollection(db)
     .find({ status: { $in: ["active", "upcoming"] } })
     .toArray();
 
@@ -432,8 +430,7 @@ export const POST = withAdminRoute(async (_auth) => {
     shugiin: ["shugiin", "snap_shugiin"],
   };
   for (const [regularType, candidateTypes] of Object.entries(lowerChamberTypeMap)) {
-    const prior = await db
-      .collection<Election>("elections")
+    const prior = await electionsCollection(db)
       .find({
         electionType: { $in: candidateTypes },
         status: { $in: ["completed", "resolved"] },
@@ -686,14 +683,14 @@ export const POST = withAdminRoute(async (_auth) => {
   }
 
   if (ops.length > 0) {
-    await db.collection<Election>("elections").bulkWrite(ops);
+    await electionsCollection(db).bulkWrite(ops);
   }
 
   // Delete pruned elections and their candidates
   if (toDelete.length > 0) {
     await db.collection("electionCandidates").deleteMany({ electionId: { $in: toDelete } });
     await db.collection("electionVoteTallies").deleteMany({ electionId: { $in: toDelete } });
-    await db.collection<Election>("elections").deleteMany({ _id: { $in: toDelete } });
+    await electionsCollection(db).deleteMany({ _id: { $in: toDelete } });
   }
 
   // Only re-spawn missing elections if some were actually pruned or deleted.

@@ -16,6 +16,7 @@ import { ensureRegionalGovernorElections } from "@/lib/elections/scheduling/shar
 import { ensureChamberElections } from "@/lib/elections/scheduling/chamberSpawner";
 import { JP_SANGIIN_SPEC, JP_SHUGIIN_SPEC } from "./chamberSpecs";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 /**
  * Ensure every JP region has an active or upcoming Shugiin election.
@@ -83,8 +84,7 @@ export async function ensureJPRegionalCouncilElections(
 
   // Country-scoped: UK's spawner relies on disjoint region IDs and is not
   // country-scoped; JP's is scoped to avoid cross-country contamination.
-  const liveElections = await db
-    .collection<Election>("elections")
+  const liveElections = await electionsCollection(db)
     .find({
       electionType: "regionalCouncil",
       countryId: "JP",
@@ -93,8 +93,7 @@ export async function ensureJPRegionalCouncilElections(
     .toArray();
   const liveCouncils = new Set(liveElections.map((e) => e.state));
 
-  const completedElections = await db
-    .collection<Election>("elections")
+  const completedElections = await electionsCollection(db)
     .find({
       electionType: "regionalCouncil",
       countryId: "JP",
@@ -111,8 +110,7 @@ export async function ensureJPRegionalCouncilElections(
   const genDur = getGeneralWindow("regionalCouncil");
 
   // Sync source: live Shugiin (regular or snap) per region.
-  const liveShugiinElections = await db
-    .collection<Election>("elections")
+  const liveShugiinElections = await electionsCollection(db)
     .find({
       electionType: { $in: ["shugiin", "snap_shugiin"] },
       countryId: "JP",
@@ -214,17 +212,14 @@ export async function ensureJPRegionalCouncilElections(
     state: e.state,
     status: { $in: ["active", "upcoming"] as ElectionStatus[] },
   }));
-  const existing = await db
-    .collection<Election>("elections")
+  const existing = await electionsCollection(db)
     .find({ $or: orFilters }, { projection: { state: 1 } })
     .toArray();
   const existingStates = new Set(existing.map((e) => e.state));
   const toActuallyInsert = toInsert.filter((e) => !existingStates.has(e.state));
 
   if (toActuallyInsert.length > 0) {
-    await db
-      .collection<Election>("elections")
-      .insertMany(toActuallyInsert.map(withCampaignRules) as Election[]);
+    await electionsCollection(db).insertMany(toActuallyInsert.map(withCampaignRules) as Election[]);
     console.log(
       `[Turn] ensureJPRegionalCouncilElections: spawned ${toActuallyInsert.length} missing Regional Council election(s)`
     );

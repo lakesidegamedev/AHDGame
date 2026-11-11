@@ -35,6 +35,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import type { Document } from "mongodb";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 export {
   appointCampaignManager,
   contributeCampaignStrength,
@@ -64,7 +65,7 @@ export async function upgradeCampaign(params: {
   const branch = params.branch ?? null;
   const campaign = await getCampaignOrThrow(db, campaignId);
 
-  const election = await db.collection<Election>("elections").findOne({ _id: campaign.electionId });
+  const election = await electionsCollection(db).findOne({ _id: campaign.electionId });
   // Fundraising is the running-mate surrogate's only upgrade lane; every other
   // lever stays manager/nominee-only. The surrogate assert is a superset, so
   // managers/nominees are unaffected on the fundraising lane too.
@@ -354,9 +355,10 @@ export async function donateToCampaign(params: {
       );
     }
 
-    const election = await db
-      .collection<Election>("elections")
-      .findOne({ _id: campaign.electionId }, { projection: { countryId: 1 } });
+    const election = await electionsCollection(db).findOne(
+      { _id: campaign.electionId },
+      { projection: { countryId: 1 } }
+    );
     if (!election) {
       throw notFound("Election not found");
     }
@@ -502,9 +504,10 @@ export async function donateToCampaign(params: {
     throw notFound("Character not found");
   }
 
-  const characterDonationElection = await db
-    .collection<Election>("elections")
-    .findOne({ _id: campaign.electionId }, { projection: { countryId: 1 } });
+  const characterDonationElection = await electionsCollection(db).findOne(
+    { _id: campaign.electionId },
+    { projection: { countryId: 1 } }
+  );
   if (!characterDonationElection) {
     throw notFound("Election not found");
   }

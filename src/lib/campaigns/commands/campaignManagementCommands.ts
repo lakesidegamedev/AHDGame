@@ -40,6 +40,7 @@ import { CAMPAIGN_ACTIVITY_HISTORY_CAP } from "@/lib/campaigns/constants/activit
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export async function appointCampaignManager(params: {
   db: Db;
@@ -91,9 +92,10 @@ export async function appointCampaignManager(params: {
     throw notFound("Proposed manager character not found");
   }
 
-  const managerElection = await db
-    .collection<Election>("elections")
-    .findOne({ _id: campaign.electionId }, { projection: { countryId: 1 } });
+  const managerElection = await electionsCollection(db).findOne(
+    { _id: campaign.electionId },
+    { projection: { countryId: 1 } }
+  );
   if (!managerElection) {
     throw notFound("Election not found");
   }
@@ -163,7 +165,7 @@ export async function contributeCampaignStrength(params: {
   const priceLevel = await loadCampaignPriceLevel(db);
   const now = new Date();
   const campaign = await getCampaignOrThrow(db, campaignId);
-  const election = await db.collection<Election>("elections").findOne({ _id: campaign.electionId });
+  const election = await electionsCollection(db).findOne({ _id: campaign.electionId });
   const forexEnabled = await isForexEnabled();
 
   // Campaign Manager eligibility is the single source of truth and admits only
@@ -398,9 +400,10 @@ export async function retargetOppositionResearch(params: {
   await assertCampaignManagerOrNominee(db, campaign, user);
 
   if (!user.isAdmin) {
-    const election = await db
-      .collection<Election>("elections")
-      .findOne({ _id: campaign.electionId }, { projection: { countryId: 1 } });
+    const election = await electionsCollection(db).findOne(
+      { _id: campaign.electionId },
+      { projection: { countryId: 1 } }
+    );
     if (!election) {
       throw notFound("Election not found");
     }
@@ -443,9 +446,7 @@ export async function retargetOppositionResearch(params: {
   // money and actions spent to drain somebody the buyer is not running
   // against. The list the picker offers comes from this same function, so the
   // two cannot disagree about who is fair game.
-  const raceElection = await db
-    .collection<Election>("elections")
-    .findOne({ _id: campaign.electionId });
+  const raceElection = await electionsCollection(db).findOne({ _id: campaign.electionId });
   if (!raceElection) {
     throw notFound("Election not found");
   }
@@ -509,9 +510,10 @@ export async function resetOppositionResearch(params: {
   // must be from the same country as the campaign's election. Closes the
   // post-relocation gap where a manager keeps their role across countries.
   if (!isAdmin && user.character) {
-    const election = await db
-      .collection<Election>("elections")
-      .findOne({ _id: campaign.electionId }, { projection: { countryId: 1 } });
+    const election = await electionsCollection(db).findOne(
+      { _id: campaign.electionId },
+      { projection: { countryId: 1 } }
+    );
     if (!election) {
       throw notFound("Election not found");
     }
@@ -590,9 +592,10 @@ export async function setCampaignColor(params: {
   // Defense-in-depth: even with a manager/nominee role, the actor's character
   // must be from the same country as the campaign's election.
   if (!isAdmin && user.character) {
-    const election = await db
-      .collection<Election>("elections")
-      .findOne({ _id: campaign.electionId }, { projection: { countryId: 1 } });
+    const election = await electionsCollection(db).findOne(
+      { _id: campaign.electionId },
+      { projection: { countryId: 1 } }
+    );
     if (!election) {
       throw notFound("Election not found");
     }
@@ -733,7 +736,7 @@ export async function fireRallyOneShot(params: {
   const campaign = await getCampaignOrThrow(db, campaignId);
 
   const now = new Date();
-  const election = await db.collection<Election>("elections").findOne({ _id: campaign.electionId });
+  const election = await electionsCollection(db).findOne({ _id: campaign.electionId });
   if (!election) {
     throw notFound("Election not found");
   }
@@ -843,7 +846,7 @@ export async function setRallyTourActive(params: {
   const campaign = await getCampaignOrThrow(db, campaignId);
   await assertCampaignManagerOrNominee(db, campaign, user);
 
-  const election = await db.collection<Election>("elections").findOne({ _id: campaign.electionId });
+  const election = await electionsCollection(db).findOne({ _id: campaign.electionId });
   if (!election) {
     throw notFound("Election not found");
   }

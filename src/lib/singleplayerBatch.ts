@@ -12,6 +12,7 @@ import {
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import type { Document } from "mongodb";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 /**
  * Multi-turn advance for a normal singleplayer world.
@@ -515,8 +516,7 @@ export function createDbBatchPorts(db: Db): BatchPorts {
             },
           }
         ),
-        db
-          .collection("elections")
+        electionsCollection<Document>(db)
           .find(
             { status: { $in: ["upcoming", "active"] } },
             { projection: { status: 1, electionType: 1, state: 1, countryId: 1 } }

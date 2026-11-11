@@ -16,6 +16,7 @@ import { getElectionSeatKey } from "@/lib/turn/autoReelectionEntry";
 import { getMultiSeatMinShare } from "@/lib/elections/resolution/seatAllocation";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 /**
  * True for single-winner legislative races that use the officeholder-based flat
@@ -184,8 +185,7 @@ export async function resolveSingleSeatLegislativeIncumbent(
   const official = await electedOfficialsCollection(db).findOne(filter);
   if (!official || !official.party) return null;
 
-  const resolvedElections = await db
-    .collection<Election>("elections")
+  const resolvedElections = await electionsCollection(db)
     .find({ countryId, state: election.state, electionType: "senate", status: "resolved" })
     .toArray();
   const loaded = await loadIncumbencyHistory(resolvedElections, db);
@@ -301,8 +301,7 @@ export async function resolveHouseIncumbentTenures(
   }
 
   const countryId = election.countryId ?? "US";
-  const resolvedElections = await db
-    .collection<Election>("elections")
+  const resolvedElections = await electionsCollection(db)
     .find({ countryId, state: election.state, electionType: "house", status: "resolved" })
     .toArray();
   const loaded = await loadIncumbencyHistory(resolvedElections, db);
@@ -341,8 +340,7 @@ export async function preloadLegislativeIncumbencies(
     ...new Set(relevant.map((election) => election.state).filter(Boolean)),
   ] as string[];
   const [resolvedElections, officials] = await Promise.all([
-    db
-      .collection<Election>("elections")
+    electionsCollection(db)
       .find({
         countryId: { $in: countries },
         state: { $in: states },

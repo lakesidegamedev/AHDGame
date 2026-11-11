@@ -1,6 +1,7 @@
 import { ensureChamberElections } from "@/lib/elections/scheduling/chamberSpawner";
 import { BR_CHAMBER_SPEC, BR_GOVERNOR_SPEC, BR_SENATE_SPEC } from "./chamberSpecs";
 import { brazilPresidentialRules } from "../rules/presidential";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 /** Câmara dos Deputados, one multi-seat election per macro-region. */
 export async function ensureBRElections(now: Date, inFlightTurn?: number): Promise<void> {
@@ -49,7 +50,7 @@ export async function ensureBRPresidentialElection(
   if (!(await countryElectionsLive(db, "BR")) && !(await isNppAutonomyActive(db, "BR"))) return;
   const { currentTurn: persistedTurn, ctx } = await getCurrentTurnAndCtx(db);
   const currentTurn = inFlightTurn ?? persistedTurn;
-  const races = db.collection<import("@/lib/db/types").Election>("elections");
+  const races = electionsCollection<import("@/lib/db/types").Election>(db);
   if (
     await races.findOne({
       countryId: "BR",

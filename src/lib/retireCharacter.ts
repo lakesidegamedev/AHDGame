@@ -49,6 +49,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 /**
  * Core retirement function: snapshots a character, cleans up all gameplay
@@ -237,8 +238,7 @@ export async function retireCharacter(
 
   await db.collection("retiredCharacters").insertOne(retiredDoc);
 
-  const activeElections = await db
-    .collection("elections")
+  const activeElections = await electionsCollection<Document>(db)
     .find({ status: { $nin: ["completed", "resolved"] } })
     .project({ _id: 1 })
     .toArray();

@@ -3,6 +3,7 @@ import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError } from "@/lib/api/errors";
 import type { Election, ElectionCandidate } from "@/lib/db/types";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export async function GET() {
   try {
@@ -12,11 +13,7 @@ export async function GET() {
     const db = await getDb();
 
     // Get all election IDs
-    const allElections = await db
-      .collection<Election>("elections")
-      .find({})
-      .project({ _id: 1 })
-      .toArray();
+    const allElections = await electionsCollection(db).find({}).project({ _id: 1 }).toArray();
     const electionIds = new Set(allElections.map((e) => e._id.toString()));
 
     // Get all candidates and check if their election exists
@@ -59,11 +56,7 @@ export async function POST() {
     const db = await getDb();
 
     // Get all election IDs
-    const allElections = await db
-      .collection<Election>("elections")
-      .find({})
-      .project({ _id: 1 })
-      .toArray();
+    const allElections = await electionsCollection(db).find({}).project({ _id: 1 }).toArray();
     const electionIds = allElections.map((e) => e._id);
 
     // Delete candidates whose election doesn't exist

@@ -26,6 +26,7 @@ import { electionNightStyle, majorityThreshold } from "./electionNightChrome";
 import type { NationalParty, NationalRegion, NationalResults } from "./types";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export {
   CHAMBER_LABELS,
@@ -95,8 +96,7 @@ export async function buildNationalElectionNight(
   // JP Sangiin elects half the chamber per night: the other class shares the cycle but is not tonight.
   const chamberClass = election.chamberClass;
 
-  const siblings = (await db
-    .collection<Election>("elections")
+  const siblings = (await electionsCollection(db)
     .find(
       {
         countryId: election.countryId,

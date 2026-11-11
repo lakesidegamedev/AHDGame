@@ -5,6 +5,7 @@ import { handleRouteError } from "@/lib/api/errors";
 import { SENATE_CLASSES } from "@/lib/constants";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import type { Document } from "mongodb";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 // POST /api/admin/officials/heal-senate — Deletes senate official and election records with invalid senate classes for their state.
 // Auth: requireAdmin
@@ -42,8 +43,7 @@ export async function POST() {
     }
 
     // Find all senate elections with a senateClass set
-    const allSenateElections = await db
-      .collection("elections")
+    const allSenateElections = await electionsCollection<Document>(db)
       .find({ electionType: "senate", senateClass: { $exists: true }, state: { $exists: true } })
       .toArray();
 
@@ -53,9 +53,9 @@ export async function POST() {
 
     let deletedElections = 0;
     if (orphanElectionIds.length > 0) {
-      const result = await db
-        .collection("elections")
-        .deleteMany({ _id: { $in: orphanElectionIds } });
+      const result = await electionsCollection<Document>(db).deleteMany({
+        _id: { $in: orphanElectionIds },
+      });
       deletedElections = result.deletedCount;
     }
 
@@ -95,8 +95,7 @@ export async function GET() {
       (o) => !validPairs.has(`${o.state}_${o.senateClass}`)
     );
 
-    const allSenateElections = await db
-      .collection("elections")
+    const allSenateElections = await electionsCollection<Document>(db)
       .find({ electionType: "senate", senateClass: { $exists: true }, state: { $exists: true } })
       .toArray();
 

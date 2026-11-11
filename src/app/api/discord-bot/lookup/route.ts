@@ -23,6 +23,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -135,8 +136,7 @@ export async function GET(request: Request) {
     const activeElectionIds = (activeCandidacies as ElectionCandidate[]).map((c) => c.electionId);
     const activeElections =
       activeElectionIds.length > 0
-        ? await db
-            .collection<Pick<Election, "_id" | "electionType" | "state">>("elections")
+        ? await electionsCollection<Pick<Election, "_id" | "electionType" | "state">>(db)
             .find(
               { _id: { $in: activeElectionIds } },
               { projection: { electionType: 1, state: 1 } }

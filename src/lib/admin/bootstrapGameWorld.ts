@@ -230,6 +230,7 @@ import type { Document } from "mongodb";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 async function seedInitialBudgetSnapshots(db: Db, log: (msg: string) => void): Promise<void> {
   const budgets = await federalBudgetCollection(db).find({}).toArray();
@@ -1281,7 +1282,7 @@ export async function bootstrapGameWorld(options: BootstrapOptions) {
 
       for (const chamberClass of [1, 2] as const) {
         // Check if election already exists for this region + class
-        const existing = await db.collection("elections").findOne({
+        const existing = await electionsCollection<Document>(db).findOne({
           electionType: "sangiin",
           countryId: "JP",
           chamberClass,
@@ -1339,9 +1340,9 @@ export async function bootstrapGameWorld(options: BootstrapOptions) {
     }
 
     if (sangiinToInsert.length > 0) {
-      await db
-        .collection<Election>("elections")
-        .insertMany(sangiinToInsert.map(withCampaignRules) as Election[]);
+      await electionsCollection(db).insertMany(
+        sangiinToInsert.map(withCampaignRules) as Election[]
+      );
       log(`Spawned ${sangiinToInsert.length} JP Sangiin elections (both classes, all regions)`);
     }
   }
@@ -1428,7 +1429,7 @@ export async function bootstrapGameWorld(options: BootstrapOptions) {
   ] = await Promise.all([
     statesCollection<Document>(db).countDocuments(),
     db.collection("seats").countDocuments(),
-    db.collection("elections").countDocuments(),
+    electionsCollection<Document>(db).countDocuments(),
     electedOfficialsCollection<Document>(db).countDocuments(),
     db.collection("partyBudget").countDocuments(),
     db.collection("unownedSectors").countDocuments(),

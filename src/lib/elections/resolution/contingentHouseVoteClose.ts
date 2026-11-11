@@ -33,6 +33,7 @@ import { logger } from "@/lib/observability/logger";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 type TallyWithVote = ElectionVoteTally & {
   contingentHouseVote: NonNullable<ElectionVoteTally["contingentHouseVote"]>;
@@ -188,7 +189,7 @@ export async function closeDueContingentHouseVotes(
   currentTurn: number
 ): Promise<number> {
   const tallies = db.collection<ElectionVoteTally>("electionVoteTallies");
-  const elections = db.collection<Election>("elections");
+  const elections = electionsCollection(db);
   let handled = 0;
 
   const pending = (await tallies.findOne({

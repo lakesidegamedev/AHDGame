@@ -10,6 +10,7 @@ import type {
   PartyAnalyticsSlateItem,
   PartyAnalyticsSlateSection,
 } from "./types";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 interface ElectionSummary {
   electionId: string;
@@ -65,8 +66,7 @@ export async function buildPartySlateAnalytics(
   partyId: string,
   stateId?: string
 ): Promise<PartyAnalyticsSlateSection> {
-  const elections = await db
-    .collection<Election>("elections")
+  const elections = await electionsCollection(db)
     .find({
       countryId,
       status: { $in: ["upcoming", "active"] },

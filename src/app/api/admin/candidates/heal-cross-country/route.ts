@@ -5,6 +5,7 @@ import { handleRouteError } from "@/lib/api/errors";
 import { archiveCampaignsForCandidates } from "@/lib/campaigns/archiveWithdrawnCampaigns";
 import type { NPP, Election, ElectionCandidate } from "@/lib/db/types";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 /**
  * GET /api/admin/candidates/heal-cross-country
@@ -25,8 +26,7 @@ export async function GET() {
     const nppCountryMap = new Map(allNPPs.map((n) => [n._id.toString(), n]));
 
     // Get all active elections with their country
-    const activeElections = await db
-      .collection<Election>("elections")
+    const activeElections = await electionsCollection(db)
       .find({ status: "active" })
       .project({ _id: 1, countryId: 1, electionType: 1, state: 1 })
       .toArray();
@@ -93,8 +93,7 @@ export async function POST() {
     const nppCountryMap = new Map(allNPPs.map((n) => [n._id.toString(), n.countryId]));
 
     // Get all active elections with their country
-    const activeElections = await db
-      .collection<Election>("elections")
+    const activeElections = await electionsCollection(db)
       .find({ status: "active" })
       .project({ _id: 1, countryId: 1 })
       .toArray();

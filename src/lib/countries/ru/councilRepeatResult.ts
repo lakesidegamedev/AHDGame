@@ -26,6 +26,7 @@ import { resolveRussianCouncilRepeat } from "./rules/councilRepeat";
 import { resolveRussianCouncilAccumulatedCohort } from "./rules/councilCohort";
 import { hasAuthorizedPostSovietTransition } from "./rules/postSovietTransition";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export async function materializeRussianCouncilRepeatResult(input: {
   db: Db;
@@ -124,7 +125,7 @@ export async function materializeRussianCouncilRepeatResult(input: {
     { session, projection: { nominees: 1 } }
   );
   if (!previousNominees) throw new Error("Council repeat predecessor nominees disappeared");
-  const elections = db.collection<Election>("elections");
+  const elections = electionsCollection(db);
   const cohort = await elections
     .find(
       { countryId: "RU", "russianCouncilRound.cohortId": opening.cohortId },

@@ -69,6 +69,7 @@ import {
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export interface SeedNppPriorsPopulationResult {
   nppsCreated: number;
@@ -205,8 +206,7 @@ export async function seedNppPriorsPopulation(
   // Cycle-0 founding elections are the seat-count truth: they're generated
   // from each country's own region/config data by `spawnFoundingElections`,
   // which must have already run when this is called.
-  const elections = await db
-    .collection<Pick<Election, "countryId" | "state" | "cycle">>("elections")
+  const elections = await electionsCollection<Pick<Election, "countryId" | "state" | "cycle">>(db)
     .find({ cycle: 0 }, { projection: { countryId: 1, state: 1 } })
     .toArray();
 

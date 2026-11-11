@@ -23,6 +23,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 /** Called only by fresh historical bootstrap, never by a turn or reference refresh. */
 export async function seedModernOpeningCandidates(
@@ -37,8 +38,7 @@ export async function seedModernOpeningCandidates(
     { projection: { currentTurn: 1, startingPartiesMode: 1 } }
   );
   const access = await getAllCountryAccess(db);
-  const races = await db
-    .collection<Election>("elections")
+  const races = await electionsCollection(db)
     .find(
       { status: "active" },
       {

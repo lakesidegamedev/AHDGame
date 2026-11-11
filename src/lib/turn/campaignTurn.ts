@@ -44,6 +44,7 @@ import { fundPoliticalMediaOrder } from "@/lib/politicalMedia/journal";
 import type { PoliticalMediaPayer } from "@/lib/politicalMedia/journal";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export interface CampaignTurnResults {
   campaignsProcessed: number;
@@ -111,8 +112,7 @@ export async function processCampaignTurn(turnNumber: number): Promise<CampaignT
         // no upkeep and gets no actions; completed elections should have had their
         // campaigns archived at resolution, and this also guards stragglers.
         const activeElections = (
-          await db
-            .collection("elections")
+          await electionsCollection<Document>(db)
             .find(
               { status: "active" },
               {

@@ -27,6 +27,7 @@ import type { Document } from "mongodb";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export async function seedUKRegions(
   db: Db,
@@ -490,9 +491,10 @@ export async function seedUKRegionalCouncil(db: Db, reset: boolean, log: (msg: s
   if (reset) {
     const regionIds = Object.keys(UK_REGIONAL_COUNCIL_SEATS);
     // Delete Regional Council elections
-    const delElections = await db
-      .collection("elections")
-      .deleteMany({ electionType: "regionalCouncil", stateId: { $in: regionIds } });
+    const delElections = await electionsCollection<Document>(db).deleteMany({
+      electionType: "regionalCouncil",
+      stateId: { $in: regionIds },
+    });
     // Delete Regional Council elected officials
     const delOfficials = await electedOfficialsCollection<Document>(db).deleteMany({
       officeType: "regionalCouncil",
@@ -528,13 +530,15 @@ export async function seedUKRegionalCouncil(db: Db, reset: boolean, log: (msg: s
   let electionsCreated = 0;
   for (const regionId of Object.keys(UK_REGIONAL_COUNCIL_SEATS)) {
     // Check if a regionalCouncil election already exists for this region
-    const existingRC = await db
-      .collection<Election>("elections")
-      .findOne({ countryId: "UK", electionType: "regionalCouncil", state: regionId });
+    const existingRC = await electionsCollection(db).findOne({
+      countryId: "UK",
+      electionType: "regionalCouncil",
+      state: regionId,
+    });
     if (existingRC) continue;
 
     // Find the current active or upcoming Commons election for this region
-    const commonsElection = await db.collection<Election>("elections").findOne(
+    const commonsElection = await electionsCollection(db).findOne(
       {
         countryId: "UK",
         electionType: "commons",
@@ -582,7 +586,7 @@ export async function seedUKRegionalCouncil(db: Db, reset: boolean, log: (msg: s
       updatedAt: now,
     };
 
-    await db.collection<Election>("elections").insertOne(withCampaignRules(rcElection));
+    await electionsCollection(db).insertOne(withCampaignRules(rcElection));
     electionsCreated++;
   }
   log(`Created ${electionsCreated} Regional Council transition elections (synced to Commons)`);

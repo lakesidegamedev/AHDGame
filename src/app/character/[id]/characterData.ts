@@ -39,6 +39,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 interface CandidateElection {
   election: Election;
@@ -251,8 +252,7 @@ export async function getCharacterById(characterId: string) {
 
     const electionIds = activeOrUpcomingCandidacies.map((c) => c.electionId);
     const elections = electionIds.length
-      ? await db
-          .collection<Election>("elections")
+      ? await electionsCollection(db)
           .find({
             _id: { $in: electionIds },
             status: { $in: ["active", "upcoming"] },

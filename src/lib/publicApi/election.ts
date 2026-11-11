@@ -16,6 +16,7 @@ import { getGameTime, type GameTimeContext } from "@/lib/time/gameTime";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -270,11 +271,7 @@ export async function queryElectionList(
   const query: Record<string, unknown> = { countryId: country };
   if (state) query.state = state;
 
-  const elections = await db
-    .collection<Election>("elections")
-    .find(query)
-    .sort({ startTime: -1 })
-    .toArray();
+  const elections = await electionsCollection(db).find(query).sort({ startTime: -1 }).toArray();
 
   if (elections.length === 0) return { found: false, elections: [] };
 
@@ -391,9 +388,7 @@ export async function queryElectionList(
 export async function queryElectionDetail(db: Db, electionId: string) {
   let election: Election | null = null;
   try {
-    election = await db
-      .collection<Election>("elections")
-      .findOne({ _id: new ObjectId(electionId) });
+    election = await electionsCollection(db).findOne({ _id: new ObjectId(electionId) });
   } catch {
     return null;
   }
@@ -425,7 +420,7 @@ export async function queryElectionDetail(db: Db, electionId: string) {
   // Resolve prior-cycle election to find incumbent
   const priorElection =
     election.cycle && election.cycle > 1
-      ? await db.collection<Election>("elections").findOne({
+      ? await electionsCollection(db).findOne({
           seatId: election.seatId,
           cycle: election.cycle - 1,
           status: { $in: ["completed", "resolved"] },
@@ -587,8 +582,7 @@ export async function queryElectionArchives(
   };
   if (type) filter.electionType = type;
 
-  const elections = await db
-    .collection<Election>("elections")
+  const elections = await electionsCollection(db)
     .find(filter)
     .sort({ endTime: -1 })
     .limit(limit)

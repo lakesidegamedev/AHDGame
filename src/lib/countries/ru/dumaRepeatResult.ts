@@ -34,6 +34,7 @@ import {
 } from "./dumaConvocationAuthority";
 import { hasAuthorizedPostSovietTransition } from "./rules/postSovietTransition";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export async function materializeRussianDumaRepeatResult(input: {
   db: Db;
@@ -138,7 +139,7 @@ export async function materializeRussianDumaRepeatResult(input: {
   )
     throw new Error("Duma repeat predecessor changed");
   await loadRussianAssemblyRepeatTerm({ db, session, country, chamber: "duma", turn, previous });
-  const elections = db.collection<Election>("elections");
+  const elections = electionsCollection(db);
   const cohort = await elections
     .find(
       { countryId: "RU", "russianDumaRound.cohortId": opening.cohortId },

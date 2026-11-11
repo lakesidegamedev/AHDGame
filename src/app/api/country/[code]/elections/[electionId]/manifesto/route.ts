@@ -26,6 +26,7 @@ import {
 } from "@/lib/db/collections/manifestos";
 import { MANIFESTO_PLEDGE_COUNT, type Pledge } from "@/lib/db/types/manifesto";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 const bodySchema = z.object({
   pledges: z.array(z.string().min(1)).max(MANIFESTO_PLEDGE_COUNT),
@@ -47,9 +48,10 @@ async function resolveContext(request: Request, code: string, electionId: string
   if (!auth.ok) return { error: auth.response };
 
   const db = await getDb();
-  const election = await db
-    .collection<Election>("elections")
-    .findOne({ _id: new ObjectId(electionId), countryId });
+  const election = await electionsCollection(db).findOne({
+    _id: new ObjectId(electionId),
+    countryId,
+  });
   if (!election) {
     return { error: errorResponse(404, "Election not found") };
   }

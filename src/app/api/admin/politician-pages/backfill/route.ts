@@ -19,6 +19,7 @@ import { formatElectionTypeLabel, MULTI_SEAT_TYPES } from "@/lib/utils/electionL
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export async function POST() {
   try {
@@ -78,8 +79,7 @@ export async function POST() {
 
       const electionIds = [...new Set(candidates.map((c) => c.electionId.toString()))];
       const elections = electionIds.length
-        ? await db
-            .collection<Election>("elections")
+        ? await electionsCollection(db)
             .find({
               _id: { $in: candidates.map((c) => c.electionId) },
               status: { $in: ["completed", "resolved"] },

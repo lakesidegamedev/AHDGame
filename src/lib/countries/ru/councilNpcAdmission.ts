@@ -28,6 +28,7 @@ import { GAME_STATE_PRE_ITERATION_FIELDS } from "@/lib/db/collections/gameState"
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export async function materializeRussianCouncilNpcAdmission(input: {
   db: Db;
@@ -102,8 +103,7 @@ export async function materializeRussianCouncilNpcAdmission(input: {
     });
     if (!boundOpening?.cohortId.equals(cohortId)) return null;
   }
-  const elections = await db
-    .collection<Election>("elections")
+  const elections = await electionsCollection(db)
     .find(
       { countryId: "RU", "russianCouncilRound.cohortId": cohortId },
       {

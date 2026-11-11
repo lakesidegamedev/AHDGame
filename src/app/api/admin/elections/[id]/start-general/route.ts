@@ -29,6 +29,7 @@ import { getGameTime } from "@/lib/time/gameTime";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -55,7 +56,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     // Game turn drives the turn-first primary-close mutation below.
     const { currentTurn } = await getGameTime();
 
-    const election = await db.collection<Election>("elections").findOne({
+    const election = await electionsCollection(db).findOne({
       _id: electionObjectId,
     });
 
@@ -212,7 +213,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       await initPresidentVoteTally(electionObjectId, generalCandidates);
     }
 
-    await db.collection<Election>("elections").updateOne(
+    await electionsCollection(db).updateOne(
       { _id: electionObjectId },
       {
         // primaryEndTurn = currentTurn so the turn-first resolver treats the

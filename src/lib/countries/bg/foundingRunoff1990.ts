@@ -15,6 +15,7 @@ import { projectBgFoundingRunoff } from "./rules/foundingBallots1990";
 import { countBgFoundingElection } from "./rules/foundingCount1990";
 import { bgFoundingOpenNominationDistricts } from "./rules/foundingRenewal1990";
 import { planBgFoundingRenewedNpcSlates } from "./foundingRenewedNpcSlates1990";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 function stableId(key: string): ObjectId {
   return new ObjectId(createHash("sha256").update(key).digest("hex").slice(0, 24));
@@ -52,8 +53,7 @@ async function materializeBgFoundingRunoffOpening(input: {
     receipt.second ?? receipt.first
   );
   const allowed = new Set(planned.flatMap((row) => row.candidateIds));
-  const roots = await db
-    .collection<Election>("elections")
+  const roots = await electionsCollection(db)
     .find(
       {
         _id: { $in: receipt.electionIds.map((id) => new ObjectId(id)) },
@@ -163,7 +163,7 @@ async function materializeBgFoundingRunoffOpening(input: {
     { session }
   );
   if (updated.modifiedCount !== 1) throw new Error("Bulgarian runoff opening changed concurrently");
-  await db.collection<Election>("elections").insertMany(polls, { session });
+  await electionsCollection(db).insertMany(polls, { session });
   if (renewedCandidates.length) {
     await db
       .collection<ElectionCandidate>("electionCandidates")
@@ -250,8 +250,7 @@ async function materializeBgFoundingRunoffCount(input: {
       ? receipt._id
       : `${receipt._id}:generation:${receipt.runoffGeneration}`;
   const ids = activeIds.map((id) => new ObjectId(id));
-  const elections = await db
-    .collection<Election>("elections")
+  const elections = await electionsCollection(db)
     .find(
       { _id: { $in: ids } },
       { session, projection: { state: 1, status: 1, endTurn: 1, bulgarianFoundingRound: 1 } }

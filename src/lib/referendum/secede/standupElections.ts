@@ -5,6 +5,7 @@ import { buildStandupElections } from "./rules/standupElections";
 import type { SecedingCountryId } from "./subRegions";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export async function standupElections(
   db: Db,
@@ -26,9 +27,9 @@ export async function standupElections(
     preset: gameState?.preset,
     id: () => new ObjectId().toHexString(),
   });
-  await db
-    .collection<Election>("elections")
-    .insertMany(rows.map((row) => ({ ...row, _id: new ObjectId(row._id) })));
+  await electionsCollection(db).insertMany(
+    rows.map((row) => ({ ...row, _id: new ObjectId(row._id) }))
+  );
   await statesCollection(db).bulkWrite(
     regions.map((region) => ({
       updateOne: {

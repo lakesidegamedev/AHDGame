@@ -40,6 +40,7 @@ import { primaryClosedFilter, electionOpenFilter } from "@/lib/elections/electio
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 // POST /api/admin/elections/resolve-primaries — Eliminates primary losers and initializes vote tallies for elections whose primary phase has ended.
 // Auth: requireAdmin
@@ -51,8 +52,7 @@ export const POST = withAdminRoute(async (_auth) => {
   const { currentTurn, effectiveNow } = await getGameTime();
 
   // All elections whose primary window has closed but which are still running
-  const pastPrimary = await db
-    .collection<Election>("elections")
+  const pastPrimary = await electionsCollection(db)
     .find({
       status: { $in: ["active", "upcoming"] },
       $and: [

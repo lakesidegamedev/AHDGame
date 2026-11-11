@@ -1,5 +1,6 @@
 import type { Db } from "mongodb";
 import type { Election, ElectionCandidate, ElectionVoteTally } from "@/lib/db/types";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export interface LastElectionPartySummary {
   cycle: number;
@@ -25,7 +26,7 @@ export async function getLastElectionPartyShares(
     query.senateClass = currentElection.senateClass;
   }
 
-  const prev = await db.collection<Election>("elections").findOne({
+  const prev = await electionsCollection(db).findOne({
     ...query,
     cycle: currentElection.cycle - 1,
     status: { $in: ["completed", "resolved"] },

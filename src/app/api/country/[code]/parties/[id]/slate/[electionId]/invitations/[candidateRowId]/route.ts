@@ -9,6 +9,7 @@ import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import type { Election, ElectionCandidate, SlateCandidate } from "@/lib/db/types";
 import { resolveSlateAuthority } from "@/lib/slateAuthority";
 import { removeWithdrawnCandidateFromTally } from "@/lib/elections/engine/tallyCleaner";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 interface RouteParams {
   params: Promise<{
@@ -71,9 +72,7 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
       // slate handle alone would leave the candidate on the ballot, so mirror
       // the self-withdraw cleanup: mark the candidate withdrawn, scrub the
       // tally, and archive any campaign doc before tombstoning the slate row.
-      const election = await db
-        .collection<Election>("elections")
-        .findOne({ _id: electionObjectId, countryId });
+      const election = await electionsCollection(db).findOne({ _id: electionObjectId, countryId });
       if (
         !election ||
         election.status === "completed" ||

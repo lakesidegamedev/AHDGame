@@ -15,6 +15,7 @@ import type { Election } from "@/lib/db/types/election";
 import type { ElectionVoteTally, VoteTurnSnapshot } from "@/lib/db/types/voteTally";
 import type { GameState } from "@/lib/db/types/gameState";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export interface ElectionTrajectoryPoint {
   turn: number;
@@ -130,8 +131,7 @@ export async function collectElectionReport(
   const scopeSet = scope ? new Set(scope) : null;
   const emptyCandidateSupplyCountries = runDoc?.emptyCandidateSupplyCountries ?? [];
 
-  const elections = await db
-    .collection<Election>("elections")
+  const elections = await electionsCollection(db)
     .find({}, { projection: { countryId: 1, electionType: 1, state: 1, status: 1 } })
     .toArray();
   const scoped = scopeSet ? elections.filter((e) => scopeSet.has(e.countryId)) : elections;

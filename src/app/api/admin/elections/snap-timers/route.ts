@@ -19,6 +19,7 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { getGameTime } from "@/lib/time/gameTime";
 import type { Election, GameState } from "@/lib/db/types";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 const TURN_MS = 60 * 60 * 1000; // turns fire every hour
 
@@ -56,8 +57,7 @@ export async function POST() {
         })();
 
     // Fetch every active (non-completed) election that still has a future timer.
-    const elections = await db
-      .collection<Election>("elections")
+    const elections = await electionsCollection(db)
       .find({
         status: { $in: ["active", "upcoming"] },
         $or: [{ endTime: { $gt: now } }, { primaryEndTime: { $gt: now } }],
@@ -101,9 +101,9 @@ export async function POST() {
       return NextResponse.json({ message: "All timers are already aligned — nothing to update." });
     }
 
-    await db
-      .collection<Election>("elections")
-      .bulkWrite(updates.map(({ filter, update }) => ({ updateOne: { filter, update } })));
+    await electionsCollection(db).bulkWrite(
+      updates.map(({ filter, update }) => ({ updateOne: { filter, update } }))
+    );
 
     return NextResponse.json({
       message: `Snapped ${updates.length} election timer${updates.length !== 1 ? "s" : ""} to turn boundaries. Next turn: ${nextTurn.toLocaleTimeString()}.`,

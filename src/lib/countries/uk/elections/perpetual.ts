@@ -28,6 +28,7 @@ import {
   ensureRegionalGovernorElections,
 } from "@/lib/elections/scheduling/shared";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 /**
  * Ensure every UK region has an active/upcoming Commons election.
@@ -58,8 +59,7 @@ export async function ensureUKElections(now: Date, inFlightTurn?: number): Promi
 
   // Include snap_commons so a live snap suppresses spawning a regular, and a
   // resolved snap contributes to cycle-period / cycle-number calculations.
-  const liveElections = await db
-    .collection<Election>("elections")
+  const liveElections = await electionsCollection(db)
     .find({
       countryId: "UK",
       electionType: { $in: ["commons", "snap_commons"] },
@@ -83,8 +83,7 @@ export async function ensureUKElections(now: Date, inFlightTurn?: number): Promi
   });
   const liveCommons = new Set(liveElections.map((e) => e.state));
 
-  const completedElections = await db
-    .collection<Election>("elections")
+  const completedElections = await electionsCollection(db)
     .find({
       countryId: "UK",
       electionType: { $in: ["commons", "snap_commons"] },
@@ -119,7 +118,7 @@ export async function ensureUKElections(now: Date, inFlightTurn?: number): Promi
     });
   }
   if (seatHealOps.length > 0) {
-    await db.collection<Election>("elections").bulkWrite(seatHealOps);
+    await electionsCollection(db).bulkWrite(seatHealOps);
     console.log(`[Turn] ensureUKElections: healed ${seatHealOps.length} Commons field(s)`);
   }
 
@@ -192,8 +191,7 @@ export async function ensureUKElections(now: Date, inFlightTurn?: number): Promi
     status: { $in: ["active", "upcoming"] as ElectionStatus[] },
   }));
 
-  const existing = await db
-    .collection<Election>("elections")
+  const existing = await electionsCollection(db)
     .find({ $or: orFilters }, { projection: { state: 1 } })
     .toArray();
   const existingStates = new Set(existing.map((e) => e.state));
@@ -201,9 +199,7 @@ export async function ensureUKElections(now: Date, inFlightTurn?: number): Promi
   const toActuallyInsert = toInsert.filter((e) => !existingStates.has(e.state));
 
   if (toActuallyInsert.length > 0) {
-    await db
-      .collection<Election>("elections")
-      .insertMany(toActuallyInsert.map(withCampaignRules) as Election[]);
+    await electionsCollection(db).insertMany(toActuallyInsert.map(withCampaignRules) as Election[]);
     console.log(
       `[Turn] ensureUKElections: spawned ${toActuallyInsert.length} missing Commons election(s)`
     );
@@ -251,14 +247,12 @@ export async function ensureUKRegionalCouncilElections(
 
   if (regionIds.length === 0) return;
 
-  const liveElections = await db
-    .collection<Election>("elections")
+  const liveElections = await electionsCollection(db)
     .find({ electionType: "regionalCouncil", status: { $in: ["active", "upcoming"] } })
     .toArray();
   const liveCouncils = new Set(liveElections.map((e) => e.state));
 
-  const completedElections = await db
-    .collection<Election>("elections")
+  const completedElections = await electionsCollection(db)
     .find({ electionType: "regionalCouncil", status: { $in: ["completed", "resolved"] } })
     .sort({ updatedAt: -1 })
     .toArray();
@@ -349,8 +343,7 @@ export async function ensureUKRegionalCouncilElections(
     status: { $in: ["active", "upcoming"] as ElectionStatus[] },
   }));
 
-  const existing = await db
-    .collection<Election>("elections")
+  const existing = await electionsCollection(db)
     .find({ $or: orFilters }, { projection: { state: 1 } })
     .toArray();
   const existingStates = new Set(existing.map((e) => e.state));
@@ -358,9 +351,7 @@ export async function ensureUKRegionalCouncilElections(
   const toActuallyInsert = toInsert.filter((e) => !existingStates.has(e.state));
 
   if (toActuallyInsert.length > 0) {
-    await db
-      .collection<Election>("elections")
-      .insertMany(toActuallyInsert.map(withCampaignRules) as Election[]);
+    await electionsCollection(db).insertMany(toActuallyInsert.map(withCampaignRules) as Election[]);
     console.log(
       `[Turn] ensureUKRegionalCouncilElections: spawned ${toActuallyInsert.length} missing Regional Council election(s)`
     );

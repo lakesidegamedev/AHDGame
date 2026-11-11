@@ -57,6 +57,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 interface Props {
   params: Promise<{ code: string; id: string }>;
@@ -230,8 +231,7 @@ export default async function GovernorOfficePage({ params }: Props) {
         seatsHeld: 1,
       })
       .toArray(),
-    db
-      .collection<Election>("elections")
+    electionsCollection(db)
       .find({
         state: stateId,
         countryId,
@@ -239,9 +239,7 @@ export default async function GovernorOfficePage({ params }: Props) {
         electionType: { $in: allowedRaceTypes },
       })
       .toArray(),
-    db
-      .collection<Election>("elections")
-      .findOne({ electionType: "president", countryId, status: "active" }),
+    electionsCollection(db).findOne({ electionType: "president", countryId, status: "active" }),
     db
       .collection<GovernorEndorsement>("governorEndorsements")
       .find({

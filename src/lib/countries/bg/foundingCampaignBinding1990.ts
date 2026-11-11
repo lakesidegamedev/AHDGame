@@ -12,6 +12,7 @@ import { isBgOrdinaryCapacity } from "./rules/assemblyTransition";
 import { STATE_POPULATION_FIELDS } from "@/lib/db/collections/states";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 async function materializeBgFoundingCampaignBinding(input: {
   db: Db;
@@ -32,8 +33,7 @@ async function materializeBgFoundingCampaignBinding(input: {
     { session, projection: { preset: 1 } }
   );
   if (game?.preset !== "1991-default") return false;
-  const elections = await db
-    .collection<Election>("elections")
+  const elections = await electionsCollection(db)
     .find(
       {
         countryId: "BG",
@@ -116,7 +116,7 @@ async function materializeBgFoundingCampaignBinding(input: {
       return [String(row._id), voters];
     })
   );
-  const result = await db.collection<Election>("elections").bulkWrite(
+  const result = await electionsCollection(db).bulkWrite(
     elections.map((row) => ({
       updateOne: {
         filter: { _id: row._id, bulgarianFoundingRound: { $exists: false } },
@@ -160,8 +160,7 @@ export async function bindBgFoundingCampaigns(
     { projection: { preset: 1 } }
   );
   if (game?.preset !== "1991-default") return 0;
-  const unbound = await db
-    .collection<Election>("elections")
+  const unbound = await electionsCollection(db)
     .find(
       {
         countryId: "BG",

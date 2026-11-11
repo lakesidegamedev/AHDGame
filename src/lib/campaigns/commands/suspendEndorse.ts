@@ -25,6 +25,7 @@ import { CAMPAIGN_ACTIVITY_HISTORY_CAP } from "@/lib/campaigns/constants/activit
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 async function getCurrentTurn(db: Db): Promise<number> {
   const gameState = await gameStateCollection<{ _id: string; currentTurn?: number }>(db).findOne({
@@ -57,7 +58,7 @@ export async function suspendCampaignAndEndorse(params: {
     throw forbidden("Only the presidential nominee can suspend the campaign and endorse.");
   }
 
-  const election = await db.collection<Election>("elections").findOne({ _id: campaign.electionId });
+  const election = await electionsCollection(db).findOne({ _id: campaign.electionId });
   if (!election) {
     throw notFound("Election not found");
   }

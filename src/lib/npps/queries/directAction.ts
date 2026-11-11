@@ -12,6 +12,7 @@ import {
 } from "@/lib/nppEndorsements";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 interface EndorsementRequestEvaluation {
   relationshipRequirement: number;
@@ -115,8 +116,7 @@ export async function getNppDirectActionView(
       .toArray();
 
     if (playerCandidacies.length > 0) {
-      const elections = await db
-        .collection<Election>("elections")
+      const elections = await electionsCollection(db)
         .find({ _id: { $in: playerCandidacies.map((candidacy) => candidacy.electionId) } })
         .project<{
           _id: ObjectId;

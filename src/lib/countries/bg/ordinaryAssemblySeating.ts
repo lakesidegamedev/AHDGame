@@ -30,6 +30,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 interface BgAssemblyOfficeArchive {
   _id: string;
@@ -91,8 +92,7 @@ async function materializeBgOrdinaryAssembly(input: {
   )
     return false;
   const ids = receipt.electionIds.map((id) => new ObjectId(id));
-  const elections = await db
-    .collection<Election>("elections")
+  const elections = await electionsCollection(db)
     .find(
       {
         _id: { $in: ids },
@@ -364,7 +364,7 @@ async function materializeBgOrdinaryAssembly(input: {
       { $set: { status: "withdrawn", withdrawnAt: now } },
       { session }
     );
-  await db.collection<Election>("elections").bulkWrite(
+  await electionsCollection(db).bulkWrite(
     elections.map((row) => ({
       updateOne: {
         filter: { _id: row._id, status: { $in: ["completed", "resolved"] } },

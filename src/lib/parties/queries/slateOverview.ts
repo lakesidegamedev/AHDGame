@@ -4,6 +4,7 @@ import type { Election } from "@/lib/db/types";
 import type { PartySlateOverviewResponse } from "@/lib/parties/dto/partyView";
 import type { Db } from "mongodb";
 import { getSlateElectionSortWeight } from "@/lib/parties/slateElectionSortWeight";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 function countByStatus(rows: { status: string }[]) {
   const counts = { invited: 0, considering: 0, accepted: 0, declined: 0, withdrawn: 0, filed: 0 };
@@ -25,8 +26,7 @@ export async function getPartySlateOverview(
     includeArchived: boolean;
   }
 ): Promise<PartySlateOverviewResponse> {
-  const elections = await db
-    .collection<Election>("elections")
+  const elections = await electionsCollection(db)
     .find({
       countryId,
       status: includeArchived

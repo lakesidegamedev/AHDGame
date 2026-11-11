@@ -9,6 +9,7 @@ import { getSiteUrl } from "@/lib/siteMetadata";
 import { redirect } from "next/navigation";
 import { downBallotRedirectTarget } from "@/lib/elections/downBallotRedirect";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -40,9 +41,10 @@ export async function generateMetadata({
   if (!ObjectId.isValid(id)) return {};
 
   const db = await getDb();
-  const election = await db
-    .collection<Election>("elections")
-    .findOne({ _id: new ObjectId(id) }, { projection: { electionType: 1, cycle: 1 } });
+  const election = await electionsCollection(db).findOne(
+    { _id: new ObjectId(id) },
+    { projection: { electionType: 1, cycle: 1 } }
+  );
   if (!election) return {};
 
   const typeLabel = ELECTION_TYPE_LABELS[election.electionType] ?? "Election";

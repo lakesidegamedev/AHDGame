@@ -63,6 +63,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 // GET /api/client-status — Returns status bar enrichment data (funds, corp, election stats, income).
 // Auth: requireBasicAuth
@@ -796,7 +797,7 @@ export async function handleClientStatus(request: Request) {
 
     if (includeElection && myCandidate) {
       const [election, voteTally] = await Promise.all([
-        db.collection<Election>("elections").findOne({
+        electionsCollection(db).findOne({
           _id: myCandidate.electionId,
           status: { $in: ["upcoming", "active", "completed"] },
         }),

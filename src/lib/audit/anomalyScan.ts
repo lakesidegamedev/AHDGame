@@ -32,6 +32,7 @@ import {
   agreementIdMatchValues,
   loadRelatedSupplyAgreementIds,
 } from "@/lib/audit/relatedSupplyAgreements";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export type { AnomalyAuditRow } from "@/lib/audit/rules/transferFlows";
 export { SYSTEM_SETTLEMENT_ACTIONS } from "@/lib/audit/rules/transferFlows";
@@ -514,7 +515,7 @@ async function resolveIsPreElectionWindow(
   windowTurns: number
 ): Promise<boolean> {
   try {
-    const doc = await db.collection<MinimalElection>("elections").findOne(
+    const doc = await electionsCollection<MinimalElection>(db).findOne(
       {
         status: { $in: ["active", "upcoming"] },
         endTurn: { $gte: currentTurn, $lte: currentTurn + windowTurns },

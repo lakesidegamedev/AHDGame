@@ -41,6 +41,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export type { PartyInfluenceCalculation } from "./partyExecutorCalculations";
 export type { ExecutePartyInfluenceInput } from "./partyExecutorTypes";
@@ -707,8 +708,7 @@ export async function getStatePartyInfluenceOptions(
   const electionIds = candidacies.map((candidate) => candidate.electionId);
   const elections =
     electionIds.length > 0
-      ? await db
-          .collection<Election>("elections")
+      ? await electionsCollection(db)
           .find(
             { _id: { $in: electionIds } },
             { projection: { _id: 1, electionType: 1, state: 1, senateClass: 1, chamberClass: 1 } }
@@ -853,8 +853,7 @@ export async function getNationalPartyInfluenceOptions(party: PoliticalParty): P
   const electionIds = candidacies.map((c) => c.electionId);
   const elections =
     electionIds.length > 0
-      ? await db
-          .collection<Election>("elections")
+      ? await electionsCollection(db)
           .find(
             { _id: { $in: electionIds } },
             { projection: { _id: 1, electionType: 1, state: 1, senateClass: 1, chamberClass: 1 } }

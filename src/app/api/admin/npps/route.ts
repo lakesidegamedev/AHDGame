@@ -20,6 +20,7 @@ import { handleSpawnNPPs } from "./lib/spawn";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 // GET /api/admin/npps — Returns NPP statistics including totals, counts by state and party, and recent NPPs
 // Auth: requireAdmin
@@ -308,8 +309,7 @@ export async function DELETE(request: Request) {
 
     let candidatesRemoved = 0;
     if (states && states.length > 0) {
-      const elections = await db
-        .collection<Election>("elections")
+      const elections = await electionsCollection(db)
         .find({ state: { $in: states } })
         .toArray();
       const electionIds = elections.map((e) => e._id);

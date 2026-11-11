@@ -18,6 +18,7 @@ import {
 import { HU_1991_TERRITORIAL_DISTRICTS } from "./data/electoralDistricts1991";
 import { huMixedElectoralLaw } from "./rules/electoralLaw";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export const HU_1991_COUNTS_COLLECTION = "hu1991AssemblyCounts";
 export interface Hu1991AssemblyRecord {
@@ -81,8 +82,7 @@ async function materializeHu1991FirstCount(input: {
     { session, projection: { preset: 1 } }
   );
   if (game?.preset !== "1991-default") return null;
-  const elections = await db
-    .collection<Election>("elections")
+  const elections = await electionsCollection(db)
     .find(
       {
         countryId: "HU",

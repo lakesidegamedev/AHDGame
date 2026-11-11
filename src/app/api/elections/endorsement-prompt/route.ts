@@ -7,6 +7,7 @@ import { isPrimaryPhaseOpen } from "@/lib/elections/playerEndorsements";
 import { getGameTime } from "@/lib/time/gameTime";
 import type { CountryId } from "@/lib/constants/countries";
 import type { Election, ElectionCandidate, PlayerEndorsement } from "@/lib/db/types";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export interface EndorsementPromptCandidate {
   /** electionCandidates row id: what POST /endorse expects as `candidateId`. */
@@ -72,7 +73,7 @@ export async function GET(request: Request) {
     // completed/resolved), and they are exactly when an endorsement is worth the
     // most, so include them and let the candidate list decide whether there is
     // anything to show.
-    const election = await db.collection<Election>("elections").findOne(
+    const election = await electionsCollection(db).findOne(
       {
         electionType: "president",
         countryId,

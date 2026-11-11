@@ -10,6 +10,7 @@ import type { Election, ElectionVoteTally } from "@/lib/db/types";
 import { RU_1991_ECONOMIC_REGION_POPULATION } from "@/lib/countries/ru/data/ruPopulation1991";
 import { invalidateSuspendEndorsementsForWithdrawnCandidate } from "@/lib/campaigns/suspendEndorseLifecycle";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export async function removeWithdrawnCandidateFromTally(
   db: Db,
@@ -42,7 +43,7 @@ export async function removeWithdrawnCandidateFromTally(
       countryHasFeature("ruElections", tally.state) ||
       Object.prototype.hasOwnProperty.call(RU_1991_ECONOMIC_REGION_POPULATION, tally.state))
   ) {
-    const election = await db.collection<Election>("elections").findOne(
+    const election = await electionsCollection(db).findOne(
       { _id: electionId },
       {
         projection: {
