@@ -55,6 +55,7 @@ import {
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 const relocateSchema = z.object({
   targetStateId: z.string().min(1, "Target state/region ID required"),
@@ -121,8 +122,7 @@ export async function relocateHeadquarters(request: Request, { params }: RoutePa
       );
     }
 
-    const propertySectors = await db
-      .collection<CorporateSector>("corporateSectors")
+    const propertySectors = await corporateSectorsCollection(db)
       .find({ corporationId: corporation._id })
       .toArray();
 

@@ -17,6 +17,7 @@ import { isExtractionStrategyZeroYield } from "@/lib/corporations/extractionStra
 import { industryConversionFields } from "@/lib/corporations/retooling/conversion";
 import { freeTransitionConversion } from "@/lib/market/producerMarket/transitionRules";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 interface RouteParams {
   params: Promise<{ id: string; sectorId: string }>;
@@ -42,9 +43,10 @@ export async function convertSectorIndustryCore(
   }
 ): Promise<ConvertSectorOutcome> {
   const [sector, gameState] = await Promise.all([
-    db
-      .collection<CorporateSector>("corporateSectors")
-      .findOne({ _id: input.sectorId, corporationId: input.corporationId }),
+    corporateSectorsCollection(db).findOne({
+      _id: input.sectorId,
+      corporationId: input.corporationId,
+    }),
     gameStateCollection(db).findOne(
       { _id: "current" },
       { projection: { currentTurn: 1, worldEpochId: 1, producerOpening: 1 } }
@@ -71,7 +73,7 @@ export async function convertSectorIndustryCore(
   const to = operatingSectorIdentity(input.targetLane);
   const strategyId = result.set.strategyId as string;
 
-  const duplicate = await db.collection<CorporateSector>("corporateSectors").findOne(
+  const duplicate = await corporateSectorsCollection(db).findOne(
     {
       _id: { $ne: sector._id },
       corporationId: input.corporationId,
@@ -106,7 +108,7 @@ export async function convertSectorIndustryCore(
   }
 
   const now = new Date();
-  const write = await db.collection<CorporateSector>("corporateSectors").updateOne(
+  const write = await corporateSectorsCollection(db).updateOne(
     {
       _id: sector._id,
       corporationId: input.corporationId,

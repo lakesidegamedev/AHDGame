@@ -27,6 +27,7 @@ import {
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 /**
  * Share of a leaving plant's built capacity an NPP operator takes over. The
@@ -86,7 +87,7 @@ export async function chooseNppPickupReceiver(
   nppCorpIds: ObjectId[],
   now: Date
 ): Promise<Omit<NonNullable<CorporateSector["nppPickup"]>, "key"> | null> {
-  const sectors = db.collection<CorporateSector>("corporateSectors");
+  const sectors = corporateSectorsCollection(db);
   const candidates = nppCorpIds.filter((id) => !id.equals(owner._id));
 
   const inState = await sectors
@@ -166,7 +167,7 @@ export async function creditNppPickup(
   /** Share of the donor's workers and nameplate that moves with the capacity. */
   share: number = NPP_PICKUP_SHARE
 ): Promise<number> {
-  const sectors = db.collection<CorporateSector>("corporateSectors");
+  const sectors = corporateSectorsCollection(db);
   const workers = Math.round((sector.workers ?? 0) * share);
   const capacityShare = builtStock(sector) > 0 ? carved.capitalStock / builtStock(sector) : 0;
 
@@ -334,7 +335,7 @@ export async function disposeLeavingSectors(
     // 2. Commit the receivers before any capacity moves, then read back what
     //    won (a concurrent retry may have marked a row first).
     if (proposals.size > 0) {
-      await db.collection<CorporateSector>("corporateSectors").bulkWrite(
+      await corporateSectorsCollection(db).bulkWrite(
         [...proposals].map(([id, proposed]) => ({
           updateOne: {
             filter: { _id: new ObjectId(id), nppPickup: { $exists: false } },
@@ -346,8 +347,7 @@ export async function disposeLeavingSectors(
     }
     const storedMarkers = new Map(
       (
-        await db
-          .collection<CorporateSector>("corporateSectors")
+        await corporateSectorsCollection(db)
           .find({ _id: { $in: eligible.map((s) => s._id) } })
           .project<Pick<CorporateSector, "_id" | "nppPickup">>({ nppPickup: 1 })
           .toArray()
@@ -431,7 +431,7 @@ async function repointContracts(
   }
   if (extractionReceiverByState.size === 0) return;
   const stillOperating = new Set(
-    await db.collection<CorporateSector>("corporateSectors").distinct("stateId", {
+    await corporateSectorsCollection(db).distinct("stateId", {
       corporationId: ownerId,
       stateId: { $in: [...extractionReceiverByState.keys()] },
       sectorType: "extraction",

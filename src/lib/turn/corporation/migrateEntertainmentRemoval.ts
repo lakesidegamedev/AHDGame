@@ -20,6 +20,7 @@ import { entertainmentRemovalRescaleRatio } from "@/lib/corporations/entertainme
 import { rescaleOtherOpexAnchorForRetool } from "@/lib/corporations/physicalPnl";
 import { seedPlantLedger } from "@/lib/corporations/plantLedger";
 import type { SectorBuildOrder } from "@/lib/db/types";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export const REMOVED_COMMODITY = "entertainment_services";
 export const ENTERTAINMENT_REMOVAL_MARKER = "entertainmentCommodityRemovedAtTurn";
@@ -110,8 +111,7 @@ export async function migrateEntertainmentRemoval(
   if (config?.[ENTERTAINMENT_REMOVAL_MARKER] != null) return { skipped: true };
 
   // 1. Rescale media sectors not yet stamped. Only media rows can carry the mix.
-  const rows = await db
-    .collection("corporateSectors")
+  const rows = await corporateSectorsCollection<Document>(db)
     .find<RescaleRow>(
       { sectorType: "media", [ENTERTAINMENT_RESCALE_STAMP]: { $ne: true } },
       {
@@ -141,10 +141,11 @@ export async function migrateEntertainmentRemoval(
       },
     });
   }
-  if (ops.length > 0) await db.collection("corporateSectors").bulkWrite(ops, { ordered: false });
+  if (ops.length > 0)
+    await corporateSectorsCollection<Document>(db).bulkWrite(ops, { ordered: false });
 
   // 2. Telemetry keys on any other sector.
-  await db.collection("corporateSectors").updateMany(
+  await corporateSectorsCollection<Document>(db).updateMany(
     {
       $or: SECTOR_COMMODITY_MAPS.map((f) => ({
         [`${f}.${REMOVED_COMMODITY}`]: { $exists: true },

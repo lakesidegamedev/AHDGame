@@ -6,6 +6,7 @@ import { MONEY_MOVE_COLLECTION } from "./moneyMove";
 import { completeRefusedDebitBatch } from "./constructionBatchCompletion";
 import { resumeSettlement } from "./settlementJournal";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export async function acquireConstructionServiceLease(
   db: Db,
@@ -130,12 +131,10 @@ export async function recoverConstructionServiceLeases(
         });
         continue;
       }
-      const sector = await db
-        .collection<CorporateSector>("corporateSectors")
-        .findOne(
-          { _id: new ObjectId(lease.service.sectorId) },
-          { projection: { constructionFinancing: 1 } }
-        );
+      const sector = await corporateSectorsCollection(db).findOne(
+        { _id: new ObjectId(lease.service.sectorId) },
+        { projection: { constructionFinancing: 1 } }
+      );
       const quote = sector?.constructionFinancing?.cancellation;
       if (quote && `${quote.key}:payout` === key && !quote.aborted) {
         // The property quote owns refund recovery, including a crash before

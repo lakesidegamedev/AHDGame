@@ -11,6 +11,8 @@ import {
   type EditorialPosition,
 } from "./rules";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import type { Document } from "mongodb";
 
 /** Largest price cut an advertiser can get from fully aligned local newsrooms. */
 export const SLANT_MAX_PRICE_DISCOUNT = 0.15;
@@ -135,8 +137,7 @@ export function applySlantToAdvertise(
 
 /** Slant of a state's newsrooms, weighted by what each sector actually earns. */
 export async function loadStateSlant(db: Db, stateId: string): Promise<StateSlant | null> {
-  const sectors = await db
-    .collection("corporateSectors")
+  const sectors = await corporateSectorsCollection<Document>(db)
     .find({ sectorType: "media", stateId, mothballed: { $ne: true } })
     .project<{ corporationId: unknown; revenue?: number; realizedRevenue?: number }>({
       corporationId: 1,

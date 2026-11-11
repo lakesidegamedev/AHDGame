@@ -33,6 +33,7 @@ import { abandonBankImpact } from "@/lib/banking/capacityAllocation";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 interface RouteParams {
   params: Promise<{ id: string; sectorId: string }>;
@@ -70,12 +71,10 @@ export async function abandonSector(request: Request, { params }: RouteParams) {
     }
 
     // A financial sector feeds a deposit-taking bank's branch network; abandoning one lowers the deposit ceiling, so the CEO confirms the impact first.
-    const preview = await db
-      .collection<CorporateSector>("corporateSectors")
-      .findOne(
-        { _id: new ObjectId(sectorId), corporationId: corporation._id },
-        { projection: { sectorType: 1 } }
-      );
+    const preview = await corporateSectorsCollection(db).findOne(
+      { _id: new ObjectId(sectorId), corporationId: corporation._id },
+      { projection: { sectorType: 1 } }
+    );
     if (preview) {
       const impact = await abandonBankImpact(db, corporation, preview);
       const body = (await request.json().catch(() => null)) as {
@@ -99,7 +98,7 @@ export async function abandonSector(request: Request, { params }: RouteParams) {
     // Reserve the sector without deleting it: the property marker makes this the sole abandon winner, excludes concurrent construction claims, and lets the idempotent pool restore delete only after its credit is durable. One atomic findOneAndUpdate; only refusal path pays a read to explain why.
     const sectorIdHex = new ObjectId(sectorId).toHexString();
     const transitionKey = `restore:${sectorIdHex}`;
-    const sectors = db.collection<CorporateSector>("corporateSectors");
+    const sectors = corporateSectorsCollection(db);
     const sectorIdFilter = { _id: new ObjectId(sectorId), corporationId: corporation._id };
 
     let sector = await sectors.findOneAndUpdate(

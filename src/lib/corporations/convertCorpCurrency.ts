@@ -15,6 +15,7 @@ import {
   releaseConstructionPropertyTransition,
 } from "@/lib/corporations/securedConstructionProperty";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export type ConvertCorpCurrencyResult = ConvertCorpCurrencySuccess | ConvertCorpCurrencyError;
 
@@ -147,10 +148,7 @@ export async function convertCorpCurrency(
   // refuse the denomination change without first mutating unrelated accounts.
   const sectors =
     sectorSnapshot ??
-    (await db
-      .collection<CorporateSector>("corporateSectors")
-      .find({ corporationId: corp._id })
-      .toArray());
+    (await corporateSectorsCollection(db).find({ corporationId: corp._id }).toArray());
   if (hasProtectedConstructionPropertyIn(sectors)) {
     return {
       ok: false,
@@ -335,9 +333,7 @@ export async function convertCorpCurrency(
       }
       corpWriteApplied = true;
       if (sectorOps.length > 0) {
-        const bulkResult = await db
-          .collection<CorporateSector>("corporateSectors")
-          .bulkWrite(sectorOps, sessionOpts);
+        const bulkResult = await corporateSectorsCollection(db).bulkWrite(sectorOps, sessionOpts);
         // A matchedCount shortfall means sectors exist in the DB that we fetched
         // but the bulkWrite didn't touch — the corp's liquidCurrencyCode would be
         // flipped while those sectors retain old-currency revenue values, inflating
@@ -364,7 +360,7 @@ export async function convertCorpCurrency(
         try {
           // An ordered bulkWrite can apply an arbitrary prefix before throwing.
           // Restore every fetched sector, not just the reported matched count.
-          await db.collection<CorporateSector>("corporateSectors").bulkWrite(restoreSectorOps);
+          await corporateSectorsCollection(db).bulkWrite(restoreSectorOps);
         } catch (revertError) {
           revertErrors.push(revertError);
           Sentry.captureException(revertError as Error);

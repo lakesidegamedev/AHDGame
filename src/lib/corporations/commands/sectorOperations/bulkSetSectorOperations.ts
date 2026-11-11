@@ -31,6 +31,7 @@ import { logEconomicAction } from "@/lib/corporations/economicActionLog";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { ownerRestartFields } from "@/lib/corporations/commands/sectorOperations/ownerRestart";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -119,7 +120,7 @@ export async function bulkSetSectorOperations(request: Request, { params }: Rout
     const filter: Record<string, unknown> = { corporationId: corporation._id, countryId };
     if (sectorType) filter.sectorType = sectorType;
 
-    const sectors = await db.collection<CorporateSector>("corporateSectors").find(filter).toArray();
+    const sectors = await corporateSectorsCollection(db).find(filter).toArray();
 
     if (sectors.length === 0) {
       return NextResponse.json({ success: true, preview, matchedCount: 0, stateIds: [] });
@@ -269,7 +270,7 @@ export async function bulkSetSectorOperations(request: Request, { params }: Rout
       if (clampedPosture !== undefined) set.pricingPosture = clampedPosture;
       return { updateOne: { filter: { _id: s._id }, update: { $set: set } } };
     });
-    await db.collection<CorporateSector>("corporateSectors").bulkWrite(ops);
+    await corporateSectorsCollection(db).bulkWrite(ops);
 
     const typeLabel = sectorType ? OPERATING_SECTOR_TYPE_LABELS[sectorType] : "all sectors";
     const parts: string[] = [];
@@ -344,7 +345,7 @@ async function bulkSetCapacity(
     countryId: scope.countryId,
   };
   if (scope.sectorType) filter.sectorType = scope.sectorType;
-  const sectors = await db.collection<CorporateSector>("corporateSectors").find(filter).toArray();
+  const sectors = await corporateSectorsCollection(db).find(filter).toArray();
   const needsChange = sectors.filter(
     (s) => (s.mothballed === true) !== mothballed || (s.activeCapacityPercent ?? 100) !== 100
   );
@@ -362,7 +363,7 @@ async function bulkSetCapacity(
 
   const now = new Date();
   const currentTurn = await getCurrentTurn(db).catch(() => 0);
-  const result = await db.collection<CorporateSector>("corporateSectors").bulkWrite(
+  const result = await corporateSectorsCollection(db).bulkWrite(
     eligible.map((s) => ({
       updateOne: {
         filter: {

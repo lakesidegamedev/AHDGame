@@ -7,6 +7,7 @@ import type {
 } from "@/lib/db/types";
 import type { NationalizationTrigger } from "./eligibility";
 import { matchActiveNationalizationBills } from "./corpNationalizationThreat";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 const CURABLE: ReadonlySet<NationalizationTrigger> = new Set(["strategic", "monopoly"]);
 
@@ -50,8 +51,7 @@ export async function buildCorpNationalizationStatus(
   corp: Corporation,
   currentTurn: number
 ): Promise<CorpNationalizationStatus> {
-  const sectorDocs = await db
-    .collection<CorporateSector>("corporateSectors")
+  const sectorDocs = await corporateSectorsCollection(db)
     .find({ corporationId: corp._id })
     .project<{ _id: ObjectId; sectorType: string }>({ _id: 1, sectorType: 1 })
     .toArray();

@@ -29,6 +29,7 @@ import { emitTx } from "@/lib/financialTxLog/emit";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 const attackSectorSchema = z.object({ sectorId: z.string().length(24) });
 
@@ -117,9 +118,10 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(400, "You don't own a corporation");
     }
 
-    const targetSector = await db
-      .collection<CorporateSector>("corporateSectors")
-      .findOne({ _id: targetSectorId, stateId });
+    const targetSector = await corporateSectorsCollection(db).findOne({
+      _id: targetSectorId,
+      stateId,
+    });
     if (!targetSector) {
       return errorResponse(404, "Sector not found");
     }
@@ -129,7 +131,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const defender = await corporationsCollection(db).findOne({ _id: targetSector.corporationId });
     if (!defender) {
-      await db.collection<CorporateSector>("corporateSectors").deleteOne({ _id: targetSector._id });
+      await corporateSectorsCollection(db).deleteOne({ _id: targetSector._id });
       return errorResponse(
         404,
         "That corporation has been dissolved. Its sector record was removed; refresh this market."

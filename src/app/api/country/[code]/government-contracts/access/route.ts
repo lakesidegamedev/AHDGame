@@ -21,6 +21,7 @@ import { extractionCapacityQuote } from "@/lib/governmentContracts/rules/present
 import { defenceContractWindow } from "@/lib/military/defenceContractLimits";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 export async function GET(request: Request, { params }: { params: Promise<{ code: string }> }) {
   try {
     const { code } = await params;
@@ -144,8 +145,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
           .toArray()
       : [];
     const sectors = corps.length
-      ? await db
-          .collection<CorporateSector>("corporateSectors")
+      ? await corporateSectorsCollection(db)
           .find(
             { corporationId: { $in: corps.map((c) => c._id) } },
             { projection: { corporationId: 1, stateId: 1, sectorType: 1, strategyId: 1 } }

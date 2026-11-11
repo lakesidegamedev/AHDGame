@@ -77,6 +77,7 @@ import type { CorporateSector } from "@/lib/db/types";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export async function processBillVoting(ctx: NPPContext): Promise<number> {
   const {
@@ -278,8 +279,7 @@ export async function processBillVoting(ctx: NPPContext): Promise<number> {
       .toArray();
     const sectors =
       corporations.length > 0
-        ? await db
-            .collection<CorporateSector>("corporateSectors")
+        ? await corporateSectorsCollection(db)
             .find(
               { corporationId: { $in: corporations.map((c) => c._id) } },
               {

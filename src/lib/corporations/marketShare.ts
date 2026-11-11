@@ -36,6 +36,7 @@ import {
   computeUnownedHeadroomUnits,
 } from "@/lib/market/unownedHeadroom";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 type MarketIdentity = {
   sectorType: CorporateSector["sectorType"];
@@ -610,8 +611,7 @@ export async function fetchSectorMarketSharePercent(
       { _id: sector.stateId },
       { projection: { _id: 1, gdp: 1, countryId: 1 } }
     ),
-    db
-      .collection<CorporateSector>("corporateSectors")
+    corporateSectorsCollection(db)
       .find(
         marketIdentityQuery(
           sector.stateId,
@@ -699,8 +699,7 @@ export async function fetchCorporationNationalSectorSharesByCountry(
   const stateIds = [...countryByStateId.keys()];
   if (stateIds.length === 0) return result;
 
-  const nationalSectors = await db
-    .collection<CorporateSector>("corporateSectors")
+  const nationalSectors = await corporateSectorsCollection(db)
     .find(
       {
         $or: stateIds.flatMap((stateId) =>
@@ -777,16 +776,14 @@ export async function fetchSectorCompetitorCount(
   owningCorporationId: Corporation["_id"]
 ): Promise<number | null> {
   try {
-    const corpIds = await db
-      .collection<CorporateSector>("corporateSectors")
-      .distinct("corporationId", {
-        ...marketIdentityQuery(
-          sector.stateId,
-          sector.sectorType,
-          sector.industryModel,
-          sector.mediaDiscriminator
-        ),
-      });
+    const corpIds = await corporateSectorsCollection(db).distinct("corporationId", {
+      ...marketIdentityQuery(
+        sector.stateId,
+        sector.sectorType,
+        sector.industryModel,
+        sector.mediaDiscriminator
+      ),
+    });
     const own = owningCorporationId?.toString();
     return corpIds.filter((id) => id != null && id.toString() !== own).length;
   } catch {
@@ -831,8 +828,7 @@ export async function fetchMarketSharePercentForSectors(
   // Sibling sectors across the spanned buckets (a superset; buildMarketShareBySectorId
   // buckets precisely by (state, sectorType), so non-target buckets don't pollute).
   const [siblingSectors, unownedDocs, states, fxByCurrency, preset] = await Promise.all([
-    db
-      .collection<CorporateSector>("corporateSectors")
+    corporateSectorsCollection(db)
       .find(
         { $or: bucketFilters },
         {
@@ -907,8 +903,7 @@ export async function fetchAttackerDefenderShares(
       { _id: targetSector.stateId },
       { projection: { _id: 1, gdp: 1, countryId: 1 } }
     ),
-    db
-      .collection<CorporateSector>("corporateSectors")
+    corporateSectorsCollection(db)
       .find(
         marketIdentityQuery(
           targetSector.stateId,

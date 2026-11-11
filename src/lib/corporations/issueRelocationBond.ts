@@ -32,6 +32,7 @@ import {
 import { errorResponse } from "@/lib/api/errors";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 /** Relocation bond uses the longest corporate tenor (7yr = 336 turns). */
 export const RELOCATION_BOND_MATURITY_TURNS: BondMaturityTurns = 336;
@@ -94,8 +95,7 @@ export async function previewRelocationBond(
   const fxByCurrency = fxByCurrencyOverride ?? (await loadFxRatesByCurrency(db));
   const existingDebt = sumBondPrincipalAnchor(existingBonds, fxByCurrency);
 
-  const sectors = await db
-    .collection<CorporateSector>("corporateSectors")
+  const sectors = await corporateSectorsCollection(db)
     .find({ corporationId: corporation._id })
     .toArray();
   const centralBanks =

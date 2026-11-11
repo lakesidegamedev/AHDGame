@@ -20,6 +20,7 @@ import { scopeNeutralBook } from "./shadowCarryRules";
 import { producerCashTransition, type ProducerCashBinding } from "./cashSettlementRules";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 type EconomyInput = Parameters<typeof advanceProducerEconomy>[0];
 export type EconomyResult = ReturnType<typeof advanceProducerEconomy>;
@@ -264,7 +265,7 @@ async function verifyPhysicalTargets(
   // Projected reads verify all sectors and the corporations that own them now
   // before any cash lands. The ownership read follows the sector read because
   // a mid-turn transfer can name a corporation the plan never saw.
-  const sectors = db.collection<CorporateSector>("corporateSectors");
+  const sectors = corporateSectorsCollection(db);
   const existing = await sectors
     .find(
       { _id: { $in: frozen.targets.map((t) => new ObjectId(t.sectorId)) } },
@@ -688,7 +689,7 @@ export async function settleProducerTurn(
   const verification = await verifyPhysicalTargets(db, frozen);
   clock.lap("verifyPhysicalAgainMs");
   const prepared = redirectFrozenOwnerCash(frozen, verification.cashRedirect);
-  const sectors = db.collection<CorporateSector>("corporateSectors");
+  const sectors = corporateSectorsCollection(db);
   const capacities = new Map(frozen.capacities.map((row) => [row.producerId, row.closing]));
   const openingInventories = inventoryImages(frozen, false);
   const closingInventories = inventoryImages(frozen, true);

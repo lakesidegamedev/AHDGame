@@ -2,6 +2,7 @@ import { ObjectId, type Db } from "mongodb";
 import type { Corporation, CorporateSector } from "@/lib/db/types/corporation";
 import { resolveSelfDealing, type SelfDealingBasis } from "@/lib/military/defenceSelfDealing";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 /**
  * A defence supplier the minister has a stake in, OTHER than the one in front of them.
@@ -58,8 +59,7 @@ export async function findCompetingSupplierInterest(
   // Only corporations with a defence plant compete for this order. One query for the whole
   // candidate set rather than one per candidate: a minister with a broad portfolio would
   // otherwise turn a single cancellation into a dozen round trips.
-  const defenceSectors = await db
-    .collection<CorporateSector>("corporateSectors")
+  const defenceSectors = await corporateSectorsCollection(db)
     .find({
       corporationId: { $in: candidates.map((c) => c._id) },
       sectorType: "defense",

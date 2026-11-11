@@ -46,6 +46,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 export {
   summarizeLedgerTurnover,
   computeEconomicVitalSigns,
@@ -262,8 +263,7 @@ export async function snapshotEconomicVitalSigns(
     // readings, and the market-formation identity fields below. An exclusion
     // projection still decoded every other scalar on ~4,500 sectors; this
     // explicit read contract cuts the local payload from ~6.6MB to ~1.8MB.
-    db
-      .collection<CorporateSector>("corporateSectors")
+    corporateSectorsCollection(db)
       .find(
         {},
         {

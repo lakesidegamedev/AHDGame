@@ -6,6 +6,7 @@ import { commandEconomySoeSectors, isCommandEconomy } from "@/lib/constants/comm
 import { getStartingYearForPreset } from "@/lib/constants/turnTime";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export interface CommandEconomyCountryReport {
   countryId: CountryId;
@@ -105,8 +106,7 @@ export async function verifyCommandEconomySeed(
       corporationsCollection(db)
         .find({ countryId, soe: { $exists: true } }, { projection: { soe: 1 } })
         .toArray(),
-      db
-        .collection<CorporateSector>("corporateSectors")
+      corporateSectorsCollection(db)
         .find({ countryId }, { projection: { corporationId: 1 } })
         .toArray(),
       corporationsCollection(db).findOne(

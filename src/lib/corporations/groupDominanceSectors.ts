@@ -15,6 +15,7 @@ import {
 import type { CommodityDominanceSector } from "@/lib/corporations/rules/commodityDominance";
 import { controlGroupRootByCorpId } from "@/lib/corporations/groups/controlGroups";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export async function loadGroupDominanceSectorResolver(
   db: Db,
@@ -28,8 +29,7 @@ export async function loadGroupDominanceSectorResolver(
     corporationsCollection(db)
       .find({}, { projection: { shareholders: 1, totalShares: 1, superShareMultiplier: 1 } })
       .toArray(),
-    db
-      .collection<CorporateSector>("corporateSectors")
+    corporateSectorsCollection(db)
       .find({}, { projection: { ...FIRM_SECTOR_PROJECTION, corporationId: 1 } })
       .toArray(),
   ]);

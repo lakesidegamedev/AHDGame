@@ -38,6 +38,7 @@ import {
 } from "./rules/cashoutLimits";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export async function loadEquityCashoutLimitsStage(db: Db): Promise<number> {
   const config = await db
@@ -107,8 +108,7 @@ export async function loadCorpBookBasisById(
     corporationsCollection(db)
       .find({ _id: { $in: ids } }, { projection: BASIS_CORP_PROJECTION })
       .toArray() as Promise<BasisCorp[]>,
-    db
-      .collection<CorporateSector>("corporateSectors")
+    corporateSectorsCollection(db)
       .find(
         { corporationId: { $in: ids } },
         {

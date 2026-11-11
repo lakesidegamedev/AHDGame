@@ -22,6 +22,7 @@ import { plantSizeMongoExpr } from "@/lib/constants/facilityQuantum";
 import { getStatesCollection } from "@/lib/db/collections/states";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import type { Document } from "mongodb";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 // Max per-year revenue boost applied to the most distressed sector type (linearly
 // scaled down the distress ranking). Raised 0.02 → 0.06 (audit t786): at 0.02 the
@@ -42,8 +43,7 @@ const AUTO_SEED_MAX_BOOST = 0.06;
  * claimable than anyone has actually built".
  */
 async function loadOwnedCapacityByBucket(db: Db): Promise<Map<string, number>> {
-  const rows = await db
-    .collection("corporateSectors")
+  const rows = await corporateSectorsCollection<Document>(db)
     .aggregate<{
       _id: {
         stateId: string;
@@ -215,7 +215,9 @@ export async function processAutoSectorSeed(
       // Per document: natcorps of one lane can run recipes of different plant sizes.
       const quantum = plantSizeMongoExpr({ sectorType, industryModel, mediaDiscriminator });
       const boostedStock = { $multiply: [{ $ifNull: ["$capitalStock", 0] }, multiplier] };
-      const { modifiedCount: natModified } = await db.collection("corporateSectors").updateMany(
+      const { modifiedCount: natModified } = await corporateSectorsCollection<Document>(
+        db
+      ).updateMany(
         {
           sectorType,
           industryModel,

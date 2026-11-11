@@ -6,6 +6,7 @@ import type { CorporationType, OperatingSectorType } from "@/lib/constants/corpo
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 /**
  * Enriched, display-ready view of one open privatization auction (spec §13.3).
@@ -109,8 +110,7 @@ export async function buildAuctionListings(
         sharePrice: 1,
       })
       .toArray(),
-    db
-      .collection<CorporateSector>("corporateSectors")
+    corporateSectorsCollection(db)
       .find({ corporationId: { $in: corpIds } })
       .toArray(),
   ]);

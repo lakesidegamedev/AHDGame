@@ -2,6 +2,7 @@ import type { Db, ObjectId } from "mongodb";
 import type { Bill, Corporation, CorporateSector, PendingNationalization } from "@/lib/db/types";
 import type { BillStatus, NationalizeProvision } from "@/lib/db/types/legislation";
 import { inferCountryIdFromStateId } from "@/lib/congress/resolveBillCountryId";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 /**
  * Bill statuses that count as "still in process" — a nationalization bill in one
@@ -103,8 +104,7 @@ export async function buildCorpNationalizationThreat(
   corp: Corporation,
   currentTurn: number
 ): Promise<CorpNationalizationThreat | null> {
-  const sectors = await db
-    .collection<CorporateSector>("corporateSectors")
+  const sectors = await corporateSectorsCollection(db)
     .find({ corporationId: corp._id }, { projection: { _id: 1, sectorType: 1 } })
     .toArray();
   const sectorIds = sectors.map((s) => s._id);

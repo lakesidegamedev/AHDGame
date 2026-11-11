@@ -23,6 +23,7 @@ import { type FxScalePair, loadFxScalePair } from "@/lib/country/mergeFxScale";
 import { convertCorpCurrency } from "@/lib/corporations/convertCorpCurrency";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export async function convertTransferredResidentsCurrency(
   db: Db,
@@ -50,8 +51,7 @@ export async function convertTransferredResidentsCurrency(
     .find({ headquartersState: regionId, countryId: toCountryId })
     .toArray();
   const securedSectors = strict
-    ? await db
-        .collection<CorporateSector>("corporateSectors")
+    ? await corporateSectorsCollection(db)
         .find(
           { corporationId: { $in: corps.map((corp) => corp._id) } },
           {

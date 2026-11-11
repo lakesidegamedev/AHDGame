@@ -8,6 +8,7 @@ import {
   type EnactedSectorTaking,
 } from "./enactedSectorTaking";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 /**
  * `(stateId:sectorType)` key for a market bucket. Shared format across the
@@ -206,8 +207,7 @@ type CorpSectorBucketFields = Pick<
 >;
 
 async function loadCorpSectorBucketFields(db: Db): Promise<CorpSectorBucketFields[]> {
-  return db
-    .collection<CorporateSector>("corporateSectors")
+  return corporateSectorsCollection(db)
     .find(
       {},
       {
@@ -271,8 +271,7 @@ type OwnedSectorMergeFields = Pick<
 >;
 
 async function loadOwnedSectorMergeFields(db: Db): Promise<OwnedSectorMergeFields[]> {
-  return db
-    .collection<CorporateSector>("corporateSectors")
+  return corporateSectorsCollection(db)
     .find(
       {},
       {

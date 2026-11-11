@@ -25,6 +25,7 @@ import { getExtractionOutputScaleEnabled } from "@/lib/market/featureFlag";
 import type { GameConfig } from "@/lib/db/types";
 import type { ExtractableResource } from "@/lib/constants/commodities";
 import type { OperatingSectorType } from "@/lib/constants/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export async function computeSectorExtractionCapacityContext(
   db: Db,
@@ -73,8 +74,7 @@ export async function computeSectorExtractionCapacityContext(
           .collection<ExtractionContract>("extractionContracts")
           .find({ stateId: sector.stateId, ...activeExtractionContractFilter() })
           .toArray(),
-        db
-          .collection<CorporateSector>("corporateSectors")
+        corporateSectorsCollection(db)
           .find({ stateId: sector.stateId, sectorType: "extraction" })
           .project({ _id: 1, corporationId: 1, stateId: 1, revenue: 1, strategyId: 1 })
           .toArray(),

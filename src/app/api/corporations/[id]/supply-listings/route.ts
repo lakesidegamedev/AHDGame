@@ -28,6 +28,7 @@ import {
 } from "@/lib/corporations/supplyExchange/rules/deliveryReach";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 type Context = { params: Promise<{ id: string }> };
 const privateHeaders = { "Cache-Control": "private, no-store" };
@@ -77,8 +78,7 @@ export async function GET(request: Request, context: Context) {
         .find({ corporationId: a.corp._id, expiresAtTurn: { $gt: turn } })
         .limit(10)
         .toArray(),
-      a.db
-        .collection<CorporateSector>("corporateSectors")
+      corporateSectorsCollection(a.db)
         .find({ corporationId: a.corp._id }, { projection: REACH_SECTOR_PROJECTION })
         .toArray(),
     ]);

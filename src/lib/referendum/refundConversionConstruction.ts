@@ -26,6 +26,7 @@ import { cancelConversionUnderwriting } from "@/lib/banking/cancelConversionUnde
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { loadWholePlantsOn } from "@/lib/corporations/wholePlants/stage";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 async function cancelSecuredBuild(
   db: Db,
@@ -68,9 +69,10 @@ async function cancelSecuredBuild(
       borrower: borrower.snapshot,
     });
     if (!settled.ok) throw new Error(settled.error);
-    const updated = await db
-      .collection<CorporateSector>("corporateSectors")
-      .findOne({ _id: sector._id }, { projection: { constructionFinancing: 1 } });
+    const updated = await corporateSectorsCollection(db).findOne(
+      { _id: sector._id },
+      { projection: { constructionFinancing: 1 } }
+    );
     claim = updated!.constructionFinancing!;
   }
   if (claim.status === "building" && !(await releaseCompletedConstructionFunding(db, claim)))
@@ -99,8 +101,7 @@ export async function refundConversionConstruction(
     .find({ $or: [{ headquartersState: regionId }, { _id: { $in: incomingCorporationIds } }] })
     .toArray();
   const ids = corporations.map((corp) => corp._id);
-  const sectors = await db
-    .collection<CorporateSector>("corporateSectors")
+  const sectors = await corporateSectorsCollection(db)
     .find(
       { $or: [{ stateId: regionId }, { corporationId: { $in: ids } }] },
       {
@@ -150,7 +151,7 @@ export async function refundConversionConstruction(
     )
     .map((sector) => sector._id);
   if (pendingIds.length) {
-    const unlisted = await db.collection<CorporateSector>("corporateSectors").updateMany(
+    const unlisted = await corporateSectorsCollection(db).updateMany(
       {
         _id: { $in: pendingIds },
         constructionPropertyTransition: { $exists: false },
@@ -185,8 +186,7 @@ export async function refundConversionConstruction(
     }
   };
   for (const sector of sectors) await settleSecured(sector);
-  const currentSectors = await db
-    .collection<CorporateSector>("corporateSectors")
+  const currentSectors = await corporateSectorsCollection(db)
     .find(
       { _id: { $in: sectors.map((sector) => sector._id) } },
       {
@@ -276,7 +276,7 @@ export async function refundConversionConstruction(
       });
   }
   if (sectorOps.length) {
-    const result = await db.collection<CorporateSector>("corporateSectors").bulkWrite(sectorOps);
+    const result = await corporateSectorsCollection(db).bulkWrite(sectorOps);
     if (result.matchedCount !== sectorOps.length)
       throw new Error("Construction queues changed during conversion");
   }

@@ -26,6 +26,7 @@ import { sectorEconomicRevenue } from "@/lib/corporations/sectorRevenueBasis";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 // The six commodity types shown in the PiP Corp view
 const PIP_COMMODITIES: CommodityType[] = [
@@ -78,8 +79,7 @@ export async function GET() {
     // corps with heterogeneous liquidCurrencyCode (v0.2.6), so sum in ₳.
     const topCorpIds = topCorpDocs.map((c) => c._id);
     const [allSectors, fxByCurrency] = await Promise.all([
-      db
-        .collection<CorporateSector>("corporateSectors")
+      corporateSectorsCollection(db)
         .find({ corporationId: { $in: topCorpIds } })
         .project<{ corporationId: ObjectId; revenue: number; realizedRevenue?: number }>({
           corporationId: 1,
@@ -141,8 +141,7 @@ export async function GET() {
       });
 
       if (corp) {
-        const sectors = await db
-          .collection<CorporateSector>("corporateSectors")
+        const sectors = await corporateSectorsCollection(db)
           .find({ corporationId: corp._id })
           .project<Pick<CorporateSector, "revenue" | "realizedRevenue">>({
             revenue: 1,

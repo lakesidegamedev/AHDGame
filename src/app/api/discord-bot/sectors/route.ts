@@ -30,6 +30,7 @@ import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 const PAGE_SIZE = 10;
 
@@ -102,7 +103,7 @@ export async function GET(request: Request) {
       // state+sector combos that have never been seeded. Matches the pattern in
       // /api/discord-bot/marketshare and /api/corporations/.../sectors.
       const [ownedSectors, persistedUnowned, fxByCurrency, worldPreset] = await Promise.all([
-        db.collection<CorporateSector>("corporateSectors").find(laneFilter).toArray(),
+        corporateSectorsCollection(db).find(laneFilter).toArray(),
         db.collection<UnownedSector>("unownedSectors").find(laneFilter).toArray(),
         loadFxRatesByCurrency(db),
         loadWorldPreset(db),
@@ -199,10 +200,7 @@ export async function GET(request: Request) {
     // Can't use db-level .sort({ revenue: -1 }) — sector.revenue is per-corp local
     // (v0.2.6), so comparing raw magnitudes mixes currencies. Fetch all, resolve
     // FX per corp, sort by anchor revenue, paginate in memory.
-    const allSectors = await db
-      .collection<CorporateSector>("corporateSectors")
-      .find(laneFilter)
-      .toArray();
+    const allSectors = await corporateSectorsCollection(db).find(laneFilter).toArray();
 
     const totalItems = allSectors.length;
     const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));

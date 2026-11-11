@@ -33,6 +33,7 @@ import {
 } from "@/lib/corporations/groups/controlGroups";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 /** gameConfig.groupSizeCostsStage at which the commodity toll reads the whole control group. */
 export const GROUP_DOMINANCE_TOLL_STAGE = 2;
@@ -190,8 +191,7 @@ export async function loadCommodityDominanceContext(
       args.corporation._id,
       typeof config?.groupSizeCostsStage === "number" ? config.groupSizeCostsStage : 0
     );
-    const rows = await db
-      .collection<CorporateSector>("corporateSectors")
+    const rows = await corporateSectorsCollection(db)
       .find({ corporationId: { $in: corporationIds } }, { projection: FIRM_SECTOR_PROJECTION })
       .toArray();
     const commandEconomyEnabled = config?.commandEconomyEnabled === true;

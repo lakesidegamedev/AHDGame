@@ -20,6 +20,7 @@ import {
   loadFxRatesByCurrency,
   resolveSectorHostCurrencyCode,
 } from "@/lib/currency/corporationCapital";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 /**
  * A corporation's daily gross revenue, expressed in the corp's OWN currency.
@@ -158,8 +159,7 @@ export async function corpDailyGrossRevenuePricingLocal(
   corp: Pick<Corporation, "_id"> & TechBasisCorp
 ): Promise<CorpDailyGrossRevenuePricing> {
   const [sectors, plantsEnabled, eraUnitScale, fxByCurrency] = await Promise.all([
-    db
-      .collection<CorporateSector>("corporateSectors")
+    corporateSectorsCollection(db)
       .find(
         { corporationId: corp._id },
         {

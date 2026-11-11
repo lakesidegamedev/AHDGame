@@ -19,6 +19,7 @@ import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
 import { groupRegionFootprint } from "./rules/overview";
 import { resolveFormalizedGroups } from "./groupMembership";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export interface GroupMemberSummary {
   corporationId: string;
@@ -76,8 +77,7 @@ export async function loadGroupBalanceSheet(
   if (corps.length === 0) return null;
 
   const [sectors, fxByCurrency] = await Promise.all([
-    db
-      .collection<CorporateSector>("corporateSectors")
+    corporateSectorsCollection(db)
       .find({ corporationId: { $in: corps.map((c) => c._id) } })
       .project<
         Pick<CorporateSector, "corporationId" | "sectorType" | "stateId" | "countryId" | "revenue">

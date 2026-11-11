@@ -55,6 +55,7 @@ import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -162,8 +163,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
       "dissolutionInProgressAt",
       now,
       async () => {
-        const sectors = await db
-          .collection<CorporateSector>("corporateSectors")
+        const sectors = await corporateSectorsCollection(db)
           .find({ corporationId: corporation._id })
           .toArray();
         if (!(await reserveSectorsForRestore(db, sectors))) {

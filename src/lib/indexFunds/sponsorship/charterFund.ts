@@ -35,6 +35,7 @@ import {
 } from "./constants";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 const FUND_TX = "indexFundTransactions";
 
@@ -203,8 +204,10 @@ async function commitCharter(
         error: "Pick public companies at home that you do not control.",
       };
   }
-  const sectors = await db
-    .collection<{ corporationId: ObjectId; sectorType: OperatingSectorType }>("corporateSectors")
+  const sectors = await corporateSectorsCollection<{
+    corporationId: ObjectId;
+    sectorType: OperatingSectorType;
+  }>(db)
     .find({ corporationId: sponsor._id }, { projection: { sectorType: 1 } })
     .toArray();
   const invalid = validateCharter(

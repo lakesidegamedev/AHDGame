@@ -21,6 +21,7 @@ import {
   supplyReachMessage,
 } from "./rules/deliveryReach";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 /**
  * Gates shared by every way a supply contract can be opened or changed:
@@ -165,8 +166,7 @@ export async function checkSupplyAgreementReach(
   }
 ): Promise<string | null> {
   const [sectors, world] = await Promise.all([
-    db
-      .collection<CorporateSector>("corporateSectors")
+    corporateSectorsCollection(db)
       .find({ corporationId: args.buyer._id }, { projection: REACH_SECTOR_PROJECTION })
       .toArray(),
     gameStateCollection(db).findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),

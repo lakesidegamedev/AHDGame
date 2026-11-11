@@ -6,6 +6,7 @@ import { corporationQueryFromParamId } from "@/lib/api/corporations/resolveQuery
 import { toCountryId } from "./countryContext";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 function readQueryCountry(search?: string | null) {
   if (!search) return null;
@@ -64,12 +65,10 @@ export async function resolveNavbarPageCountry(args: { pathname: string; search?
     return corporationCountry;
   }
 
-  const sector = await db
-    .collection<CorporateSector>("corporateSectors")
-    .findOne(
-      { _id: new ObjectId(sectorId), corporationId: corporation._id },
-      { projection: { countryId: 1, stateId: 1 } }
-    );
+  const sector = await corporateSectorsCollection(db).findOne(
+    { _id: new ObjectId(sectorId), corporationId: corporation._id },
+    { projection: { countryId: 1, stateId: 1 } }
+  );
 
   const sectorCountry = toCountryId(sector?.countryId);
   if (sectorCountry) return sectorCountry;

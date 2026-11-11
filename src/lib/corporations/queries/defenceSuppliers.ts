@@ -13,6 +13,7 @@ import { loadDefencePriceRatios } from "@/lib/military/defencePriceRatios";
 import { listOpenContracts } from "@/lib/db/collections/defenceContracts";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 /** One plant the defence minister could award a contract to. */
 export interface DefenceSupplierView {
@@ -87,8 +88,7 @@ export async function listDefenceSuppliers(
   const eligibleCorps = corps.filter((c) => canSupply(c, countryId));
   if (eligibleCorps.length === 0) return [];
 
-  const sectors = await db
-    .collection<CorporateSector>("corporateSectors")
+  const sectors = await corporateSectorsCollection(db)
     .find({
       sectorType: "defense",
       corporationId: { $in: eligibleCorps.map((c) => c._id) },

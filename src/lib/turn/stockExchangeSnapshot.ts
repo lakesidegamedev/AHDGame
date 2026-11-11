@@ -83,6 +83,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import type { Document } from "mongodb";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 const EXCHANGE_NAMES: Record<string, string> = getExchangeNamesMap();
 
@@ -305,8 +306,7 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
       });
 
       const [allSectors, historyRows] = await Promise.all([
-        database
-          .collection<CorporateSector>("corporateSectors")
+        corporateSectorsCollection(database)
           .find(
             { corporationId: { $in: corpIds } },
             {

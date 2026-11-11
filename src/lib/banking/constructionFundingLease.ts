@@ -8,6 +8,7 @@ import { releaseConstructionAdmission } from "./constructionAdmission";
 import { MONEY_MOVE_COLLECTION } from "./moneyMove";
 import { resumeSettlement, settleTransition } from "./settlementJournal";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export async function acquireConstructionFundingLease(
   db: Db,
@@ -90,9 +91,10 @@ export async function abortUnfundedConstruction(
     if (!unfunded && (recovered.error || !["applied", "replayed"].includes(recovered.status)))
       return false;
   }
-  const sector = await db
-    .collection<CorporateSector>("corporateSectors")
-    .findOne({ _id: sectorId }, { projection: { constructionFinancing: 1 } });
+  const sector = await corporateSectorsCollection(db).findOne(
+    { _id: sectorId },
+    { projection: { constructionFinancing: 1 } }
+  );
   const current = sector?.constructionFinancing;
   if (!current || current.claimId !== claim.claimId || current.loanFunded) return false;
   if (!Number.isFinite(current.escrowLocal) || current.escrowLocal < 0) return false;
@@ -217,7 +219,7 @@ export async function releaseCompletedConstructionFunding(
     },
     { $unset: { constructionSettlementOwner: "" } }
   );
-  await db.collection<CorporateSector>("corporateSectors").updateOne(
+  await corporateSectorsCollection(db).updateOne(
     {
       "constructionFinancing.claimId": claim.claimId,
       "constructionFinancing.loanId": claim.loanId,

@@ -34,6 +34,7 @@ import {
   type PlantSectorSplitQuote,
 } from "@/lib/corporations/plantSectorSplit";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export interface SplitResolution {
   quote: PlantSectorSplitQuote;
@@ -107,14 +108,15 @@ export async function attemptPlantSectorSplit(
         { _id: attacker._id },
         { session }
       );
-      const freshTarget = await db
-        .collection<CorporateSector>("corporateSectors")
-        .findOne({ _id: targetSectorId, stateId, corporationId: defender._id }, { session });
+      const freshTarget = await corporateSectorsCollection(db).findOne(
+        { _id: targetSectorId, stateId, corporationId: defender._id },
+        { session }
+      );
       const freshDefender = await corporationsCollection(db).findOne(
         { _id: defender._id },
         { session }
       );
-      const existingOwnSector = await db.collection<CorporateSector>("corporateSectors").findOne(
+      const existingOwnSector = await corporateSectorsCollection(db).findOne(
         {
           stateId,
           sectorType: targetSector.sectorType,
@@ -247,7 +249,7 @@ export async function attemptPlantSectorSplit(
         bookValueTransferredAnchor = defenderBookValueAnchor * transferFraction;
         const now = new Date();
 
-        const targetWrite = await db.collection<CorporateSector>("corporateSectors").updateOne(
+        const targetWrite = await corporateSectorsCollection(db).updateOne(
           {
             _id: freshTarget._id,
             plantCount: openingCount,
@@ -277,7 +279,7 @@ export async function attemptPlantSectorSplit(
           );
 
         if (existingOwnSector) {
-          const attackerWrite = await db.collection<CorporateSector>("corporateSectors").updateOne(
+          const attackerWrite = await corporateSectorsCollection(db).updateOne(
             { _id: existingOwnSector._id },
             {
               $inc: {
@@ -317,9 +319,9 @@ export async function attemptPlantSectorSplit(
             updatedAt: now,
           };
           try {
-            await db
-              .collection<CorporateSector>("corporateSectors")
-              .insertOne(newSector as CorporateSector, { session });
+            await corporateSectorsCollection(db).insertOne(newSector as CorporateSector, {
+              session,
+            });
           } catch (error) {
             if (isCorporateSectorDuplicateKey(error)) {
               throw new SplitConflictError("Your sector changed during the split.");

@@ -10,6 +10,7 @@ import { getMarketSystemMode, marketAtLeast } from "@/lib/market/featureFlag";
 import type { Corporation, CorporateSector, GameConfig } from "@/lib/db/types";
 import { PRODUCT_VENTURES } from "./store";
 import type { ProductVenture, VentureDomain } from "./types";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export async function ventureDomainsEnabled(db: Db): Promise<Record<VentureDomain, boolean>> {
   const config = await db.collection<GameConfig>("gameConfig").findOne(
@@ -27,10 +28,7 @@ export async function ventureDomainsEnabled(db: Db): Promise<Record<VentureDomai
 
 export async function loadVentureContext(db: Db, corporation: Corporation) {
   const [sectors, ventures, fxByCurrency, turn, gameState, enabled] = await Promise.all([
-    db
-      .collection<CorporateSector>("corporateSectors")
-      .find({ corporationId: corporation._id })
-      .toArray(),
+    corporateSectorsCollection(db).find({ corporationId: corporation._id }).toArray(),
     db
       .collection<ProductVenture>(PRODUCT_VENTURES)
       .find({ corporationId: corporation._id.toString() })

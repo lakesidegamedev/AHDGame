@@ -22,6 +22,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import type { Document } from "mongodb";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 /**
  * Post-run economy telemetry.
@@ -515,8 +516,7 @@ async function collectCorpHealth(db: Db): Promise<CorpHealthTelemetry> {
     corporationsCollection(db)
       .find({}, { projection: { type: 1, ceoType: 1, liquidCapital: 1, suspended: 1 } })
       .toArray(),
-    db
-      .collection("corporateSectors")
+    corporateSectorsCollection<Document>(db)
       .find(
         {},
         {
@@ -639,8 +639,7 @@ async function collectEraCosts(db: Db): Promise<EraCostTelemetry> {
 
 async function collectCoverage(db: Db): Promise<CoverageTelemetry> {
   const [sectors, commodities, vitalSigns] = await Promise.all([
-    db
-      .collection("corporateSectors")
+    corporateSectorsCollection<Document>(db)
       .find(
         {},
         {
@@ -749,8 +748,7 @@ async function collectCoverage(db: Db): Promise<CoverageTelemetry> {
 
 async function collectMarket(db: Db): Promise<MarketTelemetry> {
   const [sectors, commodities, history, bonds, listings, gs] = await Promise.all([
-    db
-      .collection("corporateSectors")
+    corporateSectorsCollection<Document>(db)
       .find({}, { projection: { soldFraction: 1, priceRealization: 1 } })
       .toArray(),
     db

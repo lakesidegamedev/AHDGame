@@ -21,6 +21,7 @@ import {
 } from "@/lib/market/producerMarket/transitionRules";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import { createNotifications, type NotificationInput } from "@/lib/notifications";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 /** The player behind a corporation, or null for an NPP-run company with no human owner. */
 function humanOwner(corp: Corporation): ObjectId | null {
@@ -134,7 +135,7 @@ export async function markStrugglingTransitionSectors(
     });
   }
 
-  if (ops.length > 0) await db.collection<CorporateSector>("corporateSectors").bulkWrite(ops);
+  if (ops.length > 0) await corporateSectorsCollection(db).bulkWrite(ops);
   if (notices.length > 0) await createNotifications(notices);
   return { marked: reasons.size, owners: notices.length };
 }

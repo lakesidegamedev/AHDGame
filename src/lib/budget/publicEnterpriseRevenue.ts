@@ -35,6 +35,7 @@ import { CORPORATE_SECTOR_LEAN_FIELDS } from "@/lib/db/collections/corporateSect
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 /**
  * Safety ceiling for a SYNTHETIC *scaled* national corp's per-turn budget impact,
@@ -333,8 +334,7 @@ export async function calculateCountryOwnedBudgetRevenue(
 
   const corporationIds = corporations.map((corporation) => corporation._id);
   const [allSectors, fxByCurrency] = await Promise.all([
-    db
-      .collection<CorporateSector>("corporateSectors")
+    corporateSectorsCollection(db)
       .find(
         { corporationId: { $in: corporationIds } },
         { projection: CORPORATE_SECTOR_LEAN_FIELDS }
@@ -458,8 +458,7 @@ export async function estimateCountryOwnedBudgetNetLocal(
 
   const corporationIds = corporations.map((c) => c._id);
   const [allSectors, fxByCurrency] = await Promise.all([
-    db
-      .collection<CorporateSector>("corporateSectors")
+    corporateSectorsCollection(db)
       .find(
         { corporationId: { $in: corporationIds } },
         { projection: CORPORATE_SECTOR_LEAN_FIELDS }

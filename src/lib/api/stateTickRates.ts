@@ -25,6 +25,7 @@ import type { PoliticalMetricId } from "@/lib/politicalMetrics/types";
 import { politicalValueForLegacyMetric } from "@/lib/politicalLegislation/marginAdapter";
 import { legacyValueFromPoliticalScore } from "@/lib/politicalMetrics/derive/legacyInversion";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 const DECAY_FACTOR = getPolicyDecayFactor();
 
@@ -321,8 +322,7 @@ export async function computeAllNationalMetricTickRates(
 
   const [countryStates, sectorDocs] = await Promise.all([
     statesCollection(db).find({ countryId }).toArray(),
-    db
-      .collection<CorporateSector>("corporateSectors")
+    corporateSectorsCollection(db)
       .find({ countryId }, { projection: { stateId: 1 } })
       .toArray(),
   ]);
@@ -414,8 +414,7 @@ export async function computeNationalMetricTickRate(
   const [countryStates, sectorDocs] = await Promise.all([
     statesCollection(db).find({ countryId }).toArray(),
     useGdpWeight
-      ? db
-          .collection<CorporateSector>("corporateSectors")
+      ? corporateSectorsCollection(db)
           .find({}, { projection: { stateId: 1 } })
           .toArray()
       : Promise.resolve([] as CorporateSector[]),

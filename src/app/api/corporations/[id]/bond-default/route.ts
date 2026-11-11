@@ -37,6 +37,7 @@ import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -75,10 +76,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     }
 
     const [sectors, centralBanks, gameState, latestHistory, marketMode] = await Promise.all([
-      db
-        .collection<CorporateSector>("corporateSectors")
-        .find({ corporationId: corporation._id })
-        .toArray(),
+      corporateSectorsCollection(db).find({ corporationId: corporation._id }).toArray(),
       centralBanksCollection(db).find({}).toArray(),
       getGameState(),
       db

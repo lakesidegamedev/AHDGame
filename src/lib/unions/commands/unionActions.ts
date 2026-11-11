@@ -25,6 +25,7 @@ import {
   freeCashFlowPerTurn,
   politicalContributionPerTurn,
 } from "@/lib/unions/unionPoliticalContributions";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export type UnionActionResult =
   { ok: true; status: 200; [key: string]: unknown } | { ok: false; status: number; error: string };
@@ -118,8 +119,7 @@ export async function setUnionWageDemand(
  * won, never the whole industry it merely shares a type with.
  */
 async function loadRepresentedSectors(db: Db, union: Union): Promise<UnionMemberSector[]> {
-  return db
-    .collection<CorporateSector>("corporateSectors")
+  return corporateSectorsCollection(db)
     .find(
       { representingUnionId: union._id },
       { projection: { workers: 1, unionization: 1, wagePerWorker: 1 } }

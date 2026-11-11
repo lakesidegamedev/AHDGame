@@ -25,6 +25,7 @@ import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export interface SectorPreviewAffectedCorp {
   corporationId: string;
@@ -89,8 +90,7 @@ export async function computeSectorNationalizationPreview(
 
   // ── Corp-held pool ──
   if (scope !== "unowned" && f > 0) {
-    const sectors = await db
-      .collection<CorporateSector>("corporateSectors")
+    const sectors = await corporateSectorsCollection(db)
       .find({ countryId, ...laneFilter })
       .toArray();
     const byCorp = new Map<string, CorporateSector[]>();
@@ -210,8 +210,7 @@ export async function computeNationalizationTargetDetail(
 ): Promise<NationalizationTargetDetail> {
   const elig = await resolveCorpEligibility(db, countryId, corp, currentTurn);
 
-  const sectors = await db
-    .collection<CorporateSector>("corporateSectors")
+  const sectors = await corporateSectorsCollection(db)
     .find({ corporationId: corp._id })
     .project<{
       sectorType: CorporateSector["sectorType"];

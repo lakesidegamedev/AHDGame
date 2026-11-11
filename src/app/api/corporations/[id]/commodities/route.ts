@@ -34,6 +34,7 @@ import type { GameState } from "@/lib/db/types/gameState";
 import type { SupplyAgreement } from "@/lib/db/types/supplyAgreement";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -110,8 +111,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     const mode = await getMarketSystemMode();
     const market = buildMarketContext(mode);
 
-    const sectors = await db
-      .collection<CorporateSector>("corporateSectors")
+    const sectors = await corporateSectorsCollection(db)
       .find({ corporationId: corporation._id })
       .project<CommoditySector>({
         sectorType: 1,

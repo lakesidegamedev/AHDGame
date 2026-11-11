@@ -27,6 +27,7 @@ import type { State } from "@/lib/db/types/state";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -118,8 +119,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     > = {};
     if (marketAtLeast(await getMarketSystemModeForDb(db), "plants")) {
       const [sectors, world, config] = await Promise.all([
-        db
-          .collection<CorporateSector>("corporateSectors")
+        corporateSectorsCollection(db)
           .find(
             { corporationId: corp._id },
             {

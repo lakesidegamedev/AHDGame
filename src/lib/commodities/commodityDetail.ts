@@ -73,6 +73,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 /** Sector-type flow rows for the Production Flow panel: base tables plus strategies that add commodities not present in the base map. */
 function buildSectorFlowRows(
@@ -243,7 +244,7 @@ export async function getCommodityDetailData(
     let allStates: State[] = [];
     if (includeHeavy) {
       [allSectors, allCorps, allStates] = await Promise.all([
-        db.collection<CorporateSector>("corporateSectors").find({}).toArray(),
+        corporateSectorsCollection(db).find({}).toArray(),
         corporationsCollection(db)
           .find({})
           .project<

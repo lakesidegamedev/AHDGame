@@ -67,6 +67,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -218,8 +219,7 @@ export async function GET(request: Request, { params }: RouteParams) {
 
     if (mode === "playerCorp") {
       // Find states where competitor corps operate in this sector type
-      const competitorSectors = await db
-        .collection<CorporateSector>("corporateSectors")
+      const competitorSectors = await corporateSectorsCollection(db)
         .find({
           ...marketFilter,
           corporationId: { $ne: corporation._id },
@@ -256,13 +256,11 @@ export async function GET(request: Request, { params }: RouteParams) {
       statesCollection(db)
         .find({ _id: { $in: stateIds } }, { projection: { _id: 1, name: 1, countryId: 1 } })
         .toArray(),
-      db
-        .collection<CorporateSector>("corporateSectors")
+      corporateSectorsCollection(db)
         .find({ corporationId: corporation._id, ...marketFilter, stateId: { $in: stateIds } })
         .project<{ _id: string; stateId: string }>({ _id: 1, stateId: 1 })
         .toArray(),
-      db
-        .collection<CorporateSector>("corporateSectors")
+      corporateSectorsCollection(db)
         .find({ ...marketFilter, stateId: { $in: stateIds } })
         .project<{
           corporationId: string;

@@ -9,6 +9,7 @@ import type { PrivateSuccessionFirm } from "./rules/privateFacilities";
 import { buildSourceRegionHierarchy } from "./sourceRegionHierarchy";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 /** Snapshot the current private corporations and paid facility basis. The
  * settlement writer must refresh this before applying any claim. */
@@ -32,8 +33,7 @@ export async function loadLivePrivateSuccessionFirms(
     (corp) => !isStateOwned(corp) && !isNppOwned(corp)
   );
   const sectors = privateCorporations.length
-    ? await db
-        .collection<CorporateSector>("corporateSectors")
+    ? await corporateSectorsCollection(db)
         .find({ corporationId: { $in: privateCorporations.map((corp) => corp._id) } }, { session })
         .toArray()
     : [];

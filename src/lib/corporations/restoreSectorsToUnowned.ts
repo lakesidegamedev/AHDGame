@@ -19,6 +19,7 @@ import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
 import { reserveSectorsForRestore } from "@/lib/corporations/securedConstructionProperty";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 const RESTORE_IDEMPOTENCY_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -373,14 +374,14 @@ export async function restoreSectorsToUnowned(
   }
 
   const sectorIds = sectors.map((sector) => sector._id);
-  const deleteResult = await db.collection<CorporateSector>("corporateSectors").deleteMany({
+  const deleteResult = await corporateSectorsCollection(db).deleteMany({
     _id: { $in: sectorIds },
     "constructionPropertyTransition.kind": "restore",
   });
   if (deleteResult.deletedCount !== sectorIds.length) {
-    const remaining = await db
-      .collection<CorporateSector>("corporateSectors")
-      .countDocuments({ _id: { $in: sectorIds } });
+    const remaining = await corporateSectorsCollection(db).countDocuments({
+      _id: { $in: sectorIds },
+    });
     if (remaining > 0) {
       throw new Error(
         `restoreSectorsToUnowned: expected to delete ${sectorIds.length} sectors, deleted ${deleteResult.deletedCount}, remaining ${remaining}`

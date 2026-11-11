@@ -8,6 +8,7 @@ import { parseJsonBody } from "@/lib/api/validate";
 import type { CorporateSector } from "@/lib/db/types";
 import { ObjectId } from "mongodb";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 const healCooldownSchema = z.object({
   forceAll: z.boolean().optional(),
@@ -25,8 +26,7 @@ export async function GET() {
     const db = await getDb();
     const currentTurn = (await getGameState())?.currentTurn ?? 0;
 
-    const sectors = await db
-      .collection<CorporateSector>("corporateSectors")
+    const sectors = await corporateSectorsCollection(db)
       .find(
         { transitionCooldownUntilTurn: { $ne: null } },
         {
@@ -93,8 +93,7 @@ export async function POST(request: Request) {
     const db = await getDb();
     const currentTurn = (await getGameState())?.currentTurn ?? 0;
 
-    const sectors = await db
-      .collection<CorporateSector>("corporateSectors")
+    const sectors = await corporateSectorsCollection(db)
       .find(
         { transitionCooldownUntilTurn: { $ne: null } },
         {
@@ -125,7 +124,7 @@ export async function POST(request: Request) {
       const sectorLabel = `${sector.stateId} (${sector.sectorType})`;
 
       if (forceAll || isExpired) {
-        await db.collection<CorporateSector>("corporateSectors").updateOne(
+        await corporateSectorsCollection(db).updateOne(
           { _id: sector._id },
           {
             $set: {

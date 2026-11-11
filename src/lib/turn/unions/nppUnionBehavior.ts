@@ -40,6 +40,7 @@ import {
 } from "./nppBargainingPolicy";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 /**
  * Minimum worker-weighted `unionization` (0-100) across an NPP union's scope
@@ -257,8 +258,7 @@ export async function processNppUnionBehavior(
     // bargaining signals below. A broad exclusion projection decodes unrelated
     // plant and market telemetry for every sector, even though this phase only
     // reads these eight fields.
-    db
-      .collection<CorporateSector>("corporateSectors")
+    corporateSectorsCollection(db)
       .find(
         {},
         {

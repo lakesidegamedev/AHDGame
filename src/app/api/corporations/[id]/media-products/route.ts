@@ -10,6 +10,7 @@ import type { GameConfig, CorporateSector } from "@/lib/db/types";
 import { getMediaProductKind, MEDIA_PRODUCT_KINDS } from "@/lib/products/mediaProductCatalog";
 import { getMediaOperatingModel } from "@/lib/mediaOperatingModels/catalog";
 import { MEDIA_PRODUCT_PROJECTS, type MediaProductProject } from "@/lib/products/mediaProduct";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -85,8 +86,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
           productBrand: 1,
         })
         .toArray(),
-      db
-        .collection<CorporateSector>("corporateSectors")
+      corporateSectorsCollection(db)
         .find({ corporationId: resolved.corporation._id })
         .project({
           _id: 1,

@@ -18,6 +18,7 @@ import {
   releaseConstructionPropertyTransition,
 } from "@/lib/corporations/securedConstructionProperty";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export interface NormalizedSectorSummary {
   sectorId: string;
@@ -41,11 +42,7 @@ export async function normalizeAndMergeCorporateSectors(
   normalizedSectors: NormalizedSectorSummary[];
   mergedGroups: MergedSectorSummary[];
 }> {
-  const allSectors = await db
-    .collection<CorporateSector>("corporateSectors")
-    .find({})
-    .sort({ createdAt: 1 })
-    .toArray();
+  const allSectors = await corporateSectorsCollection(db).find({}).sort({ createdAt: 1 }).toArray();
   const states = await statesCollection(db)
     .find({}, { projection: { _id: 1, countryId: 1 } })
     .toArray();
@@ -60,9 +57,10 @@ export async function normalizeAndMergeCorporateSectors(
     const operatingCountryId = getSectorOperatingCountryId(sector, stateCountryByStateId);
     if (sector.countryId === operatingCountryId) continue;
     const previousCountryId = sector.countryId;
-    await db
-      .collection<CorporateSector>("corporateSectors")
-      .updateOne({ _id: sector._id }, { $set: { countryId: operatingCountryId, updatedAt: now } });
+    await corporateSectorsCollection(db).updateOne(
+      { _id: sector._id },
+      { $set: { countryId: operatingCountryId, updatedAt: now } }
+    );
     sector.countryId = operatingCountryId;
     sector.updatedAt = now;
     normalizedSectors.push({
@@ -155,7 +153,7 @@ export async function normalizeAndMergeCorporateSectors(
           )
       : null;
 
-    const keeperWrite = await db.collection<CorporateSector>("corporateSectors").updateOne(
+    const keeperWrite = await corporateSectorsCollection(db).updateOne(
       {
         _id: keeper._id,
         "constructionPropertyTransition.key": keyById.get(keeper._id.toString()),
@@ -182,7 +180,7 @@ export async function normalizeAndMergeCorporateSectors(
       continue;
     }
 
-    const deleteResult = await db.collection<CorporateSector>("corporateSectors").deleteMany({
+    const deleteResult = await corporateSectorsCollection(db).deleteMany({
       $or: duplicates.map((sector) => ({
         _id: sector._id,
         "constructionPropertyTransition.key": keyById.get(sector._id.toString()),

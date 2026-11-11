@@ -26,6 +26,7 @@ import {
   MANUFACTURING_PRODUCT_PROJECTS_V2,
   type ManufacturingProductProject,
 } from "@/lib/products/manufacturingProject";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -115,8 +116,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     }
 
     const corporationId = corporation._id.toString();
-    const sectors = await db
-      .collection<CorporateSector>("corporateSectors")
+    const sectors = await corporateSectorsCollection(db)
       .find({ corporationId: corporation._id })
       .project<ManufacturingPlantSector>({
         _id: 1,

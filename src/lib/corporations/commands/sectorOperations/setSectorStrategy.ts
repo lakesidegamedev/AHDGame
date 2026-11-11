@@ -70,6 +70,7 @@ import {
 } from "@/lib/corporations/rules/methodAdoption";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 const STRATEGY_LOCK_MESSAGE: Record<
   "era" | "tech" | "research" | "prerequisite" | "sunset" | "diffusion",
@@ -135,9 +136,10 @@ export async function setSectorStrategy(request: Request, { params }: RouteParam
       return errorResponse(400, "Invalid sector ID");
     }
 
-    const sector = await db
-      .collection<CorporateSector>("corporateSectors")
-      .findOne({ _id: new ObjectId(sectorId), corporationId: corporation._id });
+    const sector = await corporateSectorsCollection(db).findOne({
+      _id: new ObjectId(sectorId),
+      corporationId: corporation._id,
+    });
 
     if (!sector) {
       return errorResponse(404, "Sector not found");
@@ -411,7 +413,7 @@ export async function setSectorStrategy(request: Request, { params }: RouteParam
       toStrategyId: strategyId,
     });
     await Promise.all([
-      db.collection<CorporateSector>("corporateSectors").updateOne(
+      corporateSectorsCollection(db).updateOne(
         { _id: sector._id },
         {
           $set: {

@@ -122,6 +122,7 @@ import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 export {
   settleFundedWholeCorpLiquidation,
   settleFundedWholeCorpShareholderPool,
@@ -172,7 +173,7 @@ async function absorbSectorIntoNatCorp(
   constructionTransfers?: ConstructionBorrowerTransferPlan,
   compensation?: { countryId: string; anchor: number }
 ): Promise<ObjectId> {
-  const sectors = db.collection<CorporateSector>("corporateSectors");
+  const sectors = corporateSectorsCollection(db);
   // Prior-owner provenance — captured from the donor row BEFORE it is re-parented
   // or folded, so an emergency taking can be reversed (SCOTUS strike-down). On a
   // merge the survivor's earlier takings are kept beside the latest one.
@@ -586,7 +587,7 @@ export async function releaseForeignSectorToUnowned(
     // source-sector receipt makes a retry a no-op if a crash lands before the
     // guarded source deletion below.
   }
-  const removed = await db.collection<CorporateSector>("corporateSectors").deleteOne({
+  const removed = await corporateSectorsCollection(db).deleteOne({
     _id: sector._id,
     "constructionPropertyTransition.key": transitionKey,
   });
@@ -677,7 +678,7 @@ export async function nationalizeSector(
   params: NationalizeSectorParams
 ): Promise<NationalizeSectorResult> {
   const now = new Date();
-  const sectors = db.collection<CorporateSector>("corporateSectors");
+  const sectors = corporateSectorsCollection(db);
   const corps = corporationsCollection(db);
 
   const sector = await sectors.findOne({ _id: params.sectorId });
@@ -987,7 +988,7 @@ export async function nationalizeWholeCorp(
 ): Promise<NationalizeWholeCorpResult> {
   const now = new Date();
   const corps = corporationsCollection(db);
-  const sectors = db.collection<CorporateSector>("corporateSectors");
+  const sectors = corporateSectorsCollection(db);
   const bonds = bondsCollection(db);
 
   const target = await corps.findOne({ _id: params.corporationId });

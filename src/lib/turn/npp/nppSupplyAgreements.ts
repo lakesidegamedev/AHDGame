@@ -48,6 +48,7 @@ import {
 import { supplyAgreementSectorsInScope } from "@/lib/corporations/supplyAgreementCapacity";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 /** Fill below this: the seller cannot move output and will discount to lock a buyer. */
 export const NPP_CONTRACT_GLUT_FILL = 0.5;
@@ -1091,8 +1092,7 @@ export async function processNppSupplyAgreements(
   // together removes three sequential database waits from the turn's NPP
   // supply-agreement phase.
   const [sectors, rawAgreements, commodityPriceDocs, gameState, embargoes] = await Promise.all([
-    db
-      .collection<CorporateSector>("corporateSectors")
+    corporateSectorsCollection(db)
       .find({ corporationId: { $in: corpIds } }, { projection: NPP_SUPPLY_SECTOR_PROJECTION })
       .toArray(),
     db

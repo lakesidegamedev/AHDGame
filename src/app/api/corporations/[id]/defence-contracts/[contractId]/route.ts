@@ -20,6 +20,7 @@ import { resolveFillEligibility, FILL_REASON_TEXT } from "@/lib/military/defence
 import { getGameState } from "@/lib/gameState";
 import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { isProcurementBlocked } from "@/lib/military/procurementGate";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 const bodySchema = z.object({ action: z.enum(["accept", "decline"]) });
 
@@ -74,9 +75,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     // the sweep will refuse forever: accepting it would hold the country's appropriation
     // encumbered against materiel that can never arrive.
     if (accept) {
-      const sector = await db
-        .collection<CorporateSector>("corporateSectors")
-        .findOne({ _id: contract.sectorId });
+      const sector = await corporateSectorsCollection(db).findOne({ _id: contract.sectorId });
       if (!sector) {
         return errorResponse(409, "This contract's plant no longer exists.");
       }

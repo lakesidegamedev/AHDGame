@@ -23,6 +23,7 @@ import { isMarketSystemMode, marketAtLeast } from "@/lib/market/featureFlag";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export interface SectorRevenueTax {
   /** Per-state owned-sector revenue (FX-normalized to ₳) + growth rate. */
@@ -76,8 +77,7 @@ export async function sectorRevenueTaxProvider(db: Db, turn = 0): Promise<Sector
     stateBudgets,
     marketConfig,
   ] = await Promise.all([
-    db
-      .collection<CorporateSector>("corporateSectors")
+    corporateSectorsCollection(db)
       .find({})
       .project<
         Pick<

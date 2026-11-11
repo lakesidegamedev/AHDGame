@@ -10,6 +10,8 @@ import { STAT_MIN, STAT_MAX } from "@/lib/stats/statsConstants";
 import { resolveCrisisMetricPath } from "@/lib/crises/rules/metricPath";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import type { Document } from "mongodb";
 
 /**
  * Clamp a stat value to the legal [STAT_MIN, STAT_MAX] range.
@@ -181,7 +183,7 @@ async function applyProfitMarginEffects(
     if (effect.sectorType) Object.assign(filter, operatingSectorFilter(effect.sectorType));
     if (effect.strategyId) filter.strategyId = effect.strategyId;
 
-    await db.collection("corporateSectors").updateMany(filter, [
+    await corporateSectorsCollection<Document>(db).updateMany(filter, [
       {
         $set: {
           profitMargin: {

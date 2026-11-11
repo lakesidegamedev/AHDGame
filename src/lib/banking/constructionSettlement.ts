@@ -20,6 +20,7 @@ import {
 import { acquireConstructionAdmission } from "./constructionAdmission";
 import { MONEY_MOVE_COLLECTION } from "./moneyMove";
 import { settleTransition, resumeSettlement, type SettlementResult } from "./settlementJournal";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 const complete = (result: SettlementResult) =>
   !result.error && (result.status === "applied" || result.status === "replayed");
@@ -36,7 +37,7 @@ export async function settleReservedConstruction(input: {
 }): Promise<Result> {
   if (!input.enabled) return { ok: false, error: "Construction finance is not enabled" };
   const { db, sectorId } = input;
-  const sectors = db.collection<CorporateSector>("corporateSectors");
+  const sectors = corporateSectorsCollection(db);
   let sector = await sectors.findOne(
     { _id: sectorId },
     { projection: { corporationId: 1, constructionFinancing: 1, buildQueue: 1, forSale: 1 } }

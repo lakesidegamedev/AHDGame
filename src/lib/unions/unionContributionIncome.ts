@@ -25,6 +25,7 @@ import {
   freeCashFlowPerTurn,
   politicalContributionPerTurn,
 } from "./unionPoliticalContributions";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export async function unionContributionIncomePerTurn(
   db: Db,
@@ -72,8 +73,7 @@ export async function unionContributionIncomePerTurn(
         { projection: { unionId: 1, characterId: 1, strength: 1 } }
       )
       .toArray(),
-    db
-      .collection<CorporateSector>("corporateSectors")
+    corporateSectorsCollection(db)
       .find(
         { representingUnionId: { $in: payingUnionIds } },
         { projection: { representingUnionId: 1, workers: 1, unionization: 1, wagePerWorker: 1 } }

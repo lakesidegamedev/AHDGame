@@ -39,6 +39,7 @@ import { getStatesCollection } from "@/lib/db/collections/states";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 /**
  * Process active crises for the current turn.
@@ -671,7 +672,7 @@ async function applyProfitMarginEffects(
     if (effect.strategyId) filter.strategyId = effect.strategyId;
 
     // Aggregation pipeline update to clamp profitMargin to [0, 100]
-    await db.collection("corporateSectors").updateMany(filter, [
+    await corporateSectorsCollection<Document>(db).updateMany(filter, [
       {
         $set: {
           profitMargin: {

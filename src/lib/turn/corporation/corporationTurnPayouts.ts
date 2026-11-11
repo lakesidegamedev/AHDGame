@@ -49,6 +49,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import type { Document } from "mongodb";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 // Optional sim-run salt, same convention as nppActionProcessing.ts's RNG.
 export const CORP_TURN_RNG_SALT = workerConfig.simRngSalt() ? `:${workerConfig.simRngSalt()}` : "";
@@ -172,7 +173,7 @@ export async function settleCorporationTurnPayouts({
   // the operative figure. The quantity that matters is written by the builder,
   // not here.
   if (nppNewSectors.length > 0) {
-    await db.collection("corporateSectors").insertMany(nppNewSectors);
+    await corporateSectorsCollection<Document>(db).insertMany(nppNewSectors);
   }
 
   // Business Acumen use-growth: each turn, every active player CEO accrues
@@ -240,7 +241,7 @@ export async function settleCorporationTurnPayouts({
     if (sectorBoostOps.length > 0) {
       // bulkWrite op array type doesn't satisfy AnyBulkWriteOperation narrowing, runtime shape is valid
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await db.collection("corporateSectors").bulkWrite(sectorBoostOps as any[]);
+      await corporateSectorsCollection<Document>(db).bulkWrite(sectorBoostOps as any[]);
     }
     if (capacityBoostOps.length > 0) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -8,6 +8,7 @@ import type { CorporationType } from "@/lib/constants/corporations";
 import { seededRoll } from "@/lib/events/substrate/rng";
 import type { CorporateSector } from "@/lib/db/types";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 const KIND = "pree.minorityStrategyPressure";
 
@@ -71,8 +72,7 @@ const handler: EventHandler = {
     );
     if (!corp) return null;
 
-    const sectors = await ctx.db
-      .collection<CorporateSector>("corporateSectors")
+    const sectors = await corporateSectorsCollection(ctx.db)
       .find({ corporationId: corp._id })
       .project({ sectorType: 1, strategyId: 1, revenue: 1 })
       .toArray();

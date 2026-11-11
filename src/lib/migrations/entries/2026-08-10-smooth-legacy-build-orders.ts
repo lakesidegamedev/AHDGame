@@ -1,6 +1,8 @@
 import type { Db } from "mongodb";
 import type { Migration, MigrationContext, MigrationResult } from "../types";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import type { Document } from "mongodb";
 
 /**
  * Make already-placed plant build orders deliver progressively.
@@ -26,7 +28,7 @@ async function run(db: Db, ctx: MigrationContext): Promise<MigrationResult> {
     throw new Error("smooth-legacy-build-orders: gameState.currentTurn is missing or not a number");
   }
 
-  const sectors = db.collection("corporateSectors");
+  const sectors = corporateSectorsCollection<Document>(db);
   // A sector holding at least one grandfathered (non-smooth) order still under
   // construction. `$ne: true` matches both "smooth absent" and "smooth false".
   const filter = {

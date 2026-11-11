@@ -25,6 +25,7 @@ import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import type { CorporateSector } from "@/lib/db/types";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -98,8 +99,7 @@ export async function updateCorporationSettings(request: Request, { params }: Ro
       ceoSalary !== undefined;
     if (hasBudgetUpdate) {
       const [sectors, fxByCurrency] = await Promise.all([
-        db
-          .collection<CorporateSector>("corporateSectors")
+        corporateSectorsCollection(db)
           .find(
             { corporationId: corporation._id },
             {

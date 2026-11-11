@@ -29,6 +29,7 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export interface CorporationRefinanceResult {
   ok: true;
@@ -88,8 +89,7 @@ export async function executeCorporationBondRefinance(
     .find({ corporationId: corporation._id, matured: false })
     .toArray();
 
-  const sectors = await db
-    .collection<CorporateSector>("corporateSectors")
+  const sectors = await corporateSectorsCollection(db)
     .find({ corporationId: corporation._id })
     .toArray();
   const centralBanks = await centralBanksCollection(db).find({}).toArray();

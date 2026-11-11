@@ -46,6 +46,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import type { Document } from "mongodb";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 /** Reads the state, country, tariff, sibling and market context for one sector. */
 export async function loadSectorDetailContext({
@@ -217,8 +218,7 @@ export async function loadSectorDetailContext({
               }
             ),
       db.collection<CommodityPrice>("commodityPrices").find({}).toArray(),
-      db
-        .collection<CorporateSector>("corporateSectors")
+      corporateSectorsCollection(db)
         .find(
           { corporationId: corporation._id },
           {
@@ -369,8 +369,7 @@ export async function loadSectorDetailContext({
       db.collection<Tariff>("tariffs").find({}).toArray(),
       db.collection<Subsidy>("subsidies").find({ active: true }).toArray(),
       loadActiveFtaPairs(db),
-      db
-        .collection<CorporateSector>("corporateSectors")
+      corporateSectorsCollection(db)
         .find(
           {},
           {
@@ -394,8 +393,7 @@ export async function loadSectorDetailContext({
           }
         )
         .toArray(),
-      db
-        .collection<CorporateSector>("corporateSectors")
+      corporateSectorsCollection(db)
         .find({
           stateId: sector.stateId,
           sectorType: sector.sectorType,

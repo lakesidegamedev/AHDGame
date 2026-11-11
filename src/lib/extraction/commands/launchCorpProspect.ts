@@ -23,6 +23,7 @@ import {
   PROSPECT_NOT_EXTRACTION_MESSAGE,
 } from "@/lib/constants/prospecting";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export interface CorpProspectCosts {
   costAnchor: number;
@@ -58,7 +59,7 @@ export async function launchCorpProspect(
   // company needs an extraction sector in the target state. The sector is
   // authoritative for the state's owning country (cross-country state-id
   // collisions).
-  const sectors = db.collection<CorporateSector>("corporateSectors");
+  const sectors = corporateSectorsCollection(db);
   const projection = { projection: { countryId: 1 } };
   const extractionSector = await sectors.findOne(
     { corporationId: corporation._id, stateId, sectorType: "extraction" },

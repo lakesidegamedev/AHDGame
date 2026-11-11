@@ -11,6 +11,7 @@ import type { CorporateSector, GameConfig } from "@/lib/db/types";
 import { supportsCostPlusPricing, validCostPlusBasis } from "@/lib/market/costPlusPricing/rules";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { setSectorPricingSchema } from "@/lib/api/schemas/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 interface RouteParams {
   params: Promise<{ id: string; sectorId: string }>;
@@ -67,7 +68,7 @@ export async function setSectorPricing(request: Request, { params }: RouteParams
             .findOne({ _id: "default" }, { projection: { explicitPlantCostsEnabled: 1 } })
         : null;
 
-    const sector = await db.collection<CorporateSector>("corporateSectors").findOne(
+    const sector = await corporateSectorsCollection(db).findOne(
       { _id: new ObjectId(sectorId), corporationId: corporation._id },
       {
         projection:
@@ -102,7 +103,7 @@ export async function setSectorPricing(request: Request, { params }: RouteParams
 
     const clamped = pricingPosture == null ? null : clampPricingPosture(pricingPosture);
 
-    await db.collection<CorporateSector>("corporateSectors").updateOne(
+    await corporateSectorsCollection(db).updateOne(
       { _id: sector._id, corporationId: corporation._id },
       {
         $set: {

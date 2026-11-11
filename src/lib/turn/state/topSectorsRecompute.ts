@@ -19,6 +19,8 @@ import type { CorporationType } from "@/lib/constants/corporations";
 import type { State } from "@/lib/db/types";
 import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import type { Document } from "mongodb";
 
 /** How many top sectors to surface per state. */
 const TOP_N = 3;
@@ -46,8 +48,7 @@ export async function processTopSectorsRecompute(
 ): Promise<TopSectorsRecomputeResult> {
   // Single aggregation that groups every sector instance by (state, type).
   // `revenue` is the per-turn revenue stored on each `corporateSectors` row.
-  const rows = await db
-    .collection("corporateSectors")
+  const rows = await corporateSectorsCollection<Document>(db)
     .aggregate<AggRow>([
       {
         $group: {

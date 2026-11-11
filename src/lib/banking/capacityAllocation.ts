@@ -25,6 +25,7 @@ import {
   computeDepositCeiling,
 } from "@/lib/banking/rules/capacity";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export type SetBranchCapacityShareResult =
   { ok: true; branchCapacityShare: number } | { ok: false; error: string };
@@ -62,8 +63,7 @@ export async function getBankDepositCeiling(db: Db, corp: Corporation): Promise<
   if (!isDepositTakingCharter(charter)) return 0;
 
   const [sectors, eraUnitScale] = await Promise.all([
-    db
-      .collection<CorporateSector>("corporateSectors")
+    corporateSectorsCollection(db)
       .find(
         { corporationId: corp._id, sectorType: "financial" },
         { projection: { capitalStock: 1, revenue: 1, strategyId: 1, sectorType: 1 } }
@@ -123,8 +123,7 @@ export async function abandonBankImpact(
   )
     return null;
   const [sectors, eraUnitScale] = await Promise.all([
-    db
-      .collection<CorporateSector>("corporateSectors")
+    corporateSectorsCollection(db)
       .find(
         { corporationId: corp._id, sectorType: "financial" },
         { projection: { capitalStock: 1, revenue: 1, strategyId: 1, sectorType: 1 } }

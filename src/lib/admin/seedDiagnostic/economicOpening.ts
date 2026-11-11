@@ -26,6 +26,8 @@ import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import type { Document } from "mongodb";
 
 export async function checkEconomicOpening(db: Db, preset: string): Promise<SeedDiagnosticCheck[]> {
   if (preset !== "1991-default") return [];
@@ -35,7 +37,7 @@ export async function checkEconomicOpening(db: Db, preset: string): Promise<Seed
       centralBanksCollection<{ countryId: string; primeRate: number }>(db).find({}).toArray(),
       federalBudgetCollection(db).find({}).toArray(),
       corporationsCollection(db).find({}).toArray(),
-      db.collection("corporateSectors").find({}).toArray(),
+      corporateSectorsCollection<Document>(db).find({}).toArray(),
       db.collection<StateResourceCapacity>("stateResourceCapacity").find({}).toArray(),
       db.collection<MacroCountryState>("macroCountries").find({}).toArray(),
       bondsCollection(db).find({ issuerType: "sovereign", defaulted: false }).toArray(),

@@ -18,6 +18,8 @@ import type { ProducerOpeningPlan } from "./migrationRules";
 import type { ProducerOpeningMarker } from "./liveMode";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import type { Document } from "mongodb";
 
 export const PRODUCER_OPENINGS = "producerOpenings";
 
@@ -96,7 +98,7 @@ export async function applyProducerOpening(
   );
 
   if (plan.sectors.length > 0) {
-    const result = await db.collection("corporateSectors").bulkWrite(
+    const result = await corporateSectorsCollection<Document>(db).bulkWrite(
       plan.sectors.map((sector) => {
         const quotes: Record<string, unknown> = {};
         for (const q of sector.quotes) if (!(q.commodity in quotes)) quotes[q.commodity] = q.policy;
@@ -156,7 +158,7 @@ export async function applyProducerOpening(
       $unset: { operatingCashArrearsByCurrency: "" },
     });
 
-  const opened = await db.collection("corporateSectors").countDocuments({
+  const opened = await corporateSectorsCollection<Document>(db).countDocuments({
     "producerInventory.worldEpoch": generation.worldEpoch,
     "producerInventory.turn": generation.turn,
   });

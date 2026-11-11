@@ -22,6 +22,8 @@ import {
 } from "@/lib/market/unownedHeadroom";
 import type { CorporationLookups } from "./types";
 import { seedPlantLedger } from "@/lib/corporations/plantLedger";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import type { Document } from "mongodb";
 
 // PLANTS-GATED: under plants the shed moves `capitalStock` units into the
 // unowned pool's `headroomUnits`; the revenue writes below run only below the
@@ -334,7 +336,7 @@ export async function shedSectorsForCorps(
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await db.collection("corporateSectors").bulkWrite(sectorOps as any[]);
+  await corporateSectorsCollection<Document>(db).bulkWrite(sectorOps as any[]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const unownedOps: any[] = [];

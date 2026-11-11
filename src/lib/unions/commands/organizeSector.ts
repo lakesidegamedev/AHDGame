@@ -29,6 +29,7 @@ import {
   sectorUnionizationGain,
 } from "@/lib/unions/organizeSectorEconomy";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export {
   ORGANIZE_SECTOR_ACTION_COST,
@@ -159,9 +160,7 @@ export async function organizeSector(
   if (!ObjectId.isValid(sectorId)) {
     return { ok: false, status: 400, error: "Invalid sector ID" };
   }
-  const sector = await db
-    .collection<CorporateSector>("corporateSectors")
-    .findOne({ _id: new ObjectId(sectorId) });
+  const sector = await corporateSectorsCollection(db).findOne({ _id: new ObjectId(sectorId) });
   if (!sector) {
     return { ok: false, status: 404, error: "Sector not found" };
   }
@@ -267,7 +266,7 @@ export async function organizeSector(
   const newRepresentingObjectId = outcome.newRepresentingUnionId
     ? new ObjectId(outcome.newRepresentingUnionId)
     : null;
-  const sectorUpdate = await db.collection<CorporateSector>("corporateSectors").updateOne(
+  const sectorUpdate = await corporateSectorsCollection(db).updateOne(
     {
       _id: sector._id,
       unionization: sector.unionization,

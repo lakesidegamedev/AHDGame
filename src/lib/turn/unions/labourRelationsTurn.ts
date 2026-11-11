@@ -18,6 +18,7 @@ import {
 import { closeDueRatificationVotes } from "@/lib/unions/commands/ratifySettlement";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export interface LabourRelationsTurnResult {
   campaignsMovedToDispute: number;
@@ -299,8 +300,7 @@ async function refreshOpenCampaigns(
   if (campaigns.length === 0) return counters;
 
   const [locals, unions] = await Promise.all([
-    db
-      .collection<CorporateSector>("corporateSectors")
+    corporateSectorsCollection(db)
       .find(
         { _id: { $in: campaigns.flatMap((c) => c.sectorIds) } },
         { projection: MANDATE_LOCAL_PROJECTION }

@@ -14,6 +14,7 @@ import { loadDefencePriceRatios } from "@/lib/military/defencePriceRatios";
 import { DEFENCE_CARRY_REASON_TEXT, type DefenceCarryReason } from "@/lib/db/types/defenceContract";
 import type { CorporateSector } from "@/lib/db/types/corporation";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 /** One procurement contract as the supplying CEO sees it. */
 export interface CorporationContractView {
@@ -131,8 +132,7 @@ export async function loadCorporationDefenceContracts(
 
   // One read for every sector the contracts point at, rather than one per contract.
   const sectorIds = [...new Set(contracts.map((c) => c.sectorId.toString()))];
-  const sectors = await db
-    .collection<CorporateSector>("corporateSectors")
+  const sectors = await corporateSectorsCollection(db)
     .find({ _id: { $in: sectorIds.map((id) => new ObjectId(id)) } })
     .toArray();
   const sectorById = new Map(sectors.map((s) => [s._id.toString(), s]));

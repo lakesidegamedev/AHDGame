@@ -68,6 +68,7 @@ import {
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 class RelocationUnderwritingLeaseConflict extends Error {}
 
@@ -180,8 +181,7 @@ export async function handleRelocateWithCorp(request: Request) {
             "Primary underwriting cash is settling; retry relocation after settlement"
           );
         }
-        const propertySectors = await db
-          .collection<CorporateSector>("corporateSectors")
+        const propertySectors = await corporateSectorsCollection(db)
           .find({ corporationId: corp._id })
           .toArray();
 

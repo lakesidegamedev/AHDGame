@@ -19,6 +19,7 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export async function GET() {
   try {
@@ -28,7 +29,7 @@ export async function GET() {
     const db = await getDb();
     const [corps, sectors, characters, gameState, fxByCurrency] = await Promise.all([
       corporationsCollection(db).find({}).toArray(),
-      db.collection<CorporateSector>("corporateSectors").find({}).toArray(),
+      corporateSectorsCollection(db).find({}).toArray(),
       charactersCollection(db)
         .find({}, { projection: { _id: 1, name: 1 } })
         .toArray(),

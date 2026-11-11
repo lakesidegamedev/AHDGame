@@ -14,6 +14,7 @@ import {
   type FederationArchivedPublicCorporation,
 } from "./materializePublicCorporations";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 const FEDERATION_CUSTODY_RECORDS_COLLECTION = "federationCustodyRecords";
 
@@ -118,9 +119,8 @@ export async function materializeFederationCustody(input: {
         !shell ||
         !isStateOwned(shell) ||
         (shell.countryOwnerId ?? shell.countryId) !== sourceCountryId ||
-        (await db
-          .collection<CorporateSector>("corporateSectors")
-          .countDocuments({ corporationId }, { session })) !== 0 ||
+        (await corporateSectorsCollection(db).countDocuments({ corporationId }, { session })) !==
+          0 ||
         (archived &&
           (assignment.disposition !== "aggregate-background" ||
             !archived.custodians.includes(assignment.custodianEntityId)))
@@ -151,9 +151,10 @@ export async function materializeFederationCustody(input: {
           );
         if (!archived) throw new Error("Federation custody enterprise facility was not archived");
       } else {
-        const sector = await db
-          .collection<CorporateSector>("corporateSectors")
-          .findOne({ _id: sectorId, countryId: sourceCountryId }, { session });
+        const sector = await corporateSectorsCollection(db).findOne(
+          { _id: sectorId, countryId: sourceCountryId },
+          { session }
+        );
         if (!sector || transferByState.get(sector.stateId)?.leavesDetailedSource !== false)
           throw new Error("Retained federation enterprise has no playable facility");
       }

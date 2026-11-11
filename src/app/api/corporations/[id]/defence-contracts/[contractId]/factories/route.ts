@@ -25,6 +25,7 @@ import {
   defaultFactoryAllocation,
   DEFENCE_FACTORY_SLOTS_PER_PLANT,
 } from "@/lib/military/defenceLotEconomics";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 const bodySchema = z.object({
   assignedFactories: z.number().int().min(1).max(DEFENCE_FACTORY_SLOTS_PER_PLANT),
@@ -76,9 +77,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
       return errorResponse(409, "This order is closed, so its production lines cannot be changed.");
     }
 
-    const sector = await db
-      .collection<CorporateSector>("corporateSectors")
-      .findOne({ _id: contract.sectorId });
+    const sector = await corporateSectorsCollection(db).findOne({ _id: contract.sectorId });
     if (!sector) {
       return errorResponse(409, "This contract's plant no longer exists.");
     }

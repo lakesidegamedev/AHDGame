@@ -18,6 +18,7 @@ import {
   mergeSurvivorConstructionFilter,
   type ConstructionBorrowerTransferPlan,
 } from "@/lib/banking/constructionBorrowerTransfer";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 /**
  * Move one operating sector to `destCorpId`, re-denominating its revenue and
@@ -48,7 +49,7 @@ export async function moveSectorToCorp(
   if (hasProtectedConstructionProperty(sector) && !financedMove) {
     throw new Error("A sector with secured construction cannot change ownership yet");
   }
-  const sectors = db.collection<CorporateSector>("corporateSectors");
+  const sectors = corporateSectorsCollection(db);
   const revenueAnchor = readCorpEconomicAnchor(sector.revenue ?? 0, srcCurrency, srcFxRate);
   const growthCostAnchor = readCorpEconomicAnchor(
     sector.currentGrowthCost ?? 0,

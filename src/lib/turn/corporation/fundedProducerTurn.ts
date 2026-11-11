@@ -133,6 +133,8 @@ import {
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import type { Document } from "mongodb";
 
 /** Owner decision 2026-10-18: households open with about 3 turns of wages. */
 export const HOUSEHOLD_OPENING_APPROVAL = "owner 2026-10-18: household opening cash about 3 turns";
@@ -1005,7 +1007,7 @@ export async function runFundedProducerTurn(
     (settled.result.close?.meta?.grantBySector as Record<string, number> | undefined) ?? {};
   const retiredIds = Object.keys(retiredBookBySector);
   if (retiredIds.length > 0)
-    await db.collection<CorporateSector>("corporateSectors").bulkWrite(
+    await corporateSectorsCollection(db).bulkWrite(
       retiredIds.map((id) => ({
         updateOne: {
           filter: { _id: new ObjectId(id) },
@@ -1064,7 +1066,7 @@ export async function runFundedProducerTurn(
   // and the funded demand throttle (AI saturation reads it, and the legacy pass
   // would otherwise leave it stale), in one write per sector rather than a
   // second round trip.
-  const sectorDocs = db.collection<CorporateSector>("corporateSectors");
+  const sectorDocs = corporateSectorsCollection(db);
   const sectorUpdates: AnyBulkWriteOperation<CorporateSector>[] = [];
   for (const [id, receipt] of receiptsBySectorId) {
     const soldUnits = captiveOn
@@ -1099,7 +1101,7 @@ export async function runFundedProducerTurn(
   // An idle sector settled this turn at zero: advance its generation with the
   // rest, or the next turn would reject it as unreconciled once it can produce.
   if (idleSectorIds.length > 0)
-    await db.collection<CorporateSector>("corporateSectors").bulkWrite(
+    await corporateSectorsCollection(db).bulkWrite(
       idleSectorIds.map((id) => ({
         updateOne: {
           filter: {
@@ -1456,7 +1458,7 @@ export async function runFundedProducerTurn(
       now: new Date(),
     });
     if (ops.length > 0)
-      await db.collection("corporateSectors").bulkWrite(ops as never, { ordered: false });
+      await corporateSectorsCollection<Document>(db).bulkWrite(ops as never, { ordered: false });
   }
   await apply(
     batchProducerMoves(
@@ -1688,9 +1690,7 @@ async function admitNewProducerEntrants(
   }
   if (corpOps.length > 0) await corporationsCollection(db).bulkWrite(corpOps, { ordered: false });
   if (sectorOps.length > 0)
-    await db
-      .collection<CorporateSector>("corporateSectors")
-      .bulkWrite(sectorOps, { ordered: false });
+    await corporateSectorsCollection(db).bulkWrite(sectorOps, { ordered: false });
 }
 
 /** Treasury cash, book primary spending and fiscal scale per country, for stage 2 public funding. */

@@ -23,6 +23,7 @@ import {
 } from "@/lib/constants/techTree/diffusion";
 import type { StrategyDiffusionWorld } from "@/lib/constants/techTree/strategyAvailability";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 /** Every method with a tier: the only ones diffusion can delay. */
 const TIERED_STRATEGY_IDS: readonly string[] = [
@@ -61,8 +62,7 @@ export async function loadTechDiffusionSnapshot(
       .findOne({ commodity: "energy" }, { projection: { stateSupply: 1, stateDemand: 1 } }),
     options.sectors
       ? Promise.resolve(null)
-      : db
-          .collection<CorporateSector>("corporateSectors")
+      : corporateSectorsCollection(db)
           .aggregate<{ _id: { strategyId: string; countryId: string } }>([
             {
               $match: {

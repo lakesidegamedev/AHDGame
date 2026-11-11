@@ -45,6 +45,7 @@ import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 // ── Tuning constants ─────────────────────────────────────────────────────────
 
@@ -781,8 +782,7 @@ export async function calculateCountryInflation(
         : db.collection<Tariff>("tariffs").find({ countryId }).toArray(),
       hasMeasuredTariffRate
         ? Promise.resolve([])
-        : db
-            .collection<CorporateSector>("corporateSectors")
+        : corporateSectorsCollection(db)
             .find(
               { countryId },
               { projection: { corporationId: 1, countryId: 1, sectorType: 1, revenue: 1 } }

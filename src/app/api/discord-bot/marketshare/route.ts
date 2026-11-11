@@ -25,6 +25,7 @@ import {
 import { readCorpEconomicAnchor, writeCorpEconomicLocal } from "@/lib/currency/corpEconomyFields";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 const PAGE_SIZE = 15;
 
@@ -121,8 +122,7 @@ export async function GET(request: Request) {
     const scopedStateIds = new Set(scopedStates.map((s) => s._id));
 
     const [sectorsInScope, fxByCurrency] = await Promise.all([
-      db
-        .collection<CorporateSector>("corporateSectors")
+      corporateSectorsCollection(db)
         .find({
           ...laneFilter,
           stateId: { $in: [...scopedStateIds] },

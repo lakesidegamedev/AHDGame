@@ -24,6 +24,7 @@ import {
   reserveSectorsForTransition,
 } from "@/lib/corporations/securedConstructionProperty";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 /**
  * Split-off & merge-back of National Corporation sector types (spec §24.2).
@@ -81,8 +82,7 @@ export async function splitOffSectorType(db: Db, params: SplitOffParams): Promis
   const fromIds = natCorpIds;
   const sectors =
     fromIds.length > 0
-      ? await db
-          .collection<CorporateSector>("corporateSectors")
+      ? await corporateSectorsCollection(db)
           .find({ corporationId: { $in: fromIds }, ...operatingSectorFilter(params.sectorType) })
           .toArray()
       : [];
@@ -135,7 +135,7 @@ export async function splitOffSectorType(db: Db, params: SplitOffParams): Promis
 
     // Move all sectors of this type held by any of the country's NatCorps.
     for (const [index, sector] of sectors.entries()) {
-      const moved = await db.collection<CorporateSector>("corporateSectors").updateOne(
+      const moved = await corporateSectorsCollection(db).updateOne(
         {
           _id: sector._id,
           corporationId: sector.corporationId,
@@ -204,8 +204,7 @@ async function attachSoeOverlayIfPlanned(
   );
   if (existing) return false;
 
-  const sectors = await db
-    .collection<CorporateSector>("corporateSectors")
+  const sectors = await corporateSectorsCollection(db)
     .find(
       { corporationId: corpId },
       { projection: { revenue: 1, realizedRevenue: 1, capitalStock: 1 } }
@@ -255,8 +254,7 @@ export async function mergeBackSectorType(
   if (!splitOff) {
     throw new Error(`No split-off National Corporation owns the ${params.sectorType} sector type`);
   }
-  const splitOffSectors = await db
-    .collection<CorporateSector>("corporateSectors")
+  const splitOffSectors = await corporateSectorsCollection(db)
     .find({ corporationId: splitOff._id })
     .toArray();
   // Resolve the target: explicit corp (must be a NatCorp of this country) or primary.
@@ -301,7 +299,7 @@ export async function mergeBackSectorType(
   // Move the split-off's sectors into the target.
   let sectorsMoved = 0;
   for (const [index, sector] of splitOffSectors.entries()) {
-    const moved = await db.collection<CorporateSector>("corporateSectors").updateOne(
+    const moved = await corporateSectorsCollection(db).updateOne(
       {
         _id: sector._id,
         corporationId: splitOff._id,

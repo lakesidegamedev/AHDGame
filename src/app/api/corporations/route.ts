@@ -25,6 +25,7 @@ import { foundCorporation } from "@/lib/corporations/commands/founding/foundCorp
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 const INACTIVE_CEO_THRESHOLD_MS = INACTIVE_CEO_TURN_THRESHOLD * 60 * 60 * 1000;
 
@@ -52,8 +53,7 @@ export async function GET(request: Request) {
     }
 
     if (stateId) {
-      const sectorsInState = await db
-        .collection<CorporateSector>("corporateSectors")
+      const sectorsInState = await corporateSectorsCollection(db)
         .find({ stateId: stateId.toUpperCase() })
         .project<{ corporationId: ObjectId }>({ corporationId: 1 })
         .toArray();
@@ -116,8 +116,7 @@ export async function GET(request: Request) {
     const corpIds = corporations.map((c) => c._id);
     const allSectors =
       corpIds.length > 0
-        ? await db
-            .collection<CorporateSector>("corporateSectors")
+        ? await corporateSectorsCollection(db)
             .find({ corporationId: { $in: corpIds } })
             .toArray()
         : [];

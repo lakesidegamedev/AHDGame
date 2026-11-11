@@ -4,6 +4,7 @@ import type { EnactedLaw, StateBudget } from "@/lib/db/types/budget";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 /**
  * Seeds only JP budget data: national budget, enacted laws, regional budgets,
@@ -121,7 +122,7 @@ export async function seedJpBudgets(
 
     for (const sector of entry.sectors) {
       const { _id: _sectorId, ...sectorData } = sector;
-      await db.collection<CorporateSector>("corporateSectors").updateOne(
+      await corporateSectorsCollection(db).updateOne(
         {
           corporationId: corpId,
           stateId: sector.stateId,

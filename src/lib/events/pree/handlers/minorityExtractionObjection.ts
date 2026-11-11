@@ -7,6 +7,7 @@ import { seededRoll } from "@/lib/events/substrate/rng";
 import type { CorporateSector } from "@/lib/db/types";
 import { isUngatedStrategy } from "@/lib/constants/techTree/strategyAvailability";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 const KIND = "pree.minorityExtractionObjection";
 
@@ -76,8 +77,7 @@ const handler: EventHandler = {
     const extractionStrats = SECTOR_STRATEGIES["extraction"]!;
     if (extractionStrats.length <= 1) return null;
 
-    const extractionSectors = await ctx.db
-      .collection<CorporateSector>("corporateSectors")
+    const extractionSectors = await corporateSectorsCollection(ctx.db)
       .find({ corporationId: corp._id, sectorType: "extraction" })
       .project({ strategyId: 1, revenue: 1 })
       .toArray();

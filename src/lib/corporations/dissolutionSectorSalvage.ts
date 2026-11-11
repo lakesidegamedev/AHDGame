@@ -9,6 +9,7 @@ import { getGameState } from "@/lib/gameState";
 import { sumSectorBookValueAnchor } from "@/lib/corporations/sectorProfitBasis";
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 /**
  * Salvage value (in ₳) a dissolving corp recovers from its operating sectors.
@@ -31,10 +32,7 @@ export async function computeDissolutionSectorSalvageAnchor(
   fxByCurrency: ReadonlyMap<CurrencyCode, number>
 ): Promise<number> {
   const [sectors, centralBanks, marketMode] = await Promise.all([
-    db
-      .collection<CorporateSector>("corporateSectors")
-      .find({ corporationId: corporation._id })
-      .toArray(),
+    corporateSectorsCollection(db).find({ corporationId: corporation._id }).toArray(),
     centralBanksCollection(db).find({}).toArray(),
     getMarketSystemModeForDb(db),
   ]);

@@ -24,6 +24,7 @@ import { UNION_FOUNDING_ACTION_COST, unionFoundingCostLocal } from "@/lib/unions
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export async function GET(req: NextRequest) {
   try {
@@ -74,8 +75,7 @@ export async function GET(req: NextRequest) {
     const [ownersById, memberSectors] = await Promise.all([
       resolveUnionOwners(db, unions, { includeAvatar: true }),
       unions.length
-        ? db
-            .collection<CorporateSector>("corporateSectors")
+        ? corporateSectorsCollection(db)
             .find(
               { representingUnionId: { $in: unions.map((u) => u._id) } },
               { projection: { representingUnionId: 1, workers: 1, unionization: 1 } }

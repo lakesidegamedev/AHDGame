@@ -42,6 +42,7 @@ import {
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import type { Document } from "mongodb";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 /** A standalone AI company: not player, caretaker, state-owned or a subsidiary. */
 export function isStandaloneAiCompany(corp: Corporation): boolean {
@@ -123,7 +124,7 @@ export async function runOffTypeHandover(
   if (!marketRecoveryStageActive(args.stage, MARKET_RECOVERY_STAGE.AI_OFF_TYPE_HANDOVER))
     return out;
   const corpsCol = corporationsCollection(db);
-  const sectorsCol = db.collection<CorporateSector>("corporateSectors");
+  const sectorsCol = corporateSectorsCollection(db);
   const receipts = db.collection<HandoverReceipt>("offTypeHandovers");
 
   const corps = (await corpsCol.find({ ceoType: "npp" }).toArray()).filter(isStandaloneAiCompany);

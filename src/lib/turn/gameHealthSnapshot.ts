@@ -37,6 +37,7 @@ import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficia
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 type SeatScopedOfficial = ElectedOfficial & { seatId?: string };
 
@@ -737,8 +738,7 @@ async function collectEconomyStats(db: Db): Promise<EconomyStats> {
     // Per-sector revenue moved OFF the corporation document into its own
     // `corporateSectors` collection, so the embedded-array sum above resolves
     // to 0 for every country. Aggregate the real collection.
-    db
-      .collection("corporateSectors")
+    corporateSectorsCollection<Document>(db)
       .aggregate([
         { $match: { countryId: { $in: countryIds } } },
         {

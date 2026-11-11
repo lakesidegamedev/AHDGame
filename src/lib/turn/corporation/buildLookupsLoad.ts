@@ -30,6 +30,7 @@ import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 /** Issues the parallel reads the lookups are built from. */
 export async function loadCorporationLookupInputs({
@@ -122,8 +123,7 @@ export async function loadCorporationLookupInputs({
     // whole turn pays to decode them for nothing. Nothing writes a sector back
     // as a whole document either: sectorTurn emits targeted $set/$inc/$pull/
     // $push ops, so an excluded field cannot be blanked by a write-back.
-    db
-      .collection<CorporateSector>("corporateSectors")
+    corporateSectorsCollection(db)
       .find(
         {},
         {

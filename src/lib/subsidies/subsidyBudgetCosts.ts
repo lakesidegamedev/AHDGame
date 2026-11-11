@@ -19,6 +19,7 @@ import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
 import { sumRealizedRevenue } from "@/lib/turn/gdpGrowth";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 /** Real-world fiscal inefficiency premium on top of the corp-delivered benefit. Tunable. */
 const SUBSIDY_DEADWEIGHT_FACTOR = 1.4;
@@ -58,8 +59,7 @@ export async function loadAnnualSubsidyCostMaps(db: Db): Promise<AnnualSubsidyCo
     corporationsCollection(db)
       .find({}, { projection: { headquartersState: 1, countryId: 1, liquidCurrencyCode: 1 } })
       .toArray(),
-    db
-      .collection<CorporateSector>("corporateSectors")
+    corporateSectorsCollection(db)
       .find(
         {},
         {

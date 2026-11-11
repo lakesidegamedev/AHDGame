@@ -9,6 +9,8 @@ import {
 } from "@/lib/turn/stockExchangeSnapshot";
 import type { StockExchangeSnapshot, InvestorRankingSnapshot } from "@/lib/db/types";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import type { Document } from "mongodb";
 
 interface DiagnosticResult {
   timestamps: {
@@ -65,7 +67,7 @@ export async function GET() {
     // Count documents in relevant collections
     const [corpCount, sectorCount, snapshotCount, investorSnapshotCount] = await Promise.all([
       corporationsCollection(db).countDocuments(),
-      db.collection("corporateSectors").countDocuments(),
+      corporateSectorsCollection<Document>(db).countDocuments(),
       db.collection("stockExchangeSnapshots").countDocuments(),
       db.collection("investorRankingSnapshots").countDocuments(),
     ]);
@@ -162,7 +164,7 @@ export async function POST() {
     // Count documents
     const [corpCount, sectorCount, snapshotCount, investorSnapshotCount] = await Promise.all([
       corporationsCollection(db).countDocuments(),
-      db.collection("corporateSectors").countDocuments(),
+      corporateSectorsCollection<Document>(db).countDocuments(),
       db.collection("stockExchangeSnapshots").countDocuments(),
       db.collection("investorRankingSnapshots").countDocuments(),
     ]);

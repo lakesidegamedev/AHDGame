@@ -36,6 +36,7 @@ import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export interface CorporationRestructureResult {
   /** Defaulted principal repaid in full, in ₳. */
@@ -90,10 +91,7 @@ export async function executeCorporationBondRestructure(
   }
 
   const [sectors, centralBanks, fxByCurrency, marketMode, gameState] = await Promise.all([
-    db
-      .collection<CorporateSector>("corporateSectors")
-      .find({ corporationId: refreshed._id })
-      .toArray(),
+    corporateSectorsCollection(db).find({ corporationId: refreshed._id }).toArray(),
     centralBanksCollection(db).find({}).toArray(),
     loadFxRatesByCurrency(db),
     getMarketSystemModeForDb(db),

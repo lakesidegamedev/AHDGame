@@ -74,6 +74,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 /** HTTP status for each entry refusal. */
 const MARKET_ENTRY_STATUS: Record<MarketEntryBlockReason, number> = {
@@ -164,7 +165,7 @@ export async function expandSector(request: Request, { params }: RouteParams) {
     const blockedCountries = await loadCommandEconomyBlockedCountries(db, [state.countryId]);
 
     // Check not already in this state
-    const existingSector = await db.collection<CorporateSector>("corporateSectors").findOne(
+    const existingSector = await corporateSectorsCollection(db).findOne(
       plantsEnabled
         ? {
             corporationId: corporation._id,
@@ -439,9 +440,7 @@ export async function expandSector(request: Request, { params }: RouteParams) {
 
     let newSectorId: ObjectId;
     try {
-      const inserted = await db
-        .collection<CorporateSector>("corporateSectors")
-        .insertOne(newSector as CorporateSector);
+      const inserted = await corporateSectorsCollection(db).insertOne(newSector as CorporateSector);
       newSectorId = inserted.insertedId;
     } catch (error) {
       if (isCorporateSectorDuplicateKey(error)) {
@@ -465,7 +464,7 @@ export async function expandSector(request: Request, { params }: RouteParams) {
       { $inc: { liquidCapital: -costInCorpCapital }, $set: { updatedAt: now } }
     );
     if (debit.matchedCount !== 1) {
-      await db.collection<CorporateSector>("corporateSectors").deleteOne({ _id: newSectorId });
+      await corporateSectorsCollection(db).deleteOne({ _id: newSectorId });
       return errorResponse(
         409,
         "Insufficient spendable corporate funds, or outstanding taxes and payables."

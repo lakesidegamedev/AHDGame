@@ -22,6 +22,7 @@ import { extractionDesiredUnits } from "@/lib/extraction/capacityHaircut";
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
 import { getExtractionOutputScaleEnabled } from "@/lib/market/featureFlag";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export interface OpportunityState {
   stateId: string;
@@ -56,8 +57,7 @@ export async function computeResourceOpportunities(
       .collection<StateResourceCapacity>("stateResourceCapacity")
       .find({}, { projection: { stateId: 1, resources: 1 } })
       .toArray(),
-    db
-      .collection<CorporateSector>("corporateSectors")
+    corporateSectorsCollection(db)
       .find(
         { sectorType: "extraction" },
         { projection: { stateId: 1, revenue: 1, strategyId: 1, corporationId: 1, countryId: 1 } }

@@ -9,6 +9,7 @@ import type { SuccessionRegion } from "./rules/territory";
 import { buildSourceRegionHierarchy } from "./sourceRegionHierarchy";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export interface LiveSuccessionInventory {
   sourceRegions: SuccessionRegion[];
@@ -46,8 +47,7 @@ export async function loadLiveSuccessionInventory(
     )
     .map((corp) => corp._id);
   const sectors = publicCorporationIds.length
-    ? await db
-        .collection<CorporateSector>("corporateSectors")
+    ? await corporateSectorsCollection(db)
         .find({ corporationId: { $in: publicCorporationIds } }, { session })
         .toArray()
     : [];

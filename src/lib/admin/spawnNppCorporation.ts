@@ -96,6 +96,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 /**
  * Default founding book for an admin/NPP-spawned corporation, in ₳ at MODERN
@@ -591,7 +592,7 @@ async function grantNppSectorFromUnownedPool(
       : {}),
   };
 
-  await db.collection<CorporateSector>("corporateSectors").insertOne(sectorDoc as CorporateSector);
+  await corporateSectorsCollection(db).insertOne(sectorDoc as CorporateSector);
 
   // Reduce the unowned sector pool to reflect market capture.
   const unownedSector =

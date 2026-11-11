@@ -7,6 +7,7 @@ import {
 } from "@/lib/tariffs/tariffEffects";
 import { buildFtaCoverageLookup, type FtaCoverage } from "@/lib/tariffs/ftaOverrides";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 type SectorMirrorRow = Pick<
   CorporateSector,
@@ -41,8 +42,7 @@ function getSectorMirror(db: Db, currentTurn: number): Promise<SectorMirror> {
 }
 
 async function loadSectorMirror(db: Db): Promise<SectorMirror> {
-  const rows = await db
-    .collection<CorporateSector>("corporateSectors")
+  const rows = await corporateSectorsCollection(db)
     .find({}, { projection: { corporationId: 1, countryId: 1, sectorType: 1, revenue: 1 } })
     .toArray();
   const allSectorsRaw = rows as SectorMirrorRow[] as CorporateSector[];
@@ -86,10 +86,7 @@ export async function loadReferenceSectors(
 ): Promise<ReferenceSectorsResult> {
   const [refData, sectors, { allSectorsRaw, corpByIdForTariffs }] = await Promise.all([
     refDataPromise,
-    db
-      .collection<CorporateSector>("corporateSectors")
-      .find({ corporationId: corporation._id })
-      .toArray(),
+    corporateSectorsCollection(db).find({ corporationId: corporation._id }).toArray(),
     getSectorMirror(db, currentTurn),
   ]);
   const { allTariffs, activeFtaPairs } = refData;

@@ -12,6 +12,8 @@ import {
 } from "@/lib/currency/corporationCapital";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import type { Document } from "mongodb";
 
 export async function fundCreationEligibility(
   db: Db,
@@ -20,9 +22,10 @@ export async function fundCreationEligibility(
 ): Promise<string | null> {
   if (sponsor.ceoVacant) return "Appoint a CEO before creating a fund.";
   const [sector, state, config, liveFunds] = await Promise.all([
-    db
-      .collection("corporateSectors")
-      .findOne({ corporationId: sponsor._id, sectorType: "financial" }, { projection: { _id: 1 } }),
+    corporateSectorsCollection<Document>(db).findOne(
+      { corporationId: sponsor._id, sectorType: "financial" },
+      { projection: { _id: 1 } }
+    ),
     gameStateCollection(db).findOne(
       { _id: "current" },
       { projection: { corporationActionsPaused: 1 } }

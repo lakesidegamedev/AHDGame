@@ -64,6 +64,7 @@ import type {
   VerifyResult,
 } from "../types";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export const DEFECT_ID = "AHD-dissolution-npp-successors";
 
@@ -192,8 +193,7 @@ async function fleetCapacityPerOutput(
     capitalStock: { $gt: 0 },
   };
   const ratio = async (match: Record<string, unknown>): Promise<number | null> => {
-    const [row] = await db
-      .collection<CorporateSector>("corporateSectors")
+    const [row] = await corporateSectorsCollection(db)
       .aggregate<{ capacity: number; output: number }>([
         { $match: match },
         {
@@ -226,12 +226,10 @@ function escapeRegex(value: string): string {
 
 async function eventDone(db: Db, eventId: string): Promise<boolean> {
   return (
-    (await db
-      .collection<CorporateSector>("corporateSectors")
-      .countDocuments(
-        { nppPickupReceipts: { $regex: `^heal-pickup:${escapeRegex(eventId)}:` } },
-        { limit: 1 }
-      )) > 0
+    (await corporateSectorsCollection(db).countDocuments(
+      { nppPickupReceipts: { $regex: `^heal-pickup:${escapeRegex(eventId)}:` } },
+      { limit: 1 }
+    )) > 0
   );
 }
 
@@ -442,7 +440,7 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
   const now = ctx.now;
   const eraUnitScale = await loadWorldEraUnitScale(db);
   const corps = corporationsCollection(db);
-  const sectors = db.collection<CorporateSector>("corporateSectors");
+  const sectors = corporateSectorsCollection(db);
   const nppFilter = {
     ceoType: "npp" as const,
     countryOwnerId: { $exists: false },

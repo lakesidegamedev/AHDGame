@@ -9,6 +9,7 @@ import {
   constructionBorrowerTransferTurn,
   loanServiceKeyTurn,
 } from "./rules/constructionBorrowerTransfer";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 /**
  * Point the loan at the borrower its site's claim names, when the site has
@@ -20,12 +21,10 @@ import {
 export async function alignConstructionBorrowerWithSite(db: Db, loan: BankLoan): Promise<void> {
   const collateral = loan.constructionCollateral;
   if (!collateral || !loan.borrowerId) return;
-  const sector = await db
-    .collection<CorporateSector>("corporateSectors")
-    .findOne(
-      { _id: collateral.sectorId },
-      { projection: { corporationId: 1, constructionFinancing: 1 } }
-    );
+  const sector = await corporateSectorsCollection(db).findOne(
+    { _id: collateral.sectorId },
+    { projection: { corporationId: 1, constructionFinancing: 1 } }
+  );
   const claim = sector?.constructionFinancing;
   if (
     !sector ||
@@ -86,9 +85,10 @@ export async function acquireConstructionLoanLock(
   if (!current || !previous) return null;
   const collateral = current.constructionCollateral;
   if (collateral && previous === `construction:${collateral.claimId}:funding`) {
-    const sector = await db
-      .collection<CorporateSector>("corporateSectors")
-      .findOne({ _id: collateral.sectorId }, { projection: { constructionFinancing: 1 } });
+    const sector = await corporateSectorsCollection(db).findOne(
+      { _id: collateral.sectorId },
+      { projection: { constructionFinancing: 1 } }
+    );
     const claim = sector?.constructionFinancing;
     if (
       claim?.claimId !== collateral.claimId ||
