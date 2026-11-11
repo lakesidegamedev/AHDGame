@@ -1,6 +1,7 @@
 import { personalNetWorth } from "@/lib/portfolio/rules/netWorth";
 import type { Db, ObjectId } from "mongodb";
 import type { Bond, Character, Corporation } from "@/lib/db/types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
 import { COUNTRY_CURRENCY_MAP, type CurrencyCode } from "@/lib/constants/currencies";
 import { getTotalPersonalWealth } from "@/lib/currency/characterFunds";
@@ -76,8 +77,7 @@ export async function withHeldStakeIssuers(
   corporations: readonly CorpWealthSlice[]
 ): Promise<CorpWealthSlice[]> {
   const byId = new Map<string, CorpWealthSlice>(corporations.map((c) => [c._id.toString(), c]));
-  const corporateHeld = await db
-    .collection<Corporation>("corporations")
+  const corporateHeld = await corporationsCollection(db)
     .find(
       { "shareholders.corporationId": { $exists: true } },
       { projection: CORP_WEALTH_PROJECTION }
