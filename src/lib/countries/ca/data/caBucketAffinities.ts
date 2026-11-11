@@ -1,15 +1,11 @@
 /**
- * Canada's per-domain bucket affinities: how each bucket of voters reacts to a
- * RIGHTWARD shift in that domain. Positive likes rightward, negative likes
- * leftward, magnitude is how much the bucket cares.
- *
- * Age, education, income and urbanization follow the same gradients as the
- * other Westminster tables (younger, university educated and urban voters lean
- * left on most domains), re-keyed to Canadian certificate levels. The background
- * buckets are authored for Canada: francophones sit well left of anglophones on
- * the economy, welfare and environment and close to them on immigration and
- * justice, Indigenous voters lean left on most domains, and the two Asian
- * Canadian buckets are the strongest supporters of immigration.
+ * Canada's per-domain bucket affinities: how each bucket reacts to a RIGHTWARD
+ * shift in that domain (positive likes it; magnitude is how much it cares).
+ * Age, education, income and urbanization reuse the Westminster gradients,
+ * re-keyed to Canadian certificates. Background buckets are authored for
+ * Canada: francophones sit well left of anglophones on the economy, welfare and
+ * environment but close on immigration and justice, Indigenous voters lean left
+ * on most domains, and the two Asian Canadian buckets back immigration most.
  */
 export const CA_DOMAIN_BUCKET_AFFINITIES: Record<string, Record<string, number>> = {
   agriculture: {

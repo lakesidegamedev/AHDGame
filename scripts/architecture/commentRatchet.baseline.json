@@ -4734,8 +4734,8 @@
       "narrativeLines": 0
     },
     "src/lib/constants/historicalSeatsTables.ts": {
-      "longBlocks": 19,
-      "narrativeLines": 9
+      "longBlocks": 4,
+      "narrativeLines": 3
     },
     "src/lib/constants/impeachment.ts": {
       "longBlocks": 0,
@@ -5601,6 +5601,10 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
+    "src/lib/countries/br/data/historicalSeats1953.ts": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
     "src/lib/countries/br/layer1Model.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
@@ -5634,6 +5638,10 @@
       "narrativeLines": 0
     },
     "src/lib/countries/cn/data/cnStateMetrics.ts": {
+      "longBlocks": 1,
+      "narrativeLines": 0
+    },
+    "src/lib/countries/cn/data/historicalSeats1953.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -5819,6 +5827,14 @@
     },
     "src/lib/countries/de/data/germanyGeometry.ts": {
       "longBlocks": 1,
+      "narrativeLines": 0
+    },
+    "src/lib/countries/de/data/historicalSeats1992.ts": {
+      "longBlocks": 1,
+      "narrativeLines": 0
+    },
+    "src/lib/countries/de/data/historicalSeats2020.ts": {
+      "longBlocks": 3,
       "narrativeLines": 0
     },
     "src/lib/countries/de/elections/germanyAMS.ts": {
@@ -6029,6 +6045,22 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
+    "src/lib/countries/jp/data/historicalSeats1989.ts": {
+      "longBlocks": 1,
+      "narrativeLines": 0
+    },
+    "src/lib/countries/jp/data/historicalSeats1990.ts": {
+      "longBlocks": 1,
+      "narrativeLines": 0
+    },
+    "src/lib/countries/jp/data/historicalSeats1991.ts": {
+      "longBlocks": 1,
+      "narrativeLines": 0
+    },
+    "src/lib/countries/jp/data/historicalSeats2020.ts": {
+      "longBlocks": 2,
+      "narrativeLines": 0
+    },
     "src/lib/countries/jp/data/jpLegislationTypes.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
@@ -6107,6 +6139,10 @@
     },
     "src/lib/countries/jp/data/jpStatePartyOrgCalculations.ts": {
       "longBlocks": 2,
+      "narrativeLines": 0
+    },
+    "src/lib/countries/jp/data/nationalBudget1953.ts": {
+      "longBlocks": 1,
       "narrativeLines": 0
     },
     "src/lib/countries/jp/economy.ts": {
@@ -6461,6 +6497,14 @@
       "longBlocks": 0,
       "narrativeLines": 2
     },
+    "src/lib/countries/uk/data/historicalSeats1987.ts": {
+      "longBlocks": 1,
+      "narrativeLines": 1
+    },
+    "src/lib/countries/uk/data/historicalSeats1992.ts": {
+      "longBlocks": 1,
+      "narrativeLines": 0
+    },
     "src/lib/countries/uk/data/ukDemographicTurnout.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
@@ -6592,6 +6636,26 @@
     "src/lib/countries/ukr/identity.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
+    },
+    "src/lib/countries/us/data/historicalSeats1953.ts": {
+      "longBlocks": 1,
+      "narrativeLines": 0
+    },
+    "src/lib/countries/us/data/historicalSeats1990.ts": {
+      "longBlocks": 1,
+      "narrativeLines": 0
+    },
+    "src/lib/countries/us/data/historicalSeats1992.ts": {
+      "longBlocks": 1,
+      "narrativeLines": 2
+    },
+    "src/lib/countries/us/data/historicalSeats2020.ts": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
+    "src/lib/countries/us/data/historicalSeats2027.ts": {
+      "longBlocks": 0,
+      "narrativeLines": 1
     },
     "src/lib/countries/us/data/usCongressProjection2027.ts": {
       "longBlocks": 1,
@@ -11158,7 +11222,7 @@
       "narrativeLines": 0
     },
     "src/lib/seeds/reference/budgets.ts": {
-      "longBlocks": 4,
+      "longBlocks": 3,
       "narrativeLines": 2
     },
     "src/lib/seeds/reference/budgets1953.test.ts": {

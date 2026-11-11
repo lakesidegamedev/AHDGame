@@ -1,21 +1,13 @@
 /**
- * Canada's province and territory census profiles for the 2027 world.
- *
- * Anchored to the Statistics Canada 2021 Census of Population (language,
- * Indigenous identity, visible minority, highest certificate, income, age,
- * population centre size) and carried to 2027 with the slower ageing and
- * higher university attainment seen in the labour force survey. Values are
- * rounded literals authored for 2027, not derived from another era.
- *
- * Buckets:
- * - `ethnicity` is the cultural community a voter belongs to. Language is
- *   folded in because it, not ancestry, is what separates Quebec and Acadian
- *   voters from the rest: anglophone and francophone are by mother tongue,
- *   among people who are neither Indigenous nor a visible minority.
- * - `education` is the highest certificate held by adults 25 to 64.
- * - `income` is an era-neutral relative tier, not a dollar threshold.
- * - `urbanization` follows the population centre size groups: urban is a large
- *   urban centre, suburban the medium and small centres, rural everything else.
+ * Canada's province and territory census profiles for the 2027 world: rounded
+ * literals from the Statistics Canada 2021 Census, carried to 2027 with the
+ * labour force survey's ageing and attainment trends.
+ * - `ethnicity` folds in mother tongue (anglophone, francophone) for people
+ *   neither Indigenous nor a visible minority, since language, not ancestry,
+ *   separates Quebec and Acadian voters.
+ * - `education`: highest certificate held by adults 25 to 64.
+ * - `income`: an era-neutral relative tier, not a dollar threshold.
+ * - `urbanization`: large centre urban, medium and small suburban, else rural.
  */
 import type { IntlRegionCensus } from "@/lib/seeds/regionCensusData";
 
