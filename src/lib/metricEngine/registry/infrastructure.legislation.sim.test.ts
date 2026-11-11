@@ -13,7 +13,7 @@ import type { StateMetricBaseline } from "@/lib/db/types/statePolicy";
 /**
  * Legislative metric simulation — INFRASTRUCTURE category, 240 turns.
  *
- * Law: "Transportation Infrastructure Act" (us_transportation), high-investment
+ * Law: Japan's rail transport law (jp_rail_transport), high-investment
  * option (effectDirection +1). The infrastructure outcome nodes read
  * `spending.infrastructure` directly, so enacting the funding law is modelled as the
  * spend rising from the empirically-confirmed real US baseline (~$1,238/capita —
@@ -26,7 +26,7 @@ import type { StateMetricBaseline } from "@/lib/db/types/statePolicy";
 const TURNS = 240;
 const TPY = 48;
 
-const law = legislationTypes.find((l) => l._id === "us_transportation");
+const law = legislationTypes.find((l) => l._id === "jp_rail_transport");
 const invest = law?.policyOptions?.find((o) => o.effectDirection === 1);
 
 const baselineDoc: StateMetricBaseline = {
@@ -49,9 +49,9 @@ const HIGHER_BETTER: NodeId[] = [
   "infrastructure.broadbandAccess",
 ];
 
-describe("legislation sim — infrastructure (Transportation Infrastructure Act, 240 turns)", () => {
+describe("legislation sim: infrastructure (rail transport law, 240 turns)", () => {
   it("the seed law and its high-investment option exist", () => {
-    expect(law, "us_transportation present").toBeTruthy();
+    expect(law, "jp_rail_transport present").toBeTruthy();
     expect(invest, "an investment (effectDirection +1) option exists").toBeTruthy();
   });
 
@@ -77,12 +77,7 @@ describe("legislation sim — infrastructure (Transportation Infrastructure Act,
 
   it("prints the 240-turn trajectory report", () => {
     console.log(
-      reportTrajectory(
-        "Infrastructure — Transportation Infrastructure Act",
-        HIGHER_BETTER,
-        control,
-        enacted
-      )
+      reportTrajectory("Infrastructure — rail transport law", HIGHER_BETTER, control, enacted)
     );
     expect(true).toBe(true);
   });
