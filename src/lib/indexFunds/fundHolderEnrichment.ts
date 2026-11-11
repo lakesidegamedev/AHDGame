@@ -2,6 +2,7 @@ import type { ObjectId, Db } from "mongodb";
 import type { IndexFundPosition } from "@/lib/db/types";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export type EnrichedFundHolder = {
   holderKind: IndexFundPosition["holderKind"];
@@ -48,8 +49,7 @@ export async function enrichFundPositions(
           .toArray()
       : Promise.resolve([]),
     nppIds.length
-      ? db
-          .collection<{ _id: ObjectId; name: string; countryId?: string; party?: string }>("npps")
+      ? nppsCollection<{ _id: ObjectId; name: string; countryId?: string; party?: string }>(db)
           .find({ _id: { $in: nppIds } })
           .project({ name: 1, countryId: 1, party: 1 })
           .toArray()

@@ -25,6 +25,7 @@ import { refusalBlocks } from "@/lib/government/rules/coalitionRefusals";
 import { isNppAutonomyActive } from "./featureFlag";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /**
  * Seat an NPP Prime Minister for `countryId` when government formation has
@@ -109,9 +110,10 @@ export async function appointNppPrimeMinister(
   const pmOfficial = eligibleMps[0];
   if (!pmOfficial.nppId) return false;
 
-  const npp = await db
-    .collection<NPP>("npps")
-    .findOne({ _id: pmOfficial.nppId }, { projection: { name: 1 } });
+  const npp = await nppsCollection(db).findOne(
+    { _id: pmOfficial.nppId },
+    { projection: { name: 1 } }
+  );
   if (!npp) return false;
 
   // Seat the NPP as head of government: clears any prior PM, sets the NPP's

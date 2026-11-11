@@ -7,6 +7,7 @@ import { MS_PER_TURN } from "@/lib/constants/turnTime";
 import { getRacePriority, isNPPAvailable } from "@/lib/turn/nppEntryLogic";
 import { primaryOpenFilter } from "@/lib/elections/electionDeadlineFilters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /**
  * Debug endpoint to diagnose why NPPs aren't entering primaries.
@@ -47,7 +48,7 @@ export async function GET() {
       .toArray();
 
     // 3. Non-retired NPPs
-    const allNPPs = await db.collection<NPP>("npps").find({ retiredAt: null }).toArray();
+    const allNPPs = await nppsCollection(db).find({ retiredAt: null }).toArray();
 
     // 4. Load candidates for open primaries
     const primaryIds = openPrimaries.map((e) => e._id);

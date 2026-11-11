@@ -10,6 +10,7 @@ import { nameCollidesWithUser } from "@/lib/supporter/requestValidation";
 import { notifySubmitterOfSupporterDecision } from "@/lib/supporter/reviewNotifications";
 import { escapeRegex } from "@/lib/utils/escapeRegex";
 import { syncDenormalizedNppName } from "@/lib/npp/syncDenormalizedName";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -57,18 +58,16 @@ export async function POST(_request: Request, { params }: RouteContext) {
       if (!req.nppId || !req.proposedNppName) {
         return errorResponse(400, "Request is missing rename details.");
       }
-      renameTarget = await db.collection<NPP>("npps").findOne({ _id: req.nppId });
+      renameTarget = await nppsCollection(db).findOne({ _id: req.nppId });
       if (!renameTarget || renameTarget.retiredAt) {
         return errorResponse(409, "The target politician no longer exists or is retired.");
       }
       // Re-check uniqueness at decision time to close the submit/approve race.
       const exact = new RegExp(`^${escapeRegex(req.proposedNppName)}$`, "i");
-      const taken = await db
-        .collection<NPP>("npps")
-        .findOne(
-          { _id: { $ne: renameTarget._id }, countryId: renameTarget.countryId, name: exact },
-          { projection: { _id: 1 } }
-        );
+      const taken = await nppsCollection(db).findOne(
+        { _id: { $ne: renameTarget._id }, countryId: renameTarget.countryId, name: exact },
+        { projection: { _id: 1 } }
+      );
       if (taken || (await nameCollidesWithUser(db, req.proposedNppName, req.userId))) {
         return errorResponse(
           409,
@@ -95,9 +94,10 @@ export async function POST(_request: Request, { params }: RouteContext) {
       summary = `"${req.proposedName}"`;
     } else {
       const npp = renameTarget!;
-      await db
-        .collection<NPP>("npps")
-        .updateOne({ _id: npp._id }, { $set: { name: req.proposedNppName, updatedAt: now } });
+      await nppsCollection(db).updateOne(
+        { _id: npp._id },
+        { $set: { name: req.proposedNppName, updatedAt: now } }
+      );
       // Keep denormalized ballot / office labels in lockstep with npps.name
       // (ticket #1037: polls kept the pre-rename name after supporter rename).
       await syncDenormalizedNppName(db, npp._id, req.proposedNppName!);

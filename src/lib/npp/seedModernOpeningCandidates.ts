@@ -22,6 +22,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /** Called only by fresh historical bootstrap, never by a turn or reference refresh. */
 export async function seedModernOpeningCandidates(
@@ -120,8 +121,7 @@ export async function seedModernOpeningCandidates(
     slots.push(slot);
   }
   if (slots.length === 0) return 0;
-  const actors = await db
-    .collection<NPP>("npps")
+  const actors = await nppsCollection(db)
     .find(
       {},
       {
@@ -193,7 +193,7 @@ export async function seedModernOpeningCandidates(
     generated.forEach((actor, index) => {
       actor.sequentialId = counter.seq - generated.length + index + 1;
     });
-    await db.collection<NPP>("npps").insertMany(generated);
+    await nppsCollection(db).insertMany(generated);
   }
   await db.collection<ElectionCandidate>("electionCandidates").insertMany(entries);
   log(

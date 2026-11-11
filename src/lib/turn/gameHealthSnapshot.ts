@@ -35,6 +35,7 @@ import type { Document } from "mongodb";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 type SeatScopedOfficial = ElectedOfficial & { seatId?: string };
 
@@ -541,7 +542,7 @@ async function collectPopulationStats(db: Db): Promise<PopulationStats> {
   ] = await Promise.all([
     db.collection("users").countDocuments({ banned: { $ne: true } }),
     charactersCollection<Document>(db).countDocuments(),
-    db.collection("npps").countDocuments(),
+    nppsCollection<Document>(db).countDocuments(),
     db.collection("seats").countDocuments(),
     politicalPartiesCollection<Document>(db).countDocuments(),
     db.collection("elections").countDocuments({ status: "active" }),
@@ -578,8 +579,7 @@ async function collectPopulationStats(db: Db): Promise<PopulationStats> {
         { $group: { _id: "$countryId", count: { $sum: 1 } } },
       ])
       .toArray() as Promise<{ _id: string | null; count: number }[]>,
-    db
-      .collection("npps")
+    nppsCollection<Document>(db)
       .aggregate([
         { $match: { countryId: { $in: activeCountryIds } } },
         { $group: { _id: "$countryId", count: { $sum: 1 } } },

@@ -22,6 +22,7 @@ import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export const FEDERATION_ARCHIVED_POLITICAL_ROWS_COLLECTION = "federationArchivedPoliticalRows";
 const UNION_OFFICES = ["unionCongressDeputy", "chairmanOfCabinet", "sovietPresident"];
@@ -131,8 +132,7 @@ export async function materializeProvisionalRussianCongress(input: {
         .toArray()
     : [];
   const npps = nppIds.length
-    ? await db
-        .collection<NPP>("npps")
+    ? await nppsCollection(db)
         .find({ _id: { $in: nppIds }, countryId: "RU" }, { session, projection: { _id: 1 } })
         .toArray()
     : [];
@@ -163,13 +163,11 @@ export async function materializeProvisionalRussianCongress(input: {
     { $set: { currentOffice: null, updatedAt: now } },
     { session }
   );
-  await db
-    .collection<NPP>("npps")
-    .updateMany(
-      { countryId: "RU", "currentOffice.type": { $in: FEDERAL_PERSON_OFFICES } },
-      { $set: { currentOffice: null, updatedAt: now } },
-      { session }
-    );
+  await nppsCollection(db).updateMany(
+    { countryId: "RU", "currentOffice.type": { $in: FEDERAL_PERSON_OFFICES } },
+    { $set: { currentOffice: null, updatedAt: now } },
+    { session }
+  );
   const characterUpdates: AnyBulkWriteOperation<Character>[] = [];
   const nppUpdates: AnyBulkWriteOperation<NPP>[] = [];
   for (const deputy of plan.retained) {
@@ -203,7 +201,7 @@ export async function materializeProvisionalRussianCongress(input: {
       throw new Error("A retained player deputy is missing or awaiting residence choice");
   }
   if (nppUpdates.length) {
-    const result = await db.collection<NPP>("npps").bulkWrite(nppUpdates, { session });
+    const result = await nppsCollection(db).bulkWrite(nppUpdates, { session });
     if (result.matchedCount !== nppUpdates.length)
       throw new Error("A retained NPC deputy is missing");
   }

@@ -81,6 +81,8 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import type { Document } from "mongodb";
 
 const EXCHANGE_NAMES: Record<string, string> = getExchangeNamesMap();
 
@@ -193,8 +195,7 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
               .toArray()
           : Promise.resolve([]),
         nppCeoIds.length > 0
-          ? database
-              .collection("npps")
+          ? nppsCollection<Document>(database)
               .find({ _id: { $in: nppCeoIds } })
               .project<{ _id: ObjectId; name: string; avatarUrl?: string; sequentialId?: number }>({
                 _id: 1,

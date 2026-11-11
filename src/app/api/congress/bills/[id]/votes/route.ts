@@ -24,6 +24,7 @@ import {
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 interface IndividualVote {
   id: string;
@@ -112,8 +113,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
             .toArray()
         : Promise.resolve([]),
       uniqueNppIds.length > 0
-        ? db
-            .collection<NPP>("npps")
+        ? nppsCollection(db)
             .find({
               _id: { $in: uniqueNppIds.map((i) => new ObjectId(i)) },
             })

@@ -11,6 +11,7 @@ import type { Character, NPP } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -102,8 +103,7 @@ export async function GET(request: Request) {
     // Fetch NPPs unless playersOnly
     const npps = playersOnly
       ? []
-      : await db
-          .collection<NPP>("npps")
+      : await nppsCollection(db)
           .find({ retiredAt: null, ...countryFilter })
           .sort({ [sortField]: -1, name: 1 })
           .toArray();

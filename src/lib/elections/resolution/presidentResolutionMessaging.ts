@@ -18,6 +18,7 @@ import type { ContingentElectionResult } from "@/lib/elections/resolution/contin
 import { logger } from "@/lib/observability/logger";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export type PresidentialResolutionMode = "majority" | "contingent" | "contingent_deadlock";
 
@@ -297,9 +298,10 @@ async function sendPresidentialElectionWebhook(
   const winnerParty = partyMap.get(`US:${winnerCandidate.party}`);
   const winnerPerson = winnerCandidate.isNPP
     ? winnerCandidate.nppId
-      ? await db
-          .collection<NPP>("npps")
-          .findOne({ _id: winnerCandidate.nppId }, { projection: { avatarUrl: 1 } })
+      ? await nppsCollection(db).findOne(
+          { _id: winnerCandidate.nppId },
+          { projection: { avatarUrl: 1 } }
+        )
       : null
     : await charactersCollection(db).findOne(
         { _id: winnerCandidate.characterId },
@@ -360,8 +362,7 @@ async function sendPresidentialElectionWebhook(
             .toArray()
         : [],
       nppVpIds.length > 0
-        ? db
-            .collection<NPP>("npps")
+        ? nppsCollection(db)
             .find({ _id: { $in: nppVpIds.map((id) => new ObjectId(id)) } })
             .project({ _id: 1, name: 1 })
             .toArray()

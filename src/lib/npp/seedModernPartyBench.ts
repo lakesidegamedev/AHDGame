@@ -11,6 +11,7 @@ import { generateNPP, type NPPGenerationContext } from "./generator";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /** Supply an unseated candidate bench for required modern default parties. */
 export async function seedModernPartyBench(
@@ -42,8 +43,7 @@ export async function seedModernPartyBench(
     .sort((a, b) => a.countryId.localeCompare(b.countryId) || a.sequentialId - b.sequentialId);
   // One projected population read supplies both membership and unique names.
   // Keep the bootstrap usable by the production and in-memory adapters.
-  const liveNpps = await db
-    .collection<NPP>("npps")
+  const liveNpps = await nppsCollection(db)
     .find(
       { retiredAt: null },
       {
@@ -131,7 +131,7 @@ export async function seedModernPartyBench(
   actors.forEach((actor, index) => {
     actor.sequentialId = counter.seq - actors.length + index + 1;
   });
-  await db.collection<NPP>("npps").insertMany(actors);
+  await nppsCollection(db).insertMany(actors);
   log(`Seeded ${actors.length} synthetic, unseated modern party bench actors`);
   return actors.length;
 }

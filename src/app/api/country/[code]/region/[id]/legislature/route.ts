@@ -14,6 +14,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 // GET /api/country/[code]/region/[id]/legislature — Return the state senate composition and current officials for a region
 // Auth: public
@@ -95,8 +96,7 @@ export async function GET(
             .toArray()
         : Promise.resolve([]),
       nppIds.length > 0
-        ? db
-            .collection<NPP>("npps")
+        ? nppsCollection(db)
             .find(
               { _id: { $in: nppIds } },
               { projection: { _id: 1, sequentialId: 1, avatarUrl: 1 } }

@@ -11,6 +11,7 @@ import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError } from "@/lib/api/errors";
 import type { CongressionalDistrict, NPP } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /**
  * Find districts whose holderCharacterId does not resolve to a `characters`
@@ -40,8 +41,7 @@ async function findMisstampedDistricts(
   );
   const nppIds = new Set(
     (
-      (await db
-        .collection<NPP>("npps")
+      (await nppsCollection(db)
         .find({ _id: { $in: holderIds } }, { projection: { _id: 1 } })
         .toArray()) as { _id: unknown }[]
     ).map((n) => String(n._id))

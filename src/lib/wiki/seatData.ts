@@ -12,6 +12,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export type SeatSlugType = "governor" | "senate" | "house";
 
@@ -125,8 +126,7 @@ export async function getSeatData(slug: string): Promise<SeatData | null> {
           .toArray()
       : [],
     nppIds.length
-      ? db
-          .collection<NPP>("npps")
+      ? nppsCollection(db)
           .find({ _id: { $in: nppIds } })
           .toArray()
       : [],

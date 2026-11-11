@@ -21,6 +21,7 @@ import { getCountryState } from "@/lib/countryState";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 const negotiate: DecisionOption = {
   id: "negotiate",
@@ -204,12 +205,10 @@ async function reMergeDefectors(
     { countryId, party: String(defectedPartyId) },
     { $set: { party: String(runtime.rulingPartyId) } }
   );
-  await db
-    .collection<NPP>("npps")
-    .updateMany(
-      { countryId, party: String(defectedPartyId) },
-      { $set: { party: String(runtime.rulingPartyId), updatedAt: now } }
-    );
+  await nppsCollection(db).updateMany(
+    { countryId, party: String(defectedPartyId) },
+    { $set: { party: String(runtime.rulingPartyId), updatedAt: now } }
+  );
   // Defected party is now empty — flip to banned so it doesn't linger
   // as a ghost approved party with no members.
   await politicalPartiesCollection(db).updateOne(

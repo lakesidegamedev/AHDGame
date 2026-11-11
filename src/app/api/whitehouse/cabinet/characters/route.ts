@@ -10,6 +10,7 @@ import type { ElectedOfficial, NPP } from "@/lib/db/types";
 import { resolvePresidentialCountry } from "@/lib/executive/presidentialCountry";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 // GET /api/whitehouse/cabinet/characters — Returns US player characters for the cabinet nomination dropdown (President only).
 // Auth: requireBasicAuth
@@ -52,8 +53,7 @@ export async function GET(request: Request) {
         .project({ _id: 1, name: 1, party: 1, homeState: 1, currentOffice: 1 })
         .sort({ name: 1 })
         .toArray(),
-      db
-        .collection<NPP>("npps")
+      nppsCollection(db)
         .find({ $or: [{ countryId }, { countryId: { $exists: false } }] })
         .project({ _id: 1, name: 1, party: 1, homeState: 1, currentOffice: 1 })
         .sort({ name: 1 })

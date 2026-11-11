@@ -19,6 +19,7 @@ import {
 } from "@/lib/elections/contingentHouseStandings";
 import { loadContingentElectionData } from "@/lib/elections/resolution/loadContingentElectionData";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export type ContingentHouseVoteRecord = NonNullable<ElectionVoteTally["contingentHouseVote"]>;
 
@@ -54,8 +55,7 @@ export async function partitionEligibleCandidates(
           .toArray()
       : [],
     nppIds.length > 0
-      ? db
-          .collection<NPP>("npps")
+      ? nppsCollection(db)
           .find({ _id: { $in: nppIds } })
           .project({ _id: 1, retiredAt: 1 })
           .toArray()

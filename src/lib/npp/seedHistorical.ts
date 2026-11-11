@@ -17,6 +17,7 @@ import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /**
  * Slug → party-name lookup used at resolve time. Exported so tests can
@@ -554,8 +555,7 @@ export async function seedFromSeats(
     } else {
       // Live candidates only: `retiredAt: null` matches the existing-name query
       // above, so a retired prior-world roster never blocks a fresh founding seed.
-      const seededCandidates = await db
-        .collection<NPP>("npps")
+      const seededCandidates = await nppsCollection(db)
         .aggregate<{ _id: { countryId?: string; officeType?: string } }>([
           { $match: { retiredAt: null, seededForOfficeType: { $ne: null } } },
           { $group: { _id: { countryId: "$countryId", officeType: "$seededForOfficeType" } } },
@@ -573,8 +573,7 @@ export async function seedFromSeats(
   const partyCache = new Map<string, PoliticalParty>();
 
   // Get existing names to avoid duplicates
-  const existingNPPs = await db
-    .collection<NPP>("npps")
+  const existingNPPs = await nppsCollection(db)
     .find({ retiredAt: null })
     .project({ name: 1 })
     .toArray();
@@ -813,7 +812,7 @@ export async function seedFromSeats(
 
   // Bulk insert
   if (nppsToInsert.length > 0) {
-    await db.collection<NPP>("npps").insertMany(nppsToInsert);
+    await nppsCollection(db).insertMany(nppsToInsert);
   }
   if (officialsToInsert.length > 0) {
     await electedOfficialsCollection(db).insertMany(officialsToInsert);

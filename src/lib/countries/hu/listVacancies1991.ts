@@ -17,6 +17,7 @@ import {
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export const HU_1991_LIST_REPLACEMENTS_COLLECTION = "hu1991ListReplacements";
 interface ReplacementReceipt {
@@ -92,8 +93,7 @@ async function readContext(db: Db, turn: number, session?: ClientSession) {
   const people = parent.nominations.people.filter((row) => eligible.has(row.id));
   const departed = preliminary.map((row) => row.mandate);
   const ownerPeople = [...people, ...departed];
-  const npcs = await db
-    .collection<NPP>("npps")
+  const npcs = await nppsCollection(db)
     .find(
       {
         _id: {

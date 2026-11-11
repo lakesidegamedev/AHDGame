@@ -75,6 +75,7 @@ import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 type ViewerCharacter = Character | null;
 
@@ -133,9 +134,10 @@ export async function buildCentralBankChairData(
     // chairCharacterId would render a player name under the "Autonomous Chair
     // (AI)" badge (M1). chairMode "npp" never resolves to a character.
     const npp = bank.chairNppId
-      ? await db
-          .collection<NPP>("npps")
-          .findOne({ _id: bank.chairNppId }, { projection: { _id: 1, name: 1, avatarUrl: 1 } })
+      ? await nppsCollection(db).findOne(
+          { _id: bank.chairNppId },
+          { projection: { _id: 1, name: 1, avatarUrl: 1 } }
+        )
       : null;
     return {
       chairData: npp

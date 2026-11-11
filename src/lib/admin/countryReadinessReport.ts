@@ -9,6 +9,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /** Best-effort preset lookup; null when the world has no gameState yet. */
 async function readPreset(db: Db): Promise<string | null> {
@@ -125,7 +126,7 @@ export async function buildCountryReadinessReport(
     detail: `${expect.seatNote}, found ${seatCount}`,
   });
 
-  const nppCount = await db.collection("npps").countDocuments({ countryId });
+  const nppCount = await nppsCollection<Document>(db).countDocuments({ countryId });
   checks.push({
     name: "NPPs",
     status:

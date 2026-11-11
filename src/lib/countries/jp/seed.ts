@@ -20,6 +20,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export async function seedJPRegions(
   db: Db,
@@ -336,7 +337,7 @@ export async function removeLegacyJPCeremonialIdentity(
   db: Db,
   log: (msg: string) => void
 ): Promise<void> {
-  const result = await db.collection("npps").deleteMany({
+  const result = await nppsCollection<Document>(db).deleteMany({
     countryId: "JP",
     name: "Emperor Naruhito",
     politicalInfluence: 0,
@@ -368,7 +369,7 @@ export async function seedJPGovernors2020(db: Db, reset: boolean, log: (msg: str
     });
 
     if (nppIds.length > 0) {
-      await db.collection<NPP>("npps").updateMany(
+      await nppsCollection(db).updateMany(
         { _id: { $in: nppIds }, "currentOffice.type": "governor" },
         {
           $set: {
@@ -415,7 +416,7 @@ export async function seedJPGovernors1991(db: Db, reset: boolean, log: (msg: str
     });
 
     if (nppIds.length > 0) {
-      await db.collection<NPP>("npps").updateMany(
+      await nppsCollection(db).updateMany(
         { _id: { $in: nppIds }, "currentOffice.type": "governor" },
         {
           $set: {

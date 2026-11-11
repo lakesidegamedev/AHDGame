@@ -2,6 +2,7 @@ import type { Db, ObjectId } from "mongodb";
 import type { Corporation } from "@/lib/db/types/corporation";
 import type { NPP } from "@/lib/db/types/npp";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 // Older snapshots can carry the pre-migration player controller tag.
 type RestoredCorporation = Omit<Corporation, "ceoType"> & {
@@ -19,8 +20,7 @@ export async function applyCloneControllerPolicy(
     return 0;
   }
 
-  const nppRows = await db
-    .collection<NPP>("npps")
+  const nppRows = await nppsCollection(db)
     .find({ retiredAt: null }, { projection: { _id: 1, countryId: 1 } })
     .toArray();
   const byCountry = new Map<string, ObjectId[]>();

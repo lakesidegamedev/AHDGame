@@ -22,6 +22,8 @@ import {
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import type { Document } from "mongodb";
 
 export async function readUKDevolutionState(
   db: Db,
@@ -179,7 +181,7 @@ export async function vacateUKRegionalExecutives(
         { $set: { currentOffice: null, updatedAt: now } }
       );
     if (npps.length)
-      await db.collection("npps").updateMany(
+      await nppsCollection<Document>(db).updateMany(
         {
           _id: { $in: npps },
           "currentOffice.type": "governor",

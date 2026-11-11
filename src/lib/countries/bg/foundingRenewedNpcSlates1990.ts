@@ -13,6 +13,7 @@ import {
 } from "./rules/foundingRenewal1990";
 import { BG_1990_CONSTITUENCIES } from "./data/foundingDistricts1990";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 function stableId(key: string) {
   return new ObjectId(createHash("sha256").update(key).digest("hex").slice(0, 24));
@@ -42,8 +43,7 @@ export async function planBgFoundingRenewedNpcSlates(input: {
       .filter((row) => Number.isSafeInteger(row.sequentialId) && row.sequentialId > 0)
       .map((row) => String(row.sequentialId))
   );
-  const npcs = await db
-    .collection<NPP>("npps")
+  const npcs = await nppsCollection(db)
     .find(
       {
         countryId: "BG",

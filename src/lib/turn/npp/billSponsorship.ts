@@ -88,6 +88,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /**
  * Conservative catalog of legislation types that are clearly market-liberalizing
@@ -367,9 +368,10 @@ export async function loadFrenchEuropeanExecutiveParty(db: Db): Promise<string |
     .toArray();
   if (presidents.length !== 1 || presidents[0].characterId || !presidents[0].nppId)
     return undefined;
-  const npp = await db
-    .collection<NPP>("npps")
-    .findOne({ _id: presidents[0].nppId }, { projection: { party: 1 } });
+  const npp = await nppsCollection(db).findOne(
+    { _id: presidents[0].nppId },
+    { projection: { party: 1 } }
+  );
   if (!npp?.party || (presidents[0].party && presidents[0].party !== npp.party)) return undefined;
   return npp.party;
 }

@@ -8,6 +8,7 @@ import {
   type VacateVoteValue,
 } from "./nppVacateVote";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /**
  * Give every unvoted NPP bloc a graded ballot on the motion to vacate.
@@ -53,8 +54,7 @@ export async function autoVoteNppsForVacateMotion(
   if (nppIdList.length === 0) return votes;
 
   const [nppDocs, speakerContext] = await Promise.all([
-    db
-      .collection<NPP>("npps")
+    nppsCollection(db)
       .find({ _id: { $in: nppIdList } })
       .project<Pick<NPP, "_id" | "party" | "policies">>({ _id: 1, party: 1, policies: 1 })
       .toArray(),

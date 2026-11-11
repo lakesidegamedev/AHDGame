@@ -26,6 +26,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export async function seedUKRegions(
   db: Db,
@@ -498,17 +499,14 @@ export async function seedUKRegionalCouncil(db: Db, reset: boolean, log: (msg: s
       state: { $in: regionIds },
     });
     // Retire NPPs that only held Regional Council office
-    const rcNpps = await db
-      .collection<NPP>("npps")
+    const rcNpps = await nppsCollection(db)
       .find({ "currentOffice.type": "regionalCouncil", countryId: "UK", retiredAt: null })
       .toArray();
     if (rcNpps.length > 0) {
-      await db
-        .collection<NPP>("npps")
-        .updateMany(
-          { _id: { $in: rcNpps.map((n) => n._id) } },
-          { $set: { retiredAt: now, currentOffice: null, updatedAt: now } }
-        );
+      await nppsCollection(db).updateMany(
+        { _id: { $in: rcNpps.map((n) => n._id) } },
+        { $set: { retiredAt: now, currentOffice: null, updatedAt: now } }
+      );
     }
     log(
       `Reset: deleted ${delElections.deletedCount} elections, ${delOfficials.deletedCount} officials, retired ${rcNpps.length} NPPs`
@@ -598,8 +596,7 @@ export async function seedUKRegionalCouncil(db: Db, reset: boolean, log: (msg: s
   const partyCache = new Map<string, string>();
 
   // Get existing NPP names to avoid duplicates
-  const existingNPPs = await db
-    .collection<NPP>("npps")
+  const existingNPPs = await nppsCollection(db)
     .find({ retiredAt: null })
     .project({ name: 1 })
     .toArray();
@@ -774,7 +771,7 @@ export async function seedUKRegionalCouncil(db: Db, reset: boolean, log: (msg: s
         );
         // Also update the NPP's currentOffice
         if (existingOfficial.nppId) {
-          await db.collection<NPP>("npps").updateOne(
+          await nppsCollection(db).updateOne(
             { _id: existingOfficial.nppId },
             {
               $inc: { "currentOffice.seatsHeld": newSeats },
@@ -865,7 +862,7 @@ export async function seedUKRegionalCouncil(db: Db, reset: boolean, log: (msg: s
     }
 
     if (nppsToInsert.length > 0) {
-      await db.collection<NPP>("npps").insertMany(nppsToInsert);
+      await nppsCollection(db).insertMany(nppsToInsert);
       nppsCreated += nppsToInsert.length;
     }
     if (officialsToInsert.length > 0) {
@@ -882,7 +879,7 @@ export async function removeLegacyUKCeremonialIdentity(
   db: Db,
   log: (msg: string) => void
 ): Promise<void> {
-  const result = await db.collection("npps").deleteMany({
+  const result = await nppsCollection<Document>(db).deleteMany({
     _id: new ObjectId("6770000000000000000000a1"),
     countryId: "UK",
     name: "King Charles III",
@@ -917,7 +914,7 @@ export async function seedUKGovernors2020(db: Db, reset: boolean, log: (msg: str
     });
 
     if (nppIds.length > 0) {
-      await db.collection<NPP>("npps").updateMany(
+      await nppsCollection(db).updateMany(
         { _id: { $in: nppIds }, "currentOffice.type": "governor" },
         {
           $set: {

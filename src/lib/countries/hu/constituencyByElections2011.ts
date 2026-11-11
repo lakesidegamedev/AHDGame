@@ -30,6 +30,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export const HU_2011_BY_ELECTIONS_COLLECTION = "hu2011ConstituencyByElections";
 export interface HuModernByElectionRecord {
@@ -218,8 +219,7 @@ async function materializeHuModernByElectionOpening(input: {
   }
   if (vacant.some((row) => !Number.isSafeInteger(register[row.id]) || register[row.id] < 1))
     throw new Error("Modern Hungarian vacancy has an invalid district electorate");
-  const owners = await db
-    .collection<NPP>("npps")
+  const owners = await nppsCollection(db)
     .find(
       {
         _id: {
@@ -488,8 +488,7 @@ async function materializeHuModernByElectionResolution(input: {
       }
     )
     .toArray();
-  const npcs = await db
-    .collection<NPP>("npps")
+  const npcs = await nppsCollection(db)
     .find(
       { countryId: "HU", retiredAt: null, isTechnocrat: { $ne: true } },
       {

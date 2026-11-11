@@ -13,6 +13,7 @@ import {
 } from "./presidentialElectionResult";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 const RUSSIAN_PRESIDENTIAL_ARCHIVES_COLLECTION = "russianPresidentialOfficeArchives";
 interface Archive {
   _id: string;
@@ -102,8 +103,7 @@ export async function materializeRussianPresidentialSeating(input: {
         .toArray()
     : [];
   const npps = nppIds.length
-    ? await db
-        .collection<NPP>("npps")
+    ? await nppsCollection(db)
         .find(
           {
             _id: { $in: nppIds },
@@ -197,13 +197,11 @@ export async function materializeRussianPresidentialSeating(input: {
     { $set: { currentOffice: null, updatedAt: now } },
     { session }
   );
-  await db
-    .collection<NPP>("npps")
-    .updateMany(
-      { countryId: "RU", "currentOffice.type": { $in: retiredTypes }, _id: { $nin: nppIds } },
-      { $set: { currentOffice: null, updatedAt: now } },
-      { session }
-    );
+  await nppsCollection(db).updateMany(
+    { countryId: "RU", "currentOffice.type": { $in: retiredTypes }, _id: { $nin: nppIds } },
+    { $set: { currentOffice: null, updatedAt: now } },
+    { session }
+  );
   const rows: ElectedOfficial[] = ticket.map((person, i) => ({
     _id: officialIds[i],
     countryId: "RU",
@@ -248,7 +246,7 @@ export async function materializeRussianPresidentialSeating(input: {
       },
     }));
     const updated = isNpp
-      ? await db.collection<NPP>("npps").bulkWrite(writes, { session })
+      ? await nppsCollection(db).bulkWrite(writes, { session })
       : await charactersCollection(db).bulkWrite(writes, { session });
     if (updated.matchedCount !== people.length)
       throw new Error("Russian certified office holder changed");

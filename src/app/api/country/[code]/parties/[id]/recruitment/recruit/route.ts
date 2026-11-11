@@ -36,6 +36,7 @@ import {
 } from "@/lib/npp/recruitmentCooldown";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 // POST /api/country/[code]/parties/[id]/recruitment/recruit — Recruit an NPP into the party in a specified state
 // Auth: requireAuthWithCharacter
@@ -133,12 +134,12 @@ export async function POST(
 
       // Calculate slots and cost
       const stateOrg = statePartyOrg?.organization ?? 0;
-      const currentNPPs = await db
-        .collection<NPP>("npps")
-        .countDocuments(activePartyNppFilter(countryId, partyIdStr, stateId));
-      const partyNPPCount = await db
-        .collection<NPP>("npps")
-        .countDocuments(activePartyNppFilter(countryId, partyIdStr));
+      const currentNPPs = await nppsCollection(db).countDocuments(
+        activePartyNppFilter(countryId, partyIdStr, stateId)
+      );
+      const partyNPPCount = await nppsCollection(db).countDocuments(
+        activePartyNppFilter(countryId, partyIdStr)
+      );
       const partyNppCapacity = await getPartyNppCapacity(db, countryId, partyIdStr, now);
       const capacityError = partyNppCapacityError(partyNppCapacity, partyNPPCount);
       if (capacityError) {
@@ -181,8 +182,7 @@ export async function POST(
       }
 
       // Generate NPP
-      const existingNPPs = await db
-        .collection<NPP>("npps")
+      const existingNPPs = await nppsCollection(db)
         .find({ retiredAt: null }, { projection: { name: 1 } })
         .toArray();
       const usedNames = new Set(existingNPPs.map((n) => n.name));
@@ -275,7 +275,7 @@ export async function POST(
             throw new Error("NATIONAL_RECRUITMENT_CHANGED");
           }
 
-          await db.collection<NPP>("npps").insertOne(npp, { session });
+          await nppsCollection(db).insertOne(npp, { session });
         },
         async () => {
           const deductResult = await politicalPartiesCollection(db).updateOne(
@@ -296,7 +296,7 @@ export async function POST(
           }
 
           try {
-            await db.collection<NPP>("npps").insertOne(npp);
+            await nppsCollection(db).insertOne(npp);
           } catch (error) {
             const rollbackUpdate: {
               $inc: { nppActionPoints: number; treasury: number };

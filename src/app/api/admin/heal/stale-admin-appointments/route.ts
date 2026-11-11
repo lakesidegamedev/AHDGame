@@ -17,6 +17,7 @@ import type { ElectedOfficial, NPP } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import type { Document } from "mongodb";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 interface DuplicateSeat {
   seatKey: string;
@@ -181,11 +182,12 @@ export async function POST() {
             clearedCharacters++;
           }
         } else if (stale.nppId) {
-          const npp = await db.collection<NPP>("npps").findOne({ _id: stale.nppId });
+          const npp = await nppsCollection(db).findOne({ _id: stale.nppId });
           if (npp?.currentOffice?.type === stale.officeType) {
-            await db
-              .collection("npps")
-              .updateOne({ _id: stale.nppId }, { $set: { currentOffice: null, updatedAt: now } });
+            await nppsCollection<Document>(db).updateOne(
+              { _id: stale.nppId },
+              { $set: { currentOffice: null, updatedAt: now } }
+            );
             clearedNPPs++;
           }
         }

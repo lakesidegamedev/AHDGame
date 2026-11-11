@@ -18,6 +18,7 @@ import { collectSiblingSubsidiaryCeoUserIds, resolveParentCeoUserId } from "../p
 import { fail, type SubsidiaryCommandResult } from "../commandTypes";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export interface AppointSubsidiaryCeoInput {
   sub: Corporation;
@@ -62,9 +63,10 @@ export async function appointSubsidiaryCeo(
       });
       const nppId = pickCaretakerNpp(affiliations, forcedNppId, sectorLane);
       if (!nppId) return fail("No eligible NPP is available to caretake this subsidiary.");
-      const npp = await db
-        .collection<NPP>("npps")
-        .findOne({ _id: new ObjectId(nppId) }, { projection: { name: 1 } });
+      const npp = await nppsCollection(db).findOne(
+        { _id: new ObjectId(nppId) },
+        { projection: { name: 1 } }
+      );
       if (!npp) return fail("No eligible NPP is available to caretake this subsidiary.");
 
       await installCaretakerForVacantCorp(db, { corp: sub, nppId, turn, now });

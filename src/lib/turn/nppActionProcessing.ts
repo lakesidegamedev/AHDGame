@@ -83,6 +83,7 @@ import { getPoliticalPartiesCollection } from "@/lib/db/collections/politicalPar
 import { getNppsCollection } from "@/lib/db/collections/npps";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 export {
   NPP_FOUNDING_FEE_ANCHOR,
   sellNppStockSurplus,
@@ -279,12 +280,10 @@ async function runNppActions(db: Db, currentTurn: number): Promise<NppActionProc
   // garbage collecting of it measured as 44% of a singleplayer turn's CPU,
   // against under 8% for all game logic combined. Typed as the projected shape
   // so nothing downstream can assume a field that is no longer fetched.
-  const cursor = db
-    .collection<NppWithoutPolicies>("npps")
-    .find(
-      { retiredAt: null, actionPoints: { $gte: 1 }, isTechnocrat: { $ne: true } },
-      { projection: { policies: 0 } }
-    );
+  const cursor = nppsCollection<NppWithoutPolicies>(db).find(
+    { retiredAt: null, actionPoints: { $gte: 1 }, isTechnocrat: { $ne: true } },
+    { projection: { policies: 0 } }
+  );
 
   const nppOps: {
     updateOne: {

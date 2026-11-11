@@ -12,6 +12,7 @@ import type {
   PartyAnalyticsRiskItem,
 } from "./types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 const LOW_LOYALTY_THRESHOLD = 40;
 const WHIP_BREAKER_STUBBORNNESS = 70;
@@ -106,8 +107,7 @@ export async function buildPartyDisciplineAnalytics(
     };
   }
 
-  const npps = await db
-    .collection<NPP>("npps")
+  const npps = await nppsCollection(db)
     .find({
       countryId,
       party: partyId,

@@ -77,6 +77,7 @@ import {
   resignNppCaretakerMinister,
 } from "@/lib/countries/uk/cabinet/nppResignation";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /** Map a position metric to its agenda domain, or null if it has no mapping. */
 function domainForMetric(category: string, metricId: string): string | null {
@@ -567,8 +568,7 @@ export async function runMinisterialGovernance(
   // Hydrate the ministers' NPP personalities (drives the per-archetype action
   // budget). Cabinet docs don't denormalise personality, so batch-load them.
   const ministerNppIds = ministers.map((m) => m.nppId).filter((id): id is ObjectId => !!id);
-  const nppDocs = await db
-    .collection<NPP>("npps")
+  const nppDocs = await nppsCollection(db)
     .find({ _id: { $in: ministerNppIds } }, { projection: { personality: 1 } })
     .toArray();
   const personalityByNpp = new Map<string, NPPPersonality>(
@@ -589,9 +589,7 @@ export async function runMinisterialGovernance(
   // guard further down decides whether the head may act on it this turn.
   const headNppId = gov.presidentNppId ?? gov.pmNppId ?? null;
   const headNpp = headNppId
-    ? await db
-        .collection<NPP>("npps")
-        .findOne({ _id: headNppId }, { projection: { personality: 1 } })
+    ? await nppsCollection(db).findOne({ _id: headNppId }, { projection: { personality: 1 } })
     : null;
   const reshufflePropensity = headNpp
     ? governingArchetypeModifiers(headNpp.personality).reshufflePropensity
@@ -848,8 +846,7 @@ export async function runCaretakerMinisters(
   // Hydrate each caretaker NPP's personality + ideology (drives its agenda and
   // its per-archetype action budget).
   const ministerNppIds = ministers.map((m) => m.nppId);
-  const nppDocs = await db
-    .collection<NPP>("npps")
+  const nppDocs = await nppsCollection(db)
     .find(
       { _id: { $in: ministerNppIds } },
       { projection: { personality: 1, "policies.economic": 1, "policies.social": 1 } }

@@ -19,6 +19,7 @@ import {
   trailingDailyResults,
 } from "@/lib/turn/corporation/nppCeoPay";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export const ceoPayResponseSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("accept") }),
@@ -41,9 +42,10 @@ export async function respondToCeoPayDemand(
   if (!isNppCeoPayCorp(corporation) || !demand) {
     return { ok: false, status: 400, error: "There is no open pay demand to answer." };
   }
-  const npp = await db
-    .collection<NPP>("npps")
-    .findOne({ _id: corporation.ceoId as ObjectId }, { projection: { personality: 1 } });
+  const npp = await nppsCollection(db).findOne(
+    { _id: corporation.ceoId as ObjectId },
+    { projection: { personality: 1 } }
+  );
   const outcome = resolveCeoPayResponse(
     demand.amount,
     response,

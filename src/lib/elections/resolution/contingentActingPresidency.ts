@@ -18,6 +18,7 @@ import { isNppContingentId, toCharacterObjectId, toNppObjectId } from "./conting
 import { notifyHouseVoteOpened } from "./contingentHouseVoteNotices";
 import { logger } from "@/lib/observability/logger";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /** How long the House keeps voting after a deadlock (hourly turns: about a day). */
 export const CONTINGENT_HOUSE_VOTE_TURNS = 24;
@@ -37,9 +38,10 @@ async function loadActingPerson(
 ): Promise<{ characterId: ObjectId | null; nppId: ObjectId | null; name: string; party: string }> {
   if (isNppContingentId(personId)) {
     const nppId = toNppObjectId(personId);
-    const npp = await db
-      .collection<NPP>("npps")
-      .findOne({ _id: nppId }, { projection: { name: 1, party: 1 } });
+    const npp = await nppsCollection(db).findOne(
+      { _id: nppId },
+      { projection: { name: 1, party: 1 } }
+    );
     if (!npp) throw new Error(`Acting president NPP ${personId} not found`);
     return { characterId: null, nppId, name: npp.name, party: npp.party ?? "independent" };
   }

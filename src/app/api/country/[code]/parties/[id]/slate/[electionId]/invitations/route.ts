@@ -19,6 +19,7 @@ import { findBlockingActiveCandidacy } from "@/lib/elections/activeCandidacy";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { isPrimaryClosed } from "@/lib/elections/electionDeadlineFilters";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; electionId: string }>;
@@ -325,7 +326,7 @@ async function buildNppSlateCandidate(args: {
   assignedByRole: SlateCandidate["assignedByRole"];
   getsStateAcceptanceBuff: boolean;
 }): Promise<BuiltSlateCandidate> {
-  const npp = await args.db.collection<NPP>("npps").findOne({ _id: args.candidateObjId });
+  const npp = await nppsCollection(args.db).findOne({ _id: args.candidateObjId });
   if (!npp) return { error: "NPP not found", status: 404 };
 
   if ((npp.countryId ?? "US") !== args.countryId) {

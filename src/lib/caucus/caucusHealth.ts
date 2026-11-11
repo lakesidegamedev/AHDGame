@@ -14,6 +14,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import { CAUCUS_NPP_RETENTION_MIN_RELATIONSHIP } from "@/lib/constants/partyOrg";
 import { buildWhipDefianceSnapshots } from "@/lib/partyWhips/whipDefiance";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 const CAUCUS_RECENT_WINDOW_TURNS = 12;
 const CAUCUS_WARNING_BUFFER = 10;
@@ -262,8 +263,7 @@ export async function buildPartyCaucusHealthSnapshot(
           .toArray(),
     allNppIds.length === 0
       ? Promise.resolve([] as NPP[])
-      : db
-          .collection<NPP>("npps")
+      : nppsCollection(db)
           .find({ _id: { $in: allNppIds } })
           .toArray(),
     allCharacterIds.length === 0

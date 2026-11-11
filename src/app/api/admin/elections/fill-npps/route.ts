@@ -18,6 +18,7 @@ import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError } from "@/lib/api/errors";
 import type { Election, ElectionCandidate, NPP } from "@/lib/db/types";
 import { getCountryConfig } from "@/lib/constants/countries";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /** Minimum candidates per party per race. Races below this get filled. */
 const MIN_CANDIDATES_PER_PARTY = 1;
@@ -69,7 +70,7 @@ export async function POST() {
     );
 
     // All idle, non-retired NPPs
-    const npps = await db.collection<NPP>("npps").find({ retiredAt: null }).toArray();
+    const npps = await nppsCollection(db).find({ retiredAt: null }).toArray();
 
     // Index idle NPPs by state+party
     const nppsByStateParty = new Map<string, NPP[]>();

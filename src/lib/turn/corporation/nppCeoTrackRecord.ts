@@ -17,6 +17,7 @@ import {
   isCeoRecordTurn,
   type NppCeoTrackRecord,
 } from "@/lib/nppAutonomy/v6/rules/ceoTrackRecord";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /** Pure: the `npps` writes for this turn's samples against the stored records. */
 export function buildCeoTrackRecordWrites(
@@ -50,8 +51,7 @@ export async function recordNppCeoTrackRecords(
   const ids = [...new Set(samples.map((s) => s.nppId))]
     .filter((id) => ObjectId.isValid(id))
     .map((id) => new ObjectId(id));
-  const docs = await db
-    .collection<NPP>("npps")
+  const docs = await nppsCollection(db)
     .find({ _id: { $in: ids } })
     .project<{ _id: ObjectId; ceoTrackRecord?: NppCeoTrackRecord }>({ ceoTrackRecord: 1 })
     .toArray();
@@ -63,6 +63,6 @@ export async function recordNppCeoTrackRecords(
     turn
   );
   if (writes.length === 0) return { updated: 0 };
-  await db.collection<NPP>("npps").bulkWrite(writes, { ordered: false });
+  await nppsCollection(db).bulkWrite(writes, { ordered: false });
   return { updated: writes.length };
 }

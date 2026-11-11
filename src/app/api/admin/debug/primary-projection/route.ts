@@ -42,6 +42,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 const ALL_STATE_IDS = [...new Set(ELECTORAL_VOTE_UNITS.map((u) => u.stateId))];
 
@@ -155,8 +156,7 @@ export async function GET(req: Request) {
             .toArray()
         : Promise.resolve([] as Character[]),
       nppIds.length
-        ? db
-            .collection<NPP>("npps")
+        ? nppsCollection(db)
             .find({ _id: { $in: nppIds } })
             .toArray()
         : Promise.resolve([] as NPP[]),

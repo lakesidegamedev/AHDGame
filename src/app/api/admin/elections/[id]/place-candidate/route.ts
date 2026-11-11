@@ -14,6 +14,7 @@ import type { Election, ElectionCandidate, NPP, ElectionVoteTally, Campaign } fr
 import { isCampaignEligibleElection } from "@/lib/campaigns/isCampaignEligible";
 import { DEFAULT_CANDIDATE_SUPPORT } from "@/lib/elections/engine/electionFormulaFactors";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 const placeCandidateSchema = z
   .object({
@@ -85,7 +86,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       charId = charIdObj;
     } else if (nppId) {
       const nppIdObjParsed = new ObjectId(nppId);
-      const npp = await db.collection<NPP>("npps").findOne({ _id: nppIdObjParsed });
+      const npp = await nppsCollection(db).findOne({ _id: nppIdObjParsed });
       if (!npp) {
         return errorResponse(404, "NPP not found");
       }

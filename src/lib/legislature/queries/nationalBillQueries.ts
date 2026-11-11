@@ -83,6 +83,7 @@ import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 const BILL_PAGE_LIMIT = 50;
 
@@ -880,8 +881,7 @@ export async function getNationalBillDetail(
           .toArray()
       : Promise.resolve([]),
     uniqueNppIds.length > 0
-      ? db
-          .collection<NPP>("npps")
+      ? nppsCollection(db)
           .find({ _id: { $in: uniqueNppIds.map((id) => new ObjectId(id)) } })
           .project({ _id: 1, party: 1 })
           .toArray()

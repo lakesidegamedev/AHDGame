@@ -23,6 +23,8 @@ import { migrateProducerWallets } from "./migrateProducerWallets";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import type { Document } from "mongodb";
 
 export interface ExpandToSubRegionsResult {
   inserted: number;
@@ -87,9 +89,10 @@ export async function expandToSubRegions(
       .collection<ConflictCapacityObligation>("conflictCapacityObligations")
       .deleteMany({ regionId: countryId });
   }
-  await db
-    .collection("npps")
-    .updateMany({ homeState: countryId }, { $set: { homeState: capital, countryId } });
+  await nppsCollection<Document>(db).updateMany(
+    { homeState: countryId },
+    { $set: { homeState: capital, countryId } }
+  );
   await corporationsCollection(db).updateMany(
     { headquartersState: countryId },
     { $set: { headquartersState: capital, countryId } }

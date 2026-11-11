@@ -11,6 +11,7 @@ import { handleRouteError } from "@/lib/api/errors";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import type { Document } from "mongodb";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 // POST /api/admin/officials/reset — Deletes all elected officials and clears currentOffice on all characters and NPPs.
 // Auth: requireAdmin
@@ -30,12 +31,10 @@ export async function POST() {
       { $set: { currentOffice: null, updatedAt: now } }
     );
 
-    const nppsResult = await db
-      .collection("npps")
-      .updateMany(
-        { currentOffice: { $ne: null } },
-        { $set: { currentOffice: null, updatedAt: now } }
-      );
+    const nppsResult = await nppsCollection<Document>(db).updateMany(
+      { currentOffice: { $ne: null } },
+      { $set: { currentOffice: null, updatedAt: now } }
+    );
 
     return NextResponse.json({
       success: true,

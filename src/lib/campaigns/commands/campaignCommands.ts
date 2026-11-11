@@ -33,6 +33,8 @@ import {
 } from "./campaignManagementCommands";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import type { Document } from "mongodb";
 export {
   appointCampaignManager,
   contributeCampaignStrength,
@@ -153,9 +155,7 @@ export async function upgradeCampaign(params: {
     }
     const targetChar = await charactersCollection(db).findOne({ _id: targetOid });
     oppoTargetChar = targetChar;
-    const targetNpp = !targetChar
-      ? await db.collection<NPP>("npps").findOne({ _id: targetOid })
-      : null;
+    const targetNpp = !targetChar ? await nppsCollection(db).findOne({ _id: targetOid }) : null;
     const target = targetChar || targetNpp;
     if (!target) {
       throw notFound("Target not found");
@@ -262,7 +262,7 @@ export async function upgradeCampaign(params: {
     ];
     const charRes = await charactersCollection(db).updateOne({ _id: targetOid }, clampFav);
     if (charRes.matchedCount === 0) {
-      await db.collection("npps").updateOne({ _id: targetOid }, clampFav);
+      await nppsCollection<Document>(db).updateOne({ _id: targetOid }, clampFav);
     }
   }
 

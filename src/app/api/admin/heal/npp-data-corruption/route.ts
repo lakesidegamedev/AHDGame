@@ -7,6 +7,7 @@ import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError } from "@/lib/api/errors";
 import { getDb } from "@/lib/mongodb";
 import type { StatePartyOrg, NPP } from "@/lib/db/types";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 interface DiagnosticResult {
   ukSpoWithNaNOrg: number;
@@ -38,8 +39,7 @@ export async function GET() {
       if (!Number.isFinite(spo.organization)) ukSpoWithNaNOrg++;
     }
 
-    const allNpps = await db
-      .collection<NPP>("npps")
+    const allNpps = await nppsCollection(db)
       .find({ retiredAt: null })
       .project<{
         funds?: number;
@@ -104,7 +104,7 @@ export async function POST() {
 
     const db = await getDb();
     const spoCol = db.collection<StatePartyOrg>("statePartyOrg");
-    const nppCol = db.collection<NPP>("npps");
+    const nppCol = nppsCollection(db);
 
     const fixes: string[] = [];
 

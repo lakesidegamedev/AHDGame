@@ -13,6 +13,7 @@ import { hasPartyNppSeats } from "../rules/partyNppProposal";
 import { canDirectNationalPartyNpp, pickNationalPartySponsor } from "../rules/nationalPartyNpp";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export async function resolveNationalPartyNppAccess(
   db: Db,
@@ -62,8 +63,7 @@ export async function resolveNationalPartyNppAccess(
   const seated = seats.filter((s) => s.nppId && hasPartyNppSeats(s.seatsHeld));
   const ids = seated.flatMap((s) => (s.nppId ? [s.nppId] : []));
   if (!ids.length) return { authorized: true, blocked: false, sponsor: null };
-  const npps = await db
-    .collection<NPP>("npps")
+  const npps = await nppsCollection(db)
     .find(
       { _id: { $in: ids }, party: character.party, retiredAt: null },
       { projection: { name: 1, party: 1, countryId: 1 } }

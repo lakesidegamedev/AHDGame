@@ -30,6 +30,7 @@ import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /**
  * Maximum accepted `q` length (after trimming). Longer queries are rejected
@@ -703,7 +704,7 @@ export async function runUniversalSearch({
   if (enabledCountries) {
     nppQuery.countryId = { $in: enabledCountries };
   }
-  const npps = await db.collection<NPP>("npps").find(nppQuery).limit(5).toArray();
+  const npps = await nppsCollection(db).find(nppQuery).limit(5).toArray();
 
   for (const npp of npps) {
     results.push({

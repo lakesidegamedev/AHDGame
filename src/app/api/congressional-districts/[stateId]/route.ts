@@ -6,6 +6,7 @@ import { getDb } from "@/lib/mongodb";
 import { buildDistrictSquareViews } from "@/lib/redistricting/districtSquareResponse";
 import type { CongressionalDistrict, Character, NPP } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /**
  * Returns the static congressional-district geometry for a single US
@@ -60,8 +61,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ stateId
       }
       // NPP holders live in a separate collection, keyed by holderNppId.
       if (holderNppIds.length > 0) {
-        const npps = (await db
-          .collection<NPP>("npps")
+        const npps = (await nppsCollection(db)
           .find({ _id: { $in: holderNppIds } })
           .toArray()) as NPP[];
         for (const n of npps) holderNames[String(n._id)] = n.name;

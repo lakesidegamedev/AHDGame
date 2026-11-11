@@ -33,6 +33,7 @@ import {
 } from "@/lib/nppEndorsements";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export interface ExecuteInfluenceInput {
   characterId: ObjectId;
@@ -155,7 +156,7 @@ export async function executeInfluence(
   const actionConfig = INFLUENCE_ACTIONS[input.influenceType];
 
   const character = await charactersCollection(db).findOne({ _id: input.characterId });
-  const npp = await db.collection<NPP>("npps").findOne({ _id: input.nppId });
+  const npp = await nppsCollection(db).findOne({ _id: input.nppId });
 
   if (!character) {
     return {
@@ -308,7 +309,7 @@ export async function executeInfluence(
     });
   }
 
-  await db.collection<NPP>("npps").updateOne(
+  await nppsCollection(db).updateOne(
     { _id: npp._id },
     {
       $set: {
@@ -460,7 +461,7 @@ export async function getInfluenceOptions(
   const db = await getDb();
 
   const character = await charactersCollection(db).findOne({ _id: characterId });
-  const npp = await db.collection<NPP>("npps").findOne({ _id: nppId });
+  const npp = await nppsCollection(db).findOne({ _id: nppId });
 
   if (!character || !npp) {
     return {

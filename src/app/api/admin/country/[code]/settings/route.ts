@@ -37,6 +37,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import type { Document } from "mongodb";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 interface RouteContext {
   params: Promise<{ code: string }>;
@@ -149,7 +150,7 @@ export const GET = withAdminRoute(async (_auth, request: Request, { params }: Ro
     getCountryAccess(countryId),
     gameStateCollection(db).findOne({ _id: "current" }),
     charactersCollection(db).countDocuments({ countryId }),
-    db.collection("npps").countDocuments({ countryId }),
+    nppsCollection<Document>(db).countDocuments({ countryId }),
     politicalPartiesCollection<Document>(db).countDocuments({ countryId }),
   ]);
 

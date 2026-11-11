@@ -14,6 +14,7 @@ import type { ElectedOfficial, NPP } from "@/lib/db/types";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export async function POST(
   request: Request,
@@ -60,9 +61,10 @@ export async function POST(
         { $unset: { currentOffice: "" } }
       );
     } else if (official.nppId) {
-      await db
-        .collection<NPP>("npps")
-        .updateOne({ _id: official.nppId }, { $unset: { currentOffice: "" } });
+      await nppsCollection(db).updateOne(
+        { _id: official.nppId },
+        { $unset: { currentOffice: "" } }
+      );
     }
 
     // Clear the official record (set to vacant)

@@ -57,6 +57,7 @@ import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import type { Document } from "mongodb";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export interface MergeCountryArgs {
   /** The country being absorbed. Retired when this completes. */
@@ -299,9 +300,10 @@ async function sweepNationalStrays(
   absorbedTariffsWin: boolean
 ): Promise<void> {
   const now = new Date();
-  await db
-    .collection("npps")
-    .updateMany({ countryId: fromCountryId }, { $set: { countryId: toCountryId, updatedAt: now } });
+  await nppsCollection<Document>(db).updateMany(
+    { countryId: fromCountryId },
+    { $set: { countryId: toCountryId, updatedAt: now } }
+  );
   // NATIONAL-scope subsidies: the region-scoped rows crossed with their regions
   // (the `subsidies` collection is in REGION_SCOPED_COLLECTIONS by stateId), so
   // whatever still carries the old countryId here is a national programme — the

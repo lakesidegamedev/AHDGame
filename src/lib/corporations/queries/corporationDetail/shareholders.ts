@@ -9,6 +9,8 @@ import { fetchBordersByUserIds } from "@/lib/db/patreonBorders";
 import { computeAccountedShares } from "@/lib/corporations/shareInvariant";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import type { Document } from "mongodb";
 
 /**
  * Shareholder display context: CEO + every named holder class.
@@ -51,7 +53,7 @@ export async function loadShareholderContext(db: Db, corporation: Corporation) {
         }
       )
     : isNppCeo
-      ? db.collection("npps").findOne(
+      ? nppsCollection<Document>(db).findOne(
           { _id: corporation.ceoId },
           {
             projection: {
@@ -132,8 +134,7 @@ export async function loadShareholderContext(db: Db, corporation: Corporation) {
           .toArray()
       : Promise.resolve([] as Corporation[]),
     nppShareholderIds.length > 0
-      ? db
-          .collection<{ _id: ObjectId; name: string }>("npps")
+      ? nppsCollection<{ _id: ObjectId; name: string }>(db)
           .find({ _id: { $in: nppShareholderIds } }, { projection: { _id: 1, name: 1 } })
           .toArray()
       : Promise.resolve([] as { _id: ObjectId; name: string }[]),

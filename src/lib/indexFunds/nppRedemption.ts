@@ -27,6 +27,7 @@ import {
   insertFundTransaction,
 } from "@/lib/indexFunds/fundQueries";
 import { boundedParallelMap } from "@/lib/indexFunds/boundedParallelMap";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /** Mirrors `NPRiskArchetype` in nppInvesting.ts (kept local to avoid an import cycle). */
 export type NppRiskArchetype = "conservative" | "moderate" | "aggressive";
@@ -187,8 +188,7 @@ export async function processNppFundRedemptions(
   }
 
   const cashByNppId = new Map<string, number>();
-  const cashDocs = await db
-    .collection<{ _id: ObjectId; nppInvestmentCashAnchor?: number }>("npps")
+  const cashDocs = await nppsCollection<{ _id: ObjectId; nppInvestmentCashAnchor?: number }>(db)
     .find({ _id: { $in: candidateNppIds } }, { projection: { nppInvestmentCashAnchor: 1 } })
     .toArray();
   for (const doc of cashDocs) cashByNppId.set(doc._id.toString(), doc.nppInvestmentCashAnchor ?? 0);

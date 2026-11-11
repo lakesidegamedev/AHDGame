@@ -17,6 +17,7 @@ import { getGameState } from "@/lib/gameState";
 import { SINGLEPLAYER_USER_ID, isSingleplayer } from "@/lib/singleplayer";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export function mayRuleByDecree(
   character: Pick<Character, "countryId" | "singleplayerHeadOfState">,
@@ -215,12 +216,10 @@ export async function seatSingleplayerHeadOfState(
       $unset: { nppId: "", characterName: "", party: "" },
     }
   );
-  await db
-    .collection<NPP>("npps")
-    .updateMany(
-      { countryId: args.countryId, "currentOffice.type": officeType },
-      { $set: { currentOffice: null, updatedAt: args.now } }
-    );
+  await nppsCollection(db).updateMany(
+    { countryId: args.countryId, "currentOffice.type": officeType },
+    { $set: { currentOffice: null, updatedAt: args.now } }
+  );
   await charactersCollection(db).updateMany(
     {
       countryId: args.countryId,

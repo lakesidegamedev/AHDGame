@@ -7,6 +7,7 @@ import type { ParliamentaryGovernment } from "@/lib/db/types/parliamentaryGovern
 import { getCountryState, primeCountryStates } from "@/lib/countryState";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export interface PolicyHeadSponsor {
   _id: ObjectId;
@@ -83,8 +84,7 @@ export async function loadPolicyHeadSponsors(
         { projection: { _id: 1, name: 1, party: 1 } }
       )
       .toArray(),
-    db
-      .collection<NPP>("npps")
+    nppsCollection(db)
       .find(
         { _id: { $in: [...nppHeadByCountry.values()] } },
         { projection: { _id: 1, name: 1, party: 1 } }

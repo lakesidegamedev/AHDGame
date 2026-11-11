@@ -10,6 +10,7 @@ import { getExecutiveOfficeKeys } from "@/lib/elections/executiveOffice";
 import { preserveExecutiveOffice } from "@/lib/elections/resolution/generalResolutionHelpers";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export async function reconcileBundestagHolderOffices(
   db: Db,
@@ -32,8 +33,7 @@ export async function reconcileBundestagHolderOffices(
         { projection: { _id: 1, currentOffice: 1, party: 1, userId: 1 } }
       )
       .toArray(),
-    db
-      .collection<NPP>("npps")
+    nppsCollection(db)
       .find({ _id: { $in: nppIds } }, { projection: { _id: 1, currentOffice: 1 } })
       .toArray(),
   ]);
@@ -113,16 +113,14 @@ export async function reconcileBundestagHolderOffices(
   }
   if (vacancyWrites.length) await electedOfficialsCollection(db).bulkWrite(vacancyWrites);
   if (characterWrites.length) await charactersCollection(db).bulkWrite(characterWrites);
-  if (nppWrites.length) await db.collection<NPP>("npps").bulkWrite(nppWrites);
+  if (nppWrites.length) await nppsCollection(db).bulkWrite(nppWrites);
   await charactersCollection(db).updateMany(departingFilter, {
     $set: { currentOffice: null, updatedAt: now },
   });
-  await db
-    .collection<NPP>("npps")
-    .updateMany(
-      { countryId: "DE", "currentOffice.type": "bundestag", _id: { $nin: nppIds } },
-      { $set: { currentOffice: null, updatedAt: now } }
-    );
+  await nppsCollection(db).updateMany(
+    { countryId: "DE", "currentOffice.type": "bundestag", _id: { $nin: nppIds } },
+    { $set: { currentOffice: null, updatedAt: now } }
+  );
   if (currentTurn !== undefined) {
     officeTransitions.push(
       ...departingPlayers.map((character) => ({

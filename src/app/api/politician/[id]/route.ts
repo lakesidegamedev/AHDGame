@@ -7,6 +7,7 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export type PoliticianType = "character" | "npp";
 
@@ -79,7 +80,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
       } satisfies PoliticianProfileData);
     }
 
-    const npp = await db.collection<NPP>("npps").findOne({ _id: objectId });
+    const npp = await nppsCollection(db).findOne({ _id: objectId });
     if (npp) {
       const homeState = await statesCollection(db).findOne({
         _id: npp.homeState,

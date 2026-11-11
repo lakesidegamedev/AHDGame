@@ -11,6 +11,7 @@ import { isLedgerShadowEnabled } from "@/lib/ledger/featureFlag";
 import { isAnchorBalanced } from "@/lib/ledger/epsilon";
 import type { LedgerEntry, LedgerEntryInput } from "@/lib/ledger/types";
 import { roundedNppBondReturns } from "./rules";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export interface NppBondReturns {
   total: number;
@@ -28,8 +29,7 @@ export interface NppBondCashWitness {
 export async function flushNppBondCashWitnesses(db: Db, pending: NppBondCashWitness[]) {
   if (pending.length === 0) return;
   try {
-    const rows = await db
-      .collection<{ _id: ObjectId; nppBondCashWitnessKey?: string }>("npps")
+    const rows = await nppsCollection<{ _id: ObjectId; nppBondCashWitnessKey?: string }>(db)
       .find(
         {
           _id: { $in: pending.map((p) => p.nppId) },
@@ -68,8 +68,7 @@ export async function payNppBondReturns(
   if (payments.size === 0) return;
   const shadow = await isLedgerShadowEnabled();
   const recipients = shadow
-    ? await db
-        .collection<{ _id: ObjectId; countryId?: CountryId }>("npps")
+    ? await nppsCollection<{ _id: ObjectId; countryId?: CountryId }>(db)
         .find(
           { _id: { $in: [...payments.keys()].map((id) => new ObjectId(id)) } },
           { projection: { countryId: 1 } }
@@ -132,7 +131,7 @@ export async function payNppBondReturns(
     });
   }
   try {
-    await db.collection("npps").bulkWrite(operations);
+    await nppsCollection<Document>(db).bulkWrite(operations);
   } finally {
     await flushNppBondCashWitnesses(db, pending);
   }

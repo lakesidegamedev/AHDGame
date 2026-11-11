@@ -19,6 +19,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 type AnyDoc = Document & { _id: ObjectId | string; countryId: string };
 
@@ -100,13 +101,12 @@ export async function applyEraCurrencyTopology(
       }
     }
 
-    const npps = (await db
-      .collection("npps")
+    const npps = (await nppsCollection<Document>(db)
       .find({ countryId, [`currencyBalances.personal.${legacyCurrency}`]: { $exists: true } })
       .project({ currencyBalances: 1 })
       .toArray()) as Document[];
     if (npps.length > 0) {
-      await db.collection("npps").bulkWrite(
+      await nppsCollection<Document>(db).bulkWrite(
         npps.map((npp) => ({
           updateOne: {
             filter: { _id: npp._id },

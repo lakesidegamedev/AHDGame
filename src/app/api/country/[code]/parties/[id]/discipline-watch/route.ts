@@ -5,6 +5,7 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { findPartyBySequentialId } from "@/lib/db/partyLookup";
 import { COUNTRY_CONFIGS, getOfficeTypeConfig, type CountryId } from "@/lib/constants/countries";
 import type { NPP } from "@/lib/db/types";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /**
  * Discipline Watch — chair surface listing NPPs in this party with low loyalty
@@ -51,8 +52,7 @@ export async function GET(
         ? Math.max(0, Math.min(100, Number(thresholdRaw)))
         : LOW_LOYALTY_THRESHOLD;
 
-    const npps = await db
-      .collection<NPP>("npps")
+    const npps = await nppsCollection(db)
       .find({
         countryId,
         party: partyId,

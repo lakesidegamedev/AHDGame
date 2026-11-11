@@ -14,6 +14,8 @@ import { draftCharter } from "@/lib/charters/draftCharter";
 import { getPartyFrontiers } from "@/lib/parties/partyFrontier";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import type { Document } from "mongodb";
 
 // GET /api/country/[code]/parties — Return all political parties in the country with member counts and leadership
 // Auth: public
@@ -89,8 +91,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
         .collection("users")
         .find({ isBanned: true }, { projection: { _id: 1 } })
         .toArray(),
-      db
-        .collection("npps")
+      nppsCollection<Document>(db)
         .aggregate<{ _id: string; count: number }>([
           {
             $match: {

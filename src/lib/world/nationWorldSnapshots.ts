@@ -15,6 +15,7 @@ import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
 import { tallySeatsByParty, getLargestParty } from "@/lib/turn/parliamentaryGovernment";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export type NationExecutiveSnapshot = {
   name: string;
@@ -79,7 +80,7 @@ async function resolvePresidentExecutive(db: Db): Promise<NationExecutiveSnapsho
   }
 
   if (official.isNPP && official.nppId) {
-    const npp = await db.collection<NPP>("npps").findOne({ _id: official.nppId });
+    const npp = await nppsCollection(db).findOne({ _id: official.nppId });
     if (npp) {
       return {
         name: npp.name,

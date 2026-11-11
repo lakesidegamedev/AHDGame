@@ -29,6 +29,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 interface BgAssemblyOfficeArchive {
   _id: string;
@@ -137,8 +138,7 @@ async function materializeBgOrdinaryAssembly(input: {
     .filter((row) => !row.isNpc)
     .map((row) => new ObjectId(row.ownerId));
   const npcs = npcIds.length
-    ? await db
-        .collection<NPP>("npps")
+    ? await nppsCollection(db)
         .find(
           { _id: { $in: npcIds }, countryId: "BG", retiredAt: null, isTechnocrat: { $ne: true } },
           { session, projection: { party: 1, currentOffice: 1 } }
@@ -265,20 +265,18 @@ async function materializeBgOrdinaryAssembly(input: {
       { session }
     );
   if (previousNpcs.length)
-    await db
-      .collection<NPP>("npps")
-      .updateMany(
-        { _id: { $in: previousNpcs }, "currentOffice.type": "assemblyDeputy" },
-        { $set: { currentOffice: null, updatedAt: now } },
-        { session }
-      );
+    await nppsCollection(db).updateMany(
+      { _id: { $in: previousNpcs }, "currentOffice.type": "assemblyDeputy" },
+      { $set: { currentOffice: null, updatedAt: now } },
+      { session }
+    );
   await electedOfficialsCollection(db).deleteMany(
     { countryId: "BG", officeType: "assemblyDeputy" },
     { session }
   );
   await electedOfficialsCollection(db).insertMany(officials, { session });
   if (officials.some((row) => row.isNPP))
-    await db.collection<NPP>("npps").bulkWrite(
+    await nppsCollection(db).bulkWrite(
       officials
         .filter((row) => row.isNPP)
         .map((row) => ({

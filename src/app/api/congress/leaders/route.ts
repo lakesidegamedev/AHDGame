@@ -23,6 +23,7 @@ import { getEnabledCountryIds } from "@/lib/countryAccess";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import type { Document } from "mongodb";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export interface LeaderDisplay {
   role: LeadershipRole;
@@ -92,8 +93,7 @@ export async function GET() {
       const charIds = new Set(characters.map((c) => c._id.toString()));
       const nppIds = leaderIds.filter((id) => !charIds.has(id.toString()));
       if (nppIds.length > 0) {
-        const npps = await db
-          .collection<NPP>("npps")
+        const npps = await nppsCollection(db)
           .find({ _id: { $in: nppIds } })
           .project({ _id: 1, homeState: 1, avatarUrl: 1, sequentialId: 1 })
           .toArray();

@@ -10,6 +10,7 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import type { Election, NPP, PoliticalParty } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -61,8 +62,7 @@ export async function GET(request: Request, { params }: RouteParams) {
         .project({ _id: 1, name: 1, party: 1, homeState: 1 })
         .sort({ name: 1 })
         .toArray(),
-      db
-        .collection<NPP>("npps")
+      nppsCollection(db)
         .find({})
         .project({ _id: 1, name: 1, party: 1 })
         .sort({ name: 1 })

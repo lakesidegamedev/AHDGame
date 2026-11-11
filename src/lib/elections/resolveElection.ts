@@ -59,6 +59,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export type {
   PollingData,
@@ -302,8 +303,7 @@ export async function resolveElections(
           .toArray()
       : Promise.resolve([] as Character[]),
     allNppIds.length > 0
-      ? db
-          .collection<NPP>("npps")
+      ? nppsCollection(db)
           .find(
             { _id: { $in: allNppIds } },
             isFull ? undefined : { projection: ELECTION_SUMMARY_NPP_PROJECTION }
@@ -329,8 +329,7 @@ export async function resolveElections(
           .toArray()
       : Promise.resolve([] as Character[]),
     hasSingleSeat
-      ? db
-          .collection<NPP>("npps")
+      ? nppsCollection(db)
           .find(
             {
               countryId: { $in: uniqueCountryIds },

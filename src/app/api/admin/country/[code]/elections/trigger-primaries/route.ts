@@ -46,6 +46,7 @@ import { archiveCampaignsForCandidates } from "@/lib/campaigns/archiveWithdrawnC
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export async function POST(request: Request, { params }: { params: Promise<{ code: string }> }) {
   try {
@@ -196,8 +197,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
                 .toArray()
             : [],
           nppIds.length > 0
-            ? db
-                .collection<NPP>("npps")
+            ? nppsCollection(db)
                 .find({ _id: { $in: nppIds } })
                 .toArray()
             : [],

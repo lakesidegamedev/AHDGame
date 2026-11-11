@@ -27,6 +27,7 @@ import type {
   StateBillProvision,
 } from "@/lib/db/types";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 // POST /api/country/[code]/region/[id]/office/legislation/queue — Queue a state bill.
 export async function POST(
@@ -132,8 +133,7 @@ export async function GET(
         .toArray();
       const nppIds = seats.map((s) => s.nppId).filter((x): x is ObjectId => !!x);
       const npps = nppIds.length
-        ? await db
-            .collection<NPP>("npps")
+        ? await nppsCollection(db)
             .find({ _id: { $in: nppIds }, party: officeParty, retiredAt: null })
             .toArray()
         : [];

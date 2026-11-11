@@ -18,6 +18,7 @@ import type { NPP } from "@/lib/db/types";
 import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
 import type { ProposalVoteRecord } from "@/lib/db/types/internationalOrganization";
 import { isNppAutonomyActive } from "@/lib/nppAutonomy/featureFlag";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /** The head-of-government NPP that speaks for an autonomous country's ballot. */
 async function headNppFor(
@@ -32,9 +33,10 @@ async function headNppFor(
     );
   const headNppId = formation?.presidentNppId ?? formation?.pmNppId ?? null;
   if (!headNppId) return null;
-  const npp = await db
-    .collection<NPP>("npps")
-    .findOne({ _id: headNppId }, { projection: { _id: 1, name: 1 } });
+  const npp = await nppsCollection(db).findOne(
+    { _id: headNppId },
+    { projection: { _id: 1, name: 1 } }
+  );
   if (npp) return { characterId: npp._id, characterName: npp.name };
   // A dangling NPP id must not stall the ballot: fall through to a synthetic
   // identity rather than re-creating the silent-veto this pass exists to end.

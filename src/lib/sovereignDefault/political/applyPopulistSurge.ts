@@ -11,6 +11,7 @@ import type { Db } from "mongodb";
 import type { NPP } from "@/lib/db/types/npp";
 import type { CountryId } from "@/lib/constants/countries";
 import { deriveIdeology } from "@/lib/sovereignDefault/npc/getExecutiveLeaderProfile";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /** Magnitude of the favorability bump applied to qualifying NPPs. */
 const POPULIST_SURGE_FAVORABILITY = 10;
@@ -23,10 +24,7 @@ export async function applyPopulistSurgeOnCrisis(
   db: Db,
   countryCode: CountryId
 ): Promise<PopulistSurgeResult> {
-  const npps = await db
-    .collection<NPP>("npps")
-    .find({ countryId: countryCode, retiredAt: null })
-    .toArray();
+  const npps = await nppsCollection(db).find({ countryId: countryCode, retiredAt: null }).toArray();
 
   const qualifyingIds = npps
     .filter((n) => {
@@ -37,11 +35,9 @@ export async function applyPopulistSurgeOnCrisis(
 
   if (qualifyingIds.length === 0) return { npcsAffected: 0 };
 
-  await db
-    .collection<NPP>("npps")
-    .updateMany(
-      { _id: { $in: qualifyingIds } },
-      { $inc: { favorability: POPULIST_SURGE_FAVORABILITY } }
-    );
+  await nppsCollection(db).updateMany(
+    { _id: { $in: qualifyingIds } },
+    { $inc: { favorability: POPULIST_SURGE_FAVORABILITY } }
+  );
   return { npcsAffected: qualifyingIds.length };
 }

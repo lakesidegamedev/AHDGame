@@ -6,6 +6,7 @@ import { createNPP } from "@/lib/npp/generator";
 import { getGameTime } from "@/lib/time/gameTime";
 import { DISCORD_COLORS, sendCountryGameEvent } from "@/lib/discordWebhooks";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 const VOTING_DURATION_HOURS = 24;
 const VOTING_DURATION_MS = VOTING_DURATION_HOURS * 60 * 60 * 1000;
@@ -151,7 +152,7 @@ export async function loadNomineePersonalPositions(
     return character?.policies ?? null;
   }
   if (nomination.nomineeMode === "npp" && nomination.nomineeNppId) {
-    const npp = await db.collection<NPP>("npps").findOne({ _id: nomination.nomineeNppId });
+    const npp = await nppsCollection(db).findOne({ _id: nomination.nomineeNppId });
     return npp?.policies ?? null;
   }
   return null;

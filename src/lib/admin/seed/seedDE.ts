@@ -20,6 +20,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /**
  * The region roster DE actually governs in a given preset.
@@ -421,7 +422,7 @@ export async function seedDEBundestag2021(db: Db, reset: boolean, log: (msg: str
     });
 
     if (nppIds.length > 0) {
-      await db.collection<NPP>("npps").updateMany(
+      await nppsCollection(db).updateMany(
         { _id: { $in: nppIds }, "currentOffice.type": "bundestag" },
         {
           $set: {
@@ -477,7 +478,7 @@ export async function seedDEMinisterPresidents2020(
     });
 
     if (nppIds.length > 0) {
-      await db.collection<NPP>("npps").updateMany(
+      await nppsCollection(db).updateMany(
         { _id: { $in: nppIds }, "currentOffice.type": "ministerPresident" },
         {
           $set: {

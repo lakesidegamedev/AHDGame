@@ -37,6 +37,7 @@ import {
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 // ─── Pure helpers ────────────────────────────────────────────────────────────
 
@@ -841,8 +842,7 @@ export async function mergePartyInto(
       //     are hard-deleted so a merge can't stack a region past the limit a fresh
       //     recruit would face. Retired NPPs carry no cap weight and always re-point
       //     to the target for historical continuity.
-      const proposingActiveNpps = await db
-        .collection<NPP>("npps")
+      const proposingActiveNpps = await nppsCollection(db)
         .find(
           { party: proposingStrId, countryId, retiredAt: null },
           { projection: { homeState: 1, politicalInfluence: 1, favorability: 1 } }
@@ -861,8 +861,7 @@ export async function mergePartyInto(
 
         // Surviving party's existing active NPP count per state — these consume slots
         // before any incoming NPP does.
-        const targetActiveNpps = await db
-          .collection<NPP>("npps")
+        const targetActiveNpps = await nppsCollection(db)
           .find(
             { party: targetStrId, countryId, retiredAt: null },
             { projection: { homeState: 1 } }
@@ -905,12 +904,10 @@ export async function mergePartyInto(
 
       // Re-point every absorbed NPP that survives (kept active + all retired) to the
       // target in a single pass; the cull set is excluded.
-      await db
-        .collection<NPP>("npps")
-        .updateMany(
-          { party: proposingStrId, countryId, _id: { $nin: cullIds } },
-          { $set: { party: targetStrId } }
-        );
+      await nppsCollection(db).updateMany(
+        { party: proposingStrId, countryId, _id: { $nin: cullIds } },
+        { $set: { party: targetStrId } }
+      );
 
       // Hard-delete the over-cap overflow and cascade-clean their references so no
       // seat or candidacy row points at a deleted NPP (mirrors the admin NPP delete
@@ -945,7 +942,7 @@ export async function mergePartyInto(
             },
           }
         );
-        await db.collection<NPP>("npps").deleteMany({ _id: { $in: cullIds } });
+        await nppsCollection(db).deleteMany({ _id: { $in: cullIds } });
       }
 
       // 4d. Live candidacies follow their candidates. A candidacy keeps the party

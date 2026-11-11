@@ -42,6 +42,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export const BG_GRAND_BY_ELECTIONS_COLLECTION = "bgGrandConstituencyByElections";
 export interface BgGrandByElectionRecord {
@@ -260,8 +261,7 @@ export async function openBgGrandConstituencyByElections(
         .collection<StateRegistrationPool>("stateRegistrationPool")
         .find({ countryId: "BG" }, { session, projection: { stateId: 1, unregistered: 1 } })
         .toArray();
-      const npcs = await db
-        .collection<NPP>("npps")
+      const npcs = await nppsCollection(db)
         .find(
           { countryId: "BG", retiredAt: null, isTechnocrat: { $ne: true } },
           { session, projection: { party: 1, name: 1, homeState: 1, currentOffice: 1 } }
@@ -529,8 +529,7 @@ export async function resolveBgGrandConstituencyByElections(
         ]),
       ].map((id) => new ObjectId(id));
       const npcs = npcIds.length
-        ? await db
-            .collection<NPP>("npps")
+        ? await nppsCollection(db)
             .find(
               {
                 _id: { $in: npcIds },
@@ -919,7 +918,7 @@ export async function resolveBgGrandConstituencyByElections(
             ]),
           ].filter((id) => owners.has(id));
           if (!ids.length) continue;
-          const collection = isNpc ? db.collection<NPP>("npps") : charactersCollection(db);
+          const collection = isNpc ? nppsCollection(db) : charactersCollection(db);
           await collection.bulkWrite(
             ids.map((id) => {
               const owner = owners.get(id)!,

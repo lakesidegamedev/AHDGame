@@ -20,6 +20,7 @@ import {
   type VoteByParty,
 } from "@/lib/congress/governmentVoteBreakdown";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export interface LeaderDisplay {
   characterId: string;
@@ -158,8 +159,7 @@ async function loadLeaderDisplays(
   const nppIds = holderIds.filter((id) => !charById.has(id.toString()));
   const npps =
     nppIds.length > 0
-      ? await db
-          .collection<NPP>("npps")
+      ? await nppsCollection(db)
           .find(
             { _id: { $in: nppIds } },
             { projection: { homeState: 1, avatarUrl: 1, sequentialId: 1 } }
@@ -272,8 +272,7 @@ async function loadNomineeDisplays(db: Db, nomineeIds: ObjectId[]): Promise<Nomi
   const foundCharIds = new Set(nomineeChars.map((c) => c._id.toString()));
   const nppNomineeIds = nomineeIds.filter((id) => !foundCharIds.has(id.toString()));
   if (nppNomineeIds.length > 0) {
-    const nppDocs = await db
-      .collection<NPP>("npps")
+    const nppDocs = await nppsCollection(db)
       .find({ _id: { $in: nppNomineeIds } }, { projection: { _id: 1, avatarUrl: 1 } })
       .toArray();
     for (const npp of nppDocs) {

@@ -23,6 +23,7 @@ import type { NPP } from "@/lib/db/types";
 import { FOMC_VOTE_WINDOW_TURNS, FOMC_PLAYER_VOTE_WINDOW_MS } from "@/lib/db/types/centralBank";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 interface RouteContext {
   params: Promise<{ code: string }>;
@@ -122,7 +123,7 @@ export async function POST(request: Request, context: RouteContext) {
       nomineeName = char.name;
       nomineeParty = char.party;
     } else {
-      const npp = await db.collection<NPP>("npps").findOne({ _id: nomineeNppId! });
+      const npp = await nppsCollection(db).findOne({ _id: nomineeNppId! });
       if (!npp) return NextResponse.json(notFound("Nominee not found").toJson(), { status: 404 });
       occupantType = "npp";
       nomineeName = npp.name;

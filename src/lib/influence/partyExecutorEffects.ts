@@ -15,6 +15,7 @@ import {
 import { advertiseFavorabilityGain, campaignInfluenceGain } from "@/lib/actions";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 // Loyalty and stubbornness have no per-turn decay, so their boosts stay flat.
 // Influence and favorability DO decay every turn (see actionRefresh), so their
@@ -56,9 +57,10 @@ export async function applyPartyInfluenceEffects(
       // (favorability decays by (fav-60)*0.05/turn in actionRefresh).
       const change = round1(advertiseFavorabilityGain(npp.favorability ?? 0));
       const newValue = Math.min(100, (npp.favorability ?? 0) + change);
-      await db
-        .collection<NPP>("npps")
-        .updateOne({ _id: npp._id }, { $set: { favorability: newValue, updatedAt: now } });
+      await nppsCollection(db).updateOne(
+        { _id: npp._id },
+        { $set: { favorability: newValue, updatedAt: now } }
+      );
       return { statChange: change };
     }
     case "boost_influence": {
@@ -66,28 +68,28 @@ export async function applyPartyInfluenceEffects(
       // chair boost cannot out-run the 0.75%/turn PI decay and pin an NPP at 100.
       const change = round1(campaignInfluenceGain(npp.politicalInfluence ?? 0));
       const newValue = Math.min(100, (npp.politicalInfluence ?? 0) + change);
-      await db
-        .collection<NPP>("npps")
-        .updateOne({ _id: npp._id }, { $set: { politicalInfluence: newValue, updatedAt: now } });
+      await nppsCollection(db).updateOne(
+        { _id: npp._id },
+        { $set: { politicalInfluence: newValue, updatedAt: now } }
+      );
       return { statChange: change };
     }
     case "boost_loyalty": {
       const change = calculateStatChange("boost_loyalty");
       const newValue = Math.min(100, npp.personality.loyalty + change);
-      await db
-        .collection<NPP>("npps")
-        .updateOne({ _id: npp._id }, { $set: { "personality.loyalty": newValue, updatedAt: now } });
+      await nppsCollection(db).updateOne(
+        { _id: npp._id },
+        { $set: { "personality.loyalty": newValue, updatedAt: now } }
+      );
       return { statChange: change };
     }
     case "reduce_stubbornness": {
       const change = calculateStatChange("reduce_stubbornness");
       const newValue = Math.max(0, npp.personality.stubbornness - change);
-      await db
-        .collection<NPP>("npps")
-        .updateOne(
-          { _id: npp._id },
-          { $set: { "personality.stubbornness": newValue, updatedAt: now } }
-        );
+      await nppsCollection(db).updateOne(
+        { _id: npp._id },
+        { $set: { "personality.stubbornness": newValue, updatedAt: now } }
+      );
       return { statChange: change };
     }
     case "relocate_state": {

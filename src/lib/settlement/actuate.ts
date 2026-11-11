@@ -59,6 +59,7 @@ import type { Document } from "mongodb";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export interface ActuationResult {
   actuated: boolean;
@@ -489,12 +490,10 @@ async function clearCabinetPointers(
   }
 
   if (nppIds.length > 0) {
-    await db
-      .collection("npps")
-      .updateMany(
-        { _id: { $in: nppIds }, "currentOffice.type": "parliamentaryCabinet" },
-        { $set: { currentOffice: null, updatedAt: now } }
-      );
+    await nppsCollection<Document>(db).updateMany(
+      { _id: { $in: nppIds }, "currentOffice.type": "parliamentaryCabinet" },
+      { $set: { currentOffice: null, updatedAt: now } }
+    );
   }
 }
 
@@ -642,7 +641,7 @@ async function retireNationalRemnants(
       );
     }
     if (absorbedGov.pmNppId) {
-      await db.collection("npps").updateOne({ _id: absorbedGov.pmNppId }, standDown);
+      await nppsCollection<Document>(db).updateOne({ _id: absorbedGov.pmNppId }, standDown);
     }
   }
 

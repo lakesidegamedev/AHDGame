@@ -26,6 +26,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export async function proposePmAppointment(
   db: Db,
@@ -250,9 +251,9 @@ export async function proposeHosAppointment(
   let nomineePartyStr: string;
   if (nomineeNppId) {
     nomineeNppOid = new ObjectId(nomineeNppId);
-    const nomineeNpp = await db
-      .collection<{ _id: ObjectId; name: string; party?: string }>("npps")
-      .findOne({ _id: nomineeNppOid });
+    const nomineeNpp = await nppsCollection<{ _id: ObjectId; name: string; party?: string }>(
+      db
+    ).findOne({ _id: nomineeNppOid });
     if (!nomineeNpp) {
       throw notFound("Nominee NPP not found");
     }

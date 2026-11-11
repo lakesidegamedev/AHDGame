@@ -19,6 +19,7 @@ import {
 
 import { russianDumaBoundRoot } from "./dumaConvocationAuthority";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 export async function loadRussianCouncilCertificationInputs(input: {
   db: Db;
   session: ClientSession;
@@ -74,8 +75,7 @@ export async function loadRussianCouncilCertificationInputs(input: {
   const npcIds = candidates.filter((row) => row.isNPP && row.nppId).map((row) => row.nppId!);
   const playerIds = candidates.filter((row) => !row.isNPP).map((row) => row.characterId);
   const npcs = npcIds.length
-    ? await db
-        .collection<NPP>("npps")
+    ? await nppsCollection(db)
         .find(
           {
             _id: { $in: npcIds },

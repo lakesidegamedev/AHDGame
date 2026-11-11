@@ -39,6 +39,7 @@ import {
   industrialActionPressure,
 } from "./nppBargainingPolicy";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /**
  * Minimum worker-weighted `unionization` (0-100) across an NPP union's scope
@@ -144,8 +145,7 @@ export async function processNppUnionBehavior(
   const vacant = unions.filter((union) => union.ownerId == null);
   if (vacant.length > 0) {
     const countries = [...new Set(vacant.map((union) => union.countryId))];
-    const candidates = await db
-      .collection<NPP>("npps")
+    const candidates = await nppsCollection(db)
       .find(
         { countryId: { $in: countries }, retiredAt: null },
         { projection: { _id: 1, countryId: 1, personality: 1 } }
@@ -207,8 +207,7 @@ export async function processNppUnionBehavior(
   );
 
   steps.mark("vacancyElections");
-  const leaders = await db
-    .collection<NPP>("npps")
+  const leaders = await nppsCollection(db)
     .find(
       { _id: { $in: led.map((union) => union.ownerId) }, retiredAt: null },
       { projection: { _id: 1, personality: 1 } }

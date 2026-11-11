@@ -5,6 +5,7 @@ import { getPartyHex } from "@/lib/utils/politics";
 import { buildCharacterHref, buildNppHref } from "@/lib/utils/profileUrls";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /** Display-ready person on a nomination card: portrait, profile link, party. */
 export interface NominationPerson {
@@ -54,8 +55,7 @@ export async function loadNominationPeople(
           .toArray()
       : [],
     nppIds.size > 0
-      ? db
-          .collection<NPP>("npps")
+      ? nppsCollection(db)
           .find(
             { _id: { $in: [...nppIds].map((id) => new ObjectId(id)) } },
             { projection: { _id: 1, sequentialId: 1, avatarUrl: 1, party: 1 } }

@@ -20,6 +20,7 @@ import {
 import { hasAuthorizedPostSovietTransition } from "./rules/postSovietTransition";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 export const RUSSIAN_PRESIDENTIAL_RESULTS_COLLECTION = "russianPresidentialElectionResults";
 export interface RussianPresidentialResultRecord {
   _id: string;
@@ -195,7 +196,7 @@ export async function materializeRussianPresidentialElectionResult(input: {
     const ownerId = winner.isNPP ? winner.nppId : winner.characterId;
     if (!ownerId) throw new Error("Russian presidential winner has no owner");
     const owner = winner.isNPP
-      ? await db.collection<NPP>("npps").findOne(
+      ? await nppsCollection(db).findOne(
           {
             _id: ownerId,
             countryId: "RU",
@@ -213,7 +214,7 @@ export async function materializeRussianPresidentialElectionResult(input: {
     const mate =
       mateId && !samePerson
         ? mateIsNpp
-          ? await db.collection<NPP>("npps").findOne(
+          ? await nppsCollection(db).findOne(
               {
                 _id: mateId,
                 countryId: "RU",

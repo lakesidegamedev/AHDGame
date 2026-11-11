@@ -22,6 +22,7 @@ import { NPP_MAX_DONOR_BASE_LEVEL } from "@/lib/npp/actionAi";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -44,11 +45,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   let npp: NPP | null = null;
   if (parsed.type === "sequential") {
-    npp = await db.collection<NPP>("npps").findOne({ sequentialId: parsed.value }, { projection });
+    npp = await nppsCollection(db).findOne({ sequentialId: parsed.value }, { projection });
   } else if (ObjectId.isValid(parsed.value)) {
-    npp = await db
-      .collection<NPP>("npps")
-      .findOne({ _id: new ObjectId(parsed.value) }, { projection });
+    npp = await nppsCollection(db).findOne({ _id: new ObjectId(parsed.value) }, { projection });
   }
   if (!npp) return {};
 
@@ -108,10 +107,10 @@ async function getNPPData(id: string) {
   let npp: NPP | null = null;
 
   if (parsed.type === "sequential") {
-    npp = await db.collection<NPP>("npps").findOne({ sequentialId: parsed.value });
+    npp = await nppsCollection(db).findOne({ sequentialId: parsed.value });
   } else {
     if (!ObjectId.isValid(parsed.value)) return null;
-    npp = await db.collection<NPP>("npps").findOne({ _id: new ObjectId(parsed.value) });
+    npp = await nppsCollection(db).findOne({ _id: new ObjectId(parsed.value) });
 
     if (npp?.sequentialId) {
       redirect(`/politicians/npp/${npp.sequentialId}`);

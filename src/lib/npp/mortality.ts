@@ -36,6 +36,7 @@ import { NPP_TURNOVER_CONFIG as CONFIG, NPP_TURNOVER_EXEMPT_COUNTRIES } from "./
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export {
   annualDeathProbability,
@@ -113,8 +114,7 @@ export const BIRTH_YEAR_BACKFILL_PER_TURN = 500;
  * a bounded batch per turn, so they can age out like everyone else.
  */
 async function backfillMissingBirthYears(db: Db, year: number, now: Date): Promise<number> {
-  const missing = await db
-    .collection<NPP>("npps")
+  const missing = await nppsCollection(db)
     .find(
       {
         retiredAt: null,
@@ -127,7 +127,7 @@ async function backfillMissingBirthYears(db: Db, year: number, now: Date): Promi
     .limit(BIRTH_YEAR_BACKFILL_PER_TURN)
     .toArray();
   if (missing.length === 0) return 0;
-  await db.collection<NPP>("npps").bulkWrite(
+  await nppsCollection(db).bulkWrite(
     missing.map(({ _id }) => ({
       updateOne: {
         filter: { _id, birthYear: null },
@@ -205,8 +205,7 @@ export async function processNppMortality(
     };
   const birthYearsAssigned = turnover === true ? await backfillMissingBirthYears(db, year, now) : 0;
 
-  const candidates = await db
-    .collection<NPP>("npps")
+  const candidates = await nppsCollection(db)
     .find({
       retiredAt: null,
       birthYear: { $ne: null },
@@ -308,14 +307,12 @@ export async function processNppMortality(
     const replacement = await mint(npp as NPP, year);
     replacement.createdAt = now;
     replacement.updatedAt = now;
-    await db.collection<NPP>("npps").insertOne(replacement);
+    await nppsCollection(db).insertOne(replacement);
 
-    await db
-      .collection<NPP>("npps")
-      .updateOne(
-        { _id: npp._id },
-        { $set: { retiredAt: now, currentOffice: null, updatedAt: now } }
-      );
+    await nppsCollection(db).updateOne(
+      { _id: npp._id },
+      { $set: { retiredAt: now, currentOffice: null, updatedAt: now } }
+    );
     await electedOfficialsCollection(db).updateMany(
       { nppId: npp._id },
       {

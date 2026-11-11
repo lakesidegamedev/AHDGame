@@ -76,6 +76,7 @@ import { oppositionBlocWorthwhile } from "@/lib/nppAutonomy/v6/rules/oppositionB
 import type { CorporateSector } from "@/lib/db/types";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export async function processBillVoting(ctx: NPPContext): Promise<number> {
   const {
@@ -713,7 +714,7 @@ export async function processBillVoting(ctx: NPPContext): Promise<number> {
   // Engine 6.14 (v6): a small favorability cost, once per NPP per pass, never
   // below zero. One batched write.
   if (interestDecidedVotes.size > 0) {
-    await db.collection<NPP>("npps").bulkWrite(
+    await nppsCollection(db).bulkWrite(
       [...interestDecidedVotes].map((id) => ({
         updateOne: {
           filter: { _id: new ObjectId(id) },

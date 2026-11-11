@@ -56,6 +56,7 @@ import { buildPlayerWhipMessage } from "./playerWhipMessage";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export const nationalPartyWhipSchema = z
   .object({
@@ -678,8 +679,7 @@ async function issueNppWhip(
 
   const npps =
     nppIds.length > 0
-      ? await db
-          .collection<NPP>("npps")
+      ? await nppsCollection(db)
           .find({ _id: { $in: nppIds } })
           .toArray()
       : [];

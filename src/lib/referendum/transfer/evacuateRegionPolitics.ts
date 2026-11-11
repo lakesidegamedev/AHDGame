@@ -41,6 +41,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /**
  * Region-scoped party collections.
@@ -100,11 +101,7 @@ export async function evacuateRegionPolitics(
 
   // 1. Relocate NPP politicians OUT of the region (stay in the source country,
   //    drop any office). Capture ids first so their corporations can follow.
-  const npps = await db
-    .collection<NPP>("npps")
-    .find({ homeState: regionId })
-    .project({ _id: 1 })
-    .toArray();
+  const npps = await nppsCollection(db).find({ homeState: regionId }).project({ _id: 1 }).toArray();
   const nppIds = npps.map((n) => n._id);
   // A dissolving source has nowhere to retreat to: the NPPs stay in the region
   // and cross with it, becoming the target's.
@@ -118,7 +115,7 @@ export async function evacuateRegionPolitics(
   // `electedOfficials` row intact and the politician holding nothing.
   const dissolving = relocateToRegionId === null;
   if (nppIds.length) {
-    await db.collection<NPP>("npps").updateMany(
+    await nppsCollection(db).updateMany(
       { _id: { $in: nppIds } },
       {
         $set: {
@@ -394,12 +391,10 @@ async function carryOfficials(
         { $set: { "currentOffice.type": targetOffice, updatedAt: now } }
       );
     } else if (official.nppId) {
-      await db
-        .collection("npps")
-        .updateOne(
-          { _id: official.nppId },
-          { $set: { "currentOffice.type": targetOffice, updatedAt: now } }
-        );
+      await nppsCollection<Document>(db).updateOne(
+        { _id: official.nppId },
+        { $set: { "currentOffice.type": targetOffice, updatedAt: now } }
+      );
     }
     officialsRemapped++;
   }

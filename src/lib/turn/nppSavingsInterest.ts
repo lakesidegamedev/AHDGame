@@ -22,6 +22,8 @@ import {
   SAVINGS_CREDIT_INTERVAL_TURNS,
 } from "@/lib/currency/savingsInterest";
 import { getNppsCollection } from "@/lib/db/collections/npps";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import type { Document } from "mongodb";
 
 export async function processNppSavingsInterest(
   db: Db,
@@ -70,7 +72,7 @@ export async function processNppSavingsInterest(
     }
   }
   if (accrualOps.length > 0) {
-    await db.collection("npps").bulkWrite(accrualOps);
+    await nppsCollection<Document>(db).bulkWrite(accrualOps);
   }
 
   // Phase 2 (quarterly): flush pending → savings balance + lifetime interestEarned,
@@ -111,7 +113,7 @@ export async function processNppSavingsInterest(
       }
     }
     if (creditOps.length > 0) {
-      await db.collection("npps").bulkWrite(creditOps);
+      await nppsCollection<Document>(db).bulkWrite(creditOps);
     }
   }
 

@@ -15,6 +15,7 @@ import { getGameState } from "@/lib/gameState";
 import { validateStateBillProvisions } from "@/lib/legislature/commands/validateStateBillProvisions";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export interface QueueBillInput {
   countryId: CountryId;
@@ -72,7 +73,7 @@ export async function queueBill(
   }
 
   // Target NPP eligibility.
-  const npp = await db.collection<NPP>("npps").findOne({ _id: targetNppId });
+  const npp = await nppsCollection(db).findOne({ _id: targetNppId });
   if (!npp || npp.retiredAt != null) {
     return { status: 400, body: { error: "Target NPP is unavailable." } };
   }

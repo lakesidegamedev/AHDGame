@@ -7,6 +7,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 // Map old slug values to party names for migration
 const SLUG_TO_NAME: Record<string, string> = {
@@ -66,8 +67,7 @@ export async function GET() {
       charactersCollection(db)
         .find({ party: { $exists: true, $ne: "independent" } })
         .toArray(),
-      db
-        .collection<NPP>("npps")
+      nppsCollection(db)
         .find({ party: { $exists: true, $ne: "independent" } })
         .toArray(),
       politicalPartiesCollection(db).find({}).toArray(),
@@ -256,8 +256,7 @@ export async function POST() {
       charactersCollection(db)
         .find({ party: { $exists: true, $ne: "independent" } })
         .toArray(),
-      db
-        .collection<NPP>("npps")
+      nppsCollection(db)
         .find({ party: { $exists: true, $ne: "independent" } })
         .toArray(),
       politicalPartiesCollection(db).find({}).toArray(),
@@ -368,17 +367,16 @@ export async function POST() {
       const suggestedParty = findSuggestedParty(npp.party, currentParty, memberCountry);
 
       if (suggestedParty) {
-        await db
-          .collection<NPP>("npps")
-          .updateOne(
-            { _id: npp._id },
-            { $set: { party: String(suggestedParty.sequentialId), updatedAt: new Date() } }
-          );
+        await nppsCollection(db).updateOne(
+          { _id: npp._id },
+          { $set: { party: String(suggestedParty.sequentialId), updatedAt: new Date() } }
+        );
         nppsFixed++;
       } else {
-        await db
-          .collection<NPP>("npps")
-          .updateOne({ _id: npp._id }, { $set: { party: "independent", updatedAt: new Date() } });
+        await nppsCollection(db).updateOne(
+          { _id: npp._id },
+          { $set: { party: "independent", updatedAt: new Date() } }
+        );
         nppsSetIndependent++;
       }
     }

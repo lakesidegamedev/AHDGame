@@ -27,6 +27,7 @@ import { planRussianCouncilNpcSlates } from "./rules/councilNpcSlates";
 import { GAME_STATE_PRE_ITERATION_FIELDS } from "@/lib/db/collections/gameState";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export async function materializeRussianCouncilNpcAdmission(input: {
   db: Db;
@@ -165,8 +166,7 @@ export async function materializeRussianCouncilNpcAdmission(input: {
   if (parties.some((row) => !Number.isSafeInteger(row.sequentialId) || row.sequentialId < 1))
     throw new Error("Council admission needs registered associations");
   const partyIds = parties.map((row) => String(row.sequentialId));
-  const profiles = await db
-    .collection<NPP>("npps")
+  const profiles = await nppsCollection(db)
     .find(
       {
         countryId: "RU",

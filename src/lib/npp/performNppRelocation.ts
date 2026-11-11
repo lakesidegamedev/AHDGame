@@ -12,6 +12,7 @@ import { notifyGovernorOfSenateVacancy } from "@/lib/governors/senateVacancy";
 import { updatePartyPresence } from "@/lib/turn/partyOrg/presence";
 import { heldBlocRowIds, releaseVacatedBlocSeats } from "@/lib/elections/vacatedBlocSeats";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export interface NppRelocationOutcome {
   /** Office label the NPP was vacated from, or null if they held none. */
@@ -177,12 +178,10 @@ export async function performNppRelocation(
 
   const clearedStateLeadership = await clearOldRegionStateLeadership(db, npp, oldStateId, now);
 
-  await db
-    .collection<NPP>("npps")
-    .updateOne(
-      { _id: npp._id },
-      { $set: { homeState: newStateId, currentOffice: null, updatedAt: now } }
-    );
+  await nppsCollection(db).updateOne(
+    { _id: npp._id },
+    { $set: { homeState: newStateId, currentOffice: null, updatedAt: now } }
+  );
 
   // Presence is derived from where a party's NPPs live, so it must be recomputed
   // for BOTH regions, and only after the `homeState` write above lands.

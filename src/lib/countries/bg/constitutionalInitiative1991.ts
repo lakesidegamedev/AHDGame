@@ -8,6 +8,7 @@ import {
 } from "./rules/constitutionalDecision1991";
 import { bg1991InitiativeSupport } from "./rules/constitutionalInitiative1991";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export const BG_1991_INITIATIVES_COLLECTION = "bg1991ConstitutionalInitiatives";
 export class Bg1991InitiativeConflict extends Error {}
@@ -104,8 +105,7 @@ export async function signBg1991Initiative(input: {
     ),
     [actor(proposer)]: { signedOnTurn: turn, reason: "personal_choice" as const },
   };
-  const npcs = await db
-    .collection<Pick<NPP, "_id" | "party" | "personality">>("npps")
+  const npcs = await nppsCollection<Pick<NPP, "_id" | "party" | "personality">>(db)
     .find(
       { _id: { $in: rows.flatMap((row) => (row.nppId ? [row.nppId] : [])) } },
       { session, projection: { party: 1, personality: 1 } }

@@ -31,6 +31,7 @@ import { buildScotusConfirmationCareerEvent } from "@/lib/scotus/careerEvents";
 import { getPoliticalPartiesCollection } from "@/lib/db/collections/politicalParties";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export interface ScotusNominationLifecycleResult {
   nominationsProcessed: number;
@@ -167,8 +168,7 @@ export async function processScotusNominationLifecycle(
     .map((o) => o.nppId)
     .filter((id): id is ObjectId => id instanceof ObjectId);
   const npps = nppIds.length
-    ? await database
-        .collection<NPP>("npps")
+    ? await nppsCollection(database)
         .find({ _id: { $in: nppIds } }, { projection: { party: 1 } })
         .toArray()
     : [];
@@ -222,8 +222,7 @@ export async function processScotusNominationLifecycle(
           .toArray()
       : Promise.resolve([]),
     nomineeNppIds.length
-      ? database
-          .collection<NPP>("npps")
+      ? nppsCollection(database)
           .find({ _id: { $in: nomineeNppIds } }, { projection: { avatarUrl: 1 } })
           .toArray()
       : Promise.resolve([]),

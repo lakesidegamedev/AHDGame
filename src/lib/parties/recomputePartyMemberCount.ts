@@ -3,6 +3,8 @@ import type { PoliticalParty } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import type { Document } from "mongodb";
 
 /**
  * Recompute and persist a party's denormalized `memberCount` from live
@@ -25,7 +27,7 @@ export async function recomputePartyMemberCount(
   const partyKey = String(sequentialId);
   const [characterCount, nppCount] = await Promise.all([
     charactersCollection(db).countDocuments({ party: partyKey, countryId }),
-    db.collection("npps").countDocuments({ party: partyKey, countryId, retiredAt: null }),
+    nppsCollection<Document>(db).countDocuments({ party: partyKey, countryId, retiredAt: null }),
   ]);
   const memberCount = characterCount + nppCount;
   await politicalPartiesCollection(db).updateOne(

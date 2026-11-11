@@ -56,6 +56,7 @@ import {
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 const CHAMBER_TYPES = ["house", "senate"] as const;
 
@@ -95,8 +96,7 @@ async function projectChamberRace(
     .map((c) => c.characterId as ObjectId);
   const [npps, chars] = await Promise.all([
     nppIds.length > 0
-      ? db
-          .collection<NPP>("npps")
+      ? nppsCollection(db)
           .find(
             { _id: { $in: nppIds } },
             { projection: { _id: 1, retiredAt: 1, currentOffice: 1 } }
@@ -311,9 +311,10 @@ async function buildProjectedChamber(
 async function personName(db: Db, personId: string | null): Promise<string | null> {
   if (!personId) return null;
   if (personId.startsWith("npp_")) {
-    const npp = await db
-      .collection<NPP>("npps")
-      .findOne({ _id: new ObjectId(personId.slice(4)) }, { projection: { name: 1 } });
+    const npp = await nppsCollection(db).findOne(
+      { _id: new ObjectId(personId.slice(4)) },
+      { projection: { name: 1 } }
+    );
     return npp?.name ?? null;
   }
   if (!ObjectId.isValid(personId)) return null;

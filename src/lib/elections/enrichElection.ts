@@ -142,6 +142,7 @@ import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export async function _enrichElection(
   election: Election,
@@ -1441,8 +1442,7 @@ export async function fetchDepsForElection(
           .toArray()
       : Promise.resolve([] as Character[]),
     nppIds.length > 0
-      ? db
-          .collection<NPP>("npps")
+      ? nppsCollection(db)
           .find(
             { _id: { $in: nppIds } },
             isFull ? undefined : { projection: ELECTION_SUMMARY_NPP_PROJECTION }
@@ -1533,7 +1533,7 @@ export async function fetchDepsForElection(
     }
     const [incumbentChar, incumbentNPP] = await Promise.all([
       charactersCollection(db).findOne(q, { projection: { name: 1, party: 1 } }),
-      db.collection<NPP>("npps").findOne(q, { projection: { name: 1, party: 1 } }),
+      nppsCollection(db).findOne(q, { projection: { name: 1, party: 1 } }),
     ]);
     const holder = incumbentChar ?? incumbentNPP;
     if (holder) incumbent = { name: holder.name, partyId: holder.party };

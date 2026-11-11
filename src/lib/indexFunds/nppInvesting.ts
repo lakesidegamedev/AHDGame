@@ -37,6 +37,7 @@ import { accountId } from "@/lib/ledger/accounts";
 import { emitLedgerEntries } from "@/lib/ledger/emit";
 import { isLedgerShadowEnabledFromConfig } from "@/lib/ledger/featureFlag";
 import type { LedgerEntryInput } from "@/lib/ledger/types";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 // ── GDP per capita by country (USD-equivalent, annual) ────────────────
 // These are approximate 2024 GDP per capita figures used to determine NPP
@@ -336,8 +337,7 @@ export async function processNPPFundInvestments(
   let redemptionsQueued = 0;
   let unitsRedeemed = 0;
 
-  const npps = await db
-    .collection<NPP>("npps")
+  const npps = await nppsCollection(db)
     .find({ retiredAt: null })
     .project<ProjectedNPP>({
       _id: 1,
@@ -536,11 +536,11 @@ export async function processNPPFundInvestments(
   // Sequential relative to each other (debit's guard depends on accrual
   // having landed), but each pass is a single batched round-trip.
   if (accrualOps.length > 0) {
-    await db.collection("npps").bulkWrite(accrualOps, { ordered: false });
+    await nppsCollection<Document>(db).bulkWrite(accrualOps, { ordered: false });
   }
   if (debitOps.length > 0) {
     try {
-      const result = await db.collection("npps").bulkWrite(debitOps, { ordered: false });
+      const result = await nppsCollection<Document>(db).bulkWrite(debitOps, { ordered: false });
       assertBulkWriteCount("NPP subscription debits", result.modifiedCount, debitOps.length);
     } catch (originalError) {
       try {
@@ -550,7 +550,7 @@ export async function processNPPFundInvestments(
             update: { $inc: { nppInvestmentCashAnchor: debit.amount }, $set: { updatedAt: now } },
           },
         }));
-        const result = await db.collection("npps").bulkWrite(undoOps, { ordered: false });
+        const result = await nppsCollection<Document>(db).bulkWrite(undoOps, { ordered: false });
         // A zero count is valid when the failed debit batch applied nothing.
         if (result.modifiedCount > undoOps.length) {
           throw new Error(
@@ -794,7 +794,7 @@ export async function processNPPFundInvestments(
           update: { $inc: { nppInvestmentCashAnchor: debit.amount }, $set: { updatedAt: now } },
         },
       }));
-      const result = await db.collection("npps").bulkWrite(undoOps, { ordered: false });
+      const result = await nppsCollection<Document>(db).bulkWrite(undoOps, { ordered: false });
       assertBulkWriteCount("NPP debit compensation", result.modifiedCount, undoOps.length);
     });
 

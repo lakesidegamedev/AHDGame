@@ -56,6 +56,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 interface Props {
   params: Promise<{ code: string; id: string }>;
@@ -499,8 +500,7 @@ export default async function GovernorOfficePage({ params }: Props) {
       .toArray();
     const nppIds = stateSenators.map((s) => s.nppId).filter((x): x is ObjectId => !!x);
     const npps = nppIds.length
-      ? await db
-          .collection<NPP>("npps")
+      ? await nppsCollection(db)
           .find({ _id: { $in: nppIds }, party: officeParty, retiredAt: null })
           .toArray()
       : [];

@@ -22,6 +22,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 const NG_REGION_IDS = [
   "NORTH_WEST",
@@ -364,12 +365,10 @@ export async function seedNGGovernors(
     });
 
     if (nppIds.length > 0) {
-      await db
-        .collection<NPP>("npps")
-        .updateMany(
-          { _id: { $in: nppIds }, "currentOffice.type": "governor" },
-          { $set: { retiredAt: new Date(), currentOffice: null, updatedAt: new Date() } }
-        );
+      await nppsCollection(db).updateMany(
+        { _id: { $in: nppIds }, "currentOffice.type": "governor" },
+        { $set: { retiredAt: new Date(), currentOffice: null, updatedAt: new Date() } }
+      );
     }
     log(
       `Reset: deleted ${officials.length} NG Governor NPP officials, retired ${nppIds.length} NPPs`

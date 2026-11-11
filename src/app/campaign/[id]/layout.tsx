@@ -7,6 +7,7 @@ import type { Election } from "@/lib/db/types/election";
 import type { NPP } from "@/lib/db/types/npp";
 import { getSiteUrl } from "@/lib/siteMetadata";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -64,9 +65,10 @@ export async function generateMetadata({
           { projection: { name: 1, avatarUrl: 1 } }
         ),
     campaign.candidateIsNPP
-      ? db
-          .collection<NPP>("npps")
-          .findOne({ _id: campaign.candidateId }, { projection: { name: 1, avatarUrl: 1 } })
+      ? nppsCollection(db).findOne(
+          { _id: campaign.candidateId },
+          { projection: { name: 1, avatarUrl: 1 } }
+        )
       : Promise.resolve(null),
   ]);
 

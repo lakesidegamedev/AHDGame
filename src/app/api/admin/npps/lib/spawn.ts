@@ -11,6 +11,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import type { Document } from "mongodb";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export async function handleSpawnNPPs(
   db: Db,
@@ -121,8 +122,7 @@ export async function handleSpawnNPPs(
     return weights[weights.length - 1].state;
   }
 
-  const existingNPPs = await db
-    .collection<NPP>("npps")
+  const existingNPPs = await nppsCollection(db)
     .find({ retiredAt: null }, { projection: { name: 1 } })
     .toArray();
   const usedNames = new Set(existingNPPs.map((n) => n.name));
@@ -194,7 +194,7 @@ export async function handleSpawnNPPs(
       updatedAt: now,
     };
 
-    await db.collection<NPP>("npps").insertOne(npp);
+    await nppsCollection(db).insertOne(npp);
     created.push({ state, name });
   }
 

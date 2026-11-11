@@ -22,6 +22,7 @@ import {
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 function partyKey(countryId: string, partyId: string): string {
   return `${countryId}:${partyId}`;
@@ -233,8 +234,7 @@ export async function loadContingentElectionData(
     if (!eligiblePresidentIds.has(cid)) continue;
     if (runningMateByPresidentId[cid]) continue;
     if (!candidate.isNPP || !candidate.nppId) continue;
-    const autoVp = await db
-      .collection<NPP>("npps")
+    const autoVp = await nppsCollection(db)
       .find({
         party: candidate.party,
         countryId: countryId as CountryId,
@@ -267,8 +267,7 @@ export async function loadContingentElectionData(
           .toArray()
       : [],
     nppIds.size > 0
-      ? db
-          .collection<NPP>("npps")
+      ? nppsCollection(db)
           .find({ _id: { $in: [...nppIds].map((id) => new ObjectId(id)) } })
           .project({ _id: 1, party: 1, policies: 1 })
           .toArray()

@@ -35,6 +35,7 @@ import type {
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export const DEFECT_ID = "AHD-sovereign-maturity-stranded-payout";
 const PAYOUT_KIND = "sovereign_maturity_payout";
@@ -149,7 +150,7 @@ async function survey(db: Db): Promise<PayoutPatch[]> {
     liveIds("imperialCharacters", db.collection<{ _id: unknown }>("imperialCharacters")),
     liveIds("corporations", corporationsCollection<{ _id: unknown }>(db)),
     liveIds("indexFunds", db.collection<{ _id: unknown }>("indexFunds")),
-    liveIds("npps", db.collection<{ _id: unknown }>("npps")),
+    liveIds("npps", nppsCollection<{ _id: unknown }>(db)),
   ]);
   const live = new Set(liveGroups.flat());
   const bondsById = new Map(bonds.map((bond) => [String(bond._id), bond]));

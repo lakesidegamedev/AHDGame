@@ -40,6 +40,7 @@ import { formatElectionTypeLabel } from "@/lib/utils/electionLabels";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export type { PartyInfluenceCalculation } from "./partyExecutorCalculations";
 export type { ExecutePartyInfluenceInput } from "./partyExecutorTypes";
@@ -102,8 +103,7 @@ async function getNationalRelocationTargetCost(
     .find({ countryId }, { projection: { _id: 1 } })
     .toArray();
   const countryStateIds = countryStates.map((state) => state._id);
-  const partyNpps = await db
-    .collection<NPP>("npps")
+  const partyNpps = await nppsCollection(db)
     .find({
       party: partyId,
       retiredAt: null,
@@ -142,7 +142,7 @@ async function executeStatePartyInfluenceCore(
   const statePartyOrg = await db
     .collection<StatePartyOrg>("statePartyOrg")
     .findOne({ _id: statePartyKey });
-  const npp = await db.collection<NPP>("npps").findOne({ _id: input.nppId });
+  const npp = await nppsCollection(db).findOne({ _id: input.nppId });
   const party = await findPartyForInfluence(db, input);
 
   if (!statePartyOrg || !npp || !party) {
@@ -251,7 +251,7 @@ async function executeStatePartyInfluenceCore(
     };
   }
 
-  await db.collection<NPP>("npps").updateOne(
+  await nppsCollection(db).updateOne(
     { _id: npp._id },
     {
       $set: {
@@ -277,12 +277,10 @@ async function executeStatePartyInfluenceCore(
         $set: { updatedAt: new Date() },
       }
     );
-    await db
-      .collection<NPP>("npps")
-      .updateOne(
-        { _id: npp._id },
-        { $inc: { "influenceState.totalTimesInfluenced": -1 }, $set: { updatedAt: new Date() } }
-      );
+    await nppsCollection(db).updateOne(
+      { _id: npp._id },
+      { $inc: { "influenceState.totalTimesInfluenced": -1 }, $set: { updatedAt: new Date() } }
+    );
 
     const failOutcome: InfluenceOutcome = "failure";
     const failMsg =
@@ -381,7 +379,7 @@ async function executeNationalPartyInfluenceCore(
 ): Promise<ExecutePartyInfluenceResult> {
   const db = await getDb();
   const party = await findPartyForInfluence(db, input);
-  const npp = await db.collection<NPP>("npps").findOne({ _id: input.nppId });
+  const npp = await nppsCollection(db).findOne({ _id: input.nppId });
 
   if (!party || !npp) {
     return {
@@ -490,7 +488,7 @@ async function executeNationalPartyInfluenceCore(
     };
   }
 
-  await db.collection<NPP>("npps").updateOne(
+  await nppsCollection(db).updateOne(
     { _id: npp._id },
     {
       $set: {
@@ -512,12 +510,10 @@ async function executeNationalPartyInfluenceCore(
           $set: { updatedAt: new Date() },
         }
       );
-      await db
-        .collection<NPP>("npps")
-        .updateOne(
-          { _id: npp._id },
-          { $inc: { "influenceState.totalTimesInfluenced": -1 }, $set: { updatedAt: new Date() } }
-        );
+      await nppsCollection(db).updateOne(
+        { _id: npp._id },
+        { $inc: { "influenceState.totalTimesInfluenced": -1 }, $set: { updatedAt: new Date() } }
+      );
 
       const failOutcome: InfluenceOutcome = "failure";
       const failMsg =
@@ -694,8 +690,7 @@ export async function getStatePartyInfluenceOptions(
 }> {
   const db = await getDb();
 
-  const npps = await db
-    .collection<NPP>("npps")
+  const npps = await nppsCollection(db)
     .find({ homeState: statePartyOrg.stateId, party: statePartyOrg.partyId, retiredAt: null })
     .toArray();
   const nppIds = npps.map((npp) => npp._id);
@@ -808,8 +803,7 @@ export async function getNationalPartyInfluenceOptions(party: PoliticalParty): P
   const stateIds = states.map((state) => state._id);
   const stateNames = Object.fromEntries(states.map((state) => [state._id, state.name]));
 
-  const npps = await db
-    .collection<NPP>("npps")
+  const npps = await nppsCollection(db)
     .find({
       homeState: { $in: stateIds },
       party: partyId,

@@ -61,6 +61,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /** Renewal looks for newly resolved cycles this often. */
 export const PARTY_RENEWAL_CHECK_INTERVAL_TURNS = 6;
@@ -342,8 +343,7 @@ export async function processPartyRenewal(
   // Renewal needs two elections; a country seen for the first time only records.
   const acting = work.filter((w) => w.previous != null);
   if (acting.length === 0) return summary;
-  const npps = await db
-    .collection<NPP>("npps")
+  const npps = await nppsCollection(db)
     .find(
       {
         countryId: { $in: acting.map((w) => w.countryId) },
@@ -568,12 +568,10 @@ async function applySplinter(
   const parentId = String(parent.sequentialId);
   const now = new Date();
   await Promise.all([
-    db
-      .collection<NPP>("npps")
-      .updateMany(
-        { _id: { $in: nppIds }, party: parentId },
-        { $set: { party: partyId, updatedAt: now } }
-      ),
+    nppsCollection(db).updateMany(
+      { _id: { $in: nppIds }, party: parentId },
+      { $set: { party: partyId, updatedAt: now } }
+    ),
     // Seats follow the people who hold them.
     electedOfficialsCollection(db).updateMany(
       { countryId, nppId: { $in: nppIds } },
@@ -620,8 +618,7 @@ async function applyFounding(
       .collection<StatePartyOrg>("statePartyOrg")
       .find({ countryId }, { projection: { stateId: 1, organization: 1 } })
       .toArray(),
-    db
-      .collection<NPP>("npps")
+    nppsCollection(db)
       .find({ retiredAt: null }, { projection: { name: 1 } })
       .toArray(),
   ]);

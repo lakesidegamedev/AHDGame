@@ -9,6 +9,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 const ELECTION_STATUS_FIELDS = {
   upcoming: "electionCountUpcoming",
@@ -102,7 +103,7 @@ export async function collectLocalStatistics(db: Db): Promise<LocalStatisticsPay
     ),
     politicalPartiesCollection<Document>(db).countDocuments(),
     corporationsCollection(db).countDocuments(),
-    db.collection("npps").countDocuments(),
+    nppsCollection<Document>(db).countDocuments(),
     db
       .collection("corporateSectors")
       .aggregate<{ total: number }>([{ $group: { _id: null, total: { $sum: "$workers" } } }])

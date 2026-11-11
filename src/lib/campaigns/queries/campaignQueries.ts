@@ -65,6 +65,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export interface CampaignListItem {
   id: string;
@@ -98,7 +99,7 @@ export async function getCampaignDetail(
   // serial round-trips.
   const [candidate, manager, election] = await Promise.all([
     campaign.candidateIsNPP
-      ? db.collection<NPP>("npps").findOne({ _id: campaign.candidateId })
+      ? nppsCollection(db).findOne({ _id: campaign.candidateId })
       : charactersCollection(db).findOne({ _id: campaign.candidateId }),
     campaign.managerCharacterId
       ? charactersCollection(db).findOne({ _id: campaign.managerCharacterId })

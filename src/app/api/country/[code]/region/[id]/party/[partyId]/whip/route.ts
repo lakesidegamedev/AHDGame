@@ -52,6 +52,7 @@ import { getBillWhipWindowStart } from "@/lib/congress/billWhipPhase";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; partyId: string }>;
@@ -278,8 +279,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const npps =
       nppIds.length > 0
-        ? await db
-            .collection<NPP>("npps")
+        ? await nppsCollection(db)
             .find({ _id: { $in: nppIds } })
             .toArray()
         : [];

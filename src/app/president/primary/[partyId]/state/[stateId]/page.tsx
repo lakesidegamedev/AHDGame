@@ -40,6 +40,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 // This page is a live view over turn-processed delegate awards and per-state
 // projections. It must render from current DB state every request so its
@@ -132,8 +133,7 @@ export default async function PartyPrimaryStatePage({ params }: PageProps) {
     charactersCollection(db)
       .find({ _id: { $in: candidates.filter((c) => !c.isNPP).map((c) => c.characterId) } })
       .toArray(),
-    db
-      .collection<NPP>("npps")
+    nppsCollection(db)
       .find({
         _id: { $in: candidates.filter((c) => c.isNPP && c.nppId).map((c) => c.nppId!) },
       })

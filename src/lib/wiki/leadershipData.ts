@@ -7,6 +7,7 @@ import { LEADERSHIP_ROLES } from "@/lib/congress/leadershipRoles";
 import { buildCharacterHref, buildNppHref } from "@/lib/utils/profileUrls";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export type LeadershipRole = (typeof LEADERSHIP_ROLES)[number]["role"];
 
@@ -63,7 +64,7 @@ export async function getLeadershipData(role: string): Promise<LeadershipData | 
       tintColor = char.tintColor;
       profileHref = buildCharacterHref(char);
     } else {
-      const npp = await db.collection<NPP>("npps").findOne(
+      const npp = await nppsCollection(db).findOne(
         { _id: doc.characterId },
         {
           projection: { homeState: 1, avatarUrl: 1, borderKey: 1, tintColor: 1, sequentialId: 1 },

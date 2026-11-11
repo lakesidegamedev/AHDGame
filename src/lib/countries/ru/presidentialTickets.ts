@@ -7,6 +7,7 @@ import { type Db, type ClientSession } from "mongodb";
 import type { Election, ElectionCandidate, NPP } from "@/lib/db/types";
 import { chooseRussianNpcRunningMate } from "./rules/presidentialTicket";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 export async function materializeRussianPresidentialTickets(input: {
   db: Db;
   session: ClientSession;
@@ -41,8 +42,7 @@ export async function materializeRussianPresidentialTickets(input: {
   const missing = candidates.filter((c) => !c.runningMateId && !c.russianRunningMateNppId);
   if (!candidates.length) return;
   const pool = missing.length
-    ? await db
-        .collection<NPP>("npps")
+    ? await nppsCollection(db)
         .find(
           {
             countryId: "RU",

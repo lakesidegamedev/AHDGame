@@ -25,6 +25,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import type { Document } from "mongodb";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /** A unique index that constrains `field`, as the fuse needs to see it. */
 interface UniqueIndexOverField {
@@ -310,9 +311,10 @@ export async function mergeRegion(db: Db, args: MergeRegionArgs): Promise<MergeR
   // NPPs are NOT in the table above -- `evacuateRegionPolitics` owns them on the
   // transfer path -- so they need re-homing explicitly. Left alone they would be
   // homed in a region this function is about to delete.
-  const nppMoved = await db
-    .collection("npps")
-    .updateMany({ homeState: fromRegionId }, { $set: { homeState: toRegionId, updatedAt: now } });
+  const nppMoved = await nppsCollection<Document>(db).updateMany(
+    { homeState: fromRegionId },
+    { $set: { homeState: toRegionId, updatedAt: now } }
+  );
   documentsMoved += nppMoved?.modifiedCount ?? 0;
 
   // `currentOffice.state` is a nested denormalisation, not a region key, so

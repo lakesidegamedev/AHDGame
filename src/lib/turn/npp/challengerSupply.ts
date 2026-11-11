@@ -29,6 +29,7 @@ import { getChallengerSupplyPolicy } from "./rules/challengerSupply";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /**
  * Directly-elected SINGLE-SEAT offices that need a bench challenger to be
@@ -263,8 +264,7 @@ export async function processChallengerGeneration(now: Date): Promise<number> {
         .toArray()
     ).map((o) => String(o.nppId))
   );
-  const freeNpps = await db
-    .collection<NPP>("npps")
+  const freeNpps = await nppsCollection(db)
     .find(
       { retiredAt: null, isTechnocrat: { $ne: true } },
       {

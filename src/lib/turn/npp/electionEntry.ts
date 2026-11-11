@@ -69,6 +69,7 @@ import {
 import { logger } from "../../observability/logger";
 import { workerConfig } from "@/lib/config/worker";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 // Optional global salt so headless sim runs can vary this RNG across runs
 // while staying reproducible within a run (mirrors nppActionProcessing.ts).
@@ -715,7 +716,7 @@ export async function processElectionEntry(ctx: NPPContext): Promise<number> {
     }
   }
   if (cooldownWrites.length > 0) {
-    await db.collection<NPP>("npps").bulkWrite(cooldownWrites, { ordered: false });
+    await nppsCollection(db).bulkWrite(cooldownWrites, { ordered: false });
   }
   if (consolidated > 0) {
     logger.info("Turn", `NPP consolidation: ${consolidated} trailing candidacy(ies) withdrawn`);

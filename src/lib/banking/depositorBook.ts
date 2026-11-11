@@ -11,6 +11,7 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { BankingPolicySnapshot } from "./rules/policy";
 import { savingsReadsAuthoritative } from "./rules/policy";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export interface BankDepositor {
   key: string;
@@ -62,8 +63,7 @@ export async function getBankDepositorBook(
             .toArray()
         : [],
       nppIds.length
-        ? db
-            .collection<NPP>("npps")
+        ? nppsCollection(db)
             .find({ _id: { $in: nppIds } }, { projection: { name: 1, sequentialId: 1 } })
             .toArray()
         : [],

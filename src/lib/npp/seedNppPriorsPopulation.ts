@@ -68,6 +68,7 @@ import {
 } from "@/lib/sim/backfillMissingSeats";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export interface SeedNppPriorsPopulationResult {
   nppsCreated: number;
@@ -281,8 +282,7 @@ export async function seedNppPriorsPopulation(
     orgRowsByRegion.set(key, list);
   }
 
-  const existingNpps = await db
-    .collection<NPP>("npps")
+  const existingNpps = await nppsCollection(db)
     .find({ retiredAt: null }, { projection: { name: 1, countryId: 1, homeState: 1, party: 1 } })
     .toArray();
   const existingNames = new Set(existingNpps.map((n) => n.name));
@@ -394,7 +394,7 @@ export async function seedNppPriorsPopulation(
     return npp;
   });
 
-  await db.collection<NPP>("npps").insertMany(toInsert);
+  await nppsCollection(db).insertMany(toInsert);
   log(
     `Seeded NPP priors population: ${toInsert.length} NPPs across ${
       Object.keys(byCountry).length

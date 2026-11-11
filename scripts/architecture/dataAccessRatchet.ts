@@ -36,7 +36,8 @@ export const BASELINE_PATH = join("scripts", "architecture", "dataAccessRatchet.
 const DOOR_DIRS = ["src/lib/db/collections/", "src/lib/db/repositories/"];
 const SOURCE_EXT = /\.(?:ts|tsx|mts|cts)$/;
 const TEST_FILE = /(?:\.(?:test|spec)\.[cm]?tsx?$|TestDb\.[cm]?tsx?$|\.d\.ts$)/;
-const TEST_DIR = /(?:^|\/)(?:__tests__|__mocks__|__fixtures__|mocks|test-utils|test|tests)\//;
+const TEST_DIR =
+  /(?:^|\/)(?:__tests__|__mocks__|__fixtures__|mocks|test-utils|test|tests|testing)\//;
 const frontDoor = new Set<string>(FRONT_DOOR_COLLECTIONS);
 
 export function isScannedFile(file: string): boolean {

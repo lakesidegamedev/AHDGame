@@ -9,6 +9,7 @@ import {
   type ChairAlignment,
 } from "@/lib/centralBank/chairAlignment";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 // CHAIR_TERM_TURNS lives in src/lib/turn/centralBankChairSelection.ts (not re-exported
 // from @/lib/db/types/centralBank), so we keep the literal here to match it (4 years × 48 turns).
@@ -65,7 +66,7 @@ export async function appointNppChair(
     return;
   }
 
-  const existing = await db.collection<NPP>("npps").findOne({
+  const existing = await nppsCollection(db).findOne({
     countryId,
     isTechnocrat: true,
     technocratRole: "centralBankChair",

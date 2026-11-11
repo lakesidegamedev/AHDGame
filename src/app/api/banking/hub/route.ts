@@ -45,6 +45,7 @@ import type { ObjectId } from "mongodb";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 // GET /api/banking/hub - World banking hub payload (CBs, private banks, savings, loans).
 // Auth: requireAuth
@@ -294,8 +295,7 @@ async function handleGET() {
               .toArray()
           : [],
         nppCeoIds.length
-          ? db
-              .collection<NPP>("npps")
+          ? nppsCollection(db)
               .find({ _id: { $in: nppCeoIds } })
               .project({ _id: 1, name: 1, avatarUrl: 1 })
               .toArray()

@@ -24,6 +24,7 @@ import { COUNTRY_CURRENCY_MAP, getSeedCurrencyCode } from "@/lib/constants/curre
 import { nppHomeFxRate, localToAnchor } from "./nppEconomicAccount";
 import { emitTx } from "@/lib/financialTxLog/emit";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export type NppBondBuyResult =
   | {
@@ -110,7 +111,7 @@ export async function nppBuyBond(
 
   // Deduct from the personal forex account first (atomic guard), then reserve
   // units. NOT campaign `funds` — investing is real-economy, not political.
-  const deducted = await db.collection<NPP>("npps").findOneAndUpdate(
+  const deducted = await nppsCollection(db).findOneAndUpdate(
     { _id: npp._id, nppInvestmentCashAnchor: { $gte: costAnchor } },
     { $inc: { nppInvestmentCashAnchor: -costAnchor }, $set: { updatedAt: now } },
     // Only the balance is read back; an NPP document is ~28 KB.
@@ -130,12 +131,10 @@ export async function nppBuyBond(
   );
   if (!reserved) {
     // Float was taken between read and reserve — refund and bail, no partial state.
-    await db
-      .collection<NPP>("npps")
-      .updateOne(
-        { _id: npp._id },
-        { $inc: { nppInvestmentCashAnchor: costAnchor }, $set: { updatedAt: new Date() } }
-      );
+    await nppsCollection(db).updateOne(
+      { _id: npp._id },
+      { $inc: { nppInvestmentCashAnchor: costAnchor }, $set: { updatedAt: new Date() } }
+    );
     return { ok: false, reason: "Bond units no longer available; purchase refunded." };
   }
 

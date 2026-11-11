@@ -21,6 +21,7 @@ import { isExecutiveOffice } from "@/lib/elections/executiveOffice";
 import { isPresidentialElectionType } from "@/lib/elections/nationwideExecutive";
 import { applyConversionVotePenalty } from "./conversionTerms";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /** Loads the candidates, drops the ineligible ones and adjusts the vote totals to match. */
 export async function loadGeneralElectionCandidates({
@@ -102,8 +103,7 @@ export async function loadGeneralElectionCandidates({
     .map((c) => c.nppId);
   const liveCandidateNpps =
     candidateNppIds.length > 0
-      ? await db
-          .collection<NPP>("npps")
+      ? await nppsCollection(db)
           .find({ _id: { $in: candidateNppIds }, retiredAt: null }, { projection: { _id: 1 } })
           .toArray()
       : [];
@@ -141,8 +141,7 @@ export async function loadGeneralElectionCandidates({
             .toArray()
         : Promise.resolve([]),
       holderNppIds.length > 0
-        ? db
-            .collection<NPP>("npps")
+        ? nppsCollection(db)
             // Seat resolution reads the office, never the 30KB stance map.
             .find({ _id: { $in: holderNppIds } }, { projection: { currentOffice: 1 } })
             .toArray()

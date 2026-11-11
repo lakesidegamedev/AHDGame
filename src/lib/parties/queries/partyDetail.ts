@@ -36,6 +36,7 @@ import { DEFAULT_LEGACY_COUNTRY_ID } from "@/lib/constants/countries";
 import { countDistinctOfficers } from "@/lib/treasury/payoutCapValues";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export async function loadPartyLeaders(
   db: Db,
@@ -142,8 +143,7 @@ export async function getPartyDetail(db: Db, party: PoliticalParty): Promise<Par
       )
       .sort({ name: 1 })
       .toArray(),
-    db
-      .collection<NPP>("npps")
+    nppsCollection(db)
       .find(
         { party: String(party.sequentialId), retiredAt: null, countryId: partyCountry },
         {
