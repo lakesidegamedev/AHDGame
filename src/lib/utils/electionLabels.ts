@@ -80,6 +80,7 @@ export const ELECTION_TYPE_LABEL_MAP: Record<string, string> = {
   caCommons: "House of Commons",
   snap_caCommons: "Snap House of Commons",
   special_caCommons: "Commons By-Election",
+  provincialLegislature: "Provincial Legislature",
 };
 
 /** Short labels used in win/loss notifications (space-constrained contexts). */
@@ -140,6 +141,7 @@ export const ELECTION_TYPE_SHORT_LABEL: Record<string, string> = {
   caCommons: "Commons",
   snap_caCommons: "Snap Commons",
   special_caCommons: "Commons By-Election",
+  provincialLegislature: "Provincial",
   qcAssembly: "Assembly",
 };
 
@@ -235,6 +237,8 @@ export const MULTI_SEAT_TYPES: ReadonlySet<string> = new Set([
   "snap_caCommons",
   // Resolved additively, like `special_commons`.
   "special_caCommons",
+  // CA provincial and territorial legislatures: one multi-seat race per region.
+  "provincialLegislature",
   // AT/FI/GR lower chambers: multi-seat regional PR like their FR/IT/ES
   // siblings. Without this their first resolved election runs the
   // single-winner path, which deletes the whole seeded delegation.

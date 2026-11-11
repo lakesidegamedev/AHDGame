@@ -248,8 +248,8 @@ const ERA_ROSTER_LITERAL = {
     default: "absent",
     player: ["US", "CA"],
     npp: ["UK", "DE", "JP", "CN"],
-    // Canada's Premiers fill on the shared regional executive cycle.
-    vacantChambers: ["CA.governor"],
+    // Canada's Premiers and provincial legislatures fill at their first elections.
+    vacantChambers: ["CA.governor", "CA.provincialLegislature"],
     background: [
       "IE",
       "BR",

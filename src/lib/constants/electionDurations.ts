@@ -106,6 +106,8 @@ export const DEFAULT_DURATIONS: Record<
   snap_caCommons: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },
   // Canadian Commons by-election, same split as the UK one.
   special_caCommons: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },
+  // CA provincial legislatures: 48h window, four-year fixed-date cycles.
+  provincialLegislature: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },
   milletMeclisi: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },
   // GR/AT/FI unicameral lower chambers — same beta-tier treatment as
   // FR/IT/ES/SE/TR. A chamber spec is rejected without a duration entry, so

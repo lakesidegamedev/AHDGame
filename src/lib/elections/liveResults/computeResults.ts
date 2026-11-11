@@ -31,6 +31,7 @@ export const WESTMINSTER_STYLE_TYPES = new Set([
   "sangiin",
   "bundestag",
   "landtag",
+  "provincialLegislature",
   // Beta-country parliamentary lower chambers (FR/IT/ES/SE/TR)
   "assembleeNationale",
   "cameraDeputati",
@@ -79,6 +80,7 @@ export const CHAMBER_LABELS: Record<string, string> = {
   sangiin: "Sangiin",
   bundestag: "Bundestag",
   landtag: "Landtag",
+  provincialLegislature: "Provincial Legislature",
   npcDelegate: "National People's Congress",
   peoplesCongress: "People's Congress",
   regionalCouncil: "Regional Council",

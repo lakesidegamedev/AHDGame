@@ -538,6 +538,19 @@ export function canonicalTurnsForCycle(params: CanonicalCycleParams): CanonicalC
         startTurn: cycle === 1 ? 1 : endTurn - dur.durationHours,
       };
     }
+    case "provincialLegislature": {
+      // CA provincial legislatures: four-year fixed-date terms (192 turns),
+      // staggered per province via customCycle1EndTurn. The Commons anchor
+      // only gates the chamber to eras where Canada exists.
+      if (anchors.caCommons == null) return null;
+      const cycle1End = customCycle1EndTurn ?? anchors.caCommons;
+      const endTurn = cycle1End + (cycle - 1) * 192;
+      return {
+        endTurn,
+        primaryEndTurn: endTurn - dur.generalDurationHours,
+        startTurn: cycle === 1 ? 1 : endTurn - dur.durationHours,
+      };
+    }
     case "npcDelegate":
     case "peoplesCongress": {
       // CN NPC Delegate + Provincial People's Congress: shared 5-year

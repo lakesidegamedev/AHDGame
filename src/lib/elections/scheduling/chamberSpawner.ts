@@ -214,7 +214,7 @@ async function ensureClass(
     const prev = lastCompleted(region.id);
     if (justResolvedInSameTurn(prev, now, currentTurn)) continue;
 
-    const customCycle1EndTurn = spec.regionAnchor?.(region.id, ctx.preset);
+    const customCycle1EndTurn = spec.regionAnchor?.(region.id, ctx.preset, ctx);
     if (spec.regionAnchor && customCycle1EndTurn === undefined) {
       throw new Error(
         `Chamber ${countryId}/${spec.chamberId} has no cycle anchor for ${region.id}`
