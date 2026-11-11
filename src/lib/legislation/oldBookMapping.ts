@@ -35,9 +35,6 @@ export function levelForOldOption(index: number, direction: LadderDirection): nu
   return table[Math.max(0, Math.min(table.length - 1, index))];
 }
 
-/** Ladder value `project.ts` gives each level, kept in sync for readability. */
-export const EFFECT_DIRECTION_BY_LEVEL = [-1, -1, 0, 1, 1] as const;
-
 const m = (law: string, direction: LadderDirection, reason: string): LawMapping => ({
   law,
   direction,
