@@ -8,6 +8,7 @@ export interface HistoricalSeat {
     | "president"
     | "vicePresident"
     | "commons"
+    | "caCommons"
     | "stateSenate"
     | "regionalCouncil"
     | "shugiin"

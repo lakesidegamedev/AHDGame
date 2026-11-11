@@ -71,6 +71,7 @@ const SEATS_HELD_OFFICE_TYPES = new Set([
   "senator",
   "member",
   "procurador",
+  "caCommons",
 ]);
 
 /**

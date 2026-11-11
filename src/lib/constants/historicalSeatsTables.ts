@@ -91,6 +91,7 @@ import {
   US_EXECUTIVE_2020,
 } from "@/lib/countries/us/data/historicalSeats2020";
 import { US_EXECUTIVE_2027 } from "@/lib/countries/us/data/historicalSeats2027";
+import { CA_COMMONS_2027 } from "@/lib/countries/ca/data/caCommons2027";
 
 export type { HistoricalSeat };
 export {
@@ -523,6 +524,8 @@ export const SEAT_GROUPS_2027: SeatGroups = {
   ],
   BR: modeledBrMacroregionGovernors("2027-default"),
   IE: modeledIeRegionalOffices("2027-default"),
+  // Canada seats its Commons only once the roster includes it.
+  ...(tierFor("2027-default", "CA") === "absent" ? {} : { CA: CA_COMMONS_2027 }),
 };
 
 export const SEAT_GROUPS_1992: SeatGroups = {

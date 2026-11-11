@@ -18,6 +18,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { CA_PARTY_SLUG_TO_NAME } from "@/lib/countries/ca/data/caParties";
 
 /**
  * Slug → party-name lookup used at resolve time. Exported so tests can
@@ -140,6 +141,8 @@ export const SLUG_TO_NAME: Record<string, string> = {
   by_cpb: "Communist Party of Byelorussia",
   cs_ksc: "Komunistická strana Československa",
   bal_cpsu: "Communist Party (Baltic Republics)",
+  // CA
+  ...CA_PARTY_SLUG_TO_NAME,
 };
 
 /**
@@ -426,6 +429,7 @@ export function buildOfficeType(seat: HistoricalSeat): OfficeType | null {
     case "senator":
     case "member":
     case "procurador":
+    case "caCommons":
       // Beta-parliament office-type keys (FR/IT/ES/SE/TR + ES 1953 Cortes).
       // Multi-seat regional PR; seatsHeld varies per region.
       return { type: seat.officeType, state: seat.state, seatsHeld: seat.seatsHeld ?? 1 };
@@ -796,7 +800,9 @@ export async function seedFromSeats(
       seat.officeType === "deputy" ||
       seat.officeType === "senator" ||
       seat.officeType === "member" ||
-      seat.officeType === "procurador"
+      seat.officeType === "procurador" ||
+      // Canada's Commons blocs hold every seat a party won in a province.
+      seat.officeType === "caCommons"
     ) {
       official.seatsHeld = seat.seatsHeld ?? 1;
     }
