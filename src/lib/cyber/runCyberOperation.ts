@@ -6,6 +6,7 @@
  */
 import { ObjectId, type Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
+import { getCountryDisplayName } from "@/lib/constants/countryClientConfig";
 import { applyTensionEvent } from "@/lib/coldwar/tension";
 import { createCrisisFromTemplate } from "@/lib/crises/createCrisisFromTemplate";
 import { CYBER_ATTACK_TEMPLATE } from "@/lib/crises/templates";
@@ -232,7 +233,7 @@ export interface LaunchCyberArgs {
 
 /** Name used in public copy; falls back to the id. */
 function nameOf(countryId: string): string {
-  return countryId;
+  return getCountryDisplayName(countryId as CountryId);
 }
 
 export async function launchCyberOperation(args: LaunchCyberArgs): Promise<LaunchCyberResult> {

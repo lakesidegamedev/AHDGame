@@ -16,7 +16,12 @@ vi.mock("@/lib/coldwar/tension", () => ({
     }
   ),
 }));
-vi.mock("@/lib/news", () => ({ createSystemNewsPost: vi.fn(async () => undefined) }));
+const newsPosts: unknown[] = [];
+vi.mock("@/lib/news", () => ({
+  createSystemNewsPost: vi.fn(async (...args: unknown[]) => {
+    newsPosts.push(args);
+  }),
+}));
 vi.mock("./resilience", () => ({
   loadCyberResilience: vi.fn(async (_db: unknown, ids: string[]) =>
     ids.map((countryId) => ({ countryId, resilience: countryId === "US" ? 0.2 : 0.7 }))
@@ -62,6 +67,7 @@ beforeEach(() => {
   crises.length = 0;
   activeCrisisCountries.length = 0;
   tensions.length = 0;
+  newsPosts.length = 0;
   logRows.length = 0;
   debit.mockClear();
   credit.mockClear();
@@ -237,5 +243,21 @@ describe("foldCyberPairHistory truce shield", () => {
 
   it("frees the victim once the declarer's own cooldown would have lapsed", () => {
     expect(foldCyberPairHistory(rows, "US").truceUntilTurn).toBe(34);
+  });
+});
+
+describe("public copy", () => {
+  it("names countries rather than printing their ids", async () => {
+    await launchCyberOperation({
+      db,
+      attackerId: "CN",
+      targetId: "US",
+      turn: 9,
+      chargeAppropriation: false,
+      rolls: { success: 0.99, attribution: 0.99 },
+    });
+    await standDownCyber(db, "CN", "US", 10);
+    expect(JSON.stringify(newsPosts)).toContain("United States");
+    expect(JSON.stringify(newsPosts)).not.toMatch(/against US\b/);
   });
 });
