@@ -221,21 +221,20 @@ const OVERRIDES: Record<string, Partial<Record<MetricPath, number>>> = {
 };
 
 /** Merge the baseline with per-region overrides, keeping the full shape intact. */
+function isMetricGroup(value: unknown): value is Record<string, ReturnType<typeof mv>> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 function buildMetrics(regionId: string): StateMetrics {
-  const deltas = OVERRIDES[regionId] ?? {};
-  const merged: Record<string, Record<string, { value: number; trend?: number }>> = {};
-  for (const [category, metrics] of Object.entries(BASELINE)) {
-    if (category === "_id" || category === "lastUpdated") continue;
-    merged[category] = { ...(metrics as Record<string, { value: number; trend?: number }>) };
-  }
-  for (const [path, value] of Object.entries(deltas)) {
+  const merged = structuredClone(BASELINE);
+  const groups: Record<string, unknown> = merged;
+  for (const [path, value] of Object.entries(OVERRIDES[regionId] ?? {})) {
     const [category, metric] = path.split(".");
-    if (value !== undefined && category && metric && merged[category]) {
-      merged[category][metric] = mv(value);
-    }
+    const group = category ? groups[category] : undefined;
+    if (value !== undefined && metric && isMetricGroup(group)) group[metric] = mv(value);
   }
   return withUniformMetricSet({
-    ...(merged as unknown as Omit<StateMetrics, "_id" | "countryId" | "lastUpdated">),
+    ...merged,
     _id: regionId,
     countryId: "CA",
     lastUpdated: new Date(),
