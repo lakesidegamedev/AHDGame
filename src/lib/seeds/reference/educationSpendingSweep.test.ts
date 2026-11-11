@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { LegislationType } from "@/lib/db/types";
 import { legislationTypes } from "./legislationTypes";
-import { deLegislationTypes } from "../de/deLegislationTypes";
 import { cnLegislationTypes } from "../cn/cnLegislationTypes";
 import { ieLegislationTypes } from "../ie/ieLegislationTypes";
 import { jpLegislationTypes } from "@/lib/countries/jp/data/jpLegislationTypes";
@@ -33,7 +32,6 @@ const REGULATORY_MECHANISM_KEEP_LIST = new Set([
   "us_school_standards", // standards/choice → testPerformance (pedagogy)
   "uk_education_standards", // standards → gcseAttainment (pedagogy)
   "uk_tuition_fees", // price → universityEnrollment
-  "de_university_tuition", // price/BAföG → enrollment-side effects
   // price/SUSI grants → enrollment; its workforceSkill term models the
   // enrollment→skill mechanism, an edge the engine does NOT have (workforceSkill
   // derives from gradRate/testPerf/apprenticeship only).
@@ -66,7 +64,6 @@ function readoutHits(lt: LegislationType): string[] {
 describe("§4.7 education spending sweep", () => {
   const all = [
     ...legislationTypes,
-    ...deLegislationTypes,
     ...cnLegislationTypes,
     ...ieLegislationTypes,
     ...jpLegislationTypes,
@@ -123,12 +120,12 @@ describe("§4.7 education spending sweep", () => {
     }
   });
 
-  it("does not flag reform/curriculum laws whose primary target isn't the spend root (de_academic_reform, ie_curriculum_reform)", () => {
+  it("does not flag reform/curriculum laws whose primary target isn't the spend root (ie_curriculum_reform)", () => {
     // These are genuinely regulatory/pedagogy-mechanism bills (their
     // effectTarget is testPerformance, not educationSpending) — they should
     // never need a keep-list entry because the funding-law gate excludes
     // them structurally.
-    for (const id of ["de_academic_reform", "ie_curriculum_reform"]) {
+    for (const id of ["ie_curriculum_reform"]) {
       const lt = all.find((l) => l._id === id);
       expect(lt, `${id} should exist`).toBeDefined();
       expect(lt!.effectTarget?.metricId).not.toBe("educationSpending");

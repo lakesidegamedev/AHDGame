@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { LegislationType } from "@/lib/db/types";
 import { legislationTypes } from "./legislationTypes";
-import { deLegislationTypes } from "../de/deLegislationTypes";
 import { cnLegislationTypes } from "../cn/cnLegislationTypes";
 import { ieLegislationTypes } from "../ie/ieLegislationTypes";
 import { jpLegislationTypes } from "@/lib/countries/jp/data/jpLegislationTypes";
@@ -12,7 +11,6 @@ const all = [
   ...new Map(
     [
       ...legislationTypes,
-      ...deLegislationTypes,
       ...cnLegislationTypes,
       ...ieLegislationTypes,
       ...jpLegislationTypes,
@@ -52,7 +50,6 @@ const DEF_KEEP_LIST = new Map<string, Set<string>>([
   // through the channel; overlap named for the balance pass).
   ["us_national_service", new Set(["militaryReadiness"])],
   ["uk_national_service", new Set(["militaryReadiness"])],
-  ["de_wehrpflicht", new Set(["militaryReadiness"])],
   ["cn_conscription", new Set(["militaryReadiness"])],
   ["ie_defence_recruitment", new Set(["militaryReadiness"])],
   ["jp_jsdf_recruitment", new Set(["militaryReadiness"])],
@@ -69,7 +66,6 @@ const PAIR_KEEP_LIST = new Map<string, Set<string>>([
   // AUTOMATION-POLICY mechanisms: AI/robotics strategy acts choose to automate
   // (the 🔧 half of roboticsAdoption) — distinct from the R&D/manufacturing
   // engine path their root secondaries feed.
-  ["de_robotics_ai", new Set(["roboticsAdoption"])],
   ["cn_ai_strategy", new Set(["roboticsAdoption"])],
   // ASYLUM-SYSTEM structure: the law governs the direct-provision system
   // itself (capacity rules, processing) — not just the migration inflow root.

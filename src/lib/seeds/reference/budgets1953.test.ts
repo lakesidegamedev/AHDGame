@@ -80,7 +80,7 @@ describe("1953 budget seeds — political-legislation derivation switch (§4.2a)
   });
 
   it("no policyRevenueConfigs remain on the re-seeded 1953 blocks", () => {
-    for (const cc of ["US", "UK", "RU", "DD"]) {
+    for (const cc of ["US", "UK", "RU", "DD", "DE"]) {
       expect(configByCountry(cc).policyRevenueConfigs, cc).toBeUndefined();
     }
   });
@@ -132,27 +132,14 @@ describe("1953 budget seeds — authored baseline spending (Cold War realism)", 
     expect((jp.spending.byCategory.defense ?? 0) / jp.gdp).toBeLessThan(0.015);
   });
 
-  it("generateDefaultEnactedLaws skips old US/UK/RU/DD catalogs on 1953-default", () => {
+  it("generateDefaultEnactedLaws skips old US/UK/RU/DD/DE catalogs on 1953-default", () => {
     const laws = generateDefaultEnactedLaws("1953-default");
-    for (const cc of ["US", "UK", "RU", "DD"]) {
+    for (const cc of ["US", "UK", "RU", "DD", "DE"]) {
       expect(
         laws.filter((l) => l.countryId === cc),
         `${cc} old laws`
       ).toHaveLength(0);
     }
-  });
-
-  it("non-political 1953 defense/health laws price via GDP share matching authored baselines", () => {
-    const laws = generateDefaultEnactedLaws("1953-default").filter((l) => l.countryId === "DE");
-    const defenseLaws = laws.filter((l) => l.budgetCategory === "defense" && l.rate === undefined);
-    expect(defenseLaws.length).toBeGreaterThan(0);
-    for (const law of defenseLaws) {
-      expect(law.gdpPerCapitaMultiplier, law.legislationTypeId).toBeTypeOf("number");
-      expect(law.annualCostPerCapita, law.legislationTypeId).toBeUndefined();
-    }
-    const config = configByCountry("DE");
-    const defenseShare = defenseLaws.reduce((s, l) => s + (l.gdpPerCapitaMultiplier ?? 0), 0);
-    expect(defenseShare * config.gdp).toBeCloseTo(config.baselineSpendingByCategory.defense, -3);
   });
 });
 
@@ -383,80 +370,6 @@ describe("1953 budget seeds — CN/JP spending-category calibration (fiscal audi
     const pctGdp = (100 * total) / jp.gdp;
     expect(pctGdp).toBeGreaterThan(15);
     expect(pctGdp).toBeLessThan(22);
-  });
-});
-
-describe("1953 budget seeds — DE spending-category calibration (fiscal-scale audit, 2026-07-28)", () => {
-  // Same defect class as the CN/JP block above, found auditing DE's +13.1%-of-
-  // GDP day-26 sandbox surplus. DE's authored baseline used "socialSecurity"/
-  // "infrastructure", but deLegislationTypes.ts's actual budgetCategory strings
-  // for those lines are "welfare"/"transport" — so, exactly like JP's
-  // publicWorks/socialSecurity rename, those two lines (the largest in DE's
-  // baseline) fell through to the modern per-domain catalog instead of the
-  // authored 1953 figure. "education" and "other" matched by name but still
-  // undershot the authored figure (same as CN/JP's "infrastructure"/"social"),
-  // so they're pinned too via EXTRA_OVERRIDE_CATEGORIES_BY_COUNTRY.DE.
-  //
-  // Why the existing guards didn't catch this: the day-1 symmetric-band test
-  // above only bounds `spending.total - revenue.total`, computed from the SEED
-  // snapshot's `deriveSpending` — which already falls back to the full
-  // baseline when `hasPolicySpending` is false. DE DOES have real spending
-  // laws (deLegislationTypes.ts), so `hasPolicySpending` is true and
-  // `deriveSpending`'s seed snapshot silently used the (undershooting) policy-
-  // derived costs for every non-overridden category — day-1 and the runtime
-  // engine agreed with each other, so no reconciliation check flagged it. Only
-  // an explicit "does this baseline key match an actual seeded law category"
-  // check (mirroring the CN/JP tests above) surfaces a silent rename miss.
-  const laws1953 = generateDefaultEnactedLaws("1953-default");
-
-  function lawsFor(cc: string) {
-    return laws1953.filter((l) => l.countryId === cc && l.rate === undefined);
-  }
-
-  it("DE's every authored baseline category matches an actual seeded law category", () => {
-    const de = configByCountry("DE");
-    const actualCats = new Set(lawsFor("DE").map((l) => l.budgetCategory));
-    for (const key of Object.keys(de.baselineSpendingByCategory)) {
-      expect(actualCats.has(key), `DE baselineSpendingByCategory key "${key}"`).toBe(true);
-    }
-  });
-
-  it("DE's 'welfare' laws (Bismarckian pensions/unemployment insurance) sum to the authored 1953 baseline, not the thin modern-era-catalog default", () => {
-    const de = configByCountry("DE");
-    const welfareLaws = lawsFor("DE").filter((l) => l.budgetCategory === "welfare");
-    expect(welfareLaws.length).toBeGreaterThan(0);
-    const share = welfareLaws.reduce((s, l) => s + (l.gdpPerCapitaMultiplier ?? 0), 0);
-    expect(share * de.gdp).toBeCloseTo(de.baselineSpendingByCategory.welfare, -2);
-  });
-
-  it("DE's 'transport' laws (Wirtschaftswunder rail/road reconstruction) sum to the authored 1953 baseline (key renamed from the never-matching 'infrastructure')", () => {
-    const de = configByCountry("DE");
-    const transportLaws = lawsFor("DE").filter((l) => l.budgetCategory === "transport");
-    expect(transportLaws.length).toBeGreaterThan(0);
-    const share = transportLaws.reduce((s, l) => s + (l.gdpPerCapitaMultiplier ?? 0), 0);
-    expect(share * de.gdp).toBeCloseTo(de.baselineSpendingByCategory.transport, -2);
-  });
-
-  it("DE's total booked spending lands near the documented real ~30% of GDP (Adenauer-era Sozialstaat), not the pre-fix ~21%", () => {
-    const de = configByCountry("DE");
-    const total = lawsFor("DE").reduce((sum, law) => {
-      if (!isLegislationTypeActive(law.legislationTypeId, 1953)) return sum;
-      const cost = calculateEnactedLawAnnualCost(
-        law as unknown as Parameters<typeof calculateEnactedLawAnnualCost>[0],
-        {
-          budgetCapacity: 0,
-          gdp: de.gdp,
-          population: de.population,
-          countryId: "DE",
-          nationalGdpPerCapita: de.gdp / de.population,
-          year: 1953,
-        }
-      );
-      return Number.isFinite(cost) ? sum + (law.isGrant ? 0 : cost) : sum;
-    }, 0);
-    const pctGdp = (100 * total) / de.gdp;
-    expect(pctGdp).toBeGreaterThan(25);
-    expect(pctGdp).toBeLessThan(35);
   });
 });
 

@@ -370,27 +370,6 @@ export async function seedDEGovernmentFormation(
   log("Seeded DE government formation document");
 }
 
-/**
- * Re-seed DE legislation types in isolation, for the admin UI and sandbox
- * script. `runCoreSeed` already covers these via the main legislationTypes
- * spread; bootstrap no longer calls this separately since the upserts would
- * be duplicates.
- */
-export async function seedDELegislation(db: Db, log: (msg: string) => void) {
-  const { deLegislationTypes } = await import("@/lib/seeds/de/deLegislationTypes");
-  const now = new Date();
-  for (const legislationType of deLegislationTypes) {
-    await db
-      .collection<LegislationType>("legislationTypes")
-      .updateOne(
-        { _id: legislationType._id },
-        { $set: { ...legislationType, source: "seed" as const, updatedAt: now } },
-        { upsert: true }
-      );
-  }
-  log(`Seeded ${deLegislationTypes.length} DE legislation types`);
-}
-
 export async function seedDEElections(log: (msg: string) => void) {
   const { ensureDEElections } = await import("@/lib/elections/scheduling");
   await ensureDEElections(new Date());

@@ -69,7 +69,6 @@ import {
   seedDEStateMetrics,
   seedDEBaselines,
   seedDEGovernmentFormation,
-  seedDELegislation,
   seedDEElections,
   seedDEBundestag2021,
   seedDEMinisterPresidents2020,
@@ -178,7 +177,6 @@ const DE_TARGETS = [
   "deStateMetrics",
   "deBaselines",
   "deGovernmentFormation",
-  "deLegislation",
   "deElections",
   "deBudgets",
   "deBundestag2021",
@@ -347,7 +345,6 @@ export async function GET() {
         deStateMetrics: "Land-level economic and social metrics for Germany",
         deBaselines: "Metric decay baselines for each German Land",
         deGovernmentFormation: "Germany government formation document for Chancellor appointment",
-        deLegislation: "DE-scoped legislation types (tax, labor, energy, immigration)",
         deElections: "Spawn missing Bundestag elections for every Land",
         deBudgets: "DE national budget, regional budgets, and enacted laws",
         deBundestag2021:
@@ -521,7 +518,6 @@ export async function POST(request: Request) {
     if (targets.includes("deStateMetrics")) await seedDEStateMetrics(db, reset, log, preset);
     if (targets.includes("deBaselines")) await seedDEBaselines(db, reset, log, preset);
     if (targets.includes("deGovernmentFormation")) await seedDEGovernmentFormation(db, log, preset);
-    if (targets.includes("deLegislation")) await seedDELegislation(db, log);
     if (targets.includes("deElections")) await seedDEElections(log);
     if (targets.includes("deBudgets")) await seedDeBudgets(db, reset, log, preset);
     if (targets.includes("deBundestag2021")) await seedDEBundestag2021(db, reset, log);

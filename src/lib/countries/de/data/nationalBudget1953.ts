@@ -1,4 +1,5 @@
 import type { NationalBudgetSeedConfig } from "@/lib/seeds/reference/budgets";
+import { SEED_TAX_RATES_1953 } from "@/lib/politicalLegislation/seedTaxRates";
 import { COUNTRY_POLICY_CONFIGS_1953 } from "@/lib/seeds/reference/basePolicies1953";
 
 // ── West Germany FY1953 — Adenauer / Wirtschaftswunder ──────────────────────
@@ -34,12 +35,7 @@ export const DE_NATIONAL_BUDGET_1953: NationalBudgetSeedConfig = {
     ceilingLastRaisedYear: 1953,
   },
   creditRating: "AA", // London Debt Agreement (Feb 1953) restored creditworthiness
-  // Keys "welfare"/"transport" (not "socialSecurity"/"infrastructure") — match
-  // deLegislationTypes.ts's actual budgetCategory strings for these lines (see
-  // EXTRA_OVERRIDE_CATEGORIES_BY_COUNTRY.DE above). The old names never
-  // matched any DE law, so these two lines — the largest in the baseline —
-  // silently fell through to the modern per-domain catalog's much smaller
-  // policy-derived costs.
+  // Keys match the DE law book budget categories.
   baselineSpendingByCategory: {
     welfare: 14_000_000_000, // Bismarckian pensions + unemployment insurance
     healthcare: 6_000_000_000, // GKV statutory insurance
@@ -51,6 +47,7 @@ export const DE_NATIONAL_BUDGET_1953: NationalBudgetSeedConfig = {
   baselineStateGrants: 5_000_000_000, // transfers to Länder (Länderfinanzausgleich)
   policyDefaults: COUNTRY_POLICY_CONFIGS_1953.de.defaults,
   policyOptionOverrides: COUNTRY_POLICY_CONFIGS_1953.de.optionIndexes,
+  seedTaxRatesOverride: SEED_TAX_RATES_1953.DE,
   taxPolicyIds: {
     incomeTax: "de_income_tax_rate",
     domesticCorporateTax: "de_domestic_corporate_tax_rate",

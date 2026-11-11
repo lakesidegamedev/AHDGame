@@ -5745,10 +5745,6 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/countries/de/data/deLegislationTypes.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/lib/countries/de/data/deMapConfig.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
@@ -11360,10 +11356,6 @@
     "src/lib/seeds/reference/seedInvariants.weightSigns.test.ts": {
       "longBlocks": 1,
       "narrativeLines": 1
-    },
-    "src/lib/seeds/reference/spendingSignInvariants.test.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
     },
     "src/lib/seeds/reference/stateDemographics1991.ts": {
       "longBlocks": 1,

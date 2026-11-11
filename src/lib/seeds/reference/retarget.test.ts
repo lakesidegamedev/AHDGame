@@ -15,7 +15,6 @@ const byId = new Map(legislationTypes.map((t) => [t._id, t]));
  */
 const RETARGETED: Record<string, string> = {
   jp_rd_investment: "rdIntensity",
-  de_family_policy: "birthRate",
   ie_immigration_asylum: "migrationRate",
   ie_regional_health: "physicianRate",
   ie_peat_bog_policy: "protectedLand",

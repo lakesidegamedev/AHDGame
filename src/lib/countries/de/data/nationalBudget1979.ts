@@ -45,6 +45,15 @@ export const DE_NATIONAL_BUDGET_1979: NationalBudgetSeedConfig = {
   baselineStateGrants: 80_000_000_000,
   policyDefaults: COUNTRY_POLICY_CONFIGS.de.defaults,
   policyOptionOverrides: COUNTRY_POLICY_CONFIGS.de.optionIndexes,
+  taxRateOverrides: {
+    incomeTax: 42,
+    domesticCorporateTax: 15,
+    foreignCorporateTax: 15,
+    payrollTax: 20,
+    tariffs: 0,
+    salesTax: 19,
+    solidaritySurcharge: 5.5,
+  },
   taxPolicyIds: {
     incomeTax: "de_income_tax_rate",
     domesticCorporateTax: "de_domestic_corporate_tax_rate",
