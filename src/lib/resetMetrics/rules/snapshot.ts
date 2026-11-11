@@ -1,3 +1,4 @@
+import { normalizeConvertedMetricBoard } from "./convertedBoard";
 import { primaryMetrics } from "../catalog";
 import type { OpeningMetricObservation } from "./openingObservation";
 import { openingMetricHistory, validateMetricHistory, type ResetMetricHistory } from "./history";
@@ -45,8 +46,9 @@ export interface ResetMetricSnapshot {
   housingState?: HousingState;
 }
 
-/** Mongo serializes explicit undefined fields as null; national boards have no region. */
+/** Normalize known conversion defects and BSON-null national region identities. */
 export function normalizeNationalMetricBoard(board: ResetMetricSnapshot): ResetMetricSnapshot {
+  board = normalizeConvertedMetricBoard(board);
   if (board.scope !== "national" || board.regionId != null) return board;
   const normalized = { ...board };
   delete normalized.regionId;

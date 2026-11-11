@@ -184,3 +184,38 @@ export const STATE_ADJACENCY: Readonly<Record<CountryId, AdjacencyMap>> = {
 export function adjacentStates(country: CountryId, stateId: string): readonly string[] {
   return STATE_ADJACENCY[country]?.[stateId] ?? [];
 }
+
+/**
+ * Regions that joined a country after its map was seeded, with the neighbours
+ * they gained there. Kept apart from `STATE_ADJACENCY` because that map is the
+ * seeded vocabulary of each country; applying these edges needs the live
+ * region set (see `annexedNeighbours`).
+ *
+ * IE: Northern Ireland (`NIR`) joins by referendum. Donegal's seeded region
+ * covers the border counties of Donegal, Cavan and Monaghan; Midlands and
+ * Kildare cover the remaining border to the east.
+ */
+export const ANNEXED_REGION_ADJACENCY: Partial<Record<CountryId, AdjacencyMap>> = {
+  IE: { NIR: ["DON", "MID", "KIL"] },
+};
+
+/**
+ * Neighbours `stateId` gained by annexation, restricted to `regions` (the
+ * country's live region set). Symmetric: the annexed region lists its new
+ * neighbours and each of them lists it. Empty while the region is still
+ * abroad, so a world where the referendum has not happened is unchanged.
+ */
+export function annexedNeighbours(
+  country: CountryId,
+  stateId: string,
+  regions: ReadonlySet<string>
+): readonly string[] {
+  const table = ANNEXED_REGION_ADJACENCY[country];
+  if (!table) return [];
+  const out = new Set<string>();
+  if (regions.has(stateId)) for (const next of table[stateId] ?? []) out.add(next);
+  for (const [annexed, neighbours] of Object.entries(table)) {
+    if (neighbours.includes(stateId) && regions.has(annexed)) out.add(annexed);
+  }
+  return [...out].filter((next) => regions.has(next));
+}

@@ -98,7 +98,11 @@ export function buildSuccessorMetricRows(input: {
         observations: Object.fromEntries(
           Object.entries(aggregate.observations).map(([id, row]) => [
             id,
-            inheritedRegionalObservation(row, weights[region.id]),
+            {
+              ...inheritedRegionalObservation(row, weights[region.id]),
+              observedAtTurn: row.observedAtTurn ?? row.lastUpdatedTurn ?? aggregate.asOfTurn,
+              lastUpdatedTurn: turn,
+            },
           ])
         ),
         history: history(aggregate.observations),
