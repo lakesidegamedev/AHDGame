@@ -8,7 +8,6 @@
  */
 
 import type { DevolutionPolicy } from "@/lib/db/types/governorOfficeState";
-import { sovereigntyRegion } from "@/lib/referendum/rules/sovereigntyRegions";
 
 // ─── Region eligibility ───────────────────────────────────────────────────────
 
@@ -136,16 +135,4 @@ export function getDevolutionPolicyLabel(stateId: string, policy: DevolutionPoli
     case "independence":
       return id === "NIR" ? "Irish Reunification" : "Pro-Independence";
   }
-}
-
-/** Names for the two governments in a region's devolution copy. */
-export function getSovereigntyGovernmentNames(stateId: string): {
-  regional: string;
-  national: string;
-} {
-  const region = sovereigntyRegion(stateId);
-  return {
-    regional: region?.executiveTitle ?? "First Minister",
-    national: region?.nationalGovernmentName ?? "Westminster",
-  };
 }

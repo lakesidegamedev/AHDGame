@@ -6,7 +6,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { CountryId } from "@/lib/constants/countriesCore";
 import type { ReferendumKind, ReferendumStatus } from "@/lib/db/types/referendum";
-import { getSovereigntyGovernmentNames } from "@/lib/constants/devolution";
+import { getSovereigntyGovernmentNames } from "@/lib/referendum/rules/sovereigntyRegions";
 
 /** Server-serialized summary of a region's current/most-recent referendum. */
 export interface ReferendumSummary {

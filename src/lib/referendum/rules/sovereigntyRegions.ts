@@ -112,3 +112,15 @@ export function sovereigntyCountryIds(): CountryId[] {
 export function hostsSovereigntyReferendums(countryId: string | null | undefined): boolean {
   return SOVEREIGNTY_REGIONS.some((entry) => entry.countryId === countryId);
 }
+
+/** Names for the two governments in a region's devolution copy. */
+export function getSovereigntyGovernmentNames(stateId: string): {
+  regional: string;
+  national: string;
+} {
+  const region = sovereigntyRegion(stateId);
+  return {
+    regional: region?.executiveTitle ?? "First Minister",
+    national: region?.nationalGovernmentName ?? "Westminster",
+  };
+}

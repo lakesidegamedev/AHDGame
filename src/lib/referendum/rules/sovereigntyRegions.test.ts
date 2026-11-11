@@ -3,6 +3,7 @@ import { caStateMetrics } from "@/lib/countries/ca/data/caStateMetrics";
 import { caRegions2027 } from "@/lib/countries/ca/data/caRegions2027";
 import {
   SOVEREIGNTY_REGIONS,
+  getSovereigntyGovernmentNames,
   hostsSovereigntyReferendums,
   isSovereigntyRegion,
   sovereigntyCountryIds,
@@ -54,5 +55,25 @@ describe("sovereignty registry", () => {
     );
     expect(desire.get("CA_QC")).toBe(35);
     for (const [regionId, value] of desire) if (regionId !== "CA_QC") expect(value).toBeUndefined();
+  });
+});
+
+describe("getSovereigntyGovernmentNames", () => {
+  it("names each region's own two governments", () => {
+    expect(getSovereigntyGovernmentNames("CA_QC")).toEqual({
+      regional: "Premier",
+      national: "Ottawa",
+    });
+    expect(getSovereigntyGovernmentNames("sco")).toEqual({
+      regional: "First Minister",
+      national: "Westminster",
+    });
+  });
+
+  it("falls back to the Westminster names outside the table", () => {
+    expect(getSovereigntyGovernmentNames("TX")).toEqual({
+      regional: "First Minister",
+      national: "Westminster",
+    });
   });
 });
