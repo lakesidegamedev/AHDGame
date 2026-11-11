@@ -21,6 +21,8 @@ savant-protocol
 # Testing
 /coverage
 /test-results
+# Lighthouse audit output (reports are regenerated, not checked in)
+/scripts/perf/lighthouse/results/
 /playwright-report
 /blob-report
 /.cache/

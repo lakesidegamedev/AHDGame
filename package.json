@@ -99,7 +99,9 @@
     "archetypes": "tsx scripts/architecture/archetypeRatchet.cli.ts check",
     "archetypes:lower": "tsx scripts/architecture/archetypeRatchet.cli.ts lower",
     "architecture:contracts": "vitest run scripts/architecture src/lib/admin/seed/seedManifest.test.ts src/lib/admin/seed/seedManifestDiscovery.test.ts src/lib/admin/resetGameWorld.test.ts src/lib/admin/bootstrapContract.test.ts src/lib/admin/resetAndBootstrapFailure.test.ts src/lib/admin/seed/indexes/resetRuntimeCoverage.test.ts src/simulation/engine/turnReadProjections.test.ts --maxWorkers=1",
-    "build:clean-cache": "node scripts/clear-railway-build-cache.mjs"
+    "build:clean-cache": "node scripts/clear-railway-build-cache.mjs",
+    "perf:lighthouse": "node scripts/perf/lighthouse/run.mjs --base=https://ahousedividedgame.com --strategy=mobile",
+    "perf:lighthouse:local": "node scripts/perf/lighthouse/run.mjs --base=http://127.0.0.1:3000 --strategy=mobile"
   },
   "lint-staged": {
     "*.{ts,tsx,mts}": [
@@ -192,6 +194,7 @@
     "@types/topojson-server": "^3.0.4",
     "@vitest/coverage-v8": "^5.0.5",
     "braces": "file:vendor/braces-depth-guard-3.0.3-ahd.1.tgz",
+    "chrome-launcher": "^1.2.3",
     "concurrently": "^10.0.5",
     "d3-geo": "^3.1.1",
     "eslint": "^10.14.0",
@@ -200,6 +203,7 @@
     "happy-dom": "^21.0.4",
     "husky": "^9.1.7",
     "knip": "^6.41.0",
+    "lighthouse": "^12.8.2",
     "lint-staged": "^17.6.0",
     "prettier": "^3.9.10",
     "tailwindcss": "^4",

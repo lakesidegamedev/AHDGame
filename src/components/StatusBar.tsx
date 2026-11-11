@@ -379,12 +379,17 @@ export function StatusBar({
         <div
           className={`flex min-w-0 items-center overflow-hidden ${isMinimalLayout ? "gap-x-0" : isFullLayout ? "shrink-0 flex-wrap gap-x-3 gap-y-1 sm:flex-nowrap sm:gap-x-4" : "flex-1 flex-wrap gap-x-3 gap-y-1 sm:flex-nowrap sm:gap-x-4"}`}
         >
-          <Link
-            href="/profile"
-            className="truncate max-w-[140px] sm:max-w-none text-sm font-medium text-muted hover:text-foreground transition-colors"
-          >
-            {stats?.name ?? " "}
-          </Link>
+          {/* Only players have a character name. Rendering this link with a
+              blank label gave anonymous visitors an unnamed link (axe "link
+              has no discernible name") on every public page. */}
+          {stats?.name ? (
+            <Link
+              href="/profile"
+              className="truncate max-w-[140px] sm:max-w-none text-sm font-medium text-muted hover:text-foreground transition-colors"
+            >
+              {stats.name}
+            </Link>
+          ) : null}
 
           {/* Pipe separator — minimal only */}
           {isMinimalLayout && gameState && (

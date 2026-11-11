@@ -48,6 +48,7 @@ import { isSingleplayer } from "@/lib/singleplayer";
 import { AdSlot } from "@/components/AdSlot";
 import { AdSenseSlot } from "@/components/AdSenseSlot";
 import { CookieConsentBanner } from "@/components/CookieConsent";
+import { COOKIE_CONSENT_KEY } from "@/lib/analytics/storageKeys";
 import { SiteFooter } from "@/components/SiteFooter";
 import { AuthConnectivityGate } from "@/components/AuthConnectivityGate";
 import { SiteTrafficTracker } from "@/components/SiteTrafficTracker";
@@ -132,6 +133,10 @@ const siteUrl = getSiteUrl();
 const defaultDocumentTitle = `${SITE_BRAND} | ${SITE_SUBTITLE}`;
 const GA_MEASUREMENT_ID = "G-5GBG3BHWCZ";
 const GOOGLE_ADS_ID = "AW-18130975758";
+// Optional self-hosted umami tag. Both vars must be set; see the script block
+// at the end of the layout for why the host is not hardcoded.
+const umamiSrc = process.env.NEXT_PUBLIC_UMAMI_SRC?.trim();
+const umamiWebsiteId = process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID?.trim();
 
 /**
  * Edge to edge on notched phones. Without `cover`, iOS insets the page below
@@ -362,6 +367,16 @@ export default async function RootLayout({
             __html: `window.__AHD_DISPLAY_MODE=${JSON.stringify(displayMode ?? null)};`,
           }}
         />
+        {/* Applied before first paint so a returning player never sees the
+            consent banner flash, and a first-time visitor gets it as part of
+            FCP instead of a post-hydration mount. See CookieConsentBanner. */}
+        <Script
+          id="cookie-consent-mode"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `try{var c=localStorage.getItem(${JSON.stringify(COOKIE_CONSENT_KEY)});if(c==="accepted"||c==="rejected"){document.documentElement.dataset.cookieConsent=c;}}catch(e){}`,
+          }}
+        />
         {renderGoogleCmp ? (
           <>
             <Script
@@ -373,12 +388,14 @@ export default async function RootLayout({
               }}
             />
             {/*
-              afterInteractive, not beforeInteractive: the AdSense page tag is
-              ~56KB and pulls in show_ads_impl (~186KB more), and as a
-              beforeInteractive script it ran ahead of hydration on every page.
-              Measured on the landing page (4x CPU, 1.6Mbps), blocking Google
-              ad+analytics traffic cut Total Blocking Time from 2398ms to
-              1483ms and JS heap from 24MB to 12.7MB. Perf audit 2026-07-26.
+              lazyOnload: the AdSense page tag is ~56KB and pulls in
+              show_ads_impl (~186KB more). Moving it from beforeInteractive to
+              afterInteractive cut Total Blocking Time from 2398ms to 1483ms
+              (landing, 4x CPU, 1.6Mbps; audit 2026-07-26). It still competed
+              with hydration on first load, so it now joins the rest of the
+              Google tags behind the load event: the 2026-11 Lighthouse audit
+              measured gtag+ads as the largest single blocking source on every
+              page (600-750ms of long tasks).
 
               The googlefc consent bootstrap above stays beforeInteractive so
               the CMP callback queue still exists before any consent callback
@@ -387,7 +404,7 @@ export default async function RootLayout({
             */}
             <Script
               src={getAdSensePageTagUrl(adSenseClientId!)}
-              strategy="afterInteractive"
+              strategy="lazyOnload"
               crossOrigin="anonymous"
             />
           </>
@@ -473,7 +490,9 @@ export default async function RootLayout({
                           {!isWikiSubdomain && <LiveRefreshBanner />}
                           {/* Singleplayer loads no analytics (see below), so there is
                               nothing to consent to. */}
-                          {!isNativeApp && !singleplayer && <CookieConsentBanner />}
+                          {!isNativeApp && !singleplayer && (
+                            <CookieConsentBanner googleCmp={renderGoogleCmp} />
+                          )}
                           {/* A singleplayer build runs on the player's machine with no
                               account and nothing to measure, so none of the telemetry
                               or ad tags below have a job there.
@@ -490,38 +509,50 @@ export default async function RootLayout({
                               the self-hosted umami tag below. */}
                           {!singleplayer && (
                             <>
+                              {/* GA4 and the Ads conversion tag also wait for
+                                  the load event. The consent default is still
+                                  pushed into dataLayer before gtag.js runs
+                                  (the bootstrap reads localStorage itself), so
+                                  deferring the fetch delays when Google starts
+                                  counting, not whether it respects consent. */}
                               {renderConsentManagedGoogleTags ? (
                                 <>
                                   <Script
                                     src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
-                                    strategy="afterInteractive"
+                                    strategy="lazyOnload"
                                   />
                                   <Script
                                     id="google-analytics"
-                                    strategy="afterInteractive"
+                                    strategy="lazyOnload"
                                     dangerouslySetInnerHTML={{
                                       __html: googleTagBootstrap,
                                     }}
                                   />
                                   <Script
                                     id="google-ads"
-                                    strategy="afterInteractive"
+                                    strategy="lazyOnload"
                                     dangerouslySetInnerHTML={{
                                       __html: `gtag('config', '${GOOGLE_ADS_ID}');`,
                                     }}
                                   />
                                 </>
                               ) : null}
-                              {/* The canonical host. The old analytics.ahousedividedgame.com
-                                  308s here, which serves the script but breaks every event:
-                                  the tracker posts to its own origin, and a CORS preflight
-                                  cannot follow a redirect. */}
-                              <Script
-                                id="umami-analytics"
-                                src="https://analytics.lakesidegames.net/script.js"
-                                data-website-id="caa223b2-469d-4325-9ad3-63e3e87ed3d1"
-                                strategy="afterInteractive"
-                              />
+                              {/* Optional self-hosted umami tag. The host is
+                                  configured rather than hardcoded: the old
+                                  analytics.lakesidegames.net instance stopped
+                                  resolving, and the hardcoded tag shipped a
+                                  failed request plus a console error (a Best
+                                  Practices failure) on every page. Set both
+                                  NEXT_PUBLIC_UMAMI_SRC and
+                                  NEXT_PUBLIC_UMAMI_WEBSITE_ID to enable it. */}
+                              {umamiSrc && umamiWebsiteId ? (
+                                <Script
+                                  id="umami-analytics"
+                                  src={umamiSrc}
+                                  data-website-id={umamiWebsiteId}
+                                  strategy="afterInteractive"
+                                />
+                              ) : null}
                             </>
                           )}
                         </CharacterStatsProvider>

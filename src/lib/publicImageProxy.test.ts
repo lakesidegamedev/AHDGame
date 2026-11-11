@@ -185,4 +185,31 @@ describe("publicImageProxy", () => {
     expect(response.status).toBe(302);
     expect(response.headers.get("location")).toBe("https://ahousedividedgame.com/ahd-logo.png");
   });
+
+  it("emits a relative Location when the request origin is the container loopback", () => {
+    // Behind the Railway proxy the route handler sees https://localhost:3000
+    // as its own origin; an absolute redirect there is unreachable in prod.
+    const response = redirectToFallbackImage(
+      "/ahd-logo.png",
+      "https://localhost:3000/api/logos/parties/2?country=uk",
+      "public, max-age=60"
+    );
+
+    expect(response.status).toBe(302);
+    expect(response.headers.get("location")).toBe("/ahd-logo.png");
+  });
+
+  it("rewrites an absolute candidate on the loopback origin to a relative Location", async () => {
+    vi.spyOn(global, "fetch").mockResolvedValue(
+      new Response(null, { status: 200, headers: { "content-type": "image/png" } })
+    );
+
+    const response = await redirectToFirstAvailableImage(
+      ["/uploads/party.png"],
+      "https://localhost:3000/api/logos/parties/2?country=uk",
+      "public, max-age=60"
+    );
+
+    expect(response?.headers.get("location")).toBe("/uploads/party.png");
+  });
 });

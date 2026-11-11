@@ -763,7 +763,7 @@ export function SandboxHome({
             >
               {footer.map((col) => (
                 <div key={col.headingKey}>
-                  <h3 className="mb-2 text-sm font-semibold text-muted/80">{col.heading}</h3>
+                  <h3 className="mb-2 text-sm font-semibold text-muted">{col.heading}</h3>
                   <ul className="space-y-1.5">
                     {col.links.map((link) => (
                       <li key={link.href}>
@@ -805,7 +805,7 @@ export function SandboxHome({
               />
               <span>{t("landing.byLakeside")}</span>
             </a>
-            <p className="mx-auto mt-3 max-w-3xl text-body-xs leading-relaxed text-muted/70">
+            <p className="mx-auto mt-3 max-w-3xl text-body-xs leading-relaxed text-muted">
               {t("landing.attribution")}
             </p>
           </div>

@@ -1,5 +1,6 @@
 ﻿"use client";
 
+import { useHasSession } from "@/contexts/AuthDataContext";
 import { InlineError } from "@/components/ui/InlineError";
 import { apiErrorText } from "@/lib/errors/catalog";
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -186,26 +187,31 @@ export default function WhiteHouseClient({
     };
   }, [countryId]);
 
+  // Only the President can list enrolled bills; everyone else, including a
+  // signed-out visitor, gets a 401 that surfaces as a console error. Fetch the
+  // public office data always, and the bill queue only when a session exists.
+  const hasSession = useHasSession();
+
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const countryParam = `?country=${countryId.toLowerCase()}`;
       const [whRes, billsRes] = await Promise.all([
         fetch(`/api/whitehouse${countryParam}`),
-        fetch(`/api/whitehouse/bills${countryParam}`),
+        hasSession ? fetch(`/api/whitehouse/bills${countryParam}`) : Promise.resolve(null),
       ]);
       if (whRes.ok) {
         const whData = await whRes.json();
         setData(whData);
       }
-      if (billsRes.ok) {
+      if (billsRes?.ok) {
         const b = await billsRes.json();
         setBills(b.bills ?? []);
       }
     } finally {
       setLoading(false);
     }
-  }, [countryId]);
+  }, [countryId, hasSession]);
 
   useEffect(() => {
     fetchData();

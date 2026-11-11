@@ -28,6 +28,7 @@ import type { CharacterBasic, ElectionDisplay, GameStateDisplay } from "@/lib/db
 import type { CompositionResponse } from "@/lib/elections/electionResponseTypes";
 import { EmptyState } from "@/components/ui";
 import { isMapAvailable, selectElectionGroups } from "@/app/elections/components/electionsMapModel";
+import { useHasSession } from "@/contexts/AuthDataContext";
 import {
   electionNightTitle,
   pickElectionNightAnchor,
@@ -146,19 +147,23 @@ export default function ElectionsClient({ code, initialElections }: ElectionsCli
 
   useCountdownTimer();
 
+  // A signed-out visitor has no character. Asking anyway answers 401, which is
+  // a console error on an otherwise public page.
+  const hasSession = useHasSession();
+
   const fetchSecondary = useCallback(async () => {
     try {
       const opts = { signal: AbortSignal.timeout(15_000) };
       const [charRes, compositionRes, gameStateRes] = await Promise.all([
-        fetch("/api/character/me", opts),
+        hasSession ? fetch("/api/character/me", opts) : Promise.resolve(null),
         fetch(`/api/elections/composition?country=${countryId}`, opts),
-        fetch("/api/game/turn/status", opts),
+        fetch(`/api/game/turn/status`, opts),
       ]);
-      if (charRes.ok) {
+      if (charRes?.ok) {
         const data = await charRes.json();
         setCharacter(data.character);
         setCharacterChecked(true);
-      } else if (charRes.status === 404) {
+      } else if (!charRes || charRes.status === 404) {
         setCharacterChecked(true);
       }
       if (compositionRes.ok) setComposition(await compositionRes.json());
@@ -175,7 +180,7 @@ export default function ElectionsClient({ code, initialElections }: ElectionsCli
     } catch (err) {
       console.error("Error fetching election secondaries:", err);
     }
-  }, [countryId]);
+  }, [countryId, hasSession]);
 
   const fetchData = useCallback(
     async (background = false) => {

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import type { SerializedPost } from "./NewsPost";
 import { NewsFeed } from "./NewsFeed";
 import { NewsWhoToWatch } from "./NewsWhoToWatch";
+import { useHasSession } from "@/contexts/AuthDataContext";
 
 interface CurrentUser {
   name: string;
@@ -25,13 +26,22 @@ export function NewsTab({
   activeFeed,
   onActiveFeedChange,
 }: NewsTabProps) {
-  const [currentUser, setCurrentUser] = useState<CurrentUser | null | undefined>(undefined);
+  // A signed-out visitor has no character, so the per-user state starts
+  // settled at null and never needs a state write from the effect below.
+  const hasSession = useHasSession();
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null | undefined>(
+    hasSession ? undefined : null
+  );
   const [currentCharacterId, setCurrentCharacterId] = useState<string | null>(null);
   const [moderationApiBase, setModerationApiBase] = useState<
     "/api/admin" | "/api/moderator" | null
   >(null);
 
+  // Both endpoints are per-user and answer 401 for a signed-out visitor. The
+  // news feed itself is public, so an anonymous read must not create two failed
+  // requests (Lighthouse counts them as console errors).
   useEffect(() => {
+    if (!hasSession) return;
     Promise.all([
       fetch("/api/character/me").then((res) => (res.ok ? res.json() : null)),
       fetch("/api/auth/me").then((res) => (res.ok ? res.json() : null)),
@@ -53,7 +63,7 @@ export function NewsTab({
         setCurrentCharacterId(null);
         setModerationApiBase(null);
       });
-  }, []);
+  }, [hasSession]);
 
   return (
     <div className="space-y-8">
