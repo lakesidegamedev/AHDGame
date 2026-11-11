@@ -53,10 +53,5 @@ export const JP_NATIONAL_BUDGET_1991: NationalBudgetSeedConfig = {
     tariffs: 0,
     salesTax: 3,
   },
-  taxPolicyIds: {
-    incomeTax: "jp_income_tax_rate",
-    domesticCorporateTax: "jp_domestic_corporation_tax",
-    payrollTax: "jp_social_insurance",
-    salesTax: "jp_consumption_tax",
-  },
+  taxPolicyIds: {},
 };

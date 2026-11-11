@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { LegislationType } from "@/lib/db/types";
 import { legislationTypes } from "./legislationTypes";
-import { cnLegislationTypes } from "../cn/cnLegislationTypes";
 import { ieLegislationTypes } from "../ie/ieLegislationTypes";
 
 /**
@@ -45,7 +44,7 @@ function lawTargets(lt: LegislationType): Array<{ cat: string; id: string }> {
 }
 
 describe("§4.7 governance/media root-vs-readout sweep", () => {
-  const all = [...legislationTypes, ...cnLegislationTypes, ...ieLegislationTypes];
+  const all = [...legislationTypes, ...ieLegislationTypes];
 
   it("no law targets BOTH a root and its engine-derived readout", () => {
     const offenders: string[] = [];

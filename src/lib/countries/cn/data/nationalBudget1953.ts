@@ -1,4 +1,5 @@
 import type { NationalBudgetSeedConfig } from "@/lib/seeds/reference/budgets";
+import { SEED_TAX_RATES_1953 } from "@/lib/politicalLegislation/seedTaxRates";
 import { COUNTRY_POLICY_CONFIGS_1953 } from "@/lib/seeds/reference/basePolicies1953";
 
 // ── China FY1953 — People's Republic / First Five-Year Plan ─────────────────
@@ -60,14 +61,6 @@ export const CN_NATIONAL_BUDGET_1953: NationalBudgetSeedConfig = {
   baselineStateGrants: 1_630_000_000,
   policyDefaults: COUNTRY_POLICY_CONFIGS_1953.cn.defaults,
   policyOptionOverrides: COUNTRY_POLICY_CONFIGS_1953.cn.optionIndexes,
-  taxPolicyIds: {
-    incomeTax: "cn_individual_income_tax",
-    domesticCorporateTax: "cn_enterprise_income_tax",
-    payrollTax: "cn_social_insurance_contribution",
-    tariffs: "cn_customs_tariff",
-    salesTax: "cn_value_added_tax",
-    landValueAddedTax: "cn_land_value_added_tax",
-    urbanMaintenanceTax: "cn_urban_maintenance_construction_tax",
-    stampDuty: "cn_stamp_duty",
-  },
+  seedTaxRatesOverride: SEED_TAX_RATES_1953.CN,
+  taxPolicyIds: {},
 };

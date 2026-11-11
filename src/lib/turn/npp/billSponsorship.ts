@@ -103,7 +103,7 @@ export function isMarketLiberalLegislationType(lt: { _id: string; subCategory?: 
   const id = lt._id.toLowerCase();
   if (id.endsWith("_economic_system")) return true;
   if (id.endsWith("_price_controls")) return true;
-  if (id === "cn_state_enterprises" || id.endsWith("_state_enterprises")) return true;
+  if (id.endsWith("_state_enterprises")) return true;
   // SU / eastern-bloc farm decollectivization lever.
   if ((lt.subCategory ?? "").toLowerCase() === "farm organization") return true;
   return false;

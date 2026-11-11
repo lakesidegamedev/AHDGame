@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { LegislationType } from "@/lib/db/types";
 import { legislationTypes } from "./legislationTypes";
-import { cnLegislationTypes } from "../cn/cnLegislationTypes";
 import { ieLegislationTypes } from "../ie/ieLegislationTypes";
 
 /**
@@ -68,7 +67,7 @@ function tierHits(lt: LegislationType): string[] {
 }
 
 describe("§4.7 environment spending sweep", () => {
-  const all = [...legislationTypes, ...cnLegislationTypes, ...ieLegislationTypes];
+  const all = [...legislationTypes, ...ieLegislationTypes];
 
   it("no environment-budget FUNDING law targets a tier readout", () => {
     const offenders: string[] = [];

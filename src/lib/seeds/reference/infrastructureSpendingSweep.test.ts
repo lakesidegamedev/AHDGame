@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { LegislationType } from "@/lib/db/types";
 import { legislationTypes } from "./legislationTypes";
-import { cnLegislationTypes } from "../cn/cnLegislationTypes";
 import { ieLegislationTypes } from "../ie/ieLegislationTypes";
 
 /**
@@ -40,8 +39,6 @@ const SUB_ALLOCATION_KEEP_LIST = new Set<string>([
   "jp_regional_transport",
   "jp_regional_utilities",
   "jp_digital_infrastructure",
-  "cn_rail_transport",
-  "cn_digital_infrastructure",
   "uk_digital_broadband",
   "us_broadband_energy",
 ]);
@@ -70,7 +67,7 @@ function readoutHits(lt: LegislationType): string[] {
 }
 
 describe("§4.7 infrastructure spending sweep", () => {
-  const all = [...legislationTypes, ...cnLegislationTypes, ...ieLegislationTypes];
+  const all = [...legislationTypes, ...ieLegislationTypes];
 
   it("no generic infrastructure-FUNDING law targets a spend-driven infra readout", () => {
     const offenders: string[] = [];

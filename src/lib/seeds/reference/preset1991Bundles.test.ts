@@ -358,7 +358,7 @@ describe("runCoreSeed wires preset into stateMetrics (Gap #1)", () => {
 describe("basePolicies — preset-aware (Gap #4)", () => {
   it("getBasePolicies('2019-default') is the canonical basePolicies minus post-2019 windows", async () => {
     // The era policy vacuum (Spec A) drops default policies for domains that open
-    // after the preset year — for 2019 that is just cn_common_prosperity (2021).
+    // after the preset year — for 2019 that is just the 2027 era laws.
     const { getBasePolicies, basePolicies } = await import("./basePolicies");
     const { LEGISLATION_ERA } = await import("@/lib/era/legislationCatalog");
     const out = await getBasePolicies("2019-default");
@@ -369,7 +369,7 @@ describe("basePolicies — preset-aware (Gap #4)", () => {
     expect(out.map((p) => p.legislationTypeId).sort()).toEqual(
       expected.map((p) => p.legislationTypeId).sort()
     );
-    expect(out.some((p) => p.legislationTypeId === "cn_common_prosperity")).toBe(false);
+    expect(out.some((p) => p.legislationTypeId === "ie_ai_liability_act")).toBe(false);
   });
 
   it("getBasePolicies('1991-default') generates sub-national records for IE 1991 regions", async () => {

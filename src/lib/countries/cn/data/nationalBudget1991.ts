@@ -47,16 +47,16 @@ export const CN_NATIONAL_BUDGET_1991: NationalBudgetSeedConfig = {
   baselineStateGrants: 25_000_000_000,
   policyDefaults: COUNTRY_POLICY_CONFIGS_1991.cn.defaults,
   policyOptionOverrides: COUNTRY_POLICY_CONFIGS_1991.cn.optionIndexes,
-  taxPolicyIds: {
-    incomeTax: "cn_individual_income_tax",
-    domesticCorporateTax: "cn_enterprise_income_tax",
-    // foreignCorporateTax intentionally omitted — CN unified EIT in 2008.
-    // Engine falls back to domestic rate at seed time (see spec §13.1).
-    payrollTax: "cn_social_insurance_contribution",
-    tariffs: "cn_customs_tariff",
-    salesTax: "cn_value_added_tax",
-    landValueAddedTax: "cn_land_value_added_tax",
-    urbanMaintenanceTax: "cn_urban_maintenance_construction_tax",
-    stampDuty: "cn_stamp_duty",
+  taxRateOverrides: {
+    incomeTax: 0,
+    domesticCorporateTax: 38,
+    foreignCorporateTax: 38,
+    payrollTax: 0,
+    tariffs: 0,
+    salesTax: 22,
+    landValueAddedTax: 0,
+    urbanMaintenanceTax: 7,
+    stampDuty: 0.05,
   },
+  taxPolicyIds: {},
 };

@@ -11,9 +11,9 @@ import {
 
 describe("legislation era resolvers", () => {
   it("null year (flag off) ⇒ every type active, never new", () => {
-    expect(isLegislationTypeActive("cn_common_prosperity", null)).toBe(true);
+    expect(isLegislationTypeActive("ie_ai_liability_act", null)).toBe(true);
     expect(isLegislationTypeActive("us_medicaid", null)).toBe(true);
-    expect(isNewThisEra("cn_common_prosperity", null)).toBe(false);
+    expect(isNewThisEra("ie_ai_liability_act", null)).toBe(false);
   });
 
   it("unknown / unlisted typeId ⇒ always active (fail-open)", () => {
@@ -22,21 +22,21 @@ describe("legislation era resolvers", () => {
   });
 
   it("windowed type: inactive at from-1, active at from", () => {
-    expect(LEGISLATION_ERA.cn_common_prosperity).toBe(2021);
-    expect(isLegislationTypeActive("cn_common_prosperity", 2020)).toBe(false);
-    expect(isLegislationTypeActive("cn_common_prosperity", 2021)).toBe(true);
-    expect(isLegislationTypeActive("cn_common_prosperity", 2022)).toBe(true);
+    expect(LEGISLATION_ERA.ie_ai_liability_act).toBe(2027);
+    expect(isLegislationTypeActive("ie_ai_liability_act", 2026)).toBe(false);
+    expect(isLegislationTypeActive("ie_ai_liability_act", 2027)).toBe(true);
+    expect(isLegislationTypeActive("ie_ai_liability_act", 2028)).toBe(true);
   });
 
   it("isNewThisEra true only within [from, from+2]", () => {
-    expect(isNewThisEra("cn_common_prosperity", 2020)).toBe(false); // pre-window
-    expect(isNewThisEra("cn_common_prosperity", 2021)).toBe(true); // from
-    expect(isNewThisEra("cn_common_prosperity", 2023)).toBe(true); // from+2
-    expect(isNewThisEra("cn_common_prosperity", 2024)).toBe(false); // from+3
+    expect(isNewThisEra("ie_ai_liability_act", 2026)).toBe(false); // pre-window
+    expect(isNewThisEra("ie_ai_liability_act", 2027)).toBe(true); // from
+    expect(isNewThisEra("ie_ai_liability_act", 2029)).toBe(true); // from+2
+    expect(isNewThisEra("ie_ai_liability_act", 2030)).toBe(false); // from+3
   });
 
   it("waiver + ack sets reference real classified types", () => {
-    expect(WINDOW_CONSTRAINT_WAIVERS.has("cn_internet_governance")).toBe(true);
+    expect(WINDOW_CONSTRAINT_WAIVERS.has("ie_excise_duty")).toBe(true);
     expect(GATED_REVENUE_ACK.has("ng_petroleum_profit_tax")).toBe(true);
   });
 
@@ -47,7 +47,7 @@ describe("legislation era resolvers", () => {
 });
 
 describe("untilYear: filing closes, enacted laws stay in force", () => {
-  const typeId = "cn_common_prosperity";
+  const typeId = "ie_regional_health";
 
   function withUntil(year: number, run: () => void) {
     LEGISLATION_ERA_UNTIL[typeId] = year;
@@ -106,7 +106,7 @@ describe("untilYear: filing closes, enacted laws stay in force", () => {
 
   it("does not reopen a type before its first fileable year", () => {
     withUntil(2035, () => {
-      expect(isLegislationTypeFileable(typeId, 2020)).toBe(false);
+      expect(isLegislationTypeFileable(typeId, 2004)).toBe(false);
     });
   });
 });

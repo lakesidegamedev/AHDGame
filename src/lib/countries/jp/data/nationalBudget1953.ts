@@ -48,12 +48,5 @@ export const JP_NATIONAL_BUDGET_1953: NationalBudgetSeedConfig = {
   policyDefaults: COUNTRY_POLICY_CONFIGS_1953.jp.defaults,
   policyOptionOverrides: COUNTRY_POLICY_CONFIGS_1953.jp.optionIndexes,
   seedTaxRatesOverride: SEED_TAX_RATES_1953.JP,
-  taxPolicyIds: {
-    incomeTax: "jp_income_tax_rate",
-    domesticCorporateTax: "jp_domestic_corporation_tax",
-    foreignCorporateTax: "jp_foreign_corporation_tax",
-    payrollTax: "jp_social_insurance",
-    tariffs: "jp_customs_tariff",
-    salesTax: "jp_consumption_tax",
-  },
+  taxPolicyIds: {},
 };

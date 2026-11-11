@@ -126,8 +126,8 @@ import { legislationTypes } from "./legislationTypes";
 import { SEED_FISCAL_LEVERS } from "./seedFiscalLadders";
 import { OPENING_PROGRAM_SPENDING } from "./openingProgramSpending";
 import { jpRegionalLevers } from "@/lib/countries/jp/data/jpRegionalLevers";
+import { cnRegionalLevers } from "@/lib/countries/cn/data/cnRegionalLevers";
 import { ieLegislationTypes } from "@/lib/seeds/ie/ieLegislationTypes";
-import { cnLegislationTypes } from "@/lib/seeds/cn/cnLegislationTypes";
 import { brLegislationTypes } from "@/lib/seeds/br/brLegislationTypes";
 import { frLegislationTypes } from "@/lib/seeds/fr/frLegislationTypes";
 import { itLegislationTypes } from "@/lib/seeds/it/itLegislationTypes";
@@ -249,8 +249,8 @@ export const SOVEREIGN_CORP_LEGAL_STRUCTURE: Partial<Record<CountryId, LegalStru
 const budgetLegislationTypes = [
   ...legislationTypes,
   ...jpRegionalLevers,
+  ...cnRegionalLevers,
   ...ieLegislationTypes,
-  ...cnLegislationTypes,
   ...brLegislationTypes,
   ...frLegislationTypes,
   ...itLegislationTypes,
@@ -386,16 +386,16 @@ export interface NationalBudgetSeedConfig {
    */
   seedTaxRatesOverride?: Record<string, number>;
   taxPolicyIds: {
-    incomeTax: string;
-    domesticCorporateTax: string;
+    incomeTax?: string;
+    domesticCorporateTax?: string;
     /**
      * Foreign corporate tax bill id. The bill itself is seeded separately.
      * If absent, the foreign rate mirrors the domestic rate at seed time (day-one parity).
      */
     foreignCorporateTax?: string;
-    payrollTax: string;
+    payrollTax?: string;
     tariffs?: string;
-    salesTax: string;
+    salesTax?: string;
     /**
      * DE-only Solidaritätszuschlag bill id. When set, the seeded FederalBudget.taxRates
      * picks up the default rate via `deriveTaxRates`. Non-DE countries omit.
@@ -1438,14 +1438,7 @@ const NATIONAL_BUDGET_SEED_CONFIGS: NationalBudgetSeedConfig[] = [
       tariffs: 0,
       salesTax: 10,
     },
-    taxPolicyIds: {
-      incomeTax: "jp_income_tax_rate",
-      domesticCorporateTax: "jp_domestic_corporation_tax",
-      foreignCorporateTax: "jp_foreign_corporation_tax",
-      payrollTax: "jp_social_insurance",
-      tariffs: "jp_customs_tariff",
-      salesTax: "jp_consumption_tax",
-    },
+    taxPolicyIds: {},
   },
   {
     budgetId: "DE",
@@ -1499,15 +1492,7 @@ const NATIONAL_BUDGET_SEED_CONFIGS: NationalBudgetSeedConfig[] = [
       salesTax: 19,
       solidaritySurcharge: 5.5,
     },
-    taxPolicyIds: {
-      incomeTax: "de_income_tax_rate",
-      domesticCorporateTax: "de_domestic_corporate_tax_rate",
-      foreignCorporateTax: "de_foreign_corporate_tax_rate",
-      payrollTax: "de_payroll_social_insurance",
-      tariffs: "de_customs_tariff_rate",
-      salesTax: "de_vat_rate",
-      solidaritySurcharge: "de_solidarity_surcharge",
-    },
+    taxPolicyIds: {},
   },
   // ── Ireland ────────────────────────────────────────────────────────────────
   {
@@ -1682,18 +1667,18 @@ const NATIONAL_BUDGET_SEED_CONFIGS: NationalBudgetSeedConfig[] = [
     baselineStateGrants: 9_000_000_000_000,
     policyDefaults: COUNTRY_POLICY_CONFIGS.cn.defaults,
     policyOptionOverrides: COUNTRY_POLICY_CONFIGS.cn.optionIndexes,
-    taxPolicyIds: {
-      incomeTax: "cn_individual_income_tax",
-      domesticCorporateTax: "cn_enterprise_income_tax",
-      // foreignCorporateTax intentionally omitted — CN unified EIT in 2008.
-      // Engine falls back to domestic rate at seed time (see spec §13.1).
-      payrollTax: "cn_social_insurance_contribution",
-      tariffs: "cn_customs_tariff",
-      salesTax: "cn_value_added_tax",
-      landValueAddedTax: "cn_land_value_added_tax",
-      urbanMaintenanceTax: "cn_urban_maintenance_construction_tax",
-      stampDuty: "cn_stamp_duty",
+    taxRateOverrides: {
+      incomeTax: 45,
+      domesticCorporateTax: 25,
+      foreignCorporateTax: 25,
+      payrollTax: 28,
+      tariffs: 0,
+      salesTax: 13,
+      landValueAddedTax: 40,
+      urbanMaintenanceTax: 7,
+      stampDuty: 0.05,
     },
+    taxPolicyIds: {},
   },
   // ── Nigeria ────────────────────────────────────────────────────────────────
   // 2019 Buhari-era federal budget (~₦8.9T planned spending against ~₦4.4T

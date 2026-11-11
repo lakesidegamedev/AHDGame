@@ -51,13 +51,5 @@ export const DE_NATIONAL_BUDGET_1991: NationalBudgetSeedConfig = {
     salesTax: 10,
     solidaritySurcharge: 2,
   },
-  taxPolicyIds: {
-    incomeTax: "de_income_tax_rate",
-    domesticCorporateTax: "de_domestic_corporate_tax_rate",
-    foreignCorporateTax: "de_foreign_corporate_tax_rate",
-    payrollTax: "de_payroll_social_insurance",
-    tariffs: "de_customs_tariff_rate",
-    salesTax: "de_vat_rate",
-    solidaritySurcharge: "de_solidarity_surcharge",
-  },
+  taxPolicyIds: {},
 };

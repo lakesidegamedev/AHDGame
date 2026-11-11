@@ -1,5 +1,5 @@
 /**
- * Opening program spending for the US, the UK and Japan, per preset. It sets the
+ * Opening program spending for the US, the UK, Japan and China, per preset. It sets the
  * envelope the first budget refresh calibrates non-law spending against.
  * Keys are `country|fiscalYear|gdp|population`, so a re-based config never reads
  * a mismatched row. `all` is every national spending program; `active` is the
@@ -424,6 +424,111 @@ export const OPENING_PROGRAM_SPENDING: Readonly<
         publicSafety: 2513292705378,
       },
       stateGrants: 17021241602560.002,
+    },
+  },
+  "CN|2023|126000000000000|1412000000": {
+    all: {
+      byCategory: {
+        health: 2199896000000,
+        education: 4100448000000,
+        socialSecurity: 3899944000000,
+        defense: 1620976000000,
+        infrastructure: 3500348000000,
+        other: 3138876000000,
+        publicSafety: 2300148000000,
+        agriculture: 2401812000000,
+      },
+      stateGrants: 0,
+    },
+  },
+  "CN|1979|559000000000|977000000": {
+    all: {
+      byCategory: {
+        health: 9262883269.605143,
+        education: 17265348533.333332,
+        socialSecurity: 16421106284.113865,
+        defense: 6825282409.182736,
+        infrastructure: 14738567153.62718,
+        other: 13216552957.85124,
+        publicSafety: 9685004394.214876,
+        agriculture: 10113070886.77686,
+      },
+      stateGrants: 0,
+    },
+  },
+  "CN|1991|2178000000000|1158230000": {
+    all: {
+      byCategory: {
+        health: 36090446800,
+        education: 67269998400,
+        socialSecurity: 62011634200,
+        defense: 27079417400,
+        infrastructure: 72180893600,
+        other: 50174523600,
+        publicSafety: 22631814200,
+        agriculture: 39402984600,
+      },
+      stateGrants: 0,
+    },
+  },
+  "CN|1999|2178000000000|1158230000": {
+    all: {
+      byCategory: {
+        health: 36090446800,
+        education: 67269998400,
+        socialSecurity: 62011634200,
+        defense: 27079417400,
+        infrastructure: 72180893600,
+        other: 50174523600,
+        publicSafety: 22631814200,
+        agriculture: 39402984600,
+      },
+      stateGrants: 0,
+    },
+  },
+  "CN|2007|2178000000000|1158230000": {
+    all: {
+      byCategory: {
+        health: 36090446800,
+        education: 67269998400,
+        socialSecurity: 62011634200,
+        defense: 27079417400,
+        infrastructure: 72180893600,
+        other: 50174523600,
+        publicSafety: 22631814200,
+        agriculture: 39402984600,
+      },
+      stateGrants: 0,
+    },
+  },
+  "CN|2027|155565148879000|1412000000": {
+    all: {
+      byCategory: {
+        health: 2199896000000,
+        education: 4100448000000,
+        socialSecurity: 3899944000000,
+        defense: 1620976000000,
+        infrastructure: 3500348000000,
+        other: 3138876000000,
+        publicSafety: 2300148000000,
+        agriculture: 2401812000000,
+      },
+      stateGrants: 0,
+    },
+  },
+  "CN|2027|155565148879000|1398524090": {
+    all: {
+      byCategory: {
+        health: 2178900532220,
+        education: 4061313957360,
+        socialSecurity: 3862723536580,
+        defense: 1605505655320,
+        infrastructure: 3466941219110,
+        other: 3108919052070,
+        publicSafety: 2278195742610,
+        agriculture: 2378889477090,
+      },
+      stateGrants: 0,
     },
   },
 };

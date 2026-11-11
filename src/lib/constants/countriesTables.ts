@@ -512,7 +512,7 @@ export interface CountryConfig {
     centralTransferPerCapita: number;
     /** Fallback tax rate (%) when the primary tax has not been enacted. */
     defaultTaxRate: number;
-    /** legislationTypeId of the primary regional tax (CN: cn_enterprise_income_tax). */
+    /** legislationTypeId of the primary regional tax (CN: cn.tax.domesticCorporateTax). */
     primaryTaxLegislationKey: string;
     /**
      * legislationTypeId of an optional per-region resource tax. When set, the

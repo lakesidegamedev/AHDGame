@@ -3,8 +3,8 @@ import { successorTaxTypes } from "@/lib/resetLegislation/successorTaxTypes";
 import { expandIncomeTaxTypes } from "@/lib/budget/incomeTaxCatalog";
 import { withEraCosts } from "@/lib/era/legislationCostCatalog";
 import { jpRegionalLevers } from "@/lib/countries/jp/data/jpRegionalLevers";
+import { cnRegionalLevers } from "@/lib/countries/cn/data/cnRegionalLevers";
 import { ieLegislationTypes } from "../ie/ieLegislationTypes";
-import { cnLegislationTypes } from "../cn/cnLegislationTypes";
 import { ngLegislationTypes } from "../ng/ngLegislationTypes";
 import { frLegislationTypes } from "../fr/frLegislationTypes";
 import { itLegislationTypes } from "../it/itLegislationTypes";
@@ -34,10 +34,9 @@ const rawLegislationTypes: LegislationType[] = [
   // US state redistricting levers: mechanical, read by id from statePolicies.
   ...redistrictingLegislationTypes,
   ...jpRegionalLevers,
+  ...cnRegionalLevers,
   // ── Ireland legislation types ─────────────────────────────────────────────
   ...ieLegislationTypes,
-  // ── China legislation types ───────────────────────────────────────────────
-  ...cnLegislationTypes,
   // ── Nigeria legislation types ─────────────────────────────────────────────
   ...ngLegislationTypes,
   // ── Brazil legislation types (Vargas-era developmentalism; Petrobras 1953) ──
