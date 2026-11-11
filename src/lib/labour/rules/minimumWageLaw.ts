@@ -77,8 +77,33 @@ export const MINIMUM_WAGE_LAW_SCALES: Readonly<Record<string, MinimumWageLawScal
   },
 };
 
+/**
+ * Old-generation laws that saved worlds still have enacted after their country
+ * moved to the one law book. New worlds never seed them, so no catalog lists
+ * them; without these a saved world's enacted floor would silently vanish.
+ */
+export const SAVED_WORLD_MINIMUM_WAGE_LAW_SCALES: Readonly<Record<string, MinimumWageLawScale>> = {
+  // EUR/hour. EUR 12 is 0.55 of the median.
+  de_minimum_wage: { referenceMedianWage: 22, optionRates: [0, 5, 9, 12, 14, 16, 18] },
+  // JPY/hour. JPY 1,000 is 0.45 of the median.
+  jp_minimum_wage: {
+    referenceMedianWage: 2200,
+    optionRates: [1800, 1500, 1250, 1000, 800, 500, 0],
+  },
+};
+
+function scaleFor(legislationTypeId: string): MinimumWageLawScale | undefined {
+  return (
+    MINIMUM_WAGE_LAW_SCALES[legislationTypeId] ??
+    SAVED_WORLD_MINIMUM_WAGE_LAW_SCALES[legislationTypeId]
+  );
+}
+
 /** The legislation type ids read for national floors. */
-export const MINIMUM_WAGE_LAW_TYPE_IDS: readonly string[] = Object.keys(MINIMUM_WAGE_LAW_SCALES);
+export const MINIMUM_WAGE_LAW_TYPE_IDS: readonly string[] = [
+  ...Object.keys(MINIMUM_WAGE_LAW_SCALES),
+  ...Object.keys(SAVED_WORLD_MINIMUM_WAGE_LAW_SCALES),
+];
 
 /** gameConfig.minimumWageLawStage: >= 1 lets the law in force set the floor. */
 export function minimumWageLawOn(stage: number | null | undefined): boolean {
@@ -107,7 +132,7 @@ export function policyOptionIndexOf(row: {
  * law, an unknown option or an abolition option.
  */
 export function minimumWageLawKaitz(legislationTypeId: string, optionIndex: number | null): number {
-  const scale = MINIMUM_WAGE_LAW_SCALES[legislationTypeId];
+  const scale = scaleFor(legislationTypeId);
   if (!scale || optionIndex === null || optionIndex < 0) return 0;
   let ratio = 0;
   if (scale.optionKaitz) {
@@ -143,7 +168,7 @@ export function buildMinWageRatioWithLaws(
 ): Map<string, number> {
   const lawRatio = new Map<string, number>();
   for (const p of policies) {
-    if (!MINIMUM_WAGE_LAW_SCALES[p.legislationTypeId]) continue;
+    if (!scaleFor(p.legislationTypeId)) continue;
     // One national law per country; if two ever coexist the higher floor binds.
     const ratio = minimumWageLawKaitz(p.legislationTypeId, policyOptionIndexOf(p));
     lawRatio.set(p.countryId, Math.max(lawRatio.get(p.countryId) ?? 0, ratio));
@@ -172,7 +197,7 @@ export function annotateMinimumWageLawOptions<T extends { _id?: unknown; policyO
 ): T[] {
   return types.map((type) => {
     const id = String(type._id);
-    if (!MINIMUM_WAGE_LAW_SCALES[id] || !Array.isArray(type.policyOptions)) return type;
+    if (!scaleFor(id) || !Array.isArray(type.policyOptions)) return type;
     return {
       ...type,
       policyOptions: type.policyOptions.map((option: Record<string, unknown>, index: number) => ({
