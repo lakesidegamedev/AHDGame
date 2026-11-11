@@ -13,8 +13,8 @@ import {
   HIGH_DESIRE_BONUS_TIER_COUNT,
   getDevolutionPolicyLabel,
   getIndependenceMetricLabel,
-  getSovereigntyGovernmentNames,
 } from "@/lib/constants/devolution";
+import { getSovereigntyGovernmentNames } from "@/lib/referendum/rules/sovereigntyRegions";
 import type { DevolutionPolicy } from "@/lib/db/types/governorOfficeState";
 import { ChangePolicyModal } from "./devolution/ChangePolicyModal";
 import { ReferendumPanel, type ReferendumPanelData } from "./devolution/ReferendumPanel";
