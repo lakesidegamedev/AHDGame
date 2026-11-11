@@ -43,6 +43,7 @@ import {
 } from "./rules/foreignPolicy";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { crisesCollection } from "@/lib/db/repositories/crises";
+import { crisisInteractionsCollection } from "@/lib/db/repositories/crisisInteractions";
 
 export type { MacroForeignPolicyState } from "./rules/foreignPolicy";
 
@@ -206,8 +207,7 @@ export async function loadBackgroundForeignContext(
   );
   const responses: ResponseCandidate[] = [];
   if (callable.length > 0) {
-    const interactions = await db
-      .collection<CrisisInteraction>("crisisInteractions")
+    const interactions = await crisisInteractionsCollection(db)
       .find({ crisisId: { $in: callable.map((c) => c._id) }, resolvedAt: null } as never, {
         projection: {
           crisisId: 1,

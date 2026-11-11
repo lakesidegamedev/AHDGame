@@ -1,6 +1,7 @@
 import type { Db, ObjectId } from "mongodb";
 import type { PlayerMail, PlayerMailReport, User } from "@/lib/db/types";
 import { normalizeMailSubject } from "@/lib/inbox/mailThreads";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 export type MailReportMessageView = {
   id: string;
@@ -58,9 +59,10 @@ export async function getMailReportDetail(
     .findOne({ _id: reportId });
   if (!report) return null;
 
-  const reporter = await db
-    .collection<User>("users")
-    .findOne({ _id: report.reportedByUserId }, { projection: { username: 1 } });
+  const reporter = await usersCollection(db).findOne(
+    { _id: report.reportedByUserId },
+    { projection: { username: 1 } }
+  );
 
   const anchorMail = await db.collection<PlayerMail>("playerMail").findOne({ _id: report.mailId });
 

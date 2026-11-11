@@ -15,6 +15,7 @@ import {
   type SupporterStatusSnapshot,
 } from "@/lib/patreon/service";
 import { servicesConfig } from "@/lib/config/services";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 interface GrantEntry {
   username: string;
@@ -213,8 +214,7 @@ export async function runReconcile(
   }
 
   // ── Derole / unmatched: walk current AHD supporters ──
-  const supporters = await db
-    .collection<User>("users")
+  const supporters = await usersCollection(db)
     .find({ patreonTier: { $ne: null } })
     .toArray();
 

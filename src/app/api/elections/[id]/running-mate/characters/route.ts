@@ -24,6 +24,7 @@ import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficia
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -115,8 +116,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     const userIds = characters.map((c) => c.userId).filter(Boolean);
     const [users, parties, activeCandidates] = await Promise.all([
       userIds.length > 0
-        ? db
-            .collection<User>("users")
+        ? usersCollection(db)
             .find({ _id: { $in: userIds } })
             .toArray()
         : [],

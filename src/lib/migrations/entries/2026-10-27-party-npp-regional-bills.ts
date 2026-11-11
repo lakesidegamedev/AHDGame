@@ -1,5 +1,7 @@
 import type { Migration } from "../types";
 import { STATE_BILL_PARTY_NPP_INDEX } from "@/lib/legislature/stateBillPartyNppIndex";
+import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
+import type { Document } from "mongodb";
 
 export const migration: Migration = {
   id: "2026-10-27-party-npp-regional-bills",
@@ -8,9 +10,10 @@ export const migration: Migration = {
   idempotent: true,
   execute: async (db, ctx) => {
     if (!ctx.dryRun) {
-      await db
-        .collection("stateBills")
-        .createIndex(STATE_BILL_PARTY_NPP_INDEX.key, STATE_BILL_PARTY_NPP_INDEX.options);
+      await stateBillsCollection<Document>(db).createIndex(
+        STATE_BILL_PARTY_NPP_INDEX.key,
+        STATE_BILL_PARTY_NPP_INDEX.options
+      );
     }
     return {
       documentsUpdated: 0,

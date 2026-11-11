@@ -7,6 +7,7 @@ import { listCrises } from "@/lib/crises/queries/crisisQueries";
 import { buildGovernmentTypeMap } from "@/lib/landing/governmentTypeMap";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /** Crisis fields the marketing landing consumes (serializable). */
 export type LandingCrisisSnapshot = {
@@ -41,9 +42,7 @@ export function invalidateLandingDataCache(): void {
 async function loadLandingData(): Promise<LandingDataSnapshot> {
   const db = await getDb();
   const [config, gs, crisisList, enabledIds, countRows, countryStateDocs] = await Promise.all([
-    db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { seedYear: 1 } }),
+    gameConfigCollection(db).findOne({ _id: "default" }, { projection: { seedYear: 1 } }),
     gameStateCollection(db).findOne(
       { _id: "current" },
       { projection: { startingYear: 1, currentYear: 1 } }

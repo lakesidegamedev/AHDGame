@@ -3,6 +3,7 @@ import { getContestRoundsCollection } from "@/lib/contests/collection";
 import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
 import { billsCollection } from "@/lib/db/repositories/bills";
 import type { Document } from "mongodb";
+import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
 
 /** Durable enacted laws only. Drafts, failed bills and staff overrides earn no credit. */
 export async function loadCareerLegislation(
@@ -23,8 +24,7 @@ export async function loadCareerLegislation(
         { $group: { _id: { $toString: "$sponsorId" }, count: { $sum: 1 } } },
       ])
       .toArray(),
-    db
-      .collection("stateBills")
+    stateBillsCollection<Document>(db)
       .aggregate<{ _id: string; count: number }>([
         {
           $match: {

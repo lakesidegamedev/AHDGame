@@ -29,6 +29,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
 
 export const RUSSIAN_REGIONAL_AUTHORITIES_COLLECTION = "russianRegionalAuthorities";
 export interface RussianRegionalAuthorityRecord extends RussianCouncilRegionalAuthority {
@@ -68,8 +69,7 @@ export async function loadRussianRegionalNpcProfiles(db: Db, session: ClientSess
         { session, batchSize: 1000, projection: { nppId: 1, countryId: 1, officeType: 1 } }
       )
       .toArray();
-    const cabinet = await db
-      .collection<UnifiedCabinetMember>("cabinetMembers")
+    const cabinet = await cabinetMembersCollection<UnifiedCabinetMember>(db)
       .find({ nppId: { $in: ids } }, { session, batchSize: 1000, projection: { nppId: 1 } })
       .toArray();
     for (const row of physical)

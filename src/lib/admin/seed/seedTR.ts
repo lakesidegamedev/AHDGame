@@ -9,6 +9,10 @@ import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
+import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
+import { stateBaselinesCollection } from "@/lib/db/repositories/stateBaselines";
 
 const TR_REGION_IDS = [
   "TR_IST",
@@ -92,8 +96,8 @@ export async function seedTRDemographics(
   preset: string
 ) {
   if (reset) {
-    await db.collection("stateDemographics").deleteMany({ countryId: "TR" });
-    await db.collection("stateDemographicTurnout").deleteMany({ countryId: "TR" });
+    await stateDemographicsCollection<Document>(db).deleteMany({ countryId: "TR" });
+    await stateDemographicTurnoutCollection<Document>(db).deleteMany({ countryId: "TR" });
   }
   const { getCountryLayer1Model, buildModelRegionDemographics } =
     await import("@/lib/seeds/international");
@@ -107,9 +111,7 @@ export async function seedTRDemographics(
   const regionDemographics = buildModelRegionDemographics(model);
   for (const raw of regionDemographics) {
     const { _id, groups: _groups, ...demoData } = raw;
-    await db
-      .collection<StateDemographics>("stateDemographics")
-      .updateOne({ _id }, { $set: demoData }, { upsert: true });
+    await stateDemographicsCollection(db).updateOne({ _id }, { $set: demoData }, { upsert: true });
   }
   log(`[TR] Seeded ${regionDemographics.length} region demographics (era ${era})`);
 }
@@ -121,7 +123,7 @@ export async function seedTRStateMetrics(
   preset: string
 ) {
   if (reset) {
-    await db.collection("macroMetrics").deleteMany({ _id: { $in: TR_REGION_IDS } as never });
+    await macroMetricsCollection<Document>(db).deleteMany({ _id: { $in: TR_REGION_IDS } as never });
   }
   const { trStateMetrics } = await import("@/lib/seeds/tr/trStateMetrics");
   const { getRegionMetricPresets, applyMetricPresetToMetrics } =
@@ -156,7 +158,9 @@ export async function seedTRBaselines(
   preset: string
 ) {
   if (reset) {
-    await db.collection("stateBaselines").deleteMany({ _id: { $in: TR_REGION_IDS } as never });
+    await stateBaselinesCollection<Document>(db).deleteMany({
+      _id: { $in: TR_REGION_IDS } as never,
+    });
   }
   const { trStateBaselines } = await import("@/lib/seeds/tr/trStateBaselines");
   const { getRegionMetricPresets, applyMetricPresetToBaseline } =
@@ -182,9 +186,7 @@ export async function seedTRBaselines(
     const overlay = getRegionMetricPresets("TR", String(raw._id), preset);
     const baseline = overlay ? applyMetricPresetToBaseline(adjusted, overlay) : adjusted;
     const { _id, ...baselineData } = baseline;
-    await db
-      .collection<StateMetricBaseline>("stateBaselines")
-      .updateOne({ _id }, { $set: baselineData }, { upsert: true });
+    await stateBaselinesCollection(db).updateOne({ _id }, { $set: baselineData }, { upsert: true });
   }
   log(`Seeded ${trStateBaselines.length} TR baselines (preset: ${preset})`);
 }

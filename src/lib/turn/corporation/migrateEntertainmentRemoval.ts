@@ -21,6 +21,7 @@ import { rescaleOtherOpexAnchorForRetool } from "@/lib/corporations/physicalPnl"
 import { seedPlantLedger } from "@/lib/corporations/plantLedger";
 import type { SectorBuildOrder } from "@/lib/db/types";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 export const REMOVED_COMMODITY = "entertainment_services";
 export const ENTERTAINMENT_REMOVAL_MARKER = "entertainmentCommodityRemovedAtTurn";
@@ -105,9 +106,10 @@ export async function migrateEntertainmentRemoval(
   db: Db,
   args: { turn: number; plantsEnabled: boolean; now: Date }
 ): Promise<{ skipped: true } | { rescaled: number; archived: number; deleted: number }> {
-  const config = await db
-    .collection<Document>("gameConfig")
-    .findOne({ _id: "default" as never }, { projection: { [ENTERTAINMENT_REMOVAL_MARKER]: 1 } });
+  const config = await gameConfigCollection<Document>(db).findOne(
+    { _id: "default" as never },
+    { projection: { [ENTERTAINMENT_REMOVAL_MARKER]: 1 } }
+  );
   if (config?.[ENTERTAINMENT_REMOVAL_MARKER] != null) return { skipped: true };
 
   // 1. Rescale media sectors not yet stamped. Only media rows can carry the mix.
@@ -174,11 +176,9 @@ export async function migrateEntertainmentRemoval(
   const deleted = swept.reduce((n, r) => n + r.deleted, 0);
 
   // 4. Done: later turns skip the pass.
-  await db
-    .collection<Document>("gameConfig")
-    .updateOne(
-      { _id: "default" as never },
-      { $set: { [ENTERTAINMENT_REMOVAL_MARKER]: args.turn, updatedAt: args.now } }
-    );
+  await gameConfigCollection<Document>(db).updateOne(
+    { _id: "default" as never },
+    { $set: { [ENTERTAINMENT_REMOVAL_MARKER]: args.turn, updatedAt: args.now } }
+  );
   return { rescaled: ops.length, archived, deleted };
 }

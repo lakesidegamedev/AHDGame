@@ -24,6 +24,7 @@ import { logger } from "@/lib/observability/logger";
 import { officeHolderProvider } from "./holderProviders";
 import { getCrisisDefinition } from "./registry";
 import { loadActiveCrisisDocs, resolveCrisisCountries } from "./spillover";
+import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
 
 const COMPONENT = "crisisV2NppResponse";
 
@@ -90,8 +91,7 @@ async function loadPurses(db: Db, countryIds: readonly string[]): Promise<Map<st
         { projection: { countryId: 1, treasuryBalance: 1, gdp: 1, gdpSmoothed: 1 } }
       )
       .toArray(),
-    db
-      .collection<GovernmentApproval>("governmentApprovals")
+    governmentApprovalsCollection(db)
       .find({ _id: { $in: [...countryIds] as CountryId[] } }, { projection: { approvalRating: 1 } })
       .toArray(),
   ]);

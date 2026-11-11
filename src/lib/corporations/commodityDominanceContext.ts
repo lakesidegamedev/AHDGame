@@ -34,6 +34,8 @@ import {
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
 
 /** gameConfig.groupSizeCostsStage at which the commodity toll reads the whole control group. */
 export const GROUP_DOMINANCE_TOLL_STAGE = 2;
@@ -180,12 +182,13 @@ export async function loadCommodityDominanceContext(
   }
 ): Promise<CommodityDominanceContext | null> {
   try {
-    const config = await db
-      .collection<{ commandEconomyEnabled?: boolean; groupSizeCostsStage?: number }>("gameConfig")
-      .findOne(
-        { _id: "default" as never },
-        { projection: { commandEconomyEnabled: 1, groupSizeCostsStage: 1 } }
-      );
+    const config = await gameConfigCollection<{
+      commandEconomyEnabled?: boolean;
+      groupSizeCostsStage?: number;
+    }>(db).findOne(
+      { _id: "default" as never },
+      { projection: { commandEconomyEnabled: 1, groupSizeCostsStage: 1 } }
+    );
     const corporationIds = await dominanceCorporationIds(
       db,
       args.corporation._id,
@@ -229,8 +232,7 @@ export async function loadCommodityDominanceContext(
               .toArray()
           ).map((s) => String(s._id))
         : [];
-    const priceDocs = await db
-      .collection<CommodityPrice>("commodityPrices")
+    const priceDocs = await commodityPricesCollection(db)
       .find(
         { commodity: { $in: commodities } },
         {

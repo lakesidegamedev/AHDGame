@@ -31,6 +31,8 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 
 export interface ReconcileCommandEconomyUnownedResult {
   commandCountries: CountryId[];
@@ -73,9 +75,10 @@ export async function reconcileCommandEconomyUnowned(
   };
 
   const [gameConfig, gameState, presetFromDb] = await Promise.all([
-    db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } }),
+    gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { commandEconomyEnabled: 1 } }
+    ),
     gameStateCollection(db).findOne(
       { _id: "current" as never },
       { projection: { currentYear: 1 } }
@@ -277,11 +280,9 @@ export async function reconcileCommandEconomyUnowned(
   if (covered.length === 0) {
     log("reconcileCommandEconomyUnowned: no SOE rows covered — nothing to drain");
   } else if (dryRun) {
-    unownedDeleted = await db
-      .collection<UnownedSector>("unownedSectors")
-      .countDocuments(unownedFilter);
+    unownedDeleted = await unownedSectorsCollection(db).countDocuments(unownedFilter);
   } else {
-    const del = await db.collection<UnownedSector>("unownedSectors").deleteMany(unownedFilter);
+    const del = await unownedSectorsCollection(db).deleteMany(unownedFilter);
     unownedDeleted = del.deletedCount ?? 0;
   }
 

@@ -18,6 +18,7 @@ import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficia
 import type { Document } from "mongodb";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
+import { nationalPartyElectionsCollection } from "@/lib/db/repositories/nationalPartyElections";
 
 export interface ApplyCharacterPartyJoinArgs {
   db: Db;
@@ -220,12 +221,10 @@ export async function applyCharacterPartyJoin(
       // The lookup only runs when the cheap conditions already hold.
       let becameChair = autoChairWhenVacant && party.isDefault === true && party.chairId === null;
       if (becameChair) {
-        const activeChairElection = await db
-          .collection("nationalPartyElections")
-          .findOne(
-            { partyId: partyIdStr, countryId, position: "chair", status: "voting" },
-            { projection: { _id: 1 } }
-          );
+        const activeChairElection = await nationalPartyElectionsCollection<Document>(db).findOne(
+          { partyId: partyIdStr, countryId, position: "chair", status: "voting" },
+          { projection: { _id: 1 } }
+        );
         if (activeChairElection) becameChair = false;
       }
 
@@ -246,11 +245,10 @@ export async function applyCharacterPartyJoin(
 
       // If auto-promoted to chair, sync any coalition this party leads
       if (becameChair) {
-        await coalitionsCollection<Document>(db)
-          .updateMany(
-            { chairPartyId: party._id },
-            { $set: { chairCharacterId: character._id, updatedAt: now } }
-          );
+        await coalitionsCollection<Document>(db).updateMany(
+          { chairPartyId: party._id },
+          { $set: { chairCharacterId: character._id, updatedAt: now } }
+        );
       }
 
       // Update presence for old and new parties

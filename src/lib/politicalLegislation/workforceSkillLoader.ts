@@ -10,6 +10,7 @@
 
 import type { Db } from "mongodb";
 import type { PoliticalMetricsDoc } from "@/lib/db/types/politicalMetrics";
+import { politicalMetricsCollection } from "@/lib/db/repositories/politicalMetrics";
 
 /** stateId → workforce skill (0-100) from the political board, or null. */
 export async function loadWorkforceSkillByState(
@@ -17,8 +18,7 @@ export async function loadWorkforceSkillByState(
   stateIds: string[]
 ): Promise<Map<string, number | null>> {
   if (stateIds.length === 0) return new Map();
-  const politicalDocs = await db
-    .collection<PoliticalMetricsDoc>("politicalMetrics")
+  const politicalDocs = await politicalMetricsCollection(db)
     // Whole `values` object: its keys are literal dotted strings, so a
     // projection of "values.education.adultSkills" reads it as a nested path,
     // matches nothing, and every board region silently resolves to null.

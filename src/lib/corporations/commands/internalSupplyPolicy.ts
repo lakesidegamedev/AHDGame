@@ -27,6 +27,7 @@ import type { CorporateSector, GameConfig, GameState } from "@/lib/db/types";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 export const internalSupplyPolicySchema = z
   .object({
@@ -56,7 +57,7 @@ export async function internalSupplyPolicy(request: Request, { params }: Params)
     if (denied) return denied;
     const mode = await getMarketSystemMode();
     const [config, world] = await Promise.all([
-      db.collection<GameConfig>("gameConfig").findOne(
+      gameConfigCollection(db).findOne(
         { _id: "default" },
         {
           projection: { groupSupplyCoordinationEnabled: 1, producerMarketLiveFromTurn: 1 },

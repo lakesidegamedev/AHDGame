@@ -14,6 +14,8 @@ import {
 import { readCorpEconomicAnchor, writeCorpEconomicLocal } from "@/lib/currency/corpEconomyFields";
 import { runLaunchGuard } from "@/lib/market/launchGuard";
 import { computeMarketIndex } from "./marketIndex";
+import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
+import type { Document } from "mongodb";
 
 /**
  * Currency to DENOMINATE a corp's history rows in. Returns a `code` ONLY when
@@ -92,7 +94,7 @@ export async function loadPriorCreditRatings(
   db: Db,
   corporationIds: ObjectId[]
 ): Promise<Map<string, string>> {
-  const history = db.collection<CorporationHistory>("corporationHistory");
+  const history = corporationHistoryCollection(db);
   const latestRows = await history
     .aggregate<{ _id: ObjectId; lastRating?: unknown }>([
       { $match: { corporationId: { $in: corporationIds } } },
@@ -227,8 +229,7 @@ export async function snapshotMarketCap(
       }
     ),
     indexCorpIds.length > 0
-      ? db
-          .collection<CorporationHistory>("corporationHistory")
+      ? corporationHistoryCollection(db)
           .aggregate<{
             _id: ObjectId;
             marketCap: number;
@@ -558,7 +559,7 @@ export async function snapshotMarketCap(
         createdAt: now,
       };
     });
-    await db.collection("corporationHistory").insertMany(corpHistoryDocs);
+    await corporationHistoryCollection<Document>(db).insertMany(corpHistoryDocs);
 
     for (const s of corpSnapshots) {
       const prev = prevRatingByCorp.get(s.corpId.toString());

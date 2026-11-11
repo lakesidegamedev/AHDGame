@@ -18,6 +18,7 @@ import {
   subsidisedWageMultiplier,
   type AutomationPolicy,
 } from "./rules";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
 
 type PolicyKey = keyof AutomationPolicy;
 
@@ -68,8 +69,7 @@ export function foldAutomationPolicies(
 
 /** countryId -> enacted automation law levels. Countries with none are absent. */
 export async function loadAutomationPolicies(db: Db): Promise<Map<string, AutomationPolicy>> {
-  const records = await db
-    .collection<StatePolicy>("statePolicies")
+  const records = await statePoliciesCollection(db)
     .find(
       { legislationTypeId: { $in: [...LAW_REFS.keys()] }, scope: { $ne: "state" } },
       { projection: { _id: 0, legislationTypeId: 1, policyOptionIndex: 1, scope: 1 } }

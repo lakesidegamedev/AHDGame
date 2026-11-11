@@ -11,6 +11,7 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { recordApiRequestTimingSafely } from "@/lib/observability/requestTimings";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 // POST /api/actions/execute — Executes a political action (optionally in batch) and applies its effects to the character
 // Auth: requireHumanSession (bot tokens rejected)
@@ -100,7 +101,7 @@ export async function POST(request: Request) {
 
     // Resolve active character (admin accounts may have multiple characters)
     stageStartedAt = Date.now();
-    const userDoc = await db.collection<User>("users").findOne({ _id: new ObjectId(user.userId) });
+    const userDoc = await usersCollection(db).findOne({ _id: new ObjectId(user.userId) });
     const characterQuery = userDoc?.activeCharacterId
       ? { _id: userDoc.activeCharacterId, userId: new ObjectId(user.userId) }
       : { userId: new ObjectId(user.userId) };

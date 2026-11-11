@@ -8,6 +8,7 @@ import {
 } from "@/lib/products/manufacturingProject";
 import { MEDIA_PRODUCT_PROJECTS, type MediaProductProject } from "@/lib/products/mediaProduct";
 import type { RdDevelopmentProject } from "./strengthProjection";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 export interface RdDevelopmentFundingProject extends RdDevelopmentProject {
   /** Player-facing product name. */
@@ -22,7 +23,7 @@ export async function loadRdDevelopmentProjects(
   db: Db,
   corporationId: string
 ): Promise<RdDevelopmentFundingProject[]> {
-  const config = await db.collection<GameConfig>("gameConfig").findOne(
+  const config = await gameConfigCollection(db).findOne(
     { _id: "default" },
     {
       projection: {

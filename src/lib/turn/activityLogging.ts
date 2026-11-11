@@ -9,6 +9,8 @@ import type { ActivityAction, ActivityLogTurnSummary } from "@/lib/db/types/acti
 import { getCharactersCollection } from "@/lib/db/collections/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { activityLogCollection } from "@/lib/db/repositories/activityLog";
 
 export interface ActivityLoggingResult {
   summariesInserted: number;
@@ -59,8 +61,7 @@ export async function processActivityLogging(
 
   // Batch-fetch usernames
   const userIds = characters.map((c) => c.userId);
-  const users = await db
-    .collection("users")
+  const users = await usersCollection<Document>(db)
     .find({ _id: { $in: userIds } }, { projection: { _id: 1, username: 1 } })
     .toArray();
   const userMap = new Map(users.map((u) => [u._id.toString(), u.username as string]));
@@ -131,6 +132,6 @@ export async function processActivityLogging(
 
   if (summaries.length === 0) return { summariesInserted: 0 };
 
-  await db.collection("activityLog").insertMany(summaries);
+  await activityLogCollection<Document>(db).insertMany(summaries);
   return { summariesInserted: summaries.length };
 }

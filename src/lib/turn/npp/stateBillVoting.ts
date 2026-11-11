@@ -10,6 +10,7 @@ import {
 } from "./crossPressure";
 import { ADDRESS_AGENDA_FORCE_BIAS } from "@/lib/constants/governorOffice";
 import { cabinetDisciplineForParty } from "@/lib/resetCabinet/loadDiscipline";
+import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
 
 const LOCAL_BILL_FORCE_WEIGHTS = {
   ideology: 1,
@@ -214,9 +215,10 @@ export async function processStateBillVoting(ctx: NPPContext): Promise<number> {
       incFields.votesAbstain = incAbstain;
     }
 
-    await db
-      .collection<StateBill>("stateBills")
-      .updateOne({ _id: bill._id }, { $set: setFields, $inc: incFields });
+    await stateBillsCollection(db).updateOne(
+      { _id: bill._id },
+      { $set: setFields, $inc: incFields }
+    );
 
     if (predictionOps.length > 0) {
       await db.collection<NPPVotePrediction>("nppVotePredictions").bulkWrite(

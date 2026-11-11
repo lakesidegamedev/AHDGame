@@ -17,6 +17,7 @@ import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
 const RUSSIAN_PRESIDENTIAL_ARCHIVES_COLLECTION = "russianPresidentialOfficeArchives";
 interface Archive {
   _id: string;
@@ -124,7 +125,7 @@ export async function materializeRussianPresidentialSeating(input: {
     ...(charIds.length ? [{ characterId: { $in: charIds } }] : []),
     ...(nppIds.length ? [{ nppId: { $in: nppIds } }] : []),
   ];
-  const cabinet = db.collection<UnifiedCabinetMember>("cabinetMembers");
+  const cabinet = cabinetMembersCollection<UnifiedCabinetMember>(db);
   const winningMinisters = await cabinet
     .find({ countryId: "RU", $or: identities }, { session })
     .toArray();
@@ -254,12 +255,11 @@ export async function materializeRussianPresidentialSeating(input: {
     if (updated.matchedCount !== people.length)
       throw new Error("Russian certified office holder changed");
   }
-  await electionCandidatesCollection(db)
-    .updateMany(
-      { countryId: "RU", status: "active", $or: identities },
-      { $set: { status: "withdrawn", withdrawnAt: now } },
-      { session }
-    );
+  await electionCandidatesCollection(db).updateMany(
+    { countryId: "RU", status: "active", $or: identities },
+    { $set: { status: "withdrawn", withdrawnAt: now } },
+    { session }
+  );
   await governmentFormationsCollection(db).updateOne(
     { _id: "RU" },
     {

@@ -26,6 +26,7 @@ import { readCorpEconomicAnchor, writeCorpEconomicLocal } from "@/lib/currency/c
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 const PAGE_SIZE = 15;
 
@@ -77,9 +78,10 @@ export async function GET(request: Request) {
     // Look up the Discord user's home country currency for default display in the bot.
     let suggestedCurrencyCode: string | null = null;
     if (discordIdParam) {
-      const linkedUser = await db
-        .collection<User>("users")
-        .findOne({ discordId: discordIdParam }, { projection: { accountCountryId: 1 } });
+      const linkedUser = await usersCollection(db).findOne(
+        { discordId: discordIdParam },
+        { projection: { accountCountryId: 1 } }
+      );
       if (linkedUser?.accountCountryId) {
         suggestedCurrencyCode = COUNTRY_CURRENCY_MAP[linkedUser.accountCountryId] ?? null;
       }

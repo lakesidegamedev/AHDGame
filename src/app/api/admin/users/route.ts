@@ -11,6 +11,7 @@ import {
 import { loadRecentIdentityValues } from "@/lib/identityHistory/recentValues";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 export interface UserWithCharacter {
   id: string;
@@ -64,14 +65,8 @@ export const GET = withAdminAuth(async (_auth, request: Request) => {
 
     // Fetch users sorted by creation date (newest first), bounded by limit/offset.
     const [users, total] = await Promise.all([
-      db
-        .collection<User>("users")
-        .find({})
-        .sort({ createdAt: -1 })
-        .skip(offset)
-        .limit(limit)
-        .toArray(),
-      db.collection<User>("users").countDocuments(),
+      usersCollection(db).find({}).sort({ createdAt: -1 }).skip(offset).limit(limit).toArray(),
+      usersCollection(db).countDocuments(),
     ]);
 
     // Fetch only the characters for users in this page (avoids loading the

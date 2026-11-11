@@ -2,6 +2,7 @@ import type { Db } from "mongodb";
 import type { GameConfig } from "@/lib/db/types";
 import type { Migration, MigrationResult } from "../types";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 export const migration: Migration = {
   id: "2026-09-11-central-bank-pricing-phase-in",
@@ -9,9 +10,10 @@ export const migration: Migration = {
     "Anchor the central-bank LOC spread hike and deposit bonus to the live world's current turn.",
   idempotent: true,
   execute: async (db: Db, ctx): Promise<MigrationResult> => {
-    const config = await db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { centralBankPricingPhaseIn: 1 } });
+    const config = await gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { centralBankPricingPhaseIn: 1 } }
+    );
     if (!config) {
       return { documentsScanned: 0, documentsUpdated: 0, notes: ["gameConfig is absent"] };
     }
@@ -38,12 +40,10 @@ export const migration: Migration = {
       };
     }
 
-    const result = await db
-      .collection<GameConfig>("gameConfig")
-      .updateOne(
-        { _id: "default", "centralBankPricingPhaseIn.startedTurn": { $exists: false } },
-        { $set: { "centralBankPricingPhaseIn.startedTurn": currentTurn } }
-      );
+    const result = await gameConfigCollection(db).updateOne(
+      { _id: "default", "centralBankPricingPhaseIn.startedTurn": { $exists: false } },
+      { $set: { "centralBankPricingPhaseIn.startedTurn": currentTurn } }
+    );
     return {
       documentsScanned: 1,
       documentsUpdated: result.matchedCount,

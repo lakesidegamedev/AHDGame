@@ -56,6 +56,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import type { Document } from "mongodb";
+import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
 /*
  * Fallback if `gameConfig.chairActionBonus` is missing on legacy configs.
  * The per-country config in `countries.ts` sets each centralBankChair office
@@ -147,8 +148,7 @@ export async function processActionRefresh(
   // 1.5 cabinet / governors / justices / central bank chair / minority
   // leaders, 1.0 national legislators, 0.5 sub-national legislators and state
   // party chairs, 0.3 / 0.15 CEOs. Office tiers live in `resolveOfficeNiBonus`.
-  const congressLeaderRows = await db
-    .collection<CongressLeader>("congressLeaders")
+  const congressLeaderRows = await congressLeadersCollection(db)
     .find({ characterId: { $ne: null } }, { projection: { characterId: 1, role: 1 } })
     .toArray();
   const leaderRolesByCharId = new Map<string, LeadershipRole[]>();

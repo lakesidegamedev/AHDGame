@@ -9,6 +9,7 @@ import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 import type { Document } from "mongodb";
+import { adminLogsCollection } from "@/lib/db/repositories/adminLogs";
 
 /**
  * GET /api/admin/heal/stale-campaigns
@@ -242,7 +243,7 @@ export async function POST() {
 
     const result = await campaignsCollection<Document>(db).deleteMany({ _id: { $in: staleIds } });
 
-    await db.collection("adminLogs").insertOne({
+    await adminLogsCollection<Document>(db).insertOne({
       action: "heal_stale_campaigns",
       adminUsername: auth.admin.username,
       details: {

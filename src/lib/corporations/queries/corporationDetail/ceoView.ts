@@ -9,6 +9,7 @@ import {
   CEO_SELF_ACQUISITION_CAP_FRACTION,
   CEO_SELF_ACQUISITION_WINDOW_TURNS,
 } from "@/lib/constants/corporations";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 export interface CeoShareWindow {
   capShares: number;
@@ -71,9 +72,10 @@ export async function loadCeoViewFlags(
   const INACTIVE_CEO_THRESHOLD_MS = INACTIVE_CEO_TURN_THRESHOLD * 60 * 60 * 1000;
   let ceoIsInactive = false;
   if (!isImperialCeo && corporation.userId != null && isInactiveCeoPenaltyCandidate(corporation)) {
-    const ceoUser = await db
-      .collection<User>("users")
-      .findOne({ _id: corporation.userId }, { projection: { lastActivity: 1, createdAt: 1 } });
+    const ceoUser = await usersCollection(db).findOne(
+      { _id: corporation.userId },
+      { projection: { lastActivity: 1, createdAt: 1 } }
+    );
     const reference = ceoUser?.lastActivity ?? ceoUser?.createdAt;
     if (reference && reference.getTime() < Date.now() - INACTIVE_CEO_THRESHOLD_MS) {
       ceoIsInactive = true;

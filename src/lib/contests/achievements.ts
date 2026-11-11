@@ -4,6 +4,8 @@ import type { Achievement, CharacterAchievement } from "@/lib/db/types";
 import { invalidateRarityCache } from "@/lib/achievements/cache";
 import { getContestRoundsCollection } from "./collection";
 import { contestAchievementMilestones, type ContestPlacing } from "./rules/history";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
 
 /** Reconcile from durable results, with batched reads/writes and retry-safe ids. */
 export async function reconcileContestAchievements(
@@ -56,8 +58,7 @@ export async function reconcileContestAchievements(
       .collection<CharacterAchievement>("characterAchievements")
       .find({ userId: { $in: owners } }, { projection: { userId: 1, achievementId: 1 } })
       .toArray(),
-    db
-      .collection("users")
+    usersCollection<Document>(db)
       .find({ _id: { $in: owners }, isBanned: { $ne: true } }, { projection: { _id: 1 } })
       .toArray(),
   ]);

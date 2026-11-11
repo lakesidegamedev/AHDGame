@@ -28,6 +28,7 @@ import {
 } from "@/lib/indexFunds/fundQueries";
 import { boundedParallelMap } from "@/lib/indexFunds/boundedParallelMap";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /** Mirrors `NPRiskArchetype` in nppInvesting.ts (kept local to avoid an import cycle). */
 export type NppRiskArchetype = "conservative" | "moderate" | "aggressive";
@@ -152,9 +153,10 @@ export async function processNppFundRedemptions(
     archetypesByNppId: ReadonlyMap<string, NppRiskArchetype>;
   }
 ): Promise<NppRedemptionPassResult> {
-  const config = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { nppFundRedemptionEnabled: 1 } });
+  const config = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { nppFundRedemptionEnabled: 1 } }
+  );
   if (config?.nppFundRedemptionEnabled !== true || options.currentTurn <= 0) {
     return { redemptionsQueued: 0, unitsRedeemed: 0, errors: [] };
   }

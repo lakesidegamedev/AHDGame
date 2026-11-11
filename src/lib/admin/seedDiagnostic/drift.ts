@@ -34,6 +34,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /** Default annual population growth percent when seed configs omit an explicit rate. */
 export const DEFAULT_POP_GROWTH_PCT = 1;
@@ -444,9 +445,9 @@ export async function runDriftChecks(
 
   const liveMetrics = await collectLiveMetrics(db, expect);
 
-  const config = await db
-    .collection<{ commandEconomyEnabled?: boolean }>("gameConfig")
-    .findOne({ _id: "default" as never });
+  const config = await gameConfigCollection<{ commandEconomyEnabled?: boolean }>(db).findOne({
+    _id: "default" as never,
+  });
   const commandEnabled = config?.commandEconomyEnabled === true;
 
   const checks: SeedDiagnosticCheck[] = [];

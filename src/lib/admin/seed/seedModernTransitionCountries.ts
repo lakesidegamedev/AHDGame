@@ -21,6 +21,10 @@ import type { Document } from "mongodb";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
+import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
+import { stateBaselinesCollection } from "@/lib/db/repositories/stateBaselines";
 
 export type ModernTransitionCountryId = "PL" | "RO" | "RU" | "BG";
 
@@ -162,8 +166,8 @@ export async function seedModernTransitionDemographics(
     return;
   }
   if (reset) {
-    await db.collection("stateDemographics").deleteMany({ countryId });
-    await db.collection("stateDemographicTurnout").deleteMany({ countryId });
+    await stateDemographicsCollection<Document>(db).deleteMany({ countryId });
+    await stateDemographicTurnoutCollection<Document>(db).deleteMany({ countryId });
   }
   const { getCountryLayer1Model, buildModelRegionDemographics } =
     await import("@/lib/seeds/international");
@@ -177,9 +181,11 @@ export async function seedModernTransitionDemographics(
   const regionDemographics = buildModelRegionDemographics(model);
   for (const raw of regionDemographics) {
     const { _id: demoId, groups: _groups, ...demoData } = raw;
-    await db
-      .collection<StateDemographics>("stateDemographics")
-      .updateOne({ _id: demoId }, { $set: demoData }, { upsert: true });
+    await stateDemographicsCollection(db).updateOne(
+      { _id: demoId },
+      { $set: demoData },
+      { upsert: true }
+    );
   }
   log(`[${countryId}] Seeded ${regionDemographics.length} region demographics (era ${era})`);
 }
@@ -341,9 +347,9 @@ export async function seedModernTransitionStateMetrics(
   }
   const bundle = await loadMetricsBundle(countryId, preset);
   if (reset) {
-    await db
-      .collection("macroMetrics")
-      .deleteMany({ _id: { $in: bundle.map((m) => m._id) } as never });
+    await macroMetricsCollection<Document>(db).deleteMany({
+      _id: { $in: bundle.map((m) => m._id) } as never,
+    });
   }
   // SP5: split write — macro slice -> macroMetrics (all countries), political
   // remainder -> stateMetrics (non-playables). countryId stamped for routing.
@@ -405,18 +411,16 @@ export async function seedModernTransitionBaselines(
   const { getRegionMetricPresets, applyMetricPresetToBaseline } =
     await import("@/lib/seeds/metricPresets");
   if (reset) {
-    await db
-      .collection("stateBaselines")
-      .deleteMany({ _id: { $in: bundle.map((m) => String(m._id)) } as never });
+    await stateBaselinesCollection<Document>(db).deleteMany({
+      _id: { $in: bundle.map((m) => String(m._id)) } as never,
+    });
   }
   const derived = metricsToBaselines(bundle);
   for (const raw of derived) {
     const overlay = getRegionMetricPresets(countryId, String(raw._id), preset);
     const baseline = overlay ? applyMetricPresetToBaseline(raw, overlay) : raw;
     const { _id, ...baselineData } = baseline;
-    await db
-      .collection<StateMetricBaseline>("stateBaselines")
-      .updateOne({ _id }, { $set: baselineData }, { upsert: true });
+    await stateBaselinesCollection(db).updateOne({ _id }, { $set: baselineData }, { upsert: true });
   }
   log(`Seeded ${derived.length} ${countryId} baselines (preset: ${preset})`);
 }
@@ -469,12 +473,11 @@ export async function seedModernTransitionStatePartyOrg(
         consecutiveLosses: 0,
       };
       const { _id, ...orgData } = row;
-      await statePartyOrgCollection(db)
-        .updateOne(
-          { _id },
-          { $set: { ...orgData, updatedAt: now }, $setOnInsert: { createdAt: now } },
-          { upsert: true }
-        );
+      await statePartyOrgCollection(db).updateOne(
+        { _id },
+        { $set: { ...orgData, updatedAt: now }, $setOnInsert: { createdAt: now } },
+        { upsert: true }
+      );
       total++;
     }
   }
@@ -516,12 +519,11 @@ export async function seedModernTransitionGovernmentFormation(
     formedTurn: null,
     collapsedAt: null,
   };
-  await governmentFormationsCollection(db)
-    .updateOne(
-      { _id: countryId },
-      { $set: { ...formation, updatedAt: now }, $setOnInsert: { createdAt: now } },
-      { upsert: true }
-    );
+  await governmentFormationsCollection(db).updateOne(
+    { _id: countryId },
+    { $set: { ...formation, updatedAt: now }, $setOnInsert: { createdAt: now } },
+    { upsert: true }
+  );
   log(`Seeded ${countryId} government formation document (pending, ${totalSeats} seats)`);
 }
 

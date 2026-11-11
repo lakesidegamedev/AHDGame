@@ -10,6 +10,7 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { adminFeedbackPatchSchema } from "@/lib/api/schemas/admin";
 import type { Feedback, User } from "@/lib/db/types";
 import { servicesConfig } from "@/lib/config/services";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 // PATCH /api/admin/feedback/[id] — Update feedback status and/or admin notes, notifying the reporter on status change.
 // Auth: requireAdmin
@@ -89,9 +90,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       })();
 
     if (githubIssueNum && servicesConfig.gitToken() && servicesConfig.githubRepo()) {
-      const adminUser = await db
-        .collection<User>("users")
-        .findOne({ _id: new ObjectId(admin.userId) }, { projection: { username: 1 } });
+      const adminUser = await usersCollection(db).findOne(
+        { _id: new ObjectId(admin.userId) },
+        { projection: { username: 1 } }
+      );
       await syncFeedbackToGitHub({
         githubIssueNumber: githubIssueNum,
         previousStatus: statusChanged ? previousStatus : undefined,

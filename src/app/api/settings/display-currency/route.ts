@@ -10,6 +10,7 @@ import type { User } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 import type { Document } from "mongodb";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 // PATCH /api/settings/display-currency — Saves the player's currency display preference to their
 // active regular or imperial character, matching the currently selected mode.
@@ -34,7 +35,7 @@ export async function PATCH(request: Request) {
     const { displayCurrencyPreference } = parsed.data;
 
     const db = await getDb();
-    const userDoc = await db.collection<User>("users").findOne(
+    const userDoc = await usersCollection(db).findOne(
       { _id: new ObjectId(auth.user.userId) },
       {
         projection: {
@@ -51,11 +52,10 @@ export async function PATCH(request: Request) {
     const update = { $set: { displayCurrencyPreference, updatedAt: new Date() } };
     let matchedCount = 0;
     if (userDoc.activeCharacterType === "imperial" && userDoc.activeImperialCharacterId) {
-      const result = await imperialCharactersCollection<Document>(db)
-        .updateOne(
-          { _id: userDoc.activeImperialCharacterId, userId: new ObjectId(auth.user.userId) },
-          update
-        );
+      const result = await imperialCharactersCollection<Document>(db).updateOne(
+        { _id: userDoc.activeImperialCharacterId, userId: new ObjectId(auth.user.userId) },
+        update
+      );
       matchedCount = result.matchedCount ?? 0;
     } else {
       const characterFilter = userDoc.activeCharacterId

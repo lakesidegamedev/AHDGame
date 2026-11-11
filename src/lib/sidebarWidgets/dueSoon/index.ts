@@ -9,6 +9,7 @@ import { corporateVotes } from "./corporate";
 import type { DueSoonContext, DueSoonItem, DueSoonSource, DueSoonWidgetData } from "./types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 export const DUE_SOON_LIMIT = 8;
 const HOUR_MS = 3_600_000;
@@ -50,12 +51,10 @@ export async function collectDueSoon(
 
 /** Everything waiting on the viewer's active character. Null without one. */
 export async function loadDueSoon(db: Db, userId: string): Promise<DueSoonWidgetData | null> {
-  const user = await db
-    .collection<User>("users")
-    .findOne(
-      { _id: new ObjectId(userId) },
-      { projection: { activeCharacterId: 1, activeCharacterType: 1, createdAt: 1 } }
-    );
+  const user = await usersCollection(db).findOne(
+    { _id: new ObjectId(userId) },
+    { projection: { activeCharacterId: 1, activeCharacterType: 1, createdAt: 1 } }
+  );
   if (!user?.activeCharacterId || user.activeCharacterType === "imperial") return null;
   const characterId = user.activeCharacterId;
   const [character, game, seats] = await Promise.all([

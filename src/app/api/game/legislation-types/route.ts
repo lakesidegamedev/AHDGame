@@ -19,6 +19,7 @@ import { marketAtLeast } from "@/lib/market/featureFlag";
 import { isMediaOwnershipBillAvailable } from "@/lib/mediaRegulation/rules";
 import { loadUSMediaOutletDelivery } from "@/lib/mediaRegulation/turnData";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 // Legislation types are near-static — written only by admin seed / law-type
 // edit routes, never by gameplay or turn processing. We cache the read with a
@@ -191,12 +192,10 @@ export async function GET(request: Request) {
       MINIMUM_WAGE_LAW_TYPE_IDS.includes(String(t._id))
     );
     const wageFloorConfig = minimumWageLawListed
-      ? await db
-          .collection<GameConfig>("gameConfig")
-          .findOne(
-            { _id: "default" },
-            { projection: { minimumWageLawStage: 1, labourSystemMode: 1 } }
-          )
+      ? await gameConfigCollection(db).findOne(
+          { _id: "default" },
+          { projection: { minimumWageLawStage: 1, labourSystemMode: 1 } }
+        )
       : null;
     const body =
       minimumWageLawOn(wageFloorConfig?.minimumWageLawStage) &&

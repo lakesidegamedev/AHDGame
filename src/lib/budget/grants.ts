@@ -13,6 +13,7 @@ import { formulaGrants } from "@/lib/seeds/reference/formulaGrants";
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
 import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 
 interface StateData {
   id: string;
@@ -26,8 +27,7 @@ async function getStateData(db: Db, countryId?: CountryId): Promise<StateData[]>
     .toArray();
 
   const stateIds = states.map((s) => String(s._id));
-  const metricsDocs = await db
-    .collection("macroMetrics")
+  const metricsDocs = await macroMetricsCollection<Document>(db)
     .find(
       { stateId: { $in: stateIds } },
       { projection: { stateId: 1, "economic.povertyRate.value": 1 } }

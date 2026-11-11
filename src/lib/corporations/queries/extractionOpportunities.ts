@@ -23,6 +23,7 @@ import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
 import { getExtractionOutputScaleEnabled } from "@/lib/market/featureFlag";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 export interface OpportunityState {
   stateId: string;
@@ -67,9 +68,10 @@ export async function computeResourceOpportunities(
       .find({}, { projection: { _id: 1, countryId: 1 } })
       .toArray(),
     loadWorldEraUnitScale(db),
-    db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { extractionOutputScaleEnabled: 1 } }),
+    gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { extractionOutputScaleEnabled: 1 } }
+    ),
   ]);
   const extractionOutputScaleEnabled = await getExtractionOutputScaleEnabled(gameConfig);
   const revenueAnchorOf = await loadExtractionRevenueAnchorOf(db, extractionSectors);

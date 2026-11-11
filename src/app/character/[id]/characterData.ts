@@ -42,6 +42,8 @@ import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 interface CandidateElection {
   election: Election;
@@ -156,7 +158,7 @@ export async function getCharacterById(characterId: string) {
     }
 
     const db = await getDb();
-    const user = await db.collection<User>("users").findOne({ _id: character.userId });
+    const user = await usersCollection(db).findOne({ _id: character.userId });
 
     const charCountryId: CountryId = character.countryId ?? "US";
 
@@ -204,7 +206,7 @@ export async function getCharacterById(characterId: string) {
       partyHistoryEvents,
     ] = await Promise.all([
       statesCollection(db).findOne({ _id: character.homeState, countryId: character.countryId }),
-      db.collection<GameConfig>("gameConfig").findOne({ _id: "default" }),
+      gameConfigCollection(db).findOne({ _id: "default" }),
       charactersCollection(db)
         .find({ isBanned: { $ne: true }, ...npiCountryMatch })
         .sort({ nationalInfluence: -1 })

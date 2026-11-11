@@ -48,6 +48,7 @@ import { bankNpvFromPerTurnIncome } from "@/lib/banking/valuation";
 import { bankIncomeIncludingUnbookedSovereignAssets } from "@/lib/banking/rules/sovereignClaims";
 import { applyPriceMultipliers } from "@/lib/corporations/applyPriceMultipliers";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
 
 export interface RecomputeSharePricesResult {
   corpsRepriced: number;
@@ -120,8 +121,7 @@ export async function recomputeSharePricesAfterBondTurn(
   // the plants trailing-growth estimator (sectorNPV history); still one query,
   // no per-corp reads.
   const [histRows, prevHistRows] = await Promise.all([
-    database
-      .collection<CorporationHistory>("corporationHistory")
+    corporationHistoryCollection(database)
       .find({ turn })
       // Snapshot rows carry the full shareholder register and the SOE backing
       // breakdown; this pass prices off four numbers from each. Projected, the
@@ -145,8 +145,7 @@ export async function recomputeSharePricesAfterBondTurn(
         perTurnBondDragOnNetIncome: 1,
       })
       .toArray(),
-    database
-      .collection<CorporationHistory>("corporationHistory")
+    corporationHistoryCollection(database)
       .find({ turn: { $gte: turn - TRAILING_GROWTH_WINDOW_TURNS, $lt: turn } })
       .project<{
         corporationId: ObjectId;
@@ -427,9 +426,7 @@ export async function recomputeSharePricesAfterBondTurn(
         corpOps,
         intraHour ? { ordered: false } : undefined
       ),
-      histOps.length > 0
-        ? database.collection<CorporationHistory>("corporationHistory").bulkWrite(histOps)
-        : null,
+      histOps.length > 0 ? corporationHistoryCollection(database).bulkWrite(histOps) : null,
     ]);
     return {
       corpsRepriced: corpResult.matchedCount,

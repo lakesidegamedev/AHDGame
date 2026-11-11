@@ -17,6 +17,7 @@ import {
 } from "@/lib/discord/eventCard";
 import type { ChamberVoteSplit } from "@/lib/charts/voteSplitChart";
 import type { SuggestionReporterIdentity } from "@/lib/suggestions/reporterIdentity";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 export interface DiscordEmbed {
   title?: string;
@@ -172,7 +173,7 @@ async function getWebhookUrls(): Promise<{
 }> {
   try {
     const db = await getDb();
-    const config = await db.collection<GameConfig>("gameConfig").findOne({ _id: "default" });
+    const config = await gameConfigCollection(db).findOne({ _id: "default" });
     // #1208 — a restored database must not post into the players' channels.
     if (!ownsConfiguredWebhooks(config?.discordWebhookOwnerService)) return {};
     return {

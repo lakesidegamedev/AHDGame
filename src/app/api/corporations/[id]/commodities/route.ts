@@ -36,6 +36,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -171,7 +172,7 @@ export async function GET(request: Request, { params }: RouteParams) {
         ])
         .toArray(),
       computeCorpMarketShare(db, corporation, sectors),
-      db.collection<GameConfig>("gameConfig").findOne(
+      gameConfigCollection(db).findOne(
         { _id: "default" },
         {
           projection: {

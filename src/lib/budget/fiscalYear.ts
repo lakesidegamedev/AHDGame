@@ -81,6 +81,9 @@ import type { Document } from "mongodb";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
 
 // The current turn engine still processes fiscal-year rollover as one shared phase.
 // Pulling the anchor from country-systems makes the rule source explicit now, while
@@ -174,7 +177,7 @@ export async function processFiscalYear(
 
   const [states, allStateMetrics] = await Promise.all([
     statesCollection(db).find({}).toArray(),
-    db.collection<StateMetrics>("macroMetrics").find({}).toArray(),
+    macroMetricsCollection(db).find({}).toArray(),
   ]);
   const usResetRegionalPrograms =
     usResetLegislationV2 && financeState?.resetWorldId
@@ -224,12 +227,10 @@ export async function processFiscalYear(
   // same hoist-once pattern as `refreshNationalBudgetRevenue`, never one read
   // per country in this per-budget loop.
   const [moneyWiringConfig, fxByCurrency, tariffExposureSnapshot, couponBooks] = await Promise.all([
-    db
-      .collection<GameConfig>("gameConfig")
-      .findOne(
-        { _id: "default" },
-        { projection: { interstateMoneyWiringEnabled: 1, fiscalStabilizerEnabled: 1 } }
-      ),
+    gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { interstateMoneyWiringEnabled: 1, fiscalStabilizerEnabled: 1 } }
+    ),
     loadFxRatesByCurrency(db),
     loadTurnTariffInflationExposure(db, currentTurn),
     // Debt interest is charged on the coupons the stock carries: one
@@ -782,8 +783,7 @@ async function processStateFiscalYear(
   legislationTypeMap: ReadonlyMap<string, LegislationType> = new Map(),
   resetPrograms: readonly ResetLawProgramDocument[] = []
 ): Promise<void> {
-  const stateBudget = await stateBudgetsCollection(db)
-    .findOne({ _id: stateId, countryId });
+  const stateBudget = await stateBudgetsCollection(db).findOne({ _id: stateId, countryId });
   if (!stateBudget) {
     // State budget doesn't exist yet, skip
     return;
@@ -1026,7 +1026,7 @@ export async function saveFiscalYearSnapshot(
   } else {
     lawQuery.countryId = countryId;
   }
-  const laws = await db.collection<EnactedLaw>("enactedLaws").find(lawQuery).toArray();
+  const laws = await enactedLawsCollection(db).find(lawQuery).toArray();
 
   // State grants breakdown
   const [states, stateBudgets] = await Promise.all([

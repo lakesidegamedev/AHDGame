@@ -5,6 +5,7 @@ import { resolveCharacterRoles } from "@/lib/crises/interactionEngine";
 import type { CrisisRole } from "@/lib/crises/v2/types";
 import type { CongressLeader } from "@/lib/db/types/leadership";
 import { LEGISLATURE_LEADER_ROLES } from "@/lib/turn/crisisV2/holderProviders";
+import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
 
 export interface LeverActor {
   _id: ObjectId;
@@ -49,8 +50,7 @@ export async function resolveLeverRoles(
   const [leader, ceo] = await Promise.all([
     isLegislativeOffice(actor)
       ? Promise.resolve(true)
-      : db
-          .collection<CongressLeader>("congressLeaders")
+      : congressLeadersCollection(db)
           .findOne(
             { characterId: actor._id, role: { $in: [...LEGISLATURE_LEADER_ROLES] } },
             { projection: { _id: 1 } }

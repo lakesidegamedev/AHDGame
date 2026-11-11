@@ -26,6 +26,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 
 export interface SectorPreviewAffectedCorp {
   corporationId: string;
@@ -151,8 +152,7 @@ export async function computeSectorNationalizationPreview(
 
   // ── Unowned market pool (free) ──
   if (scope !== "corporations" && f > 0) {
-    const unowned = await db
-      .collection<UnownedSector>("unownedSectors")
+    const unowned = await unownedSectorsCollection(db)
       .find({ countryId, ...laneFilter })
       .toArray();
     for (const u of unowned) unownedSliceRevenue += Math.round((u.revenue ?? 0) * f);

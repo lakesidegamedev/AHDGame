@@ -98,6 +98,8 @@ import {
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import type { Document } from "mongodb";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 
 /** Per-region net internal-migration change capped per turn (circuit-breaker). */
 const MAX_INTERNAL_CHANGE_FRACTION = 0.05;
@@ -260,7 +262,10 @@ export async function runDemographicFlows(
     await Promise.all([
       db.collection<RegionDemographics>("regionDemographics").find({}).toArray(),
       statesCollection(db).find({}).toArray(),
-      db.collection("macroMetrics").find({}).project<MetricsDoc>(METRICS_PROJECTION).toArray(),
+      macroMetricsCollection<Document>(db)
+        .find({})
+        .project<MetricsDoc>(METRICS_PROJECTION)
+        .toArray(),
       gameStateCollection<Document>(db).findOne<
         {
           votingAgeEligible?: number;
@@ -276,8 +281,7 @@ export async function runDemographicFlows(
       >({}),
       // v2: read the labour mode via the SAME db (so tests' mock db is honored) and
       // feed it as preloaded — never let getLabourSystemMode hit its own getDb.
-      db
-        .collection<GameConfig>("gameConfig")
+      gameConfigCollection(db)
         .findOne({ _id: "default" }, { projection: { labourSystemMode: 1 } })
         .catch(() => null),
       // Bridge A supplies the healthcare.* mortality inputs. The macro read

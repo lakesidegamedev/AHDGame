@@ -16,6 +16,7 @@ import type { BillLifecycleRuntimeContext } from "./types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
 
 /**
  * Regional (state) bill-lifecycle walker: the `level: "regional"` counterpart
@@ -195,7 +196,7 @@ export async function finalizeStateBillEnactment(
   const rejection = await enforceStateBudgetGate(db, bill);
   if (rejection) {
     const now = new Date();
-    const failed = await db.collection<StateBill>("stateBills").updateOne(
+    const failed = await stateBillsCollection(db).updateOne(
       { _id: bill._id },
       {
         $set: {

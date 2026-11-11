@@ -47,6 +47,7 @@ import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
 
 const ALL_STATE_IDS = [...new Set(ELECTORAL_VOTE_UNITS.map((u) => u.stateId))];
 
@@ -94,8 +95,10 @@ export async function GET(req: Request) {
 
     // List parties that actually have active candidates so the UI can populate
     // the dropdown without separately calling another endpoint.
-    const partyKeysWithCandidates = (await electionCandidatesCollection(db)
-      .distinct("party", { electionId: election._id, status: "active" })) as string[];
+    const partyKeysWithCandidates = (await electionCandidatesCollection(db).distinct("party", {
+      electionId: election._id,
+      status: "active",
+    })) as string[];
     const candidateParties = await politicalPartiesCollection(db)
       .find({ countryId: "US", sequentialId: { $in: partyKeysWithCandidates.map(Number) } })
       .project<{ sequentialId: number; abbreviation: string; name: string }>({
@@ -162,14 +165,11 @@ export async function GET(req: Request) {
             .find({ _id: { $in: nppIds } })
             .toArray()
         : Promise.resolve([] as NPP[]),
-      statePartyOrgCollection(db)
-        .find({ countryId: "US", partyId: partyKey })
-        .toArray(),
+      statePartyOrgCollection(db).find({ countryId: "US", partyId: partyKey }).toArray(),
       statesCollection(db)
         .find({ _id: { $in: ALL_STATE_IDS } })
         .toArray(),
-      db
-        .collection<StateDemographics>("stateDemographics")
+      stateDemographicsCollection(db)
         .find({ _id: { $in: ALL_STATE_IDS } })
         .toArray(),
       fetchEnrichedCandidates(candidates, { includePartyPositions: true, countryId: "US" }),

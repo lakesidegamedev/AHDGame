@@ -13,6 +13,7 @@ import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficia
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import type { Document } from "mongodb";
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
 
 export interface CarryOverOfficialsResult {
   msps: number;
@@ -56,7 +57,10 @@ export async function carryOverOfficials(
   if (government)
     await unformGovernmentAndVacatePM(db, fromCountryId, now, { reason: "lost-seat" });
   await officials.deleteMany({ countryId: fromCountryId, $or: [{ state: regionId }, ...holders] });
-  await db.collection("cabinetMembers").deleteMany({ countryId: fromCountryId, $or: holders });
+  await cabinetMembersCollection<Document>(db).deleteMany({
+    countryId: fromCountryId,
+    $or: holders,
+  });
   await db.collection("seats").deleteMany({ countryId: fromCountryId, state: regionId });
   await charactersCollection(db).updateMany(
     { _id: { $in: characterIds } },

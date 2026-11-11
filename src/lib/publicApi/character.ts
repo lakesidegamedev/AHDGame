@@ -23,6 +23,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -112,8 +113,7 @@ async function enrichPublicCharacters(db: Db, characters: Character[]): Promise<
     statesCollection(db)
       .find({ _id: { $in: stateIds } })
       .toArray(),
-    db
-      .collection<UserProjection>("users")
+    usersCollection<UserProjection>(db)
       .find({ _id: { $in: userIds } })
       .project<UserProjection>({
         _id: 1,
@@ -258,7 +258,7 @@ export async function queryCharacters(
   let characters: Character[] = [];
 
   if (discordId) {
-    const user = await db.collection<User>("users").findOne({ discordId });
+    const user = await usersCollection(db).findOne({ discordId });
     if (user) {
       const char = await charactersCollection(db).findOne({ userId: user._id });
       if (char) characters = [char];

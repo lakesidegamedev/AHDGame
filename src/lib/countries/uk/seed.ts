@@ -29,6 +29,10 @@ import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParti
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
+import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
+import { stateBaselinesCollection } from "@/lib/db/repositories/stateBaselines";
 
 export async function seedUKRegions(
   db: Db,
@@ -164,9 +168,9 @@ export async function seedUKDemographics(
   preset: string
 ) {
   if (reset) {
-    await db.collection("stateDemographics").deleteMany({ countryId: "UK" });
+    await stateDemographicsCollection<Document>(db).deleteMany({ countryId: "UK" });
     await db.collection("demographicDefaults").deleteMany({ countryId: "UK" });
-    await db.collection("stateDemographicTurnout").deleteMany({ countryId: "UK" });
+    await stateDemographicTurnoutCollection<Document>(db).deleteMany({ countryId: "UK" });
   }
   const { default: ukRegionDemographicsStatic } =
     await import("@/lib/seeds/uk/ukRegionDemographics");
@@ -202,9 +206,7 @@ export async function seedUKDemographics(
   // and rounds away population, so persist the selected bundle directly.
   for (const sd of ukRegionDemographics) {
     const { _id, groups: _groups, ...sdData } = sd;
-    await db
-      .collection<StateDemographics>("stateDemographics")
-      .updateOne({ _id }, { $set: sdData }, { upsert: true });
+    await stateDemographicsCollection(db).updateOne({ _id }, { $set: sdData }, { upsert: true });
     await db
       .collection<StateDemographics>("demographicDefaults")
       .updateOne({ _id }, { $set: sdData }, { upsert: true });
@@ -227,9 +229,11 @@ export async function seedUKDemographics(
   }
   for (const doc of ukDemographicTurnout) {
     const { _id, ...turnoutData } = doc;
-    await db
-      .collection<StateDemographicTurnout>("stateDemographicTurnout")
-      .updateOne({ _id }, { $set: turnoutData }, { upsert: true });
+    await stateDemographicTurnoutCollection(db).updateOne(
+      { _id },
+      { $set: turnoutData },
+      { upsert: true }
+    );
   }
   log(
     `Seeded UK demographics (preset: ${preset}): ${ukRegionDemographics.length} region demographics, ${ukDemographicTurnout.length} turnout`
@@ -258,12 +262,11 @@ export async function seedUKStatePartyOrg(
   const orgs = await calculateUKStatePartyOrgs(db, activePreset);
   for (const org of orgs) {
     const { _id, ...orgData } = org;
-    await statePartyOrgCollection(db)
-      .updateOne(
-        { _id },
-        { $set: { ...orgData, updatedAt: now }, $setOnInsert: { createdAt: now } },
-        { upsert: true }
-      );
+    await statePartyOrgCollection(db).updateOne(
+      { _id },
+      { $set: { ...orgData, updatedAt: now }, $setOnInsert: { createdAt: now } },
+      { upsert: true }
+    );
   }
   log(`Seeded ${orgs.length} UK state party org entries (preset: ${activePreset})`);
 }
@@ -306,8 +309,7 @@ export async function ensureMissingUKStatePartyOrgRows(
   let inserted = 0;
   for (const org of orgs) {
     if (existingIds.has(org._id)) continue;
-    await statePartyOrgCollection(db)
-      .insertOne({ ...org, createdAt: now, updatedAt: now });
+    await statePartyOrgCollection(db).insertOne({ ...org, createdAt: now, updatedAt: now });
     inserted++;
   }
   if (inserted > 0) {
@@ -352,7 +354,7 @@ export async function seedUKStateMetrics(
     // UK_REGION_IDS is string[] — MongoDB filter $in accepts string[] but the typed collection's
     // _id infers as ObjectId in the UpdateFilter, requiring a cast here
     /* eslint-disable @typescript-eslint/no-explicit-any */
-    await db.collection("macroMetrics").deleteMany({ _id: { $in: UK_REGION_IDS as any } });
+    await macroMetricsCollection<Document>(db).deleteMany({ _id: { $in: UK_REGION_IDS as any } });
     /* eslint-enable @typescript-eslint/no-explicit-any */
   }
 
@@ -416,7 +418,7 @@ export async function seedUKBaselines(
   if (reset) {
     // UK_REGION_IDS is string[] — untyped collection filter requires cast for string _id array
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await db.collection("stateBaselines").deleteMany({ _id: { $in: UK_REGION_IDS as any } });
+    await stateBaselinesCollection<Document>(db).deleteMany({ _id: { $in: UK_REGION_IDS as any } });
   }
   const { ukStateBaselines } = await import("@/lib/seeds/uk/ukStateBaselines");
   const { getRegionMetricPresets, applyMetricPresetToBaseline } =
@@ -447,9 +449,11 @@ export async function seedUKBaselines(
     const { _id, ...baselineData } = baseline;
     // _id is a string region key — untyped collection filter requires cast
     /* eslint-disable @typescript-eslint/no-explicit-any */
-    await db
-      .collection("stateBaselines")
-      .updateOne({ _id: _id as any }, { $set: baselineData }, { upsert: true });
+    await stateBaselinesCollection<Document>(db).updateOne(
+      { _id: _id as any },
+      { $set: baselineData },
+      { upsert: true }
+    );
     /* eslint-enable @typescript-eslint/no-explicit-any */
   }
   log(`Seeded ${ukStateBaselines.length} UK region baselines (preset: ${preset})`);

@@ -21,6 +21,7 @@ import type { NewsPostView, NewsReplyView } from "@/lib/news/dto/newsView";
 import { serializeNewsPost, serializeNewsReply } from "@/lib/news/dto/newsView";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 interface CreateNewsPostInput {
   userId: string;
@@ -448,9 +449,10 @@ async function autoReactFromDiscordLinkedUser(
   now: Date
 ): Promise<void> {
   try {
-    const userDoc = await db
-      .collection<User>("users")
-      .findOne({ _id: new ObjectId(userId) }, { projection: { discordId: 1 } });
+    const userDoc = await usersCollection(db).findOne(
+      { _id: new ObjectId(userId) },
+      { projection: { discordId: 1 } }
+    );
     if (!userDoc?.discordId) {
       return;
     }

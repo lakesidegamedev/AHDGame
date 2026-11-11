@@ -14,6 +14,7 @@ import type { User } from "@/lib/db/types";
 import { loadUserCharacterAndCeoCorpIds } from "@/lib/account/loadUserCharacterAndCeoCorpIds";
 import { syncSuspiciousFlagsForBanState } from "@/lib/account/syncSuspiciousFlagsForBanState";
 import { invalidateCachedUser } from "@/lib/auth/userDocCache";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 // POST /api/moderator/users/ban — Ban or unban a user.
 // Auth: requireModerator
@@ -36,7 +37,7 @@ export async function POST(request: Request) {
       return errorResponse(400, "You cannot ban yourself");
     }
 
-    const targetUser = await db.collection<User>("users").findOne({ _id: objectId });
+    const targetUser = await usersCollection(db).findOne({ _id: objectId });
     if (!targetUser) {
       return errorResponse(404, "User not found");
     }
@@ -48,7 +49,7 @@ export async function POST(request: Request) {
 
     if (ban) {
       const { ceoCorpIds } = await loadUserCharacterAndCeoCorpIds(db, objectId);
-      await db.collection<User>("users").updateOne(
+      await usersCollection(db).updateOne(
         { _id: objectId },
         {
           $set: {
@@ -70,7 +71,7 @@ export async function POST(request: Request) {
       await vacatePartyLeadershipForBannedUser(db, objectId);
       await stripPartyMembershipForBannedUser(db, objectId);
     } else {
-      await db.collection<User>("users").updateOne(
+      await usersCollection(db).updateOne(
         { _id: objectId },
         {
           $set: { isBanned: false, updatedAt: new Date() },

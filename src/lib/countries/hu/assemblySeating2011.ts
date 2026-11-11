@@ -29,6 +29,8 @@ import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { notificationsCollection } from "@/lib/db/repositories/notifications";
+import type { Document } from "mongodb";
 
 const HU_2011_OFFICE_ARCHIVES_COLLECTION = "hu2011AssemblyOfficeArchives";
 interface Hu2011AssemblyArchive {
@@ -404,7 +406,7 @@ async function materializeHu2011AssemblySeating(input: {
   );
   const notices = players.filter((player) => owners.has(`player:${player._id.toHexString()}`));
   if (notices.length)
-    await db.collection("notifications").insertMany(
+    await notificationsCollection<Document>(db).insertMany(
       notices.map((player) => ({
         _id: stableId(`${receipt._id}:notice:${player._id.toHexString()}`),
         userId: player.userId,

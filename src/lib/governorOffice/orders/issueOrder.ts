@@ -19,6 +19,7 @@ import { generateOrderNews } from "@/lib/news";
 import { ladderBounds } from "@/lib/legislature/policyLadder";
 import { regionalDefaultLevel } from "@/lib/politicalLegislation/regionalDefaults";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
 
 export interface IssueOrderInput {
   countryId: CountryId;
@@ -93,9 +94,7 @@ export async function issueOrder(db: Db, input: IssueOrderInput): Promise<IssueO
     return { status: 409, body: { error: "An active order already exists for this policy." } };
   }
 
-  const priorPolicy = await db
-    .collection<StatePolicy>("statePolicies")
-    .findOne({ stateId, legislationTypeId });
+  const priorPolicy = await statePoliciesCollection(db).findOne({ stateId, legislationTypeId });
 
   // The ladder's bounds come from THIS type's option set, not the 7-option
   // (0–6) shape most types happen to have. A three-option type like the state
@@ -106,8 +105,7 @@ export async function issueOrder(db: Db, input: IssueOrderInput): Promise<IssueO
   // order claims one authority while the map enforces another). billEnactment
   // fixed the same class of bug on the bill path; this is the order path.
   // A type with no options ladder keeps the legacy 0–6 behaviour.
-  const legType = await legislationTypesCollection(db)
-    .findOne({ _id: legislationTypeId });
+  const legType = await legislationTypesCollection(db).findOne({ _id: legislationTypeId });
   const { maxIndex, centerIndex } = ladderBounds(legType?.policyOptions?.length);
   // A region with no row for a new-generation `both` law sits at level 0, which
   // is what getEnactedLevel reports to the engine and what
@@ -187,7 +185,7 @@ export async function issueOrder(db: Db, input: IssueOrderInput): Promise<IssueO
     effectDirection: effectDirection as number,
     scope: priorPolicy?.scope ?? scope,
   };
-  await db.collection<StatePolicy>("statePolicies").updateOne(
+  await statePoliciesCollection(db).updateOne(
     { stateId, legislationTypeId },
     {
       $set: policyDoc,

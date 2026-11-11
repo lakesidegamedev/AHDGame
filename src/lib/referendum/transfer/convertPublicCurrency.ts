@@ -4,6 +4,7 @@ import type { Db } from "mongodb";
 import type { State } from "@/lib/db/types/state";
 import { scaleDeep } from "../secede/docScale";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 
 export async function convertPublicCurrency(
   db: Db,
@@ -37,9 +38,10 @@ export async function convertPublicCurrency(
     ],
     scale
   );
-  await db
-    .collection<{ _id: string }>("macroMetrics")
-    .updateOne({ _id: regionId }, { $mul: { "economic.medianIncome.value": scale } });
+  await macroMetricsCollection<{ _id: string }>(db).updateOne(
+    { _id: regionId },
+    { $mul: { "economic.medianIncome.value": scale } }
+  );
   await db
     .collection("infraProjects")
     .updateMany({ regionId }, { $mul: { upkeepBase: scale, constructionCostBase: scale } });

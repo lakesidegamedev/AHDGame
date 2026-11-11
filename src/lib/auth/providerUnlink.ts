@@ -12,6 +12,7 @@ import {
 import { errorResponse } from "@/lib/api/errors";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import type { User } from "@/lib/db/types";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 export interface ProviderUnlinkSpec {
   provider: ProviderKind;
@@ -30,10 +31,10 @@ export async function unlinkProviderCredential(
   if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
   const db = await getDb();
-  const usersCollection = db.collection<User>("users");
+  const usersCollectionHandle = usersCollection(db);
 
   // Credential writes require the uncached account state, never the cached grant.
-  const account = await usersCollection.findOne({ _id: new ObjectId(userId) });
+  const account = await usersCollectionHandle.findOne({ _id: new ObjectId(userId) });
   if (!account) {
     return errorResponse(404, "User not found", {
       headers: { "Cache-Control": "private, no-store" },
@@ -73,7 +74,7 @@ export async function unlinkProviderCredential(
   const revokedAt = new Date();
   let write;
   try {
-    write = await usersCollection.updateOne(
+    write = await usersCollectionHandle.updateOne(
       {
         _id: new ObjectId(userId),
         ...providerWriteSnapshotFilter(account),

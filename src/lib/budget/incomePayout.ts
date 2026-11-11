@@ -34,6 +34,8 @@ import { ledgerEntriesCollection } from "@/lib/db/repositories/ledgerEntries";
 import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 
 export interface IncomeCredit {
   characterId: ObjectId;
@@ -121,7 +123,7 @@ export async function creditIncomeAfterTax(
         )
         .toArray();
       const rates = new Map<string, number>(exchange.map((row) => [row.currencyCode, row.rate]));
-      const config = await db.collection<GameConfig>("gameConfig").findOne(
+      const config = await gameConfigCollection(db).findOne(
         { _id: "default" },
         {
           session,
@@ -183,8 +185,7 @@ export async function creditIncomeAfterTax(
           }
         )
         .toArray();
-      const medians = await db
-        .collection("macroMetrics")
+      const medians = await macroMetricsCollection<Document>(db)
         .find(
           {},
           {
@@ -591,13 +592,17 @@ export async function creditIncomeAfterTax(
           throw new Error("Income recipient changed");
       }
       if (walletOps.imperialCharacters.length) {
-        const credited = await imperialCharactersCollection<IncomeWallet>(db)
-          .bulkWrite(walletOps.imperialCharacters, { session });
+        const credited = await imperialCharactersCollection<IncomeWallet>(db).bulkWrite(
+          walletOps.imperialCharacters,
+          { session }
+        );
         if (credited.matchedCount !== walletOps.imperialCharacters.length)
           throw new Error("Income recipient changed");
       }
       if (savingsOps.length) {
-        const saved = await savingsAccountsCollection<Document>(db).bulkWrite(savingsOps, { session });
+        const saved = await savingsAccountsCollection<Document>(db).bulkWrite(savingsOps, {
+          session,
+        });
         if (saved.matchedCount !== savingsOps.length)
           throw new Error("Income savings account unavailable");
       }
@@ -644,7 +649,9 @@ export async function creditIncomeAfterTax(
           },
         }));
       if (regionalOps.length) {
-        const saved = await stateBudgetsCollection<Document>(db).bulkWrite(regionalOps, { session });
+        const saved = await stateBudgetsCollection<Document>(db).bulkWrite(regionalOps, {
+          session,
+        });
         if (saved.matchedCount !== regionalOps.length)
           throw new Error("Income tax regional treasury unavailable");
       }

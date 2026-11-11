@@ -21,6 +21,8 @@ import { nppsCollection } from "@/lib/db/repositories/npps";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
 
 interface ReadinessCheck {
   name: string;
@@ -80,8 +82,11 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     });
 
     // 4. Government formation doc
-    const gov = await governmentFormationsCollection<{ _id: string; status?: string; cycle?: number }>(db)
-      .findOne({ _id: countryId });
+    const gov = await governmentFormationsCollection<{
+      _id: string;
+      status?: string;
+      cycle?: number;
+    }>(db).findOne({ _id: countryId });
     checks.push({
       name: "GovernmentFormation",
       status: gov ? "ok" : "missing",
@@ -122,7 +127,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     });
 
     // 8. Demographics (one per region)
-    const demoCount = await db.collection("stateDemographics").countDocuments({ countryId });
+    const demoCount = await stateDemographicsCollection<Document>(db).countDocuments({ countryId });
     checks.push({
       name: "Demographics",
       status: demoCount === regionCount ? "ok" : demoCount > 0 ? "warning" : "missing",
@@ -134,9 +139,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     const regionIds = regions.map((r) => r._id);
     // macroMetrics, not stateMetrics — see countryReadinessReport: counting the
     // retired collection reported every country as missing its region metrics.
-    const metricsCount = await db
-      .collection<{ _id: string }>("macroMetrics")
-      .countDocuments({ _id: { $in: regionIds } });
+    const metricsCount = await macroMetricsCollection<{ _id: string }>(db).countDocuments({
+      _id: { $in: regionIds },
+    });
     checks.push({
       name: "RegionMetrics",
       status: metricsCount === regionCount ? "ok" : metricsCount > 0 ? "warning" : "missing",
@@ -145,7 +150,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     });
 
     // 10. Legislation types
-    const legTypeCount = await legislationTypesCollection<Document>(db).countDocuments({ countryId });
+    const legTypeCount = await legislationTypesCollection<Document>(db).countDocuments({
+      countryId,
+    });
     checks.push({
       name: "LegislationTypes",
       status: legTypeCount > 0 ? "ok" : "missing",

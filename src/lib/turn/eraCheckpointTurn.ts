@@ -44,6 +44,8 @@ import {
 } from "@/lib/demographics/eraCheckpoints";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
 
 export interface EraCheckpointTurnResult {
   checkpointsActive: number;
@@ -153,8 +155,7 @@ export async function processEraCheckpointsTurn(
   const [legTypes, demographicsDocs, defaultsDocs, metricsDocs] = await Promise.all([
     // full-read(legislationTypes): the era checkpoint re-applies every law through the policy-effects map
     legislationTypesCollection(db).find({}).toArray(),
-    db
-      .collection<StateDemographics>("stateDemographics")
+    stateDemographicsCollection(db)
       .find({ _id: { $in: [...stateIds] } })
       .toArray(),
     db
@@ -163,8 +164,7 @@ export async function processEraCheckpointsTurn(
       .toArray(),
     gateMetrics.length === 0
       ? Promise.resolve([] as Array<{ _id: string }>)
-      : db
-          .collection<{ _id: string }>("macroMetrics")
+      : macroMetricsCollection<{ _id: string }>(db)
           .find(
             { _id: { $in: [...stateIds] } },
             { projection: Object.fromEntries(gateMetrics.map((m) => [m, 1])) }
@@ -263,7 +263,7 @@ export async function processEraCheckpointsTurn(
   }
 
   if (liveOps.length > 0) {
-    await db.collection<StateDemographics>("stateDemographics").bulkWrite(liveOps);
+    await stateDemographicsCollection(db).bulkWrite(liveOps);
   }
   if (defaultOps.length > 0) {
     await db.collection<StateDemographics>("demographicDefaults").bulkWrite(defaultOps);

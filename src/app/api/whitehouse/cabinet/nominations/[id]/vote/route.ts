@@ -17,6 +17,7 @@ import { isVotingDeadlinePassed } from "@/lib/legislature/billVotingWindow";
 import type { CabinetNomination, ElectedOfficial } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { cabinetNominationsCollection } from "@/lib/db/repositories/cabinetNominations";
 
 const voteSchema = z.object({
   vote: z.enum(["for", "against", "abstain"]),
@@ -54,7 +55,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     // so a stalled or drifted real clock can't open/close the window early.
     const gameTime = await getGameTime();
 
-    const nomination = await db.collection<CabinetNomination>("cabinetNominations").findOne({
+    const nomination = await cabinetNominationsCollection(db).findOne({
       _id: nominationOid,
       status: "active",
     });
@@ -102,7 +103,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         ? { for: "houseVotesFor", against: "houseVotesAgainst", abstain: "houseVotesAbstain" }
         : { for: "votesFor", against: "votesAgainst", abstain: "votesAbstain" };
 
-    const updateResult = await db.collection<CabinetNomination>("cabinetNominations").updateOne(
+    const updateResult = await cabinetNominationsCollection(db).updateOne(
       { _id: nominationOid, status: "active" },
       buildEmbeddedVoteTallyUpdate({
         voteField,

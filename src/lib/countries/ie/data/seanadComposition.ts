@@ -6,6 +6,7 @@ import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficia
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 import type { Document } from "mongodb";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
 
 const VOCATIONAL_SEATS = 43;
 const TAOISEACH_PICKS = 11;
@@ -110,10 +111,7 @@ export async function deriveSeanadComposition(
     .sort((a, b) => b.seats - a.seats);
 
   // 2. Taoiseach picks — cabinet (cap 11), then loyalist fill from governing party.
-  const cabinetCursor = db
-    .collection<CabinetMember>("cabinetMembers")
-    .find({ countryId })
-    .sort({ confirmedAt: 1 });
+  const cabinetCursor = cabinetMembersCollection(db).find({ countryId }).sort({ confirmedAt: 1 });
   const cabinet = await cabinetCursor.toArray();
   // NPP-held seats carry a null characterId and are not Taoiseach-pickable people.
   const cabinetPicks: SeanadTaoiseachPick[] = cabinet
@@ -134,8 +132,9 @@ export async function deriveSeanadComposition(
 
   let loyalistPartyId = "independent";
   if (cabinetPicks.length < TAOISEACH_PICKS) {
-    const formation = (await governmentFormationsCollection<Document>(db)
-      .findOne({ _id: countryId as never })) as { governingPartyId?: string } | null;
+    const formation = (await governmentFormationsCollection<Document>(db).findOne({
+      _id: countryId as never,
+    })) as { governingPartyId?: string } | null;
     if (formation?.governingPartyId) loyalistPartyId = formation.governingPartyId;
   }
   const loyalistFill: SeanadTaoiseachPick[] = Array.from(

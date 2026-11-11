@@ -6,6 +6,8 @@ import {
   type CommodityType,
 } from "@/lib/constants/commodities";
 import type { CommodityPrice } from "@/lib/db/types/commodityPrice";
+import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
+import type { Document } from "mongodb";
 
 /**
  * Seed baseline `commodityPrices` rows — one per `CommodityType` — at their
@@ -35,7 +37,7 @@ export async function seedCommodityPrices(
   log("Seeding baseline commodity prices:");
 
   if (reset) {
-    const dropped = await db.collection("commodityPrices").deleteMany({});
+    const dropped = await commodityPricesCollection<Document>(db).deleteMany({});
     if (dropped.deletedCount > 0) {
       log(`  ~ commodityPrices: dropped ${dropped.deletedCount} legacy rows`);
     }
@@ -65,9 +67,11 @@ export async function seedCommodityPrices(
       updatedAt: now,
     };
 
-    const result = await db
-      .collection<CommodityPrice>("commodityPrices")
-      .updateOne({ commodity }, { $setOnInsert: seed }, { upsert: true });
+    const result = await commodityPricesCollection(db).updateOne(
+      { commodity },
+      { $setOnInsert: seed },
+      { upsert: true }
+    );
     if (result.upsertedCount > 0) {
       inserted += 1;
     } else {

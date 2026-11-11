@@ -12,6 +12,7 @@ import {
   economicInterventionPlanSchema,
   validateInterventionActivation,
 } from "@/lib/economy/interventionGovernance";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 const patchSchema = z.object({
   mode: z.enum(["shadow", "active"]),
@@ -28,9 +29,10 @@ function resolveMode(value: unknown): FreightSettlementMode {
 // Auth: requireAdmin
 export const GET = withAdminRoute(async (_auth) => {
   const db = await getDb();
-  const config = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { freightSettlementMode: 1 } });
+  const config = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { freightSettlementMode: 1 } }
+  );
 
   return NextResponse.json({ mode: resolveMode(config?.freightSettlementMode) });
 });
@@ -46,7 +48,7 @@ export const PATCH = withAdminRoute(async (auth, request: Request) => {
 
   const { mode, intervention } = parsed.data;
   const db = await getDb();
-  const gameConfig = db.collection<GameConfig>("gameConfig");
+  const gameConfig = gameConfigCollection(db);
   const priorConfig = await gameConfig.findOne(
     { _id: "default" },
     { projection: { freightSettlementMode: 1 } }

@@ -31,6 +31,7 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 
 const PAGE_SIZE = 10;
 
@@ -104,7 +105,7 @@ export async function GET(request: Request) {
       // /api/discord-bot/marketshare and /api/corporations/.../sectors.
       const [ownedSectors, persistedUnowned, fxByCurrency, worldPreset] = await Promise.all([
         corporateSectorsCollection(db).find(laneFilter).toArray(),
-        db.collection<UnownedSector>("unownedSectors").find(laneFilter).toArray(),
+        unownedSectorsCollection(db).find(laneFilter).toArray(),
         loadFxRatesByCurrency(db),
         loadWorldPreset(db),
       ]);

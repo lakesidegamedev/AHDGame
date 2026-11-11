@@ -56,6 +56,12 @@ import { imperialCharactersCollection } from "@/lib/db/repositories/imperialChar
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { billsCollection } from "@/lib/db/repositories/bills";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
+import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
+import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
+import { activityLogCollection } from "@/lib/db/repositories/activityLog";
 
 /**
  * Runtime collections that `resetGameWorld` handles with bespoke logic instead
@@ -444,16 +450,17 @@ export async function resetGameWorld(
     charactersDeleted = deleteResult.deletedCount;
 
     // Staff and banned accounts survive; see FULL_RESET_DELETABLE_USERS_FILTER.
-    const usersResult = await db
-      .collection("users")
-      .deleteMany({ ...FULL_RESET_DELETABLE_USERS_FILTER });
+    const usersResult = await usersCollection<Document>(db).deleteMany({
+      ...FULL_RESET_DELETABLE_USERS_FILTER,
+    });
     usersDeleted = usersResult.deletedCount;
     // Every surviving account just lost all of its characters. Settle the
     // fields `retireCharacter` settles on a soft reset, or the one-character
     // limit (`activeCharacterCount >= 1`) refuses a kept moderator a new one.
-    await db
-      .collection<User>("users")
-      .updateMany({}, { $set: { hasCompletedSetup: false, activeCharacterCount: 0 } });
+    await usersCollection(db).updateMany(
+      {},
+      { $set: { hasCompletedSetup: false, activeCharacterCount: 0 } }
+    );
 
     await db.collection("retiredCharacters").deleteMany({});
     await db.collection("characterAchievements").deleteMany({});
@@ -504,11 +511,11 @@ export async function resetGameWorld(
   const nppsResult = await nppsCollection<Document>(db).deleteMany({});
   const logsResult = await db.collection("actionLogs").deleteMany({});
   const billsResult = await billsCollection<Document>(db).deleteMany({});
-  const stateBillsResult = await db.collection("stateBills").deleteMany({});
+  const stateBillsResult = await stateBillsCollection<Document>(db).deleteMany({});
   const statePartyElectionsResult = await db.collection("statePartyElections").deleteMany({});
-  await db
-    .collection("activityLog")
-    .deleteMany({ type: { $nin: [...PRESERVED_ACTIVITY_LOG_TYPES] } });
+  await activityLogCollection<Document>(db).deleteMany({
+    type: { $nin: [...PRESERVED_ACTIVITY_LOG_TYPES] },
+  });
 
   const sweepCollections = getRuntimeCollectionNames().filter(
     (name) => !RUNTIME_WIPE_SPECIAL_CASES.has(name)
@@ -552,7 +559,7 @@ export async function resetGameWorld(
   // only in runSeed's reset branch, which a `resetReference: false` run skips.
   // Ops keys (maintenance, sandbox tester access, webhooks) are in neither list
   // and survive.
-  await db.collection<GameConfig>("gameConfig").updateOne(
+  await gameConfigCollection(db).updateOne(
     { _id: "default" },
     {
       $set: { ...FRESH_WORLD_GAME_CONFIG_FLAGS },
@@ -748,8 +755,8 @@ export async function resetGameWorld(
   // they won't overwrite stale accumulated state) must be wiped explicitly — the
   // manifest-driven sweep only touches `runtime` collections. statePolicies is
   // re-seeded by seedStatePolicies below; commodity/forex by their seeders.
-  await db.collection("statePolicies").deleteMany({});
-  await db.collection("commodityPrices").deleteMany({});
+  await statePoliciesCollection<Document>(db).deleteMany({});
+  await commodityPricesCollection<Document>(db).deleteMany({});
   await exchangeRatesCollection<Document>(db).deleteMany({});
   await centralBanksCollection(db).deleteMany({});
 

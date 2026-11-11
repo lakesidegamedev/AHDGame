@@ -66,6 +66,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { politicalMetricsCollection } from "@/lib/db/repositories/politicalMetrics";
 
 /** Human-readable label for a `category.field` metric path (region-aware). */
 function mandateMetricLabel(path: string, stateId?: string): string {
@@ -317,8 +318,7 @@ export async function buildNationalCorporationView(
       ? findMergedRegionMetricsManyForDisplay(db, { _id: { $in: stateIds } })
       : Promise.resolve([]),
     isPoliticalApprovalCountry(countryId) && stateIds.length > 0
-      ? db
-          .collection<PoliticalMetricsDoc>("politicalMetrics")
+      ? politicalMetricsCollection(db)
           .find({ _id: { $in: stateIds } })
           .toArray()
       : Promise.resolve([]),

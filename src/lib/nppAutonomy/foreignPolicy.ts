@@ -68,6 +68,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { billsCollection } from "@/lib/db/repositories/bills";
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
 function buildOpinion(context: ForeignPolicyContext, targetCountryId: CountryId): CountryOpinion {
   const factors: OpinionFactor[] = [];
   const sourceAlignment = context.alignments.find(
@@ -299,8 +300,7 @@ async function loadContext(
   countryId: CountryId,
   currentTurn: number
 ): Promise<ForeignPolicyContext | null> {
-  const government = await governmentFormationsCollection(db)
-    .findOne({ _id: countryId });
+  const government = await governmentFormationsCollection(db).findOne({ _id: countryId });
   if (!government || government.status !== "formed") return null;
   const headNppId = government.presidentNppId ?? government.pmNppId ?? null;
   if (!headNppId) return null;
@@ -390,7 +390,7 @@ async function loadContext(
       .limit(20)
       .toArray(),
     db.collection<MilitaryUnit>("militaryUnits").find({ countryId }).toArray(),
-    db.collection<GovernmentApproval>("governmentApprovals").findOne({ _id: countryId }),
+    governmentApprovalsCollection(db).findOne({ _id: countryId }),
     db
       .collection<BattleDeclarationDoc>("battleDeclarations")
       .find({ declarerCountry: countryId, status: "pending" })

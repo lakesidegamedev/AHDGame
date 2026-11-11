@@ -15,6 +15,7 @@ import type { GameConfig } from "@/lib/db/types/gameConfig";
 import type { GameState } from "@/lib/db/types/gameState";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /** Funded rules a rebuilt economy starts with, keyed from its last legacy turn. */
 export function fundedSwitchGameConfigUpdate(currentTurn: number): UpdateFilter<GameConfig> {
@@ -98,12 +99,10 @@ export async function applyFundedSwitch(
   const update = fundedSwitchGameConfigUpdate(currentTurn);
   const set = (update.$set ?? {}) as unknown as Record<string, unknown>;
   const liveFromTurn = set.producerMarketLiveFromTurn as number;
-  const config = await db
-    .collection<{ _id: string } & Document>("gameConfig")
-    .findOne(
-      { _id: "default" },
-      { projection: Object.fromEntries(Object.keys(set).map((key) => [key, 1])) }
-    );
+  const config = await gameConfigCollection<{ _id: string } & Document>(db).findOne(
+    { _id: "default" },
+    { projection: Object.fromEntries(Object.keys(set).map((key) => [key, 1])) }
+  );
   const transitionStamps =
     await corporateSectorsCollection<Document>(db).countDocuments(TRANSITION_STAMP_FILTER);
   if (transitionStamps === 0 && matches(config, set))
@@ -119,9 +118,7 @@ export async function applyFundedSwitch(
     await corporateSectorsCollection<Document>(db).updateMany(TRANSITION_STAMP_FILTER, {
       $unset: { cutoverTransition: "", cutoverStruggling: "" },
     });
-  const written = await db
-    .collection<GameConfig>("gameConfig")
-    .updateOne({ _id: "default" }, update);
+  const written = await gameConfigCollection(db).updateOne({ _id: "default" }, update);
   if (written.matchedCount !== 1)
     throw new Error("The gameConfig document is missing; the funded switch was not written");
   return {

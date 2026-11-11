@@ -16,6 +16,7 @@ import { flushServerPosthog, getServerPosthogClient } from "./serverPosthog";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { crisesCollection } from "@/lib/db/repositories/crises";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 type WorldEventType = "election" | "war" | "bill_passed" | "crisis" | "record_wealth";
 
@@ -35,7 +36,7 @@ export async function captureTurnPosthog(input: {
     const envelope = gameEventEnvelope(input.iteration, turn);
     const countryHistory = await getCountryHistoryCollection(db);
     const [playersActive, budgets, wealth, history, elections, wars, crises] = await Promise.all([
-      db.collection<User>("users").countDocuments({
+      usersCollection(db).countDocuments({
         lastActivity: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
         isBanned: { $ne: true },
       }),

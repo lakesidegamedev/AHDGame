@@ -19,6 +19,8 @@ import {
   isUnmannedDefault,
 } from "@/lib/turn/partyOrg/defenseConstants";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
 
 /**
  * Is the party's chair seat held by an active (non-banned) human player?
@@ -32,9 +34,10 @@ async function isActiveHumanChair(db: Db, chairId: PoliticalParty["chairId"]): P
     { projection: { userId: 1 } }
   );
   if (!chair?.userId) return false;
-  const user = await db
-    .collection("users")
-    .findOne({ _id: chair.userId, isBanned: { $ne: true } }, { projection: { _id: 1 } });
+  const user = await usersCollection<Document>(db).findOne(
+    { _id: chair.userId, isBanned: { $ne: true } },
+    { projection: { _id: 1 } }
+  );
   return !!user;
 }
 

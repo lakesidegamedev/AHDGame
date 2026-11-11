@@ -14,6 +14,7 @@ import { nameCollidesWithUser, validateProposedName } from "@/lib/supporter/requ
 import { notifyModeratorsOfSupporterRequest } from "@/lib/supporter/reviewNotifications";
 import { escapeRegex } from "@/lib/utils/escapeRegex";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 const bodySchema = z.discriminatedUnion("kind", [
   z.object({
@@ -37,7 +38,7 @@ async function handleGET() {
     const userId = new ObjectId(auth.user.userId);
 
     const db = await getDb();
-    const user = await db.collection<User>("users").findOne(
+    const user = await usersCollection(db).findOne(
       { _id: userId },
       {
         projection: {
@@ -111,7 +112,7 @@ export async function POST(request: Request) {
     }
 
     const db = await getDb();
-    const user = await db.collection<User>("users").findOne({ _id: userId });
+    const user = await usersCollection(db).findOne({ _id: userId });
     if (!user) {
       return errorResponse(404, "User not found");
     }

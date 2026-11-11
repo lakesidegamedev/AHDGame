@@ -40,6 +40,8 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
 
 /** One point on the fiscal-year trend series (stat strip compare + debt sparkline). */
 export interface FyHistoryPoint {
@@ -265,9 +267,10 @@ export async function loadFederalBudgetDetail(params: {
 
     const [snapshotGameState, snapshotGameConfig] = await Promise.all([
       gameStateCollection(db).findOne({ _id: "current" }, { projection: { currentYear: 1 } }),
-      db
-        .collection<GameConfig>("gameConfig")
-        .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } }),
+      gameConfigCollection(db).findOne(
+        { _id: "default" },
+        { projection: { commandEconomyEnabled: 1 } }
+      ),
     ]);
 
     const snapshotCurrencyCode =
@@ -321,7 +324,7 @@ export async function loadFederalBudgetDetail(params: {
         : { countryId },
       { projection: { primeRate: 1, reserveBalance: 1 } }
     ),
-    db.collection<GameConfig>("gameConfig").findOne(
+    gameConfigCollection(db).findOne(
       { _id: "default" },
       {
         projection: {
@@ -463,10 +466,7 @@ export async function loadFederalBudgetDetail(params: {
     ...nationalLawCountryQuery(budgetCountryId),
     repealedAt: { $exists: false },
   };
-  const enactedLaws = await db
-    .collection<EnactedLaw>("enactedLaws")
-    .find(enactedLawQuery)
-    .toArray();
+  const enactedLaws = await enactedLawsCollection(db).find(enactedLawQuery).toArray();
 
   // Enrich tax statutes with the revenue line they govern: a tax law's
   // legislationType carries `taxRateChange.taxType`, which is a FederalTaxRates /
@@ -477,7 +477,10 @@ export async function loadFederalBudgetDetail(params: {
   );
   const revenueTaxTypeByLegId = new Map<string, string>();
   if (legislationTypeIds.length > 0) {
-    const legislationTypes = await legislationTypesCollection<{ _id: string; taxRateChange?: { taxType?: string } }>(db)
+    const legislationTypes = await legislationTypesCollection<{
+      _id: string;
+      taxRateChange?: { taxType?: string };
+    }>(db)
       .find({ _id: { $in: legislationTypeIds } }, { projection: { "taxRateChange.taxType": 1 } })
       .toArray();
     for (const t of legislationTypes) {

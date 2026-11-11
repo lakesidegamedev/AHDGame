@@ -2,6 +2,7 @@ import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { StatePolicy } from "@/lib/db/types/statePolicy";
 import { REDISTRICT_AUTHORITY_LAW } from "./caps";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
 
 /**
  * "Legislature-drawn" authority ladder index, the historically correct
@@ -53,7 +54,7 @@ export async function seedRedistrictingAuthority(
   const stateIds = Array.from(new Set(opts.stateIds));
   if (stateIds.length === 0) return { seeded: 0 };
 
-  const result = await db.collection<StatePolicy>("statePolicies").bulkWrite(
+  const result = await statePoliciesCollection(db).bulkWrite(
     stateIds.map((stateId) => ({
       updateOne: {
         filter: { stateId, legislationTypeId: REDISTRICT_AUTHORITY_LAW },

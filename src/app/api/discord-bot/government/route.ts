@@ -26,6 +26,8 @@ import { getLiveGameYear } from "@/lib/cabinet/liveGameYear";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
+import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -109,12 +111,8 @@ export async function GET(request: Request) {
       electedOfficialsCollection(db)
         .find({ countryId: country, officeType: { $in: officeTypes } })
         .toArray(),
-      directElection
-        ? db.collection<CongressLeader>("congressLeaders").find({}).toArray()
-        : Promise.resolve([]),
-      directElection
-        ? db.collection<CabinetMember>("cabinetMembers").find({}).toArray()
-        : Promise.resolve([]),
+      directElection ? congressLeadersCollection(db).find({}).toArray() : Promise.resolve([]),
+      directElection ? cabinetMembersCollection(db).find({}).toArray() : Promise.resolve([]),
     ]);
 
     // Collect all character IDs for profile URL lookups

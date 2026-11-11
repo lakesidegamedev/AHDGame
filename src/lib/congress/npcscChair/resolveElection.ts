@@ -15,6 +15,7 @@ import type {
   PoliticalParty,
 } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
 
 /**
  * Resolve the open NPC Standing Committee Chairman election. Mirrors
@@ -66,7 +67,7 @@ export async function resolveNpcscChairElection(
       { _id: { $ne: winner._id }, status: { $in: ["open", "voting"] } },
       { $set: { status: "failed", updatedAt: now } }
     );
-  await db.collection<CongressLeader>("congressLeaders").updateOne(
+  await congressLeadersCollection(db).updateOne(
     { role: "chair_npcsc" },
     {
       $set: {

@@ -16,6 +16,7 @@ import { validateStateBillProvisions } from "@/lib/legislature/commands/validate
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
 
 export interface QueueBillInput {
   countryId: CountryId;
@@ -91,7 +92,7 @@ export async function queueBill(
       body: { error: "NPP does not hold a state-legislature seat in this state." },
     };
   }
-  const activeNppBill = await db.collection<StateBill>("stateBills").findOne({
+  const activeNppBill = await stateBillsCollection(db).findOne({
     sponsorNppId: targetNppId,
     status: { $nin: STATE_TERMINAL_STATUSES },
   });

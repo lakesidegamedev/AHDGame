@@ -39,6 +39,7 @@ import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficia
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
 
 export {
   annualDeathProbability,
@@ -325,11 +326,10 @@ export async function processNppMortality(
       }
     );
 
-    await electionCandidatesCollection(db)
-      .updateMany(
-        { nppId: npp._id, status: "active" },
-        { $set: { status: "withdrawn", withdrawnAt: now } }
-      );
+    await electionCandidatesCollection(db).updateMany(
+      { nppId: npp._id, status: "active" },
+      { $set: { status: "withdrawn", withdrawnAt: now } }
+    );
 
     // Head-of-government succession: the successor inherits the office, so a
     // government formed under the dead NPP continues under them rather than
@@ -345,11 +345,10 @@ export async function processNppMortality(
         idField === "presidentNppId"
           ? { presidentName: replacement.name, pmName: replacement.name }
           : { [nameField]: replacement.name };
-      await governmentFormationsCollection(db)
-        .updateMany(
-          { [idField]: npp._id },
-          { $set: { ...succession, ...nameUpdates, [idField]: replacement._id } }
-        );
+      await governmentFormationsCollection(db).updateMany(
+        { [idField]: npp._id },
+        { $set: { ...succession, ...nameUpdates, [idField]: replacement._id } }
+      );
     }
 
     successions.push({ deadId: npp._id as ObjectId, successor: replacement });
@@ -403,7 +402,7 @@ async function seatSuccessors(
 ): Promise<void> {
   const successorOf = new Map(successions.map((s) => [s.deadId.toHexString(), s.successor]));
 
-  await db.collection<CabinetMember>("cabinetMembers").bulkWrite(
+  await cabinetMembersCollection(db).bulkWrite(
     successions.map(({ deadId, successor }) => ({
       updateMany: {
         filter: { nppId: deadId },

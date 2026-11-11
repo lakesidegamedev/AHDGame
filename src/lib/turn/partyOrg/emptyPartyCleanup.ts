@@ -33,6 +33,7 @@ import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParti
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
+import { nationalPartyElectionsCollection } from "@/lib/db/repositories/nationalPartyElections";
 
 export interface EmptyPartyCleanupResult {
   deletedParties: string[];
@@ -226,10 +227,7 @@ export async function cleanupEmptyParties(): Promise<EmptyPartyCleanupResult> {
 
   const nationalElections =
     partyCountryPairs.length > 0
-      ? await db
-          .collection<NationalPartyElection>("nationalPartyElections")
-          .find({ $or: partyCountryPairs })
-          .toArray()
+      ? await nationalPartyElectionsCollection(db).find({ $or: partyCountryPairs }).toArray()
       : [];
   const nationalElectionIds = nationalElections.map((e) => e._id);
 
@@ -302,9 +300,7 @@ export async function cleanupEmptyParties(): Promise<EmptyPartyCleanupResult> {
 
   const nationalElectionResult =
     partyCountryPairs.length > 0
-      ? await db
-          .collection<NationalPartyElection>("nationalPartyElections")
-          .deleteMany({ $or: partyCountryPairs })
+      ? await nationalPartyElectionsCollection(db).deleteMany({ $or: partyCountryPairs })
       : { deletedCount: 0 };
 
   const committeeElectionResult =

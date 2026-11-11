@@ -16,6 +16,7 @@ import { heldBlocRowIds, releaseVacatedBlocSeats } from "@/lib/elections/vacated
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import type { Document } from "mongodb";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 // POST /api/admin/users/delete — Permanently delete a user account and their character.
 // Auth: requireAdmin
@@ -39,13 +40,13 @@ export const POST = withNoStore(async (request: Request) => {
     }
 
     const db = await getDb();
-    const usersCollection = db.collection("users");
+    const usersCollectionHandle = usersCollection<Document>(db);
     const charactersHandle = charactersCollection(db);
     const actionLogsCollection = db.collection("actionLogs");
     const officialsCollection = electedOfficialsCollection<Document>(db);
 
     // Check if user exists
-    const user = await usersCollection.findOne({ _id: objectId });
+    const user = await usersCollectionHandle.findOne({ _id: objectId });
     if (!user) {
       return errorResponse(404, "User not found");
     }
@@ -173,7 +174,7 @@ export const POST = withNoStore(async (request: Request) => {
     await db.collection(IDENTITY_OBSERVATIONS_COLLECTION).deleteMany({ userId: objectId });
 
     // Delete the user
-    await usersCollection.deleteOne({ _id: objectId });
+    await usersCollectionHandle.deleteOne({ _id: objectId });
 
     return NextResponse.json({
       success: true,

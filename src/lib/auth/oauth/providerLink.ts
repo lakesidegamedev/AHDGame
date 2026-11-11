@@ -13,6 +13,7 @@ import {
 import { isAuthMigrationFenced } from "@/lib/auth/sourceFence";
 import type { User } from "@/lib/db/types";
 import type { OAuthCookieStore, OAuthDb, OAuthLinkAdapter } from "./types";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 /** Links a provider account to the signed-in user. Requires a current session. */
 export async function runOAuthLink(
@@ -26,9 +27,9 @@ export async function runOAuthLink(
     return adapter.loginRequired();
   }
 
-  const usersCollection = db.collection<User>("users");
+  const usersCollectionHandle = usersCollection(db);
   // Credential writes require the uncached account state, never the cached grant.
-  const account = await usersCollection.findOne({ _id: new ObjectId(grant.userId) });
+  const account = await usersCollectionHandle.findOne({ _id: new ObjectId(grant.userId) });
   if (!account) {
     return adapter.loginRequired();
   }
@@ -67,7 +68,7 @@ export async function runOAuthLink(
   }
 
   // Check if this provider account is already linked to another user.
-  const existingUser = await usersCollection.findOne({
+  const existingUser = await usersCollectionHandle.findOne({
     [adapter.idField]: adapter.externalId,
     _id: { $ne: new ObjectId(grant.userId) },
   } as Filter<User>);
@@ -93,7 +94,7 @@ export async function runOAuthLink(
   const linkedAt = new Date();
   let write;
   try {
-    write = await usersCollection.updateOne(
+    write = await usersCollectionHandle.updateOne(
       {
         _id: new ObjectId(grant.userId),
         ...providerWriteSnapshotFilter(account),

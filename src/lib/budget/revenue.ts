@@ -113,6 +113,9 @@ import { initializeCapitalGainsTaxRates } from "./rules/capitalGainsTax";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
 
 type LegacyFederalTaxRates = Partial<FederalTaxRates> & {
   corporateTax?: number;
@@ -456,8 +459,7 @@ export async function calculateFederalRevenue(
   // same base-erosion cap as ordinary tax receipts. Persisted `other` and
   // public-enterprise income stay outside that cap. Laws with no `costModelV2`
   // are legacy and keep their persisted value.
-  const lawRevenueDocs = await db
-    .collection<EnactedLaw>("enactedLaws")
+  const lawRevenueDocs = await enactedLawsCollection(db)
     .find(
       {
         scope: "national",
@@ -578,9 +580,10 @@ export async function refreshNationalBudgetRevenue(db: Db, budgetIds?: string[])
     loadPlantsBudgetContext(db),
     getEraContext(db).catch(() => null),
     loadFxRatesByCurrency(db),
-    db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { interstateMoneyWiringEnabled: 1 } }),
+    gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { interstateMoneyWiringEnabled: 1 } }
+    ),
     // All countries share this projected obligation load; never one per budget.
     loadRefugeeServiceCosts(db),
     loadCapacityRepairSpending(db),
@@ -722,8 +725,7 @@ export async function calculateStateRevenue(
   };
 
   // Get the current state budget to read tax bases
-  const stateBudget = await stateBudgetsCollection(db)
-    .findOne({ _id: stateId, countryId });
+  const stateBudget = await stateBudgetsCollection(db).findOne({ _id: stateId, countryId });
 
   // Use stored tax bases if available, otherwise derive from state data
   let bases: StateTaxBases;
@@ -734,9 +736,10 @@ export async function calculateStateRevenue(
     const state = await statesCollection(db).findOne({ _id: stateId, countryId });
     // SP5: medianIncome lives on macroMetrics. (Also fixes the legacy filter,
     // which queried a nonexistent stateId field and always fell to the default.)
-    const metrics = await db
-      .collection<MacroMetricsDoc>("macroMetrics")
-      .findOne({ _id: stateId, countryId });
+    const metrics = await macroMetricsCollection<MacroMetricsDoc>(db).findOne({
+      _id: stateId,
+      countryId,
+    });
 
     const population = state?.population || 1000000;
     const medianIncome = metrics?.economic?.medianIncome?.value || 50000;

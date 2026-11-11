@@ -19,6 +19,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 // NPP-run corps have no owner to dissolve an insolvent or bond-defaulted company, so they
 // would bleed liquidCapital negative forever and pollute wealth metrics. Any NPP corps whose
@@ -66,12 +67,10 @@ export async function processNppInsolventCorpDissolution(
   // (efficiency pressure; the reform nudge flows through the marketization
   // policy-stance term, which reads hard budgets as reformist). NPP default is
   // fairly soft, so a hands-off world keeps the historical spare-everyone shape.
-  const gc = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne(
-      { _id: "default" },
-      { projection: { commandEconomyEnabled: 1, nppInsolvencyGraceTurns: 1 } }
-    );
+  const gc = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { commandEconomyEnabled: 1, nppInsolvencyGraceTurns: 1 } }
+  );
   const commandEconomyEnabled = gc?.commandEconomyEnabled === true;
   const graceTurns = insolvencyGraceTurns(gc?.nppInsolvencyGraceTurns);
   const gs = await gameStateCollection(db).findOne(

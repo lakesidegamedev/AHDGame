@@ -35,6 +35,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
 
 const RUSSIAN_COUNCIL_COMPOSITION_SEATINGS_COLLECTION = "russianCouncilCompositionSeatings";
 export interface RussianCouncilCompositionSeating {
@@ -157,8 +158,7 @@ export async function materializeRussianCouncilCompositionSeating(input: {
     )
     .toArray();
   const cabinet = playerIds.length
-    ? await db
-        .collection<UnifiedCabinetMember>("cabinetMembers")
+    ? await cabinetMembersCollection<UnifiedCabinetMember>(db)
         .find(
           { characterId: { $in: playerIds } },
           { session, projection: { characterId: 1 }, batchSize: 1000 }

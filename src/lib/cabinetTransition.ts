@@ -17,6 +17,8 @@ import { cabinetOfficeTypeForCountry } from "@/lib/actions/officeActionBonus";
 import { getCabinetEligibleOfficeTypes } from "@/lib/legislature/chamberOfficeType";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
+import { cabinetNominationsCollection } from "@/lib/db/repositories/cabinetNominations";
 
 /**
  * For the cleared cabinet holders, (1) restore each holder's `currentOffice` so
@@ -135,14 +137,12 @@ export async function clearCabinetOnTransition(db: Db, countryId: CountryId): Pr
 
   if (countryId === COUNTRY_CONFIGS.US.id) {
     // Handle US cabinet (confirmation-based)
-    const members = await db.collection<CabinetMember>("cabinetMembers").find(filter).toArray();
-    await db.collection<CabinetMember>("cabinetMembers").deleteMany(filter);
-    await db
-      .collection<CabinetNomination>("cabinetNominations")
-      .updateMany(
-        { ...filter, status: { $in: ["proposed", "active"] } },
-        { $set: { status: "withdrawn", updatedAt: new Date() } }
-      );
+    const members = await cabinetMembersCollection(db).find(filter).toArray();
+    await cabinetMembersCollection(db).deleteMany(filter);
+    await cabinetNominationsCollection(db).updateMany(
+      { ...filter, status: { $in: ["proposed", "active"] } },
+      { $set: { status: "withdrawn", updatedAt: new Date() } }
+    );
 
     // Restore office state for the cleared secretaries and notify the players.
     // NPP-held seats carry a null characterId: no player to notify, no office
@@ -157,19 +157,16 @@ export async function clearCabinetOnTransition(db: Db, countryId: CountryId): Pr
     // cabinetMembers collection is the single source of truth for seat holders,
     // so a transition clears the country's seats there and restores/notifies the
     // affected players.
-    const members = await db
-      .collection<CabinetMember>("cabinetMembers")
+    const members = await cabinetMembersCollection(db)
       .find({ ...filter, countryId })
       .toArray();
 
-    await db.collection<CabinetMember>("cabinetMembers").deleteMany({ ...filter, countryId });
+    await cabinetMembersCollection(db).deleteMany({ ...filter, countryId });
 
-    await db
-      .collection<CabinetNomination>("cabinetNominations")
-      .updateMany(
-        { ...filter, countryId, status: { $in: ["proposed", "active"] } },
-        { $set: { status: "withdrawn", updatedAt: new Date() } }
-      );
+    await cabinetNominationsCollection(db).updateMany(
+      { ...filter, countryId, status: { $in: ["proposed", "active"] } },
+      { $set: { status: "withdrawn", updatedAt: new Date() } }
+    );
 
     await db.collection("cabinetSettings").deleteMany({ countryId });
     await db

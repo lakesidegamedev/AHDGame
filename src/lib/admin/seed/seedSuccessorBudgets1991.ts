@@ -13,6 +13,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 const COUNTRY_IDS = [
   "RU",
@@ -34,8 +35,7 @@ export async function seedSuccessorBudgets1991(
   if (preset !== "1991-default") return;
   if (reset) {
     await federalBudgetCollection(db).deleteMany({ countryId: { $in: [...COUNTRY_IDS] } });
-    await stateBudgetsCollection(db)
-      .deleteMany({ countryId: { $in: [...COUNTRY_IDS] } });
+    await stateBudgetsCollection(db).deleteMany({ countryId: { $in: [...COUNTRY_IDS] } });
   }
   const budgets = getInitialNationalBudgetsForPreset(preset).filter((budget) =>
     (COUNTRY_IDS as readonly string[]).includes(budget.countryId)
@@ -71,9 +71,10 @@ export async function seedSuccessorBudgets1991(
   // seedRuBudgets returns on 1991; seed RU owned producing SOEs
   // via the RU seeder path (RU states, gated on commandEconomyEnabled).
   // Upserts only, so repeat seeding is stable.
-  const gameConfig = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } });
+  const gameConfig = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { commandEconomyEnabled: 1 } }
+  );
   const commandEconomyEnabled = gameConfig?.commandEconomyEnabled === true;
   const ruStatesForCorps = regions
     .filter((region) => countryHasFeature("ruAdmin", region.countryId))

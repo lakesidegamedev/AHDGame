@@ -71,6 +71,8 @@ import {
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
 
 const STRATEGY_LOCK_MESSAGE: Record<
   "era" | "tech" | "research" | "prerequisite" | "sunset" | "diffusion",
@@ -159,9 +161,10 @@ export async function setSectorStrategy(request: Request, { params }: RouteParam
     const operatingModel = getMediaOperatingModel(strategyId);
     let operatingModelsEnabled = false;
     if (operatingModel) {
-      const config = await db
-        .collection<GameConfig>("gameConfig")
-        .findOne({ _id: "default" }, { projection: { mediaOperatingModelsEnabled: 1 } });
+      const config = await gameConfigCollection(db).findOne(
+        { _id: "default" },
+        { projection: { mediaOperatingModelsEnabled: 1 } }
+      );
       operatingModelsEnabled = config?.mediaOperatingModelsEnabled === true;
       if (!operatingModelsEnabled) {
         return errorResponse(404, "Media operating models are not available.");
@@ -292,8 +295,7 @@ export async function setSectorStrategy(request: Request, { params }: RouteParam
     // resource in global shortage (s/d < 0.5) waives the retool fee and halves
     // the transition window. Lagged balances from commodityPrices — same
     // one-turn lag as every market input. Self-deactivates as supply recovers.
-    const priceBalanceDocs = await db
-      .collection<CommodityPrice>("commodityPrices")
+    const priceBalanceDocs = await commodityPricesCollection(db)
       .find({}, { projection: { commodity: 1, globalSupply: 1, globalDemand: 1 } })
       .toArray();
     const globalBalances = new Map<CommodityType, { supply: number; demand: number }>(

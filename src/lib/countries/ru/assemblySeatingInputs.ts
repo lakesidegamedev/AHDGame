@@ -39,6 +39,7 @@ import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficia
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
 function currentOfficeType(office: NPP["currentOffice"] | string) {
   return typeof office === "string" ? office : office?.type;
 }
@@ -283,8 +284,7 @@ export async function loadRussianAssemblySeatingInputs(
   )
     throw new Error("Assembly handover cannot overwrite unjournaled chamber offices");
   const cabinet = identities.length
-    ? await db
-        .collection<UnifiedCabinetMember>("cabinetMembers")
+    ? await cabinetMembersCollection<UnifiedCabinetMember>(db)
         .find(
           { $or: identities },
           { session, batchSize: 1000, projection: { characterId: 1, nppId: 1, countryId: 1 } }

@@ -38,6 +38,7 @@ import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
 
 export async function materializeRussianDumaConvocationSeating(input: {
   db: Db;
@@ -58,11 +59,10 @@ export async function materializeRussianDumaConvocationSeating(input: {
     { session, projection: { preset: 1 } }
   );
   if (game?.preset !== "1991-default") return false;
-  const country = await countryGameStatesCollection(db)
-    .findOne(
-      { _id: "RU" },
-      { session, projection: { ...RUSSIAN_DUMA_AUTHORITY_PROJECTION, ruCouncilComposition: 1 } }
-    );
+  const country = await countryGameStatesCollection(db).findOne(
+    { _id: "RU" },
+    { session, projection: { ...RUSSIAN_DUMA_AUTHORITY_PROJECTION, ruCouncilComposition: 1 } }
+  );
   if (!country?.ruDumaConvocationCohortId) return false;
   const root = country.ruDumaConvocationCohortId;
   const authority = await loadRussianDumaAuthority({ db, session, country, root, turn });
@@ -264,8 +264,7 @@ export async function materializeRussianDumaConvocationSeating(input: {
     .find({ $or: [{ countryId: "RU" }, ...identities] }, { session, batchSize: 10000 })
     .toArray();
   const cabinet = identities.length
-    ? await db
-        .collection<UnifiedCabinetMember>("cabinetMembers")
+    ? await cabinetMembersCollection<UnifiedCabinetMember>(db)
         .find(
           { $or: identities },
           { session, batchSize: 1000, projection: { characterId: 1, nppId: 1, countryId: 1 } }
@@ -563,8 +562,10 @@ export async function materializeRussianDumaConvocationSeating(input: {
     if (result.matchedCount !== selected.length)
       throw new Error("Duma owner changed during seating");
   }
-  const formation = await governmentFormationsCollection(db)
-    .findOne({ _id: "RU" }, { session, projection: { coalitionPartyIds: 1, governingPartyId: 1 } });
+  const formation = await governmentFormationsCollection(db).findOne(
+    { _id: "RU" },
+    { session, projection: { coalitionPartyIds: 1, governingPartyId: 1 } }
+  );
   if (formation) {
     const supporting = new Set(
       formation.coalitionPartyIds?.length

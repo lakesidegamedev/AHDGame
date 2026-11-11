@@ -7,6 +7,8 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { createModAuditLog } from "@/lib/modAuditLog";
 import { z } from "zod";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
 
 const positionValue = z.number().int().min(-5).max(5);
 
@@ -45,7 +47,7 @@ export async function PATCH(request: Request) {
     // Resolve the linked account for the admin-account guard and audit-log
     // attribution (NPCs may have no linked user).
     const user = character.userId
-      ? await db.collection("users").findOne({ _id: character.userId })
+      ? await usersCollection<Document>(db).findOne({ _id: character.userId })
       : null;
     if (user?.role === "admin") {
       return errorResponse(403, "Cannot perform actions on admin accounts");

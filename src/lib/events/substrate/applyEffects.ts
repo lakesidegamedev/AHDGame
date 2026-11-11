@@ -43,6 +43,7 @@ import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 import type { Document } from "mongodb";
+import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
 
 function isCompletedSettlement(result: SettlementResult): boolean {
   return result.status === "applied" || (result.status === "replayed" && !result.error);
@@ -90,8 +91,10 @@ async function resumeFrozenFundedEvent(
   if (!isCompletedSettlement(resumed)) {
     throw new Error(resumed.error ?? `Funded Treasury event receipt ${receiptKey} is incomplete`);
   }
-  const receipt = await bankMoneyMovesCollection<{ _id: string; event?: { meta?: Record<string, unknown> } }>(db)
-    .findOne({ _id: receiptKey }, { projection: { _id: 1, event: 1 } });
+  const receipt = await bankMoneyMovesCollection<{
+    _id: string;
+    event?: { meta?: Record<string, unknown> };
+  }>(db).findOne({ _id: receiptKey }, { projection: { _id: 1, event: 1 } });
   if (!receipt)
     throw new Error(`Funded Treasury event receipt ${receiptKey} disappeared during recovery`);
   return parseFundedEventQuote(receipt, receiptKey);
@@ -170,7 +173,7 @@ async function applyCountryEffects(
       case "approvalDelta": {
         if (effect.delta === 0) break;
         if (ctx.treasuryCashLedgerEnabled) {
-          await ctx.db.collection("governmentApprovals").updateOne(
+          await governmentApprovalsCollection<Document>(ctx.db).updateOne(
             {
               _id: countryId as unknown as ObjectId,
               appliedEventEffects: { $ne: effectKey },
@@ -181,12 +184,10 @@ async function applyCountryEffects(
             }
           );
         } else {
-          await ctx.db
-            .collection("governmentApprovals")
-            .updateOne(
-              { _id: countryId as unknown as ObjectId },
-              { $inc: { approvalRating: effect.delta } }
-            );
+          await governmentApprovalsCollection<Document>(ctx.db).updateOne(
+            { _id: countryId as unknown as ObjectId },
+            { $inc: { approvalRating: effect.delta } }
+          );
         }
         break;
       }
@@ -513,9 +514,10 @@ export async function applyCountryApprovalDelta(
   delta: number
 ): Promise<void> {
   if (delta === 0) return;
-  await db
-    .collection("governmentApprovals")
-    .updateOne({ _id: countryId as unknown as ObjectId }, { $inc: { approvalRating: delta } });
+  await governmentApprovalsCollection<Document>(db).updateOne(
+    { _id: countryId as unknown as ObjectId },
+    { $inc: { approvalRating: delta } }
+  );
 }
 
 export async function applyDeclarativeEffects(
@@ -587,8 +589,10 @@ export async function applyDeclarativeEffects(
         );
         // Campaign documents hold their spendable money in `funds`; every
         // campaign reader and upkeep path uses it, with or without forex.
-        await campaignsCollection<Document>(ctx.db)
-          .updateOne({ characterId, electionId }, { $inc: { funds: localDelta } });
+        await campaignsCollection<Document>(ctx.db).updateOne(
+          { characterId, electionId },
+          { $inc: { funds: localDelta } }
+        );
         break;
       }
       case "campaignSupport": {
@@ -600,14 +604,15 @@ export async function applyDeclarativeEffects(
           candidateIdRaw instanceof ObjectId
             ? candidateIdRaw
             : new ObjectId(String(candidateIdRaw));
-        const candidate = await electionCandidatesCollection(ctx.db)
-          .findOne({ _id: candidateId });
+        const candidate = await electionCandidatesCollection(ctx.db).findOne({ _id: candidateId });
         if (!candidate) {
           break;
         }
         const next = clampStat((candidate.support ?? 50) + effect.delta);
-        await electionCandidatesCollection(ctx.db)
-          .updateOne({ _id: candidateId }, { $set: { support: next } });
+        await electionCandidatesCollection(ctx.db).updateOne(
+          { _id: candidateId },
+          { $set: { support: next } }
+        );
         break;
       }
       case "corpSentiment": {

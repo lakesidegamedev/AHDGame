@@ -28,6 +28,9 @@ import {
 import { getGameTime } from "@/lib/time/gameTime";
 import { TreasuryExecutionUncertainError } from "@/lib/treasury/executionUncertain";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { adminLogsCollection } from "@/lib/db/repositories/adminLogs";
+import { activityLogCollection } from "@/lib/db/repositories/activityLog";
+import type { Document } from "mongodb";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; slug: string }>;
@@ -265,7 +268,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       adminUsername: authUser.username,
       details: `Sent $${sendAmount.toLocaleString()} from caucus ${caucus.name} to ${targetCharacter.name}`,
     };
-    await db.collection<AdminLog>("adminLogs").insertOne(adminLog);
+    await adminLogsCollection(db).insertOne(adminLog);
 
     await emitTreasuryTransaction({
       db,
@@ -293,7 +296,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       now,
     });
 
-    void db.collection("activityLog").insertOne({
+    void activityLogCollection<Document>(db).insertOne({
       type: "fund_event",
       timestamp: now,
       userId: new ObjectId(authUser.userId),

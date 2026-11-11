@@ -15,6 +15,7 @@ import type { CabinetNomination, ElectedOfficial, Character } from "@/lib/db/typ
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { cabinetNominationsCollection } from "@/lib/db/repositories/cabinetNominations";
 
 const VOTING_DURATION_HOURS = 24;
 const VOTING_DURATION_MS = VOTING_DURATION_HOURS * 60 * 60 * 1000;
@@ -75,9 +76,10 @@ export async function POST(request: Request) {
     }
 
     // No existing active VP nomination
-    const existing = await db
-      .collection<CabinetNomination>("cabinetNominations")
-      .findOne({ positionId: "vicePresident", status: { $in: ["active", "proposed"] } });
+    const existing = await cabinetNominationsCollection(db).findOne({
+      positionId: "vicePresident",
+      status: { $in: ["active", "proposed"] },
+    });
     if (existing) {
       return errorResponse(409, "A VP nomination is already pending Senate confirmation");
     }
@@ -132,9 +134,9 @@ export async function POST(request: Request) {
       updatedAt: now,
     };
 
-    const result = await db
-      .collection<CabinetNomination>("cabinetNominations")
-      .insertOne(nomination as unknown as CabinetNomination);
+    const result = await cabinetNominationsCollection(db).insertOne(
+      nomination as unknown as CabinetNomination
+    );
 
     // Notify all US senators and representatives (player characters)
     const legislators = await electedOfficialsCollection(db)

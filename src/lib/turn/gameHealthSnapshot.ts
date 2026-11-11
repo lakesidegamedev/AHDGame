@@ -40,6 +40,8 @@ import { electionsCollection } from "@/lib/db/repositories/elections";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 
 type SeatScopedOfficial = ElectedOfficial & { seatId?: string };
 
@@ -542,7 +544,7 @@ async function collectPopulationStats(db: Db): Promise<PopulationStats> {
     filledSeats,
     enabledIds,
   ] = await Promise.all([
-    db.collection("users").countDocuments({ banned: { $ne: true } }),
+    usersCollection<Document>(db).countDocuments({ banned: { $ne: true } }),
     charactersCollection<Document>(db).countDocuments(),
     nppsCollection<Document>(db).countDocuments(),
     db.collection("seats").countDocuments(),
@@ -704,8 +706,7 @@ async function collectEconomyStats(db: Db): Promise<EconomyStats> {
     stateGdps,
     fundAggs,
   ] = await Promise.all([
-    db
-      .collection<StateMetrics>("macroMetrics")
+    macroMetricsCollection(db)
       // (#2166): only the gdpGrowth value is read below.
       .find({ _id: { $in: nationalIds } }, { projection: { "economic.gdpGrowth.value": 1 } })
       .toArray(),

@@ -6,6 +6,7 @@ import type { State, StateMetrics, GameState } from "@/lib/db/types";
 import type { RegionDemographics } from "@/lib/db/types/regionDemographics";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -34,7 +35,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
 
     const [demo, metrics, gameState] = await Promise.all([
       db.collection<RegionDemographics>("regionDemographics").findOne({ _id: stateId }),
-      db.collection<StateMetrics>("macroMetrics").findOne({ _id: stateId }),
+      macroMetricsCollection(db).findOne({ _id: stateId }),
       gameStateCollection(db).findOne({ _id: "current" }),
     ]);
 

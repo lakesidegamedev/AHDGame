@@ -16,6 +16,9 @@ import { requirePlayerTransfersEnabled } from "@/lib/api/requirePlayerTransfers"
 import { emitTreasuryTransaction } from "@/lib/treasury/emit";
 import { isSameCountry } from "@/lib/api/sameCountry";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { adminLogsCollection } from "@/lib/db/repositories/adminLogs";
+import type { Document } from "mongodb";
+import { activityLogCollection } from "@/lib/db/repositories/activityLog";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; slug: string }>;
@@ -156,7 +159,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       }
     }
 
-    await db.collection("adminLogs").insertOne({
+    await adminLogsCollection<Document>(db).insertOne({
       category: "system",
       action: "funds_transferred",
       username: authUser.username,
@@ -203,7 +206,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       now,
     });
 
-    void db.collection("activityLog").insertOne({
+    void activityLogCollection<Document>(db).insertOne({
       type: "fund_event",
       timestamp: now,
       userId: new ObjectId(authUser.userId),

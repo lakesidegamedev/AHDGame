@@ -86,6 +86,8 @@ import type { Document } from "mongodb";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
+import { politicalMetricsCollection } from "@/lib/db/repositories/politicalMetrics";
 
 const EXCHANGE_NAMES: Record<string, string> = getExchangeNamesMap();
 
@@ -334,8 +336,7 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
             }
           )
           .toArray(),
-        database
-          .collection<CorporationHistory>("corporationHistory")
+        corporationHistoryCollection(database)
           .aggregate<{
             _id: ObjectId;
             h1?: RawHistorySlot;
@@ -521,10 +522,7 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
       const stateCountryMap = new Map(allStates.map((s) => [s._id, s.countryId]));
 
       // SP4 §4a: political margin overlays for playable regions.
-      const politicalDocs = await database
-        .collection<PoliticalMetricsDoc>("politicalMetrics")
-        .find({})
-        .toArray();
+      const politicalDocs = await politicalMetricsCollection(database).find({}).toArray();
       const politicalBaseModifiersByState = new Map(
         politicalDocs.map((doc) => [String(doc._id), buildPoliticalBaseModifiers(doc.values)])
       );
@@ -614,8 +612,10 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
       const bailoutCorps = corporations.filter((c) => c.imfBailoutActive === true);
       if (bailoutCorps.length > 0) {
         const bailoutCorpIds = bailoutCorps.map((c) => c._id);
-        const bailoutIncomeRows = await database
-          .collection<{ corporationId: ObjectId; income?: number }>("corporationHistory")
+        const bailoutIncomeRows = await corporationHistoryCollection<{
+          corporationId: ObjectId;
+          income?: number;
+        }>(database)
           .aggregate<{ _id: ObjectId; income: number }>([
             { $match: { corporationId: { $in: bailoutCorpIds } } },
             // Sort by group key first so the {corporationId, turn} index serves the pipeline as a DISTINCT_SCAN instead of walking the full history.

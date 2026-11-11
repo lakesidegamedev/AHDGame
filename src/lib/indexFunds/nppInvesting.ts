@@ -39,6 +39,7 @@ import { isLedgerShadowEnabledFromConfig } from "@/lib/ledger/featureFlag";
 import type { LedgerEntryInput } from "@/lib/ledger/types";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 // ── GDP per capita by country (USD-equivalent, annual) ────────────────
 // These are approximate 2024 GDP per capita figures used to determine NPP
@@ -574,9 +575,10 @@ export async function processNPPFundInvestments(
     }
   }
   if (ledgerEntries.length > 0) {
-    const config = await db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { ledgerShadow: 1 } });
+    const config = await gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { ledgerShadow: 1 } }
+    );
     if (isLedgerShadowEnabledFromConfig(config)) {
       await emitLedgerEntries(db, ledgerEntries);
     }
@@ -779,7 +781,9 @@ export async function processNPPFundInvestments(
             };
           }
         );
-        const result = await indexFundsCollection<Document>(db).bulkWrite(undoOps, { ordered: false });
+        const result = await indexFundsCollection<Document>(db).bulkWrite(undoOps, {
+          ordered: false,
+        });
         assertCompensationCount(
           "fund compensation",
           result.modifiedCount,
@@ -813,7 +817,9 @@ export async function processNPPFundInvestments(
   try {
     if (fundOps.length > 0) {
       completed.funds = "uncertain";
-      const result = await indexFundsCollection<Document>(db).bulkWrite(fundOps, { ordered: false });
+      const result = await indexFundsCollection<Document>(db).bulkWrite(fundOps, {
+        ordered: false,
+      });
       assertBulkWriteCount("fund subscription credits", result.modifiedCount, fundOps.length);
       completed.funds = "confirmed";
     }

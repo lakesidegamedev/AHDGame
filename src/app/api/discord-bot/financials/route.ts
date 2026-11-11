@@ -50,6 +50,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -134,8 +135,7 @@ export async function GET(request: Request) {
               .toArray(),
             // SP5: unemployment lives on macroMetrics (workforceSkill flows
             // through loadWorkforceSkillByState separately).
-            db
-              .collection<StateMetrics>("macroMetrics")
+            macroMetricsCollection(db)
               .find(
                 { _id: { $in: uniqueStateIds } },
                 { projection: { "economic.unemploymentRate.value": 1 } }

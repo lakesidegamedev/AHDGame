@@ -11,6 +11,7 @@ import {
   startPatreonGracePeriod,
 } from "@/lib/patreon/service";
 import type { User } from "@/lib/db/types";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 // POST /api/webhooks/lakeside-subscription
 // Lakeside portal pushes Stripe subscription changes here so AHD grants
@@ -53,9 +54,9 @@ export async function POST(request: Request) {
     // Match the shared Lakeside account by lowercased email (case-insensitive
     // exact match, mirroring the Patreon reconciler's email matching).
     const normalized = email.trim().toLowerCase();
-    const user = await db
-      .collection<User>("users")
-      .findOne({ email: { $regex: `^${escapeRegex(normalized)}$`, $options: "i" } });
+    const user = await usersCollection(db).findOne({
+      email: { $regex: `^${escapeRegex(normalized)}$`, $options: "i" },
+    });
 
     if (!user) {
       return errorResponse(404, "unknown_email", { extra: { ok: false } });

@@ -66,6 +66,7 @@ import { getCharactersCollection } from "@/lib/db/collections/characters";
 import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 
 /**
  * Maximum |modifier| any single metric can receive per turn from the combined
@@ -692,7 +693,7 @@ export async function processMinisterialOrders(currentTurn: number): Promise<{
   }
 
   if (macroMetricsBulkOps.length > 0) {
-    await db.collection<StateMetrics>("macroMetrics").bulkWrite(macroMetricsBulkOps);
+    await macroMetricsCollection(db).bulkWrite(macroMetricsBulkOps);
   }
 
   // Persist discretionary monetary-policy inflation pressure per bank (steady-state pp).

@@ -5,6 +5,8 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import { z } from "zod";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { adminLogsCollection } from "@/lib/db/repositories/adminLogs";
+import type { Document } from "mongodb";
 
 const setCashSchema = z.object({
   liquidCapital: z.number().min(0).max(1_000_000_000),
@@ -57,7 +59,7 @@ export async function POST(request: NextRequest) {
     const result = await corporationsCollection(db).updateMany({}, { $set: { liquidCapital } });
 
     // Log admin action
-    await db.collection("adminLogs").insertOne({
+    await adminLogsCollection<Document>(db).insertOne({
       action: "heal_corporation_cash",
       admin: auth.admin.username,
       details: { liquidCapital, corporationsUpdated: result.modifiedCount },

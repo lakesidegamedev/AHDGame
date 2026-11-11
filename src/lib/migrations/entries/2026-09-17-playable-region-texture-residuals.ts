@@ -5,6 +5,7 @@ import type { PoliticalMetricsDoc } from "@/lib/db/types/politicalMetrics";
 import { getRegionalTexture1953 } from "@/lib/politicalMetrics/seeds/regionalTexture1953";
 import { POLITICAL_METRIC_COUNTRY_IDS, type PoliticalMetricId } from "@/lib/politicalMetrics/types";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { politicalMetricsCollection } from "@/lib/db/repositories/politicalMetrics";
 
 const PRESET = "1953-default";
 const STARTING_YEAR = 1953;
@@ -45,8 +46,7 @@ async function backfillPlayableTextureResiduals(db: Db, dryRun: boolean): Promis
     };
   }
 
-  const docs = await db
-    .collection<PoliticalMetricsDoc>("politicalMetrics")
+  const docs = await politicalMetricsCollection(db)
     .find({ countryId: { $in: [...POLITICAL_METRIC_COUNTRY_IDS] } })
     .toArray();
 
@@ -131,9 +131,7 @@ async function backfillPlayableTextureResiduals(db: Db, dryRun: boolean): Promis
     return { documentsScanned: scanned, documentsUpdated: 0, notes };
   }
 
-  const result = await db
-    .collection<PoliticalMetricsDoc>("politicalMetrics")
-    .bulkWrite(ops, { ordered: false });
+  const result = await politicalMetricsCollection(db).bulkWrite(ops, { ordered: false });
   const documentsUpdated = result.modifiedCount ?? 0;
   if (documentsUpdated !== ops.length) {
     notes.push(

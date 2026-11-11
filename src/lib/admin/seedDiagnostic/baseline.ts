@@ -19,6 +19,8 @@ import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
+import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
 
 const BASELINE_COLLECTION = "seedDiagnosticBaselines";
 export const BASELINE_ID = "current" as const;
@@ -49,8 +51,7 @@ function setMetric(metrics: Record<string, number>, id: string, value: number | 
  * At fresh seed most output sits in unowned; after play it migrates to corps.
  */
 async function sumSectorAggregate(db: Db, countryId: string): Promise<number> {
-  const unowned = await db
-    .collection<{ revenue?: number }>("unownedSectors")
+  const unowned = await unownedSectorsCollection<{ revenue?: number }>(db)
     .find({ countryId })
     .project({ revenue: 1 })
     .toArray();
@@ -69,8 +70,7 @@ async function sumSectorAggregate(db: Db, countryId: string): Promise<number> {
  * no usable rows exist.
  */
 async function commodityPriceIndex(db: Db): Promise<number | null> {
-  const rows = await db
-    .collection<{ globalPrice?: number; basePrice?: number }>("commodityPrices")
+  const rows = await commodityPricesCollection<{ globalPrice?: number; basePrice?: number }>(db)
     .find({})
     .project({ globalPrice: 1, basePrice: 1 })
     .toArray();

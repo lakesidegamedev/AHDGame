@@ -47,6 +47,7 @@ import { fundPoliticalMediaOrder } from "@/lib/politicalMedia/journal";
 import { applySlantToAdvertise, loadStateSlant } from "@/lib/mediaEditorial/slant";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 function clampAddExpression(fieldPath: string, delta: number, min: number, max: number) {
   return {
@@ -150,7 +151,7 @@ async function executeCharacterActionImpl(
   const gameState = await getGameState();
   timing.dbReadMs += Date.now() - dbStartedAt;
   dbStartedAt = Date.now();
-  const gameConfig = await db.collection<GameConfig>("gameConfig").findOne(
+  const gameConfig = await gameConfigCollection(db).findOne(
     { _id: "default" },
     {
       projection: {

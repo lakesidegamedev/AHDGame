@@ -55,6 +55,8 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { unionsCollection } from "@/lib/db/repositories/unions";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 
 function campaignResult(campaign: BargainingCampaign): Extract<UnionActionResult, { ok: true }> {
   return {
@@ -78,8 +80,7 @@ export async function costOfLivingByState(
 ): Promise<Map<string, number>> {
   const stateIds = [...new Set(locals.map((local) => local.stateId).filter(Boolean))];
   if (stateIds.length === 0) return new Map();
-  const metrics = await db
-    .collection<StateMetrics>("macroMetrics")
+  const metrics = await macroMetricsCollection(db)
     .find({ _id: { $in: stateIds } }, { projection: { "economic.costOfLiving": 1 } })
     .toArray();
   const byState = new Map<string, number>();
@@ -114,9 +115,10 @@ export async function bargainingMacroInputs(db: Db, countryId: Union["countryId"
   const nationalDocId = getNationalDocId(countryId);
   const [metrics, budget, states, labourConfig] = await Promise.all([
     nationalDocId
-      ? db
-          .collection<StateMetrics>("macroMetrics")
-          .findOne({ _id: nationalDocId }, { projection: { "economic.unemploymentRate": 1 } })
+      ? macroMetricsCollection(db).findOne(
+          { _id: nationalDocId },
+          { projection: { "economic.unemploymentRate": 1 } }
+        )
       : null,
     federalBudgetCollection(db).findOne(
       { _id: getNationalBudgetId(countryId) },
@@ -125,16 +127,13 @@ export async function bargainingMacroInputs(db: Db, countryId: Union["countryId"
     statesCollection(db)
       .find({ countryId }, { projection: { _id: 1 } })
       .toArray(),
-    db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { labourSystemMode: 1 } }),
+    gameConfigCollection(db).findOne({ _id: "default" }, { projection: { labourSystemMode: 1 } }),
   ]);
   const unemploymentFallback = metrics?.economic?.unemploymentRate?.value ?? 5;
   let laborTightness = laborTightnessFromUnemployment(unemploymentFallback);
   const stateIds = states.map((state) => state._id);
   if (stateIds.length > 0 && (await isLabourMacroEnabled(labourConfig))) {
-    const stateDocs = await db
-      .collection<StateMetrics>("macroMetrics")
+    const stateDocs = await macroMetricsCollection(db)
       .find(
         { _id: { $in: stateIds } },
         { projection: { "economic.labourTightness.value": 1, "economic.laborForce.value": 1 } }

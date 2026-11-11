@@ -132,6 +132,8 @@ import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 
 /** Default unemployment when a state has no prior reading (matches gdpGrowth.ts `?? 4.5`). */
 const DEFAULT_UNEMPLOYMENT = 4.5;
@@ -369,11 +371,7 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
     capacityObligations,
   ] = await Promise.all([
     statesCollection(db).find({}).toArray(),
-    db
-      .collection<StateMetrics>("macroMetrics")
-      .find({})
-      .project<PrevMetricsDoc>(PREV_PROJECTION)
-      .toArray(),
+    macroMetricsCollection(db).find({}).project<PrevMetricsDoc>(PREV_PROJECTION).toArray(),
     sectorRevenueTaxProvider(db, turn),
     // Per-country prime rate drives capital investment (P1c-0). Batched here so
     // there is no per-region round trip.
@@ -392,8 +390,7 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
     // v2-2: read the labour mode via the SAME db (mock-db safe — see the
     // demographics-phase gotcha) so labourWageIndexDelta only feeds
     // medianIncome at labourSystemMode ≥ "macro".
-    db
-      .collection<GameConfig>("gameConfig")
+    gameConfigCollection(db)
       .findOne(
         { _id: "default" },
         {
@@ -1410,7 +1407,7 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
   }
 
   if (macroOps.length > 0) {
-    await db.collection<StateMetrics>("macroMetrics").bulkWrite(macroOps);
+    await macroMetricsCollection(db).bulkWrite(macroOps);
   }
   if (stateOps.length > 0) {
     await statesCollection(db).bulkWrite(stateOps);

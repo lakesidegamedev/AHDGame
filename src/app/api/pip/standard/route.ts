@@ -22,6 +22,8 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { notificationsCollection } from "@/lib/db/repositories/notifications";
 
 export async function GET() {
   try {
@@ -37,9 +39,10 @@ export async function GET() {
     }
 
     const userId = new ObjectId(auth.user.userId);
-    const user = await db
-      .collection<User>("users")
-      .findOne({ _id: userId }, { projection: { notificationPreferences: 1 } });
+    const user = await usersCollection(db).findOne(
+      { _id: userId },
+      { projection: { notificationPreferences: 1 } }
+    );
     const visibility = notificationTypeFilter(user?.notificationPreferences, new Date());
 
     const [
@@ -66,15 +69,12 @@ export async function GET() {
             partyId: character.party,
           })
         : null,
-      db
-        .collection<Notification>("notifications")
+      notificationsCollection(db)
         .find({ userId, ...visibility, read: false })
         .sort({ createdAt: -1 })
         .limit(3)
         .toArray(),
-      db
-        .collection<Notification>("notifications")
-        .countDocuments({ userId, ...visibility, read: false }),
+      notificationsCollection(db).countDocuments({ userId, ...visibility, read: false }),
       db
         .collection("playerMail")
         .countDocuments({ toUserId: userId, read: false, deletedByRecipient: false }),

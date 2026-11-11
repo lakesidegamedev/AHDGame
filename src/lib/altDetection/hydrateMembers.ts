@@ -11,6 +11,7 @@ import type { Character, User } from "@/lib/db/types";
 import { discordCreatedAtFromSnowflake, getDiscordAvatarUrl } from "@/lib/discord";
 import { maskEmail, maskIp } from "@/lib/altDetection/signals";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 export interface HydratedAltMember {
   userId: string;
@@ -142,8 +143,7 @@ export async function hydrateAltMembers(
   const unique = [...new Map(userIds.map((id) => [id.toString(), id])).values()];
 
   const [users, characters] = await Promise.all([
-    db
-      .collection<User>("users")
+    usersCollection(db)
       .find({ _id: { $in: unique } }, { projection: USER_PROJECTION })
       .toArray(),
     charactersCollection(db)

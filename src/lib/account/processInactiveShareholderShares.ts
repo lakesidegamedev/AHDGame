@@ -5,6 +5,7 @@ import { releaseCharacterHeldSharesToFloat } from "@/lib/corporations/releaseCha
 import { isUserActive, INACTIVE_SHAREHOLDER_TURN_THRESHOLD } from "@/lib/players/playerActivity";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 export interface ProcessInactiveShareholderSharesOptions {
   now: Date;
@@ -89,8 +90,7 @@ export async function processInactiveShareholderShares(
 
   // 4. Keep only inactive holder users.
   const holderUserIds = [...charIdsByUser.keys()].map((id) => new ObjectId(id));
-  const users = await db
-    .collection<User>("users")
+  const users = await usersCollection(db)
     .find(
       { _id: { $in: holderUserIds } },
       { projection: { _id: 1, lastActivity: 1, createdAt: 1 } }

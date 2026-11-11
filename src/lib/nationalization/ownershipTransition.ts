@@ -124,6 +124,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 export {
   settleFundedWholeCorpLiquidation,
   settleFundedWholeCorpShareholderPool,
@@ -452,7 +453,7 @@ export async function releaseForeignSectorToUnowned(
     const releaseCountryId = releaseState?.countryId ?? sector.countryId;
     const restoreToken = sector._id.toHexString();
     const retryWindowStart = new Date(now.getTime() - UNOWNED_RELEASE_RETRY_WINDOW_MS);
-    await db.collection<UnownedSector>("unownedSectors").findOneAndUpdate(
+    await unownedSectorsCollection(db).findOneAndUpdate(
       {
         stateId: sector.stateId,
         sectorType: sector.sectorType,
@@ -595,7 +596,7 @@ export async function releaseForeignSectorToUnowned(
   if (removed.deletedCount !== 1)
     throw badRequest("The sector transition reservation was lost during release");
   if (revenueAnchor > 0) {
-    const acknowledged = await db.collection<UnownedSector>("unownedSectors").findOneAndUpdate(
+    const acknowledged = await unownedSectorsCollection(db).findOneAndUpdate(
       {
         stateId: sector.stateId,
         sectorType: sector.sectorType,

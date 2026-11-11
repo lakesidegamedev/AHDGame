@@ -66,6 +66,11 @@ import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParti
 import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
+import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
+import { stateBaselinesCollection } from "@/lib/db/repositories/stateBaselines";
 
 /**
  * What `runSeed`'s reset branch deletes, and how far.
@@ -280,8 +285,7 @@ export async function runSeed(
 
   // Grant all achievements to admin characters (runs every seed)
   if (achievementDocs.length > 0) {
-    const adminUsers = await db
-      .collection<User>("users")
+    const adminUsers = await usersCollection(db)
       .find({ $or: [{ isAdmin: true }, { role: "admin" }] })
       .toArray();
     const adminUserIds = adminUsers.map((u) => u._id);
@@ -367,9 +371,10 @@ export async function runSeed(
     // per-world markers the turn engine stamped onto it, so the operational
     // half of the document (maintenance, webhooks, feature gates) survives.
     try {
-      await db
-        .collection<GameConfig>("gameConfig")
-        .updateOne({ _id: gameConfig._id }, { $unset: STALE_PER_WORLD_GAME_CONFIG_UNSET });
+      await gameConfigCollection(db).updateOne(
+        { _id: gameConfig._id },
+        { $unset: STALE_PER_WORLD_GAME_CONFIG_UNSET }
+      );
     } catch (error) {
       throw new Error("RESET cleanup failed while clearing per-world gameConfig markers", {
         cause: error,
@@ -452,9 +457,11 @@ export async function runSeed(
       cachedSocialLean: calculatedLean.socialLean,
     };
     seededDemographicsCount++;
-    await db
-      .collection<StateDemographics>("stateDemographics")
-      .updateOne({ _id: sd._id }, { $set: cachedDemographics }, { upsert: true });
+    await stateDemographicsCollection(db).updateOne(
+      { _id: sd._id },
+      { $set: cachedDemographics },
+      { upsert: true }
+    );
     await db
       .collection<StateDemographics>("demographicDefaults")
       .updateOne({ _id: sd._id }, { $set: cachedDemographics }, { upsert: true });
@@ -494,7 +501,7 @@ export async function runSeed(
     ),
   };
   for (const sid of usStateIds) {
-    await db.collection<StateDemographicTurnout>("stateDemographicTurnout").updateOne(
+    await stateDemographicTurnoutCollection(db).updateOne(
       { _id: sid },
       {
         $set: {
@@ -541,9 +548,11 @@ export async function runSeed(
   // operator intent to protect, so it takes the reference tier, and the stamps
   // naming whoever chose the old world's tier go with it.
   const seedYear = parseInt(era, 10);
-  await db
-    .collection<GameConfig>("gameConfig")
-    .updateOne({ _id: gameConfig._id }, coreGameConfigUpdate(reset, seedYear), { upsert: true });
+  await gameConfigCollection(db).updateOne(
+    { _id: gameConfig._id },
+    coreGameConfigUpdate(reset, seedYear),
+    { upsert: true }
+  );
   log("Seeded game config");
 
   // Political parties — sort by seedOrder to guarantee deterministic sequentialId assignment
@@ -583,12 +592,11 @@ export async function runSeed(
 
   // State party org
   for (const org of statePartyOrg) {
-    await statePartyOrgCollection(db)
-      .updateOne(
-        { _id: org._id },
-        { $set: { ...org, updatedAt: now }, $setOnInsert: { createdAt: now } },
-        { upsert: true }
-      );
+    await statePartyOrgCollection(db).updateOne(
+      { _id: org._id },
+      { $set: { ...org, updatedAt: now }, $setOnInsert: { createdAt: now } },
+      { upsert: true }
+    );
   }
   log(`Seeded ${statePartyOrg.length} state party org entries`);
 
@@ -643,9 +651,11 @@ export async function runSeed(
     // Align the US decay targets with the authored metric values (both eras).
     const overlay = getRegionMetricPresets("US", String(raw._id), preset);
     const baseline = overlay ? applyMetricPresetToBaseline(adjusted, overlay) : adjusted;
-    await db
-      .collection<StateMetricBaseline>("stateBaselines")
-      .updateOne({ _id: baseline._id }, { $set: baseline }, { upsert: true });
+    await stateBaselinesCollection(db).updateOne(
+      { _id: baseline._id },
+      { $set: baseline },
+      { upsert: true }
+    );
   }
   log(`Seeded ${stateBaselines.length} state baselines (preset: ${preset})`);
 
@@ -655,8 +665,9 @@ export async function runSeed(
     "immigration", // Split into border_security_enforcement + legal_immigration_visas
     "medicare", // Redundant with federal_healthcare_funding and drug_pricing_medicare
   ];
-  const deleteResult = await legislationTypesCollection(db)
-    .deleteMany({ _id: { $in: DEPRECATED_TYPE_IDS } });
+  const deleteResult = await legislationTypesCollection(db).deleteMany({
+    _id: { $in: DEPRECATED_TYPE_IDS },
+  });
   if (deleteResult.deletedCount > 0) {
     log(`Deleted ${deleteResult.deletedCount} deprecated legislation types`);
   }
@@ -731,12 +742,10 @@ export async function runSeed(
   }
 
   // Indexes
-  await db
-    .collection("users")
+  await usersCollection<Document>(db)
     .createIndex({ email: 1 }, { unique: true })
     .catch(() => {});
-  await db
-    .collection("users")
+  await usersCollection<Document>(db)
     .createIndex({ username: 1 }, { unique: true })
     .catch(() => {});
   // Non-unique: multiple characters per userId are allowed in test mode and for admins.
@@ -813,13 +822,11 @@ export async function runRegionDerivedStage(
   // `reference` so teardown does not sweep it, and a pin left from the previous world
   // would otherwise hold this one to the old world's numbers, which is a worse version
   // of the bug the pin exists to fix. See `seedRosterUpkeepPin.ts`.
-  await db
-    .collection("gameConfig")
-    .updateOne(
-      { _id: "default" as unknown as never },
-      { $set: { seedRosterUpkeep: captureSeedRosterUpkeepPin(preset) } },
-      { upsert: true }
-    );
+  await gameConfigCollection<Document>(db).updateOne(
+    { _id: "default" as unknown as never },
+    { $set: { seedRosterUpkeep: captureSeedRosterUpkeepPin(preset) } },
+    { upsert: true }
+  );
   clearSeedRosterUpkeepPinCache();
 
   // Replacement-manpower pool at 25% of each nation's ceiling. Population is

@@ -6,6 +6,7 @@ import type { Db } from "mongodb";
 import type { MacroMetricsDoc } from "@/lib/db/types/macroMetrics";
 import type { IndependenceDesireDriftResult } from "@/lib/governorOffice/devolution/rules";
 import { loadIndependenceDesireSnapshots } from "@/lib/governorOffice/devolution/queries";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 export * from "@/lib/governorOffice/devolution/rules";
 export {
   computeIndependenceDesireDriftForRegion,
@@ -33,6 +34,6 @@ export async function processIndependenceDesireDrift(
   }));
   // A PM decision or referendum count may have changed Desire since the read.
   // Leave that newer value intact; the next turn computes a fresh drift.
-  const result = await db.collection<MacroMetricsDoc>("macroMetrics").bulkWrite(writes);
+  const result = await macroMetricsCollection<MacroMetricsDoc>(db).bulkWrite(writes);
   return { regionsProcessed: result.matchedCount, perRegion };
 }

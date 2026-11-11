@@ -125,6 +125,8 @@ import { electionCandidatesCollection } from "@/lib/db/repositories/electionCand
 import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
+import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
 
 /** Vote multiplier applied in a state when its sitting governor has endorsed
  *  the candidate. Half of the VP-home-state effect — a real in-state lift
@@ -256,8 +258,7 @@ export async function initPresidentVoteTally(
   // Preserve primary-phase fields across the primary→general tally reset so
   // the historical primary map and delegate tally remain visible after the
   // general phase begins. Only the general-phase counters are zeroed.
-  const existing = await electionVoteTalliesCollection(db)
-    .findOne({ electionId });
+  const existing = await electionVoteTalliesCollection(db).findOne({ electionId });
 
   const doc: ElectionVoteTally = {
     // Preserve the matched doc's _id: legacy tallies carry an auto-generated
@@ -295,8 +296,7 @@ export async function initPresidentVoteTally(
     updatedAt: now,
   };
 
-  await electionVoteTalliesCollection(db)
-    .replaceOne({ electionId }, doc, { upsert: true });
+  await electionVoteTalliesCollection(db).replaceOne({ electionId }, doc, { upsert: true });
 }
 
 /**
@@ -376,9 +376,7 @@ export async function accumulatePresidentVoteTurn(
 
   const [tally, candidates, election] = await Promise.all([
     electionVoteTalliesCollection(db).findOne({ electionId }),
-    electionCandidatesCollection(db)
-      .find({ electionId, status: "active" })
-      .toArray(),
+    electionCandidatesCollection(db).find({ electionId, status: "active" }).toArray(),
     electionsCollection(db).findOne({ _id: electionId }),
   ]);
 
@@ -416,15 +414,13 @@ export async function accumulatePresidentVoteTurn(
       statesCollection(db)
         .find({ _id: { $in: uniqueStateIds } })
         .toArray(),
-      db
-        .collection<StateDemographics>("stateDemographics")
+      stateDemographicsCollection(db)
         .find({ _id: { $in: uniqueStateIds } })
         .toArray(),
       statePartyOrgCollection(db)
         .find({ stateId: { $in: uniqueStateIds } })
         .toArray(),
-      db
-        .collection<StateDemographicTurnout>("stateDemographicTurnout")
+      stateDemographicTurnoutCollection(db)
         .find({ _id: { $in: uniqueStateIds } })
         .toArray(),
       db

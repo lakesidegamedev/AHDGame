@@ -7,6 +7,7 @@ import type { User } from "@/lib/db/types";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { getTotalPersonalWealth } from "@/lib/currency/characterFunds";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 // GET /api/discord-bot/blackjack/balance?discordId=xxx
 // Returns the player's current liquid capital (cashOnHand) and character info.
@@ -35,7 +36,7 @@ export async function GET(request: Request) {
     const db = await getDb();
 
     // Look up user by Discord ID
-    const user = await db.collection<User>("users").findOne({ discordId });
+    const user = await usersCollection(db).findOne({ discordId });
     if (!user) {
       return errorResponse(404, "No user found with that Discord ID", { extra: { discordId } });
     }

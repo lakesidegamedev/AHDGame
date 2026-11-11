@@ -26,6 +26,7 @@ import { loadFundedBuildDemand } from "./loadFundedBuildDemand";
 import { isCountryBookCommodity } from "@/lib/market/rules/commodityMarketScope";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
 
 type Balance = { supply: number; demand: number };
 
@@ -49,8 +50,7 @@ export interface BuildRoomContext {
 export async function loadBuildRoomContext(db: Db): Promise<BuildRoomContext> {
   const [reachableBooks, priceDocs, funded] = await Promise.all([
     loadReachableBooks(db),
-    db
-      .collection<CommodityPrice>("commodityPrices")
+    commodityPricesCollection(db)
       .find(
         {},
         {

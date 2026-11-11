@@ -83,6 +83,8 @@ import type { Document } from "mongodb";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
+import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
 
 const MS_PER_HOUR = 3_600_000;
 
@@ -230,12 +232,10 @@ export async function runPrimaryStaggerWaveIfDue(
     .toArray();
   if (candidates.length === 0) return null;
 
-  let tally = await electionVoteTalliesCollection(db)
-    .findOne({ electionId: election._id });
+  let tally = await electionVoteTalliesCollection(db).findOne({ electionId: election._id });
   if (!tally) {
     await initPresidentVoteTally(election._id, candidates, undefined, db);
-    tally = await electionVoteTalliesCollection(db)
-      .findOne({ electionId: election._id });
+    tally = await electionVoteTalliesCollection(db).findOne({ electionId: election._id });
     if (!tally) return null;
   }
 
@@ -314,15 +314,13 @@ export async function runPrimaryStaggerWaveIfDue(
   const waveStates = wave.states;
   const [states, demographics, partyOrgs, turnoutDocs] = await Promise.all([
     (await getStatesCollection(db)).find({ _id: { $in: waveStates } }).toArray(),
-    db
-      .collection<StateDemographics>("stateDemographics")
+    stateDemographicsCollection(db)
       .find({ _id: { $in: waveStates } })
       .toArray(),
     statePartyOrgCollection(db)
       .find({ stateId: { $in: waveStates } })
       .toArray(),
-    db
-      .collection<StateDemographicTurnout>("stateDemographicTurnout")
+    stateDemographicTurnoutCollection(db)
       .find({ _id: { $in: waveStates } })
       .toArray(),
   ]);

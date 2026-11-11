@@ -4,6 +4,7 @@ import type { StatePolicy } from "@/lib/db/types/statePolicy";
 import type { CongressionalDistrict } from "@/lib/db/types";
 import { REDISTRICT_AUTHORITY_LAW } from "@/lib/redistricting/caps";
 import { legislativeAuthorityPolicy } from "@/lib/redistricting/seedRedistrictingAuthority";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
 
 /**
  * Backfill the redistricting-authority law to "Legislature-drawn" for every US
@@ -30,8 +31,7 @@ async function backfillRedistrictingAuthority(db: Db, dryRun: boolean): Promise<
     return { documentsScanned: 0, notes };
   }
 
-  const existing = await db
-    .collection<StatePolicy>("statePolicies")
+  const existing = await statePoliciesCollection(db)
     .find({ legislationTypeId: REDISTRICT_AUTHORITY_LAW, stateId: { $in: stateIds } })
     .project<{ stateId: string }>({ stateId: 1 })
     .toArray();
@@ -45,7 +45,7 @@ async function backfillRedistrictingAuthority(db: Db, dryRun: boolean): Promise<
   }
 
   const now = new Date();
-  const result = await db.collection<StatePolicy>("statePolicies").bulkWrite(
+  const result = await statePoliciesCollection(db).bulkWrite(
     missing.map((stateId) => ({
       updateOne: {
         filter: { stateId, legislationTypeId: REDISTRICT_AUTHORITY_LAW },

@@ -6,6 +6,7 @@ import { handleRouteError } from "@/lib/api/errors";
 import type { User } from "@/lib/db/types";
 import { stripPartyMembershipForBannedUser } from "@/lib/account/stripPartyMembershipForBannedUser";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 /**
  * GET /api/admin/heal/banned-party-membership
@@ -18,8 +19,7 @@ export async function GET() {
 
     const db = await getDb();
 
-    const bannedIds = await db
-      .collection<User>("users")
+    const bannedIds = await usersCollection(db)
       .find({ isBanned: true })
       .project<{ _id: ObjectId }>({ _id: 1 })
       .toArray();
@@ -62,8 +62,7 @@ export async function POST() {
 
     const db = await getDb();
 
-    const bannedIds = await db
-      .collection<User>("users")
+    const bannedIds = await usersCollection(db)
       .find({ isBanned: true })
       .project<{ _id: ObjectId }>({ _id: 1 })
       .toArray();

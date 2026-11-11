@@ -7,6 +7,8 @@ import { emitTx, emitTxBulk, loadTxThresholds } from "@/lib/financialTxLog/emit"
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { activityLogCollection } from "@/lib/db/repositories/activityLog";
+import type { Document } from "mongodb";
 
 export type IndexFundTxSource = "player" | "cron_queue";
 
@@ -53,7 +55,7 @@ function logIndexFundActivity(
 ): void {
   if (!params.holder.userId) return;
 
-  void db.collection("activityLog").insertOne({
+  void activityLogCollection<Document>(db).insertOne({
     type: "game_action",
     timestamp: new Date(),
     userId: params.holder.userId,
@@ -344,11 +346,10 @@ export async function resolveIndexFundHolder(
   }
 
   if (entry.holderKind === "imperial_character" && entry.imperialCharacterId) {
-    const imperial = await imperialCharactersCollection(db)
-      .findOne(
-        { _id: entry.imperialCharacterId },
-        { projection: { name: 1, countryId: 1, userId: 1 } }
-      );
+    const imperial = await imperialCharactersCollection(db).findOne(
+      { _id: entry.imperialCharacterId },
+      { projection: { name: 1, countryId: 1, userId: 1 } }
+    );
     if (!imperial) return null;
     return {
       holderKind: "imperial_character",

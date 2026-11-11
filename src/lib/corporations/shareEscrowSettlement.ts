@@ -28,6 +28,7 @@ import {
   refundEquityPoolDebit,
 } from "@/lib/equities/marketPool";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /**
  * Centralized routing for public-float cash settlement. When a currency has an
@@ -216,9 +217,10 @@ export type FloatSellSettlement = {
 
 /** gameConfig.honestBalanceSheetsStage >= 3 caps escrow buybacks by the issuer's cash. */
 async function buybackCappedByCash(db: Db): Promise<boolean> {
-  const cfg = await db
-    .collection<{ honestBalanceSheetsStage?: number }>("gameConfig")
-    .findOne({ _id: "default" as never }, { projection: { honestBalanceSheetsStage: 1 } });
+  const cfg = await gameConfigCollection<{ honestBalanceSheetsStage?: number }>(db).findOne(
+    { _id: "default" as never },
+    { projection: { honestBalanceSheetsStage: 1 } }
+  );
   return (cfg?.honestBalanceSheetsStage ?? 0) >= HONEST_BUYBACK_CAP_STAGE;
 }
 

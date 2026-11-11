@@ -28,6 +28,7 @@ import { loadAnnualSubsidyCostMaps } from "@/lib/subsidies/subsidyBudgetCosts";
 import { COUNTRY_CONFIGS, getCountryConfig, type CountryId } from "@/lib/constants/countries";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
 
 // ── Pure calculation ─────────────────────────────────────────────────────────
 
@@ -262,13 +263,11 @@ export async function processOnePartyRegionalBudgets(
 
   const regionIds = regions.map((r) => r._id as string);
 
-  const allRegionalPolicies = await db
-    .collection<StatePolicy>("statePolicies")
+  const allRegionalPolicies = await statePoliciesCollection(db)
     .find({ stateId: { $in: regionIds } })
     .toArray();
 
-  const nationalPolicies = await db
-    .collection<StatePolicy>("statePolicies")
+  const nationalPolicies = await statePoliciesCollection(db)
     .find({ stateId: `${countryId.toLowerCase()}_national` })
     .toArray();
 
@@ -440,7 +439,7 @@ export async function processOnePartyRegionalBudgets(
   }
 
   if (statePolicyOps.length > 0) {
-    await db.collection<StatePolicy>("statePolicies").bulkWrite(statePolicyOps);
+    await statePoliciesCollection(db).bulkWrite(statePolicyOps);
   }
   if (regionalBudgetOps.length > 0) {
     await db.collection<RegionalBudget>("regionalBudgets").bulkWrite(regionalBudgetOps);

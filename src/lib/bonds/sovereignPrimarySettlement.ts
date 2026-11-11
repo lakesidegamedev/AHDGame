@@ -27,6 +27,7 @@ import {
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 export interface PrimaryAccountingContext {
   ledgerShadow: boolean;
@@ -101,25 +102,23 @@ export function primaryFinancingRate(
 
 export async function loadPrimaryAccounting(db: Db): Promise<PrimaryAccountingContext> {
   const [config, rates, gameState, ledgerTurn] = await Promise.all([
-    db
-      .collection<{
-        _id: string;
-        ledgerShadow?: boolean;
-        turnLengthMinutes?: number;
-        treasuryCashLedgerEnabled?: boolean;
-        fiscalScaleStage?: number;
-      }>("gameConfig")
-      .findOne(
-        { _id: "default" },
-        {
-          projection: {
-            ledgerShadow: 1,
-            turnLengthMinutes: 1,
-            treasuryCashLedgerEnabled: 1,
-            fiscalScaleStage: 1,
-          },
-        }
-      ),
+    gameConfigCollection<{
+      _id: string;
+      ledgerShadow?: boolean;
+      turnLengthMinutes?: number;
+      treasuryCashLedgerEnabled?: boolean;
+      fiscalScaleStage?: number;
+    }>(db).findOne(
+      { _id: "default" },
+      {
+        projection: {
+          ledgerShadow: 1,
+          turnLengthMinutes: 1,
+          treasuryCashLedgerEnabled: 1,
+          fiscalScaleStage: 1,
+        },
+      }
+    ),
     exchangeRatesCollection<{ currencyCode: string; rate: number }>(db)
       .find({}, { projection: { currencyCode: 1, rate: 1 } })
       .toArray(),

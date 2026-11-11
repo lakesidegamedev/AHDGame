@@ -2,6 +2,7 @@ import type { Db } from "mongodb";
 import type { ElectedOfficial, Notification } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { notificationsCollection } from "@/lib/db/repositories/notifications";
 
 export function isFilledOfficial(official: Pick<ElectedOfficial, "characterId" | "nppId"> | null) {
   return Boolean(official?.characterId || official?.nppId);
@@ -28,7 +29,7 @@ export async function notifyGovernorOfSenateVacancy(
 
   if (!governorChar?.userId) return;
 
-  await db.collection<Omit<Notification, "_id">>("notifications").insertOne({
+  await notificationsCollection<Omit<Notification, "_id">>(db).insertOne({
     userId: governorChar.userId,
     title: "Senate Seat Vacant",
     message: `A Senate seat in ${state} (Class ${senateClass}) has become vacant. You may appoint a replacement.`,

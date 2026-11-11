@@ -21,6 +21,7 @@ import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 // POST /api/country/[code]/parties/[id]/join — Join a political party
 // Auth: requireAuthWithCharacter
@@ -50,9 +51,10 @@ export async function POST(
 
     const [party, gameConfig, currentTurn, gameState] = await Promise.all([
       findPartyBySequentialId(db, id, countryId),
-      db
-        .collection<GameConfig>("gameConfig")
-        .findOne({ _id: "default" }, { projection: { firstJoinerBecomesPartyChair: 1 } }),
+      gameConfigCollection(db).findOne(
+        { _id: "default" },
+        { projection: { firstJoinerBecomesPartyChair: 1 } }
+      ),
       getCurrentTurn(db),
       gameStateCollection(db).findOne(
         { _id: "current" },

@@ -13,12 +13,14 @@ import {
   type BankingPolicyConfig,
   type BankingPolicySnapshot,
 } from "@/lib/banking/rules/policy";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 export type { BankingPolicySnapshot } from "@/lib/banking/rules/policy";
 
 export async function loadBankingPolicy(db: Db): Promise<BankingPolicySnapshot> {
-  const config = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { ...BANKING_POLICY_PROJECTION } });
+  const config = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { ...BANKING_POLICY_PROJECTION } }
+  );
   return resolveBankingPolicy(config as BankingPolicyConfig | null);
 }

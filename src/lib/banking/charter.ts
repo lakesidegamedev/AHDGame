@@ -34,6 +34,7 @@ import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSecto
 import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
 import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 import type { Document } from "mongodb";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /**
  * Charter capital as a multiple of the corporation founding cost.
@@ -157,7 +158,7 @@ export async function checkCharterEligibility(
   const reasons: string[] = [];
 
   if (!options?.skipFlagCheck) {
-    const config = await db.collection<GameConfig>("gameConfig").findOne(
+    const config = await gameConfigCollection(db).findOne(
       { _id: "default" },
       {
         projection: {
@@ -684,8 +685,10 @@ export async function previewCharterSwitch(
   if (corporation.bankUnderwritingFunding) blockers.push("underwriting_settlement");
   if (
     !bankMayManageFunds({ status: "active", type: targetType }) &&
-    (await indexFundsCollection<Document>(db)
-      .countDocuments({ sponsorCorporationId: corporation._id, status: { $ne: "delisted" } })) > 0
+    (await indexFundsCollection<Document>(db).countDocuments({
+      sponsorCorporationId: corporation._id,
+      status: { $ne: "delisted" },
+    })) > 0
   )
     blockers.push("sponsored_funds");
 

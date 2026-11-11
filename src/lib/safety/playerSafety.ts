@@ -9,6 +9,7 @@ import type {
   User,
 } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 /**
  * Player-to-player safety: reporting objectionable content and blocking
@@ -89,8 +90,7 @@ export async function reportPlayer(
     createdAt: new Date(),
   });
 
-  const staff = await db
-    .collection<User>("users")
+  const staff = await usersCollection(db)
     .find(
       { $or: [{ isAdmin: true }, { role: "admin" }, { role: "moderator" }] },
       { projection: { _id: 1 } }
@@ -117,7 +117,7 @@ export async function blockPlayer(
   const self = new ObjectId(userId);
   if (target.userId.equals(self)) throw badRequest("You cannot block yourself");
 
-  const result = await db.collection<User>("users").updateOne(
+  const result = await usersCollection(db).updateOne(
     {
       _id: self,
       $or: [
@@ -151,9 +151,7 @@ export async function unblockPlayer(
     throw badRequest("Missing player");
   }
   const self = new ObjectId(userId);
-  await db
-    .collection<User>("users")
-    .updateOne({ _id: self }, { $pull: { blockedUserIds: targetUserId } });
+  await usersCollection(db).updateOne({ _id: self }, { $pull: { blockedUserIds: targetUserId } });
   await setMailHiddenFrom(db, self, targetUserId, false);
 }
 
@@ -182,9 +180,10 @@ export async function hasBlocked(
   userId: ObjectId,
   otherUserId: ObjectId
 ): Promise<boolean> {
-  const hit = await db
-    .collection<User>("users")
-    .findOne({ _id: userId, blockedUserIds: otherUserId }, { projection: { _id: 1 } });
+  const hit = await usersCollection(db).findOne(
+    { _id: userId, blockedUserIds: otherUserId },
+    { projection: { _id: 1 } }
+  );
   return hit !== null;
 }
 
@@ -196,9 +195,10 @@ export interface BlockedPlayer {
 
 /** The viewer's block list with a recognisable name for each entry. */
 export async function listBlockedPlayers(db: Db, userId: string): Promise<BlockedPlayer[]> {
-  const self = await db
-    .collection<User>("users")
-    .findOne({ _id: new ObjectId(userId) }, { projection: { blockedUserIds: 1 } });
+  const self = await usersCollection(db).findOne(
+    { _id: new ObjectId(userId) },
+    { projection: { blockedUserIds: 1 } }
+  );
   const ids = self?.blockedUserIds ?? [];
   if (ids.length === 0) return [];
   // Character names only: account usernames are login identifiers, not public.

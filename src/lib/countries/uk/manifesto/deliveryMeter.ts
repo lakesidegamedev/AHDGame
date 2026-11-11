@@ -7,6 +7,7 @@ import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
 import { getPledgeCatalogEntry } from "./pledgeCatalog";
 import { evaluateDelivery, type EnactedPolicyLookup } from "./manifestoPopularity";
 import type { Pledge } from "@/lib/db/types/manifesto";
+import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
 
 function enactedLookup(laws: Pick<EnactedLaw, "legislationTypeId" | "policyOptionIndex">[]) {
   const lookup: EnactedPolicyLookup = {};
@@ -60,8 +61,7 @@ export async function loadUkBrokenPromiseMeter(db: Db): Promise<number | undefin
   const entries = manifesto ? pledgeEntries(manifesto.pledges ?? []) : [];
   if (entries.length === 0) return undefined;
 
-  const laws = await db
-    .collection<EnactedLaw>("enactedLaws")
+  const laws = await enactedLawsCollection(db)
     .find(
       {
         scope: "national",

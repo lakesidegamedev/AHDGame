@@ -7,6 +7,7 @@ import type { Character, State, User } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 // GET /api/admin/heal/discord-users — Diagnoses user/character linkage issues and characters missing countryId
 // Auth: requireAdmin
@@ -19,7 +20,7 @@ export async function GET() {
     const db = await getDb();
 
     const [allUsers, allChars] = await Promise.all([
-      db.collection<User>("users").find({}).toArray(),
+      usersCollection(db).find({}).toArray(),
       charactersCollection(db).find({}).toArray(),
     ]);
 
@@ -94,7 +95,7 @@ export async function POST() {
     const now = new Date();
 
     const [allUsers, allChars] = await Promise.all([
-      db.collection<User>("users").find({}).toArray(),
+      usersCollection(db).find({}).toArray(),
       charactersCollection(db).find({}).toArray(),
     ]);
 
@@ -118,7 +119,7 @@ export async function POST() {
         // A: Missing activeCharacterId — set from character lookup
         const char = charByUserId.get(userId);
         if (char) {
-          await db.collection<User>("users").updateOne(
+          await usersCollection(db).updateOne(
             { _id: user._id },
             {
               $set: {
@@ -138,7 +139,7 @@ export async function POST() {
           // Try to find the real character by userId
           const realChar = charByUserId.get(userId);
           if (realChar) {
-            await db.collection<User>("users").updateOne(
+            await usersCollection(db).updateOne(
               { _id: user._id },
               {
                 $set: {
@@ -150,7 +151,7 @@ export async function POST() {
             );
           } else {
             // No character at all — clear the stale reference
-            await db.collection<User>("users").updateOne(
+            await usersCollection(db).updateOne(
               { _id: user._id },
               {
                 $set: {

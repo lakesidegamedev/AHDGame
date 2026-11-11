@@ -25,6 +25,7 @@ import type { GameConfig } from "@/lib/db/types/gameConfig";
 import { getCurrentTurn } from "@/lib/currentTurn";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { billsCollection } from "@/lib/db/repositories/bills";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 function finiteRate(value: unknown): number {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
@@ -466,9 +467,10 @@ export async function applyTariffProvision(
       // rare rate-change event (a tariff bill just enacted), not a per-turn
       // hot loop, so a direct read here (rather than a caller-hoisted map)
       // stays cheap. Same netting rule as `refreshNationalBudgetRevenue`.
-      const moneyWiringConfig = await db
-        .collection<GameConfig>("gameConfig")
-        .findOne({ _id: "default" }, { projection: { interstateMoneyWiringEnabled: 1 } });
+      const moneyWiringConfig = await gameConfigCollection(db).findOne(
+        { _id: "default" },
+        { projection: { interstateMoneyWiringEnabled: 1 } }
+      );
       let sourcedImports: { tariffPaidAnchor: number; importValueAnchor: number } | undefined;
       if (moneyWiringConfig?.interstateMoneyWiringEnabled === true) {
         const [sourcedByCountry] = await Promise.all([

@@ -12,6 +12,8 @@ import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParti
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
 
 /** Best-effort preset lookup; null when the world has no gameState yet. */
 async function readPreset(db: Db): Promise<string | null> {
@@ -155,7 +157,7 @@ export async function buildCountryReadinessReport(
   });
 
   const expectedDemographics = expect.demographicsCount;
-  const demoCount = await db.collection("stateDemographics").countDocuments({ countryId });
+  const demoCount = await stateDemographicsCollection<Document>(db).countDocuments({ countryId });
   checks.push({
     name: "Demographics",
     status: demoCount === expectedDemographics ? "ok" : demoCount > 0 ? "warning" : "missing",
@@ -167,9 +169,9 @@ export async function buildCountryReadinessReport(
   // in step-6 Phase 3, so counting it reported EVERY country as missing its
   // region metrics. macroMetrics is where seeded region metrics live now.
   const expectedMetrics = expect.stateMetricsCount;
-  const metricsCount = await db
-    .collection<{ _id: string }>("macroMetrics")
-    .countDocuments(expect.stateMetricsFilter);
+  const metricsCount = await macroMetricsCollection<{ _id: string }>(db).countDocuments(
+    expect.stateMetricsFilter
+  );
   checks.push({
     name: "RegionMetrics",
     status: metricsCount >= expectedMetrics ? "ok" : metricsCount > 0 ? "warning" : "missing",
@@ -178,8 +180,9 @@ export async function buildCountryReadinessReport(
   });
 
   // legislationTypes docs carry `countryScope` (lowercase id), never `countryId`.
-  const legTypeCount = await legislationTypesCollection<Document>(db)
-    .countDocuments({ countryScope: countryId.toLowerCase() });
+  const legTypeCount = await legislationTypesCollection<Document>(db).countDocuments({
+    countryScope: countryId.toLowerCase(),
+  });
   checks.push({
     name: "LegislationTypes",
     status:

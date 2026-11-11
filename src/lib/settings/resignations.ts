@@ -42,6 +42,8 @@ import { electionCandidatesCollection } from "@/lib/db/repositories/electionCand
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
 import type { Document } from "mongodb";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
+import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
 
 const PARTY_LEADERSHIP_FIELDS = ["chairId", "viceChairId", "treasurerId"] as const;
 type PartyLeadershipField = (typeof PARTY_LEADERSHIP_FIELDS)[number];
@@ -226,13 +228,13 @@ async function discoverPositions(db: Db, character: Character): Promise<Position
     banks,
   ] = await Promise.all([
     electedOfficialsCollection(db).find({ characterId }).toArray(),
-    db.collection<CabinetMember>("cabinetMembers").find({ characterId }).toArray(),
+    cabinetMembersCollection(db).find({ characterId }).toArray(),
     statePartyOrgCollection(db)
       .find({
         $or: PARTY_LEADERSHIP_FIELDS.map((field) => ({ [field]: characterId })),
       })
       .toArray(),
-    db.collection<CongressLeader>("congressLeaders").find({ characterId }).toArray(),
+    congressLeadersCollection(db).find({ characterId }).toArray(),
     getGovernmentFormationsCollection(db).find({ pmCharacterId: characterId }).toArray(),
     db
       .collection<ParliamentaryGovernment>("parliamentaryGovernments")
@@ -506,9 +508,10 @@ async function resignCabinet(
 ): Promise<boolean> {
   // NPP-held seats have no character holder and cannot resign down this path.
   if (!member.characterId || !member.characterId.equals(character._id)) return false;
-  const result = await db
-    .collection<CabinetMember>("cabinetMembers")
-    .deleteOne({ _id: member._id, characterId: character._id });
+  const result = await cabinetMembersCollection(db).deleteOne({
+    _id: member._id,
+    characterId: character._id,
+  });
   if (result.deletedCount === 0) return false;
   // A surviving second row keeps the holder in cabinet (issue #2049): repoint
   // at it instead of clearing. Only a fully departed holder clears office.
@@ -534,11 +537,10 @@ async function resignNationalPartyRole(
   );
   if (!hasChanged(result)) return false;
   if (field === "chairId") {
-    await coalitionsCollection<Document>(db)
-      .updateMany(
-        { chairPartyId: party._id },
-        { $set: { chairCharacterId: null, updatedAt: now } }
-      );
+    await coalitionsCollection<Document>(db).updateMany(
+      { chairPartyId: party._id },
+      { $set: { chairCharacterId: null, updatedAt: now } }
+    );
   }
   return true;
 }
@@ -550,11 +552,10 @@ async function resignStatePartyRole(
   field: PartyLeadershipField,
   now: Date
 ): Promise<boolean> {
-  const result = await statePartyOrgCollection(db)
-    .updateOne(
-      { _id: organization._id, [field]: character._id },
-      { $set: { [field]: null, updatedAt: now } }
-    );
+  const result = await statePartyOrgCollection(db).updateOne(
+    { _id: organization._id, [field]: character._id },
+    { $set: { [field]: null, updatedAt: now } }
+  );
   return hasChanged(result);
 }
 
@@ -564,7 +565,7 @@ async function resignCongressLeadership(
   leader: CongressLeader,
   now: Date
 ): Promise<boolean> {
-  const result = await db.collection<CongressLeader>("congressLeaders").updateOne(
+  const result = await congressLeadersCollection(db).updateOne(
     { _id: leader._id, characterId: character._id },
     {
       $set: { characterId: null, characterName: "Vacant", updatedAt: now },
@@ -724,11 +725,10 @@ async function withdrawActiveCandidacies(db: Db, characterId: ObjectId, now: Dat
     .find({ characterId, status: "active" })
     .toArray();
   const [elections, stateParty] = await Promise.all([
-    electionCandidatesCollection(db)
-      .updateMany(
-        { characterId, status: "active" },
-        { $set: { status: "withdrawn", withdrawnAt: now } }
-      ),
+    electionCandidatesCollection(db).updateMany(
+      { characterId, status: "active" },
+      { $set: { status: "withdrawn", withdrawnAt: now } }
+    ),
     db
       .collection("statePartyCandidates")
       .updateMany(
@@ -809,16 +809,14 @@ export async function resignAllPositions(db: Db, character: Character): Promise<
           },
         }
       ),
-      db.collection<CongressLeader>("congressLeaders").updateMany(
+      congressLeadersCollection(db).updateMany(
         { characterId: freshCharacter._id },
         {
           $set: { characterId: null, characterName: "Vacant", updatedAt: now },
           $unset: { party: "", nominatedBy: "", electedAt: "" },
         }
       ),
-      db
-        .collection<CabinetMember>("cabinetMembers")
-        .deleteMany({ characterId: freshCharacter._id }),
+      cabinetMembersCollection(db).deleteMany({ characterId: freshCharacter._id }),
       centralBanksCollection(db).find({ chairCharacterId: freshCharacter._id }).toArray(),
     ]);
   await releaseVacatedBlocSeats(db, leftoverBlocRowIds, now);

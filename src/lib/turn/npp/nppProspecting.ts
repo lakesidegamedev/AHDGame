@@ -28,6 +28,8 @@ import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
 
 /** Price ratio at or above this: the resource is short enough to survey. */
 export const NPP_PROSPECT_SHORTAGE_RATIO = 1.15;
@@ -97,9 +99,10 @@ export function pickNppProspect(args: {
 }
 
 export async function processNppProspecting(db: Db, turn: number, now: Date): Promise<number> {
-  const cfg = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { prospectingEnabled: 1 } });
+  const cfg = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { prospectingEnabled: 1 } }
+  );
   if (cfg?.prospectingEnabled !== true) return 0;
 
   const nppCorps = await corporationsCollection(db)
@@ -134,7 +137,7 @@ export async function processNppProspecting(db: Db, turn: number, now: Date): Pr
     sectorsByCorp.set(key, list);
   }
 
-  const priceDocs = await db.collection<CommodityPrice>("commodityPrices").find({}).toArray();
+  const priceDocs = await commodityPricesCollection(db).find({}).toArray();
   const priceByCommodity = new Map<string, CommodityPrice>();
   for (const doc of priceDocs) {
     const existing = priceByCommodity.get(doc.commodity);

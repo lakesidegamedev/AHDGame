@@ -24,6 +24,7 @@ import { validateStateBillProvisions } from "@/lib/legislature/commands/validate
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
 
 const VOTING_DURATION_HOURS = 24;
 
@@ -115,7 +116,7 @@ export async function proposeStateBill(
   }
 
   if (!adminOverride || !user.isAdmin) {
-    const existingActiveBill = await db.collection<StateBill>("stateBills").findOne({
+    const existingActiveBill = await stateBillsCollection(db).findOne({
       $or: [{ sponsorId: character._id }, { proposalPayerId: character._id }],
       stateId,
       status: { $nin: STATE_TERMINAL_STATUSES },
@@ -273,7 +274,7 @@ export async function proposeStateBill(
 
   let result;
   try {
-    result = await db.collection<StateBill>("stateBills").insertOne(bill as StateBill);
+    result = await stateBillsCollection(db).insertOne(bill as StateBill);
   } catch (error) {
     if (!(adminOverride && user.isAdmin)) {
       await charactersCollection(db).updateOne(

@@ -4,6 +4,7 @@ import type { Suggestion } from "@/lib/db/types/suggestion";
 import { getDiscordAvatarUrl, toAbsoluteUploadUrl } from "@/lib/discord";
 import { discordSubmitPrimaryLabel } from "@/lib/suggestions/discordSubmitAttribution";
 import { loadReporterDisplayMap } from "@/lib/suggestions/reporterDisplay";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 /** Name and avatar shown as the author line of a suggestion's Discord post. */
 export interface SuggestionReporterIdentity {
@@ -39,12 +40,10 @@ export async function resolveSuggestionReporterIdentity(
         loadReporterDisplayMap(db, [source.userId]).then((map) =>
           map.get(source.userId!.toString())
         ),
-        db
-          .collection<User>("users")
-          .findOne(
-            { _id: source.userId },
-            { projection: { username: 1, discordId: 1, discordAvatar: 1 } }
-          ),
+        usersCollection(db).findOne(
+          { _id: source.userId },
+          { projection: { username: 1, discordId: 1, discordAvatar: 1 } }
+        ),
       ]);
       const name = display?.characterName || user?.username;
       if (name) {

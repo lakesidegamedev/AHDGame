@@ -10,6 +10,8 @@ import {
 } from "./rules/arabOrigins";
 import { projectArabRegion, migrateLegacyArabOrigin } from "./rules/arabProjection";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
 
 /** Four bounded, projected batch reads, only at initialization or quarterly
  * pressure ticks. Background stability is explicitly an estimate of legitimacy;
@@ -43,16 +45,14 @@ export async function advanceArabRegionalTurn(
     statesCollection<{ _id: string; countryId: string; population: number }>(db)
       .find({ countryId: { $in: ids } }, { projection: { _id: 1, countryId: 1, population: 1 } })
       .toArray(),
-    db
-      .collection<{ _id: string; approvalRating: number }>("governmentApprovals")
+    governmentApprovalsCollection<{ _id: string; approvalRating: number }>(db)
       .find({ _id: { $in: [...ARAB_ORIGINS] } }, { projection: { _id: 1, approvalRating: 1 } })
       .toArray(),
-    db
-      .collection<{
-        _id: string;
-        countryId: string;
-        economic?: { unemploymentRate?: { value: number }; costOfLiving?: { value: number } };
-      }>("macroMetrics")
+    macroMetricsCollection<{
+      _id: string;
+      countryId: string;
+      economic?: { unemploymentRate?: { value: number }; costOfLiving?: { value: number } };
+    }>(db)
       .find(
         { countryId: { $in: [...ARAB_ORIGINS] } },
         {

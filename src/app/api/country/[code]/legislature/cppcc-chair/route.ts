@@ -42,6 +42,7 @@ import type {
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
 
 const cppccChairActionSchema = z.object({
   action: z.enum(["declare", "withdraw", "vote", "start_election", "force_end"]),
@@ -93,7 +94,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     }
 
     const [leader, election, nominations] = await Promise.all([
-      db.collection<CongressLeader>("congressLeaders").findOne({ role: "chair_cppcc" }),
+      congressLeadersCollection(db).findOne({ role: "chair_cppcc" }),
       db.collection<CppccChairElection>("cppccChairElections").findOne({ _id: "current" }),
       db
         .collection<CppccChairNomination>("cppccChairNominations")

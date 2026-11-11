@@ -7,6 +7,7 @@ import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQu
 import { marketAtLeast, getMarketSystemMode } from "@/lib/market/featureFlag";
 import type { GameConfig } from "@/lib/db/types/gameConfig";
 import { MEDIA_PRODUCT_PROJECTS, type MediaProductProject } from "@/lib/products/mediaProduct";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 interface RouteParams {
   params: Promise<{ id: string; projectId: string }>;
@@ -29,7 +30,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
     const corporation = resolved.corporation;
     const ceoError = requireCeo(corporation, auth.user.userId);
     if (ceoError) return ceoError;
-    const config = await db.collection<GameConfig>("gameConfig").findOne(
+    const config = await gameConfigCollection(db).findOne(
       { _id: "default" },
       {
         projection: {

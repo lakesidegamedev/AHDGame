@@ -2,6 +2,7 @@ import { withAdminRoute } from "@/lib/api/withAdminAuth";
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import type { AdminLog, AdminLogCategory } from "@/lib/db/types";
+import { adminLogsCollection } from "@/lib/db/repositories/adminLogs";
 
 /**
  * Coerce a stored log field to the `string | null` this route's response
@@ -50,8 +51,7 @@ export const GET = withAdminRoute(async (_auth, request: Request) => {
   // Build query based on category filter
   const query = category ? { category } : {};
 
-  const logs = await db
-    .collection<AdminLog>("adminLogs")
+  const logs = await adminLogsCollection(db)
     .find(query)
     .sort({ createdAt: -1 })
     .limit(limit)

@@ -29,6 +29,7 @@ import {
   type CompensationTier,
 } from "./constants";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
 
 /** A NPC/unowned taking — no investor it expropriated, so no approval/political movement. */
 function isNpcOrUnowned(triggers: string[]): boolean {
@@ -229,9 +230,10 @@ export async function loadRegisterStanding(
       economicPosition = party.economicPosition;
   }
 
-  const approvalDoc = await db
-    .collection<GovernmentApproval>("governmentApprovals")
-    .findOne({ countryId }, { sort: { updatedAt: -1 } });
+  const approvalDoc = await governmentApprovalsCollection(db).findOne(
+    { countryId },
+    { sort: { updatedAt: -1 } }
+  );
   const approval =
     typeof approvalDoc?.approvalRating === "number" ? Math.round(approvalDoc.approvalRating) : null;
 

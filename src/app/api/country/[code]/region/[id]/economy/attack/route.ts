@@ -75,6 +75,8 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 
 const splitSchema = z.object({
   sectorType: z.enum(OPERATING_SECTOR_TYPES),
@@ -162,9 +164,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     // Get player's corporation — supports both regular and imperial characters
-    const userDoc = await db
-      .collection<User>("users")
-      .findOne({ _id: new ObjectId(auth.user.userId) });
+    const userDoc = await usersCollection(db).findOne({ _id: new ObjectId(auth.user.userId) });
 
     let corporation: Corporation | null = null;
 
@@ -208,7 +208,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       corporateSectorsCollection(db)
         .find({ stateId, ...laneIdentity })
         .toArray(),
-      db.collection<UnownedSector>("unownedSectors").findOne({ stateId, ...laneIdentity }),
+      unownedSectorsCollection(db).findOne({ stateId, ...laneIdentity }),
     ]);
 
     // Normalize each sector's revenue to ₳ before summing. Sectors in a state
@@ -593,7 +593,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     // split. A doc with no `headroomUnits` yet heals from its revenue first.
     if (unownedDoc) {
       if (plantsEnabled) {
-        await db.collection<UnownedSector>("unownedSectors").updateOne({ _id: unownedDoc._id }, [
+        await unownedSectorsCollection(db).updateOne({ _id: unownedDoc._id }, [
           {
             $set: {
               headroomUnits: {
@@ -627,19 +627,15 @@ export async function POST(request: Request, { params }: RouteParams) {
           },
         ]);
       } else {
-        await db
-          .collection<UnownedSector>("unownedSectors")
-          .updateOne(
-            { _id: unownedDoc._id },
-            { $inc: { revenue: -actualCapture }, $set: { updatedAt: now } }
-          );
+        await unownedSectorsCollection(db).updateOne(
+          { _id: unownedDoc._id },
+          { $inc: { revenue: -actualCapture }, $set: { updatedAt: now } }
+        );
         // Clamp to 0 — prevents negative if two concurrent splits race
-        await db
-          .collection<UnownedSector>("unownedSectors")
-          .updateOne(
-            { _id: unownedDoc._id, revenue: { $lt: 0 } },
-            { $set: { revenue: 0, updatedAt: now } }
-          );
+        await unownedSectorsCollection(db).updateOne(
+          { _id: unownedDoc._id, revenue: { $lt: 0 } },
+          { $set: { revenue: 0, updatedAt: now } }
+        );
       }
     }
 

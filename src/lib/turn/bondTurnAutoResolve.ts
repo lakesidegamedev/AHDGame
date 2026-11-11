@@ -6,6 +6,8 @@ import type { ActionAuditInput } from "@/lib/db/types/actionAuditLog";
 import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { adminLogsCollection } from "@/lib/db/repositories/adminLogs";
+import type { Document } from "mongodb";
 
 /**
  * Auto-resolve lingering corporate defaults.
@@ -201,7 +203,7 @@ export async function autoResolveLingeringDefaults(args: {
 
     if (auditRows.length > 0) {
       try {
-        await db.collection("adminLogs").insertMany(auditRows);
+        await adminLogsCollection<Document>(db).insertMany(auditRows);
       } catch (err) {
         // Audit is best-effort; never crash a turn over the log write.
         console.error("[bondTurn] Phase 7 audit log insert failed:", err);

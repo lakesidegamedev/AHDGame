@@ -41,6 +41,7 @@ import {
 } from "../types";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalMetricsCollection } from "@/lib/db/repositories/politicalMetrics";
 
 export interface CountryPoliticalMetricsResponse {
   /** Which registry this is; the views branch display on it. */
@@ -130,7 +131,7 @@ export async function loadCountryPoliticalMetrics(
 ): Promise<CountryPoliticalMetricsResponse | null> {
   const db = dbOverride ?? (await getDb());
   const [docs, states, gameState] = await Promise.all([
-    db.collection<PoliticalMetricsDoc>("politicalMetrics").find({ countryId }).toArray(),
+    politicalMetricsCollection(db).find({ countryId }).toArray(),
     statesCollection(db)
       .find({ countryId }, { projection: { name: 1, population: 1, gdp: 1 } })
       .toArray(),

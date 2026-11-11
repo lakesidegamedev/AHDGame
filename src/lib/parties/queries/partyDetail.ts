@@ -37,6 +37,10 @@ import { countDistinctOfficers } from "@/lib/treasury/payoutCapValues";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
+import type { Document } from "mongodb";
 
 export async function loadPartyLeaders(
   db: Db,
@@ -58,8 +62,7 @@ export async function loadPartyLeaders(
     )
     .toArray();
   const users = characters.length
-    ? await db
-        .collection<User>("users")
+    ? await usersCollection(db)
         .find(
           {
             _id: {
@@ -160,8 +163,8 @@ export async function getPartyDetail(db: Db, party: PoliticalParty): Promise<Par
       )
       .sort({ name: 1 })
       .toArray(),
-    db.collection<GameConfig>("gameConfig").findOne({ _id: "default" }),
-    db.collection("stateDemographicTurnout").countDocuments(
+    gameConfigCollection(db).findOne({ _id: "default" }),
+    stateDemographicTurnoutCollection<Document>(db).countDocuments(
       partyCountry === DEFAULT_LEGACY_COUNTRY_ID
         ? {
             $or: [
@@ -176,8 +179,7 @@ export async function getPartyDetail(db: Db, party: PoliticalParty): Promise<Par
 
   const memberUsers =
     allMembers.length > 0
-      ? await db
-          .collection<User>("users")
+      ? await usersCollection(db)
           .find({ _id: { $in: allMembers.map((member) => member.userId) } })
           .project<{ _id: ObjectId; isBanned?: boolean; lastActivity?: Date; createdAt?: Date }>({
             _id: 1,

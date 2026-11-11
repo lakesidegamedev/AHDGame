@@ -47,6 +47,7 @@ import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import type { Document } from "mongodb";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 const MIN_BASE_ACTIONS_PER_TURN = 4;
 
@@ -122,7 +123,7 @@ async function handleGET() {
       portfolioSnapshots,
       unionContribution,
     ] = await Promise.all([
-      db.collection<GameConfig>("gameConfig").findOne({ _id: "default" }),
+      gameConfigCollection(db).findOne({ _id: "default" }),
       statesCollection(db).findOne({ _id: character.homeState, countryId: character.countryId }),
       character.party && Number.isFinite(Number(character.party))
         ? politicalPartiesCollection(db).findOne({
@@ -309,8 +310,10 @@ async function findNearestElection(
   isCandidate: boolean;
 } | null> {
   // Check if the player is a candidate in any active election
-  const candidacy = await electionCandidatesCollection<Document>(db)
-    .findOne({ characterId: character._id, status: "active" });
+  const candidacy = await electionCandidatesCollection<Document>(db).findOne({
+    characterId: character._id,
+    status: "active",
+  });
 
   if (candidacy) {
     const election = await electionsCollection(db).findOne({

@@ -11,6 +11,8 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { createCharacterForAccount } from "@/lib/auth/characterCreation";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
 
 // POST /api/auth/character — Creates a new character for the authenticated user with starting stats and referral bonuses.
 // Auth: requireBasicAuth
@@ -51,9 +53,10 @@ async function handleGET(request?: Request) {
     // Scope by activeCharacterId when present so multi-character accounts resolve the
     // same character /api/auth/me uses. Without this, downstream pages (actions,
     // settings, etc.) silently operate on whichever character was inserted first.
-    const userDoc = await db
-      .collection("users")
-      .findOne({ _id: new ObjectId(userId) }, { projection: { activeCharacterId: 1 } });
+    const userDoc = await usersCollection<Document>(db).findOne(
+      { _id: new ObjectId(userId) },
+      { projection: { activeCharacterId: 1 } }
+    );
     const characterQuery = userDoc?.activeCharacterId
       ? { _id: userDoc.activeCharacterId, userId: new ObjectId(userId) }
       : { userId: new ObjectId(userId) };

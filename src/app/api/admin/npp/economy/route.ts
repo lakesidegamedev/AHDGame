@@ -7,6 +7,7 @@ import { z } from "zod";
 import type { NPP, GameConfig, GameState } from "@/lib/db/types";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /** GET — return NPP economy enabled status and aggregate stats */
 export async function GET() {
@@ -17,9 +18,10 @@ export async function GET() {
     const db = await getDb();
 
     const [config, gameState, statsResult] = await Promise.all([
-      db
-        .collection<GameConfig>("gameConfig")
-        .findOne({ _id: "default" }, { projection: { nppEconomyEnabled: 1 } }),
+      gameConfigCollection(db).findOne(
+        { _id: "default" },
+        { projection: { nppEconomyEnabled: 1 } }
+      ),
       gameStateCollection(db).findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
       nppsCollection(db)
         .aggregate([
@@ -76,9 +78,11 @@ export async function POST(request: Request) {
     const { enabled } = parsed.data;
 
     const db = await getDb();
-    await db
-      .collection<GameConfig>("gameConfig")
-      .updateOne({ _id: "default" }, { $set: { nppEconomyEnabled: enabled } }, { upsert: true });
+    await gameConfigCollection(db).updateOne(
+      { _id: "default" },
+      { $set: { nppEconomyEnabled: enabled } },
+      { upsert: true }
+    );
 
     const message = enabled
       ? "NPP economy system enabled — fund generation and action processing will run each turn."

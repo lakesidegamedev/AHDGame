@@ -6,6 +6,10 @@ import { currencyOrdersCollection } from "@/lib/db/repositories/currencyOrders";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { billsCollection } from "@/lib/db/repositories/bills";
 import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
+import { cabinetNominationsCollection } from "@/lib/db/repositories/cabinetNominations";
+import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
+import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
 
 /**
  * Propagate a character name change to all denormalized collections.
@@ -24,8 +28,10 @@ export async function propagateCharacterNameChange(
 ): Promise<void> {
   // ── 1. Election candidates ────────────────────────────────────────────────
   await Promise.all([
-    electionCandidatesCollection<Document>(db)
-      .updateMany({ characterId }, { $set: { characterName: newName } }),
+    electionCandidatesCollection<Document>(db).updateMany(
+      { characterId },
+      { $set: { characterName: newName } }
+    ),
     db
       .collection("nationalCommitteeCandidates")
       .updateMany({ characterId }, { $set: { characterName: newName } }),
@@ -43,31 +49,35 @@ export async function propagateCharacterNameChange(
       { characterId },
       { $set: { characterName: newName } }
     ),
-    db
-      .collection("congressLeaders")
-      .updateMany({ characterId }, { $set: { characterName: newName } }),
+    congressLeadersCollection<Document>(db).updateMany(
+      { characterId },
+      { $set: { characterName: newName } }
+    ),
     db
       .collection("committeeAssignments")
       .updateMany({ characterId }, { $set: { characterName: newName } }),
-    db
-      .collection("cabinetMembers")
-      .updateMany({ characterId }, { $set: { characterName: newName } }),
+    cabinetMembersCollection<Document>(db).updateMany(
+      { characterId },
+      { $set: { characterName: newName } }
+    ),
   ]);
 
   // ── 3. Bills (sponsor and co-sponsors) ────────────────────────────────────
   await Promise.all([
-    billsCollection<Document>(db)
-      .updateMany({ sponsorId: characterId }, { $set: { sponsorName: newName } }),
-    db
-      .collection("stateBills")
-      .updateMany({ sponsorId: characterId }, { $set: { sponsorName: newName } }),
+    billsCollection<Document>(db).updateMany(
+      { sponsorId: characterId },
+      { $set: { sponsorName: newName } }
+    ),
+    stateBillsCollection<Document>(db).updateMany(
+      { sponsorId: characterId },
+      { $set: { sponsorName: newName } }
+    ),
     // Co-sponsors are an embedded array — use arrayFilters
-    billsCollection<Document>(db)
-      .updateMany(
-        { "coSponsors.characterId": characterId },
-        { $set: { "coSponsors.$[elem].characterName": newName } },
-        { arrayFilters: [{ "elem.characterId": characterId }] }
-      ),
+    billsCollection<Document>(db).updateMany(
+      { "coSponsors.characterId": characterId },
+      { $set: { "coSponsors.$[elem].characterName": newName } },
+      { arrayFilters: [{ "elem.characterId": characterId }] }
+    ),
   ]);
 
   // ── 4. Central bank ───────────────────────────────────────────────────────
@@ -120,15 +130,14 @@ export async function propagateCharacterNameChange(
 
   // Cabinet nominations
   await Promise.all([
-    db
-      .collection("cabinetNominations")
-      .updateMany({ nomineeCharacterId: characterId }, { $set: { nomineeCharacterName: newName } }),
-    db
-      .collection("cabinetNominations")
-      .updateMany(
-        { proposedByPresidentId: characterId },
-        { $set: { proposedByPresidentName: newName } }
-      ),
+    cabinetNominationsCollection<Document>(db).updateMany(
+      { nomineeCharacterId: characterId },
+      { $set: { nomineeCharacterName: newName } }
+    ),
+    cabinetNominationsCollection<Document>(db).updateMany(
+      { proposedByPresidentId: characterId },
+      { $set: { proposedByPresidentName: newName } }
+    ),
   ]);
 
   // UK government formation nominations
@@ -171,20 +180,23 @@ export async function propagateCharacterNameChange(
     await Promise.all(
       charCandidates.map((c) => {
         const candidateIdStr = (c._id as import("mongodb").ObjectId).toString();
-        return electionVoteTalliesCollection<Document>(db)
-          .updateMany(
-            { [`candidateNames.${candidateIdStr}`]: { $exists: true } },
-            { $set: { [`candidateNames.${candidateIdStr}`]: newName } }
-          );
+        return electionVoteTalliesCollection<Document>(db).updateMany(
+          { [`candidateNames.${candidateIdStr}`]: { $exists: true } },
+          { $set: { [`candidateNames.${candidateIdStr}`]: newName } }
+        );
       })
     );
   }
 
   // ── 8. Forex / currency orders ────────────────────────────────────────────
   await Promise.all([
-    currencyOrdersCollection<Document>(db)
-      .updateMany({ characterId }, { $set: { characterName: newName } }),
-    currencyOrdersCollection<Document>(db)
-      .updateMany({ targetCharacterId: characterId }, { $set: { targetCharacterName: newName } }),
+    currencyOrdersCollection<Document>(db).updateMany(
+      { characterId },
+      { $set: { characterName: newName } }
+    ),
+    currencyOrdersCollection<Document>(db).updateMany(
+      { targetCharacterId: characterId },
+      { $set: { targetCharacterName: newName } }
+    ),
   ]);
 }

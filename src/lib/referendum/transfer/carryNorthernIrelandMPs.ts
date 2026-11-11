@@ -11,6 +11,7 @@ import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficia
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
 
 export async function carryNorthernIrelandMPs(
   db: Db,
@@ -28,7 +29,7 @@ export async function carryNorthernIrelandMPs(
   });
   if (government) await unformGovernmentAndVacatePM(db, "UK", now, { reason: "lost-seat" });
   await electedOfficialsCollection<Document>(db).deleteMany({ countryId: "UK", $or: holders });
-  await db.collection("cabinetMembers").deleteMany({ countryId: "UK", $or: holders });
+  await cabinetMembersCollection<Document>(db).deleteMany({ countryId: "UK", $or: holders });
   const parties = await politicalPartiesCollection<Document>(db)
     .find(
       { countryId: { $in: ["UK", "IE"] } },

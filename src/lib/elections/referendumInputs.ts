@@ -25,6 +25,7 @@ import { getNationalDocId } from "@/lib/constants/nationalScope";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import type { MiseryInputs } from "@/lib/elections/engine/economicReferendum";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 
 /** Fallbacks when a country has no national metrics doc yet (neutral-ish). */
 const FALLBACK_UNEMPLOYMENT = 6;
@@ -44,7 +45,7 @@ export async function loadReferendumInputs(db: Db, countryId: CountryId): Promis
   const nationalDocId = getNationalDocId(countryId);
   const [metrics, budget] = await Promise.all([
     nationalDocId
-      ? db.collection<StateMetrics>("macroMetrics").findOne(
+      ? macroMetricsCollection(db).findOne(
           { _id: nationalDocId },
           {
             projection: {

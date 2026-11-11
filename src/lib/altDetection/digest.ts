@@ -40,6 +40,7 @@ import { isAltScoringEnabled } from "./featureFlag";
 import { resolveAltScoringConfig } from "./config";
 import { sendDiscordWebhookMultiple, type DiscordEmbed } from "@/lib/discordWebhooks";
 import { readEnv } from "@/lib/config/read";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /** Env var carrying the mod-facing digest webhook URL. Mirrors the
  * `DISCORD_ALERT_WEBHOOK_URL` pattern in `src/lib/observability/alertOps.ts`
@@ -268,8 +269,7 @@ export async function runAltDigest(
 
     const [state, configDoc, openClusters] = await Promise.all([
       stateCol.findOne({ _id: "default" }),
-      db
-        .collection<{ _id: string; altScoring?: unknown }>("gameConfig")
+      gameConfigCollection<{ _id: string; altScoring?: unknown }>(db)
         .findOne({ _id: "default" }, { projection: { altScoring: 1 } })
         .catch(() => null),
       getAltClustersCollection(db).then((col) => col.find({ status: "open" }).toArray()),

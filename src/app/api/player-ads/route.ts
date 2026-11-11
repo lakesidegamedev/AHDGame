@@ -21,6 +21,7 @@ import { isR2Enabled, uploadFile } from "@/lib/r2";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { parseFormData } from "@/lib/api/validate";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 const MAX_SIZE = 2 * 1024 * 1024; // 2 MB
@@ -78,12 +79,10 @@ async function handleGET() {
     const homeCurrency = getHomeCurrency(character) as CurrencyCode;
     const balance = getPersonalBalance(character, homeCurrency, forexEnabled);
 
-    const dbUser = await db
-      .collection<User>("users")
-      .findOne(
-        { _id: new ObjectId(auth.user.userId) },
-        { projection: { patreonTier: 1, patreonExpiresAt: 1 } }
-      );
+    const dbUser = await usersCollection(db).findOne(
+      { _id: new ObjectId(auth.user.userId) },
+      { projection: { patreonTier: 1, patreonExpiresAt: 1 } }
+    );
     const patreonTier = dbUser?.patreonTier ?? null;
     const patreonExpiresAt = dbUser?.patreonExpiresAt ?? null;
 
@@ -149,12 +148,10 @@ export async function POST(request: Request) {
     const homeCurrency = getHomeCurrency(character) as CurrencyCode;
     const ads = await getPlayerBannerAdsCollection(db);
 
-    const dbUser = await db
-      .collection<User>("users")
-      .findOne(
-        { _id: new ObjectId(authUser.userId) },
-        { projection: { patreonTier: 1, patreonExpiresAt: 1 } }
-      );
+    const dbUser = await usersCollection(db).findOne(
+      { _id: new ObjectId(authUser.userId) },
+      { projection: { patreonTier: 1, patreonExpiresAt: 1 } }
+    );
     const patreonTier = dbUser?.patreonTier ?? null;
     const patreonExpiresAt = dbUser?.patreonExpiresAt ?? null;
 

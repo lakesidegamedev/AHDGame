@@ -9,6 +9,7 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import type { User } from "@/lib/db/types";
 import { validateStatAllocation } from "@/lib/stats/validateStatAllocation";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 const reallocateStatsSchema = z.object({
   stats: z.record(z.string(), z.number()),
@@ -17,9 +18,10 @@ const reallocateStatsSchema = z.object({
 /** Resolve the requesting user's active character. */
 async function loadActiveCharacter(userId: string) {
   const db = await getDb();
-  const userDoc = await db
-    .collection<User>("users")
-    .findOne({ _id: new ObjectId(userId) }, { projection: { activeCharacterId: 1 } });
+  const userDoc = await usersCollection(db).findOne(
+    { _id: new ObjectId(userId) },
+    { projection: { activeCharacterId: 1 } }
+  );
   const query = userDoc?.activeCharacterId
     ? { _id: userDoc.activeCharacterId, userId: new ObjectId(userId) }
     : { userId: new ObjectId(userId) };

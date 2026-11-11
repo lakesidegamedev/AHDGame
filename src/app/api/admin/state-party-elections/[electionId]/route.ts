@@ -13,6 +13,7 @@ import type {
   NationalPartyElection,
   NationalCommitteeElection,
 } from "@/lib/db/types";
+import { nationalPartyElectionsCollection } from "@/lib/db/repositories/nationalPartyElections";
 
 interface RouteParams {
   params: Promise<{ electionId: string }>;
@@ -54,17 +55,16 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
     }
 
     // Try national elections
-    const nationalElection = await db
-      .collection<NationalPartyElection>("nationalPartyElections")
-      .findOne({ _id: oid });
+    const nationalElection = await nationalPartyElectionsCollection(db).findOne({ _id: oid });
 
     if (nationalElection) {
       if (nationalElection.status !== "voting") {
         return errorResponse(400, "Only active (voting) elections can be cancelled");
       }
-      await db
-        .collection<NationalPartyElection>("nationalPartyElections")
-        .updateOne({ _id: oid }, { $set: { status: "cancelled", updatedAt: now } });
+      await nationalPartyElectionsCollection(db).updateOne(
+        { _id: oid },
+        { $set: { status: "cancelled", updatedAt: now } }
+      );
       return NextResponse.json({
         success: true,
         message: `National election cancelled (${nationalElection.countryId ?? "US"} ${nationalElection.partyId} ${nationalElection.position})`,

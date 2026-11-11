@@ -79,6 +79,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { billsCollection } from "@/lib/db/repositories/bills";
 import type { Document } from "mongodb";
 import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
 
 export { resolveGoverningPartyIdsFromDocuments };
 
@@ -363,7 +364,7 @@ export async function updateParliamentaryGovernmentSeats(
       await clearCabinetOnTransition(db, countryId);
       await Promise.all([
         db.collection("ukCabinetCooldowns").deleteMany({ countryId }),
-        db.collection("cabinetMembers").deleteMany({ countryId }),
+        cabinetMembersCollection<Document>(db).deleteMany({ countryId }),
       ]);
       return;
     }
@@ -374,8 +375,10 @@ export async function updateParliamentaryGovernmentSeats(
   // Track coalition seats when coalitionId is set — covers both "coalition" and
   // "minority" formation types that were formed by a coalition chair
   if (existing.coalitionId != null) {
-    const coalition = await coalitionsCollection(db)
-      .findOne({ sequentialId: existing.coalitionId, countryId });
+    const coalition = await coalitionsCollection(db).findOne({
+      sequentialId: existing.coalitionId,
+      countryId,
+    });
     const coalitionPartyIds = (coalition?.members ?? []).map((m) => String(m.partySequentialId));
     totalSeatsSupporting = coalitionPartyIds.reduce(
       (sum, partyId) => sum + (seatsByParty[partyId] ?? 0),
@@ -471,8 +474,10 @@ export async function resetParliamentaryGovernmentAfterElection(
     // Track coalition seats when coalitionId is set — covers both "coalition" and
     // "minority" formation types that were formed by a coalition chair
     if (existing.coalitionId != null) {
-      const coalition = await coalitionsCollection(db)
-        .findOne({ sequentialId: existing.coalitionId, countryId });
+      const coalition = await coalitionsCollection(db).findOne({
+        sequentialId: existing.coalitionId,
+        countryId,
+      });
       const coalitionPartyIds = (coalition?.members ?? []).map((m) => String(m.partySequentialId));
       totalSeatsSupporting = coalitionPartyIds.reduce(
         (sum, pid) => sum + (seatsByParty[pid] ?? 0),
@@ -1633,8 +1638,10 @@ export async function checkAppointmentEligibility(
   // A chair of both a party and a qualifying coalition nominates for the whole
   // coalition, so partner-party MPs are nominable; otherwise fall through to
   // the party-only bid below.
-  const chairCoalition = await coalitionsCollection(db)
-    .findOne({ countryId, chairCharacterId: characterId });
+  const chairCoalition = await coalitionsCollection(db).findOne({
+    countryId,
+    chairCharacterId: characterId,
+  });
 
   if (chairCoalition) {
     // One-party state guard: coalitions are not allowed unless the lead
@@ -1805,7 +1812,7 @@ export async function unformGovernmentAndVacatePM(
   await Promise.all([
     db.collection("ukCabinetCooldowns").deleteMany({ countryId }),
     // Extra sweep catches any position not in the country's position map.
-    db.collection("cabinetMembers").deleteMany({ countryId }),
+    cabinetMembersCollection<Document>(db).deleteMany({ countryId }),
   ]);
 
   const clearPM = { $set: { currentOffice: null, updatedAt: now } };

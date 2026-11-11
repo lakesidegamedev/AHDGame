@@ -23,6 +23,9 @@ import type {
 import type { NoConfidenceVote } from "@/lib/db/types/governmentFormation";
 import { getGovernmentFormationsCollection } from "@/lib/db/collections/governmentFormation";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
+import type { Document } from "mongodb";
+import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
 
 const ELECTION_TYPES = [
   "speaker",
@@ -347,7 +350,7 @@ async function handleUSPass(
   // Upsert congress leader
   const congressRole = getCongressLeaderRole(type, role);
   if (congressRole) {
-    await db.collection<CongressLeader>("congressLeaders").updateOne(
+    await congressLeadersCollection(db).updateOne(
       { role: congressRole },
       {
         $set: {
@@ -532,7 +535,7 @@ async function handleUKAction(
     );
     // Clear cabinet
     await Promise.all([
-      db.collection("cabinetMembers").deleteMany({ countryId: "UK" }),
+      cabinetMembersCollection<Document>(db).deleteMany({ countryId: "UK" }),
       db.collection("ukCabinetCooldowns").deleteMany({ countryId: "UK" }),
     ]);
     // Clear PM office from UK characters only — other countries have their own PM

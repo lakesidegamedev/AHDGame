@@ -13,6 +13,7 @@ import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { parseJsonBody } from "@/lib/api/validate";
 import { setPasswordSchema } from "@/lib/api/schemas/settings";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 // POST /api/auth/set-password — Sets a password for a social-only account that has no existing password.
 // Auth: requireBasicAuth
@@ -33,9 +34,9 @@ export async function POST(request: Request) {
     const { newPassword } = parsed.data;
 
     const db = await getDb();
-    const usersCollection = db.collection<User>("users");
+    const usersCollectionHandle = usersCollection(db);
 
-    const user = await usersCollection.findOne({ _id: new ObjectId(userId) });
+    const user = await usersCollectionHandle.findOne({ _id: new ObjectId(userId) });
     if (!user) {
       return errorResponse(404, "User not found");
     }
@@ -55,7 +56,7 @@ export async function POST(request: Request) {
     const hashedPassword = await bcrypt.hash(newPassword, 12);
     const changedAt = new Date();
 
-    const updated = await usersCollection.updateOne(
+    const updated = await usersCollectionHandle.updateOne(
       {
         _id: new ObjectId(userId),
         password: user.password ?? null,

@@ -22,6 +22,8 @@ import { incrementNatCorpSectorRevenue } from "@/lib/nationalization/seedToNatCo
 import { computeUnownedHeadroomUnits } from "@/lib/market/unownedHeadroom";
 import { reconcileCommandEconomyUnowned } from "@/lib/admin/seed/reconcileCommandEconomyUnowned";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
+import type { Document } from "mongodb";
 
 /**
  * Modern-era floor. Kept as a named export for existing callers; the value a
@@ -148,13 +150,11 @@ export async function seedUnownedSectors(
   // a collection scan over a collection growing to ~3,800 docs (~7.4M document
   // examinations). That was invisible while each upsert cost a ~15ms round trip,
   // but the batched write below removes the latency the scan was hiding behind.
-  await db
-    .collection("unownedSectors")
-    .createIndex(
-      { stateId: 1, sectorType: 1, industryModel: 1, mediaDiscriminator: 1 },
-      { name: "unowned_state_type_models_unique", unique: true, background: true }
-    );
-  await db.collection("unownedSectors").createIndex({ countryId: 1 });
+  await unownedSectorsCollection<Document>(db).createIndex(
+    { stateId: 1, sectorType: 1, industryModel: 1, mediaDiscriminator: 1 },
+    { name: "unowned_state_type_models_unique", unique: true, background: true }
+  );
+  await unownedSectorsCollection<Document>(db).createIndex({ countryId: 1 });
 
   for (const state of states) {
     const countryId = state.countryId;
@@ -238,9 +238,7 @@ export async function seedUnownedSectors(
   // in loop order, and a failure skips the remainder exactly as a thrown await
   // did. The win here is round trips, not server-side parallelism.
   if (ops.length > 0) {
-    const result = await db
-      .collection<UnownedSector>("unownedSectors")
-      .bulkWrite(ops, { ordered: true });
+    const result = await unownedSectorsCollection(db).bulkWrite(ops, { ordered: true });
     inserted = result.upsertedCount;
   }
 

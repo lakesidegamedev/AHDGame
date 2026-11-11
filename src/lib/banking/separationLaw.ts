@@ -10,6 +10,7 @@ import {
   legalCharterTypesForPolicy,
 } from "./rules/charterAccess";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /**
  * Banking charter separation is a per-country law, not a world switch. Any
@@ -78,9 +79,10 @@ export async function getLegalCharterTypes(
     gameStateCollection(db)
       // gameState is keyed by _id "current"; do not filter on isActive.
       .findOne({ _id: "current" }, { projection: { currentYear: 1 } }),
-    db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } }),
+    gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { commandEconomyEnabled: 1 } }
+    ),
   ]);
   if (
     isCommandEconomy(
@@ -108,7 +110,7 @@ export async function loadLegalCharterTypesForCountries(
         projection: { currentYear: 1, currentTurn: 1, startingYear: 1, preset: 1 },
       }
     ),
-    db.collection<GameConfig>("gameConfig").findOne(
+    gameConfigCollection(db).findOne(
       { _id: "default" },
       {
         projection: { commandEconomyEnabled: 1 },

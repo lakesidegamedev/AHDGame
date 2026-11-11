@@ -1,5 +1,7 @@
 import type { Db } from "mongodb";
 import { ensureIndex } from "./helpers";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
+import type { Document } from "mongodb";
 
 // Cabinet collections — the unified cabinetMembers (all countries) plus the
 // UK-specific appointment cooldowns.
@@ -54,7 +56,7 @@ export async function seedCabinetIndexes(db: Db, log: (msg: string) => void) {
   // replacement exists (never before). Absent on fresh bootstraps; the catch
   // is the normal path there.
   try {
-    await db.collection("cabinetMembers").dropIndex("cabinetMembers_countryId_characterId");
+    await cabinetMembersCollection<Document>(db).dropIndex("cabinetMembers_countryId_characterId");
     log("  - cabinetMembers.cabinetMembers_countryId_characterId (dropped, superseded)");
   } catch {
     log("  = cabinetMembers.cabinetMembers_countryId_characterId (already absent)");

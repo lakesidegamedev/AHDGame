@@ -29,6 +29,8 @@ import type { Campaign, CharacterStateOrg } from "@/lib/db/types";
 import { MongoServerError, ObjectId } from "mongodb";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { activityLogCollection } from "@/lib/db/repositories/activityLog";
+import type { Document } from "mongodb";
 
 const VALID_US_STATES = new Set(ELECTORAL_VOTE_UNITS.map((u) => u.stateId));
 
@@ -352,7 +354,7 @@ export async function POST(request: Request) {
     // paid for, and a log failure must not turn that into an error.
     if (!ownerId.equals(character._id)) {
       try {
-        await db.collection("activityLog").insertOne({
+        await activityLogCollection<Document>(db).insertOne({
           type: "game_action",
           timestamp: now,
           userId: new ObjectId(auth.user.userId),

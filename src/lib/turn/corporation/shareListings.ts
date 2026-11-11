@@ -20,6 +20,7 @@ import { emitTxBulk, loadTxThresholds } from "@/lib/financialTxLog/emit";
 import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { notificationsCollection } from "@/lib/db/repositories/notifications";
 
 /**
  * Expire share listings whose expiresAt has passed:
@@ -385,9 +386,7 @@ export async function expireShareListings(db: Db, now: Date, currentTurn: number
     if (notifications.length > 0) {
       // notifications array is Omit<Notification, "_id">[] — insertMany expects OptionalUnlessRequiredId
       /* eslint-disable @typescript-eslint/no-explicit-any */
-      await db
-        .collection<Omit<Notification, "_id">>("notifications")
-        .insertMany(notifications as any);
+      await notificationsCollection<Omit<Notification, "_id">>(db).insertMany(notifications as any);
       /* eslint-enable @typescript-eslint/no-explicit-any */
     }
   }

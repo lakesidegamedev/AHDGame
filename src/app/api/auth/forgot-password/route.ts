@@ -14,6 +14,7 @@ import type { PasswordResetDoc } from "@/lib/passwordReset";
 import { sendEmail } from "@/lib/email";
 import { isPlaceholderEmail } from "@/lib/auth/placeholderEmail";
 import type { User } from "@/lib/db/types";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 /** Per-identifier limit: 3 requests per 15 minutes. Deliberately tighter than
  * the per-IP AUTH_LIMITS so one target account cannot be spammed with links. */
@@ -71,7 +72,7 @@ export async function POST(request: Request) {
     }
 
     const db = await getDb();
-    const user = await db.collection<User>("users").findOne({
+    const user = await usersCollection(db).findOne({
       $or: [{ email: identifier }, { username: identifier }],
     });
 

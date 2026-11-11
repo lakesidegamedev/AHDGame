@@ -31,6 +31,8 @@ import { decideGovernance } from "@/lib/monetaryGovernance/rules/machine";
 import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
 import { getCharactersCollection } from "@/lib/db/collections/characters";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 
 function finiteOr(value: unknown, fallback: number): number {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
@@ -52,7 +54,7 @@ async function loadMacroContext(
 
   const nationalDocId = getNationalDocId(countryId);
   const nationalMetrics = nationalDocId
-    ? await db.collection<StateMetrics>("macroMetrics").findOne({ _id: nationalDocId })
+    ? await macroMetricsCollection(db).findOne({ _id: nationalDocId })
     : null;
   const gdpGrowth = finiteOr(nationalMetrics?.economic?.gdpGrowth?.value, NPP_CHAIR_TARGET_GROWTH);
 
@@ -176,9 +178,9 @@ export async function castFomcBallot(
   const seat = board.find((s) => s.occupantType === "player" && s.characterId?.equals(characterId));
   const clockMs = now.getTime();
   const jurisdiction = await resolveJurisdiction(db, bank.countryId);
-  const config = await db
-    .collection<{ _id: string; commandEconomyEnabled?: boolean }>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } });
+  const config = await gameConfigCollection<{ _id: string; commandEconomyEnabled?: boolean }>(
+    db
+  ).findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } });
   const policies = await loadExecutionPolicies(
     db,
     [jurisdiction.anchorCountryId],
@@ -247,9 +249,9 @@ export async function setFomcMotion(
     return { ok: false, reason: "no-meeting", message: "No meeting is currently taking votes." };
   }
   const jurisdiction = await resolveJurisdiction(db, bank.countryId);
-  const config = await db
-    .collection<{ _id: string; commandEconomyEnabled?: boolean }>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } });
+  const config = await gameConfigCollection<{ _id: string; commandEconomyEnabled?: boolean }>(
+    db
+  ).findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } });
   const policies = await loadExecutionPolicies(
     db,
     [jurisdiction.anchorCountryId],
@@ -347,9 +349,9 @@ export async function processFomcMeetings(
     seatsReplaced: 0,
   };
 
-  const gameConfig = await db
-    .collection<{ _id: string; commandEconomyEnabled?: boolean }>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } });
+  const gameConfig = await gameConfigCollection<{ _id: string; commandEconomyEnabled?: boolean }>(
+    db
+  ).findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } });
   const commandEconomyEnabled = gameConfig?.commandEconomyEnabled === true;
 
   // Advance the cost-of-capital EMA for EVERY bank, every turn — including

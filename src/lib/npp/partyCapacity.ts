@@ -4,6 +4,8 @@ import type { CountryId } from "@/lib/constants/countries";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { activityLogCollection } from "@/lib/db/repositories/activityLog";
 
 /**
  * NPP slots each active member adds, with gentle diminishing returns. Small
@@ -83,8 +85,7 @@ export async function getPartyNppCapacity(
     return { activeMemberCount: 0, maxNpps: 0, ceiling };
   }
 
-  const users = await db
-    .collection<User>("users")
+  const users = await usersCollection(db)
     .find({ _id: { $in: userIds }, isBanned: { $ne: true } }, { projection: { _id: 1 } })
     .project<Pick<User, "_id">>({ _id: 1 })
     .toArray();
@@ -94,8 +95,7 @@ export async function getPartyNppCapacity(
   }
 
   const cutoff = new Date(now.getTime() - NPP_ACTIVE_MEMBER_WINDOW_MS);
-  const activeMembers = await db
-    .collection<ActivityLog>("activityLog")
+  const activeMembers = await activityLogCollection(db)
     .aggregate<{ _id: ObjectId }>([
       {
         $match: {

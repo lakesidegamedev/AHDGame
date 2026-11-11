@@ -11,6 +11,7 @@ import { notifySubmitterOfSupporterDecision } from "@/lib/supporter/reviewNotifi
 import { escapeRegex } from "@/lib/utils/escapeRegex";
 import { syncDenormalizedNppName } from "@/lib/npp/syncDenormalizedName";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -39,9 +40,10 @@ export async function POST(_request: Request, { params }: RouteContext) {
       return errorResponse(409, "Request has already been decided.");
     }
 
-    const requester = await db
-      .collection<User>("users")
-      .findOne({ _id: req.userId }, { projection: { username: 1, nppRenameUsedAt: 1 } });
+    const requester = await usersCollection(db).findOne(
+      { _id: req.userId },
+      { projection: { username: 1, nppRenameUsedAt: 1 } }
+    );
     if (!requester) {
       return errorResponse(404, "Requesting user not found.");
     }
@@ -88,9 +90,10 @@ export async function POST(_request: Request, { params }: RouteContext) {
 
     let summary: string;
     if (req.kind === "wall-name") {
-      await db
-        .collection<User>("users")
-        .updateOne({ _id: req.userId }, { $set: { supporterWallName: req.proposedName } });
+      await usersCollection(db).updateOne(
+        { _id: req.userId },
+        { $set: { supporterWallName: req.proposedName } }
+      );
       summary = `"${req.proposedName}"`;
     } else {
       const npp = renameTarget!;
@@ -101,9 +104,7 @@ export async function POST(_request: Request, { params }: RouteContext) {
       // Keep denormalized ballot / office labels in lockstep with npps.name
       // (ticket #1037: polls kept the pre-rename name after supporter rename).
       await syncDenormalizedNppName(db, npp._id, req.proposedNppName!);
-      await db
-        .collection<User>("users")
-        .updateOne({ _id: req.userId }, { $set: { nppRenameUsedAt: now } });
+      await usersCollection(db).updateOne({ _id: req.userId }, { $set: { nppRenameUsedAt: now } });
       // Audit trail: store the name the NPP actually held at approval time.
       await requestsCol.updateOne(
         { _id: req._id },

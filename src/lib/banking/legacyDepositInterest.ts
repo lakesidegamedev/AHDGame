@@ -24,6 +24,7 @@ import {
 import type { SettlementResult } from "./settlementJournal";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 interface Credit {
   characterId: ObjectId;
@@ -109,9 +110,7 @@ export async function settleLegacyDepositInterest(
       loadTxThresholds(db),
       loadTurnLengthMinutes(db),
       loadAnchorRateMap(db, entries),
-      db
-        .collection<GameConfig>("gameConfig")
-        .findOne({ _id: "default" }, { projection: { ledgerShadow: 1 } }),
+      gameConfigCollection(db).findOne({ _id: "default" }, { projection: { ledgerShadow: 1 } }),
     ]);
     const receipts = buildTxDocs(entries, thresholds, cadence, rates).map((entry, i) => {
       entry._id = new ObjectId(

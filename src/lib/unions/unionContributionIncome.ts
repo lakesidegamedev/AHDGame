@@ -27,6 +27,7 @@ import {
 } from "./unionPoliticalContributions";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { unionsCollection } from "@/lib/db/repositories/unions";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 export async function unionContributionIncomePerTurn(
   db: Db,
@@ -38,9 +39,10 @@ export async function unionContributionIncomePerTurn(
     .toArray();
   if (mine.length === 0) return 0;
 
-  const config = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { labourSystemMode: 1 } });
+  const config = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { labourSystemMode: 1 } }
+  );
   if (!(await isLabourFullMode(config))) return 0;
 
   const unionIds = mine.map((row) => row.unionId);

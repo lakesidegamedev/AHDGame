@@ -21,6 +21,8 @@ import { getRegionalTexture1953 } from "@/lib/politicalMetrics/seeds/regionalTex
 import { getNonPlayableBoards } from "@/lib/politicalMetrics/seeds/nonPlayableBoards";
 import { NON_PLAYABLE_BOARD_COUNTRY_IDS } from "@/lib/politicalMetrics/seeds/nonPlayableBoardsSchema";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalMetricsCollection } from "@/lib/db/repositories/politicalMetrics";
+import type { Document } from "mongodb";
 
 /**
  * The 1953 preset carrying both authored modifiers and generated texture.
@@ -73,8 +75,7 @@ export async function seedPoliticalMetrics(
     log(`No non-playable political boards emitted for preset ${preset}; playables only`);
   }
   if (reset) {
-    await db
-      .collection("politicalMetrics")
+    await politicalMetricsCollection<Document>(db)
       .drop()
       .catch((error) => {
         logWarning("Collection drop failed (may not exist)", {
@@ -161,7 +162,7 @@ export async function seedPoliticalMetrics(
   }
 
   if (ops.length > 0) {
-    await db.collection<PoliticalMetricsDoc>("politicalMetrics").bulkWrite(ops, { ordered: true });
+    await politicalMetricsCollection(db).bulkWrite(ops, { ordered: true });
   }
   log(`Seeded political metrics for ${regionsSeeded} regions (playables + board countries)`);
   return { regionsSeeded };

@@ -12,6 +12,7 @@ import { createNotification } from "@/lib/notifications";
 import type { CabinetNomination, ElectedOfficial } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { cabinetNominationsCollection } from "@/lib/db/repositories/cabinetNominations";
 
 // POST /api/whitehouse/vp-nomination/[id]/withdraw — President withdraws a pending VP nomination.
 // Auth: requireBasicAuth
@@ -38,7 +39,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     const db = await getDb();
     const now = new Date();
 
-    const nomination = await db.collection<CabinetNomination>("cabinetNominations").findOne({
+    const nomination = await cabinetNominationsCollection(db).findOne({
       _id: nominationOid,
       positionId: "vicePresident",
       status: { $in: ["active", "proposed"] },
@@ -63,9 +64,10 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
       return errorResponse(403, "Only the President can withdraw a VP nomination");
     }
 
-    await db
-      .collection<CabinetNomination>("cabinetNominations")
-      .updateOne({ _id: nominationOid }, { $set: { status: "withdrawn", updatedAt: now } });
+    await cabinetNominationsCollection(db).updateOne(
+      { _id: nominationOid },
+      { $set: { status: "withdrawn", updatedAt: now } }
+    );
 
     const nomineeChar = nomination.nomineeCharacterId
       ? await charactersCollection(db).findOne(

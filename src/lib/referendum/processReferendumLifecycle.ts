@@ -42,6 +42,7 @@ import { WIRE_SWING_THRESHOLD } from "@/lib/constants/referendum";
 import { hostsSovereigntyReferendums } from "@/lib/referendum/rules/sovereigntyRegions";
 import { resolveWestminsterPolicy } from "@/lib/governorOffice/devolution/rules";
 import { billsCollection } from "@/lib/db/repositories/bills";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
 
 /**
  * Snapshot a region's cohort baseline at campaign open, from the Layer-1
@@ -58,9 +59,7 @@ async function buildCohortBaseline(
   regionDesire: number,
   peaceAgreement = false
 ): Promise<ReferendumCohort[]> {
-  const demo = await db
-    .collection<StateDemographics>("stateDemographics")
-    .findOne({ _id: regionId });
+  const demo = await stateDemographicsCollection(db).findOne({ _id: regionId });
   if (!demo?.countryId) {
     return [{ groupId: "_all", share: 1, turnout: 60, yesLean: regionDesire }];
   }
@@ -434,8 +433,7 @@ export async function processReferendumLifecycle(
       // Passed → secede via `secedeRegion`; failed/withdrawn/missing → cancel (no
       // cooldown, the popular vote stands); still voting → wait.
       if (ref.kind === "independence" && ref.westminsterBillId != null) {
-        const westminster = await billsCollection(db)
-          .findOne({ _id: ref.westminsterBillId });
+        const westminster = await billsCollection(db).findOne({ _id: ref.westminsterBillId });
         const billPassed = (b: Bill | null) =>
           b != null && (b.status === "signed" || b.enactedAt != null);
         const billFailed = (b: Bill | null) =>

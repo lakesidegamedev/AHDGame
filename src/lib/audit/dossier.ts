@@ -14,6 +14,8 @@ import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 import type { Document } from "mongodb";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { activityLogCollection } from "@/lib/db/repositories/activityLog";
 
 const DOSSIER_MAX_SESSIONS = 25;
 const DOSSIER_MAX_FINANCIAL_ROWS = 50;
@@ -346,7 +348,7 @@ export async function queryDossier(
   userId: ObjectId,
   isAdmin: boolean
 ): Promise<DossierResponse | null> {
-  const user = await db.collection<User>("users").findOne({ _id: userId });
+  const user = await usersCollection(db).findOne({ _id: userId });
   if (!user) return null;
 
   const categoryGuard = categoryGuardFor(isAdmin);
@@ -365,8 +367,7 @@ export async function queryDossier(
     recentActions,
     flaggedAuditRows,
   ] = await Promise.all([
-    db
-      .collection<ActivityLog>("activityLog")
+    activityLogCollection(db)
       .find({
         userId,
         type: { $in: ["login", "logout"] },
@@ -463,8 +464,7 @@ export async function queryDossier(
   }
 
   const linkedUsers = otherUserIds.size
-    ? await db
-        .collection<User>("users")
+    ? await usersCollection(db)
         .find({ _id: { $in: [...otherUserIds].map((id) => new ObjectId(id)) } })
         .project({ username: 1 })
         .toArray()

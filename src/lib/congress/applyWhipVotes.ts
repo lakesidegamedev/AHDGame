@@ -43,6 +43,7 @@ import {
   cabinetDisciplineForParty,
 } from "@/lib/resetCabinet/loadDiscipline";
 import { billsCollection } from "@/lib/db/repositories/bills";
+import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
 
 interface ApplyWhipResult {
   fellInLine: number;
@@ -514,9 +515,10 @@ export async function applyWhipVotesToStateBill(
     incFields.votesAbstain = incAbstain - decAbstain;
   }
 
-  await db
-    .collection<StateBill>("stateBills")
-    .updateOne({ _id: bill._id, status: bill.status }, { $set: setFields, $inc: incFields });
+  await stateBillsCollection(db).updateOne(
+    { _id: bill._id, status: bill.status },
+    { $set: setFields, $inc: incFields }
+  );
 
   if (predictionOps.length > 0) {
     const now = new Date();

@@ -13,6 +13,7 @@ import type { CommodityPrice, CommodityPriceHistory, GameState, State } from "@/
 import { computeCommodityPressureRatio } from "@/lib/constants/commodities";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
 
 const querySchema = z.object({
   countryId: countryIdSchema,
@@ -32,7 +33,7 @@ export const GET = withAdminAuth(async (_auth, request: Request) => {
     const db = await getDb();
 
     const [prices, gameState] = await Promise.all([
-      db.collection<CommodityPrice>("commodityPrices").find({}).toArray(),
+      commodityPricesCollection(db).find({}).toArray(),
       gameStateCollection(db).findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
     ]);
 

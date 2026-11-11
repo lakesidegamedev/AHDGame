@@ -74,6 +74,8 @@ import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParti
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
+import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
 
 /**
  * Record a primary standings snapshot for every election currently in primary phase.
@@ -164,14 +166,12 @@ export async function recordPrimarySnapshots(
     // come from one source of truth. All of these degrade to "no accrual, keep
     // score-based shares" when a world has not seeded them.
     snapshotRegionIds.length > 0
-      ? db
-          .collection<StateDemographics>("stateDemographics")
+      ? stateDemographicsCollection(db)
           .find({ _id: { $in: snapshotRegionIds } })
           .toArray()
       : Promise.resolve([] as StateDemographics[]),
     snapshotRegionIds.length > 0
-      ? db
-          .collection<StateDemographicTurnout>("stateDemographicTurnout")
+      ? stateDemographicTurnoutCollection(db)
           .find({ _id: { $in: snapshotRegionIds } })
           .toArray()
       : Promise.resolve([] as StateDemographicTurnout[]),
@@ -745,8 +745,7 @@ async function recordPresidentialStatePollingSnapshots(
     statesCollection(db)
       .find({ _id: { $in: stateIds } })
       .toArray(),
-    db
-      .collection<StateDemographics>("stateDemographics")
+    stateDemographicsCollection(db)
       .find({ _id: { $in: stateIds } })
       .toArray(),
   ]);

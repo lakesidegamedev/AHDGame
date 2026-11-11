@@ -26,6 +26,7 @@ import { recordAudit } from "@/lib/audit/recordAudit";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { currencyOrdersCollection } from "@/lib/db/repositories/currencyOrders";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 const limitOrderSchema = z
   .object({
@@ -128,9 +129,10 @@ export async function POST(request: Request) {
     }
 
     // Non-convertible command currencies cannot be limit-traded on the open market.
-    const gameConfig = await db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } });
+    const gameConfig = await gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { commandEconomyEnabled: 1 } }
+    );
     const blocked = nonConvertibleTradeCurrency(
       [fromCurrency, toCurrency],
       gs?.currentYear,
@@ -178,8 +180,10 @@ export async function POST(request: Request) {
           );
         }
 
-        const result: InsertOneResult<CurrencyOrder> = await currencyOrdersCollection(db)
-          .insertOne(order as CurrencyOrder, { session });
+        const result: InsertOneResult<CurrencyOrder> = await currencyOrdersCollection(db).insertOne(
+          order as CurrencyOrder,
+          { session }
+        );
         insertedId = result.insertedId;
       },
       async () => {
@@ -195,8 +199,9 @@ export async function POST(request: Request) {
         }
 
         try {
-          const result: InsertOneResult<CurrencyOrder> = await currencyOrdersCollection(db)
-            .insertOne(order as CurrencyOrder);
+          const result: InsertOneResult<CurrencyOrder> = await currencyOrdersCollection(
+            db
+          ).insertOne(order as CurrencyOrder);
           insertedId = result.insertedId;
         } catch (error) {
           await charactersCollection(db).updateOne(

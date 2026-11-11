@@ -8,6 +8,8 @@ import { POLITICAL_METRIC_FAMILIES } from "@/lib/politicalMetrics/families";
 import { US_METRIC_NAMES } from "@/lib/politicalMetrics/names";
 import type { MapMetricDefinition, MapMetricsResponse } from "./metricTypes";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { politicalMetricsCollection } from "@/lib/db/repositories/politicalMetrics";
 
 const stocks: MapMetricDefinition[] = [
   {
@@ -167,12 +169,10 @@ export async function loadMapMetrics(db: Db, stateIds: string[]): Promise<MapMet
         },
       })
       .toArray(),
-    db
-      .collection<MacroMetricsDoc>("macroMetrics")
+    macroMetricsCollection<MacroMetricsDoc>(db)
       .find(filter, { projection: { _id: 1, economic: 1, population: 1, governance: 1 } })
       .toArray(),
-    db
-      .collection<PoliticalMetricsDoc>("politicalMetrics")
+    politicalMetricsCollection(db)
       .find(filter, { projection: { _id: 1, values: 1 } })
       .toArray(),
   ]);

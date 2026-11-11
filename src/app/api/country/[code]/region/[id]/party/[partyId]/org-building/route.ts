@@ -24,6 +24,8 @@ import {
 } from "@/lib/partyBudgetGuards";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { adminLogsCollection } from "@/lib/db/repositories/adminLogs";
+import type { Document } from "mongodb";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; partyId: string }>;
@@ -76,8 +78,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const partyKey = getPartyIdString(party);
     const statePartyKey = getStatePartyOrgDocumentId(stateId, party);
-    const stateParty = await statePartyOrgCollection(db)
-      .findOne({ _id: statePartyKey });
+    const stateParty = await statePartyOrgCollection(db).findOne({ _id: statePartyKey });
 
     // Authorization: admin, national chair, state chair, vice chair, or state treasurer
     const isAdmin = authUser.isAdmin;
@@ -151,7 +152,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       now
     );
 
-    await db.collection("adminLogs").insertOne({
+    await adminLogsCollection<Document>(db).insertOne({
       category: "system",
       action: "org_building_budget_changed",
       username: authUser.username,

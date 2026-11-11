@@ -7,6 +7,9 @@ import type { PoliticalMetricsDoc } from "@/lib/db/types/politicalMetrics";
 import type { StatePolicy } from "@/lib/db/types/statePolicy";
 import { MODERN_ERA_LEGISLATURE_SPECS } from "@/lib/seeds/shared/modernEraLegislation";
 import { cyberResilienceScore } from "./rules";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
+import { politicalMetricsCollection } from "@/lib/db/repositories/politicalMetrics";
 
 const MANDATE_SLUG = "cyber_resilience_mandate";
 
@@ -42,16 +45,14 @@ export async function loadCyberResilience(
   const [boards, macro, policies] = await Promise.all([
     // Board values are keyed by literal dotted ids, so the field cannot be
     // projected on its own path; read the values record.
-    db
-      .collection<Pick<PoliticalMetricsDoc, "countryId" | "values">>("politicalMetrics")
+    politicalMetricsCollection<Pick<PoliticalMetricsDoc, "countryId" | "values">>(db)
       .find({ countryId: { $in: countryIds } } as never, {
         projection: { _id: 0, countryId: 1, values: 1 },
       })
       .toArray(),
-    db
-      .collection<{ countryId?: string; economic?: { rdIntensity?: { value?: number } } }>(
-        "macroMetrics"
-      )
+    macroMetricsCollection<{ countryId?: string; economic?: { rdIntensity?: { value?: number } } }>(
+      db
+    )
       .find(
         { countryId: { $in: countryIds } },
         { projection: { _id: 0, countryId: 1, "economic.rdIntensity.value": 1 } }
@@ -59,8 +60,7 @@ export async function loadCyberResilience(
       .toArray(),
     mandateIds.size === 0
       ? Promise.resolve([] as Pick<StatePolicy, "legislationTypeId" | "policyOptionIndex">[])
-      : db
-          .collection<StatePolicy>("statePolicies")
+      : statePoliciesCollection(db)
           .find(
             { scope: "national", legislationTypeId: { $in: [...mandateIds.keys()] } },
             { projection: { _id: 0, legislationTypeId: 1, policyOptionIndex: 1 } }

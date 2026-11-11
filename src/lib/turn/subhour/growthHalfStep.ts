@@ -21,6 +21,7 @@ import {
 } from "./stepBase";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 
 type GrowthState = Pick<State, "_id" | "countryId" | "gdp" | "outputGap" | "subhourStep"> & {
   subhourBase?: State["subhourBase"];
@@ -99,8 +100,7 @@ export async function runGrowthHalfStep(
         subhourBase: 1,
       })
       .toArray(),
-    db
-      .collection<StateMetrics>("macroMetrics")
+    macroMetricsCollection(db)
       .find({})
       .project<GrowthMetrics>({
         "economic.gdpGrowth.value": 1,
@@ -263,7 +263,7 @@ export async function runGrowthHalfStep(
   // so a failure after this write leaves only display fields behind.
   if (stateOps.length > 0) await statesCollection(db).bulkWrite(stateOps);
   if (metricOps.length > 0)
-    await db.collection<StateMetrics>("macroMetrics").bulkWrite(metricOps, { ordered: false });
+    await macroMetricsCollection(db).bulkWrite(metricOps, { ordered: false });
   if (budgetOps.length > 0)
     await federalBudgetCollection(db).bulkWrite(budgetOps, { ordered: false });
 

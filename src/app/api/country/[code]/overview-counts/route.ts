@@ -24,6 +24,7 @@ import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { billsCollection } from "@/lib/db/repositories/bills";
 import { unionsCollection } from "@/lib/db/repositories/unions";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 export type { OverviewCounts } from "@/lib/country/overviewCounts";
 
@@ -87,9 +88,10 @@ async function countPoliticians(db: Db, countryId: CountryId): Promise<number> {
 async function resolveCommandEconomyActive(db: Db, countryId: CountryId): Promise<boolean> {
   if (!commandEconomyOffices(countryId)) return false;
   const [config, state, budget] = await Promise.all([
-    db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } }),
+    gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { commandEconomyEnabled: 1 } }
+    ),
     gameStateCollection(db).findOne({ _id: "current" }, { projection: { currentYear: 1 } }),
     federalBudgetCollection(db).findOne(
       { _id: getNationalBudgetId(countryId) } as { _id: "federal" },

@@ -24,6 +24,8 @@ import {
 import type { StrategyDiffusionWorld } from "@/lib/constants/techTree/strategyAvailability";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
 
 /** Every method with a tier: the only ones diffusion can delay. */
 const TIERED_STRATEGY_IDS: readonly string[] = [
@@ -46,8 +48,7 @@ export async function loadTechDiffusionSnapshot(
     statesCollection(db)
       .find(countryFilter as Filter<State>, { projection: { countryId: 1, population: 1 } })
       .toArray(),
-    db
-      .collection<StateMetrics>("macroMetrics")
+    macroMetricsCollection(db)
       .find(countryFilter as Filter<StateMetrics>, {
         projection: {
           countryId: 1,
@@ -57,9 +58,10 @@ export async function loadTechDiffusionSnapshot(
         },
       })
       .toArray(),
-    db
-      .collection<CommodityPrice>("commodityPrices")
-      .findOne({ commodity: "energy" }, { projection: { stateSupply: 1, stateDemand: 1 } }),
+    commodityPricesCollection(db).findOne(
+      { commodity: "energy" },
+      { projection: { stateSupply: 1, stateDemand: 1 } }
+    ),
     options.sectors
       ? Promise.resolve(null)
       : corporateSectorsCollection(db)

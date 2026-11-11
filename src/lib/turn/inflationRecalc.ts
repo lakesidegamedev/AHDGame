@@ -59,6 +59,7 @@ import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { savingsLedgerCollection } from "@/lib/db/repositories/savingsLedger";
 import type { Document } from "mongodb";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 
 export interface InflationRecalcOptions {
   /**
@@ -380,7 +381,7 @@ export async function runInflationRecalc(
 
           const nationalDocId = getNationalDocId(countryId);
           const nationalMetrics = nationalDocId
-            ? await db.collection<StateMetrics>("macroMetrics").findOne({ _id: nationalDocId })
+            ? await macroMetricsCollection(db).findOne({ _id: nationalDocId })
             : null;
           const gdpGrowth = finiteOr(nationalMetrics?.economic?.gdpGrowth?.value, 2.0);
           const policyStancePressure = finiteOr(bank.policyInflationPressure, 0);

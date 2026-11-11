@@ -30,6 +30,7 @@ import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
 
 export interface MapRegionLean {
   regionId: string;
@@ -81,7 +82,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
 
     const [allStates, allDemographics] = await Promise.all([
       statesCollection(db).find({ countryId }).toArray(),
-      db.collection<StateDemographics>("stateDemographics").find({ countryId }).toArray(),
+      stateDemographicsCollection(db).find({ countryId }).toArray(),
     ]);
 
     const stateIds = allStates.map((s) => s._id);

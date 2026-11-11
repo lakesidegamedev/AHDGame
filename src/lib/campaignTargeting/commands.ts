@@ -36,6 +36,7 @@ import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 type Actor = AuthUserWithCharacter & { hasCharacter: true; character: Character };
 
@@ -169,9 +170,10 @@ export async function purchaseTargetedAds(
     throw conflict("The ad quote changed. Refresh before buying.");
   const actions = AD_ACTION_COST * request.count;
   const fundsField = quote.forex ? "currencyBalances.campaign" : "funds";
-  const config = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { politicalMediaMarketEnabled: 1 } });
+  const config = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { politicalMediaMarketEnabled: 1 } }
+  );
   if (config?.politicalMediaMarketEnabled === true) {
     const orderId = randomUUID();
     const funding = await fundPoliticalMediaOrder(db, {
@@ -231,12 +233,11 @@ export async function purchaseTargetedAds(
     if (!result.modifiedCount) throw conflict("Insufficient personal actions or campaign funds");
   };
   const write = async (session?: ClientSession) => {
-    const result = await electionCandidatesCollection(db)
-      .updateOne(
-        candidateFilter,
-        { $set: { targetedAds: ads }, $inc: { targetedAdsRevision: 1 } },
-        { session }
-      );
+    const result = await electionCandidatesCollection(db).updateOne(
+      candidateFilter,
+      { $set: { targetedAds: ads }, $inc: { targetedAdsRevision: 1 } },
+      { session }
+    );
     if (!result.modifiedCount) throw conflict("Campaign changed. Refresh before buying ads");
   };
   await runWithOptionalTransaction(

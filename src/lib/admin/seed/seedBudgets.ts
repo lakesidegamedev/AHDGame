@@ -9,6 +9,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
 
 /**
  * Seeds US-only budget data: federal budget, US enacted laws, US state budgets,
@@ -31,8 +32,10 @@ export async function seedBudgets(
       await statesCollection<Document>(db).find({ countryId: "US" }).project({ _id: 1 }).toArray()
     ).map((s) => s._id as string);
     if (usStateIds.length > 0) {
-      await stateBudgetsCollection(db)
-        .deleteMany({ stateId: { $in: usStateIds }, countryId: "US" });
+      await stateBudgetsCollection(db).deleteMany({
+        stateId: { $in: usStateIds },
+        countryId: "US",
+      });
     }
     // The US enacted-law book comes from `seedPoliticalLegislationBaseline`,
     // which strips the legacy US catalog via `POLITICAL_LEGISLATION_EXCLUDED_SCOPES`.
@@ -87,8 +90,7 @@ export async function seedBudgets(
   const stateBudgets = generateStateBudgets(statesForBudgets, usFiscalYear);
   for (const budget of stateBudgets) {
     const { _id, ...budgetData } = budget;
-    await stateBudgetsCollection(db)
-      .updateOne({ _id }, { $set: budgetData }, { upsert: true });
+    await stateBudgetsCollection(db).updateOne({ _id }, { $set: budgetData }, { upsert: true });
   }
   log(`Seeded ${stateBudgets.length} US state budgets`);
 
@@ -150,8 +152,7 @@ export async function seedBudgets(
         metadata: { index: "stateId", error: String(error) },
       });
     });
-  await db
-    .collection("enactedLaws")
+  await enactedLawsCollection<Document>(db)
     .createIndex({ scope: 1, stateId: 1 })
     .catch((error) => {
       logWarning("Index creation failed (may already exist)", {
@@ -160,8 +161,7 @@ export async function seedBudgets(
         metadata: { index: "scope_stateId", error: String(error) },
       });
     });
-  await db
-    .collection("enactedLaws")
+  await enactedLawsCollection<Document>(db)
     .createIndex({ legislationTypeId: 1 })
     .catch((error) => {
       logWarning("Index creation failed (may already exist)", {

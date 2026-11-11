@@ -70,6 +70,7 @@ import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /** Concurrent country settlements; a shared payee or pool still orders them. */
 const TREASURY_LANES = 8;
@@ -172,7 +173,7 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
   // Flag posture first: it decides which optional fields the budget read below
   // has to decode.
   const [config, rates] = await Promise.all([
-    db.collection<GameConfig>("gameConfig").findOne(
+    gameConfigCollection(db).findOne(
       { _id: "default" },
       {
         projection: {

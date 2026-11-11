@@ -28,6 +28,7 @@ import {
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -81,12 +82,12 @@ export async function GET(request: Request, { params }: RouteParams) {
       Number.isFinite(incomeCapturePct) ? incomeCapturePct : DEFAULT_INCOME_CAPTURE_PERCENT
     );
 
-    const lastHist = await db
-      .collection<{ income?: number; turn?: number }>("corporationHistory")
-      .findOne(
-        { corporationId: corp._id },
-        { sort: { turn: -1 }, projection: { income: 1, turn: 1 } }
-      );
+    const lastHist = await corporationHistoryCollection<{ income?: number; turn?: number }>(
+      db
+    ).findOne(
+      { corporationId: corp._id },
+      { sort: { turn: -1 }, projection: { income: 1, turn: 1 } }
+    );
 
     const lastTurnIncome =
       typeof lastHist?.income === "number" && Number.isFinite(lastHist.income)

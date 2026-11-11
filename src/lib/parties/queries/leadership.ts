@@ -32,6 +32,9 @@ import type {
   NationalElectionsState,
 } from "@/lib/parties/dto/partyView";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
+import { nationalPartyElectionsCollection } from "@/lib/db/repositories/nationalPartyElections";
 
 async function getOptionalViewer(): Promise<AuthUserWithCharacter | null> {
   try {
@@ -50,8 +53,7 @@ export async function getNationalPartyElectionState(
   const partyCountryId = party.countryId ?? "US";
   const isMember =
     authUser?.character?.party === partyId && authUser?.character?.countryId === partyCountryId;
-  const activeElections = await db
-    .collection<NationalPartyElection>("nationalPartyElections")
+  const activeElections = await nationalPartyElectionsCollection(db)
     .find({
       partyId,
       countryId: partyCountryId,
@@ -84,9 +86,10 @@ export async function getNationalPartyElectionState(
       }
     }
     if (canRun) {
-      const userDoc = await db
-        .collection("users")
-        .findOne({ _id: new ObjectId(authUser.userId) }, { projection: { createdAt: 1 } });
+      const userDoc = await usersCollection<Document>(db).findOne(
+        { _id: new ObjectId(authUser.userId) },
+        { projection: { createdAt: 1 } }
+      );
       const cooldown = isInNewCharacterCooldown({
         userCreatedAt: (userDoc?.createdAt as Date | undefined) ?? new Date(0),
         characterCreatedAt: authUser.character.createdAt,
@@ -136,8 +139,7 @@ export async function getNationalPartyElectionState(
   const completedElections =
     missingPositions.length === 0
       ? []
-      : await db
-          .collection<NationalPartyElection>("nationalPartyElections")
+      : await nationalPartyElectionsCollection(db)
           .aggregate<NationalPartyElection>([
             {
               $match: {
@@ -382,9 +384,10 @@ export async function getNationalCommitteeState(
   // the cooldown gate in the committee/enter route.
   let runCooldownUntil: string | null = null;
   if (isMember && authUser?.character) {
-    const userDoc = await db
-      .collection("users")
-      .findOne({ _id: new ObjectId(authUser.userId) }, { projection: { createdAt: 1 } });
+    const userDoc = await usersCollection<Document>(db).findOne(
+      { _id: new ObjectId(authUser.userId) },
+      { projection: { createdAt: 1 } }
+    );
     const cooldown = isInNewCharacterCooldown({
       userCreatedAt: (userDoc?.createdAt as Date | undefined) ?? new Date(0),
       characterCreatedAt: authUser.character.createdAt,

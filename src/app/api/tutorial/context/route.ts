@@ -20,6 +20,8 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { unionsCollection } from "@/lib/db/repositories/unions";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 
 /**
  * GET /api/tutorial/context — live world numbers for the tutorial coach.
@@ -58,20 +60,19 @@ async function handleGET() {
     const [gameState, gameConfig, state, metrics, partyCount, openRaces, corps, unions] =
       await Promise.all([
         getGameState(db),
-        db
-          .collection<GameConfig>("gameConfig")
-          .findOne({ _id: "default" }, { projection: { turnLengthMinutes: 1 } }),
+        gameConfigCollection(db).findOne(
+          { _id: "default" },
+          { projection: { turnLengthMinutes: 1 } }
+        ),
         statesCollection(db).findOne(
           { _id: character.homeState, countryId },
           { projection: { name: 1, population: 1 } }
         ),
         // Unemployment lives on macroMetrics, keyed by region id.
-        db
-          .collection<StateMetrics>("macroMetrics")
-          .findOne(
-            { _id: character.homeState },
-            { projection: { "economic.unemploymentRate.value": 1 } }
-          ),
+        macroMetricsCollection(db).findOne(
+          { _id: character.homeState },
+          { projection: { "economic.unemploymentRate.value": 1 } }
+        ),
         // The collection is "politicalParties", not "parties" (seedManifest.ts).
         politicalPartiesCollection(db).countDocuments({ countryId }),
         electionsCollection(db).countDocuments({

@@ -20,6 +20,8 @@ import {
   humanizeLegislationTypeId,
 } from "@/lib/legislationTypeAliases";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
+import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
 
 export interface PolicyProvisionInput {
   legislationTypeId: string;
@@ -109,11 +111,10 @@ export async function checkDuplicateProvisions(
     const key = `${canonicalId}:${provision.policyOptionId}`;
     if (activeProvisionKeys.has(key)) {
       // Look up the legislation type name for a user-friendly error
-      const lt = await legislationTypesCollection(db)
-        .findOne(
-          { _id: { $in: getEquivalentLegislationTypeIds(provision.legislationTypeId) } },
-          { projection: { name: 1 } }
-        );
+      const lt = await legislationTypesCollection(db).findOne(
+        { _id: { $in: getEquivalentLegislationTypeIds(provision.legislationTypeId) } },
+        { projection: { name: 1 } }
+      );
       const name =
         lt?.name ??
         humanizeLegislationTypeId(provision.legislationTypeId) ??
@@ -259,8 +260,7 @@ export async function checkCurrentPolicyLevel(
   ];
 
   // Primary: check statePolicies
-  const currentPolicies = await db
-    .collection<StatePolicy>("statePolicies")
+  const currentPolicies = await statePoliciesCollection(db)
     .find({ stateId: policyStoreId, legislationTypeId: { $in: legTypeIds } })
     .toArray();
 
@@ -316,8 +316,7 @@ export async function checkCurrentPolicyLevel(
     }
 
     // Fetch enacted laws sorted by enactedAt desc — only the most recent per type matters
-    const enactedLaws = await db
-      .collection<EnactedLaw>("enactedLaws")
+    const enactedLaws = await enactedLawsCollection(db)
       .find(enactedLawFilter)
       .sort({ enactedAt: -1 })
       .toArray();
@@ -398,11 +397,10 @@ export async function checkCurrentPolicyLevel(
       canonicalizeLegislationTypeId(provision.legislationTypeId) ?? provision.legislationTypeId;
     const currentOptionId = policyMap.get(canonicalId);
     if (currentOptionId && currentOptionId === provision.policyOptionId) {
-      const lt = await legislationTypesCollection(db)
-        .findOne(
-          { _id: { $in: getEquivalentLegislationTypeIds(provision.legislationTypeId) } },
-          { projection: { name: 1 } }
-        );
+      const lt = await legislationTypesCollection(db).findOne(
+        { _id: { $in: getEquivalentLegislationTypeIds(provision.legislationTypeId) } },
+        { projection: { name: 1 } }
+      );
       const name =
         lt?.name ??
         humanizeLegislationTypeId(provision.legislationTypeId) ??

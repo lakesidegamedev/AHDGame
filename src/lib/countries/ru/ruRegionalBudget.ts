@@ -21,6 +21,7 @@ import { computeLawCost } from "@/lib/politicalLegislation/costEngine";
 import { projectLawToLegislationType } from "@/lib/politicalLegislation/project";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
 
 const GDP_MILLIONS = 1_000_000;
 
@@ -83,8 +84,7 @@ export async function processRURegionalBudgets(
   const nationalPopulation = regions.reduce((sum, r) => sum + (r.population ?? 0), 0);
 
   const regionIds = regions.map((r) => r._id as string);
-  const allRegionalPolicies = await db
-    .collection<StatePolicy>("statePolicies")
+  const allRegionalPolicies = await statePoliciesCollection(db)
     .find({ stateId: { $in: regionIds }, scope: "state" })
     .toArray();
   const policiesByRegion = new Map<string, StatePolicy[]>();
@@ -177,7 +177,7 @@ export async function processRURegionalBudgets(
   }
 
   if (statePolicyOps.length > 0) {
-    await db.collection<StatePolicy>("statePolicies").bulkWrite(statePolicyOps);
+    await statePoliciesCollection(db).bulkWrite(statePolicyOps);
   }
   if (regionalBudgetOps.length > 0) {
     await db.collection<RegionalBudget>("regionalBudgets").bulkWrite(regionalBudgetOps);

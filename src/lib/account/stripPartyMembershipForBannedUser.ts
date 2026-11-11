@@ -20,6 +20,7 @@ import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficia
 import type { Document } from "mongodb";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
+import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
 
 export interface StripPartyMembershipResult {
   charactersUpdated: number;
@@ -38,8 +39,7 @@ async function vacateCongressionalLeadershipForCharacters(
 ): Promise<void> {
   if (characters.length === 0) return;
   try {
-    const held = await db
-      .collection<CongressLeader>("congressLeaders")
+    const held = await congressLeadersCollection(db)
       .find({ characterId: { $in: characters.map((c) => c._id) } })
       .toArray();
     if (held.length === 0) return;
@@ -137,11 +137,10 @@ export async function stripPartyMembershipForBannedUser(
 
       const isChair = politicalParty.chairId?.toString() === char._id.toString();
       if (isChair) {
-        await coalitionsCollection<Document>(db)
-          .updateMany(
-            { chairPartyId: politicalParty._id },
-            { $set: { chairCharacterId: null, updatedAt: now } }
-          );
+        await coalitionsCollection<Document>(db).updateMany(
+          { chairPartyId: politicalParty._id },
+          { $set: { chairCharacterId: null, updatedAt: now } }
+        );
       }
     }
 

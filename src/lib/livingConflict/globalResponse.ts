@@ -81,6 +81,9 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { crisesCollection } from "@/lib/db/repositories/crises";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { crisisInteractionsCollection } from "@/lib/db/repositories/crisisInteractions";
+import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
 
 /**
  * The deep module for shared world-event responses. Callers only need to ask
@@ -123,9 +126,7 @@ export async function loadCampaignCapability(
 ): Promise<CampaignCapabilitySnapshot> {
   const [budget, approval, units] = await Promise.all([
     federalBudgetCollection(db).findOne({ countryId: countryId as FederalBudget["countryId"] }),
-    db
-      .collection<GovernmentApproval>("governmentApprovals")
-      .findOne({ _id: countryId as GovernmentApproval["_id"] }),
+    governmentApprovalsCollection(db).findOne({ _id: countryId as GovernmentApproval["_id"] }),
     db
       .collection<MilitaryUnit>("militaryUnits")
       .find({ countryId: countryId as MilitaryUnit["countryId"] })
@@ -315,9 +316,10 @@ export async function prepareGlobalResponseOption(
     ["recapitalize", "guarantee", "stimulus", "sovereign_support"].includes(option.action.response);
   const cashLedgerEnabled = cashLedgerAction
     ? (
-        await db
-          .collection<GameConfig>("gameConfig")
-          .findOne({ _id: "default" }, { projection: { treasuryCashLedgerEnabled: 1 } })
+        await gameConfigCollection(db).findOne(
+          { _id: "default" },
+          { projection: { treasuryCashLedgerEnabled: 1 } }
+        )
       )?.treasuryCashLedgerEnabled === true
     : undefined;
   await prepareFinancialCrisisBankResponse(db, countryId, option, cashLedgerEnabled);
@@ -595,9 +597,10 @@ async function applyOutcomeTrajectory(
         : relieveCommitment(def, state, side, Math.abs(amount));
   }
   if (def.key === ARAB_UPRISINGS_KEY && state.arabRegional) {
-    const interaction = await db
-      .collection<CrisisInteraction>("crisisInteractions")
-      .findOne({ crisisId: crisis._id }, { projection: { leaderResponses: 1 } });
+    const interaction = await crisisInteractionsCollection(db).findOne(
+      { crisisId: crisis._id },
+      { projection: { leaderResponses: 1 } }
+    );
     state = projectArabRegion({
       ...state,
       arabRegional: resolveArabRegion(
@@ -649,9 +652,7 @@ export async function resolveGlobalResponse(
 ): Promise<ResolvedGlobalResponse | null> {
   const crisis = await crisesCollection(db).findOne({ _id: crisisId });
   if (!crisis?.globalResponse) return null;
-  const interaction = await db
-    .collection<CrisisInteraction>("crisisInteractions")
-    .findOne({ crisisId });
+  const interaction = await crisisInteractionsCollection(db).findOne({ crisisId });
   if (!interaction) return null;
   if (interaction.globalResponseOutcome) {
     const prior = crisis.globalResponse.outcomes.find(
@@ -665,7 +666,7 @@ export async function resolveGlobalResponse(
       if (prior.capacityDestruction && !interaction.globalResponseOutcome.capacityDestruction) {
         const summary = await applyConflictCapacityDestruction(db, crisis, prior, resolutionId);
         if (summary)
-          await db.collection<CrisisInteraction>("crisisInteractions").updateOne(
+          await crisisInteractionsCollection(db).updateOne(
             { _id: interaction._id },
             {
               $set: {
@@ -799,7 +800,7 @@ export async function resolveGlobalResponse(
   // deterministic embargo identity makes concurrent/repeated resolution safe.
   await applyCrisisTradeSanctions(db, crisis, interaction, outcome);
 
-  const claimed = await db.collection<CrisisInteraction>("crisisInteractions").updateOne(
+  const claimed = await crisisInteractionsCollection(db).updateOne(
     {
       _id: interaction._id,
       globalResponseOutcome: { $exists: false },
@@ -823,9 +824,7 @@ export async function resolveGlobalResponse(
     }
   );
   if (claimed.modifiedCount === 0) {
-    const latest = await db
-      .collection<CrisisInteraction>("crisisInteractions")
-      .findOne({ _id: interaction._id });
+    const latest = await crisisInteractionsCollection(db).findOne({ _id: interaction._id });
     if (latest?.globalResponseOutcome) return latest.globalResponseOutcome;
     throw new Error("Global response changed during resolution; retry from current responses");
   }
@@ -850,7 +849,7 @@ export async function resolveGlobalResponse(
   );
   if (capacitySummary) {
     resolved.capacityDestruction = capacitySummary;
-    await db.collection<CrisisInteraction>("crisisInteractions").updateOne(
+    await crisisInteractionsCollection(db).updateOne(
       { _id: interaction._id },
       {
         $set: {
@@ -869,7 +868,7 @@ export async function resolveGlobalResponse(
   if (campaignResult) {
     resolved.campaignStageBefore = campaignResult.previousStage;
     resolved.campaignStageAfter = campaignResult.nextStage;
-    await db.collection<CrisisInteraction>("crisisInteractions").updateOne(
+    await crisisInteractionsCollection(db).updateOne(
       { _id: interaction._id },
       {
         $set: {

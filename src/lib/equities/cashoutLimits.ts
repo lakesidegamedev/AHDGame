@@ -41,11 +41,12 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 export async function loadEquityCashoutLimitsStage(db: Db): Promise<number> {
-  const config = await db
-    .collection<Pick<GameConfig, "equityCashoutLimitsStage">>("gameConfig")
-    .findOne({ _id: "default" } as never, { projection: { equityCashoutLimitsStage: 1 } });
+  const config = await gameConfigCollection<Pick<GameConfig, "equityCashoutLimitsStage">>(
+    db
+  ).findOne({ _id: "default" } as never, { projection: { equityCashoutLimitsStage: 1 } });
   const stage = config?.equityCashoutLimitsStage;
   return typeof stage === "number" && Number.isFinite(stage) ? stage : 0;
 }

@@ -56,6 +56,10 @@ import { nppsCollection } from "@/lib/db/repositories/npps";
 import { billsCollection } from "@/lib/db/repositories/bills";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
+import { cabinetNominationsCollection } from "@/lib/db/repositories/cabinetNominations";
+import type { Document } from "mongodb";
+import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; partyId: string }>;
@@ -106,8 +110,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const partyKey = getPartyIdString(party);
     const statePartyKey = getStatePartyOrgDocumentId(stateId, party);
 
-    const statePartyOrg = await statePartyOrgCollection(db)
-      .findOne({ _id: statePartyKey });
+    const statePartyOrg = await statePartyOrgCollection(db).findOne({ _id: statePartyKey });
 
     if (!statePartyOrg) {
       return errorResponse(404, "State party organization not found");
@@ -157,7 +160,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     if (targetType === "bill") {
       const bill =
         chamber === subNationalChamber
-          ? await db.collection<StateBill>("stateBills").findOne({
+          ? await stateBillsCollection(db).findOne({
               _id: targetOid,
               stateId,
               status: { $in: ["active", "veto_override"] },
@@ -176,7 +179,9 @@ export async function POST(request: Request, { params }: RouteParams) {
         whipWindowStart = getBillWhipWindowStart(bill as Bill);
       }
     } else if (targetType === "cabinetNomination") {
-      const nomination = await db.collection("cabinetNominations").findOne<CabinetNomination>({
+      const nomination = await cabinetNominationsCollection<Document>(
+        db
+      ).findOne<CabinetNomination>({
         _id: targetOid,
         status: "active",
       });
@@ -302,9 +307,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     if (targetType === "bill") {
       if (chamber === subNationalChamber) {
-        const bill = await db
-          .collection<StateBill>("stateBills")
-          .findOne({ _id: targetOid, stateId });
+        const bill = await stateBillsCollection(db).findOne({ _id: targetOid, stateId });
         if (!bill) {
           return errorResponse(404, "Bill not found or voting not open");
         }
@@ -313,11 +316,9 @@ export async function POST(request: Request, { params }: RouteParams) {
         // type, all state demographics, and the current turn for the snapshot.
         const [legislationType, stateDemographicsArr, gameStateDoc] = await Promise.all([
           bill.legislationTypeId
-            ? legislationTypesCollection(db)
-                .findOne({ _id: bill.legislationTypeId })
+            ? legislationTypesCollection(db).findOne({ _id: bill.legislationTypeId })
             : Promise.resolve(null),
-          db
-            .collection<StateDemographics>("stateDemographics")
+          stateDemographicsCollection(db)
             .find({
               _id: {
                 $in: [
@@ -357,11 +358,9 @@ export async function POST(request: Request, { params }: RouteParams) {
         }
         const [legislationType, stateDemographicsArr, gameStateDoc] = await Promise.all([
           bill.legislationTypeId
-            ? legislationTypesCollection(db)
-                .findOne({ _id: bill.legislationTypeId })
+            ? legislationTypesCollection(db).findOne({ _id: bill.legislationTypeId })
             : Promise.resolve(null),
-          db
-            .collection<StateDemographics>("stateDemographics")
+          stateDemographicsCollection(db)
             .find({
               _id: {
                 $in: [

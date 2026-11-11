@@ -6,6 +6,7 @@
 import type { Db } from "mongodb";
 import { lossShareByCountry } from "./lossShare";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 export const MARKET_ADJUSTMENT_SIGNALS = "marketAdjustmentSignals";
 /** Turns of loss-share history kept per country. */
@@ -20,9 +21,10 @@ interface SignalDoc {
 }
 
 async function marketAdjustmentStage(db: Db): Promise<number> {
-  const cfg = await db
-    .collection<{ marketAdjustmentStage?: number }>("gameConfig")
-    .findOne({ _id: "default" as never }, { projection: { marketAdjustmentStage: 1 } });
+  const cfg = await gameConfigCollection<{ marketAdjustmentStage?: number }>(db).findOne(
+    { _id: "default" as never },
+    { projection: { marketAdjustmentStage: 1 } }
+  );
   return typeof cfg?.marketAdjustmentStage === "number" ? cfg.marketAdjustmentStage : 0;
 }
 

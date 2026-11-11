@@ -22,6 +22,7 @@ import {
 } from "./rules/deliveryReach";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /**
  * Gates shared by every way a supply contract can be opened or changed:
@@ -33,9 +34,10 @@ export async function requireSupplyExchangeAccess(
   db: Db,
   userId: string
 ): Promise<NextResponse | null> {
-  const config = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { supplyAgreementsEnabled: 1 } });
+  const config = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { supplyAgreementsEnabled: 1 } }
+  );
   if (!config?.supplyAgreementsEnabled) {
     return errorResponse(403, "Supply agreements are not enabled.");
   }
@@ -67,9 +69,10 @@ export async function isSupplyLaneClosed(
       { _id: "current" },
       { projection: { currentTurn: 1, currentYear: 1 } }
     ),
-    db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } }),
+    gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { commandEconomyEnabled: 1 } }
+    ),
   ]);
   const turn = world?.currentTurn ?? 0;
   const supplier = supplierCountry as CountryId;

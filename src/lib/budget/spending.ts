@@ -44,6 +44,9 @@ import { loadSovereignCouponBooks } from "@/lib/bonds/sovereignCouponBook";
 import { sovereignStockAnnualService } from "@/lib/budget/rules/sovereignDebtService";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
 
 // Re-exported so existing importers of `./spending` keep working.
 export { keepLatestActiveLawPerType } from "./keepLatestActiveLawPerType";
@@ -183,9 +186,10 @@ export async function resolveNationalMedianIncome(
 ): Promise<number | undefined> {
   const nationalDocId = getNationalDocId(countryId);
   if (!nationalDocId) return undefined;
-  const doc = await db
-    .collection<StateMetrics>("macroMetrics")
-    .findOne({ _id: nationalDocId }, { projection: { "economic.medianIncome.value": 1 } });
+  const doc = await macroMetricsCollection(db).findOne(
+    { _id: nationalDocId },
+    { projection: { "economic.medianIncome.value": 1 } }
+  );
   const value = doc?.economic?.medianIncome?.value;
   return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : undefined;
 }
@@ -224,16 +228,17 @@ export async function calculateFederalLawAnnualCosts(
   };
   const [rawLaws, population, nationalMedianIncome, eraContext, v2Base, gameConfig] =
     await Promise.all([
-      db.collection<EnactedLaw>("enactedLaws").find(nationalQuery).toArray(),
+      enactedLawsCollection(db).find(nationalQuery).toArray(),
       getCountryPopulation(db, budgetCountryId),
       resolveNationalMedianIncome(db, budgetCountryId),
       hoistedEraContext ? Promise.resolve(hoistedEraContext) : getEraContext(db),
       budgetCountryId in COST_INCOME_ANCHORS
         ? countryFiscalBase(db, budgetCountryId)
         : Promise.resolve(undefined),
-      db
-        .collection<{ _id: string; commandEconomyEnabled?: boolean }>("gameConfig")
-        .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } }),
+      gameConfigCollection<{ _id: string; commandEconomyEnabled?: boolean }>(db).findOne(
+        { _id: "default" },
+        { projection: { commandEconomyEnabled: 1 } }
+      ),
     ]);
   const { year: eraYear, incomeBandIndexByCountry } = eraContext;
   const nationalGdpPerCapita = population > 0 ? budget.gdp / population : undefined;
@@ -423,8 +428,7 @@ export async function calculateStateSpendingDetail(
   lawCosts: Array<{ law: EnactedLaw; annualCost: number; category: string }>;
 }> {
   const enactedLaws = keepLatestActiveLawPerType(
-    await db
-      .collection<EnactedLaw>("enactedLaws")
+    await enactedLawsCollection(db)
       .find({ scope: "state", stateId, repealedAt: { $exists: false } })
       .toArray()
   );

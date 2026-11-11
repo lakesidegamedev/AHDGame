@@ -73,6 +73,7 @@ import {
 import { getCharactersCollection } from "@/lib/db/collections/characters";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 export interface ForexTurnResult {
   countriesUpdated: number;
@@ -166,9 +167,10 @@ export async function processForexTurn(
 
   // Command-economy regime gate (default OFF). When on, command-era currencies
   // (USSR, command-China) are held at a fixed, non-convertible official rate.
-  const gameConfig = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } });
+  const gameConfig = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { commandEconomyEnabled: 1 } }
+  );
   const commandEconomyEnabled = gameConfig?.commandEconomyEnabled === true;
 
   // Compute volumes for all currencies in one pass

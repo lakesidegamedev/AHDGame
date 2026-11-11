@@ -11,6 +11,7 @@ import {
 } from "@/lib/constants/commodities";
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
+import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
 
 /** Which source a country's supply and demand came from; null with no price row. */
 function balanceSource(data: object | null | undefined): NationalBalanceSource | null {
@@ -23,7 +24,7 @@ function balanceSource(data: object | null | undefined): NationalBalanceSource |
 export async function queryCommodities(db: Db, params: { country?: string }) {
   const { country } = params;
 
-  const rawPrices = await db.collection<CommodityPrice>("commodityPrices").find({}).toArray();
+  const rawPrices = await commodityPricesCollection(db).find({}).toArray();
   // A country's figures come from the funded country book of the prices' turn
   // when there is one (see fundedCountryViewRules).
   const prices = country ? await withFundedNationalBalances(db, rawPrices) : rawPrices;
@@ -67,7 +68,7 @@ export async function queryCommodityDetail(db: Db, params: { key: string; countr
   if (!COMMODITY_TYPES.includes(key as CommodityType)) return null;
   const commodity = key as CommodityType;
 
-  const rawData = await db.collection<CommodityPrice>("commodityPrices").findOne({ commodity });
+  const rawData = await commodityPricesCollection(db).findOne({ commodity });
   const data = rawData && country ? (await withFundedNationalBalances(db, [rawData]))[0] : rawData;
 
   const basePrice = COMMODITY_BASE_PRICES[commodity];

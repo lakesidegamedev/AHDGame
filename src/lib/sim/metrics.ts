@@ -32,6 +32,9 @@ import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 import { crisesCollection } from "@/lib/db/repositories/crises";
+import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
+import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
+import { crisisInteractionsCollection } from "@/lib/db/repositories/crisisInteractions";
 
 /**
  * Read-only balance-metric aggregations over a (sandbox) world DB, for the
@@ -727,12 +730,14 @@ export async function collectCrisisMetrics(db: Db): Promise<CrisisMetrics> {
     .filter((crisis) => crisis.livingConflictEventId || crisis.globalResponse?.conflictKey)
     .map((crisis) => crisis._id);
   const [pendingDecisions, resolvedDecisions] = await Promise.all([
-    db
-      .collection("crisisInteractions")
-      .countDocuments({ crisisId: { $in: livingCrisisIds }, resolvedAt: null }),
-    db
-      .collection("crisisInteractions")
-      .countDocuments({ crisisId: { $in: livingCrisisIds }, resolvedAt: { $ne: null } }),
+    crisisInteractionsCollection<Document>(db).countDocuments({
+      crisisId: { $in: livingCrisisIds },
+      resolvedAt: null,
+    }),
+    crisisInteractionsCollection<Document>(db).countDocuments({
+      crisisId: { $in: livingCrisisIds },
+      resolvedAt: { $ne: null },
+    }),
   ]);
   const totalSpawned = crises.length;
   const active = crises.filter((c) => c.status === "active").length;
@@ -802,8 +807,7 @@ export function summarizeEconomyMetrics(
 
 async function collectEconomyMetrics(db: Db): Promise<EconomyMetrics> {
   const [commodities, budgets] = await Promise.all([
-    db
-      .collection<EconomyCommodityRow>("commodityPrices")
+    commodityPricesCollection<EconomyCommodityRow>(db)
       .find({ basePrice: { $gt: 0 } }, { projection: { basePrice: 1, globalPrice: 1 } })
       .toArray(),
     federalBudgetCollection<EconomyBudgetRow>(db)
@@ -970,7 +974,7 @@ async function collectCorporateCashFlowMetrics(
   db: Db,
   turn: number
 ): Promise<CorporateCashFlowMetrics> {
-  const rows = await db.collection("corporationHistory").find({ turn }).toArray();
+  const rows = await corporationHistoryCollection<Document>(db).find({ turn }).toArray();
   const corps = await corporationsCollection(db)
     .find({}, { projection: { countryOwnerId: 1, countryId: 1 } })
     .toArray();

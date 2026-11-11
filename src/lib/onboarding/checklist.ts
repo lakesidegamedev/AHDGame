@@ -21,6 +21,7 @@ import { electionCandidatesCollection } from "@/lib/db/repositories/electionCand
 import type { Document } from "mongodb";
 import { billsCollection } from "@/lib/db/repositories/bills";
 import { unionsCollection } from "@/lib/db/repositories/unions";
+import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
 
 /**
  * Canonical new-player onboarding checklist.
@@ -317,9 +318,10 @@ export async function hasVotedOnAnyBill(db: Db, characterId: ObjectId): Promise<
       },
       { limit: 1 }
     ),
-    db
-      .collection("stateBills")
-      .countDocuments({ [`votes.${key}`]: { $exists: true } }, { limit: 1 }),
+    stateBillsCollection<Document>(db).countDocuments(
+      { [`votes.${key}`]: { $exists: true } },
+      { limit: 1 }
+    ),
   ]);
   return national > 0 || state > 0;
 }

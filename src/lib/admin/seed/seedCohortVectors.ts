@@ -9,6 +9,7 @@ import { presetUsesDemographicPaths } from "@/lib/demographics/rules/demographic
 import { synthesizeAgeSexVector } from "@/lib/demographics/seedSynthesis";
 import { sexRatioFromVector, dependencyRatio } from "@/lib/demographics/cohortVector";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 
 /**
  * Stand up the per-region single-year age×sex cohort vector (`regionDemographics.ages`)
@@ -71,8 +72,7 @@ export async function seedCohortVectors(
     statesCollection<StateDoc>(db)
       .find({}, { projection: { _id: 1, countryId: 1, population: 1 } })
       .toArray(),
-    db
-      .collection<MetricsDoc>("macroMetrics")
+    macroMetricsCollection<MetricsDoc>(db)
       .find(
         {},
         {
@@ -230,7 +230,7 @@ export async function seedCohortVectors(
       .bulkWrite(demoOps, { ordered: true });
   }
   if (metricOps.length > 0) {
-    await db.collection<StateMetrics>("macroMetrics").bulkWrite(metricOps, { ordered: true });
+    await macroMetricsCollection(db).bulkWrite(metricOps, { ordered: true });
   }
 
   log(

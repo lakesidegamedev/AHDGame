@@ -29,6 +29,8 @@ import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import { recordNppCeoTrackRecords } from "./nppCeoTrackRecord";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
+import type { Document } from "mongodb";
 
 type NppCareer = Pick<NPP, "_id" | "ceoTrackRecord" | "personality">;
 
@@ -305,8 +307,7 @@ export async function trailingDailyResults(
   const out = new Map<string, { revenue: number; profit: number; priorProfit: number }>();
   if (corpIds.length === 0) return out;
   const window = CEO_PAY_REVIEW_TURNS;
-  const rows = await db
-    .collection("corporationHistory")
+  const rows = await corporationHistoryCollection<Document>(db)
     .aggregate<{ _id: ObjectId; revenue: number; profit: number; priorProfit: number }>([
       {
         $match: {

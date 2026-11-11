@@ -23,6 +23,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
 
 const OVERRIDE_VOTING_HOURS = 24;
 
@@ -98,7 +99,7 @@ export async function castStateBillVote(
   }
 
   const seatsHeld = official.seatsHeld ?? 1;
-  const bill = await db.collection<StateBill>("stateBills").findOne({
+  const bill = await stateBillsCollection(db).findOne({
     _id: new ObjectId(billId),
     stateId,
   });
@@ -117,7 +118,7 @@ export async function castStateBillVote(
   }
 
   const charId = character._id.toString();
-  const updateResult = await db.collection<StateBill>("stateBills").updateOne(
+  const updateResult = await stateBillsCollection(db).updateOne(
     { _id: bill._id, status: "active" },
     buildEmbeddedVoteTallyUpdate({
       voteField: "votes",
@@ -218,7 +219,7 @@ export async function castStateBillOverrideVote(
   }
 
   const seatsHeld = official.seatsHeld ?? 1;
-  const bill = await db.collection<StateBill>("stateBills").findOne({
+  const bill = await stateBillsCollection(db).findOne({
     _id: new ObjectId(billId),
     stateId,
   });
@@ -244,7 +245,7 @@ export async function castStateBillOverrideVote(
   }
 
   const charId = character._id.toString();
-  const updateResult = await db.collection<StateBill>("stateBills").updateOne(
+  const updateResult = await stateBillsCollection(db).updateOne(
     { _id: bill._id, status: "veto_override" },
     buildEmbeddedVoteTallyUpdate({
       voteField: "overrideVotes",
@@ -345,7 +346,7 @@ export async function takeStateBillGovernorAction(
     };
   }
 
-  const bill = await db.collection<StateBill>("stateBills").findOne({
+  const bill = await stateBillsCollection(db).findOne({
     _id: new ObjectId(billId),
     stateId,
   });
@@ -382,7 +383,7 @@ export async function takeStateBillGovernorAction(
       }
     }
 
-    const signed = await db.collection<StateBill>("stateBills").updateOne(
+    const signed = await stateBillsCollection(db).updateOne(
       { _id: bill._id, status: "passed" },
       {
         $set: {
@@ -469,7 +470,7 @@ export async function takeStateBillGovernorAction(
   const vetoTurn = vetoGameState?.currentTurn ?? 1;
   const overrideVotingEndsOnTurn = vetoTurn + OVERRIDE_VOTING_HOURS;
   const trimmedVetoMessage = vetoMessage?.trim();
-  const vetoed = await db.collection<StateBill>("stateBills").updateOne(
+  const vetoed = await stateBillsCollection(db).updateOne(
     { _id: bill._id, status: "passed" },
     {
       $set: {

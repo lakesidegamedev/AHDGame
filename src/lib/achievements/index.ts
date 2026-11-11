@@ -16,6 +16,8 @@ import {
   invalidateRarityCache,
 } from "./cache";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
 
 async function maybeAwardCompletionist(
   userId: ObjectId,
@@ -316,7 +318,9 @@ export async function getAchievementRarityMap(): Promise<Map<string, number>> {
 
     const db = await getDb();
     // Count accounts with characters rather than character docs
-    const totalAccounts = await db.collection("users").countDocuments({ hasCompletedSetup: true });
+    const totalAccounts = await usersCollection<Document>(db).countDocuments({
+      hasCompletedSetup: true,
+    });
     if (totalAccounts === 0) {
       const empty = new Map<string, number>();
       setCachedRarity(empty);

@@ -24,6 +24,8 @@ import {
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
+import { crisisInteractionsCollection } from "@/lib/db/repositories/crisisInteractions";
 
 const REFUGEE_RECEPTION_HISTORY = "refugeeReceptionHistory";
 interface RefugeeReceptionHistory extends RefugeeReceptionResult {
@@ -37,12 +39,10 @@ async function ensureRefugeeReceptionIndexes(db: Db): Promise<void> {
   let ready = indexReadiness.get(db);
   if (!ready) {
     ready = (async () => {
-      await db
-        .collection<CrisisInteraction>("crisisInteractions")
-        .createIndex(
-          { populationOrderEpochId: 1, populationOrdersPending: 1 },
-          { name: "crisis_population_orders_pending" }
-        );
+      await crisisInteractionsCollection(db).createIndex(
+        { populationOrderEpochId: 1, populationOrdersPending: 1 },
+        { name: "crisis_population_orders_pending" }
+      );
       await db
         .collection<RefugeeReceptionHistory>(REFUGEE_RECEPTION_HISTORY)
         .createIndex(
@@ -63,8 +63,7 @@ export async function loadRefugeeAdmissionAuthorization(
   db: Db,
   countryId: string
 ): Promise<RefugeeAdmissionAuthorization> {
-  const laws = await db
-    .collection<EnactedLaw>("enactedLaws")
+  const laws = await enactedLawsCollection(db)
     .find(
       {
         scope: "national",
@@ -193,8 +192,7 @@ export async function loadPendingRefugeeReceptions(
   turn: number
 ): Promise<RefugeeReceptionOrder[]> {
   await ensureRefugeeReceptionIndexes(db);
-  const interactions = await db
-    .collection<CrisisInteraction>("crisisInteractions")
+  const interactions = await crisisInteractionsCollection(db)
     .find(
       {
         populationOrderEpochId: worldEpochId,
@@ -253,7 +251,7 @@ export async function materializeRefugeeReceptionResults(
   await completeCrisisPopulationOrders(db, { civilianLoss: [], reception: crisisResults });
   const interactionResults = results.filter((result) => result.origin !== "crisis");
   if (interactionResults.length === 0) return;
-  const completed = await db.collection<CrisisInteraction>("crisisInteractions").bulkWrite(
+  const completed = await crisisInteractionsCollection(db).bulkWrite(
     interactionResults.map((result) => ({
       updateOne: {
         filter: {
@@ -274,7 +272,7 @@ export async function materializeRefugeeReceptionResults(
   );
   if (completed.matchedCount !== interactionResults.length)
     throw new Error("Refugee reception response completion was not confirmed");
-  await db.collection<CrisisInteraction>("crisisInteractions").updateMany(
+  await crisisInteractionsCollection(db).updateMany(
     {
       _id: {
         $in: [...new Set(interactionResults.map((result) => result.interactionId))].map(

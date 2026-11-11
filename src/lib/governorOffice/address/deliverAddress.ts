@@ -28,6 +28,7 @@ import { sendCountryGameEvent } from "@/lib/discordWebhooks";
 import { buildNationalAddressEmbed } from "@/lib/governorOffice/address/addressWebhook";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
 
 export interface DeliverAddressInput {
   countryId: CountryId;
@@ -184,8 +185,7 @@ export async function deliverAddress(
         .find({ countryId })
         .toArray();
       const stateIds = states.map((s) => s._id);
-      const turnoutDocs = await db
-        .collection<StateDemographicTurnout>("stateDemographicTurnout")
+      const turnoutDocs = await stateDemographicTurnoutCollection(db)
         .find({ _id: { $in: stateIds } })
         .toArray();
       const currentByState = new Map(
@@ -222,21 +222,19 @@ export async function deliverAddress(
         }
       }
       if (ops.length > 0) {
-        await db.collection<StateDemographicTurnout>("stateDemographicTurnout").bulkWrite(ops);
+        await stateDemographicTurnoutCollection(db).bulkWrite(ops);
       }
       turnoutDeltasByState = deltas;
       // Scalar reflects the sum so UIs reading the legacy field show a
       // representative value; precise expiry uses the per-state map.
       appliedTurnoutDelta = Object.values(deltas).reduce((s, v) => s + v, 0);
     } else {
-      const turnoutDoc = await db
-        .collection<StateDemographicTurnout>("stateDemographicTurnout")
-        .findOne({ _id: stateId });
+      const turnoutDoc = await stateDemographicTurnoutCollection(db).findOne({ _id: stateId });
       const currentModifier = readTurnoutModifier(turnoutDoc?.modifiers, targetDemographicGroupId);
       const headroom = 20 - currentModifier;
       appliedTurnoutDelta = Math.max(0, Math.min(ADDRESS_DEMOGRAPHIC_DELTA, headroom));
       if (appliedTurnoutDelta > 0) {
-        await db.collection<StateDemographicTurnout>("stateDemographicTurnout").updateOne(
+        await stateDemographicTurnoutCollection(db).updateOne(
           { _id: stateId },
           {
             $inc: { [turnoutModifierPath(targetDemographicGroupId)]: appliedTurnoutDelta },

@@ -13,6 +13,7 @@ import type { Document } from "mongodb";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 type ElectionRow = Omit<ElectionRecord, "_id"> & { _id: ObjectId; status: string };
 type CandidateRow = Omit<CandidateRecord, "_id" | "electionId" | "characterId" | "nppId"> & {
   _id: ObjectId;
@@ -140,12 +141,10 @@ export async function collectElectionTurnoverReport(db: Db, window: ElectionTurn
           },
         }
       ),
-      db
-        .collection("gameConfig")
-        .findOne(
-          { _id: "default" as never },
-          { projection: { preset: 1, redistrictingEnabled: 1 } }
-        ),
+      gameConfigCollection<Document>(db).findOne(
+        { _id: "default" as never },
+        { projection: { preset: 1, redistrictingEnabled: 1 } }
+      ),
       db
         .collection("simRuns")
         .find(

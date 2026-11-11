@@ -20,6 +20,7 @@ import type {
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import type { Document } from "mongodb";
+import { nationalPartyElectionsCollection } from "@/lib/db/repositories/nationalPartyElections";
 
 /**
  * GET /api/admin/heal/party-elections
@@ -48,8 +49,7 @@ export async function GET() {
       .toArray()) as unknown as StatePartyElection[];
 
     // Find national elections missing fields (including countryId)
-    const nationalElectionsWithIssues = (await db
-      .collection("nationalPartyElections")
+    const nationalElectionsWithIssues = (await nationalPartyElectionsCollection<Document>(db)
       .find({
         $or: [
           { startTurn: { $exists: false } },
@@ -215,8 +215,7 @@ export async function POST() {
     }
 
     // Fix national elections
-    const nationalElectionsToFix = (await db
-      .collection("nationalPartyElections")
+    const nationalElectionsToFix = (await nationalPartyElectionsCollection<Document>(db)
       .find({
         $or: [
           { startTurn: { $exists: false } },
@@ -246,9 +245,9 @@ export async function POST() {
         endTurn: { $exists: true, $ne: null },
       };
       if (election.countryId) siblingQuery.countryId = election.countryId;
-      const siblingElection = (await db
-        .collection("nationalPartyElections")
-        .findOne(siblingQuery)) as NationalPartyElection | null;
+      const siblingElection = (await nationalPartyElectionsCollection<Document>(db).findOne(
+        siblingQuery
+      )) as NationalPartyElection | null;
 
       if (siblingElection && siblingElection.startTurn != null && siblingElection.endTurn != null) {
         startTurn = siblingElection.startTurn;
@@ -293,7 +292,7 @@ export async function POST() {
         }
       }
 
-      await db.collection<NationalPartyElection>("nationalPartyElections").updateOne(
+      await nationalPartyElectionsCollection(db).updateOne(
         { _id: election._id },
         {
           $set: {

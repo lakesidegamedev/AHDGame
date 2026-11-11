@@ -34,6 +34,8 @@ import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
 
 // Pure surface (driver types + snapshot compute) lives in the domain layer;
 // re-exported here so existing importers keep working.
@@ -118,8 +120,7 @@ async function loadCountrySnapshots(
 ): Promise<IndependenceDesireDriftPerRegion[]> {
   const regionIds = sovereigntyRegionIds(countryId);
   // SP5: regions live on macroMetrics; merge back to the legacy doc shape.
-  const macroDocs = await db
-    .collection<MacroMetricsDoc>("macroMetrics")
+  const macroDocs = await macroMetricsCollection<MacroMetricsDoc>(db)
     .find({ _id: { $in: stateIds } })
     .toArray();
   const metrics = macroDocs
@@ -133,7 +134,7 @@ async function loadCountrySnapshots(
   // National approval from the last snapshot. One-turn lag is acceptable for a
   // slowly changing constitutional preference.
   const [approvalDoc, budget, officeStates, groupsByState, bases] = await Promise.all([
-    db.collection<GovernmentApproval>("governmentApprovals").findOne({ _id: countryId }),
+    governmentApprovalsCollection(db).findOne({ _id: countryId }),
     federalBudgetCollection(db).findOne({ _id: getNationalBudgetId(countryId) }),
     // Regional and national policies together, without another round trip.
     db

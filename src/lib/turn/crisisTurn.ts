@@ -41,6 +41,9 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { crisesCollection } from "@/lib/db/repositories/crises";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { crisisInteractionsCollection } from "@/lib/db/repositories/crisisInteractions";
+import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
 
 /**
  * Process active crises for the current turn.
@@ -124,9 +127,9 @@ export async function processCrisisTurn(
     if (!crisis.v2) {
       // Check for interaction-based duration reduction
       if (crisis.interactionDefinition) {
-        const interaction = await db
-          .collection<CrisisInteraction>("crisisInteractions")
-          .findOne({ crisisId: crisis._id });
+        const interaction = await crisisInteractionsCollection(db).findOne({
+          crisisId: crisis._id,
+        });
         if (interaction && effectiveDuration !== null) {
           // Two independent ways to shorten a crisis: funding a shared aid tally,
           // and taking a decisive response. A crisis carrying both earns both.
@@ -233,17 +236,16 @@ export async function finalizeResolvedCrises(
   toResolve = resolvable;
   if (toResolve.length === 0) return;
   const ids = toResolve.map((c) => c._id);
-  await crisesCollection(db)
-    .updateMany(
-      { _id: { $in: ids } },
-      { $set: { status: "resolved", endTurn: turn, resolvedAt: new Date() } }
-    );
+  await crisesCollection(db).updateMany(
+    { _id: { $in: ids } },
+    { $set: { status: "resolved", endTurn: turn, resolvedAt: new Date() } }
+  );
   // Close any still-open interactions for the resolved crises. Multi-responder
   // global crises carry no decision deadline, so they never auto-resolve on a
   // timer; without this they would linger "open" after the crisis itself ended.
   // Each leader's effects were already applied at response time; this only
   // flips the lifecycle flag so the panel reads as resolved.
-  await db.collection<CrisisInteraction>("crisisInteractions").updateMany(
+  await crisisInteractionsCollection(db).updateMany(
     { crisisId: { $in: ids }, resolvedAt: null },
     {
       $set: {
@@ -533,12 +535,10 @@ async function applyMetricEffects(
   const writes: Array<Promise<unknown>> = [];
   if (Object.keys(macroDeltas).length > 0) {
     writes.push(
-      db
-        .collection("macroMetrics")
-        .updateMany(
-          { _id: { $in: targetStateIds.map((id) => id as unknown as import("mongodb").ObjectId) } },
-          [{ $set: clampedSet(macroDeltas) }]
-        )
+      macroMetricsCollection<Document>(db).updateMany(
+        { _id: { $in: targetStateIds.map((id) => id as unknown as import("mongodb").ObjectId) } },
+        [{ $set: clampedSet(macroDeltas) }]
+      )
     );
   }
   // The per-turn political half, as a VALUE shift — the same events channel and
@@ -608,7 +608,7 @@ async function applyApprovalEffects(
   }
 
   if (affectedCountries.length > 0) {
-    await db.collection("governmentApprovals").updateMany(
+    await governmentApprovalsCollection<Document>(db).updateMany(
       {
         _id: { $in: affectedCountries.map((id) => id as unknown as import("mongodb").ObjectId) },
       },

@@ -6,6 +6,9 @@ import { getDb } from "@/lib/mongodb";
 import { parseJsonBody } from "@/lib/api/validate";
 import { z } from "zod";
 import type { User } from "@/lib/db/types";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { adminLogsCollection } from "@/lib/db/repositories/adminLogs";
+import type { Document } from "mongodb";
 
 const schema = z.object({
   userId: z.string().min(1),
@@ -35,7 +38,7 @@ export const POST = withAdminRoute(async (auth, request: Request) => {
 
   const db = await getDb();
   const userId = new ObjectId(parsed.data.userId);
-  const user = await db.collection<User>("users").findOne({ _id: userId });
+  const user = await usersCollection(db).findOne({ _id: userId });
 
   if (!user) {
     return errorResponse(404, "User not found");
@@ -45,11 +48,12 @@ export const POST = withAdminRoute(async (auth, request: Request) => {
     return NextResponse.json({ message: "No founding cooldown was active" });
   }
 
-  await db
-    .collection<User>("users")
-    .updateOne({ _id: userId }, { $unset: { lastCorporationFoundedTurn: "" } });
+  await usersCollection(db).updateOne(
+    { _id: userId },
+    { $unset: { lastCorporationFoundedTurn: "" } }
+  );
 
-  await db.collection("adminLogs").insertOne({
+  await adminLogsCollection<Document>(db).insertOne({
     category: "system",
     action: "founding_cooldown_reset",
     username: user.username,

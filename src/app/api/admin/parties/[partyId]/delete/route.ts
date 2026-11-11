@@ -30,6 +30,7 @@ import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { nationalPartyElectionsCollection } from "@/lib/db/repositories/nationalPartyElections";
 
 export async function POST(request: Request, { params }: { params: Promise<{ partyId: string }> }) {
   try {
@@ -93,8 +94,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ par
       const liveElectionIds = liveElections.map((e) => e._id);
 
       if (liveElectionIds.length > 0) {
-        const candRes = await electionCandidatesCollection(db)
-          .deleteMany({ electionId: { $in: liveElectionIds }, nppId: { $in: partyNppIds } });
+        const candRes = await electionCandidatesCollection(db).deleteMany({
+          electionId: { $in: liveElectionIds },
+          nppId: { $in: partyNppIds },
+        });
         nppCandidateRowsDeleted = candRes.deletedCount;
       }
 
@@ -130,8 +133,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ par
     }
 
     // Delete all associated state party organizations (must match both partyId AND countryId)
-    const statePartyResult = await statePartyOrgCollection(db)
-      .deleteMany({ partyId: partySeqIdStr, countryId: partyCountryId });
+    const statePartyResult = await statePartyOrgCollection(db).deleteMany({
+      partyId: partySeqIdStr,
+      countryId: partyCountryId,
+    });
 
     // Delete all party budgets (must match both partyId AND countryId)
     const budgetResult = await db
@@ -140,9 +145,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ par
 
     // Delete all party leadership elections (both national and state)
     // National elections have countryId
-    const nationalElectionResult = await db
-      .collection<NationalPartyElection>("nationalPartyElections")
-      .deleteMany({ partyId: partySeqIdStr, countryId: partyCountryId });
+    const nationalElectionResult = await nationalPartyElectionsCollection(db).deleteMany({
+      partyId: partySeqIdStr,
+      countryId: partyCountryId,
+    });
 
     // StatePartyElection doesn't have countryId — resolve via states collection
     const countryStates = await statesCollection<Document>(db)

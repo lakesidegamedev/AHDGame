@@ -27,6 +27,8 @@ import { getCountryConfig, type CountryId } from "@/lib/constants/countries";
 import { getStatesCollection } from "@/lib/db/collections/states";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -283,14 +285,12 @@ export async function processLaenderRegionalBudgets(
   const regionIds = deRegions.map((r) => r._id as string);
 
   // Fetch all enacted DE regional policies (for spending calculation)
-  const allRegionalPolicies = await db
-    .collection<StatePolicy>("statePolicies")
+  const allRegionalPolicies = await statePoliciesCollection(db)
     .find({ stateId: { $in: regionIds } })
     .toArray();
 
   // Fetch DE national policies (for income tax rate and VAT rate)
-  const nationalPolicies = await db
-    .collection<StatePolicy>("statePolicies")
+  const nationalPolicies = await statePoliciesCollection(db)
     .find({ stateId: `${countryId.toLowerCase()}_national` })
     .toArray();
 
@@ -343,8 +343,7 @@ export async function processLaenderRegionalBudgets(
   const budgetMap = new Map(existingBudgets.map((b) => [b._id, b]));
 
   // Fetch median income per region (SP5: economic.* lives on macroMetrics)
-  const stateMetrics = await db
-    .collection<StateMetrics>("macroMetrics")
+  const stateMetrics = await macroMetricsCollection(db)
     .find({ _id: { $in: regionIds } })
     .toArray();
   const metricsMap = new Map(stateMetrics.map((m) => [m._id, m]));
@@ -498,7 +497,7 @@ export async function processLaenderRegionalBudgets(
   }
 
   if (statePolicyOps.length > 0) {
-    await db.collection<StatePolicy>("statePolicies").bulkWrite(statePolicyOps);
+    await statePoliciesCollection(db).bulkWrite(statePolicyOps);
   }
   if (regionalBudgetOps.length > 0) {
     await db.collection<RegionalBudget>("regionalBudgets").bulkWrite(regionalBudgetOps);

@@ -42,6 +42,7 @@ import { electionCandidatesCollection } from "@/lib/db/repositories/electionCand
 import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { nationalPartyElectionsCollection } from "@/lib/db/repositories/nationalPartyElections";
 
 // ─── Pure helpers ────────────────────────────────────────────────────────────
 
@@ -189,8 +190,7 @@ export async function applyElectionMethodEffect(
 
   const partyId = String(party.sequentialId);
   const countryId = party.countryId ?? "US";
-  const activeElections = await db
-    .collection<NationalPartyElection>("nationalPartyElections")
+  const activeElections = await nationalPartyElectionsCollection(db)
     .find({ partyId, countryId, status: "voting" })
     .toArray();
   if (activeElections.length === 0) return;
@@ -269,8 +269,7 @@ export async function applyElectionDurationEffect(
   //    startTurn / startTime preserves candidacies and votes; only the
   //    close-time moves. Skip rows where the new duration would close
   //    the election immediately (shrink guard).
-  const officerRows = await db
-    .collection<NationalPartyElection>("nationalPartyElections")
+  const officerRows = await nationalPartyElectionsCollection(db)
     .find({ partyId: partyKey, countryId: countryKey, status: "voting" })
     .toArray();
 
@@ -299,7 +298,7 @@ export async function applyElectionDurationEffect(
     ];
   });
   if (officerOps.length > 0) {
-    await db.collection<NationalPartyElection>("nationalPartyElections").bulkWrite(officerOps);
+    await nationalPartyElectionsCollection(db).bulkWrite(officerOps);
   }
 
   // 5. Stretch in-flight committee elections with identical logic.
@@ -959,11 +958,10 @@ export async function mergePartyInto(
         ...proposingActiveNpps.map((n) => n._id).filter((id) => !cullIdSet.has(id.toString())),
       ];
       if (movedCandidateIds.length > 0) {
-        await electionCandidatesCollection<Document>(db)
-          .updateMany(
-            { party: proposingStrId, status: "active", characterId: { $in: movedCandidateIds } },
-            { $set: { party: targetStrId } }
-          );
+        await electionCandidatesCollection<Document>(db).updateMany(
+          { party: proposingStrId, status: "active", characterId: { $in: movedCandidateIds } },
+          { $set: { party: targetStrId } }
+        );
         await campaignsCollection<Document>(db).updateMany(
           {
             party: proposingStrId,
@@ -1044,7 +1042,7 @@ export async function mergePartyInto(
       );
       const cancelRace = { $set: { status: "cancelled", updatedAt: now } };
       await Promise.all([
-        db.collection<Document>("nationalPartyElections").updateMany(openRaces, cancelRace),
+        nationalPartyElectionsCollection<Document>(db).updateMany(openRaces, cancelRace),
         db.collection<Document>("nationalCommitteeElections").updateMany(openRaces, cancelRace),
       ]);
 

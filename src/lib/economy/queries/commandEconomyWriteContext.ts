@@ -23,6 +23,7 @@ import {
   type CommandEconomyRoles,
 } from "@/lib/economy/commandEconomyAuth";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 export interface CommandEconomyWriteContext {
   db: Db;
@@ -56,9 +57,10 @@ export async function resolveWriteContext(code: string): Promise<WriteContextRes
 
   const db = await getDb();
   const [gameConfig, gameState] = await Promise.all([
-    db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } }),
+    gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { commandEconomyEnabled: 1 } }
+    ),
     getGameState(),
   ]);
   const enabled = gameConfig?.commandEconomyEnabled === true;

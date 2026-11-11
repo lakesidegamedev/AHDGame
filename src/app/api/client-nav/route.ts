@@ -57,6 +57,11 @@ import { electionsCollection } from "@/lib/db/repositories/elections";
 import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
+import { notificationsCollection } from "@/lib/db/repositories/notifications";
 
 /**
  * Whether to show the "Campaign Manager" navbar link. Returns true for: admins,
@@ -97,8 +102,9 @@ async function computeCanSeeCampaignManager(args: {
 
   if (ownedIds.length === 0 || !characterCountryId) return false;
 
-  const campaignPartyIds = await campaignsCollection(db)
-    .distinct("party", { electionId: { $in: presidentElectionIds } });
+  const campaignPartyIds = await campaignsCollection(db).distinct("party", {
+    electionId: { $in: presidentElectionIds },
+  });
   const partySeqIds = [
     ...new Set(campaignPartyIds.map((party) => Number(party)).filter(Number.isFinite)),
   ];
@@ -202,7 +208,7 @@ export async function GET() {
     const userOid = new ObjectId(userId);
 
     const [user, presidentElection, gameState, forexEnabled, unionsEnabled] = await Promise.all([
-      db.collection<User>("users").findOne(
+      usersCollection(db).findOne(
         { _id: userOid },
         {
           projection: {
@@ -242,9 +248,10 @@ export async function GET() {
     ]);
     const sandboxTesterAccessEnabled = user?.sandboxAccessGrantedAt
       ? (
-          await db
-            .collection<GameConfig>("gameConfig")
-            .findOne({ _id: "default" }, { projection: { sandboxTesterAccessEnabled: 1 } })
+          await gameConfigCollection(db).findOne(
+            { _id: "default" },
+            { projection: { sandboxTesterAccessEnabled: 1 } }
+          )
         )?.sandboxTesterAccessEnabled === true
       : false;
     const wikiDisabled = !!gameState?.wikiDisabled;
@@ -313,7 +320,7 @@ export async function GET() {
     });
 
     // Fire-and-forget last activity update
-    db.collection("users")
+    usersCollection<Document>(db)
       .updateOne({ _id: userOid }, { $set: { lastActivity: new Date() } })
       .catch(() => {});
 
@@ -363,7 +370,7 @@ export async function GET() {
               { projection: { name: 1, sequentialId: 1, countryId: 1 } }
             )
           : null,
-        db.collection<Notification>("notifications").countDocuments({
+        notificationsCollection(db).countDocuments({
           userId: userOid,
           ...notificationTypeFilter(user?.notificationPreferences, new Date()),
           read: false,
@@ -374,16 +381,16 @@ export async function GET() {
           deletedByRecipient: false,
           blockedByRecipient: { $ne: true },
         }),
-        electionCandidatesCollection(db)
-          .findOne(
-            { characterId: character._id, status: "active" },
-            { sort: { enteredAt: -1 }, projection: { electionId: 1 } }
-          ),
+        electionCandidatesCollection(db).findOne(
+          { characterId: character._id, status: "active" },
+          { sort: { enteredAt: -1 }, projection: { electionId: 1 } }
+        ),
         // Unified cabinetMembers covers every country's cabinet (US Senate-
         // confirmed and parliamentary/OPS direct-appointment alike).
-        db
-          .collection<{ positionId: string; countryId: string }>("cabinetMembers")
-          .findOne({ characterId: character._id }, { projection: { positionId: 1, countryId: 1 } }),
+        cabinetMembersCollection<{ positionId: string; countryId: string }>(db).findOne(
+          { characterId: character._id },
+          { projection: { positionId: 1, countryId: 1 } }
+        ),
         db
           .collection<{ countryId: string; seatNumber: number }>("supremeCourtSeats")
           .findOne(

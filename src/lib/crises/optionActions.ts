@@ -71,6 +71,8 @@ import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSecto
 import { billsCollection } from "@/lib/db/repositories/bills";
 import { crisesCollection } from "@/lib/db/repositories/crises";
 import { unionsCollection } from "@/lib/db/repositories/unions";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { politicalMetricsCollection } from "@/lib/db/repositories/politicalMetrics";
 
 /** Crisis actions name an operating lane; rows store its identity. */
 function laneFilter(sectorType: string) {
@@ -634,8 +636,10 @@ async function settleWageFloor(ctx: CrisisActionContext, sectorType: string): Pr
     return;
   }
 
-  const union = await unionsCollection(db)
-    .findOne({ countryId: ctx.countryId as CountryId, ...laneFilter(sectorType) });
+  const union = await unionsCollection(db).findOne({
+    countryId: ctx.countryId as CountryId,
+    ...laneFilter(sectorType),
+  });
   const now = new Date();
   const SETTLEMENT_TERM_TURNS = 48;
 
@@ -848,7 +852,7 @@ async function moveLivingConflictTrajectory(ctx: CrisisActionContext): Promise<v
   const regional = action.regionalEffects;
   if (!regional) return;
   if (regional.independenceDesireDelta) {
-    const metrics = ctx.db.collection<MacroMetricsDoc>("macroMetrics");
+    const metrics = macroMetricsCollection<MacroMetricsDoc>(ctx.db);
     const doc = await metrics.findOne({ _id: regional.regionId });
     if (doc?.independenceDesire) {
       await metrics.updateOne(
@@ -866,7 +870,7 @@ async function moveLivingConflictTrajectory(ctx: CrisisActionContext): Promise<v
     }
   }
   if (regional.devolutionSatisfactionDelta) {
-    const metrics = ctx.db.collection<PoliticalMetricsDoc>("politicalMetrics");
+    const metrics = politicalMetricsCollection(ctx.db);
     const doc = await metrics.findOne({ _id: regional.regionId });
     const values = doc?.values;
     const currentSatisfaction = values?.["governance.localAutonomy"];

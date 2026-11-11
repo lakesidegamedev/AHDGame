@@ -42,6 +42,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 /**
  * Generate pre-computed global investor rankings.
@@ -220,8 +221,7 @@ export async function generateWealthListSnapshots(currentTurn: number, db?: Db):
   const userIds = [...new Set(characters.map((c) => c.userId.toString()))].map(
     (id) => new ObjectId(id)
   );
-  const users = await database
-    .collection<User>("users")
+  const users = await usersCollection(database)
     .find({ _id: { $in: userIds } })
     .project<Pick<User, "_id" | "isBanned" | "discordId" | "discordAvatar" | "googleAvatar">>({
       _id: 1,

@@ -8,6 +8,7 @@ import { notifySubmitterOfWikiDecision } from "@/lib/wiki/reviewNotifications";
 import { createModAuditLog } from "@/lib/modAuditLog";
 import type { User, WikiPage } from "@/lib/db/types";
 import { ObjectId } from "mongodb";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 interface RouteContext {
   params: Promise<{ slug: string }>;
@@ -63,9 +64,10 @@ export async function POST(request: Request, context: RouteContext) {
 
     let submitterUsername: string | undefined;
     if (existing.submittedBy) {
-      const submitter = await db
-        .collection<User>("users")
-        .findOne({ _id: existing.submittedBy }, { projection: { username: 1, displayName: 1 } });
+      const submitter = await usersCollection(db).findOne(
+        { _id: existing.submittedBy },
+        { projection: { username: 1, displayName: 1 } }
+      );
       submitterUsername = submitter?.displayName || submitter?.username;
 
       notifySubmitterOfWikiDecision({

@@ -4,6 +4,7 @@ import { ObjectId, type Db } from "mongodb";
 import { createNotifications } from "@/lib/notifications";
 import { containsSlur } from "@/lib/moderation";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 type MailSender = Pick<Character, "_id" | "name" | "sequentialId" | "userId">;
 
@@ -28,7 +29,7 @@ export async function sendPlayerMail(
     throw notFound("Recipient not found");
   }
 
-  const toUser = await db.collection<User>("users").findOne({ _id: toChar.userId });
+  const toUser = await usersCollection(db).findOne({ _id: toChar.userId });
   // Same message for banned and blocking recipients: a blocked sender is not
   // told they were blocked.
   if (toUser?.isBanned || toUser?.blockedUserIds?.some((id) => id.equals(sender.userId))) {
@@ -186,8 +187,7 @@ export async function reportReceivedMail(db: Db, userId: string, mailId: string)
 
   await db.collection<Omit<PlayerMailReport, "_id">>("playerMailReports").insertOne(report);
 
-  const staffUsers = await db
-    .collection<User>("users")
+  const staffUsers = await usersCollection(db)
     .find(
       { $or: [{ isAdmin: true }, { role: "admin" }, { role: "moderator" }] },
       { projection: { _id: 1 } }

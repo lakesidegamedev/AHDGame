@@ -42,6 +42,7 @@ import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParti
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /**
  * `electionType` is intentionally an open string here rather than a hardcoded
@@ -108,7 +109,7 @@ export async function POST(request: Request) {
     // that would post nowhere. The actual URL is resolved inside
     // sendCountryGameEventMultiple, which also applies the enabled-country gate;
     // do NOT post directly from here or that gate is bypassed.
-    const config = await db.collection<GameConfig>("gameConfig").findOne({ _id: "default" });
+    const config = await gameConfigCollection(db).findOne({ _id: "default" });
     const hasDestination = Boolean(descriptor.url || config?.discordGameWebhookUrl);
     if (!hasDestination) {
       return errorResponse(400, `No ${inferredCountryId} game webhook URL configured`);
@@ -179,8 +180,9 @@ export async function POST(request: Request) {
       const winnerId = ranked[0]?.id;
       if (!winnerId) continue;
 
-      const winner = await electionCandidatesCollection(db)
-        .findOne({ _id: new ObjectId(winnerId) });
+      const winner = await electionCandidatesCollection(db).findOne({
+        _id: new ObjectId(winnerId),
+      });
 
       if (winner) {
         const elCountryId = election.countryId ?? "US";

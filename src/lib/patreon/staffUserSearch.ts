@@ -3,6 +3,7 @@ import { getDb } from "@/lib/mongodb";
 import { escapeRegex } from "@/lib/utils/escapeRegex";
 import type { Character, User } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 export interface PatreonSearchUser {
   userId: string;
@@ -35,7 +36,7 @@ export async function searchPatreonUsers(
     if (character) {
       const filter: Filter<User> = { _id: character.userId };
       if (excludeAdmins) filter.role = { $ne: "admin" };
-      user = await db.collection<User>("users").findOne(filter);
+      user = await usersCollection(db).findOne(filter);
     }
     return user
       ? [
@@ -54,15 +55,14 @@ export async function searchPatreonUsers(
   const regex = new RegExp(escapeRegex(q), "i");
 
   const [users, characters] = await Promise.all([
-    db.collection<User>("users").find({ username: regex }).limit(10).toArray(),
+    usersCollection(db).find({ username: regex }).limit(10).toArray(),
     charactersCollection(db).find({ name: regex }).limit(10).toArray(),
   ]);
 
   const userIdsFromCharacters = characters.map((character) => character.userId);
   const characterUsers =
     userIdsFromCharacters.length > 0
-      ? await db
-          .collection<User>("users")
+      ? await usersCollection(db)
           .find({ _id: { $in: userIdsFromCharacters } })
           .toArray()
       : [];

@@ -58,6 +58,8 @@ import {
 } from "./metricsAssembly";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
+import { politicalMetricsCollection } from "@/lib/db/repositories/politicalMetrics";
 
 /** First calendar year of the information era for indicator-list selection. */
 const MODERN_INDICATORS_FROM_YEAR = 1990;
@@ -164,7 +166,7 @@ export async function loadRegionPoliticalMetrics(
 ): Promise<RegionPoliticalMetricsResponse | null> {
   const db = dbOverride ?? (await getDb());
   const [docs, states, gameState, historyDoc, regionRows] = await Promise.all([
-    db.collection<PoliticalMetricsDoc>("politicalMetrics").find({ countryId }).toArray(),
+    politicalMetricsCollection(db).find({ countryId }).toArray(),
     statesCollection(db)
       .find({ countryId }, { projection: { name: 1, population: 1, gdp: 1 } })
       .toArray(),
@@ -186,8 +188,7 @@ export async function loadRegionPoliticalMetrics(
     db
       .collection<PoliticalMetricsRegionHistoryDoc>("politicalMetricsRegionHistory")
       .findOne({ _id: regionId }, { projection: { entries: { $slice: -SERVED_HISTORY_ENTRIES } } }),
-    db
-      .collection<StatePolicy>("statePolicies")
+    statePoliciesCollection(db)
       .find(
         { scope: "state", stateId: regionId },
         { projection: { legislationTypeId: 1, policyOptionIndex: 1 } }

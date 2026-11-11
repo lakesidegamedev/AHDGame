@@ -68,6 +68,11 @@ import { imperialCharactersCollection } from "@/lib/db/repositories/imperialChar
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
+import type { Document } from "mongodb";
+import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
 
 // GET /api/client-status — Returns status bar enrichment data (funds, corp, election stats, income).
 // Auth: requireBasicAuth
@@ -95,7 +100,7 @@ export async function handleClientStatus(request: Request) {
 
     const [user, forexEnabled] = await Promise.all([
       // Projected: only the character-selection fields below are read.
-      db.collection<User>("users").findOne(
+      usersCollection(db).findOne(
         { _id: new ObjectId(userId) },
         {
           projection: {
@@ -119,8 +124,10 @@ export async function handleClientStatus(request: Request) {
       user?.activeCharacterType === "imperial" && !!user?.activeImperialCharacterId;
 
     if (isImperialMode) {
-      const imperial = await imperialCharactersCollection(db)
-        .findOne({ _id: user!.activeImperialCharacterId!, userId: new ObjectId(userId) });
+      const imperial = await imperialCharactersCollection(db).findOne({
+        _id: user!.activeImperialCharacterId!,
+        userId: new ObjectId(userId),
+      });
       if (!imperial) {
         return NextResponse.json(
           { status: "no-character" },
@@ -306,8 +313,7 @@ export async function handleClientStatus(request: Request) {
           (ceoCorp.countryId ? getExchangeApiKey(ceoCorp.countryId) : undefined) ?? "global";
         const [historyDocs, snapshotListing] = includeCorpMarket
           ? await Promise.all([
-              db
-                .collection<CorporationHistory>("corporationHistory")
+              corporationHistoryCollection(db)
                 .find({ corporationId: ceoCorp._id })
                 .sort({ turn: -1 })
                 .limit(12)
@@ -485,8 +491,10 @@ export async function handleClientStatus(request: Request) {
         ? statePartyOrgCollection(db).findOne({ _id: statePartyKey })
         : Promise.resolve(null),
       includeElection
-        ? electionCandidatesCollection(db)
-            .findOne({ characterId: character._id, status: "active" }, { sort: { enteredAt: -1 } })
+        ? electionCandidatesCollection(db).findOne(
+            { characterId: character._id, status: "active" },
+            { sort: { enteredAt: -1 } }
+          )
         : Promise.resolve(null),
       includeCorp
         ? corporationsCollection(db).findOne(
@@ -561,34 +569,33 @@ export async function handleClientStatus(request: Request) {
         { chairCharacterId: character._id },
         { projection: { _id: 1 } }
       ),
-      db
-        .collection<{
-          _id: string;
-          campaignEraPriceLevelEnabled?: boolean;
-          chairActionBonus?: number;
-          baseActionsPerTurn?: number;
-          officeActionBonus?: Record<string, number>;
-          partyInfluenceMaxBonus?: number;
-          partyInfluencePoolMultiplier?: number;
-        }>("gameConfig")
-        .findOne(
-          { _id: "default" },
-          {
-            projection: {
-              campaignEraPriceLevelEnabled: 1,
-              chairActionBonus: 1,
-              baseActionsPerTurn: 1,
-              officeActionBonus: 1,
-              partyInfluenceMaxBonus: 1,
-              partyInfluencePoolMultiplier: 1,
-            },
-          }
-        ),
+      gameConfigCollection<{
+        _id: string;
+        campaignEraPriceLevelEnabled?: boolean;
+        chairActionBonus?: number;
+        baseActionsPerTurn?: number;
+        officeActionBonus?: Record<string, number>;
+        partyInfluenceMaxBonus?: number;
+        partyInfluencePoolMultiplier?: number;
+      }>(db).findOne(
+        { _id: "default" },
+        {
+          projection: {
+            campaignEraPriceLevelEnabled: 1,
+            chairActionBonus: 1,
+            baseActionsPerTurn: 1,
+            officeActionBonus: 1,
+            partyInfluenceMaxBonus: 1,
+            partyInfluencePoolMultiplier: 1,
+          },
+        }
+      ),
       // Cabinet seat (unified collection) — its action bonus stacks on the
       // legislative seat, mirroring actionRefresh.
-      db
-        .collection("cabinetMembers")
-        .findOne({ characterId: character._id }, { projection: { countryId: 1 } }),
+      cabinetMembersCollection<Document>(db).findOne(
+        { characterId: character._id },
+        { projection: { countryId: 1 } }
+      ),
     ]);
 
     const statePopulation = homeState?.population ?? 0;
@@ -732,8 +739,7 @@ export async function handleClientStatus(request: Request) {
         (ceoCorp.countryId ? getExchangeApiKey(ceoCorp.countryId) : undefined) ?? "global";
       const [historyDocs, snapshotListing] = includeCorpMarket
         ? await Promise.all([
-            db
-              .collection<CorporationHistory>("corporationHistory")
+            corporationHistoryCollection(db)
               .find({ corporationId: ceoCorp._id })
               .sort({ turn: -1 })
               .limit(12)
@@ -803,11 +809,10 @@ export async function handleClientStatus(request: Request) {
           _id: myCandidate.electionId,
           status: { $in: ["upcoming", "active", "completed"] },
         }),
-        electionVoteTalliesCollection(db)
-          .findOne(
-            { electionId: myCandidate.electionId },
-            { projection: { totalVotes: 1, seatsEstimate: 1, turnSnapshots: { $slice: -12 } } }
-          ),
+        electionVoteTalliesCollection(db).findOne(
+          { electionId: myCandidate.electionId },
+          { projection: { totalVotes: 1, seatsEstimate: 1, turnSnapshots: { $slice: -12 } } }
+        ),
       ]);
 
       if (election) {

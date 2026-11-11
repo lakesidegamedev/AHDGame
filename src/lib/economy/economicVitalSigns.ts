@@ -51,6 +51,10 @@ import { ledgerEntriesCollection } from "@/lib/db/repositories/ledgerEntries";
 import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
+import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
+import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
 export {
   summarizeLedgerTurnover,
   computeEconomicVitalSigns,
@@ -260,7 +264,7 @@ export async function snapshotEconomicVitalSigns(
         }
       )
       .toArray(),
-    db.collection<CommodityPrice>("commodityPrices").find({}).toArray(),
+    commodityPricesCollection(db).find({}).toArray(),
     db.collection<CommoditySourcingDoc>("commoditySourcingFlows").find({ turn }).toArray(),
     // This diagnostics pass needs only commodity-flow inputs, production-health
     // readings, and the market-formation identity fields below. An exclusion
@@ -302,8 +306,7 @@ export async function snapshotEconomicVitalSigns(
       )
       .toArray(),
     db.collection<StockExchangeSnapshot>("stockExchangeSnapshots").findOne({ _id: "global" }),
-    db
-      .collection<{ corporationId: { toString(): string }; income: number }>("corporationHistory")
+    corporationHistoryCollection<{ corporationId: { toString(): string }; income: number }>(db)
       .find({ turn }, { projection: { corporationId: 1, income: 1 } })
       .toArray(),
     db
@@ -317,8 +320,7 @@ export async function snapshotEconomicVitalSigns(
     db.collection<LedgerReconciliation>("ledgerReconciliations").findOne({ turn }),
     db.collection<BalanceSnapshot>("balanceSnapshots").findOne({ turn }),
     loadLedgerTurnover(db, windowStart, turn),
-    ledgerEntriesCollection(db)
-      .countDocuments({ turn: { $gte: windowStart, $lte: turn } }),
+    ledgerEntriesCollection(db).countDocuments({ turn: { $gte: windowStart, $lte: turn } }),
     resolveFormalizedGroups(db),
     exchangeRatesCollection(db).find({}).toArray(),
     // Ring-fenced money lives on corporations, outside the ledger: active bank
@@ -338,7 +340,7 @@ export async function snapshotEconomicVitalSigns(
         }
       )
       .toArray(),
-    db.collection<UnownedSector>("unownedSectors").find({}).toArray(),
+    unownedSectorsCollection(db).find({}).toArray(),
     db
       .collection<NppMarketEntryFunnel>(NPP_MARKET_ENTRY_FUNNEL_COLLECTION)
       .findOne({ _id: `turn:${turn}` }),
@@ -387,9 +389,10 @@ export async function snapshotEconomicVitalSigns(
     }>(db)
       .find({}, { projection: { creditRating: 1, "economicFactors.inflationRate": 1 } })
       .toArray(),
-    db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { indexFundBondLiquidityEnabled: 1 } }),
+    gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { indexFundBondLiquidityEnabled: 1 } }
+    ),
     gameStateCollection<{ _id: string; preset?: string; hardwareInputReliefStartTurn?: number }>(
       db
     ).findOne({ _id: "current" }, { projection: { preset: 1, hardwareInputReliefStartTurn: 1 } }),

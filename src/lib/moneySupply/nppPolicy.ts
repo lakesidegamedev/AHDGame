@@ -34,6 +34,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 interface NppMonetaryConditions {
   inflation: number;
@@ -125,9 +126,10 @@ export async function processNppMonetaryOperations(
   turn: number,
   currentYear?: number | null
 ): Promise<{ banksProcessed: number; evaluationsRecorded: number; operationsExecuted: number }> {
-  const config = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { moneySupplyEnabled: 1 } });
+  const config = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { moneySupplyEnabled: 1 } }
+  );
   if (!isMoneySupplyEnabledFromConfig(config))
     return { banksProcessed: 0, evaluationsRecorded: 0, operationsExecuted: 0 };
   const banks = await centralBanksCollection(db)

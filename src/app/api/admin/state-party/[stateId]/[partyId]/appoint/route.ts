@@ -25,6 +25,8 @@ import {
 import type { StatePartyElectionPosition, StatePartyOrg, AdminLog } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { adminLogsCollection } from "@/lib/db/repositories/adminLogs";
+import type { Document } from "mongodb";
 
 interface RouteParams {
   params: Promise<{ stateId: string; partyId: string }>;
@@ -84,8 +86,9 @@ export const POST = withAdminRoute(async (auth, request: Request, { params }: Ro
   }
 
   // Get current holder so we can notify removal
-  const org = await statePartyOrgCollection(db)
-    .findOne({ _id: `${stateId}_${partyId}` as unknown as string });
+  const org = await statePartyOrgCollection(db).findOne({
+    _id: `${stateId}_${partyId}` as unknown as string,
+  });
 
   const previousHolderId: ObjectId | null = org?.[field] ?? null;
   const leadershipReset: Partial<Pick<StatePartyOrg, "chairId" | "viceChairId" | "treasurerId">> =
@@ -102,11 +105,10 @@ export const POST = withAdminRoute(async (auth, request: Request, { params }: Ro
   }
 
   // Update statePartyOrg (elections continue running - winner will take position when election completes)
-  await statePartyOrgCollection(db)
-    .updateOne(
-      { _id: `${stateId}_${partyId}` as unknown as string },
-      { $set: { ...leadershipReset, [field]: newHolderId, updatedAt: now } }
-    );
+  await statePartyOrgCollection(db).updateOne(
+    { _id: `${stateId}_${partyId}` as unknown as string },
+    { $set: { ...leadershipReset, [field]: newHolderId, updatedAt: now } }
+  );
 
   // Notifications
   if (newHolderId) {
@@ -125,7 +127,7 @@ export const POST = withAdminRoute(async (auth, request: Request, { params }: Ro
     details: `${label} of ${stateId} ${partyId}`,
     createdAt: now,
   };
-  await db.collection("adminLogs").insertOne(logEntry);
+  await adminLogsCollection<Document>(db).insertOne(logEntry);
 
   return NextResponse.json({
     success: true,

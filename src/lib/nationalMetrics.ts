@@ -15,6 +15,7 @@ import {
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 
 /**
  * Plausible range for the back-solved income-band index at world start. A seed
@@ -68,7 +69,7 @@ export async function computeNationalMetrics(db: Db, turn?: number): Promise<voi
   // being averaged out of per-region legacy docs here.
   const [allStates, regionMetrics, federalBudgets, eraGameState] = await Promise.all([
     statesCollection(db).find({}).toArray(),
-    db.collection<StateMetrics>("macroMetrics").find({}).toArray(),
+    macroMetricsCollection(db).find({}).toArray(),
     federalBudgetCollection(db).find({}).toArray(),
     gameStateCollection(db).findOne(
       { _id: "current" },
@@ -314,7 +315,7 @@ export async function computeNationalMetrics(db: Db, turn?: number): Promise<voi
   }
 
   if (macroRollupOps.length > 0) {
-    await db.collection<NationalMetricsDoc>("macroMetrics").bulkWrite(macroRollupOps);
+    await macroMetricsCollection<NationalMetricsDoc>(db).bulkWrite(macroRollupOps);
   }
 
   // Persist the era income-band state in one write (flag off ⇒ untouched).

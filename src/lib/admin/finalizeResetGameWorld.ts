@@ -30,6 +30,8 @@ import { purgeAbsentCountryRegions } from "./seed/purgeAbsentCountryRegions";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 
 export interface FinalizeResetOptions {
   /** 1991 only: leave political offices vacant for player-created parties. */
@@ -178,7 +180,7 @@ export async function finalizeResetGameWorld(
 
   if (defaultDemographics.length > 0) {
     for (const defaultDemo of defaultDemographics) {
-      await db.collection<StateDemographics>("stateDemographics").updateOne(
+      await stateDemographicsCollection(db).updateOne(
         { _id: defaultDemo._id },
         {
           $set: {
@@ -347,8 +349,9 @@ export async function finalizeResetGameWorld(
       .toArray();
     const defaultPartyIds = defaultParties.map((p) => String(p.sequentialId));
 
-    partyOrgCleanupResult = await statePartyOrgCollection(db)
-      .deleteMany({ partyId: { $nin: defaultPartyIds } });
+    partyOrgCleanupResult = await statePartyOrgCollection(db).deleteMany({
+      partyId: { $nin: defaultPartyIds },
+    });
     // `partyId` is a per-country sequence number, so the filter above keeps a
     // row for a removed party whenever another country has a party with the
     // same number. Settle the (country, party) pair for the org rows and the
@@ -414,7 +417,7 @@ export async function finalizeResetGameWorld(
   let orphanRegionDemographicsDeleted = 0;
   if (seededStateIds.length > 0) {
     orphanUnownedSectorsDeleted = (
-      await db.collection("unownedSectors").deleteMany({ stateId: { $nin: seededStateIds } })
+      await unownedSectorsCollection<Document>(db).deleteMany({ stateId: { $nin: seededStateIds } })
     ).deletedCount;
     orphanRegionDemographicsDeleted =
       // Typed on `_id: string` — this collection keys on the region id, not the

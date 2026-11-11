@@ -15,6 +15,7 @@ import { assertStandingAdRegion } from "./regions";
 import { quoteAdAudience } from "./adQuote";
 import { AD_ACTION_COST, AD_BOOST_PER_ACTION, planAdPurchase, type CampaignTarget } from "./rules";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 export type StandingAdRequest = CampaignTarget & {
   stateId: string;
@@ -72,9 +73,10 @@ export async function purchaseStandingAds(
     throw conflict("The ad quote changed. Refresh before buying.");
   const actions = AD_ACTION_COST * request.count;
   const fundsField = quote.forex ? "currencyBalances.campaign" : "funds";
-  const config = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { politicalMediaMarketEnabled: 1 } });
+  const config = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { politicalMediaMarketEnabled: 1 } }
+  );
   if (config?.politicalMediaMarketEnabled === true) {
     const orderId = randomUUID();
     const funding = await fundPoliticalMediaOrder(db, {

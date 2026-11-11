@@ -27,6 +27,9 @@ import { legacyValueFromPoliticalScore } from "@/lib/politicalMetrics/derive/leg
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
+import { politicalMetricsCollection } from "@/lib/db/repositories/politicalMetrics";
 
 const DECAY_FACTOR = getPolicyDecayFactor();
 
@@ -127,9 +130,8 @@ export async function computeStateTickRates(
       ({ politicalDoc, allPolicyDocs, stateDoc, stateMetricsDoc } = preloaded);
     } else {
       const result = await Promise.all([
-        db.collection<PoliticalMetricsDoc>("politicalMetrics").findOne({ _id: stateId }),
-        db
-          .collection<StatePolicy>("statePolicies")
+        politicalMetricsCollection(db).findOne({ _id: stateId }),
+        statePoliciesCollection(db)
           .find({ stateId: { $in: [stateId, ...nationalScopeIds] } })
           .toArray(),
         statesCollection(db).findOne({ _id: stateId, countryId }),
@@ -332,16 +334,13 @@ export async function computeAllNationalMetricTickRates(
   const nationalScopeId = getNationalDocId(countryId);
   const policyScopeIds = [...stateIds, ...(nationalScopeId ? [nationalScopeId] : [])];
   const [politicalDocs, policyDocs, macroDocs] = await Promise.all([
-    db
-      .collection<PoliticalMetricsDoc>("politicalMetrics")
+    politicalMetricsCollection(db)
       .find({ _id: { $in: stateIds } })
       .toArray(),
-    db
-      .collection<StatePolicy>("statePolicies")
+    statePoliciesCollection(db)
       .find({ stateId: { $in: policyScopeIds } })
       .toArray(),
-    db
-      .collection<MacroMetricsDoc>("macroMetrics")
+    macroMetricsCollection<MacroMetricsDoc>(db)
       .find({ _id: { $in: stateIds } })
       .toArray(),
   ]);

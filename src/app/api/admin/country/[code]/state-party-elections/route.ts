@@ -42,6 +42,7 @@ import type {
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { getGameTime } from "@/lib/time/gameTime";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nationalPartyElectionsCollection } from "@/lib/db/repositories/nationalPartyElections";
 
 // Schema for POST requests
 const batchSchema = z.object({
@@ -189,8 +190,7 @@ export const GET = withAdminRoute(
       if (filterPosition && filterPosition !== "committee") nationalQuery.position = filterPosition;
       if (filterStatus) nationalQuery.status = filterStatus;
 
-      const nationalElections = await db
-        .collection<NationalPartyElection>("nationalPartyElections")
+      const nationalElections = await nationalPartyElectionsCollection(db)
         .find(nationalQuery)
         .sort({ endTurn: 1, partyId: 1 })
         .toArray();
@@ -456,10 +456,7 @@ export const POST = withAdminRoute(
             .find(stateElectionFilter)
             .toArray(),
           includeNational
-            ? db
-                .collection<NationalPartyElection>("nationalPartyElections")
-                .find(nationalElectionFilter)
-                .toArray()
+            ? nationalPartyElectionsCollection(db).find(nationalElectionFilter).toArray()
             : Promise.resolve([] as NationalPartyElection[]),
           includeCommittee
             ? db
@@ -495,12 +492,10 @@ export const POST = withAdminRoute(
       // Cancel all voting national elections and their candidates
       let nationalElectionsCancelled = { modifiedCount: 0 };
       if (includeNational && nationalElectionIds.length > 0) {
-        nationalElectionsCancelled = await db
-          .collection<NationalPartyElection>("nationalPartyElections")
-          .updateMany(
-            { _id: { $in: nationalElectionIds } },
-            { $set: { status: "cancelled", updatedAt: now } }
-          );
+        nationalElectionsCancelled = await nationalPartyElectionsCollection(db).updateMany(
+          { _id: { $in: nationalElectionIds } },
+          { $set: { status: "cancelled", updatedAt: now } }
+        );
 
         await db
           .collection("nationalPartyCandidates")

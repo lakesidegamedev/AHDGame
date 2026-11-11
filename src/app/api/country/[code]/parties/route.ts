@@ -17,6 +17,7 @@ import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParti
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import type { Document } from "mongodb";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 // GET /api/country/[code]/parties — Return all political parties in the country with member counts and leadership
 // Auth: public
@@ -87,8 +88,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
         )
         .toArray(),
       // fetch banned user IDs so we can exclude their characters
-      db
-        .collection("users")
+      usersCollection<Document>(db)
         .find({ isBanned: true }, { projection: { _id: 1 } })
         .toArray(),
       nppsCollection<Document>(db)

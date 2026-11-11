@@ -3,6 +3,8 @@ import { ObjectId } from "mongodb";
 import type { SuspiciousCharacter } from "@/lib/db/types/activityLog";
 import { AUTOMATION_FLAG_TYPE } from "@/lib/turn/automationDetection";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
 
 export type RawSuspicious = SuspiciousCharacter;
 export type SuspiciousEntryOut = SuspiciousCharacter & { accountDeleted: boolean };
@@ -168,8 +170,7 @@ export async function fetchSuspiciousList(
     charactersCollection(db)
       .find({ _id: { $in: charIds } }, { projection: { _id: 1 } })
       .toArray(),
-    db
-      .collection("users")
+    usersCollection<Document>(db)
       .find({ _id: { $in: userIds } }, { projection: { _id: 1 } })
       .toArray(),
   ]);

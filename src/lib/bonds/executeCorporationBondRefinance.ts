@@ -30,6 +30,8 @@ import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
+import type { Document } from "mongodb";
 
 export interface CorporationRefinanceResult {
   ok: true;
@@ -175,9 +177,10 @@ export async function executeCorporationBondRefinance(
   const totalUnits = holderUnitSum + publicFloatFinal;
   const actualFaceValueLocal = totalUnits * BOND_UNIT_FACE_VALUE;
 
-  const latestHistory = await db
-    .collection("corporationHistory")
-    .findOne({ corporationId: corporation._id }, { sort: { turn: -1 } });
+  const latestHistory = await corporationHistoryCollection<Document>(db).findOne(
+    { corporationId: corporation._id },
+    { sort: { turn: -1 } }
+  );
   const annualIncome = (latestHistory?.income ?? 0) * TURNS_PER_YEAR;
 
   const countryId = corporation.countryId;

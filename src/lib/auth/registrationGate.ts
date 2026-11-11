@@ -4,6 +4,8 @@ import { getRegistrationIpMatchCandidates, normalizeIp } from "@/lib/utils/ipNor
 import { LEGACY_FINGERPRINT_LENGTH } from "@/lib/utils/fingerprint";
 import { isCgnatProneDevice, type DeviceClass } from "@/lib/utils/userAgent";
 import type { BannedDevice, BannedIp, GameConfig, User } from "@/lib/db/types";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 interface RegistrationSignals {
   clientIp: string;
@@ -77,7 +79,7 @@ export async function assertRegistrationAllowed(
   const deviceKey = typeof signals === "string" ? undefined : (signals.deviceKey ?? undefined);
   const device: DeviceClass =
     typeof signals === "string" ? "desktop" : (signals.device ?? "desktop");
-  const config = await db.collection<GameConfig>("gameConfig").findOne(
+  const config = await gameConfigCollection(db).findOne(
     { _id: "default" },
     {
       projection: {
@@ -134,9 +136,10 @@ export async function assertRegistrationAllowed(
   }
 
   if (browserCollisionClauses.length > 0) {
-    const browserCollision = await db
-      .collection<User>("users")
-      .findOne({ $or: browserCollisionClauses }, { projection: { _id: 1 } });
+    const browserCollision = await usersCollection(db).findOne(
+      { $or: browserCollisionClauses },
+      { projection: { _id: 1 } }
+    );
     if (browserCollision) {
       throw forbidden("An account is already registered from this browser.");
     }
@@ -144,9 +147,7 @@ export async function assertRegistrationAllowed(
 
   if (!ipCandidates.length) return {};
 
-  const count = await db
-    .collection<User>("users")
-    .countDocuments({ registrationIp: { $in: ipCandidates } });
+  const count = await usersCollection(db).countDocuments({ registrationIp: { $in: ipCandidates } });
 
   if (rule && rule.allowRegistration === true) {
     const max = rule.maxAccounts ?? 0;

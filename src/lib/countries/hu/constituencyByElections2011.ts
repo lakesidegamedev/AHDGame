@@ -35,6 +35,8 @@ import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { notificationsCollection } from "@/lib/db/repositories/notifications";
+import type { Document } from "mongodb";
 
 export const HU_2011_BY_ELECTIONS_COLLECTION = "hu2011ConstituencyByElections";
 export interface HuModernByElectionRecord {
@@ -87,12 +89,11 @@ async function cancelJobs(
     { $set: { status: "cancelled", resolving: false, updatedAt: now } },
     { session }
   );
-  await electionCandidatesCollection(db)
-    .updateMany(
-      { electionId: { $in: ids }, status: "active" },
-      { $set: { status: "withdrawn", withdrawnAt: now } },
-      { session }
-    );
+  await electionCandidatesCollection(db).updateMany(
+    { electionId: { $in: ids }, status: "active" },
+    { $set: { status: "withdrawn", withdrawnAt: now } },
+    { session }
+  );
 }
 async function materializeHuModernByElectionOpening(input: {
   db: Db;
@@ -300,8 +301,10 @@ async function materializeHuModernByElectionOpening(input: {
       });
     }
   }
-  const chamberLock = await governmentFormationsCollection<{ _id: string; hu1991MandateGeneration?: number }>(db)
-    .updateOne({ _id: "HU" }, { $inc: { hu1991MandateGeneration: 1 } }, { session });
+  const chamberLock = await governmentFormationsCollection<{
+    _id: string;
+    hu1991MandateGeneration?: number;
+  }>(db).updateOne({ _id: "HU" }, { $inc: { hu1991MandateGeneration: 1 } }, { session });
   if (chamberLock.matchedCount !== 1)
     throw new Error("Modern Hungarian chamber authority is missing");
   const claim = await db.collection<Hu2011AssemblyRecord>(HU_2011_COUNTS_COLLECTION).updateOne(
@@ -333,9 +336,7 @@ async function materializeHuModernByElectionOpening(input: {
     { session }
   );
   await electionsCollection(db).insertMany(polls, { session });
-  if (candidates.length)
-    await electionCandidatesCollection(db)
-      .insertMany(candidates, { session });
+  if (candidates.length) await electionCandidatesCollection(db).insertMany(candidates, { session });
   await electionVoteTalliesCollection(db).insertMany(
     polls.map((poll) => ({
       _id: stableId(`${id}:tally:${poll.seatId}`),
@@ -378,8 +379,10 @@ async function materializeHuModernByElectionResolution(input: {
   const journal = db.collection<HuModernByElectionRecord>(HU_2011_BY_ELECTIONS_COLLECTION);
   const job = await journal.findOne({ _id: receiptId }, { session });
   if (!job || job.completedAtTurn != null) return 0;
-  const chamber = await governmentFormationsCollection<{ _id: string; hu1991MandateGeneration?: number }>(db)
-    .updateOne({ _id: "HU" }, { $inc: { hu1991MandateGeneration: 1 } }, { session });
+  const chamber = await governmentFormationsCollection<{
+    _id: string;
+    hu1991MandateGeneration?: number;
+  }>(db).updateOne({ _id: "HU" }, { $inc: { hu1991MandateGeneration: 1 } }, { session });
   if (chamber.matchedCount !== 1) throw new Error("Modern Hungarian chamber authority is missing");
   const parent = await db
     .collection<Hu2011AssemblyRecord>(HU_2011_COUNTS_COLLECTION)
@@ -691,19 +694,19 @@ async function materializeHuModernByElectionResolution(input: {
         read: false,
         createdAt: now,
       }));
-    if (notices.length) await db.collection("notifications").insertMany(notices, { session });
+    if (notices.length)
+      await notificationsCollection<Document>(db).insertMany(notices, { session });
   }
   await electionsCollection(db).updateMany(
     { _id: { $in: ids } },
     { $set: { status: "resolved", resolving: false, updatedAt: now } },
     { session }
   );
-  await electionCandidatesCollection(db)
-    .updateMany(
-      { electionId: { $in: ids }, status: "active" },
-      { $set: { status: "withdrawn", withdrawnAt: now } },
-      { session }
-    );
+  await electionCandidatesCollection(db).updateMany(
+    { electionId: { $in: ids }, status: "active" },
+    { $set: { status: "withdrawn", withdrawnAt: now } },
+    { session }
+  );
   await electionVoteTalliesCollection(db).bulkWrite(
     polls.map((poll) => {
       const local = candidates.filter((row) => row.electionId.equals(poll._id));

@@ -15,6 +15,7 @@ import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import { presentPlannedEconomy } from "@/lib/economy/presentPlannedEconomy";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 export async function GET() {
   try {
@@ -29,12 +30,10 @@ export async function GET() {
         { _id: "current" },
         { projection: { currentYear: 1, currentTurn: 1 } }
       ),
-      db
-        .collection<GameConfig>("gameConfig")
-        .findOne(
-          { _id: "default" },
-          { projection: { commandEconomyEnabled: 1, commandEconomySecondEconomyTolerance: 1 } }
-        ),
+      gameConfigCollection(db).findOne(
+        { _id: "default" },
+        { projection: { commandEconomyEnabled: 1, commandEconomySecondEconomyTolerance: 1 } }
+      ),
       federalBudgetCollection(db)
         .find(
           { _id: { $in: scheduledIds.map((id) => getNationalBudgetId(id)) } },

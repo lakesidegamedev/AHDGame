@@ -92,6 +92,7 @@ import { raceHref } from "@/lib/campaignManager/links";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
 
 const MIN_BASE_ACTIONS_PER_TURN = 4;
 
@@ -245,8 +246,7 @@ export default async function CharacterPage({ params }: PageProps) {
           { projection: { countryId: 1, positionId: 1, acting: 1 } }
         )
         .toArray(),
-      apDb
-        .collection<CongressLeader>("congressLeaders")
+      congressLeadersCollection(apDb)
         .find({ characterId: character._id }, { projection: { role: 1 } })
         .toArray(),
       apDb

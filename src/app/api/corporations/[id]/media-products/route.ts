@@ -11,6 +11,7 @@ import { getMediaProductKind, MEDIA_PRODUCT_KINDS } from "@/lib/products/mediaPr
 import { getMediaOperatingModel } from "@/lib/mediaOperatingModels/catalog";
 import { MEDIA_PRODUCT_PROJECTS, type MediaProductProject } from "@/lib/products/mediaProduct";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -19,7 +20,7 @@ interface RouteParams {
 const noStore = { "Cache-Control": "private, no-store" };
 
 async function slatesAvailable(db: Awaited<ReturnType<typeof getDb>>) {
-  const config = await db.collection<GameConfig>("gameConfig").findOne(
+  const config = await gameConfigCollection(db).findOne(
     { _id: "default" },
     {
       projection: {

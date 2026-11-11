@@ -19,6 +19,8 @@ import {
 } from "@/lib/parties/leadershipTenure";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { adminLogsCollection } from "@/lib/db/repositories/adminLogs";
+import type { Document } from "mongodb";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -86,7 +88,7 @@ async function logCampaignerChange(
   isAdmin: boolean,
   detail: string
 ): Promise<void> {
-  await db.collection("adminLogs").insertOne({
+  await adminLogsCollection<Document>(db).insertOne({
     category: "system",
     action: "national_campaigners_changed",
     username: authUser.username,

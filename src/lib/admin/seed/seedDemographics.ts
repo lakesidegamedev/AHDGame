@@ -5,6 +5,8 @@ import { calculateStateLeanForCache } from "@/lib/demographics/cachedStateLean";
 import { STATE_IDS } from "@/lib/constants/states";
 import { DEMOGRAPHIC_TURNOUT_RATES } from "@/lib/seeds/demographicCategories";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
+import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
 
 /** The static US bundle seeded here is the 2019 census. */
 const US_STATIC_PRESET = "2019-default";
@@ -12,13 +14,11 @@ const US_STATIC_PRESET = "2019-default";
 export async function seedDemographics(db: Db, reset: boolean, log: (msg: string) => void) {
   if (reset) {
     const usIds = [...STATE_IDS];
-    await db.collection<StateDemographics>("stateDemographics").deleteMany({ _id: { $in: usIds } });
+    await stateDemographicsCollection(db).deleteMany({ _id: { $in: usIds } });
     await db
       .collection<StateDemographics>("demographicDefaults")
       .deleteMany({ _id: { $in: usIds } });
-    await db
-      .collection<StateDemographicTurnout>("stateDemographicTurnout")
-      .deleteMany({ _id: { $in: usIds } });
+    await stateDemographicTurnoutCollection(db).deleteMany({ _id: { $in: usIds } });
   }
 
   const demoTime = new Date();
@@ -55,9 +55,7 @@ export async function seedDemographics(db: Db, reset: boolean, log: (msg: string
     };
   });
   if (stateDemoUpserts.length > 0) {
-    await db
-      .collection<StateDemographics>("stateDemographics")
-      .bulkWrite(stateDemoUpserts, { ordered: false });
+    await stateDemographicsCollection(db).bulkWrite(stateDemoUpserts, { ordered: false });
     await db
       .collection<StateDemographics>("demographicDefaults")
       .bulkWrite(stateDemoUpserts, { ordered: false });
@@ -101,9 +99,7 @@ export async function seedDemographics(db: Db, reset: boolean, log: (msg: string
     })
   );
   if (turnoutOps.length > 0) {
-    await db
-      .collection<StateDemographicTurnout>("stateDemographicTurnout")
-      .bulkWrite(turnoutOps, { ordered: false });
+    await stateDemographicTurnoutCollection(db).bulkWrite(turnoutOps, { ordered: false });
   }
   log(
     `Seeded ${stateDemographics.length} state demographics, ${usStateIds.length} US turnout docs`

@@ -25,6 +25,7 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { createNotification } from "@/lib/notifications";
 import type { Corporation, CorporationShareInvite, User } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 const INVITE_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
@@ -64,9 +65,7 @@ async function handleGET(_request: Request, { params }: RouteParams) {
 
     if (!isCeo) {
       // Restrict to invites addressed to the caller's active character.
-      const userDoc = await db
-        .collection<User>("users")
-        .findOne({ _id: new ObjectId(auth.user.userId) });
+      const userDoc = await usersCollection(db).findOne({ _id: new ObjectId(auth.user.userId) });
       const characterId = userDoc?.activeCharacterId;
       if (!characterId) {
         return NextResponse.json({ invites: [] });

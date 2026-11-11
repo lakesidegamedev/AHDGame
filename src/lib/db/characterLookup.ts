@@ -2,6 +2,7 @@ import { ObjectId, type Db } from "mongodb";
 import type { Character } from "./types/character";
 import type { User } from "./types/user";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 /** Minimal character info returned by bulk lookups. */
 export interface CharacterNameEntry {
@@ -56,9 +57,10 @@ export async function getCharacterByUserId(
   userId: string | ObjectId
 ): Promise<Character | null> {
   const uid = new ObjectId(userId.toString());
-  const user = await db
-    .collection<User>("users")
-    .findOne({ _id: uid }, { projection: { activeCharacterId: 1 } });
+  const user = await usersCollection(db).findOne(
+    { _id: uid },
+    { projection: { activeCharacterId: 1 } }
+  );
   const characterQuery = user?.activeCharacterId
     ? { _id: user.activeCharacterId, userId: uid }
     : { userId: uid };

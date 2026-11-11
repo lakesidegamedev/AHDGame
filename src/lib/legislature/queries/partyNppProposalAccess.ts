@@ -22,6 +22,7 @@ import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficia
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
 
 export async function resolvePartyNppProposalAccess(
   db: Db,
@@ -44,8 +45,10 @@ export async function resolvePartyNppProposalAccess(
       { countryId, sequentialId: partyNumber },
       { projection: { chairId: 1, sequentialId: 1 } }
     ),
-    statePartyOrgCollection(db)
-      .findOne({ countryId, stateId, partyId: character.party }, { projection: { chairId: 1 } }),
+    statePartyOrgCollection(db).findOne(
+      { countryId, stateId, partyId: character.party },
+      { projection: { chairId: 1 } }
+    ),
   ]);
   if (
     !party ||
@@ -82,8 +85,7 @@ export async function resolvePartyNppProposalAccess(
       .toArray(),
     skipReservations
       ? Promise.resolve([] as Pick<StateBill, "sponsorNppId" | "nppId">[])
-      : db
-          .collection<StateBill>("stateBills")
+      : stateBillsCollection(db)
           .find(
             {
               status: { $nin: STATE_TERMINAL_STATUSES },

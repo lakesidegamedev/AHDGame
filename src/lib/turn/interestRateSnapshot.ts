@@ -11,6 +11,7 @@ import { getGameStateCollection } from "@/lib/db/collections/gameState";
 import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
 import { getStatesCollection } from "@/lib/db/collections/states";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 
 const HISTORY_CAP = FOREX_AND_MACRO_CHART_HISTORY_TURNS;
 
@@ -63,8 +64,7 @@ export async function snapshotInterestRateHistory(db: Db, turn: number): Promise
 
   const nationalMetricsDocs =
     nationalDocIdSet.size > 0
-      ? await db
-          .collection<StateMetrics>("macroMetrics")
+      ? await macroMetricsCollection(db)
           .find(
             { _id: { $in: Array.from(nationalDocIdSet) } },
             { projection: { "economic.gdpGrowth.value": 1 } }
@@ -84,8 +84,7 @@ export async function snapshotInterestRateHistory(db: Db, turn: number): Promise
     (await getStatesCollection(db))
       .find({ countryId: { $in: bankCountryIds } }, { projection: { countryId: 1, gdp: 1 } })
       .toArray(),
-    db
-      .collection<StateMetrics>("macroMetrics")
+    macroMetricsCollection(db)
       .find(
         { countryId: { $in: bankCountryIds } },
         { projection: { countryId: 1, "economic.gdpGrowth.value": 1 } }

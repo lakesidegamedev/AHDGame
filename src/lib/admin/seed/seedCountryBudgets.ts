@@ -14,6 +14,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
 
 interface CountryBudgetSeedOptions {
   countryId: CountryId;
@@ -58,7 +59,7 @@ export async function seedCountryBudgets(
         });
       }
     }
-    await db.collection<EnactedLaw>("enactedLaws").deleteMany({ countryId });
+    await enactedLawsCollection(db).deleteMany({ countryId });
     log(`Reset: deleted ${countryId} budget data`);
   }
 
@@ -104,7 +105,7 @@ export async function seedCountryBudgets(
     if (law.incomeCostFraction === undefined) unsetFields.incomeCostFraction = "";
     const update: Record<string, unknown> = { $set: lawWithoutId, $setOnInsert: { _id } };
     if (Object.keys(unsetFields).length > 0) update.$unset = unsetFields;
-    await db.collection<EnactedLaw>("enactedLaws").updateOne(
+    await enactedLawsCollection(db).updateOne(
       {
         legislationTypeId: law.legislationTypeId,
         scope: law.scope,
@@ -127,8 +128,7 @@ export async function seedCountryBudgets(
   const stateBudgets = generateStateBudgets(statesForBudgets, fiscalYear);
   for (const budget of stateBudgets) {
     const { _id, ...budgetData } = budget;
-    await stateBudgetsCollection(db)
-      .updateOne({ _id }, { $set: budgetData }, { upsert: true });
+    await stateBudgetsCollection(db).updateOne({ _id }, { $set: budgetData }, { upsert: true });
   }
   log(`Seeded ${stateBudgets.length} ${countryId} regional budgets`);
 

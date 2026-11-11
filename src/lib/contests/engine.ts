@@ -78,6 +78,10 @@ import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParti
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { billsCollection } from "@/lib/db/repositories/bills";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
+import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
+import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
 
 type PlayerCharacter = Pick<
   Character,
@@ -119,8 +123,7 @@ async function loadPlayers(db: Db): Promise<Map<string, PlayerCharacter>> {
     )
     .toArray();
   const userIds = characters.map((c) => c.userId).filter(Boolean);
-  const banned = await db
-    .collection<User>("users")
+  const banned = await usersCollection(db)
     .find({ _id: { $in: userIds }, isBanned: true }, { projection: { _id: 1 } })
     .toArray();
   const bannedIds = new Set(banned.map((u) => u._id.toString()));
@@ -151,8 +154,7 @@ async function loadCorpRows(db: Db, world: ContestWorld): Promise<Map<string, Co
   const playerCorps = corps.filter((c) => c.ceoId && world.players.has(c.ceoId.toString()));
   if (playerCorps.length === 0) return new Map();
 
-  const history = await db
-    .collection<CorporationHistory>("corporationHistory")
+  const history = await corporationHistoryCollection(db)
     .find(
       {
         corporationId: { $in: playerCorps.map((c) => c._id) },
@@ -221,8 +223,7 @@ type ApprovalSnapshot = Pick<GovernmentApproval, "approvalRating"> &
   Partial<Pick<GovernmentApproval, "history" | "headOfGovernmentSinceTurn">>;
 
 async function loadApprovals(db: Db): Promise<Map<string, ApprovalSnapshot>> {
-  const docs = await db
-    .collection<GovernmentApproval>("governmentApprovals")
+  const docs = await governmentApprovalsCollection(db)
     .find(
       {},
       { projection: { _id: 1, approvalRating: 1, history: 1, headOfGovernmentSinceTurn: 1 } }
@@ -287,8 +288,7 @@ async function loadEnactedBillCounts(
         { projection: { sponsorId: 1 } }
       )
       .toArray(),
-    db
-      .collection<StateBill>("stateBills")
+    stateBillsCollection(db)
       .find({ enactedAt: window, sponsorId: { $ne: null } }, { projection: { sponsorId: 1 } })
       .toArray(),
   ]);
@@ -313,8 +313,7 @@ async function loadWeekAgoCaps(
   const caps = new Map<string, number>();
   if (corporationIds.length === 0) return caps;
   const weekAgo = world.now.getTime() - CONTEST_ROUND_MS;
-  const rows = await db
-    .collection<CorporationHistory>("corporationHistory")
+  const rows = await corporationHistoryCollection(db)
     .find(
       {
         corporationId: { $in: corporationIds.map((id) => new ObjectId(id)) },
@@ -1030,8 +1029,7 @@ async function referralStandings(
     .find({ createdAt: { $gte: since } }, { projection: { userId: 1 } })
     .toArray();
   if (fresh.length === 0) return [];
-  const referees = await db
-    .collection<User>("users")
+  const referees = await usersCollection(db)
     .find(
       { _id: { $in: fresh.map((c) => c.userId) }, referredBy: { $exists: true } },
       { projection: { _id: 1, referredBy: 1, isBanned: 1 } }

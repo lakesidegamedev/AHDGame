@@ -96,6 +96,9 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 
 /**
  * Sector capacity commands (plants tier, P3a of the buildable-sectors plan).
@@ -437,8 +440,7 @@ export async function buildCapacity(request: Request, { params }: RouteParams) {
       // owned and counts toward market share. Best-effort like the drawdown.
       const poolCredit = unownedPoolCredit(poolBucket, cancelledUnits, now, eraUnitScale);
       if (poolCredit) {
-        await db
-          .collection<UnownedSector>("unownedSectors")
+        await unownedSectorsCollection(db)
           .updateOne(
             {
               stateId: sector.stateId,
@@ -676,9 +678,10 @@ export async function loadOperatingReserve(
   corporationId: ObjectId,
   currentTurn: number
 ): Promise<{ turns: number; billsPerTurnAnchor: number; revenuePerTurnAnchor: number }> {
-  const config = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { capacityBuildReserveTurns: 1 } });
+  const config = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { capacityBuildReserveTurns: 1 } }
+  );
   const configured = config?.capacityBuildReserveTurns;
   const turns =
     typeof configured === "number" && Number.isFinite(configured) && configured >= 0
@@ -759,7 +762,7 @@ export async function placeCapacityBuild(
   } = await loadCapacityContext(db, corporation, sector);
 
   if (sector.sectorType === "retail") {
-    const transition = await db.collection<GameConfig>("gameConfig").findOne(
+    const transition = await gameConfigCollection(db).findOne(
       { _id: "default" },
       {
         projection: {
@@ -829,9 +832,10 @@ export async function placeCapacityBuild(
   // Host price level: the sector's OWN state's cost-of-living index, so where
   // you build changes what it costs. Absent metrics ⇒ neutral 1.0 (see
   // `hostBuildPriceIndex`).
-  const hostMetrics = await db
-    .collection<StateMetrics>("macroMetrics")
-    .findOne({ _id: sector.stateId }, { projection: { "economic.costOfLiving": 1 } });
+  const hostMetrics = await macroMetricsCollection(db).findOne(
+    { _id: sector.stateId },
+    { projection: { "economic.costOfLiving": 1 } }
+  );
   const hostCostOfLivingIndex = hostMetrics?.economic?.costOfLiving?.value ?? null;
   // Tech-tree growth-cost reduction, re-homed onto the build price (it bought
   // nothing under plants, where the growth slider is vestigial). Scoped to the
@@ -1197,8 +1201,7 @@ export async function placeCapacityBuild(
   // already exists. Failing here leaves pre-existing behavior, never a worse one.
   const drawdown = unownedPoolDrawdown(poolBucket, units, now, eraUnitScale);
   if (drawdown) {
-    await db
-      .collection<UnownedSector>("unownedSectors")
+    await unownedSectorsCollection(db)
       .updateOne(
         {
           stateId: sector.stateId,

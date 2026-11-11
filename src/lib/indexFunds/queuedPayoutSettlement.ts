@@ -15,6 +15,7 @@ import type { BankingTransition } from "@/lib/banking/rules/boundary";
 import { prepareAuditRecord } from "@/lib/audit/recordAudit";
 import { redemptionEntryStatusAfterPayout } from "./fundRedemptionQueue";
 import { recoverPayoutBatches, type PayoutBatchMarker } from "./queuedPayoutBatch";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 const QUEUE = "indexFundRedemptionQueue";
 type PayoutJournalRecord = {
@@ -65,7 +66,7 @@ export async function loadQueuedPayoutAuditContext(db: Db) {
   const [thresholds, turnLength, config, ledgerTurn] = await Promise.all([
     loadTxThresholds(db),
     loadTurnLengthMinutes(db),
-    db.collection<GameConfig>("gameConfig").findOne({ _id: "default" }),
+    gameConfigCollection(db).findOne({ _id: "default" }),
     resolveLedgerTurn(db),
   ]);
   return {

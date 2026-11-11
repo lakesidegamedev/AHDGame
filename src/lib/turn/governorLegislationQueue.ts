@@ -10,6 +10,7 @@ import { canManageOffice } from "@/lib/governorOffice/access";
 import { snapshotPolicyProvisionsInPlace } from "@/lib/legislature/provisionEnrichment";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
 
 const VOTING_DURATION_HOURS = 24;
 
@@ -50,8 +51,7 @@ export async function processGovernorLegislationQueue(
     ),
   ];
   if (regionsWithQueuedLaws.length > 0) {
-    const activeLawBills = await db
-      .collection<StateBill>("stateBills")
+    const activeLawBills = await stateBillsCollection(db)
       .find({
         stateId: { $in: regionsWithQueuedLaws },
         status: { $nin: STATE_TERMINAL_STATUSES },
@@ -116,7 +116,7 @@ export async function processGovernorLegislationQueue(
       cancelled++;
       continue;
     }
-    const activeNppBill = await db.collection<StateBill>("stateBills").findOne({
+    const activeNppBill = await stateBillsCollection(db).findOne({
       sponsorNppId: q.targetNppId,
       status: { $nin: STATE_TERMINAL_STATUSES },
     });
@@ -202,7 +202,7 @@ export async function processGovernorLegislationQueue(
       createdAt: now,
       updatedAt: now,
     };
-    await db.collection<StateBill>("stateBills").insertOne(bill);
+    await stateBillsCollection(db).insertOne(bill);
     for (const key of lawFamilyKeys) activeResetFamilies.add(key);
 
     await db.collection<GovernorQueuedBill>("governorLegislationQueue").updateOne(

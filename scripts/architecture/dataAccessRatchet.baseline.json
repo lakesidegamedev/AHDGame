@@ -16,15 +16,6 @@
     "src/app/api/admin/bot-api-keys/route.ts": {
       "untyped": 2
     },
-    "src/app/api/admin/characters/update-country/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/admin/characters/update-positions/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/admin/characters/update-state/route.ts": {
-      "untyped": 1
-    },
     "src/app/api/admin/client-diagnostics/route.ts": {
       "untyped": 1
     },
@@ -37,11 +28,8 @@
     "src/app/api/admin/corporations/[id]/imf-bailout/route.ts": {
       "untyped": 1
     },
-    "src/app/api/admin/country/[code]/cabinet/route.ts": {
-      "untyped": 1
-    },
     "src/app/api/admin/country/[code]/one-party-readiness/route.ts": {
-      "untyped": 2
+      "untyped": 1
     },
     "src/app/api/admin/country/[code]/state-party-elections/route.ts": {
       "untyped": 9
@@ -61,14 +49,8 @@
     "src/app/api/admin/feedback/backfill-github/route.ts": {
       "untyped": 5
     },
-    "src/app/api/admin/heal/corporation-cash/route.ts": {
-      "untyped": 1
-    },
     "src/app/api/admin/heal/party-elections/route.ts": {
-      "untyped": 8
-    },
-    "src/app/api/admin/heal/stale-campaigns/route.ts": {
-      "untyped": 1
+      "untyped": 5
     },
     "src/app/api/admin/health/snapshots/latest/route.ts": {
       "untyped": 1
@@ -83,15 +65,9 @@
       "untyped": 1
     },
     "src/app/api/admin/leadership-elections/route.ts": {
-      "untyped": 11
-    },
-    "src/app/api/admin/logs/fix-character-names/route.ts": {
-      "untyped": 3
+      "untyped": 10
     },
     "src/app/api/admin/logs/hourly/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/admin/mail-reports/[id]/route.ts": {
       "untyped": 1
     },
     "src/app/api/admin/migrations/create-indexes/diagnose/route.ts": {
@@ -101,15 +77,6 @@
       "untyped": 1
     },
     "src/app/api/admin/news/[id]/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/admin/party-org/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/admin/referrals/leaderboard/route.ts": {
-      "untyped": 2
-    },
-    "src/app/api/admin/resources/grant/route.ts": {
       "untyped": 1
     },
     "src/app/api/admin/roadmap/[id]/route.ts": {
@@ -128,10 +95,7 @@
       "untyped": 1
     },
     "src/app/api/admin/setup/route.ts": {
-      "untyped": 5
-    },
-    "src/app/api/admin/state-party/[stateId]/[partyId]/appoint/route.ts": {
-      "untyped": 1
+      "untyped": 3
     },
     "src/app/api/admin/suggestions/[id]/route.ts": {
       "untyped": 2
@@ -143,64 +107,25 @@
       "untyped": 3
     },
     "src/app/api/admin/user-api-keys/route.ts": {
-      "untyped": 6
+      "untyped": 4
     },
     "src/app/api/admin/users/ban/route.ts": {
-      "untyped": 3
+      "untyped": 2
     },
     "src/app/api/admin/users/delete/route.ts": {
-      "untyped": 3
-    },
-    "src/app/api/admin/users/mod-note/route.ts": {
-      "untyped": 3
-    },
-    "src/app/api/admin/users/reset-founding-cooldown/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/admin/users/retire-character/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/admin/users/sandbox-access/route.ts": {
       "untyped": 2
-    },
-    "src/app/api/admin/users/singleplayer-entitlement/route.ts": {
-      "untyped": 2
-    },
-    "src/app/api/auth/active-character/route.ts": {
-      "untyped": 2
-    },
-    "src/app/api/auth/character/route.ts": {
-      "untyped": 1
     },
     "src/app/api/auth/delete-account/route.ts": {
       "untyped": 4
     },
-    "src/app/api/auth/login/route.ts": {
-      "untyped": 2
-    },
-    "src/app/api/auth/logout/route.ts": {
-      "untyped": 2
-    },
     "src/app/api/auth/me/route.ts": {
-      "untyped": 3
-    },
-    "src/app/api/auth/oidc/callback/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/auth/register/route.ts": {
-      "untyped": 1
+      "untyped": 2
     },
     "src/app/api/bonds/[bondId]/sell/route.ts": {
       "untyped": 2
     },
-    "src/app/api/campaigns/[id]/campaign-strength/detail/route.ts": {
-      "untyped": 2
-    },
-    "src/app/api/characters/[id]/wire/route.ts": {
-      "untyped": 5
-    },
     "src/app/api/client-nav/route.ts": {
-      "untyped": 4
+      "untyped": 3
     },
     "src/app/api/client/diagnostics/route.ts": {
       "untyped": 1
@@ -220,9 +145,6 @@
     "src/app/api/corporations/[id]/bond-default/cash/route.ts": {
       "untyped": 2
     },
-    "src/app/api/corporations/[id]/bond-default/route.ts": {
-      "untyped": 1
-    },
     "src/app/api/corporations/[id]/ceo/resign/route.ts": {
       "untyped": 1
     },
@@ -241,9 +163,6 @@
     "src/app/api/country/[code]/executive/cabinet/[positionId]/defence-contracts/route.ts": {
       "untyped": 1
     },
-    "src/app/api/country/[code]/executive/declare-war/route.ts": {
-      "untyped": 1
-    },
     "src/app/api/country/[code]/executive/orders/route.ts": {
       "untyped": 2
     },
@@ -251,9 +170,6 @@
       "untyped": 1
     },
     "src/app/api/country/[code]/government-contracts/access/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/country/[code]/legislature/cabinet-bills/[id]/vote/route.ts": {
       "untyped": 1
     },
     "src/app/api/country/[code]/map/overview/route.ts": {
@@ -268,19 +184,7 @@
     "src/app/api/country/[code]/overview-counts/route.ts": {
       "untyped": 3
     },
-    "src/app/api/country/[code]/parties/[id]/bulk-org/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/country/[code]/parties/[id]/campaigners/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/country/[code]/parties/[id]/caucuses/[slug]/election/enter/route.ts": {
-      "untyped": 1
-    },
     "src/app/api/country/[code]/parties/[id]/caucuses/[slug]/election/route.ts": {
-      "untyped": 2
-    },
-    "src/app/api/country/[code]/parties/[id]/caucuses/[slug]/election/vote/route.ts": {
       "untyped": 1
     },
     "src/app/api/country/[code]/parties/[id]/caucuses/[slug]/members/[memberId]/route.ts": {
@@ -289,40 +193,10 @@
     "src/app/api/country/[code]/parties/[id]/caucuses/[slug]/members/route.ts": {
       "untyped": 1
     },
-    "src/app/api/country/[code]/parties/[id]/caucuses/[slug]/send/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/country/[code]/parties/[id]/caucuses/[slug]/transfer/route.ts": {
-      "untyped": 2
-    },
     "src/app/api/country/[code]/parties/[id]/committee/enter/route.ts": {
-      "untyped": 2
-    },
-    "src/app/api/country/[code]/parties/[id]/committee/vote/route.ts": {
       "untyped": 1
     },
     "src/app/api/country/[code]/parties/[id]/election/enter/route.ts": {
-      "untyped": 2
-    },
-    "src/app/api/country/[code]/parties/[id]/election/vote/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/country/[code]/parties/[id]/gotv/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/country/[code]/parties/[id]/registration-drive/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/country/[code]/parties/[id]/suppression/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/country/[code]/parties/[id]/tax/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/country/[code]/parties/[id]/treasury-plan/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/country/[code]/parties/route.ts": {
       "untyped": 1
     },
     "src/app/api/country/[code]/region/[id]/office/address/route.ts": {
@@ -331,46 +205,7 @@
     "src/app/api/country/[code]/region/[id]/office/orders/route.ts": {
       "untyped": 2
     },
-    "src/app/api/country/[code]/region/[id]/party/[partyId]/campaigners/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/country/[code]/region/[id]/party/[partyId]/donate/route.ts": {
-      "untyped": 1
-    },
     "src/app/api/country/[code]/region/[id]/party/[partyId]/election/enter/route.ts": {
-      "untyped": 2
-    },
-    "src/app/api/country/[code]/region/[id]/party/[partyId]/election/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/country/[code]/region/[id]/party/[partyId]/election/vote/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/country/[code]/region/[id]/party/[partyId]/gotv/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/country/[code]/region/[id]/party/[partyId]/org-building/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/country/[code]/region/[id]/party/[partyId]/primary-allocation/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/country/[code]/region/[id]/party/[partyId]/send/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/country/[code]/region/[id]/party/[partyId]/suppression/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/country/[code]/region/[id]/party/[partyId]/tax/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/country/[code]/region/[id]/party/[partyId]/transfer/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/country/[code]/region/[id]/party/[partyId]/treasury-plan/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/country/[code]/region/[id]/party/[partyId]/whip/route.ts": {
       "untyped": 1
     },
     "src/app/api/crises/[id]/interaction/route.ts": {
@@ -391,15 +226,6 @@
     "src/app/api/moderator/achievements/grant/route.ts": {
       "untyped": 1
     },
-    "src/app/api/moderator/characters/update-country/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/moderator/characters/update-positions/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/moderator/characters/update-state/route.ts": {
-      "untyped": 1
-    },
     "src/app/api/moderator/news/[id]/route.ts": {
       "untyped": 1
     },
@@ -409,29 +235,14 @@
     "src/app/api/pip/standard/route.ts": {
       "untyped": 1
     },
-    "src/app/api/political-operations/state-org/build/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/public/v1/market/route.ts": {
-      "untyped": 2
-    },
     "src/app/api/roadmap/route.ts": {
       "untyped": 2
-    },
-    "src/app/api/sectors/route.ts": {
-      "untyped": 1
     },
     "src/app/api/settings/achievements/route.ts": {
       "untyped": 1
     },
     "src/app/api/settings/bot-api-keys/route.ts": {
       "untyped": 3
-    },
-    "src/app/api/settings/legacy-display-name/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/settings/reelection-preference/route.ts": {
-      "untyped": 1
     },
     "src/app/api/settings/retired-characters/route.ts": {
       "untyped": 1
@@ -449,12 +260,6 @@
       "untyped": 1
     },
     "src/app/api/v1/key/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/v1/transfer/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/world/parties/route.ts": {
       "untyped": 1
     },
     "src/app/wiki/[slug]/edit/page.tsx": {
@@ -475,9 +280,6 @@
     "src/lib/achievements/earnedCounts.ts": {
       "untyped": 1
     },
-    "src/lib/achievements/index.ts": {
-      "untyped": 1
-    },
     "src/lib/achievements/progress.ts": {
       "untyped": 4
     },
@@ -494,28 +296,25 @@
       "untyped": 1
     },
     "src/lib/admin/activityLog.ts": {
-      "untyped": 2
+      "untyped": 1
     },
     "src/lib/admin/bootstrapGameWorld.ts": {
-      "untyped": 5
+      "untyped": 4
     },
     "src/lib/admin/countryReadinessReport.ts": {
-      "untyped": 2
+      "untyped": 1
     },
     "src/lib/admin/economyReset/apply.ts": {
-      "untyped": 11
+      "untyped": 8
     },
     "src/lib/admin/economyReset/census.ts": {
       "untyped": 6
     },
     "src/lib/admin/finalizeResetGameWorld.ts": {
-      "untyped": 5
-    },
-    "src/lib/admin/intake/intakeSummary.ts": {
-      "untyped": 1
+      "untyped": 4
     },
     "src/lib/admin/recover1991Bootstrap.ts": {
-      "untyped": 10
+      "untyped": 1
     },
     "src/lib/admin/resetAndBootstrapGameWorld.ts": {
       "untyped": 1
@@ -527,12 +326,9 @@
       "untyped": 3
     },
     "src/lib/admin/resetGameWorld.ts": {
-      "untyped": 11
+      "untyped": 6
     },
     "src/lib/admin/seed/applyEraCurrencyTopology.ts": {
-      "untyped": 1
-    },
-    "src/lib/admin/seed/indexes/cabinet.ts": {
       "untyped": 1
     },
     "src/lib/admin/seed/indexes/helpers.ts": {
@@ -542,115 +338,43 @@
       "untyped": 1
     },
     "src/lib/admin/seed/purgeAbsentCountryRegions.ts": {
-      "untyped": 2
+      "untyped": 1
     },
     "src/lib/admin/seed/referenceRebuildClear.ts": {
       "untyped": 1
     },
-    "src/lib/admin/seed/resetPoliticalMetricsRuntimeState.ts": {
-      "untyped": 1
-    },
     "src/lib/admin/seed/runCoreSeed.ts": {
-      "untyped": 10
+      "untyped": 7
     },
     "src/lib/admin/seed/seedAchievements.ts": {
       "untyped": 6
     },
-    "src/lib/admin/seed/seedAT.ts": {
-      "untyped": 4
-    },
-    "src/lib/admin/seed/seedBG2027.ts": {
-      "untyped": 4
-    },
-    "src/lib/admin/seed/seedBR.ts": {
-      "untyped": 4
-    },
     "src/lib/admin/seed/seedBudgets.ts": {
-      "untyped": 4
-    },
-    "src/lib/admin/seed/seedCN.ts": {
-      "untyped": 4
+      "untyped": 2
     },
     "src/lib/admin/seed/seedColdWarFoundations.ts": {
       "untyped": 3
     },
-    "src/lib/admin/seed/seedCommodityPrices.ts": {
-      "untyped": 1
-    },
-    "src/lib/admin/seed/seedDD.ts": {
-      "untyped": 4
-    },
     "src/lib/admin/seed/seedDE.ts": {
-      "untyped": 5
-    },
-    "src/lib/admin/seed/seedEasternBloc.ts": {
-      "untyped": 4
-    },
-    "src/lib/admin/seed/seedES.ts": {
-      "untyped": 4
-    },
-    "src/lib/admin/seed/seedFI.ts": {
-      "untyped": 4
-    },
-    "src/lib/admin/seed/seedFR.ts": {
-      "untyped": 4
-    },
-    "src/lib/admin/seed/seedGameConfig.ts": {
       "untyped": 1
-    },
-    "src/lib/admin/seed/seedGR.ts": {
-      "untyped": 4
-    },
-    "src/lib/admin/seed/seedHU.ts": {
-      "untyped": 4
-    },
-    "src/lib/admin/seed/seedIE.ts": {
-      "untyped": 4
-    },
-    "src/lib/admin/seed/seedIT.ts": {
-      "untyped": 4
     },
     "src/lib/admin/seed/seedLegislationTypes.ts": {
-      "untyped": 2
-    },
-    "src/lib/admin/seed/seedModern2019.ts": {
       "untyped": 1
-    },
-    "src/lib/admin/seed/seedModernTransitionCountries.ts": {
-      "untyped": 4
-    },
-    "src/lib/admin/seed/seedNG.ts": {
-      "untyped": 4
     },
     "src/lib/admin/seed/seedPolicies.ts": {
-      "untyped": 1
-    },
-    "src/lib/admin/seed/seedPoliticalMetrics.ts": {
       "untyped": 1
     },
     "src/lib/admin/seed/seedRegionMetrics.ts": {
       "untyped": 1
     },
-    "src/lib/admin/seed/seedSE.ts": {
-      "untyped": 4
-    },
-    "src/lib/admin/seed/seedStatePolicies.ts": {
-      "untyped": 3
-    },
     "src/lib/admin/seed/seedStateResourceCapacity.ts": {
       "untyped": 3
-    },
-    "src/lib/admin/seed/seedTR.ts": {
-      "untyped": 4
     },
     "src/lib/admin/seed/seedUnions.ts": {
       "untyped": 3
     },
-    "src/lib/admin/seed/seedUnownedSectors.ts": {
-      "untyped": 2
-    },
     "src/lib/admin/seedDiagnostic/conformance.ts": {
-      "untyped": 13
+      "untyped": 8
     },
     "src/lib/admin/seedDiagnostic/index.ts": {
       "untyped": 3
@@ -658,23 +382,14 @@
     "src/lib/admin/seedDiagnostic/regionDerivedCoverage.ts": {
       "untyped": 2
     },
-    "src/lib/admin/spawnNppCorporation.ts": {
-      "untyped": 4
-    },
     "src/lib/admin/startingParties.ts": {
       "untyped": 4
-    },
-    "src/lib/admin/suspiciousList.ts": {
-      "untyped": 1
-    },
-    "src/lib/adminLog.ts": {
-      "untyped": 1
     },
     "src/lib/advertising/persistence.ts": {
       "untyped": 2
     },
     "src/lib/altDetection/run.ts": {
-      "untyped": 2
+      "untyped": 1
     },
     "src/lib/api/abuseDetection.ts": {
       "untyped": 3
@@ -683,22 +398,13 @@
       "untyped": 3
     },
     "src/lib/api/userApiAuth.ts": {
-      "untyped": 6
-    },
-    "src/lib/auth/characterCreation.ts": {
-      "untyped": 7
-    },
-    "src/lib/auth/oauth/providerLogin.ts": {
-      "untyped": 2
+      "untyped": 4
     },
     "src/lib/auth/providerIdentityIndexes.ts": {
       "untyped": 1
     },
     "src/lib/auth/sourceOwnershipProof.ts": {
       "untyped": 2
-    },
-    "src/lib/auth/unifiedMigration.ts": {
-      "untyped": 1
     },
     "src/lib/banking/atomicDocumentSettlement.ts": {
       "untyped": 3
@@ -724,32 +430,14 @@
     "src/lib/bonds/executeCorporationBondDefaultDissolution.ts": {
       "untyped": 1
     },
-    "src/lib/bonds/executeCorporationBondRefinance.ts": {
-      "untyped": 1
-    },
     "src/lib/bonds/saleRecovery.ts": {
-      "untyped": 1
-    },
-    "src/lib/budget/grants.ts": {
-      "untyped": 1
-    },
-    "src/lib/budget/incomePayout.ts": {
       "untyped": 1
     },
     "src/lib/budget/treasuryReserveTransfer.ts": {
       "untyped": 1
     },
-    "src/lib/cabinet/cabinetBills.ts": {
-      "untyped": 3
-    },
     "src/lib/cabinetTransition.ts": {
       "untyped": 2
-    },
-    "src/lib/campaigns/commands/campaignCommands.ts": {
-      "untyped": 2
-    },
-    "src/lib/campaigns/commands/campaignManagementCommands.ts": {
-      "untyped": 1
     },
     "src/lib/campaigns/queries/campaignQueries.ts": {
       "untyped": 2
@@ -761,9 +449,6 @@
       "untyped": 1
     },
     "src/lib/character/performRelocation.ts": {
-      "untyped": 2
-    },
-    "src/lib/client/clientStatus.ts": {
       "untyped": 1
     },
     "src/lib/client/widgetExtras.ts": {
@@ -787,17 +472,11 @@
     "src/lib/constants/countryReadinessExpectations.ts": {
       "untyped": 1
     },
-    "src/lib/contests/achievements.ts": {
-      "untyped": 1
-    },
     "src/lib/contests/history.ts": {
       "untyped": 1
     },
-    "src/lib/contests/referralAward.ts": {
-      "untyped": 1
-    },
     "src/lib/corporations/applyPriceMultipliers.ts": {
-      "untyped": 2
+      "untyped": 1
     },
     "src/lib/corporations/cancelShareOrder.ts": {
       "untyped": 1
@@ -825,14 +504,8 @@
     "src/lib/corporations/economicActionLog.ts": {
       "untyped": 1
     },
-    "src/lib/corporations/hostileTakeoverNotifications.ts": {
-      "untyped": 1
-    },
-    "src/lib/corporations/issueRelocationBond.ts": {
-      "untyped": 1
-    },
     "src/lib/corporations/offTypeHandover.ts": {
-      "untyped": 3
+      "untyped": 2
     },
     "src/lib/corporations/sentimentEvents.ts": {
       "untyped": 1
@@ -843,43 +516,19 @@
     "src/lib/corporations/votes/voteService.ts": {
       "untyped": 1
     },
-    "src/lib/countries/bg/constituencyByElections1991.ts": {
-      "untyped": 1
-    },
-    "src/lib/countries/bg/foundingSeating1990.ts": {
-      "untyped": 1
-    },
-    "src/lib/countries/bg/listVacancies1991.ts": {
-      "untyped": 1
-    },
-    "src/lib/countries/bg/ordinaryAssemblySeating.ts": {
-      "untyped": 1
-    },
-    "src/lib/countries/hu/assemblySeating1991.ts": {
-      "untyped": 1
-    },
-    "src/lib/countries/hu/assemblySeating2011.ts": {
-      "untyped": 1
-    },
     "src/lib/countries/hu/constituencyByElections1991.ts": {
-      "untyped": 2
+      "untyped": 1
     },
     "src/lib/countries/hu/constituencyByElections2011.ts": {
-      "untyped": 2
+      "untyped": 1
     },
     "src/lib/countries/hu/listVacancies1991.ts": {
-      "untyped": 3
+      "untyped": 2
     },
     "src/lib/countries/jp/elections/billLifecycle.ts": {
       "untyped": 1
     },
     "src/lib/countries/jp/elections/shugiinFilingIndexes.ts": {
-      "untyped": 1
-    },
-    "src/lib/countries/jp/seed.ts": {
-      "untyped": 4
-    },
-    "src/lib/countries/jp/seedBudgets.ts": {
       "untyped": 1
     },
     "src/lib/countries/ru/assemblyVacancySeating.ts": {
@@ -898,16 +547,13 @@
       "untyped": 1
     },
     "src/lib/countries/ru/seedRU.ts": {
-      "untyped": 6
+      "untyped": 1
     },
     "src/lib/countries/uk/devolution/service.ts": {
       "untyped": 1
     },
     "src/lib/countries/uk/seed.ts": {
-      "untyped": 6
-    },
-    "src/lib/countries/uk/seedBudgets.ts": {
-      "untyped": 2
+      "untyped": 1
     },
     "src/lib/country/mergeCountry.ts": {
       "untyped": 7
@@ -922,21 +568,6 @@
       "untyped": 3
     },
     "src/lib/country/regionEconomyView.ts": {
-      "untyped": 2
-    },
-    "src/lib/crises/aidFinalize.ts": {
-      "untyped": 1
-    },
-    "src/lib/crises/applyEffects.ts": {
-      "untyped": 2
-    },
-    "src/lib/crises/interactionEngine.ts": {
-      "untyped": 1
-    },
-    "src/lib/crises/migrateSovereignDefault.ts": {
-      "untyped": 2
-    },
-    "src/lib/crises/warEmergencyResponse.ts": {
       "untyped": 1
     },
     "src/lib/currency/autoConvert.ts": {
@@ -960,23 +591,17 @@
     "src/lib/demographics/flowJournal.ts": {
       "untyped": 5
     },
-    "src/lib/demographics/phase.ts": {
-      "untyped": 1
-    },
     "src/lib/elections/engine/candidateEnrichment.ts": {
       "untyped": 1
     },
     "src/lib/elections/responseCredit.ts": {
       "untyped": 1
     },
-    "src/lib/events/substrate/applyEffects.ts": {
-      "untyped": 3
-    },
     "src/lib/forex/fillRecovery.ts": {
       "untyped": 1
     },
     "src/lib/government/commands/appointments.ts": {
-      "untyped": 2
+      "untyped": 1
     },
     "src/lib/governmentContracts/commands.ts": {
       "untyped": 1
@@ -991,9 +616,6 @@
       "untyped": 2
     },
     "src/lib/indexFunds/fundFloatSettlement.ts": {
-      "untyped": 1
-    },
-    "src/lib/indexFunds/fundTxLog.ts": {
       "untyped": 1
     },
     "src/lib/indexFunds/nppInvesting.ts": {
@@ -1029,26 +651,17 @@
     "src/lib/indexFunds/sponsorship/windUp.ts": {
       "untyped": 3
     },
-    "src/lib/influence/partyExecutorValidation.ts": {
-      "untyped": 2
-    },
     "src/lib/influence/simpleInfluence.ts": {
       "untyped": 4
     },
     "src/lib/internationalOrganizations/cashLedger.ts": {
       "untyped": 2
     },
-    "src/lib/legislature/commands/nationalBillActions.ts": {
-      "untyped": 2
-    },
-    "src/lib/legislature/queries/nationalBillQueries.ts": {
-      "untyped": 1
-    },
     "src/lib/lineOfCredit/ledger.ts": {
       "untyped": 1
     },
     "src/lib/lineOfCredit/settlement.ts": {
-      "untyped": 2
+      "untyped": 1
     },
     "src/lib/livingConflict/financialDemand.ts": {
       "untyped": 1
@@ -1090,9 +703,6 @@
       "untyped": 2
     },
     "src/lib/migrations/entries/2026-09-17-supply-listing-indexes.ts": {
-      "untyped": 1
-    },
-    "src/lib/migrations/entries/2026-09-17-uk-dual-ministry-role-slot.ts": {
       "untyped": 1
     },
     "src/lib/migrations/entries/2026-09-20-turn-clock-indexes.ts": {
@@ -1150,7 +760,7 @@
       "untyped": 2
     },
     "src/lib/migrations/entries/2026-10-14-government-contract-bidding.ts": {
-      "untyped": 4
+      "untyped": 3
     },
     "src/lib/migrations/entries/2026-10-16-income-tax-tiers.ts": {
       "untyped": 2
@@ -1164,9 +774,6 @@
     "src/lib/migrations/entries/2026-10-23-drop-log-text-indexes.ts": {
       "untyped": 1
     },
-    "src/lib/migrations/entries/2026-10-27-party-npp-regional-bills.ts": {
-      "untyped": 1
-    },
     "src/lib/migrations/entries/2026-10-30-county-populations.ts": {
       "untyped": 2
     },
@@ -1176,16 +783,7 @@
     "src/lib/migrations/indexPlans.ts": {
       "untyped": 1
     },
-    "src/lib/military/covertCrackdown.ts": {
-      "untyped": 1
-    },
     "src/lib/moneySupply/seed.ts": {
-      "untyped": 1
-    },
-    "src/lib/nationalization/restructure.ts": {
-      "untyped": 1
-    },
-    "src/lib/nativePush/devices.ts": {
       "untyped": 1
     },
     "src/lib/news.ts": {
@@ -1194,38 +792,20 @@
     "src/lib/news/commands/newsCommands.ts": {
       "untyped": 9
     },
-    "src/lib/nppAutonomy/governingMetrics.ts": {
-      "untyped": 1
-    },
-    "src/lib/nppAutonomy/playerImpactBudget.ts": {
-      "untyped": 1
-    },
     "src/lib/onboarding/checklist.ts": {
-      "untyped": 4
+      "untyped": 3
     },
     "src/lib/onboarding/firstDays.ts": {
       "untyped": 1
     },
-    "src/lib/parties/applyCharacterPartyJoin.ts": {
-      "untyped": 1
-    },
     "src/lib/parties/proposals.ts": {
-      "untyped": 1
-    },
-    "src/lib/parties/queries/leadership.ts": {
-      "untyped": 2
-    },
-    "src/lib/parties/queries/partyDetail.ts": {
-      "untyped": 1
-    },
-    "src/lib/parties/unmannedDefenseShield.ts": {
       "untyped": 1
     },
     "src/lib/partyWhips/commands/issueCaucusWhip.ts": {
       "untyped": 2
     },
     "src/lib/partyWhips/commands/issueNationalPartyWhip.ts": {
-      "untyped": 3
+      "untyped": 2
     },
     "src/lib/policyShift.ts": {
       "untyped": 1
@@ -1237,13 +817,7 @@
       "untyped": 1
     },
     "src/lib/propagateNameChange.ts": {
-      "untyped": 15
-    },
-    "src/lib/publicApi/government.ts": {
-      "untyped": 2
-    },
-    "src/lib/publicApi/tierLimits.ts": {
-      "untyped": 1
+      "untyped": 10
     },
     "src/lib/recap/buildSeasonRecaps.ts": {
       "untyped": 1
@@ -1255,10 +829,10 @@
       "untyped": 1
     },
     "src/lib/referendum/refundConversionConstruction.ts": {
-      "untyped": 2
+      "untyped": 1
     },
     "src/lib/referendum/secede/carryOverOfficials.ts": {
-      "untyped": 3
+      "untyped": 2
     },
     "src/lib/referendum/secede/expandToSubRegions.ts": {
       "untyped": 1
@@ -1269,14 +843,11 @@
     "src/lib/referendum/secede/splitParties.ts": {
       "untyped": 7
     },
-    "src/lib/referendum/transfer/carryNorthernIrelandMPs.ts": {
-      "untyped": 1
-    },
     "src/lib/referendum/transfer/convertPublicCurrency.ts": {
       "untyped": 2
     },
     "src/lib/referendum/transfer/evacuateRegionPolitics.ts": {
-      "untyped": 5
+      "untyped": 4
     },
     "src/lib/referendum/transfer/regionScopedCollections.ts": {
       "untyped": 1
@@ -1296,20 +867,11 @@
     "src/lib/remediation/defects/AHD-1266-tr-repudiation-restitution.ts": {
       "untyped": 1
     },
-    "src/lib/remediation/defects/AHD-1271-merged-state-extraction.ts": {
-      "untyped": 2
-    },
-    "src/lib/remediation/defects/AHD-1271-pool-country-attribution.ts": {
-      "untyped": 1
-    },
     "src/lib/remediation/defects/AHD-951-orphan-null-party-seats.ts": {
       "untyped": 2
     },
     "src/lib/remediation/defects/AHD-command-economy-private-sector-ownership.ts": {
       "untyped": 2
-    },
-    "src/lib/remediation/defects/AHD-dissolution-npp-successors.ts": {
-      "untyped": 1
     },
     "src/lib/remediation/defects/AHD-tinky-stale-vote-excess.ts": {
       "untyped": 1
@@ -1327,12 +889,9 @@
       "untyped": 2
     },
     "src/lib/retireCharacter.ts": {
-      "untyped": 14
+      "untyped": 12
     },
     "src/lib/savings/shadow.ts": {
-      "untyped": 1
-    },
-    "src/lib/scotus/enactRulingBill.ts": {
       "untyped": 1
     },
     "src/lib/scotus/seedScotus.ts": {
@@ -1341,29 +900,26 @@
     "src/lib/settings/resignations.ts": {
       "untyped": 1
     },
-    "src/lib/settlement/actuate.ts": {
-      "untyped": 2
-    },
     "src/lib/sidebarWidgets/widgetData.ts": {
       "untyped": 2
     },
     "src/lib/sim/driveSyntheticActors.ts": {
-      "untyped": 2
+      "untyped": 1
     },
     "src/lib/sim/economyTelemetry.ts": {
-      "untyped": 11
+      "untyped": 7
     },
     "src/lib/sim/electionTurnover.ts": {
-      "untyped": 4
+      "untyped": 3
     },
     "src/lib/sim/experimentsReport.ts": {
-      "untyped": 4
+      "untyped": 3
     },
     "src/lib/sim/materializeSyntheticActors.ts": {
-      "untyped": 8
+      "untyped": 5
     },
     "src/lib/sim/metrics.ts": {
-      "untyped": 7
+      "untyped": 4
     },
     "src/lib/sim/worldsimBootstrapConformance.ts": {
       "untyped": 2
@@ -1372,28 +928,13 @@
       "untyped": 6
     },
     "src/lib/singleplayerBatch.ts": {
-      "untyped": 2
-    },
-    "src/lib/singleplayerOwnerAdmin.ts": {
-      "untyped": 1
-    },
-    "src/lib/singleplayerServer.ts": {
       "untyped": 1
     },
     "src/lib/singleplayerStatistics.ts": {
-      "untyped": 5
-    },
-    "src/lib/treasury/executeSendToMember.ts": {
-      "untyped": 1
-    },
-    "src/lib/treasury/executeTransferToStateParty.ts": {
-      "untyped": 2
+      "untyped": 3
     },
     "src/lib/treasury/payoutCap.ts": {
       "untyped": 1
-    },
-    "src/lib/turn/activityLogging.ts": {
-      "untyped": 2
     },
     "src/lib/turn/atomicClaim.ts": {
       "untyped": 1
@@ -1402,12 +943,6 @@
       "untyped": 1
     },
     "src/lib/turn/bankingTurn.ts": {
-      "untyped": 1
-    },
-    "src/lib/turn/billLifecycle/lifecycleHelpers.ts": {
-      "untyped": 1
-    },
-    "src/lib/turn/bondTurnAutoResolve.ts": {
       "untyped": 1
     },
     "src/lib/turn/bondTurnLedger.ts": {
@@ -1422,20 +957,11 @@
     "src/lib/turn/commodity/sourcingSettlement.ts": {
       "untyped": 5
     },
-    "src/lib/turn/commodityPriceTurn.ts": {
-      "untyped": 1
-    },
     "src/lib/turn/corporation/corporateTaxPriority.ts": {
-      "untyped": 1
-    },
-    "src/lib/turn/corporation/corporationSectorShed.ts": {
       "untyped": 1
     },
     "src/lib/turn/corporation/corporationTurnPayouts.ts": {
       "untyped": 1
-    },
-    "src/lib/turn/corporation/corporationTurnPhases.ts": {
-      "untyped": 2
     },
     "src/lib/turn/corporation/corporationTurnSideEffects.ts": {
       "untyped": 1
@@ -1447,13 +973,10 @@
       "untyped": 1
     },
     "src/lib/turn/corporation/marketCapSnapshot.ts": {
-      "untyped": 2
+      "untyped": 1
     },
     "src/lib/turn/corporation/migrateEntertainmentRemoval.ts": {
       "untyped": 4
-    },
-    "src/lib/turn/corporation/nppCeoPay.ts": {
-      "untyped": 1
     },
     "src/lib/turn/corporation/producerMarketShadowPhase.ts": {
       "untyped": 1
@@ -1461,14 +984,11 @@
     "src/lib/turn/corporationCountrySnapshot.ts": {
       "untyped": 1
     },
-    "src/lib/turn/crisisTurn.ts": {
-      "untyped": 2
-    },
     "src/lib/turn/decolonizationTurn.ts": {
       "untyped": 1
     },
     "src/lib/turn/gameHealthSnapshot.ts": {
-      "untyped": 5
+      "untyped": 4
     },
     "src/lib/turn/history/freezeOfficeHistoryIterations.ts": {
       "untyped": 2
@@ -1482,14 +1002,11 @@
     "src/lib/turn/investorWealthSnapshots.ts": {
       "untyped": 1
     },
-    "src/lib/turn/npp/billSponsorship.ts": {
-      "untyped": 1
-    },
     "src/lib/turn/npp/leadershipVoting.ts": {
       "untyped": 2
     },
     "src/lib/turn/parliamentaryGovernment.ts": {
-      "untyped": 8
+      "untyped": 6
     },
     "src/lib/turn/parliamentSeatsSnapshot.ts": {
       "untyped": 1
@@ -1504,10 +1021,7 @@
       "untyped": 2
     },
     "src/lib/turn/suspiciousDetection.ts": {
-      "untyped": 18
-    },
-    "src/lib/turnSystem.ts": {
-      "untyped": 1
+      "untyped": 6
     },
     "src/lib/unions/commands/resignUnionLeadership.ts": {
       "untyped": 2
@@ -1519,16 +1033,16 @@
       "untyped": 1
     },
     "src/lib/world/careerEvidence.ts": {
-      "untyped": 3
+      "untyped": 2
     },
     "src/lib/world/legacyLeaderboard.ts": {
       "untyped": 1
     },
     "src/lib/world/succession/materializeFederalRetirement.ts": {
-      "untyped": 3
+      "untyped": 2
     },
     "src/lib/world/succession/materializeRussianCongress.ts": {
-      "untyped": 9
+      "untyped": 7
     },
     "src/lib/world/succession/materializeTerritory.ts": {
       "untyped": 1

@@ -39,6 +39,7 @@ import {
 } from "@/lib/turn/parliamentaryGovernment";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
 
 // ---------------------------------------------------------------------------
 // Exported helpers — delegate to shared system, maintain original signatures
@@ -91,7 +92,7 @@ export async function updateGovernmentSeats(): Promise<void> {
 export async function tickUkGovernmentGauges(db: Db, now: Date): Promise<void> {
   const nhsGameState = await getGameState(db);
   const [approvalDoc, brokenPromiseMeter] = await Promise.all([
-    db.collection<GovernmentApproval>("governmentApprovals").findOne({ _id: "UK" }),
+    governmentApprovalsCollection(db).findOne({ _id: "UK" }),
     loadUkBrokenPromiseMeter(db),
   ]);
   if (approvalDoc) {

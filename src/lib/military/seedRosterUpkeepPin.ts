@@ -2,6 +2,7 @@ import type { Db } from "mongodb";
 import type { GameConfig } from "@/lib/db/types/gameConfig";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { seedRosterUpkeepFor } from "@/lib/military/seedRosterUpkeep";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /**
  * A world's OWN seed-roster upkeep denominators, captured at creation.
@@ -66,8 +67,7 @@ export function clearSeedRosterUpkeepPinCache(): void {
 async function loadPin(db: Db): Promise<SeedRosterUpkeepPin | null> {
   const now = Date.now();
   if (cache && now - cache.at < CACHE_TTL_MS) return cache.pin;
-  const doc = await db
-    .collection<GameConfig>("gameConfig")
+  const doc = await gameConfigCollection(db)
     .findOne({ _id: "default" }, { projection: { seedRosterUpkeep: 1 } })
     .catch(() => null);
   const pin = (doc as { seedRosterUpkeep?: SeedRosterUpkeepPin } | null)?.seedRosterUpkeep ?? null;

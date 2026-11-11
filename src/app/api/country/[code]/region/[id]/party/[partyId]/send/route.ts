@@ -37,6 +37,9 @@ import { isSameCountry } from "@/lib/api/sameCountry";
 import { TreasuryExecutionUncertainError } from "@/lib/treasury/executionUncertain";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { adminLogsCollection } from "@/lib/db/repositories/adminLogs";
+import { activityLogCollection } from "@/lib/db/repositories/activityLog";
+import type { Document } from "mongodb";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; partyId: string }>;
@@ -195,10 +198,13 @@ export async function POST(request: Request, { params }: RouteParams) {
     };
 
     const applySendInTransaction = async (session: ClientSession) => {
-      const debitResult = await statePartyOrgCollection(db)
-        .updateOne({ _id: statePartyKey, treasury: { $gte: sendAmount } }, statePartyDebit, {
+      const debitResult = await statePartyOrgCollection(db).updateOne(
+        { _id: statePartyKey, treasury: { $gte: sendAmount } },
+        statePartyDebit,
+        {
           session,
-        });
+        }
+      );
 
       if (debitResult.matchedCount === 0) {
         throw badRequest("Insufficient treasury funds");
@@ -216,8 +222,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     };
 
     const applySendWithoutTransaction = async () => {
-      const debitResult = await statePartyOrgCollection(db)
-        .updateOne({ _id: statePartyKey, treasury: { $gte: sendAmount } }, statePartyDebit);
+      const debitResult = await statePartyOrgCollection(db).updateOne(
+        { _id: statePartyKey, treasury: { $gte: sendAmount } },
+        statePartyDebit
+      );
 
       if (debitResult.matchedCount === 0) {
         return errorResponse(400, "Insufficient treasury funds");
@@ -227,11 +235,10 @@ export async function POST(request: Request, { params }: RouteParams) {
       // here must either complete the credit or refund.
       const refundDebit = async (reason: string, cause?: unknown): Promise<void> => {
         try {
-          const refundResult = await statePartyOrgCollection(db)
-            .updateOne(
-              { _id: statePartyKey },
-              { $inc: { treasury: sendAmount }, $set: { updatedAt: new Date() } }
-            );
+          const refundResult = await statePartyOrgCollection(db).updateOne(
+            { _id: statePartyKey },
+            { $inc: { treasury: sendAmount }, $set: { updatedAt: new Date() } }
+          );
           if (refundResult.matchedCount !== 1) {
             throw new Error("State party treasury no longer exists during refund");
           }
@@ -311,7 +318,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       adminUsername: authUser.username,
       details: `Sent $${sendAmount.toLocaleString()} from ${stateId} ${party.name} treasury to ${targetCharacter.name}${reserveWarning ? ` (${reserveWarning})` : ""}`,
     };
-    await db.collection<AdminLog>("adminLogs").insertOne(adminLog);
+    await adminLogsCollection(db).insertOne(adminLog);
 
     await emitTreasuryTransaction({
       db,
@@ -343,7 +350,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     // Fire-and-forget: log fund flow for admin activity tracking
     if (authUser.character) {
-      void db.collection("activityLog").insertOne({
+      void activityLogCollection<Document>(db).insertOne({
         type: "fund_event",
         timestamp: now,
         userId: new ObjectId(authUser.userId),

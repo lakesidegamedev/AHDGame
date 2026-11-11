@@ -26,6 +26,7 @@ import {
 import type { Character, ExchangeRate, User } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 const BOT_ADMIN_NAME = "Discord Bot";
 
@@ -201,7 +202,7 @@ export async function POST(request: Request) {
 
     const db = await getDb();
 
-    const user = await db.collection<User>("users").findOne({ discordId });
+    const user = await usersCollection(db).findOne({ discordId });
     if (!user || user.isBanned) return errorResponse(404, "No linked account");
 
     const character = characterId

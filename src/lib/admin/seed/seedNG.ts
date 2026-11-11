@@ -25,6 +25,10 @@ import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParti
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
+import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
+import { stateBaselinesCollection } from "@/lib/db/repositories/stateBaselines";
 
 const NG_REGION_IDS = [
   "NORTH_WEST",
@@ -113,8 +117,8 @@ export async function seedNGDemographics(
   preset: string
 ) {
   if (reset) {
-    await db.collection("stateDemographics").deleteMany({ countryId: "NG" });
-    await db.collection("stateDemographicTurnout").deleteMany({ countryId: "NG" });
+    await stateDemographicsCollection<Document>(db).deleteMany({ countryId: "NG" });
+    await stateDemographicTurnoutCollection<Document>(db).deleteMany({ countryId: "NG" });
   }
 
   const { ngRegionDemographics: ngRegionDemographicsStatic } =
@@ -146,17 +150,17 @@ export async function seedNGDemographics(
   for (const raw of ngRegionDemographics) {
     const demo = is1991 ? applyEra1991DemographicAdjustments(raw, "NG") : raw;
     const { _id, groups: _groups, ...demoData } = demo;
-    await db
-      .collection<StateDemographics>("stateDemographics")
-      .updateOne({ _id }, { $set: demoData }, { upsert: true });
+    await stateDemographicsCollection(db).updateOne({ _id }, { $set: demoData }, { upsert: true });
   }
 
   const { ngDemographicTurnout } = await import("@/lib/seeds/ng/ngDemographicTurnout");
   for (const turnout of ngDemographicTurnout) {
     const { _id, ...turnoutData } = turnout;
-    await db
-      .collection<StateDemographicTurnout>("stateDemographicTurnout")
-      .updateOne({ _id }, { $set: turnoutData }, { upsert: true });
+    await stateDemographicTurnoutCollection(db).updateOne(
+      { _id },
+      { $set: turnoutData },
+      { upsert: true }
+    );
   }
 
   log(
@@ -171,7 +175,7 @@ export async function seedNGStateMetrics(
   preset: string
 ) {
   if (reset) {
-    await db.collection("macroMetrics").deleteMany({
+    await macroMetricsCollection<Document>(db).deleteMany({
       _id: { $in: NG_REGION_IDS } as never,
     });
   }
@@ -216,7 +220,7 @@ export async function seedNGBaselines(
   preset: string
 ) {
   if (reset) {
-    await db.collection("stateBaselines").deleteMany({
+    await stateBaselinesCollection<Document>(db).deleteMany({
       _id: { $in: NG_REGION_IDS } as never,
     });
   }
@@ -248,9 +252,11 @@ export async function seedNGBaselines(
     const overlay = getRegionMetricPresets("NG", String(raw._id), preset);
     const baseline = overlay ? applyMetricPresetToBaseline(adjusted, overlay) : adjusted;
     const { _id, ...baselineData } = baseline;
-    await db
-      .collection<StateMetricBaseline>("stateBaselines")
-      .updateOne({ _id }, { $set: { ...baselineData, countryId: "NG" } }, { upsert: true });
+    await stateBaselinesCollection(db).updateOne(
+      { _id },
+      { $set: { ...baselineData, countryId: "NG" } },
+      { upsert: true }
+    );
   }
   log(`Seeded ${ngStateBaselines.length} NG baselines (preset: ${preset})`);
 }
@@ -259,12 +265,11 @@ export async function seedNGGovernmentFormation(db: Db, log: (msg: string) => vo
   const { ngGovernmentFormation } = await import("@/lib/seeds/ng/ngGovernmentFormation");
   const now = new Date();
   const { _id, ...formationData } = ngGovernmentFormation;
-  await governmentFormationsCollection(db)
-    .updateOne(
-      { _id },
-      { $set: { ...formationData, createdAt: now, updatedAt: now } },
-      { upsert: true }
-    );
+  await governmentFormationsCollection(db).updateOne(
+    { _id },
+    { $set: { ...formationData, createdAt: now, updatedAt: now } },
+    { upsert: true }
+  );
   log("Seeded NG government formation document");
 }
 
@@ -288,8 +293,11 @@ export async function seedNGStatePartyOrg(
   const now = new Date();
   for (const org of orgs) {
     const { _id, ...orgData } = org;
-    await statePartyOrgCollection(db)
-      .updateOne({ _id }, { $set: { ...orgData, updatedAt: now } }, { upsert: true });
+    await statePartyOrgCollection(db).updateOne(
+      { _id },
+      { $set: { ...orgData, updatedAt: now } },
+      { upsert: true }
+    );
   }
   log(`Seeded ${orgs.length} NG state party org records (preset: ${activePreset})`);
 }
@@ -326,12 +334,11 @@ export async function ensureMissingNGStatePartyOrgRows(
   if (missing.length > 0) {
     for (const org of missing) {
       const { _id, ...orgData } = org;
-      await statePartyOrgCollection(db)
-        .updateOne(
-          { _id },
-          { $set: { ...orgData, updatedAt: now }, $setOnInsert: { createdAt: now } },
-          { upsert: true }
-        );
+      await statePartyOrgCollection(db).updateOne(
+        { _id },
+        { $set: { ...orgData, updatedAt: now }, $setOnInsert: { createdAt: now } },
+        { upsert: true }
+      );
     }
     log(`Inserted ${missing.length} missing NG state party org row(s) (preset: ${activePreset})`);
   }

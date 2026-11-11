@@ -129,6 +129,8 @@ import { electionCandidatesCollection } from "@/lib/db/repositories/electionCand
 import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
+import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
 
 // ─── Accumulate one turn of votes into a tally ───────────────────────────────
 
@@ -204,12 +206,12 @@ export async function accumulateVoteTurn(
 
   const [tally, candidates]: [ElectionVoteTally | null, ElectionCandidate[]] = await Promise.all([
     options?.tally ??
-      electionVoteTalliesCollection(db)
-        .findOne({ electionId }, { projection: TALLY_WITH_SNAPSHOT_TURNS_ONLY }),
+      electionVoteTalliesCollection(db).findOne(
+        { electionId },
+        { projection: TALLY_WITH_SNAPSHOT_TURNS_ONLY }
+      ),
     options?.candidates ??
-      electionCandidatesCollection(db)
-        .find({ electionId, status: "active" })
-        .toArray(),
+      electionCandidatesCollection(db).find({ electionId, status: "active" }).toArray(),
   ]);
 
   if (!tally || candidates.length === 0) return;
@@ -270,15 +272,12 @@ export async function accumulateVoteTurn(
   } else {
     const [s, d, spo, t, rp, gs] = await Promise.all([
       statesCollection(db).findOne({ _id: stateId, countryId: election.countryId }),
-      db
-        .collection<StateDemographics>("stateDemographics")
-        .findOne({ _id: stateId, countryId: election.countryId }),
-      statePartyOrgCollection(db)
-        .find({ stateId, countryId: election.countryId })
-        .toArray(),
-      db
-        .collection<StateDemographicTurnout>("stateDemographicTurnout")
-        .findOne({ _id: stateId, countryId: election.countryId }),
+      stateDemographicsCollection(db).findOne({ _id: stateId, countryId: election.countryId }),
+      statePartyOrgCollection(db).find({ stateId, countryId: election.countryId }).toArray(),
+      stateDemographicTurnoutCollection(db).findOne({
+        _id: stateId,
+        countryId: election.countryId,
+      }),
       db
         .collection<StateRegistrationPool>("stateRegistrationPool")
         .findOne({ stateId, countryId: election.countryId }),
@@ -1291,8 +1290,7 @@ export async function accumulateVoteTurn(
     options.tallyWrites.push({ updateOne: { filter: tallyFilter, update: tallyUpdate } });
     return;
   }
-  const write = await electionVoteTalliesCollection(db)
-    .updateOne(tallyFilter, tallyUpdate);
+  const write = await electionVoteTalliesCollection(db).updateOne(tallyFilter, tallyUpdate);
   if (isPrStv && write.matchedCount !== 1)
     throw new Error("PR-STV accumulation lost its tally revision; retry from persisted ballots");
 }
@@ -1380,8 +1378,11 @@ export async function initElectionVoteTally(
     if (!existing) {
       // A concurrent initializer can create or accrue the tally while this
       // call validates the race. Never replace the document it produced.
-      await electionVoteTalliesCollection(db)
-        .updateOne({ electionId }, { $setOnInsert: doc }, { upsert: true });
+      await electionVoteTalliesCollection(db).updateOne(
+        { electionId },
+        { $setOnInsert: doc },
+        { upsert: true }
+      );
       return;
     }
     const replaced = await electionVoteTalliesCollection(db).replaceOne(
@@ -1397,6 +1398,5 @@ export async function initElectionVoteTally(
       throw new Error("Cannot reinitialize a PR-STV tally after its revision changed");
     return;
   }
-  await electionVoteTalliesCollection(db)
-    .replaceOne({ electionId }, doc, { upsert: true });
+  await electionVoteTalliesCollection(db).replaceOne({ electionId }, doc, { upsert: true });
 }

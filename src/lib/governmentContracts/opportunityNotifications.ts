@@ -23,6 +23,7 @@ import { canBid } from "./rules";
 import type { GovernmentTender } from "./types";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { notificationsCollection } from "@/lib/db/repositories/notifications";
 
 /** One projected read per dataset, then one idempotent bulk write per published tender. */
 export async function notifyTenderBidders(
@@ -142,7 +143,7 @@ export async function notifyTenderBidders(
     recipients.set(key, entry);
   }
   if (!recipients.size) return;
-  await db.collection<Notification>("notifications").bulkWrite(
+  await notificationsCollection(db).bulkWrite(
     [...recipients.values()].map((recipient) => ({
       updateOne: {
         filter: {

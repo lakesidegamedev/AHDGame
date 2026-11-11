@@ -24,6 +24,8 @@ import type { GroupManagement } from "./managementTypes";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
 
 export const defaultGroupManagement = (root: Corporation): GroupManagement => ({
   name: root.name,
@@ -70,7 +72,7 @@ export async function loadGroupManagement(db: Db, corporation: Corporation, user
       )
       .toArray(),
     gameStateCollection(db).findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
-    db.collection<GameConfig>("gameConfig").findOne(
+    gameConfigCollection(db).findOne(
       { _id: "default" },
       {
         projection: {
@@ -119,8 +121,7 @@ export async function groupManagementView(db: Db, corporation: Corporation, user
     .map((c) => c._id);
   const [history, debtByCorp] = await Promise.all([
     privateIds.length
-      ? db
-          .collection<CorporationHistory>("corporationHistory")
+      ? corporationHistoryCollection(db)
           .find(
             {
               corporationId: { $in: privateIds },

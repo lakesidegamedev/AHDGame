@@ -29,6 +29,8 @@ import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { notificationsCollection } from "@/lib/db/repositories/notifications";
+import type { Document } from "mongodb";
 
 export const BG_FOUNDING_OFFICE_ARCHIVES_COLLECTION = "bgFoundingAssemblyOfficeArchives";
 interface BgFoundingAssemblyArchive {
@@ -399,7 +401,7 @@ async function materializeBgFoundingAssemblySeating(input: {
   if (formation.matchedCount !== 1) throw new Error("Bulgarian government formation is missing");
   const notices = players.filter((player) => owners.has(`player:${player._id.toHexString()}`));
   if (notices.length)
-    await db.collection("notifications").insertMany(
+    await notificationsCollection<Document>(db).insertMany(
       notices.map((player) => ({
         _id: stableId(`${receipt._id}:notice:${player._id.toHexString()}`),
         userId: player.userId,

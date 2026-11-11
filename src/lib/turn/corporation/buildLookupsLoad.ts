@@ -33,6 +33,8 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
+import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
 
 /** Issues the parallel reads the lookups are built from. */
 export async function loadCorporationLookupInputs({
@@ -156,8 +158,7 @@ export async function loadCorporationLookupInputs({
     // buildNationalCommodityBalances helper it feeds). commodityPrices
     // documents carry per-state supply/demand maps which can be large; the
     // unread fields (history, metadata, etc.) compound per turn.
-    db
-      .collection<CommodityPrice>("commodityPrices")
+    commodityPricesCollection(db)
       .find(
         {},
         {
@@ -277,7 +278,7 @@ export async function loadCorporationLookupInputs({
       .find({}, { projection: { stateId: 1, resources: 1 } })
       .toArray(),
     loadActiveFtaPairs(db),
-    db.collection<UnownedSector>("unownedSectors").find({}).toArray(),
+    unownedSectorsCollection(db).find({}).toArray(),
     // Latest trade-flow snapshot (prev turn) → per-country export intensity for
     // the export-reward margin premium. One small doc.
     db

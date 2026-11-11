@@ -5,6 +5,7 @@ import type { GameConfig } from "@/lib/db/types";
 import { isAppleSignInConfigured } from "@/lib/auth/apple";
 import { computeIntakeStatus, type IntakeStatus } from "@/lib/auth/intakeStatus";
 import { authConfig } from "@/lib/config/auth";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /**
  * Which ways of signing up actually work on THIS deployment.
@@ -33,7 +34,7 @@ export interface SignupMethods {
 export async function GET() {
   try {
     const db = await getDb();
-    const config = await db.collection<GameConfig>("gameConfig").findOne(
+    const config = await gameConfigCollection(db).findOne(
       { _id: "default" },
       {
         projection: {

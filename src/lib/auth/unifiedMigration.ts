@@ -22,6 +22,8 @@ import { createDisabledTargetProvisioner } from "@/lib/auth/unifiedProvisioning"
 import { recoverCredentialImport } from "@/lib/auth/credentialImportRecovery";
 import { authConfig } from "@/lib/config/auth";
 import { readEnv } from "@/lib/config/read";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
 
 const SOURCE_ISSUER = "urn:lakeside:legacy:ahd:production";
 const AUTHORITY = "ahd-unified-cohort";
@@ -293,9 +295,10 @@ export async function migratePasswordLoginToUnified(sourceAccountId: string, pas
           obtainAccessToken: tokenProvider("LAKESIDE_PROVISION_COORDINATOR").obtainAccessToken,
         })
       : null;
-    const sourceUser = await db
-      .collection("users")
-      .findOne({ _id: new ObjectId(sourceAccountId) }, { projection: { authMigrationFence: 1 } });
+    const sourceUser = await usersCollection<Document>(db).findOne(
+      { _id: new ObjectId(sourceAccountId) },
+      { projection: { authMigrationFence: 1 } }
+    );
     let sourceFence = storedSourceFence(sourceUser?.authMigrationFence);
     if (sourceUser && Object.hasOwn(sourceUser, "authMigrationFence") && !sourceFence)
       throw new Error("Source fence is malformed");

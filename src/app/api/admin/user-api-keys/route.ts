@@ -5,6 +5,8 @@ import { withAdminAuth } from "@/lib/api/withAdminAuth";
 import { getDb } from "@/lib/mongodb";
 import { parseBoundedIntParam } from "@/lib/api/validate";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
 
 interface UserApiKeyRow {
   _id: string;
@@ -41,8 +43,7 @@ export const GET = withAdminAuth(async (_auth, request: Request) => {
     // 1) Find matching user IDs, 2) Add to filter
     let matchingUserIds: ObjectId[] | null = null;
     if (search) {
-      const users = await db
-        .collection("users")
+      const users = await usersCollection<Document>(db)
         .find({ username: { $regex: search, $options: "i" } })
         .project({ _id: 1 })
         .limit(100)
@@ -74,8 +75,7 @@ export const GET = withAdminAuth(async (_auth, request: Request) => {
 
     // Resolve user info
     const userIds = [...new Set(keys.map((k) => k.userId.toString()))];
-    const users = await db
-      .collection("users")
+    const users = await usersCollection<Document>(db)
       .find({ _id: { $in: userIds.map((id) => new ObjectId(id)) } })
       .project({ _id: 1, username: 1 })
       .toArray();

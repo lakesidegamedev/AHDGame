@@ -20,6 +20,7 @@ import type { DemandUsesByState } from "@/lib/logistics/rules/purchaseExposure";
 import type { SourcingOwnRoute } from "@/lib/logistics/sourcing";
 import { NATIONAL_SCOPE_IDS } from "@/lib/constants/nationalScope";
 import type { CountryLedger, GlobalLedger, StateLedger } from "./ledgerTypes";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 export interface FreightSettlementInputs {
   marketSystemMode: Parameters<typeof marketAtLeast>[0];
@@ -89,7 +90,7 @@ export async function runFreightSettlementPhase(
   // Freight is a separately-soaked rollout. The market ladder enables the
   // ledger needed to observe routes, while this gate decides whether those
   // deliveries constrain next turn's local plant inputs.
-  const freightSettlementConfig = await db.collection<GameConfig>("gameConfig").findOne(
+  const freightSettlementConfig = await gameConfigCollection(db).findOne(
     { _id: "default" },
     {
       projection: {

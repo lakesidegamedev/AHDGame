@@ -23,6 +23,9 @@ import { hasTurnBackedWindowClosed } from "@/lib/time/turnBackedWindow";
 import { isActiveNationalCommitteeCandidateDuplicateKey } from "@/lib/elections/duplicateKey";
 import { isSameCountry } from "@/lib/api/sameCountry";
 import { CANONICAL_VOTING_ELECTION_SORT } from "@/lib/elections/canonicalVotingElection";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
+import { nationalPartyElectionsCollection } from "@/lib/db/repositories/nationalPartyElections";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -70,9 +73,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     // 24h new-character cooldown on committee actions.
-    const userDoc = await db
-      .collection("users")
-      .findOne({ _id: new ObjectId(authUser.userId) }, { projection: { createdAt: 1 } });
+    const userDoc = await usersCollection<Document>(db).findOne(
+      { _id: new ObjectId(authUser.userId) },
+      { projection: { createdAt: 1 } }
+    );
     const cooldown = isInNewCharacterCooldown({
       userCreatedAt: userDoc?.createdAt ?? new Date(0),
       characterCreatedAt: authUser.character.createdAt,
@@ -138,8 +142,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       });
     }
 
-    const openLeadershipElections = await db
-      .collection<NationalPartyElection>("nationalPartyElections")
+    const openLeadershipElections = await nationalPartyElectionsCollection(db)
       .find({ partyId, countryId: partyCountryId, status: "voting" })
       .toArray();
     const activeLeadershipElections = openLeadershipElections.filter(

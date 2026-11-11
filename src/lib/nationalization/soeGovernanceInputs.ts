@@ -14,6 +14,7 @@ import type { Db } from "mongodb";
 import type { StateMetrics } from "@/lib/db/types";
 import type { PoliticalMetricsDoc } from "@/lib/db/types/politicalMetrics";
 import { politicalSoeInputs } from "@/lib/politicalLegislation/marginAdapter";
+import { politicalMetricsCollection } from "@/lib/db/repositories/politicalMetrics";
 
 /**
  * `stateId →` a minimal legacy-shaped doc carrying just the two governance
@@ -26,8 +27,7 @@ export async function loadSoeGovernanceInputs(
 ): Promise<Map<string, StateMetrics>> {
   const byId = new Map<string, StateMetrics>();
   if (stateIds.length === 0) return byId;
-  const boards = await db
-    .collection<PoliticalMetricsDoc>("politicalMetrics")
+  const boards = await politicalMetricsCollection(db)
     .find({ _id: { $in: stateIds } })
     .toArray();
   for (const doc of boards) {

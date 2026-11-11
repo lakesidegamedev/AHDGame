@@ -4,6 +4,8 @@ import { getDb } from "@/lib/mongodb";
 import { handleRouteError } from "@/lib/api/errors";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
 
 // Maps CountryId to the ISO 3166-1 numeric code used by the world map
 const COUNTRY_TO_ISO: Record<string, string> = {
@@ -21,8 +23,7 @@ export async function GET() {
     const db = await getDb();
 
     // Get all banned user IDs
-    const bannedUsers = await db
-      .collection("users")
+    const bannedUsers = await usersCollection<Document>(db)
       .find({ isBanned: true }, { projection: { _id: 1 } })
       .toArray();
     const bannedUserIds = new Set(bannedUsers.map((u) => u._id.toString()));

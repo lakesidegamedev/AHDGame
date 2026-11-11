@@ -35,6 +35,7 @@ import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { crisesCollection } from "@/lib/db/repositories/crises";
 import type { Document } from "mongodb";
+import { crisisInteractionsCollection } from "@/lib/db/repositories/crisisInteractions";
 
 export interface DriveSyntheticActorsOptions {
   seed: string;
@@ -70,7 +71,10 @@ async function driveCrisisDecision(
     plan.actors.find((a) => a.role === "us-president"),
     plan.actors.find((a) => a.role === "crisis-decider"),
   ].filter((a) => a !== undefined);
-  const interactions = (await db.collection("crisisInteractions").find({}).toArray()).slice(0, 5);
+  const interactions = (await crisisInteractionsCollection<Document>(db).find({}).toArray()).slice(
+    0,
+    5
+  );
   for (const decider of ordered) {
     const character = await charactersCollection(db).findOne({
       _id: new ObjectId(decider.characterIdHex),

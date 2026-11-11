@@ -34,6 +34,7 @@ import type { Ticket, TicketMessage } from "@/lib/db/types/ticket";
 import type { User } from "@/lib/db/types";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 const BASE_URL = (process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com").replace(
   /\/$/,
@@ -416,12 +417,10 @@ export async function handleCreateDiscordTicket(request: Request) {
     let reporter: Ticket["reporter"] | undefined;
     let visits: NonNullable<Ticket["supportRecentVisits"]> = [];
     if (body.discordUserId) {
-      const user = await db
-        .collection<User>("users")
-        .findOne(
-          { discordId: body.discordUserId },
-          { projection: { _id: 1, username: 1, supportRecentVisits: 1 } }
-        );
+      const user = await usersCollection(db).findOne(
+        { discordId: body.discordUserId },
+        { projection: { _id: 1, username: 1, supportRecentVisits: 1 } }
+      );
       if (user) {
         userId = user._id;
         visits = recentSupportVisits(user.supportRecentVisits, new Date());

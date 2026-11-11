@@ -21,6 +21,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /**
  * Maximum NET favorability any one target can be moved by player support/attack
@@ -135,9 +136,10 @@ async function getSimpleInfluencePrices(
     };
   }
 
-  const gameConfig = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { campaignEraPriceLevelEnabled: 1 } });
+  const gameConfig = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { campaignEraPriceLevelEnabled: 1 } }
+  );
   const priceLevel = resolveCampaignPriceLevel(gameConfig?.campaignEraPriceLevelEnabled, preset);
   const quoteTarget = {
     gdpMillions: state.gdp,

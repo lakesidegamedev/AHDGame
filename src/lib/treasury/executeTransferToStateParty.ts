@@ -28,6 +28,9 @@ import { TreasuryExecutionUncertainError } from "@/lib/treasury/executionUncerta
 import { getGameState } from "@/lib/gameState";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { adminLogsCollection } from "@/lib/db/repositories/adminLogs";
+import type { Document } from "mongodb";
+import { activityLogCollection } from "@/lib/db/repositories/activityLog";
 
 export interface ExecuteTransferToStateArgs {
   db: Db;
@@ -84,8 +87,10 @@ export async function executeTransferToStateParty(
     if (debitResult.matchedCount === 0) {
       throw badRequest(`Insufficient treasury balance. Available: $${treasury.toLocaleString()}`);
     }
-    await statePartyOrgCollection(db)
-      .updateOne({ _id: statePartyKey }, statePartyCredit, { upsert: true, session });
+    await statePartyOrgCollection(db).updateOne({ _id: statePartyKey }, statePartyCredit, {
+      upsert: true,
+      session,
+    });
   };
 
   const applyWithoutTransaction = async (): Promise<NextResponse | null> => {
@@ -100,8 +105,9 @@ export async function executeTransferToStateParty(
       );
     }
     try {
-      await statePartyOrgCollection(db)
-        .updateOne({ _id: statePartyKey }, statePartyCredit, { upsert: true });
+      await statePartyOrgCollection(db).updateOne({ _id: statePartyKey }, statePartyCredit, {
+        upsert: true,
+      });
     } catch (error) {
       // Refund on failure. If the refund ALSO fails the treasury is
       // short with nothing credited, and this can no longer be reported
@@ -169,7 +175,7 @@ export async function executeTransferToStateParty(
   // second Approve click to spend again. Losing an audit row is a
   // reporting gap; throwing one was a double payout.
   try {
-    await db.collection("adminLogs").insertOne({
+    await adminLogsCollection<Document>(db).insertOne({
       category: "system",
       action: "funds_transferred",
       username: args.initiatorUsername,
@@ -266,7 +272,7 @@ export async function executeTransferToStateParty(
       },
     });
 
-    void db.collection("activityLog").insertOne({
+    void activityLogCollection<Document>(db).insertOne({
       type: "fund_event",
       timestamp: new Date(),
       userId: new ObjectId(args.initiatorUserId),

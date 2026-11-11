@@ -71,6 +71,11 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import type { Document } from "mongodb";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 
 type AuthedViewer = Awaited<ReturnType<typeof getAuthUser>>;
 
@@ -119,12 +124,14 @@ export async function buildRegionEconomyResponse({
     };
 
     // Check imperial mode first, then fall back to regular character
-    const userDoc = await db.collection<User>("users").findOne({ _id: new ObjectId(user.userId) });
+    const userDoc = await usersCollection(db).findOne({ _id: new ObjectId(user.userId) });
     let corp: Corporation | null = null;
 
     if (userDoc?.activeCharacterType === "imperial" && userDoc.activeImperialCharacterId) {
-      const imperial = await imperialCharactersCollection(db)
-        .findOne({ _id: userDoc.activeImperialCharacterId, userId: new ObjectId(user.userId) });
+      const imperial = await imperialCharactersCollection(db).findOne({
+        _id: userDoc.activeImperialCharacterId,
+        userId: new ObjectId(user.userId),
+      });
       if (imperial) {
         corp = await corporationsCollection(db).findOne(
           { ceoId: imperial._id, ceoType: "imperial", ceoVacant: { $ne: true } },
@@ -183,9 +190,10 @@ export async function buildRegionEconomyResponse({
   // header, they never fail the route.
   //
   // This region's own rate comes from its own metrics document.
-  const regionGrowthDoc = await db
-    .collection<StateMetrics>("macroMetrics")
-    .findOne({ _id: stateId }, { projection: { "economic.gdpGrowth.value": 1 } });
+  const regionGrowthDoc = await macroMetricsCollection(db).findOne(
+    { _id: stateId },
+    { projection: { "economic.gdpGrowth.value": 1 } }
+  );
   const regionGrowthValue = regionGrowthDoc?.economic?.gdpGrowth?.value;
   const stateGdpGrowth =
     typeof regionGrowthValue === "number" && Number.isFinite(regionGrowthValue)
@@ -219,10 +227,7 @@ export async function buildRegionEconomyResponse({
   const sectors = await corporateSectorsCollection(db).find({ stateId }).toArray();
 
   // Get unowned sectors for this state from DB
-  const unownedDocs = await db
-    .collection<UnownedSector>("unownedSectors")
-    .find({ stateId })
-    .toArray();
+  const unownedDocs = await unownedSectorsCollection(db).find({ stateId }).toArray();
   // Keyed by operating lane: the vehicles and entertainment markets are their own rows.
   const laneOf = (
     row: Pick<UnownedSector, "sectorType" | "industryModel" | "mediaDiscriminator">
@@ -600,11 +605,12 @@ export async function buildRegionEconomyResponse({
   );
 
   // NPP corps are individually attackable unless an admin explicitly disabled it.
-  const attackCfg = await db
-    .collection("gameConfig")
-    .findOne({ _id: "default" } as Record<string, unknown>, {
+  const attackCfg = await gameConfigCollection<Document>(db).findOne(
+    { _id: "default" } as Record<string, unknown>,
+    {
       projection: { nppCorpsAttackable: 1 },
-    });
+    }
+  );
   const nppAttackable =
     (attackCfg as { nppCorpsAttackable?: boolean } | null)?.nppCorpsAttackable !== false;
 

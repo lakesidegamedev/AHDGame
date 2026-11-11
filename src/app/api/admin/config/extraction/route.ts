@@ -11,6 +11,7 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { createAdminLog } from "@/lib/adminLog";
 import type { GameConfig } from "@/lib/db/types";
 import { adminExtractionConfigSchema } from "@/lib/api/schemas/prospecting";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 export async function GET() {
   try {
@@ -18,7 +19,7 @@ export async function GET() {
     if (!auth.ok) return auth.response;
 
     const db = await getDb();
-    const config = await db.collection<GameConfig>("gameConfig").findOne(
+    const config = await gameConfigCollection(db).findOne(
       { _id: "default" },
       {
         projection: {
@@ -72,9 +73,7 @@ export async function PATCH(request: Request) {
       set.contractIssuanceEnabledUpdatedAt = nowIso;
     }
 
-    await db
-      .collection<GameConfig>("gameConfig")
-      .updateOne({ _id: "default" }, { $set: set }, { upsert: true });
+    await gameConfigCollection(db).updateOne({ _id: "default" }, { $set: set }, { upsert: true });
 
     if (prospectingEnabled !== undefined) {
       await createAdminLog({

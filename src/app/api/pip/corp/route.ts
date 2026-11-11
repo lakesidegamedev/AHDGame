@@ -27,6 +27,7 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
 
 // The six commodity types shown in the PiP Corp view
 const PIP_COMMODITIES: CommodityType[] = [
@@ -58,8 +59,7 @@ export async function GET() {
 
     // Fetch commodity current prices + previous turn prices + top corps in parallel
     const [currentPrices, prevPrices, topCorpDocs] = await Promise.all([
-      db
-        .collection<CommodityPrice>("commodityPrices")
+      commodityPricesCollection(db)
         .find({ commodity: { $in: PIP_COMMODITIES } })
         .toArray(),
       db

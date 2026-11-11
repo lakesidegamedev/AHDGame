@@ -2,6 +2,7 @@ import type { Db } from "mongodb";
 import type { Corporation, CorporateSector } from "@/lib/db/types";
 import { TURNS_PER_DAY } from "@/lib/constants/corporations";
 import { getRevenueMultiplier } from "@/lib/utils/productionPolicy";
+import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
 
 /**
  * Realization-vs-nameplate reconciliation.
@@ -26,12 +27,10 @@ export async function computeRevenueRealizationRatio(
   sectors: readonly CorporateSector[],
   toCorpCurrency: (amount: number, sector: Pick<CorporateSector, "countryId">) => number
 ): Promise<number> {
-  const latest = await db
-    .collection<{ revenue?: number }>("corporationHistory")
-    .findOne(
-      { corporationId: corporation._id },
-      { sort: { turn: -1 }, projection: { revenue: 1 } }
-    );
+  const latest = await corporationHistoryCollection<{ revenue?: number }>(db).findOne(
+    { corporationId: corporation._id },
+    { sort: { turn: -1 }, projection: { revenue: 1 } }
+  );
 
   const nameplateHourly = sectors.reduce((sum, sector) => {
     const multiplier = getRevenueMultiplier(sector.productionPolicyLevel ?? 0);

@@ -73,6 +73,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
 import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -207,9 +208,7 @@ export async function sellPublicShares(request: Request, { params }: RouteParams
       return null;
     }
 
-    const userDoc = await db
-      .collection<User>("users")
-      .findOne({ _id: new ObjectId(basicAuth.user.userId) });
+    const userDoc = await usersCollection(db).findOne({ _id: new ObjectId(basicAuth.user.userId) });
     const isImperialMode =
       userDoc?.activeCharacterType === "imperial" && !!userDoc?.activeImperialCharacterId;
 

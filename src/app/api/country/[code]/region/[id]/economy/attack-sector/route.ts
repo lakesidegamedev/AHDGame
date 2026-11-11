@@ -31,6 +31,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 const attackSectorSchema = z.object({ sectorId: z.string().length(24) });
 
@@ -90,9 +91,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       );
     }
 
-    const userDoc = await db
-      .collection<User>("users")
-      .findOne({ _id: new ObjectId(auth.user.userId) });
+    const userDoc = await usersCollection(db).findOne({ _id: new ObjectId(auth.user.userId) });
     let attacker: Corporation | null = null;
     if (userDoc?.activeCharacterType === "imperial" && userDoc.activeImperialCharacterId) {
       const imperial = await imperialCharactersCollection(db).findOne({

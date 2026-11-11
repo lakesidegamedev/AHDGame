@@ -14,6 +14,7 @@ import { notifyModeratorsOfWikiSubmission } from "@/lib/wiki/reviewNotifications
 import { getGameStamp } from "@/lib/wiki/gameConfig";
 import type { User, WikiPage } from "@/lib/db/types";
 import { ObjectId } from "mongodb";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 // GET /api/wiki — Returns a list of all wiki pages with metadata (no content body).
 // Auth: public (private pages hidden from non-admins); blocked when wiki is disabled
@@ -150,9 +151,10 @@ export async function POST(request: Request) {
     const created = await wikiPages.findOne({ _id: result.insertedId });
 
     // Fire-and-forget notification to moderators. Don't block the response.
-    const submitterDisplay = await db
-      .collection<User>("users")
-      .findOne({ _id: userId }, { projection: { username: 1, displayName: 1 } });
+    const submitterDisplay = await usersCollection(db).findOne(
+      { _id: userId },
+      { projection: { username: 1, displayName: 1 } }
+    );
     notifyModeratorsOfWikiSubmission({
       slug: parsed.data.slug,
       title: parsed.data.title,

@@ -44,6 +44,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { unionsCollection } from "@/lib/db/repositories/unions";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 export interface UnionsTurnResult {
   unionsProcessed: number;
@@ -186,16 +187,14 @@ export async function processUnionsTurn(db: Db, turn?: number): Promise<UnionsTu
   const bannedCountryList = Array.from(bannedUnionCountryIds);
   const suspendedUnionFilter =
     bannedCountryList.length > 0 ? { countryId: { $in: bannedCountryList } } : { suspended: true };
-  const suspendedUnionIds = await unionsCollection(db)
-    .distinct("_id", suspendedUnionFilter);
+  const suspendedUnionIds = await unionsCollection(db).distinct("_id", suspendedUnionFilter);
   const strengthDecayMultiplier = 1 - UNION_STRENGTH_DECAY_PER_TURN;
   const decayStamp = new Date();
   await Promise.all([
-    unionsCollection(db)
-      .updateMany(
-        { _id: { $nin: suspendedUnionIds }, strength: { $gt: 0 } },
-        { $mul: { strength: strengthDecayMultiplier }, $set: { updatedAt: decayStamp } }
-      ),
+    unionsCollection(db).updateMany(
+      { _id: { $nin: suspendedUnionIds }, strength: { $gt: 0 } },
+      { $mul: { strength: strengthDecayMultiplier }, $set: { updatedAt: decayStamp } }
+    ),
     db
       .collection<UnionOrganizer>("unionOrganizers")
       .updateMany(
@@ -271,8 +270,7 @@ export async function processUnionsTurn(db: Db, turn?: number): Promise<UnionsTu
     (s) => new ObjectId(s)
   );
   const users = userIds.length
-    ? await db
-        .collection<User>("users")
+    ? await usersCollection(db)
         .find({ _id: { $in: userIds } })
         .project<{ _id: ObjectId; lastActivity?: Date; createdAt?: Date }>({
           _id: 1,
@@ -310,8 +308,10 @@ export async function processUnionsTurn(db: Db, turn?: number): Promise<UnionsTu
   }
 
   if (vacatedUnionIds.length > 0) {
-    await unionsCollection(db)
-      .updateMany({ _id: { $in: vacatedUnionIds } }, { $set: { ownerId: null, updatedAt: now } });
+    await unionsCollection(db).updateMany(
+      { _id: { $in: vacatedUnionIds } },
+      { $set: { ownerId: null, updatedAt: now } }
+    );
     await charactersCollection(db).updateMany(
       { _id: { $in: vacatedCharacterIds } },
       { $set: { unionLeaderOf: null, updatedAt: now } }

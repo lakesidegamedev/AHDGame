@@ -24,6 +24,8 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import type { Document } from "mongodb";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
 
 /**
  * Post-run economy telemetry.
@@ -423,7 +425,7 @@ async function collectFunds(db: Db, currentTurn: number): Promise<FundTelemetry>
     indexFundsCollection<Document>(db)
       .find({}, { projection: { _id: 1 } })
       .toArray(),
-    db.collection("gameConfig").findOne({ _id: "default" as never }),
+    gameConfigCollection<Document>(db).findOne({ _id: "default" as never }),
   ]);
   if (txs.length === 0 && queue.length === 0 && positions.length === 0) {
     return emptyFunds(
@@ -590,9 +592,10 @@ async function collectCorpHealth(db: Db): Promise<CorpHealthTelemetry> {
 async function collectEraCosts(db: Db): Promise<EraCostTelemetry> {
   const gs = await gameStateCollection<Document>(db).findOne({ _id: "current" as never });
   const g = (gs ?? {}) as Record<string, unknown>;
-  const config = await db
-    .collection("gameConfig")
-    .findOne({ _id: "default" as never }, { projection: { campaignEraPriceLevelEnabled: 1 } });
+  const config = await gameConfigCollection<Document>(db).findOne(
+    { _id: "default" as never },
+    { projection: { campaignEraPriceLevelEnabled: 1 } }
+  );
   const rawFlag = config?.campaignEraPriceLevelEnabled;
   const preset = typeof g["preset"] === "string" ? g["preset"] : undefined;
   const priceLevel = resolveCampaignPriceLevel(rawFlag, preset);
@@ -654,8 +657,7 @@ async function collectCoverage(db: Db): Promise<CoverageTelemetry> {
         }
       )
       .toArray(),
-    db
-      .collection("commodityPrices")
+    commodityPricesCollection<Document>(db)
       .find({}, { projection: { commodity: 1, globalSupply: 1, globalDemand: 1 } })
       .toArray(),
     db.collection("economicVitalSigns").findOne({}, { sort: { turn: -1 } }),
@@ -751,8 +753,7 @@ async function collectMarket(db: Db): Promise<MarketTelemetry> {
     corporateSectorsCollection<Document>(db)
       .find({}, { projection: { soldFraction: 1, priceRealization: 1 } })
       .toArray(),
-    db
-      .collection("commodityPrices")
+    commodityPricesCollection<Document>(db)
       .find({}, { projection: { commodity: 1, globalSupply: 1, globalDemand: 1 } })
       .toArray(),
     db

@@ -108,6 +108,8 @@ import type { Document } from "mongodb";
 import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
+import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
 
 export type { ElectionSweepScope } from "./electionSweepScope";
 export { recordPrimarySnapshots } from "./primarySnapshots";
@@ -576,11 +578,10 @@ export async function resolvePrimariesIfNeeded(
 
       if (loserIds.length > 0) {
         const loserObjectIds = loserIds.map((id) => new ObjectId(id));
-        await electionCandidatesCollection<Document>(db)
-          .updateMany(
-            { _id: { $in: loserObjectIds } },
-            { $set: { status: "withdrawn", withdrawnAt: now } }
-          );
+        await electionCandidatesCollection<Document>(db).updateMany(
+          { _id: { $in: loserObjectIds } },
+          { $set: { status: "withdrawn", withdrawnAt: now } }
+        );
 
         // A debate challenge tied to this primary is moot the instant its
         // candidate is eliminated — void any still-pending session rather than
@@ -691,11 +692,10 @@ export async function resolvePrimariesIfNeeded(
 
         // Clear primarySurge bumps on every state party org for this country —
         // the surge bonus exists only for the duration of the primary cycle.
-        await statePartyOrgCollection(db)
-          .updateMany(
-            { countryId: election.countryId, primarySurge: { $gt: 0 } },
-            { $unset: { primarySurge: "" }, $set: { updatedAt: now } }
-          );
+        await statePartyOrgCollection(db).updateMany(
+          { countryId: election.countryId, primarySurge: { $gt: 0 } },
+          { $unset: { primarySurge: "" }, $set: { updatedAt: now } }
+        );
       }
 
       // Always reinitialise the tally so any stale vote snapshots from a previous
@@ -843,7 +843,7 @@ export async function accumulateGeneralElectionVotes(
           governingPartyEntries,
         ] = await Promise.all([
           (await getStatesCollection(db)).find(regionalScope).toArray(),
-          db.collection<StateDemographics>("stateDemographics").find(regionalScope).toArray(),
+          stateDemographicsCollection(db).find(regionalScope).toArray(),
           statePartyOrgCollection(db)
             .find(
               nationwideCountries.length > 0
@@ -856,10 +856,7 @@ export async function accumulateGeneralElectionVotes(
                 : { stateId: { $in: uniqueStateIds } }
             )
             .toArray(),
-          db
-            .collection<StateDemographicTurnout>("stateDemographicTurnout")
-            .find(regionalScope)
-            .toArray(),
+          stateDemographicTurnoutCollection(db).find(regionalScope).toArray(),
           db
             .collection<StateRegistrationPool>("stateRegistrationPool")
             .find(

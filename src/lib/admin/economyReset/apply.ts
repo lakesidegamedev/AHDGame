@@ -66,6 +66,10 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { adminLogsCollection } from "@/lib/db/repositories/adminLogs";
 
 type Log = (message: string) => void;
 
@@ -181,12 +185,10 @@ async function phaseHolders(db: Db, plan: EconomyResetPlan): Promise<void> {
     { lineOfCredit: { $exists: true } },
     { $set: { lineOfCredit: { balances: {}, arrears: {} } } }
   );
-  await db
-    .collection("users")
-    .updateMany(
-      { lastCorporationFoundedTurn: { $exists: true } },
-      { $unset: { lastCorporationFoundedTurn: "" } }
-    );
+  await usersCollection<Document>(db).updateMany(
+    { lastCorporationFoundedTurn: { $exists: true } },
+    { $unset: { lastCorporationFoundedTurn: "" } }
+  );
   await bulk(
     db,
     "pensionSchemes",
@@ -410,9 +412,10 @@ async function phaseUnset(db: Db, plan: EconomyResetPlan): Promise<void> {
   } as never);
   // The rebuilt plants start from fresh-world configuration: gameplay flags on,
   // and no governor, recovery stage, funded lever or turn stamp from the old economy.
-  await db
-    .collection<Document>("gameConfig")
-    .updateOne({ _id: "default" as never }, freshPlantsGameConfigUpdate() as never);
+  await gameConfigCollection<Document>(db).updateOne(
+    { _id: "default" as never },
+    freshPlantsGameConfigUpdate() as never
+  );
   await statesCollection<Document>(db).updateMany(
     {},
     { $unset: Object.fromEntries(STATE_SECTOR_UNSET_FIELDS.map((f) => [f, ""])) }
@@ -439,12 +442,10 @@ async function phaseUnset(db: Db, plan: EconomyResetPlan): Promise<void> {
   // reserved for jobs the rebuilt plants do not offer, and those workers sit
   // unemployed indefinitely. Marking demand unknown makes the next metric pass
   // re-baseline the share from the rebuilt plants' real demand.
-  await db
-    .collection("macroMetrics")
-    .updateMany(
-      { "labourEmployment.corporateDemandKnown": true },
-      { $set: { "labourEmployment.corporateDemandKnown": false } }
-    );
+  await macroMetricsCollection<Document>(db).updateMany(
+    { "labourEmployment.corporateDemandKnown": true },
+    { $set: { "labourEmployment.corporateDemandKnown": false } }
+  );
 }
 
 /**
@@ -457,8 +458,7 @@ async function reseedOutputTrends(db: Db): Promise<void> {
   const states = await statesCollection<Document>(db)
     .find({}, { projection: { _id: 1 } })
     .toArray();
-  const metrics = await db
-    .collection<Document>("macroMetrics")
+  const metrics = await macroMetricsCollection<Document>(db)
     .find(
       { _id: { $in: states.map((state) => state._id) } },
       { projection: { "economic.sectorGrowth.value": 1, "economic.gdpGrowth.value": 1 } }
@@ -895,7 +895,7 @@ export async function applyEconomyReset(
       phasesRun.push(phase);
     }
     const completedAt = new Date();
-    await db.collection("adminLogs").updateOne(
+    await adminLogsCollection<Document>(db).updateOne(
       { _id: economyResetObjectId(digest, "adminLog") },
       {
         $setOnInsert: {

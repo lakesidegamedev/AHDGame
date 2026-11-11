@@ -35,6 +35,8 @@ import { isSameCountry } from "@/lib/api/sameCountry";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { activityLogCollection } from "@/lib/db/repositories/activityLog";
+import type { Document } from "mongodb";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; partyId: string }>;
@@ -95,8 +97,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const partyKey = getPartyIdString(party);
     const statePartyKey = getStatePartyOrgDocumentId(stateId, party);
-    const stateParty = await statePartyOrgCollection(db)
-      .findOne({ _id: statePartyKey });
+    const stateParty = await statePartyOrgCollection(db).findOne({ _id: statePartyKey });
 
     if (!stateParty) {
       return errorResponse(404, "State party not found");
@@ -216,7 +217,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       });
 
       // Fire-and-forget: log fund flow for admin activity tracking
-      void db.collection("activityLog").insertOne({
+      void activityLogCollection<Document>(db).insertOne({
         type: "fund_event",
         timestamp: new Date(),
         userId: new ObjectId(authUser.userId),

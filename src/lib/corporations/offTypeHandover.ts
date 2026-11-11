@@ -43,6 +43,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import type { Document } from "mongodb";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /** A standalone AI company: not player, caretaker, state-owned or a subsidiary. */
 export function isStandaloneAiCompany(corp: Corporation): boolean {
@@ -435,9 +436,10 @@ export async function runOffTypeHandover(
 /** Turn phase entry: reads the stage, clock and era scale, then runs. */
 export async function processOffTypeHandover(db: Db, turn: number) {
   const [config, gameState] = await Promise.all([
-    db
-      .collection("gameConfig")
-      .findOne({ _id: "default" as never }, { projection: { marketRecoveryStage: 1 } }),
+    gameConfigCollection<Document>(db).findOne(
+      { _id: "default" as never },
+      { projection: { marketRecoveryStage: 1 } }
+    ),
     gameStateCollection<Document>(db).findOne(
       { _id: "current" as never },
       { projection: { currentYear: 1 } }

@@ -16,6 +16,10 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
+import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
+import { stateBaselinesCollection } from "@/lib/db/repositories/stateBaselines";
 
 const CN_REGION_IDS = ["DB", "HB", "HD", "HZ", "HN", "XN", "XB"];
 
@@ -78,8 +82,8 @@ export async function seedCNDemographics(
   preset: string
 ) {
   if (reset) {
-    await db.collection("stateDemographics").deleteMany({ countryId: "CN" });
-    await db.collection("stateDemographicTurnout").deleteMany({ countryId: "CN" });
+    await stateDemographicsCollection<Document>(db).deleteMany({ countryId: "CN" });
+    await stateDemographicTurnoutCollection<Document>(db).deleteMany({ countryId: "CN" });
   }
 
   const { cnRegionDemographics: cnRegionDemographicsStatic } =
@@ -111,17 +115,17 @@ export async function seedCNDemographics(
   for (const raw of cnRegionDemographics) {
     const demo = is1991 ? applyEra1991DemographicAdjustments(raw, "CN") : raw;
     const { _id, groups: _groups, ...demoData } = demo;
-    await db
-      .collection<StateDemographics>("stateDemographics")
-      .updateOne({ _id }, { $set: demoData }, { upsert: true });
+    await stateDemographicsCollection(db).updateOne({ _id }, { $set: demoData }, { upsert: true });
   }
 
   const { cnDemographicTurnout } = await import("@/lib/seeds/cn/cnDemographicTurnout");
   for (const turnout of cnDemographicTurnout) {
     const { _id, ...turnoutData } = turnout;
-    await db
-      .collection<StateDemographicTurnout>("stateDemographicTurnout")
-      .updateOne({ _id }, { $set: turnoutData }, { upsert: true });
+    await stateDemographicTurnoutCollection(db).updateOne(
+      { _id },
+      { $set: turnoutData },
+      { upsert: true }
+    );
   }
 
   log(
@@ -136,7 +140,7 @@ export async function seedCNStateMetrics(
   preset: string
 ) {
   if (reset) {
-    await db.collection("macroMetrics").deleteMany({
+    await macroMetricsCollection<Document>(db).deleteMany({
       _id: { $in: CN_REGION_IDS } as never,
     });
   }
@@ -173,7 +177,7 @@ export async function seedCNBaselines(
   preset: string
 ) {
   if (reset) {
-    await db.collection("stateBaselines").deleteMany({
+    await stateBaselinesCollection<Document>(db).deleteMany({
       _id: { $in: CN_REGION_IDS } as never,
     });
   }
@@ -205,9 +209,7 @@ export async function seedCNBaselines(
     const overlay = getRegionMetricPresets("CN", String(raw._id), preset);
     const baseline = overlay ? applyMetricPresetToBaseline(adjusted, overlay) : adjusted;
     const { _id, ...baselineData } = baseline;
-    await db
-      .collection<StateMetricBaseline>("stateBaselines")
-      .updateOne({ _id }, { $set: baselineData }, { upsert: true });
+    await stateBaselinesCollection(db).updateOne({ _id }, { $set: baselineData }, { upsert: true });
   }
   log(`Seeded ${cnStateBaselines.length} CN baselines (preset: ${preset})`);
 }
@@ -216,12 +218,11 @@ export async function seedCNGovernmentFormation(db: Db, log: (msg: string) => vo
   const { cnGovernmentFormation } = await import("@/lib/seeds/cn/cnGovernmentFormation");
   const now = new Date();
   const { _id, ...formationData } = cnGovernmentFormation;
-  await governmentFormationsCollection(db)
-    .updateOne(
-      { _id },
-      { $set: { ...formationData, createdAt: now, updatedAt: now } },
-      { upsert: true }
-    );
+  await governmentFormationsCollection(db).updateOne(
+    { _id },
+    { $set: { ...formationData, createdAt: now, updatedAt: now } },
+    { upsert: true }
+  );
   log("Seeded CN government formation document");
 }
 

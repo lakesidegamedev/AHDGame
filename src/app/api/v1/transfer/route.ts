@@ -20,6 +20,8 @@ import {
   NEW_CHARACTER_TRANSFER_BARRIER_TURNS,
 } from "@/lib/character/newCharacterTransferBarrier";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
 
 const apiTransferSchema = z.object({
   targetCharacterId: schemas.objectId,
@@ -66,9 +68,9 @@ export async function POST(request: Request) {
     if (transferGuard) return transferGuard;
 
     // Resolve the API key owner's active character
-    const userDoc = await db
-      .collection("users")
-      .findOne({ _id: new ObjectId(apiAuth.ownerUserId) });
+    const userDoc = await usersCollection<Document>(db).findOne({
+      _id: new ObjectId(apiAuth.ownerUserId),
+    });
     if (!userDoc) {
       return errorResponse(404, "User not found");
     }

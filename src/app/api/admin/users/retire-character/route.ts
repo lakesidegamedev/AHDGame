@@ -15,6 +15,8 @@ import type { RetiredCharacter } from "@/lib/db/types/retiredCharacter";
 import { ObjectId } from "mongodb";
 import { z } from "zod";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
 
 // GET /api/admin/users/retire-character?userId=xxx — Fetch retired characters for a user.
 // Auth: requireAdmin
@@ -71,7 +73,7 @@ export async function POST(request: Request) {
     const db = await getDb();
     const userId = new ObjectId(parsed.data.userId);
 
-    const user = await db.collection("users").findOne({ _id: userId });
+    const user = await usersCollection<Document>(db).findOne({ _id: userId });
     if (!user) return errorResponse(404, "User not found");
 
     // Find active character — use activeCharacterId if set, otherwise first character

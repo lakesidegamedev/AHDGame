@@ -39,6 +39,10 @@ import {
 } from "@/lib/countries/ca/rules/opening2027";
 import { metricsToBaselines } from "./seedModernTransitionCountries";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
+import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
+import { stateBaselinesCollection } from "@/lib/db/repositories/stateBaselines";
 
 const PRESET = "2027-default";
 type Log = (message: string) => void;
@@ -80,10 +84,10 @@ async function clearCanada(db: Db): Promise<void> {
   await Promise.all([
     statesCollection<Document>(db).deleteMany({ countryId: "CA" }),
     statePartyOrgCollection(db).deleteMany({ countryId: "CA" }),
-    db.collection<StateDemographics>("stateDemographics").deleteMany({ countryId: "CA" }),
-    db.collection<Document>("stateDemographicTurnout").deleteMany({ countryId: "CA" }),
-    db.collection<Document>("macroMetrics").deleteMany({ countryId: "CA" }),
-    db.collection<StateMetricBaseline>("stateBaselines").deleteMany({ _id: { $in: regionIds } }),
+    stateDemographicsCollection(db).deleteMany({ countryId: "CA" }),
+    stateDemographicTurnoutCollection<Document>(db).deleteMany({ countryId: "CA" }),
+    macroMetricsCollection<Document>(db).deleteMany({ countryId: "CA" }),
+    stateBaselinesCollection(db).deleteMany({ _id: { $in: regionIds } }),
   ]);
 }
 
@@ -135,7 +139,7 @@ async function seedVoterGroups(db: Db): Promise<number> {
   const model = getCaModel("2027");
   if (!model) return 0;
   const regions = buildModelRegionDemographics(model);
-  await db.collection<StateDemographics>("stateDemographics").bulkWrite(
+  await stateDemographicsCollection(db).bulkWrite(
     regions.map(({ _id, groups: _groups, ...data }) => {
       void _groups;
       return { updateOne: { filter: { _id }, update: { $set: data }, upsert: true } };
@@ -155,7 +159,7 @@ async function seedMetricsAndBaselines(db: Db): Promise<void> {
     const overlay = getRegionMetricPresets("CA", raw._id, PRESET);
     return overlay ? applyMetricPresetToBaseline(raw, overlay) : raw;
   });
-  await db.collection<StateMetricBaseline>("stateBaselines").bulkWrite(
+  await stateBaselinesCollection(db).bulkWrite(
     baselines.map(({ _id, ...data }) => ({
       updateOne: { filter: { _id }, update: { $set: data }, upsert: true },
     })),

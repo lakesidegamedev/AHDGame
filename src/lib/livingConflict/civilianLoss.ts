@@ -17,6 +17,7 @@ import {
 } from "./rules/civilianLoss";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { crisisInteractionsCollection } from "@/lib/db/repositories/crisisInteractions";
 
 const CONFLICT_CIVILIAN_LOSS_HISTORY = "conflictCivilianLossHistory";
 interface CivilianLossHistory extends ConflictCivilianLossResult {
@@ -28,8 +29,7 @@ const indexReadiness = new WeakMap<Db, Promise<void>>();
 async function ensureCivilianLossIndexes(db: Db): Promise<void> {
   let ready = indexReadiness.get(db);
   if (!ready) {
-    ready = db
-      .collection<CrisisInteraction>("crisisInteractions")
+    ready = crisisInteractionsCollection(db)
       .createIndex(
         { civilianLossEpochId: 1, civilianLossPending: 1 },
         { name: "crisis_civilian_loss_pending" }
@@ -106,8 +106,7 @@ export async function loadPendingConflictCivilianLosses(
   turn: number
 ): Promise<ConflictCivilianLossOrder[]> {
   await ensureCivilianLossIndexes(db);
-  const interactions = await db
-    .collection<CrisisInteraction>("crisisInteractions")
+  const interactions = await crisisInteractionsCollection(db)
     .find(
       { civilianLossEpochId: worldEpochId, civilianLossPending: true },
       { projection: { "globalResponseOutcome.civilianLossOrder": 1 } }
@@ -156,7 +155,7 @@ export async function materializeConflictCivilianLossResults(
   await completeCrisisPopulationOrders(db, { civilianLoss: crisisResults, reception: [] });
   const interactionResults = results.filter((result) => result.origin !== "crisis");
   if (interactionResults.length === 0) return;
-  const completed = await db.collection<CrisisInteraction>("crisisInteractions").bulkWrite(
+  const completed = await crisisInteractionsCollection(db).bulkWrite(
     interactionResults.map((result) => ({
       updateOne: {
         filter: {

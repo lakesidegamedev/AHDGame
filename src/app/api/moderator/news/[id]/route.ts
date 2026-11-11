@@ -6,6 +6,7 @@ import { handleRouteError, notFound, errorResponse } from "@/lib/api/errors";
 import { createModAuditLog } from "@/lib/modAuditLog";
 import type { NewsPost, User } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 // DELETE /api/moderator/news/[id] — Delete a player news post and all its replies and reactions.
 // Auth: requireModerator
@@ -32,9 +33,10 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
       { projection: { userId: 1 } }
     );
     const authorUser = authorCharacter?.userId
-      ? await db
-          .collection<User>("users")
-          .findOne({ _id: authorCharacter.userId }, { projection: { username: 1, role: 1 } })
+      ? await usersCollection(db).findOne(
+          { _id: authorCharacter.userId },
+          { projection: { username: 1, role: 1 } }
+        )
       : null;
 
     if (authorUser?.role === "admin") {

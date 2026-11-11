@@ -1,5 +1,7 @@
 import crypto from "crypto";
 import { getDb } from "@/lib/mongodb";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
 
 /** Scopes for user-facing API keys (distinct from bot keys). */
 export type UserApiScope = "public" | "private";
@@ -90,9 +92,10 @@ export async function requireUserApiKey(
   // banned users on every request; without this check a banned player's key
   // kept working on the private-scope endpoints (transfers, forex) forever,
   // since banning never touched this collection.
-  const owner = await db
-    .collection("users")
-    .findOne({ _id: keyDoc.userId }, { projection: { isBanned: 1 } });
+  const owner = await usersCollection<Document>(db).findOne(
+    { _id: keyDoc.userId },
+    { projection: { isBanned: 1 } }
+  );
   if (!owner || owner.isBanned === true) {
     return { ok: false as const, reason: "revoked" };
   }
@@ -149,9 +152,10 @@ export async function validateUserApiKey(
 
   if (!keyDoc || keyDoc.scope !== inferredScope) return { valid: false };
 
-  const owner = await db
-    .collection("users")
-    .findOne({ _id: keyDoc.userId }, { projection: { isBanned: 1 } });
+  const owner = await usersCollection<Document>(db).findOne(
+    { _id: keyDoc.userId },
+    { projection: { isBanned: 1 } }
+  );
   if (!owner || owner.isBanned === true) return { valid: false };
 
   // Update usage stats (background, don't await). The rejection is swallowed

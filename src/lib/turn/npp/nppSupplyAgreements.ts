@@ -49,6 +49,8 @@ import { supplyAgreementSectorsInScope } from "@/lib/corporations/supplyAgreemen
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
 
 /** Fill below this: the seller cannot move output and will discount to lock a buyer. */
 export const NPP_CONTRACT_GLUT_FILL = 0.5;
@@ -1066,12 +1068,10 @@ export async function processNppSupplyAgreements(
   now: Date,
   plantsEnabled: boolean
 ): Promise<{ accepted: number; cancelled: number; proposed: number }> {
-  const cfg = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne(
-      { _id: "default" },
-      { projection: { supplyAgreementsEnabled: 1, commandEconomyEnabled: 1 } }
-    );
+  const cfg = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { supplyAgreementsEnabled: 1, commandEconomyEnabled: 1 } }
+  );
   if (cfg?.supplyAgreementsEnabled !== true) {
     return { accepted: 0, cancelled: 0, proposed: 0 };
   }
@@ -1105,14 +1105,13 @@ export async function processNppSupplyAgreements(
         { projection: NPP_SUPPLY_AGREEMENT_PROJECTION }
       )
       .toArray(),
-    db
-      .collection<{
-        commodity: string;
-        turn?: number;
-        basePrice?: number;
-        globalPrice?: number;
-        nationalPrices?: Record<string, number>;
-      }>("commodityPrices")
+    commodityPricesCollection<{
+      commodity: string;
+      turn?: number;
+      basePrice?: number;
+      globalPrice?: number;
+      nationalPrices?: Record<string, number>;
+    }>(db)
       .find({})
       .toArray(),
     gameStateCollection(db).findOne({ _id: "current" }, { projection: { currentYear: 1 } }),

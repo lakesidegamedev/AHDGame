@@ -25,6 +25,8 @@ import {
 } from "@/lib/corporations/securedConstructionProperty";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import type { Document } from "mongodb";
 
 /**
  * Split-off & merge-back of National Corporation sector types (spec §24.2).
@@ -190,12 +192,9 @@ async function attachSoeOverlayIfPlanned(
   corpId: ObjectId,
   sectorType: OperatingSectorType
 ): Promise<boolean> {
-  const config = await db
-    .collection("gameConfig")
-    .findOne<{ commandEconomyEnabled?: boolean }>(
-      { commandEconomyEnabled: { $exists: true } },
-      { projection: { commandEconomyEnabled: 1 } }
-    );
+  const config = await gameConfigCollection<Document>(db).findOne<{
+    commandEconomyEnabled?: boolean;
+  }>({ commandEconomyEnabled: { $exists: true } }, { projection: { commandEconomyEnabled: 1 } });
   if (!config?.commandEconomyEnabled) return false;
 
   const existing = await corporationsCollection(db).findOne(

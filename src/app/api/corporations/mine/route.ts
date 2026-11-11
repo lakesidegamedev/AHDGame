@@ -7,6 +7,7 @@ import type { User, ImperialCharacter } from "@/lib/db/types";
 import { corporationPathIdFromDoc } from "@/lib/api/corporations/resolveQuery";
 import { handleRouteError } from "@/lib/api/errors";
 import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +25,7 @@ export async function GET(request: Request) {
     if (!auth) return redirect("/login");
     const db = await getDb();
     const userId = new ObjectId(auth.userId);
-    const user = await db.collection<User>("users").findOne(
+    const user = await usersCollection(db).findOne(
       { _id: userId },
       {
         projection: {
@@ -38,8 +39,10 @@ export async function GET(request: Request) {
     const imperial = user.activeCharacterType === "imperial";
     const character = imperial
       ? user.activeImperialCharacterId
-        ? await imperialCharactersCollection(db)
-            .findOne({ _id: user.activeImperialCharacterId, userId }, { projection: { _id: 1 } })
+        ? await imperialCharactersCollection(db).findOne(
+            { _id: user.activeImperialCharacterId, userId },
+            { projection: { _id: 1 } }
+          )
         : null
       : await (
           await getCharactersCollection(db)

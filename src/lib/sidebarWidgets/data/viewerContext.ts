@@ -4,6 +4,7 @@ import type { Character } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { getGameStateCore, type GameStateCore } from "@/lib/gameState";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 /** The few character fields the role widgets read. */
 export type ViewerCharacter = Pick<
@@ -36,7 +37,7 @@ function memo(viewer: object): Memo {
 
 export function loadViewerUser(db: Db, viewer: { userId: string }): Promise<ViewerUser | null> {
   const entry = memo(viewer);
-  entry.user ??= db.collection<User>("users").findOne(
+  entry.user ??= usersCollection(db).findOne(
     { _id: new ObjectId(viewer.userId) },
     {
       projection: {

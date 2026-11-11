@@ -7,6 +7,7 @@ import { isStockMarketCorporation } from "@/lib/turn/corporation/marketCapSnapsh
 import type { Defect, DetectResult, HealPlan, HealResult, VerifyResult } from "../types";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
 
 type HistoryRow = MarketCapHistory & { _id: ObjectId };
 
@@ -121,8 +122,7 @@ async function survey(db: Db): Promise<Survey> {
 
   const corpById = new Map(unlisted.map((corp) => [corp._id.toString(), corp]));
   const currentRate = new Map(rates.map((rate) => [rate.currencyCode, rate.rate]));
-  const histories = await db
-    .collection<CorporationHistory>("corporationHistory")
+  const histories = await corporationHistoryCollection(db)
     .find({
       corporationId: { $in: unlisted.map((corp) => corp._id) },
       turn: { $in: rows.map((row) => row.turn) },

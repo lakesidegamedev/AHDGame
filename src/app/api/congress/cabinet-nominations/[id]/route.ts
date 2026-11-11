@@ -12,6 +12,7 @@ import { getCabinetPositionById } from "@/lib/constants";
 import { computeCabinetNominationTally } from "@/lib/congress/governmentVoteBreakdown";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { cabinetNominationsCollection } from "@/lib/db/repositories/cabinetNominations";
 
 // GET /api/congress/cabinet-nominations/[id] — Returns full detail for a single cabinet nomination including vote tallies.
 // Auth: public
@@ -30,9 +31,7 @@ export const GET = withNoStore(async function GET(
     }
 
     const db = await getDb();
-    const nomination = await db
-      .collection<CabinetNomination>("cabinetNominations")
-      .findOne({ _id: nominationOid });
+    const nomination = await cabinetNominationsCollection(db).findOne({ _id: nominationOid });
 
     if (!nomination) {
       return errorResponse(404, "Nomination not found");

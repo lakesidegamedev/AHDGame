@@ -21,6 +21,7 @@ import {
   type CeoSalaryVoteCheck,
 } from "@/lib/corporations/rules/ceoSalaryVote";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 export async function evaluateCeoSalaryVote(
   db: Db,
@@ -34,9 +35,10 @@ export async function evaluateCeoSalaryVote(
     return { ...off, freeCeilingLocal: Infinity };
   if ((corporation.ceoType ?? "character") !== "character")
     return { ...off, freeCeilingLocal: Infinity };
-  const cfg = await db
-    .collection<{ ceoSalaryVoteNetIncomeShare?: number }>("gameConfig")
-    .findOne({ _id: "default" as never }, { projection: { ceoSalaryVoteNetIncomeShare: 1 } });
+  const cfg = await gameConfigCollection<{ ceoSalaryVoteNetIncomeShare?: number }>(db).findOne(
+    { _id: "default" as never },
+    { projection: { ceoSalaryVoteNetIncomeShare: 1 } }
+  );
   const share = cfg?.ceoSalaryVoteNetIncomeShare ?? 0;
   if (!(share > 0)) return { ...off, freeCeilingLocal: Infinity };
   const fxByCurrency = await loadFxRatesByCurrency(db);

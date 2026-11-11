@@ -20,6 +20,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
 
 /** Per-law provenance for the statute book's mono sublines + fiscal chips. */
 export interface PolicyProvenance {
@@ -72,8 +73,7 @@ export async function loadPolicyRecordPayload(countryId: CountryId) {
 
   const [types, laws, budget, states, era, eraCtx, nationalMedianIncome] = await Promise.all([
     loadCountryLegislationTypes(db, countryId),
-    db
-      .collection<EnactedLaw>("enactedLaws")
+    enactedLawsCollection(db)
       .find({
         scope: "national",
         ...nationalLawCountryQuery(countryId),

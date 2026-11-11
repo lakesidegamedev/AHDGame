@@ -25,6 +25,9 @@ import {
 import { serverEnv } from "@/lib/config/read";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /**
  * Node-only singleplayer helpers. `@/lib/singleplayer` must stay importable
@@ -65,7 +68,7 @@ export async function ensureSingleplayerUser(
   db: Db,
   displayName = "Admin"
 ): Promise<{ created: boolean }> {
-  const users = db.collection("users");
+  const users = usersCollection<Document>(db);
   const _id = new ObjectId(SINGLEPLAYER_USER_ID);
   const claims = singleplayerSessionClaims();
   const now = new Date();
@@ -119,7 +122,7 @@ export interface SingleplayerStatus {
 }
 
 async function clearSingleplayerMaintenance(db: Db): Promise<void> {
-  const result = await db.collection<GameConfig>("gameConfig").updateOne(
+  const result = await gameConfigCollection(db).updateOne(
     { _id: "default", maintenanceMode: { $ne: "off" } },
     {
       $set: { maintenanceMode: "off" },

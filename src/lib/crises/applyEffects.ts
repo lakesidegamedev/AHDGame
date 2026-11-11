@@ -12,6 +12,8 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import type { Document } from "mongodb";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
 
 /**
  * Clamp a stat value to the legal [STAT_MIN, STAT_MAX] range.
@@ -112,12 +114,10 @@ async function applyMetricEffects(
   const writes: Array<Promise<unknown>> = [];
   if (Object.keys(macroInc).length > 0) {
     writes.push(
-      db
-        .collection("macroMetrics")
-        .updateMany(
-          { _id: { $in: targetStateIds.map((id) => id as unknown as import("mongodb").ObjectId) } },
-          { $inc: macroInc, $set: { lastUpdated: new Date() } }
-        )
+      macroMetricsCollection<Document>(db).updateMany(
+        { _id: { $in: targetStateIds.map((id) => id as unknown as import("mongodb").ObjectId) } },
+        { $inc: macroInc, $set: { lastUpdated: new Date() } }
+      )
     );
   }
   // Political effects move the BOARD, as a VALUE shift.
@@ -164,7 +164,7 @@ async function applyApprovalEffects(
   const approvalDelta = effects.reduce((sum, e) => sum + e.value, 0);
 
   if (affectedCountries.length > 0) {
-    await db.collection("governmentApprovals").updateMany(
+    await governmentApprovalsCollection<Document>(db).updateMany(
       {
         _id: { $in: affectedCountries.map((id) => id as unknown as import("mongodb").ObjectId) },
       },

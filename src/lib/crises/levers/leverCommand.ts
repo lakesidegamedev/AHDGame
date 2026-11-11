@@ -26,6 +26,7 @@ import { leverBlock } from "./availability";
 import { crisisCountryIds, governsAffectedState, leverInActorJurisdiction } from "./jurisdiction";
 import { resolveLeverRoles, type LeverActor } from "./roles";
 import { crisesCollection } from "@/lib/db/repositories/crises";
+import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
 
 const COMPONENT = "crisisLeverCommand";
 
@@ -95,11 +96,10 @@ type LiveCrisis = Pick<Crisis, "_id" | "scope" | "countryIds" | "regionIds"> &
   Required<Pick<Crisis, "v2">>;
 
 export function loadLiveCrisis(db: Db, crisisId: ObjectId): Promise<LiveCrisis | null> {
-  return crisesCollection(db)
-    .findOne(
-      { _id: crisisId, status: "active", "v2.definitionId": { $exists: true } },
-      { projection: { scope: 1, countryIds: 1, regionIds: 1, v2: 1 } }
-    ) as Promise<LiveCrisis | null>;
+  return crisesCollection(db).findOne(
+    { _id: crisisId, status: "active", "v2.definitionId": { $exists: true } },
+    { projection: { scope: 1, countryIds: 1, regionIds: 1, v2: 1 } }
+  ) as Promise<LiveCrisis | null>;
 }
 
 export function loadLiveCrises(db: Db, crisisIds: ObjectId[]): Promise<LiveCrisis[]> {
@@ -251,7 +251,7 @@ async function chargeCostSteps(
       return fail("charge_failed", "No government to charge approval to");
     }
     const points = cost.approval.points;
-    const approvals = db.collection<GovernmentApproval>("governmentApprovals");
+    const approvals = governmentApprovalsCollection(db);
     await approvals.updateOne(
       { _id: countryId as CountryId },
       { $inc: { approvalRating: -points } }

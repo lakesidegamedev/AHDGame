@@ -21,6 +21,7 @@ import {
 } from "@/lib/congress/governmentVoteBreakdown";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
 
 export interface LeaderDisplay {
   characterId: string;
@@ -135,8 +136,7 @@ async function loadLeaderDisplays(
   leaderRoles: LeadershipRole[],
   partyMap: Map<string, PoliticalParty>
 ): Promise<Map<LeadershipRole, LeaderDisplay>> {
-  const leaderDocs = await db
-    .collection<CongressLeader>("congressLeaders")
+  const leaderDocs = await congressLeadersCollection(db)
     .find({ role: { $in: leaderRoles } })
     .toArray();
   // First doc per role, matching the per-role findOne this replaces.

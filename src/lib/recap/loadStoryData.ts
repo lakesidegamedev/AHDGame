@@ -25,6 +25,7 @@ import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { billsCollection } from "@/lib/db/repositories/bills";
 import { crisesCollection } from "@/lib/db/repositories/crises";
+import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
 
 /**
  * I/O for the v2 Wrapped sections. Reads the runtime collections the reset is
@@ -377,7 +378,7 @@ export async function loadStoryData(
     };
     const [bills, stateBills, npps] = await Promise.all([
       billsCollection<BillRow>(db).find({}, { projection }).toArray(),
-      db.collection<BillRow>("stateBills").find({}, { projection }).toArray(),
+      stateBillsCollection<BillRow>(db).find({}, { projection }).toArray(),
       nppsCollection<Document>(db)
         .find({}, { projection: { party: 1, countryId: 1 } })
         .toArray(),

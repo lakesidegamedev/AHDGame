@@ -36,6 +36,8 @@ import { isContractIssuanceEnabled } from "@/lib/extraction/featureFlag";
 import { buildCorpNationalizationThreat } from "@/lib/nationalization/corpNationalizationThreat";
 import { marketAtLeast, getMarketSystemMode } from "@/lib/market/featureFlag";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -60,7 +62,7 @@ export const GET = withNoStore(async function GET(request: Request, { params }: 
       // Private supply-agreements gate — a governor-set gameConfig flag ("default"
       // doc), surfaced on the corp payload so the CEO panel can show/hide without
       // an extra round-trip.
-      db.collection<GameConfig>("gameConfig").findOne(
+      gameConfigCollection(db).findOne(
         { _id: "default" },
         {
           projection: {
@@ -309,12 +311,10 @@ export const GET = withNoStore(async function GET(request: Request, { params }: 
         // Fetch the quarterly history snapshot (most recent turn <= fogSourceTurn).
         const historySnap =
           fogSourceTurn > 0
-            ? await db
-                .collection<CorporationHistory>("corporationHistory")
-                .findOne(
-                  { corporationId: corporation._id, turn: { $lte: fogSourceTurn } },
-                  { sort: { turn: -1 } }
-                )
+            ? await corporationHistoryCollection(db).findOne(
+                { corporationId: corporation._id, turn: { $lte: fogSourceTurn } },
+                { sort: { turn: -1 } }
+              )
             : null;
 
         const factor = getFogFactor(corporation._id.toString(), currentTurn);

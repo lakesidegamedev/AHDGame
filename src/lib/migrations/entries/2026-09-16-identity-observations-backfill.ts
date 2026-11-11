@@ -6,6 +6,7 @@ import {
 } from "@/lib/db/types/identityObservation";
 import { isGroupableIdentityValue } from "@/lib/identityHistory/guards";
 import type { Migration, MigrationContext, MigrationResult } from "../types";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 export interface BackfillUser {
   _id: ObjectId;
@@ -96,8 +97,7 @@ export function buildBackfillRows(user: BackfillUser): IdentityObservation[] {
 }
 
 async function backfill(db: Db, ctx: MigrationContext): Promise<MigrationResult> {
-  const users = await db
-    .collection<BackfillUser>("users")
+  const users = await usersCollection<BackfillUser>(db)
     .find(
       {},
       {

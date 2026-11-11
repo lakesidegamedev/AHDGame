@@ -80,6 +80,7 @@ import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 export { refreshSovereignDebtTerms } from "./sovereignFunding";
 
 export const SOVEREIGN_ISSUANCE_INTERVAL_TURNS = 12;
@@ -590,9 +591,10 @@ export async function issueScheduledSovereignBondSeries(
 
   // One read per scheduled quarter: the tranche-consolidation dark
   // gate. Absent or false keeps the historical ladder exactly as issued.
-  const issuanceGate = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { sovereignIssuanceConsolidationEnabled: 1 } });
+  const issuanceGate = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { sovereignIssuanceConsolidationEnabled: 1 } }
+  );
   const consolidationEnabled = issuanceGate?.sovereignIssuanceConsolidationEnabled === true;
 
   // Registered, not the raw static list: a dissolved country keeps its budget

@@ -33,6 +33,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
 
 /**
  * "<Surname> administration", from whichever office actually governs this
@@ -73,8 +74,7 @@ export async function loadRegionPolicyRecordPayload(
 
   const [types, laws, state, budget, era] = await Promise.all([
     loadCountryLegislationTypes(db, countryId),
-    db
-      .collection<EnactedLaw>("enactedLaws")
+    enactedLawsCollection(db)
       .find({ scope: "state", stateId: regionId, repealedAt: { $exists: false } })
       .sort({ enactedAt: 1 })
       .toArray(),

@@ -21,6 +21,9 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
+import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
 
 export interface OfficeDashboardWidgetData {
   scope: "state" | "nation";
@@ -57,12 +60,10 @@ async function stateOffice(
     db
       .collection<StateApprovalHistory>("stateApprovalHistory")
       .findOne({ _id: stateId, countryId }, { projection: { approvalRating: 1 } }),
-    db
-      .collection<MetricsRow>("macroMetrics")
-      .findOne(
-        { _id: stateId, countryId },
-        { projection: { "economic.gdpGrowth.value": 1, "economic.unemploymentRate.value": 1 } }
-      ),
+    macroMetricsCollection<MetricsRow>(db).findOne(
+      { _id: stateId, countryId },
+      { projection: { "economic.gdpGrowth.value": 1, "economic.unemploymentRate.value": 1 } }
+    ),
     // Same split as the region budget page: parliamentary regions keep their
     // balance on regionalBudgets, the rest derive it from stateBudgets.
     parliamentary
@@ -72,8 +73,10 @@ async function stateOffice(
       : null,
     parliamentary
       ? null
-      : stateBudgetsCollection(db)
-          .findOne({ _id: stateId, countryId }, { projection: { revenue: 1, spending: 1 } }),
+      : stateBudgetsCollection(db).findOne(
+          { _id: stateId, countryId },
+          { projection: { revenue: 1, spending: 1 } }
+        ),
   ]);
   if (!state) return null;
   const budgetBalance = regionalBudget
@@ -96,9 +99,10 @@ async function stateOffice(
 
 async function nationOffice(db: Db, countryId: CountryId): Promise<OfficeDashboardWidgetData> {
   const [approval, budget, states] = await Promise.all([
-    db
-      .collection<GovernmentApproval>("governmentApprovals")
-      .findOne({ _id: countryId }, { projection: { approvalRating: 1 } }),
+    governmentApprovalsCollection(db).findOne(
+      { _id: countryId },
+      { projection: { approvalRating: 1 } }
+    ),
     federalBudgetCollection(db).findOne(
       { _id: getNationalBudgetId(countryId) } as { _id: "federal" },
       {
@@ -117,8 +121,7 @@ async function nationOffice(db: Db, countryId: CountryId): Promise<OfficeDashboa
   ]);
   // Population-weighted, as on the national Economy page. Scoped to the
   // country because region ids repeat across countries.
-  const metrics = await db
-    .collection<MetricsRow>("macroMetrics")
+  const metrics = await macroMetricsCollection<MetricsRow>(db)
     .find(
       { _id: { $in: states.map((s) => s._id) }, countryId },
       { projection: { "economic.unemploymentRate.value": 1 } }
@@ -167,9 +170,10 @@ export async function loadOfficeDashboard(
       },
       { projection: { state: 1 } }
     ),
-    db
-      .collection<{ countryId: CountryId }>("cabinetMembers")
-      .findOne({ characterId: character._id }, { projection: { countryId: 1 } }),
+    cabinetMembersCollection<{ countryId: CountryId }>(db).findOne(
+      { characterId: character._id },
+      { projection: { countryId: 1 } }
+    ),
   ]);
   if (regional?.state) return stateOffice(db, countryId, regional.state);
   if (cabinetSeat) return nationOffice(db, cabinetSeat.countryId ?? countryId);

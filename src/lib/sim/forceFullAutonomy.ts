@@ -10,6 +10,7 @@ import type {
 import { ALL_COUNTRY_IDS } from "@/lib/constants/countries";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /** Re-exported for callers that already import from this module — the
  * implementation and its full rationale live in bootstrapGameWorld.ts,
@@ -115,7 +116,7 @@ export async function forceFullAutonomy(
     }
   );
 
-  await db.collection<GameConfig>("gameConfig").updateOne(
+  await gameConfigCollection(db).updateOne(
     { _id: "default" },
     {
       $set: {

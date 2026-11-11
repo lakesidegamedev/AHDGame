@@ -46,6 +46,7 @@ import { electionCandidatesCollection } from "@/lib/db/repositories/electionCand
 import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
 
 // This page is a live view over turn-processed delegate awards and per-state
 // projections. It must render from current DB state every request so its
@@ -142,9 +143,7 @@ export default async function PartyPrimaryStatePage({ params }: PageProps) {
         _id: { $in: candidates.filter((c) => c.isNPP && c.nppId).map((c) => c.nppId!) },
       })
       .toArray(),
-    statePartyOrgCollection(db)
-      .find({ countryId: "US", partyId: partyKey })
-      .toArray(),
+    statePartyOrgCollection(db).find({ countryId: "US", partyId: partyKey }).toArray(),
     candidateKeys.length
       ? campaignsCollection(db)
           .find({ electionId: election._id, candidateId: { $in: candidateKeys } })
@@ -197,8 +196,7 @@ export default async function PartyPrimaryStatePage({ params }: PageProps) {
     statesCollection(db)
       .find({ _id: { $in: ALL_STATE_IDS } })
       .toArray(),
-    db
-      .collection<StateDemographics>("stateDemographics")
+    stateDemographicsCollection(db)
       .find({ _id: { $in: ALL_STATE_IDS } })
       .toArray(),
     enrichedPromise,

@@ -13,6 +13,8 @@ import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
 
 const ELECTION_STATUS_FIELDS = {
   upcoming: "electionCountUpcoming",
@@ -132,8 +134,7 @@ export async function collectLocalStatistics(db: Db): Promise<LocalStatisticsPay
     statesCollection<Document>(db)
       .find({}, { projection: { _id: 1, gdp: 1, population: 1 } })
       .toArray(),
-    db
-      .collection("macroMetrics")
+    macroMetricsCollection<Document>(db)
       .find(
         {},
         {
@@ -153,8 +154,7 @@ export async function collectLocalStatistics(db: Db): Promise<LocalStatisticsPay
     federalBudgetCollection(db)
       .find({}, { projection: { "economicFactors.inflationRate": 1 } })
       .toArray(),
-    db
-      .collection("governmentApprovals")
+    governmentApprovalsCollection<Document>(db)
       .find({}, { projection: { approvalRating: 1 } })
       .toArray(),
     electionsCollection<Document>(db)

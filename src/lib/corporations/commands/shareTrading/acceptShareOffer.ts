@@ -48,6 +48,7 @@ import type { Notification, ShareListing, ShareOffer } from "@/lib/db/types";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { notificationsCollection } from "@/lib/db/repositories/notifications";
 
 interface RouteParams {
   params: Promise<{ id: string; listingId: string; offerId: string }>;
@@ -430,8 +431,7 @@ export async function settleListingOffer(
   if (buyerChar) {
     const listingCorpSym =
       CURRENCY_SYMBOLS[(listingCorp?.liquidCurrencyCode ?? "USD") as CurrencyCode] ?? "₳";
-    void db
-      .collection<Omit<Notification, "_id">>("notifications")
+    void notificationsCollection<Omit<Notification, "_id">>(db)
       .insertOne({
         userId: buyerChar.userId,
         type: "share_offer_accepted",

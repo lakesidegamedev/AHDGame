@@ -3,6 +3,7 @@ import { seedCountryBudgets } from "./seedCountryBudgets";
 import type { GameConfig } from "@/lib/db/types/gameConfig";
 import { upsertCountryOwnedCorpEntries } from "./upsertCountryOwnedCorps";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 export async function seedCnBudgets(
   db: Db,
@@ -27,9 +28,10 @@ export async function seedCnBudgets(
       // When commandEconomyEnabled is on AND CN is in its fully-command era,
       // the CN seed splits into one SOE per commanding-height sector.
       // Dual-track / market eras and flag-off are unaffected.
-      const gameConfig = await db
-        .collection<GameConfig>("gameConfig")
-        .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } });
+      const gameConfig = await gameConfigCollection(db).findOne(
+        { _id: "default" },
+        { projection: { commandEconomyEnabled: 1 } }
+      );
       const commandEconomyEnabled = gameConfig?.commandEconomyEnabled === true;
 
       const countryOwnedSeedData = generateCountryOwnedSeedData(

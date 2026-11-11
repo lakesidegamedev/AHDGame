@@ -31,6 +31,8 @@ import {
   type PullLeverInput,
 } from "./leverCommand";
 import { crisesCollection } from "@/lib/db/repositories/crises";
+import { crisisInteractionsCollection } from "@/lib/db/repositories/crisisInteractions";
+import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
 
 const COMPONENT = "crisisLegacyLever";
 
@@ -62,7 +64,7 @@ export async function pullLeverWithDecision(
 
   const [crisis, interaction, character] = await Promise.all([
     crisesCollection(db).findOne({ _id: input.crisisId }),
-    db.collection<CrisisInteraction>("crisisInteractions").findOne({ crisisId: input.crisisId }),
+    crisisInteractionsCollection(db).findOne({ crisisId: input.crisisId }),
     getCharactersCollection(db).then((characters) =>
       characters.findOne({ _id: input.characterId })
     ),
@@ -88,9 +90,9 @@ export async function pullLeverWithDecision(
   const option = ref.optionId ? node.options?.find((o) => o.optionId === ref.optionId) : undefined;
   if (ref.kind !== "aid" && !option) return fail("not_found", "No such option on this decision");
   if (option?.requiredApproval) {
-    const approval = await db
-      .collection<{ approvalRating?: number }>("governmentApprovals")
-      .findOne({ _id: actor.countryId as unknown as ObjectId });
+    const approval = await governmentApprovalsCollection<{ approvalRating?: number }>(db).findOne({
+      _id: actor.countryId as unknown as ObjectId,
+    });
     if ((approval?.approvalRating ?? 0) < option.requiredApproval) {
       return fail("rejected", `Insufficient approval. Required: ${option.requiredApproval}`);
     }

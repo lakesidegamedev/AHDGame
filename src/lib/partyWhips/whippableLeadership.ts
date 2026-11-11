@@ -57,6 +57,7 @@ import {
   senateElectionRoleToLeader,
 } from "@/lib/congress/leadership/electionRoleMap";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { cabinetNominationsCollection } from "@/lib/db/repositories/cabinetNominations";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -582,8 +583,7 @@ export async function handleWhippableLeadership(request: Request, { params }: Ro
 
     // Add active cabinet nominations — senators vote on these
     if (hasUpperNPPs || hasLowerNPPs) {
-      const activeNominations = await db
-        .collection<CabinetNomination>("cabinetNominations")
+      const activeNominations = await cabinetNominationsCollection(db)
         .find({ status: "active", countryId })
         .toArray();
 

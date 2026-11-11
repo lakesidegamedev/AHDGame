@@ -82,6 +82,8 @@ import { plannedEconomyMediaSupplyFactor, isNewsMediaLane } from "@/lib/constant
 import { isPlannedEconomy } from "@/lib/constants/commandEconomy";
 import { resolvePresetIdFromGameState } from "@/lib/world/presetId";
 import { getEraUnitScale } from "@/lib/constants/sectorSeedEra";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
 
 /**
  * Advertising counted from one news-media sector's exact commodity ledger
@@ -150,9 +152,10 @@ export async function loadSectorModeFlags(
   // field. Below plants this is false and every field added below is null, so
   // a capital-tier world's payload is unchanged apart from the null keys.
   const plantsMode = marketAtLeast(await getMarketSystemModeForDb(db), "plants");
-  const gameConfig = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } });
+  const gameConfig = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { commandEconomyEnabled: 1 } }
+  );
   const commandEconomyEnabled = gameConfig?.commandEconomyEnabled === true;
 
   // Under plants, `currentGrowthRate` is vestigial (always 0) since revenue
@@ -162,8 +165,7 @@ export async function loadSectorModeFlags(
   const realizedGrowthRate = plantsMode
     ? computeCorpRealizedGrowthRate(
         (
-          await db
-            .collection<{ turn?: number; revenue?: number }>("corporationHistory")
+          await corporationHistoryCollection<{ turn?: number; revenue?: number }>(db)
             .find(
               { corporationId: corporation._id },
               {

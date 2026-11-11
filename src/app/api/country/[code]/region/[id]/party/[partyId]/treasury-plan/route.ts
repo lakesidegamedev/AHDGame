@@ -18,6 +18,8 @@ import type { State, StatePartyOrg } from "@/lib/db/types";
 import { getTreasuryPresetLabel, type TreasuryPresetId } from "@/lib/treasury/partyTreasuryPresets";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { adminLogsCollection } from "@/lib/db/repositories/adminLogs";
+import type { Document } from "mongodb";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; partyId: string }>;
@@ -71,8 +73,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     const statePartyKey = getStatePartyOrgDocumentId(stateId, party);
-    const stateParty = await statePartyOrgCollection(db)
-      .findOne({ _id: statePartyKey });
+    const stateParty = await statePartyOrgCollection(db).findOne({ _id: statePartyKey });
     const actor = auth.user.character;
     const isAdmin = auth.user.isAdmin;
     const isStateTreasurer = stateParty?.treasurerId?.equals(actor._id);
@@ -104,7 +105,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const summary = getTreasuryReserveSummary(stateParty?.treasury ?? 0, parsed.data);
     const presetLabel = getTreasuryPresetLabel(parsed.data.treasuryPreset as TreasuryPresetId);
 
-    await db.collection("adminLogs").insertOne({
+    await adminLogsCollection<Document>(db).insertOne({
       category: "system",
       action: "state_treasury_plan_changed",
       username: auth.user.username,

@@ -10,6 +10,8 @@ import { validateOrganization } from "@/lib/utils/partyOrg";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { adminLogsCollection } from "@/lib/db/repositories/adminLogs";
+import type { Document } from "mongodb";
 
 // GET - Fetch party org for a state or all states
 // Returns organization data for ALL parties, defaulting to 0 for parties without records
@@ -171,7 +173,7 @@ export async function PATCH(request: Request) {
     );
 
     // Log the update
-    await db.collection("adminLogs").insertOne({
+    await adminLogsCollection<Document>(db).insertOne({
       category: "system",
       action: "party_org_updated",
       username: "SYSTEM",

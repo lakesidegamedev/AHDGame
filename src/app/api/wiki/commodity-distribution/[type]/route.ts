@@ -17,6 +17,7 @@ import {
 import { COUNTRY_CONFIGS, COUNTRY_ORDER, type CountryId } from "@/lib/constants/countries";
 import { getEconomyVisibleCountryIds } from "@/lib/countryAccess";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
 
 interface CountryDistribution {
   countryId: CountryId;
@@ -74,7 +75,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ typ
     const db = await getDb();
 
     const [rawPriceDoc, states, capacities] = await Promise.all([
-      db.collection<CommodityPrice>("commodityPrices").findOne({ commodity }),
+      commodityPricesCollection(db).findOne({ commodity }),
       statesCollection(db)
         .find({}, { projection: { _id: 1, countryId: 1, name: 1 } })
         .toArray(),

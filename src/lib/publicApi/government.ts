@@ -9,6 +9,9 @@ import { buildCharacterHref } from "@/lib/utils/profileUrls";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
+import type { Document } from "mongodb";
+import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -39,8 +42,8 @@ export async function queryGovernment(db: Db, country: string) {
         },
       } as Filter<ElectedOfficial>)
       .toArray(),
-    db.collection("congressLeaders").find({ countryId: country }).toArray(),
-    db.collection("cabinetMembers").find({ countryId: country }).toArray(),
+    congressLeadersCollection<Document>(db).find({ countryId: country }).toArray(),
+    cabinetMembersCollection<Document>(db).find({ countryId: country }).toArray(),
   ]);
 
   // Collect character IDs for profile URL lookups

@@ -41,6 +41,8 @@ import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
+import { cabinetNominationsCollection } from "@/lib/db/repositories/cabinetNominations";
 
 /**
  * NPP vote based on party lines: same party as nominee -> for; opposite -> against.
@@ -179,7 +181,7 @@ async function castNPPCabinetVotes(
   }
 
   if (voteOps.length > 0) {
-    await db.collection<CabinetNomination>("cabinetNominations").bulkWrite(voteOps);
+    await cabinetNominationsCollection(db).bulkWrite(voteOps);
   }
 }
 
@@ -340,8 +342,7 @@ export async function processCabinetNominationLifecycle(
 
   // ── A. NPP catch-up votes on active nominations ─────────────────────────────
   // Turn-number first, date fallback for legacy nominations.
-  const activeNominations = await db
-    .collection<CabinetNomination>("cabinetNominations")
+  const activeNominations = await cabinetNominationsCollection(db)
     .find({
       status: "active",
       $or: [
@@ -357,8 +358,7 @@ export async function processCabinetNominationLifecycle(
   }
 
   // ── B. Close expired votes ───────────────────────────────────────────────
-  const expired = await db
-    .collection<CabinetNomination>("cabinetNominations")
+  const expired = await cabinetNominationsCollection(db)
     .find({
       status: "active",
       $or: [
@@ -382,8 +382,7 @@ export async function processCabinetNominationLifecycle(
     }));
   const priorCabinetMembers =
     cabinetMemberFilters.length > 0 || cabinetNomineeFilters.length > 0
-      ? await db
-          .collection<CabinetMember>("cabinetMembers")
+      ? await cabinetMembersCollection(db)
           .find(
             {
               $or: [
@@ -527,8 +526,7 @@ export async function processCabinetNominationLifecycle(
           : undefined;
         const nominationNation = (nom.countryId ?? "US") as CountryId;
         const nominationOffice = cabinetOfficeTypeForCountry(nominationNation);
-        await db
-          .collection<CabinetMember>("cabinetMembers")
+        await cabinetMembersCollection(db)
           // Country-scoped: position ids are not unique across countries, so an
           // unscoped delete here could evict another country's seat holder.
           .deleteOne({ countryId: nom.countryId, positionId: nom.positionId });
@@ -541,9 +539,10 @@ export async function processCabinetNominationLifecycle(
         // nomination stays active forever, failing the whole phase. A
         // Senate-confirmed move vacates the old office.
         if (nom.nomineeCharacterId) {
-          await db
-            .collection<CabinetMember>("cabinetMembers")
-            .deleteMany({ countryId: nom.countryId, characterId: nom.nomineeCharacterId });
+          await cabinetMembersCollection(db).deleteMany({
+            countryId: nom.countryId,
+            characterId: nom.nomineeCharacterId,
+          });
         }
 
         const member: Omit<CabinetMember, "_id"> & {
@@ -570,9 +569,7 @@ export async function processCabinetNominationLifecycle(
           createdAt: now,
           updatedAt: now,
         };
-        await db
-          .collection<CabinetMember>("cabinetMembers")
-          .insertOne(member as unknown as CabinetMember);
+        await cabinetMembersCollection(db).insertOne(member as unknown as CabinetMember);
 
         // Clear the predecessor's setting cooldowns so the new secretary can change
         // settings immediately (cabinetSettings is keyed by position, not holder).
@@ -646,7 +643,7 @@ export async function processCabinetNominationLifecycle(
         }
       }
 
-      await db.collection<CabinetNomination>("cabinetNominations").updateOne(
+      await cabinetNominationsCollection(db).updateOne(
         { _id: nom._id },
         {
           $set: {
@@ -761,7 +758,7 @@ export async function processCabinetNominationLifecycle(
   }
 
   if (nominationUpdates.length > 0) {
-    await db.collection<CabinetNomination>("cabinetNominations").bulkWrite(nominationUpdates);
+    await cabinetNominationsCollection(db).bulkWrite(nominationUpdates);
   }
 
   await createNotifications(notificationInputs);

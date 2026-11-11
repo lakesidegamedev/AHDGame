@@ -78,6 +78,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -133,9 +134,9 @@ export async function buyPublicShares(request: Request, { params }: RouteParams)
       }
 
       // Resolve CEO identity from correct collection
-      const corpUserDoc = await db
-        .collection<User>("users")
-        .findOne({ _id: new ObjectId(corpAuth.user.userId) });
+      const corpUserDoc = await usersCollection(db).findOne({
+        _id: new ObjectId(corpAuth.user.userId),
+      });
       const isCeoImperial =
         corpUserDoc?.activeCharacterType === "imperial" && !!corpUserDoc?.activeImperialCharacterId;
 
@@ -438,9 +439,7 @@ export async function buyPublicShares(request: Request, { params }: RouteParams)
       );
     }
 
-    const userDoc = await db
-      .collection<User>("users")
-      .findOne({ _id: new ObjectId(basicAuth.user.userId) });
+    const userDoc = await usersCollection(db).findOne({ _id: new ObjectId(basicAuth.user.userId) });
     const isImperialMode =
       userDoc?.activeCharacterType === "imperial" && !!userDoc?.activeImperialCharacterId;
 

@@ -5,6 +5,7 @@ import type {
   NationalPartyCandidate,
   NationalPartyVote,
 } from "@/lib/db/types";
+import { nationalPartyElectionsCollection } from "@/lib/db/repositories/nationalPartyElections";
 
 export interface WithdrawFromPartyLeadershipElectionsResult {
   candidatesWithdrawn: number;
@@ -33,8 +34,7 @@ export async function withdrawFromPartyLeadershipElections(
   // collisions; callers that lack it (rare) fall back to partyId alone.
   const electionQuery: Record<string, unknown> = { partyId, status: "voting" };
   if (countryId) electionQuery.countryId = countryId;
-  const votingElections = await db
-    .collection<NationalPartyElection>("nationalPartyElections")
+  const votingElections = await nationalPartyElectionsCollection(db)
     .find(electionQuery)
     .project<{ _id: ObjectId }>({ _id: 1 })
     .toArray();
