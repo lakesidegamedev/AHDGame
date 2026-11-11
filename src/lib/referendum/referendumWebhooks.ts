@@ -66,11 +66,12 @@ function Noun(kind: ReferendumKind): string {
 export function buildReferendumRequestedEmbed(args: {
   region: string;
   kind: ReferendumKind;
+  executiveTitle?: string;
 }): DiscordEmbed {
   return {
     title: `${args.region}: ${Noun(args.kind)} Referendum Requested`,
     description:
-      `The First Minister of ${args.region} has formally petitioned for a ${noun(args.kind)} ` +
+      `The ${args.executiveTitle ?? "First Minister"} of ${args.region} has formally petitioned for a ${noun(args.kind)} ` +
       `referendum. It now awaits the Prime Minister's decision to grant or decline.`,
     color: DISCORD_COLORS.electionOpen,
     footer: FOOTER,
@@ -263,7 +264,11 @@ async function announceToProcessCountries(ref: Referendum, embed: DiscordEmbed):
 export async function announceReferendumRequested(ref: Referendum): Promise<void> {
   await announceToProcessCountries(
     ref,
-    buildReferendumRequestedEmbed({ region: regionName(ref.regionId), kind: ref.kind })
+    buildReferendumRequestedEmbed({
+      region: regionName(ref.regionId),
+      kind: ref.kind,
+      executiveTitle: sovereigntyRegion(ref.regionId)?.executiveTitle,
+    })
   );
 }
 
