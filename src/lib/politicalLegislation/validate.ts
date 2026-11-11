@@ -6,7 +6,7 @@ import { incomeTierForTaxKey } from "@/lib/budget/rules/incomeTaxTiers";
  */
 
 import { POLITICAL_METRIC_FAMILIES } from "../politicalMetrics/families";
-import { SEED_TAX_RATES_1953, SEED_TAX_RATES_PENDING, type SeedTaxType } from "./seedTaxRates";
+import { SEED_TAX_RATES_1953, type SeedTaxType } from "./seedTaxRates";
 import type { CostAnchorCountryId, LawCountryId, LawLevel, PoliticalLaw } from "./types";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
@@ -96,10 +96,7 @@ export function validateCatalog(laws: PoliticalLaw[], countryId: CostAnchorCount
   const cc = countryId.toLowerCase();
   const metricIds = POLITICAL_METRIC_FAMILIES.map((f) => f.id);
   const metricIdSet = new Set<string>(metricIds);
-  const seedRates: Record<string, number> =
-    SEED_TAX_RATES_1953[countryId as LawCountryId] ??
-    SEED_TAX_RATES_PENDING[countryId as keyof typeof SEED_TAX_RATES_PENDING] ??
-    {};
+  const seedRates: Record<string, number> = SEED_TAX_RATES_1953[countryId as LawCountryId] ?? {};
 
   // Id uniqueness + prefix/country consistency
   const seen = new Set<string>();

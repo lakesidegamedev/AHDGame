@@ -283,6 +283,7 @@ const NAMES_BY_COUNTRY: Record<PoliticalMetricsCountryId, Record<PoliticalMetric
   UK: UK_METRIC_NAMES,
   RU: RU_METRIC_NAMES,
   DD: DD_METRIC_NAMES,
+  DE: US_METRIC_NAMES,
 };
 
 export function getMetricDisplayName(
@@ -312,6 +313,7 @@ const CATEGORY_NAMES_BY_COUNTRY: Record<
   ) as Record<PoliticalMetricCategoryId, string>,
   RU: baseCategoryNames(),
   DD: baseCategoryNames(),
+  DE: baseCategoryNames(),
 };
 
 export function getCategoryDisplayName(
@@ -347,5 +349,10 @@ export const COUNTRY_CHROME: Record<
     registry: "Council of Ministers · State Central Administration for Statistics",
     seal: "SZS · STATE STATISTICS ADMIN",
     glyph: "DDR",
+  },
+  DE: {
+    registry: "Federal Chancellery · Federal Statistical Office",
+    seal: "STATISTISCHES BUNDESAMT",
+    glyph: "DE",
   },
 };

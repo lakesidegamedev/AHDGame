@@ -62,13 +62,6 @@ const board = (
 export const DEFENSE_BOARDS_1953: Record<string, DefenseBoard> = {
   // ── Western Europe ────────────────────────────────────────────────────────
   /**
-   * West Germany: occupied, sovereignty incomplete, and constitutionally and
-   * practically disarmed — the Bundeswehr is not founded until 1955 and rearmament
-   * is still bitterly contested. Adenauer's Westbindung makes diplomacy the whole
-   * strategy; standing is low because NATO and UN membership have not happened yet.
-   */
-  DE: board(62, 35, 45, 40, 15, 8, 5),
-  /**
    * France: a UN Security Council permanent seat and enormous cultural reach, set
    * against a draining colonial war in Indochina and a nascent nuclear programme.
    * Real projection, but projection that is being spent rather than accumulated.

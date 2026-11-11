@@ -27,7 +27,6 @@ export const NON_PLAYABLE_BOARD_COUNTRY_IDS = [
   "BR",
   "CN",
   "CS",
-  "DE",
   "ES",
   "FI",
   "FR",

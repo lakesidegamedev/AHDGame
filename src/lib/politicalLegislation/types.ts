@@ -13,21 +13,11 @@ import type { PoliticalMetricCategoryId, PoliticalMetricId } from "../politicalM
  * instead. Deriving the union from the list means a new member is one edit, and
  * the tables demand their row at the same moment.
  */
-export const LAW_COUNTRY_IDS = ["US", "UK", "RU", "DD"] as const;
+export const LAW_COUNTRY_IDS = ["US", "UK", "RU", "DD", "DE"] as const;
 export type LawCountryId = (typeof LAW_COUNTRY_IDS)[number];
 
-/**
- * Countries that PRICE v2 laws without carrying a catalogue of their own.
- *
- * A reunified Germany holds a law book of rescoped `dd.*` laws but authors no
- * legislation of its own, so it needs a cost anchor and nothing else. Widening
- * `LawCountryId` to include it looked equivalent and is not: that type keys the
- * exhaustive `Record<LawCountryId, ...>` tables for the catalogue, the budget
- * keys, the seed tax rates and the calibration baselines, so adding a member
- * silently demands a full law catalogue for a country that has none. Anchors are
- * their own axis.
- */
-export type CostAnchorCountryId = LawCountryId | "DE";
+/** Countries the cost engine can price for. Every law-book country has an anchor. */
+export type CostAnchorCountryId = LawCountryId;
 
 export interface LawLevel {
   name: string;

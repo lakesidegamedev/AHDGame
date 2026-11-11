@@ -43,8 +43,15 @@ import { politicalParties } from "@/lib/seeds/reference/politicalParties";
 import { ukParties } from "@/lib/seeds/uk/ukParties";
 import { ruParties } from "@/lib/seeds/ru/ruParties";
 import { ddParties } from "@/lib/seeds/dd/ddParties";
+import { deStateMetrics } from "@/lib/countries/de/data/deStateMetrics";
+import { deRegions1953 } from "@/lib/countries/de/data/deRegions1953";
+import { deParties } from "@/lib/countries/de/data/deParties";
 import { REGIONAL_MODIFIERS_1953 } from "../seeds/regionalModifiers1953";
-import type { PoliticalMetricId, PoliticalMetricsCountryId } from "../types";
+import {
+  POLITICAL_METRIC_COUNTRY_IDS,
+  type PoliticalMetricId,
+  type PoliticalMetricsCountryId,
+} from "../types";
 
 /** The only preset this texture is derived for (single-1953-anchor table). */
 export const PLAYABLE_TEXTURE_PRESET = "1953-default";
@@ -96,6 +103,9 @@ const BASE_DOCS: Record<PoliticalMetricsCountryId, Array<Record<string, unknown>
   UK: ukStateMetrics as unknown as Array<Record<string, unknown>>,
   RU: ruStateMetrics as unknown as Array<Record<string, unknown>>,
   DD: ddStateMetrics1953 as unknown as Array<Record<string, unknown>>,
+  DE: deStateMetrics.filter((m) => deRegions1953.some((r) => r._id === m._id)) as unknown as Array<
+    Record<string, unknown>
+  >,
 };
 
 const PARTY_ROSTERS: Record<PoliticalMetricsCountryId, readonly unknown[]> = {
@@ -103,6 +113,7 @@ const PARTY_ROSTERS: Record<PoliticalMetricsCountryId, readonly unknown[]> = {
   UK: ukParties,
   RU: ruParties,
   DD: ddParties,
+  DE: deParties,
 };
 
 const REGION_SEEDS: Record<
@@ -113,6 +124,7 @@ const REGION_SEEDS: Record<
   UK: ukRegions1953,
   RU: ruRegions1953,
   DD: ddRegions1953,
+  DE: deRegions1953,
 };
 
 /**
@@ -128,6 +140,7 @@ const LEGACY_DOC_BUILDERS: Record<
   UK: (raw) => applyEra1953Adjustments(raw as never) as unknown as Record<string, unknown>,
   RU: (raw) => raw,
   DD: (raw) => raw,
+  DE: (raw) => raw,
 };
 
 /**
@@ -275,7 +288,7 @@ export function derivePlayableTexture1953(): {
 } {
   const texture = {} as PlayableTexture;
   const diagnostics: TextureCountryDiagnostic[] = [];
-  for (const countryId of ["US", "UK", "RU", "DD"] as const) {
+  for (const countryId of POLITICAL_METRIC_COUNTRY_IDS) {
     const { texture: t, diagnostic } = deriveOneCountry(countryId);
     texture[countryId] = t;
     diagnostics.push(diagnostic);

@@ -13,7 +13,6 @@ const EXPECTED_COUNTRIES = [
   "AT",
   "BR",
   "CN",
-  "DE",
   "ES",
   "FI",
   "FR",
@@ -61,7 +60,7 @@ describe("DEFENSE_BOARDS_1953", () => {
   });
 
   it("never contains playable countries — they have authored anchors already", () => {
-    for (const playable of ["US", "UK", "RU", "DD"]) {
+    for (const playable of ["US", "UK", "RU", "DD", "DE"]) {
       expect(DEFENSE_BOARDS_1953[playable], playable).toBeUndefined();
     }
   });
@@ -87,8 +86,6 @@ describe("DEFENSE_BOARDS_1953", () => {
   });
 
   it("reflects the 1953 postures the authoring rules call out", () => {
-    // West Germany has no army — the Bundeswehr is founded in 1955.
-    expect(DEFENSE_BOARDS_1953.DE["defense.armedForces"]).toBeLessThan(20);
     // Japan under Article 9, SDF barely forming.
     expect(DEFENSE_BOARDS_1953.JP["defense.projection"]).toBeLessThan(15);
     // Nigeria is still a British colony — no independent defense at all.
@@ -128,9 +125,9 @@ describe("defenseBoardFor", () => {
 
     // Every other era falls back AND says so. This is the whole point: a 2019
     // board carrying occupied-Germany defense values must not look authored.
-    expect(defenseBoardFor("DE", 2019)).toEqual(DEFENSE_BOARDS_1953.DE);
+    expect(defenseBoardFor("FR", 2019)).toEqual(DEFENSE_BOARDS_1953.FR);
     expect(getDefenseEraSubstitutions()).toEqual([
-      { countryId: "DE", requestedYear: 2019, usedYear: 1953 },
+      { countryId: "FR", requestedYear: 2019, usedYear: 1953 },
     ]);
   });
 
