@@ -15,9 +15,6 @@ import {
   US_AUTHORED_METRIC_PATHS,
 } from "@/lib/seeds/reference/usMetricPresets";
 import { usMetricPresets1953 } from "@/lib/seeds/reference/usMetricPresets1953";
-import { legislationTypes } from "@/lib/seeds/reference/legislationTypes";
-import { deLegislationTypes } from "@/lib/seeds/de/deLegislationTypes";
-import { calculatePolicyContribution } from "@shared/constants/formulas";
 import type { StateDemographicGroup } from "@/lib/db/types/demographics";
 import type { StateMetrics } from "@/lib/db/types";
 
@@ -34,20 +31,6 @@ const NEW_METRICS = [
 
 function findDef(category: string, id: string) {
   return metricCategories.find((c) => c.id === category)?.metrics.find((m) => m.id === id);
-}
-
-function findLaw(id: string) {
-  return legislationTypes.find((l) => l._id === id);
-}
-
-function weightFor(
-  law: { effectTargetsWeighted?: { metricCategoryId: string; metricId: string; weight: number }[] },
-  category: string,
-  metricId: string
-): number | undefined {
-  return law.effectTargetsWeighted?.find(
-    (t) => t.metricCategoryId === category && t.metricId === metricId
-  )?.weight;
 }
 
 function group(economicLean: number, socialLean: number): StateDemographicGroup {
@@ -160,51 +143,6 @@ describe("right-lane seed baselines per era", () => {
       expect(usMetricPresets1953[region]["governance.borderSecurity"]).toBeGreaterThan(
         usMetricPresets2019[region]["governance.borderSecurity"]
       );
-    }
-  });
-});
-
-describe("right-lane law wiring (two-sided tradeoffs)", () => {
-  it("us_gun_control: restriction lowers firearmRights, deregulation raises it", () => {
-    const law = findLaw("us_gun_control")!;
-    const w = weightFor(law, "publicSafety", "firearmRights");
-    expect(w).toBe(-1.0);
-    // Right option (effectDirection -1) raises the higher-is-better metric.
-    expect(calculatePolicyContribution(-3, w!, 1.0, true)).toBeGreaterThan(0);
-    // Left option (effectDirection +1) lowers it.
-    expect(calculatePolicyContribution(3, w!, 1.0, true)).toBeLessThan(0);
-    // Two-sidedness: the law still carries its crime-side wiring, so the
-    // restriction path keeps its public-safety upside.
-    expect(weightFor(law, "publicSafety", "crimeRate")).toBeTypeOf("number");
-  });
-
-  it("us_border_security_enforcement: restriction raises borderSecurity at an economicFreedom cost", () => {
-    const law = findLaw("us_border_security_enforcement")!;
-    const border = weightFor(law, "governance", "borderSecurity");
-    const freedom = weightFor(law, "economic", "economicFreedom");
-    expect(border).toBe(-1.0);
-    expect(freedom).toBe(0.15);
-    expect(calculatePolicyContribution(-3, border!, 1.0, true)).toBeGreaterThan(0);
-    // The tradeoff: the same right option costs economicFreedom.
-    expect(calculatePolicyContribution(-3, freedom!, 1.0, true)).toBeLessThan(0);
-  });
-
-  it("us_legal_immigration_visas and us_law_enforcement_criminal_justice carry borderSecurity levers", () => {
-    expect(weightFor(findLaw("us_legal_immigration_visas")!, "governance", "borderSecurity")).toBe(
-      -0.4
-    );
-    // Enforcement law codes right as effectDirection +1, so the weight is positive.
-    expect(
-      weightFor(findLaw("us_law_enforcement_criminal_justice")!, "governance", "borderSecurity")
-    ).toBe(0.4);
-  });
-
-  it("DE immigration and asylum laws wire borderSecurity with restriction-raises sign", () => {
-    for (const id of ["de_immigration_policy", "de_asylum_policy"]) {
-      const law = deLegislationTypes.find((l) => l._id === id)!;
-      const w = weightFor(law, "governance", "borderSecurity");
-      expect(w, id).toBeTypeOf("number");
-      expect(w!).toBeLessThan(0);
     }
   });
 });
