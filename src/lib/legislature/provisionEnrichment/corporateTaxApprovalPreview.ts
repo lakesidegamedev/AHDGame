@@ -24,11 +24,10 @@ export async function corporateTaxApprovalPreview(
           { projection: { taxRates: 1, taxRatePhaseIn: 1 } }
         )
       : scope.scope === "region"
-        ? await stateBudgetsCollection(db)
-            .findOne(
-              { _id: scope.regionId, countryId: scope.countryId },
-              { projection: { taxRates: 1 } }
-            )
+        ? await stateBudgetsCollection(db).findOne(
+            { _id: scope.regionId, countryId: scope.countryId },
+            { projection: { taxRates: 1 } }
+          )
         : null;
   const pending =
     budget && "taxRatePhaseIn" in budget ? budget.taxRatePhaseIn?.[change.taxType] : undefined;

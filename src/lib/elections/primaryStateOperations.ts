@@ -126,8 +126,7 @@ export async function buildStateOperations(
     }));
 
   // ── The field ─────────────────────────────────────────────────────────────
-  const tally = await electionVoteTalliesCollection(db)
-    .findOne({ electionId: election._id });
+  const tally = await electionVoteTalliesCollection(db).findOne({ electionId: election._id });
   const delegatesByCandidate = tally?.primaryDelegates?.[character.party ?? ""] ?? {};
 
   // Campaign colours must come from the campaigns, not be assumed absent: a
@@ -206,8 +205,10 @@ export async function buildStateOperations(
   // ── The viewer's shield ───────────────────────────────────────────────────
   // The same Rapid Response branch that blunts the national oppo drain. Read so
   // the panel can say why a hit landed softer than advertised.
-  const myCampaign = await campaignsCollection(db)
-    .findOne({ electionId: election._id, candidateId: character._id });
+  const myCampaign = await campaignsCollection(db).findOne({
+    electionId: election._id,
+    candidateId: character._id,
+  });
   const shieldTree = myCampaign?.mediaSpendingTree;
   const shieldPct =
     shieldTree?.starter && shieldTree.c > 0

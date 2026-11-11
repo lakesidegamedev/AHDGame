@@ -88,11 +88,10 @@ export async function fundUnionTreasury(
   }
 
   try {
-    const credited = await unionsCollection(db)
-      .updateOne(
-        { _id: union._id },
-        { $inc: { treasury: contribution }, $set: { updatedAt: new Date() } }
-      );
+    const credited = await unionsCollection(db).updateOne(
+      { _id: union._id },
+      { $inc: { treasury: contribution }, $set: { updatedAt: new Date() } }
+    );
     if (credited.modifiedCount === 0) {
       throw new Error("union treasury credit matched no document");
     }

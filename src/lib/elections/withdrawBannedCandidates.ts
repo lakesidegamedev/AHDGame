@@ -28,11 +28,10 @@ export async function withdrawAllCandidatesForUser(db: Db, userId: ObjectId): Pr
   const candidateIds = activeCandidates.map((c) => c._id);
 
   // Bulk-withdraw all active candidates
-  await electionCandidatesCollection(db)
-    .updateMany(
-      { _id: { $in: candidateIds } },
-      { $set: { status: "withdrawn", withdrawnAt: now } }
-    );
+  await electionCandidatesCollection(db).updateMany(
+    { _id: { $in: candidateIds } },
+    { $set: { status: "withdrawn", withdrawnAt: now } }
+  );
 
   // Clean up tallies concurrently (atomic per-election updates) and archive
   // all campaigns in one updateMany instead of a serial per-candidate walk.

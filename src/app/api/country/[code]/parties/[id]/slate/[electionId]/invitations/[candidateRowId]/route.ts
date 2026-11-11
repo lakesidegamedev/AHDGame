@@ -91,11 +91,10 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
         status: "active",
       });
       if (filedCandidate) {
-        await electionCandidatesCollection(db)
-          .updateOne(
-            { _id: filedCandidate._id },
-            { $set: { status: "withdrawn", withdrawnAt: now } }
-          );
+        await electionCandidatesCollection(db).updateOne(
+          { _id: filedCandidate._id },
+          { $set: { status: "withdrawn", withdrawnAt: now } }
+        );
         await removeWithdrawnCandidateFromTally(
           db,
           electionObjectId,

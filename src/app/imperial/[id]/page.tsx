@@ -30,12 +30,10 @@ export async function generateMetadata({
 
   let imp: ImperialCharacter | null = null;
   if (Number.isFinite(sequentialId)) {
-    imp = await imperialCharactersCollection(db)
-      .findOne({ sequentialId }, { projection });
+    imp = await imperialCharactersCollection(db).findOne({ sequentialId }, { projection });
   }
   if (!imp && ObjectId.isValid(id)) {
-    imp = await imperialCharactersCollection(db)
-      .findOne({ _id: new ObjectId(id) }, { projection });
+    imp = await imperialCharactersCollection(db).findOne({ _id: new ObjectId(id) }, { projection });
   }
   if (!imp) return {};
 

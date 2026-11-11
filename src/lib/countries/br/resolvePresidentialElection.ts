@@ -96,11 +96,10 @@ export async function resolveBrazilPresidentialElection(
     );
     if (finalists.some((c) => !c)) throw new Error("Brazil runoff lost a certified finalist");
     // Release the old active candidacies before opening the fresh ballot.
-    await electionCandidatesCollection(db)
-      .updateMany(
-        { electionId: election._id, status: "active" },
-        { $set: { status: "withdrawn", withdrawnAt: now } }
-      );
+    await electionCandidatesCollection(db).updateMany(
+      { electionId: election._id, status: "active" },
+      { $set: { status: "withdrawn", withdrawnAt: now } }
+    );
     const nextCandidates = finalists.map((c) => ({
       ...c!,
       _id: followupId(String(c!._id)),
@@ -109,10 +108,12 @@ export async function resolveBrazilPresidentialElection(
       enteredAt: now,
     }));
     for (const candidate of nextCandidates)
-      await electionCandidatesCollection(db)
-        .updateOne({ _id: candidate._id }, { $setOnInsert: candidate }, { upsert: true });
-    const existingTally = await electionVoteTalliesCollection(db)
-      .findOne({ electionId });
+      await electionCandidatesCollection(db).updateOne(
+        { _id: candidate._id },
+        { $setOnInsert: candidate },
+        { upsert: true }
+      );
+    const existingTally = await electionVoteTalliesCollection(db).findOne({ electionId });
     if (!existingTally)
       await initElectionVoteTally(electionId, nextCandidates, "BR", {
         byParty: {},
@@ -152,11 +153,10 @@ export async function resolveBrazilPresidentialElection(
       now,
       turn,
     });
-    await electionCandidatesCollection(db)
-      .updateMany(
-        { electionId: election._id, status: "active" },
-        { $set: { status: "withdrawn", withdrawnAt: now } }
-      );
+    await electionCandidatesCollection(db).updateMany(
+      { electionId: election._id, status: "active" },
+      { $set: { status: "withdrawn", withdrawnAt: now } }
+    );
   }
   await electionVoteTalliesCollection(db).updateOne(
     { electionId: election._id },

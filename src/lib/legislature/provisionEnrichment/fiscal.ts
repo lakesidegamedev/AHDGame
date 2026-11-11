@@ -44,11 +44,10 @@ export async function resolveProvisionFiscal(
     // national-scope slider always prices against the national one, even when
     // the slider appears on a regional bill.
     if (lt.taxSlider.scope === "state" && scope.scope === "region") {
-      const budget = await stateBudgetsCollection(db)
-        .findOne(
-          { _id: scope.regionId, countryId: countryId as StateBudget["countryId"] },
-          { projection: { taxRates: 1, taxBases: 1 } }
-        );
+      const budget = await stateBudgetsCollection(db).findOne(
+        { _id: scope.regionId, countryId: countryId as StateBudget["countryId"] },
+        { projection: { taxRates: 1, taxBases: 1 } }
+      );
       currentRate =
         (budget?.taxRates as Record<string, number> | undefined)?.[lt.taxSlider.taxType] ??
         lt.taxSlider.baselineRate;

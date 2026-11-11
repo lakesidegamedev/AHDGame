@@ -80,8 +80,10 @@ export async function GET(
     const partyIdStr = String(party.sequentialId);
 
     // Check if caller is state Chair/VC
-    const statePartyOrg = await statePartyOrgCollection(db)
-      .findOne({ stateId, partyId: partyIdStr });
+    const statePartyOrg = await statePartyOrgCollection(db).findOne({
+      stateId,
+      partyId: partyIdStr,
+    });
 
     const charId = auth.character._id.toString();
     const isStateChair = statePartyOrg?.chairId?.toString() === charId;
@@ -229,8 +231,10 @@ export async function POST(
       const partyIdStr = String(party.sequentialId);
 
       // Check if caller is state Chair/VC
-      const statePartyOrg = await statePartyOrgCollection(db)
-        .findOne({ stateId, partyId: partyIdStr });
+      const statePartyOrg = await statePartyOrgCollection(db).findOne({
+        stateId,
+        partyId: partyIdStr,
+      });
 
       const charId = auth.character._id.toString();
       const isStateChair = statePartyOrg?.chairId?.toString() === charId;
@@ -386,11 +390,10 @@ export async function POST(
       // Heal a never-initialized AP pool (paused / never-regenerated game) to the
       // tier cap so the atomic `$gte` deduct can match. Idempotent via `$exists:false`.
       if (statePartyOrg && statePartyOrg.nppActionPoints == null) {
-        await statePartyOrgCollection(db)
-          .updateOne(
-            { stateId, partyId: partyIdStr, nppActionPoints: { $exists: false } },
-            { $set: { nppActionPoints: availableAp } }
-          );
+        await statePartyOrgCollection(db).updateOne(
+          { stateId, partyId: partyIdStr, nppActionPoints: { $exists: false } },
+          { $set: { nppActionPoints: availableAp } }
+        );
       }
 
       await runWithOptionalTransaction(
@@ -478,8 +481,10 @@ export async function POST(
               rollbackUpdate.$unset = rollbackUnset;
             }
 
-            await statePartyOrgCollection(db)
-              .updateOne({ stateId, partyId: partyIdStr }, rollbackUpdate);
+            await statePartyOrgCollection(db).updateOne(
+              { stateId, partyId: partyIdStr },
+              rollbackUpdate
+            );
             throw error;
           }
         }

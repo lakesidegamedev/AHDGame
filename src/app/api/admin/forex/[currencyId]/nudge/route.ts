@@ -28,8 +28,10 @@ export async function POST(
     if (!parsed.success) return errorResponse(parsed.status, parsed.error);
 
     const db = await getDb();
-    const result = await exchangeRatesCollection(db)
-      .updateOne({ _id: currencyId }, { $set: { rate: parsed.data.rate, updatedAt: new Date() } });
+    const result = await exchangeRatesCollection(db).updateOne(
+      { _id: currencyId },
+      { $set: { rate: parsed.data.rate, updatedAt: new Date() } }
+    );
     if (result.matchedCount === 0) throw notFound("Currency not found");
 
     return NextResponse.json({ success: true });

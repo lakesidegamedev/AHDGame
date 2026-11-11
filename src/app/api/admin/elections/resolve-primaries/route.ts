@@ -249,11 +249,10 @@ export const POST = withAdminRoute(async (_auth) => {
       }
 
       if (loserIds.length > 0) {
-        await electionCandidatesCollection<Document>(db)
-          .updateMany(
-            { _id: { $in: loserIds.map((id) => new ObjectId(id)) } },
-            { $set: { status: "withdrawn", withdrawnAt: now } }
-          );
+        await electionCandidatesCollection<Document>(db).updateMany(
+          { _id: { $in: loserIds.map((id) => new ObjectId(id)) } },
+          { $set: { status: "withdrawn", withdrawnAt: now } }
+        );
         totalEliminated += loserIds.length;
 
         // Archive (not delete) campaign documents for eliminated primary

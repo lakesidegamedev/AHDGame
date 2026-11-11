@@ -308,8 +308,11 @@ export const PATCH = withAdminRoute(async (_auth, request: Request, { params }: 
     if (status !== undefined) extra.status = status;
     if (economyPreview !== undefined) extra.economyPreview = economyPreview;
     if (status !== undefined || economyPreview !== undefined) {
-      await countryGameStatesCollection(db)
-        .updateOne({ _id: countryId }, { $set: extra }, { upsert: true });
+      await countryGameStatesCollection(db).updateOne(
+        { _id: countryId },
+        { $set: extra },
+        { upsert: true }
+      );
     }
     return NextResponse.json({ success: true });
   }
@@ -324,8 +327,11 @@ export const PATCH = withAdminRoute(async (_auth, request: Request, { params }: 
   }
   if (economyPreview !== undefined) updateFields.economyPreview = economyPreview;
 
-  await countryGameStatesCollection(db)
-    .updateOne({ _id: countryId }, { $set: updateFields }, { upsert: true });
+  await countryGameStatesCollection(db).updateOne(
+    { _id: countryId },
+    { $set: updateFields },
+    { upsert: true }
+  );
 
   return NextResponse.json({ success: true });
 });

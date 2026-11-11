@@ -111,12 +111,11 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(400, `${characterName} is already in this race`);
     }
 
-    const partyAlreadyHasCandidate = await electionCandidatesCollection(db)
-      .findOne({
-        electionId: electionObjectId,
-        status: "active",
-        party,
-      });
+    const partyAlreadyHasCandidate = await electionCandidatesCollection(db).findOne({
+      electionId: electionObjectId,
+      status: "active",
+      party,
+    });
 
     if (partyAlreadyHasCandidate) {
       return errorResponse(
@@ -202,8 +201,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       .toArray();
 
     // Get current vote tally
-    const tally = await electionVoteTalliesCollection(db)
-      .findOne({ electionId: electionObjectId });
+    const tally = await electionVoteTalliesCollection(db).findOne({ electionId: electionObjectId });
 
     if (tally && withdrawnSameParty.length > 0) {
       // Transfer votes from withdrawn candidates to new candidate
@@ -226,11 +224,10 @@ export async function POST(request: Request, { params }: RouteParams) {
           for (const unitId in tally.totalVotesByUnit) {
             const unitVotes = tally.totalVotesByUnit[unitId][withdrawnId] || 0;
             if (unitVotes > 0) {
-              await electionVoteTalliesCollection(db)
-                .updateOne(
-                  { electionId: electionObjectId },
-                  { $inc: { [`totalVotesByUnit.${unitId}.${candidateId}`]: unitVotes } }
-                );
+              await electionVoteTalliesCollection(db).updateOne(
+                { electionId: electionObjectId },
+                { $inc: { [`totalVotesByUnit.${unitId}.${candidateId}`]: unitVotes } }
+              );
             }
             unsetTotalVotesByUnit[`totalVotesByUnit.${unitId}.${withdrawnId}`] = "";
           }

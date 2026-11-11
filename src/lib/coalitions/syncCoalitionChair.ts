@@ -43,11 +43,10 @@ export async function syncCoalitionChairsForParty(
   // legitimate sync target, not a skip case.
   if (!party) return 0;
   const newChairId = party.chairId ?? null;
-  const result = await coalitionsCollection(db)
-    .updateMany(
-      { chairPartyId: partyId, chairCharacterId: { $ne: newChairId } as unknown as ObjectId },
-      { $set: { chairCharacterId: newChairId as ObjectId, updatedAt: now } }
-    );
+  const result = await coalitionsCollection(db).updateMany(
+    { chairPartyId: partyId, chairCharacterId: { $ne: newChairId } as unknown as ObjectId },
+    { $set: { chairCharacterId: newChairId as ObjectId, updatedAt: now } }
+  );
   return result.modifiedCount;
 }
 

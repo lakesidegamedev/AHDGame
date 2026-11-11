@@ -150,8 +150,7 @@ export async function POST() {
     }
 
     if (toInsert.length > 0) {
-      await electionCandidatesCollection(db)
-        .insertMany(toInsert as ElectionCandidate[]);
+      await electionCandidatesCollection(db).insertMany(toInsert as ElectionCandidate[]);
     }
 
     return NextResponse.json({

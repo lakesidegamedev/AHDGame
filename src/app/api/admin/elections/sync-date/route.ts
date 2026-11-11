@@ -785,8 +785,12 @@ export const POST = withAdminRoute(async (_auth) => {
   let deletedCount = 0;
   if (oldElectionIds.length > 0) {
     await Promise.all([
-      electionCandidatesCollection<Document>(db).deleteMany({ electionId: { $in: oldElectionIds } }),
-      electionVoteTalliesCollection<Document>(db).deleteMany({ electionId: { $in: oldElectionIds } }),
+      electionCandidatesCollection<Document>(db).deleteMany({
+        electionId: { $in: oldElectionIds },
+      }),
+      electionVoteTalliesCollection<Document>(db).deleteMany({
+        electionId: { $in: oldElectionIds },
+      }),
       campaignsCollection<Document>(db).deleteMany({ electionId: { $in: oldElectionIds } }),
       // Clear election-linked data that persists beyond the elections collection:
       // primary snapshots captured at primary close, and NPP/player endorsements tied

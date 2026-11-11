@@ -264,8 +264,10 @@ export async function executeFundOnlyBuyout(
           ? Math.round((topUpAnchorTotal - creditedAnchor) * 100) / 100
           : Math.round((s.sharesSold / boughtBack) * topUpAnchorTotal * 100) / 100;
       if (share <= 0) continue;
-      await indexFundsCollection(db)
-        .updateOne({ _id: s.fundId }, { $inc: { cashAnchor: share }, $set: { updatedAt: now } });
+      await indexFundsCollection(db).updateOne(
+        { _id: s.fundId },
+        { $inc: { cashAnchor: share }, $set: { updatedAt: now } }
+      );
       creditedAnchor += share;
     }
     cashPaidAnchor = Math.round((cashPaidAnchor + topUpAnchorTotal) * 100) / 100;

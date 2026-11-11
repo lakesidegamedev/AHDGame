@@ -775,8 +775,7 @@ export async function fileAcceptedSlateRows(ctx: NPPContext): Promise<SlateFilin
         isNPP: true,
         nppId: npp._id,
       };
-      await electionCandidatesCollection(db)
-        .insertOne(candidateDoc as ElectionCandidate);
+      await electionCandidatesCollection(db).insertOne(candidateDoc as ElectionCandidate);
 
       // Mirror the new candidate into the in-memory map so the rest of
       // processElectionEntry sees the slot as filled.

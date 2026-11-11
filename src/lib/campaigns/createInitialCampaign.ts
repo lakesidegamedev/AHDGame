@@ -36,8 +36,10 @@ export async function createInitialCampaign({
   party,
   now = new Date(),
 }: CreateInitialCampaignArgs): Promise<ObjectId> {
-  const existing = await campaignsCollection(db)
-    .findOne({ electionId, candidateId }, { projection: { _id: 1, status: 1 } });
+  const existing = await campaignsCollection(db).findOne(
+    { electionId, candidateId },
+    { projection: { _id: 1, status: 1 } }
+  );
   if (existing) {
     // Re-entering candidate keeps retained funds/levels: reactivate a campaign
     // archived by an earlier withdrawal. Active rows are a no-op.
@@ -124,8 +126,10 @@ export async function ensureCampaignForCandidate({
   party,
   now = new Date(),
 }: CreateInitialCampaignArgs): Promise<ObjectId> {
-  const existing = await campaignsCollection(db)
-    .findOne({ electionId, candidateId }, { projection: { _id: 1, status: 1 } });
+  const existing = await campaignsCollection(db).findOne(
+    { electionId, candidateId },
+    { projection: { _id: 1, status: 1 } }
+  );
 
   if (!existing) {
     return createInitialCampaign({ db, electionId, candidateId, candidateIsNPP, party, now });

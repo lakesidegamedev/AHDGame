@@ -235,19 +235,20 @@ export async function applyNppDirectAction(
     const context: CapitalActionLog["context"] = {};
     if (plan.sideEffects.createEndorsement) {
       const candidacyOid = new ObjectId(plan.sideEffects.createEndorsement.candidacyId);
-      const candidacy = await electionCandidatesCollection(db)
-        .findOne({ _id: candidacyOid, status: "active" }, session ? { session } : undefined);
+      const candidacy = await electionCandidatesCollection(db).findOne(
+        { _id: candidacyOid, status: "active" },
+        session ? { session } : undefined
+      );
       if (candidacy) {
         const [election, candidateCountAtDecision] = await Promise.all([
           electionsCollection(db).findOne(
             { _id: candidacy.electionId },
             session ? { session } : undefined
           ),
-          electionCandidatesCollection(db)
-            .countDocuments(
-              { electionId: candidacy.electionId, status: "active" },
-              session ? { session } : undefined
-            ),
+          electionCandidatesCollection(db).countDocuments(
+            { electionId: candidacy.electionId, status: "active" },
+            session ? { session } : undefined
+          ),
         ]);
 
         if (election) {

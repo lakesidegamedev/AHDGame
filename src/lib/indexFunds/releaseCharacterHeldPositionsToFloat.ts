@@ -62,8 +62,10 @@ export async function releaseCharacterHeldIndexFundPositionsToFloat(
     const debited = await debitFundPosition(db, pos.fundId, "character", { characterId }, units);
     if (!debited.ok) continue;
 
-    const fund = await indexFundsCollection(db)
-      .findOne({ _id: pos.fundId }, { projection: { quotedNav: 1 } });
+    const fund = await indexFundsCollection(db).findOne(
+      { _id: pos.fundId },
+      { projection: { quotedNav: 1 } }
+    );
 
     await creditFundPosition(db, pos.fundId, "fund_reserve", {}, units, fund?.quotedNav ?? 0);
 

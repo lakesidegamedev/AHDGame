@@ -56,8 +56,9 @@ export default async function CampaignManagerPage({
       .find({ countryId }, { projection: { _id: 1, name: 1 } })
       .toArray(),
     getGameStatePreset(db),
-    countryGameStatesCollection<{ _id: string } & NonNullable<CountryRuntimeState>>(db)
-      .findOne({ _id: countryId }),
+    countryGameStatesCollection<{ _id: string } & NonNullable<CountryRuntimeState>>(db).findOne({
+      _id: countryId,
+    }),
     loadCountryNameOverrides(db),
   ]);
   const view = campaignManagerCountryView(countryId, preset, countryState, nameOverrides);

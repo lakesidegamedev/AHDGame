@@ -118,8 +118,9 @@ export async function POST(request: Request, { params }: RouteParams) {
         .find({ characterId: character._id, electionId: electionObjectId, isActive: true })
         .toArray();
       for (const prior of priorEndorsements) {
-        const priorCandidate = await electionCandidatesCollection(db)
-          .findOne({ _id: prior.candidateId });
+        const priorCandidate = await electionCandidatesCollection(db).findOne({
+          _id: prior.candidateId,
+        });
         if (priorCandidate && !priorCandidate.isNPP && priorCandidate.characterId) {
           await applyEndorsementSupportBump(db, priorCandidate.characterId, true);
         }

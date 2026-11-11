@@ -33,8 +33,10 @@ export async function processBg1991ConstitutionalNpcProposal(
     return false;
   const decision = await loadBg1991ConstitutionalDecision(db, game, turn);
   if (!decision?.available || decision.proposal) return false;
-  const government = await governmentFormationsCollection(db)
-    .findOne({ _id: "BG" }, { projection: { status: 1, pmCharacterId: 1, pmNppId: 1 } });
+  const government = await governmentFormationsCollection(db).findOne(
+    { _id: "BG" },
+    { projection: { status: 1, pmCharacterId: 1, pmNppId: 1 } }
+  );
   if (government?.status !== "formed" || government.pmCharacterId || !government.pmNppId)
     return false;
   const [leader, officials, regions] = await Promise.all([

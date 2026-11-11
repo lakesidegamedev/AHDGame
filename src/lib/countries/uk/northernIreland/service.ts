@@ -83,11 +83,10 @@ export async function reconcileNorthernIrelandGovernance(
         { _id: { $in: ids }, status: { $in: ["active", "upcoming"] } },
         { $set: { status: "cancelled", updatedAt: now } }
       );
-      await electionCandidatesCollection(db)
-        .updateMany(
-          { electionId: { $in: ids }, status: "active" },
-          { $set: { status: "withdrawn", withdrawnAt: now } }
-        );
+      await electionCandidatesCollection(db).updateMany(
+        { electionId: { $in: ids }, status: "active" },
+        { $set: { status: "withdrawn", withdrawnAt: now } }
+      );
     }
   }
   // Persist last. A retry repeats idempotent cleanup after a partial failure.

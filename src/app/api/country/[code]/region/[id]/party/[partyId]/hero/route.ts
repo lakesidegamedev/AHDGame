@@ -79,8 +79,7 @@ export async function POST(
       return errorResponse(403, "Only the state party chair can update the hero image");
     }
 
-    await statePartyOrgCollection(db)
-      .updateOne({ _id: orgId }, { $set: { heroImageUrl } });
+    await statePartyOrgCollection(db).updateOne({ _id: orgId }, { $set: { heroImageUrl } });
 
     return NextResponse.json({ message: "Hero image updated successfully" });
   } catch (error) {

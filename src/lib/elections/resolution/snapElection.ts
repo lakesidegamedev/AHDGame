@@ -317,11 +317,10 @@ export async function triggerSnapElection(
       { _id: { $in: cancelledElectionIds } },
       { $set: { status: "cancelled" as ElectionStatus, updatedAt: now } }
     );
-    await electionCandidatesCollection<Document>(db)
-      .updateMany(
-        { electionId: { $in: cancelledElectionIds }, status: "active" },
-        { $set: { status: "withdrawn", withdrawnAt: now } }
-      );
+    await electionCandidatesCollection<Document>(db).updateMany(
+      { electionId: { $in: cancelledElectionIds }, status: "active" },
+      { $set: { status: "withdrawn", withdrawnAt: now } }
+    );
   }
 
   // 2. Fail in-progress bills whose currentChamber is the lower chamber.
@@ -346,8 +345,10 @@ export async function triggerSnapElection(
   const seatsByRegion = new Map(seats.map((s) => [s.state, s.totalSeats ?? 1]));
   const jpCountryState =
     countryId === COUNTRY_CONFIGS.JP.id
-      ? await countryGameStatesCollection(db)
-          .findOne({ _id: COUNTRY_CONFIGS.JP.id }, { projection: { jpShugiinElectoralMandate: 1 } })
+      ? await countryGameStatesCollection(db).findOne(
+          { _id: COUNTRY_CONFIGS.JP.id },
+          { projection: { jpShugiinElectoralMandate: 1 } }
+        )
       : null;
   const jpLegacySeats = gameState?.preset ? getJpShugiinSeats(gameState.preset) : {};
 

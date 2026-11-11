@@ -131,7 +131,10 @@ async function deliver(db: Db, original: Batch): Promise<void> {
           { projection: { incomeTaxBatchReceipt: 1 } }
         )
         .toArray(),
-      imperialCharactersCollection<{ _id: ObjectId; incomeTaxBatchReceipt?: IncomeTaxBatchReceipt }>(db)
+      imperialCharactersCollection<{
+        _id: ObjectId;
+        incomeTaxBatchReceipt?: IncomeTaxBatchReceipt;
+      }>(db)
         .find(
           {
             _id: {

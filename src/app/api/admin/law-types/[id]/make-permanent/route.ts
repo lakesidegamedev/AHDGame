@@ -25,8 +25,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     }
 
     // Set isPermanent to true
-    await legislationTypesCollection(db)
-      .updateOne({ _id: id }, { $set: { isPermanent: true, updatedAt: new Date() } });
+    await legislationTypesCollection(db).updateOne(
+      { _id: id },
+      { $set: { isPermanent: true, updatedAt: new Date() } }
+    );
 
     // Get all permanent admin types from DB
     const permanentTypes = await legislationTypesCollection(db)

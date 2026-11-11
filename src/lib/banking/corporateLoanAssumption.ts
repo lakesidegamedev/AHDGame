@@ -59,11 +59,10 @@ export async function restoreCorporateLoans(
   input: { ids: readonly ObjectId[]; fromId: ObjectId; toId: ObjectId }
 ): Promise<void> {
   if (input.ids.length === 0) return;
-  await bankLoansCollection(db)
-    .updateMany(
-      { _id: { $in: [...input.ids] }, borrowerType: "corporation", borrowerId: input.toId },
-      { $set: { borrowerId: input.fromId } }
-    );
+  await bankLoansCollection(db).updateMany(
+    { _id: { $in: [...input.ids] }, borrowerType: "corporation", borrowerId: input.toId },
+    { $set: { borrowerId: input.fromId } }
+  );
 }
 
 /**

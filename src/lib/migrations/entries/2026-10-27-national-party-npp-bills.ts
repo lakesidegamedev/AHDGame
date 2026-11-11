@@ -9,8 +9,10 @@ export const migration: Migration = {
   idempotent: true,
   execute: async (db, ctx) => {
     if (!ctx.dryRun)
-      await billsCollection<Document>(db)
-        .createIndex(NATIONAL_PARTY_NPP_INDEX.key, NATIONAL_PARTY_NPP_INDEX.options);
+      await billsCollection<Document>(db).createIndex(
+        NATIONAL_PARTY_NPP_INDEX.key,
+        NATIONAL_PARTY_NPP_INDEX.options
+      );
     return {
       documentsUpdated: 0,
       notes: [

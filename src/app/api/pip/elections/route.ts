@@ -113,8 +113,10 @@ export async function GET() {
     // Player race (auth only)
     let playerRace = null;
     if (character) {
-      const candidacy = await electionCandidatesCollection(db)
-        .findOne({ characterId: character._id, status: "active" });
+      const candidacy = await electionCandidatesCollection(db).findOne({
+        characterId: character._id,
+        status: "active",
+      });
 
       if (candidacy) {
         const election = await electionsCollection(db).findOne({
@@ -132,8 +134,7 @@ export async function GET() {
             electionCandidatesCollection(db)
               .find({ electionId: election._id, status: "active" })
               .toArray(),
-            electionVoteTalliesCollection(db)
-              .findOne({ electionId: election._id }),
+            electionVoteTalliesCollection(db).findOne({ electionId: election._id }),
           ]);
 
           let position: number | null = null;

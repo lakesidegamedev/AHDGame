@@ -161,8 +161,10 @@ async function countryLabourApproval(db: Db, countryId: string): Promise<number>
 
 /** True when the country has at least one union to be banned. */
 async function countryHasUnions(db: Db, countryId: string): Promise<boolean> {
-  const union = await unionsCollection(db)
-    .findOne({ countryId: countryId as CountryId }, { projection: { _id: 1 } });
+  const union = await unionsCollection(db).findOne(
+    { countryId: countryId as CountryId },
+    { projection: { _id: 1 } }
+  );
   return union !== null;
 }
 
@@ -278,11 +280,10 @@ async function endUnionBanStrike(
   outcome: string
 ): Promise<void> {
   const now = new Date();
-  await crisesCollection(db)
-    .updateOne(
-      { _id: crisis._id, status: "active" },
-      { $set: { status: "resolved", endTurn: currentTurn, resolvedAt: now } }
-    );
+  await crisesCollection(db).updateOne(
+    { _id: crisis._id, status: "active" },
+    { $set: { status: "resolved", endTurn: currentTurn, resolvedAt: now } }
+  );
   await announceUnionBanStrikeEnd(crisis.countryIds[0] ?? "", outcome);
 }
 
@@ -439,11 +440,10 @@ async function respondByRidingItOut(
   countryId: string
 ): Promise<UnionBanStrikeResponseResult> {
   const intensity = await countryUndergroundIntensity(db, countryId as CountryId);
-  await crisesCollection(db)
-    .updateOne(
-      { _id: crisis._id },
-      { $set: { effects: diminishEffects(crisis.effects, rideOutEffectRetention(intensity)) } }
-    );
+  await crisesCollection(db).updateOne(
+    { _id: crisis._id },
+    { $set: { effects: diminishEffects(crisis.effects, rideOutEffectRetention(intensity)) } }
+  );
   await chargeExecutive(db, characterId, countryId, UNION_BAN_EXECUTIVE_COSTS.rideOut);
   return {};
 }

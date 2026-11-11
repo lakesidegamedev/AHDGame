@@ -135,8 +135,11 @@ export async function nppBuildPartyOrg(
   const hasPresence = await checkPartyPresence(db, stateId, partyIdStr);
   if (!hasPresence) return { ok: false, reason: "No presence in this state." };
 
-  let spenderRow = await statePartyOrgCollection(db)
-    .findOne({ countryId, stateId, partyId: partyIdStr });
+  let spenderRow = await statePartyOrgCollection(db).findOne({
+    countryId,
+    stateId,
+    partyId: partyIdStr,
+  });
   if (!spenderRow) {
     spenderRow = await ensureStatePartyOrgRow(db, {
       countryId,

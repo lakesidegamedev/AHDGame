@@ -118,8 +118,10 @@ export async function charterFund(db: Db, input: CharterFundInput): Promise<Char
   const name = input.name.trim();
 
   const eligibility = await fundCreationEligibility(db, sponsor, {
-    replay: !!(await indexFundsCollection<Document>(db)
-      .findOne({ slug: sponsoredFundSlug(tickerSymbol), sponsorCorporationId: sponsor._id })),
+    replay: !!(await indexFundsCollection<Document>(db).findOne({
+      slug: sponsoredFundSlug(tickerSymbol),
+      sponsorCorporationId: sponsor._id,
+    })),
   });
   if (eligibility) return { ok: false, status: 403, error: eligibility };
 
@@ -140,8 +142,10 @@ async function commitCharter(
       error: "Corporation ownership changed. Reload before creating a fund.",
     };
   const eligibility = await fundCreationEligibility(db, sponsor, {
-    replay: !!(await indexFundsCollection<Document>(db)
-      .findOne({ slug: sponsoredFundSlug(tickerSymbol), sponsorCorporationId: sponsor._id })),
+    replay: !!(await indexFundsCollection<Document>(db).findOne({
+      slug: sponsoredFundSlug(tickerSymbol),
+      sponsorCorporationId: sponsor._id,
+    })),
   });
   if (eligibility) return { ok: false, status: 403, error: eligibility };
   let mandate: PickedStockMandate | undefined;

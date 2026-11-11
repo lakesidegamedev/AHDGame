@@ -90,8 +90,10 @@ async function statePviForRace(
   countryId: string,
   electionId: ObjectId
 ): Promise<Map<string, number> | null> {
-  const tally = await electionVoteTalliesCollection(db)
-    .findOne({ electionId }, { projection: { totalVotesByUnit: 1, candidateParties: 1 } });
+  const tally = await electionVoteTalliesCollection(db).findOne(
+    { electionId },
+    { projection: { totalVotesByUnit: 1, candidateParties: 1 } }
+  );
   const byUnit = tally?.totalVotesByUnit;
   if (!byUnit || !tally.candidateParties) return null;
 

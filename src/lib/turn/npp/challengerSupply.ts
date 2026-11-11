@@ -400,8 +400,7 @@ export async function processChallengerGeneration(now: Date): Promise<number> {
           nppId: npp._id,
         };
         try {
-          await electionCandidatesCollection(db)
-            .insertOne(candidateDoc as ElectionCandidate);
+          await electionCandidatesCollection(db).insertOne(candidateDoc as ElectionCandidate);
           hasCandidate.add(`${String(primary._id)}_${party}`);
           electionsWithCandidate.add(String(primary._id));
           nppsInActiveCandidacy.add(String(npp._id));
@@ -453,8 +452,7 @@ export async function processChallengerGeneration(now: Date): Promise<number> {
             nppId: npp._id,
           };
           try {
-            await electionCandidatesCollection(db)
-              .insertOne(candidateDoc as ElectionCandidate);
+            await electionCandidatesCollection(db).insertOne(candidateDoc as ElectionCandidate);
             hasCandidate.add(`${String(primary._id)}_${party}`);
             electionsWithCandidate.add(String(primary._id));
             nppsInActiveCandidacy.add(String(npp._id));

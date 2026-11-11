@@ -14,11 +14,10 @@ export async function seedUSGovernmentFormation(db: Db, log: (msg: string) => vo
   const { usGovernmentFormation } = await import("@/lib/seeds/us/usGovernmentFormation");
   const now = new Date();
   const { _id, ...formationData } = usGovernmentFormation;
-  await governmentFormationsCollection(db)
-    .updateOne(
-      { _id },
-      { $set: { ...formationData, createdAt: now, updatedAt: now } },
-      { upsert: true }
-    );
+  await governmentFormationsCollection(db).updateOne(
+    { _id },
+    { $set: { ...formationData, createdAt: now, updatedAt: now } },
+    { upsert: true }
+  );
   log("Seeded US government formation document");
 }

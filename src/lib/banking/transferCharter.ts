@@ -217,26 +217,22 @@ async function rekeySatellites(
   const destHex = destId.toString();
   const holderPath = `currencyBalances.savingsHolder.${currency}` as const;
 
-  const loans = await bankLoansCollection(db)
-    .updateMany(
-      { bankCorporationId: targetId },
-      { $set: { bankCorporationId: destId, updatedAt: now } }
-    );
-  const interbankLent = await interbankLoansCollection(db)
-    .updateMany(
-      { lenderCorporationId: targetId },
-      { $set: { lenderCorporationId: destId, updatedAt: now } }
-    );
-  const interbankBorrowed = await interbankLoansCollection(db)
-    .updateMany(
-      { borrowerCorporationId: targetId },
-      { $set: { borrowerCorporationId: destId, updatedAt: now } }
-    );
-  const accounts = await savingsAccountsCollection(db)
-    .updateMany(
-      { holder: targetHex, status: { $ne: "closed" } },
-      { $set: { holder: destHex, updatedAt: now } }
-    );
+  const loans = await bankLoansCollection(db).updateMany(
+    { bankCorporationId: targetId },
+    { $set: { bankCorporationId: destId, updatedAt: now } }
+  );
+  const interbankLent = await interbankLoansCollection(db).updateMany(
+    { lenderCorporationId: targetId },
+    { $set: { lenderCorporationId: destId, updatedAt: now } }
+  );
+  const interbankBorrowed = await interbankLoansCollection(db).updateMany(
+    { borrowerCorporationId: targetId },
+    { $set: { borrowerCorporationId: destId, updatedAt: now } }
+  );
+  const accounts = await savingsAccountsCollection(db).updateMany(
+    { holder: targetHex, status: { $ne: "closed" } },
+    { $set: { holder: destHex, updatedAt: now } }
+  );
   const pointers = await charactersCollection(db).updateMany(
     { [holderPath]: targetHex },
     { $set: { [holderPath]: destHex, updatedAt: now } }

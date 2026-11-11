@@ -293,7 +293,9 @@ export async function runAutoReelectionEntry(
     try {
       // Unordered: a duplicate key on one document still inserts the rest,
       // preserving the per-character tolerance the old try/catch had.
-      await electionCandidatesCollection<Document>(db).insertMany(pending as never[], { ordered: false });
+      await electionCandidatesCollection<Document>(db).insertMany(pending as never[], {
+        ordered: false,
+      });
     } catch {
       // Duplicate key or transient error - the unordered write still applied
       // everything it could, same as skipping silently per character before.

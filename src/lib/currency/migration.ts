@@ -348,7 +348,9 @@ export async function createForexIndexes(db: Db): Promise<void> {
     db
       .collection("tradeHistory")
       .createIndex({ buyerCharacterId: 1, turn: -1 }, { background: true }),
-    currencyOrdersCollection<Document>(db)
-      .createIndex({ status: 1, expiresAtTurn: 1 }, { background: true }),
+    currencyOrdersCollection<Document>(db).createIndex(
+      { status: 1, expiresAtTurn: 1 },
+      { background: true }
+    ),
   ]);
 }

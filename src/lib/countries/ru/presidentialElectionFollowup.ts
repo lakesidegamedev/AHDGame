@@ -51,11 +51,10 @@ export async function materializeRussianPresidentialFollowup(input: {
   if (result.nextElectionId) return result.nextElectionId;
   if (!Number.isSafeInteger(turn) || turn < result.resolvedOnTurn)
     throw new Error("Russian followup cannot precede its result");
-  const country = await countryGameStatesCollection(db)
-    .findOne(
-      { _id: "RU", ruPresidencyMandateSinceTurn: result.mandateSinceTurn },
-      { session, projection: { _id: 1 } }
-    );
+  const country = await countryGameStatesCollection(db).findOne(
+    { _id: "RU", ruPresidencyMandateSinceTurn: result.mandateSinceTurn },
+    { session, projection: { _id: 1 } }
+  );
   if (!country) throw new Error("Russian followup mandate changed");
   const elections = electionsCollection(db);
   const predecessor = await elections.findOne(
@@ -154,8 +153,7 @@ export async function materializeRussianPresidentialFollowup(input: {
     { session }
   );
   if (nextCandidates.length) {
-    await electionCandidatesCollection(db)
-      .insertMany(nextCandidates, { session });
+    await electionCandidatesCollection(db).insertMany(nextCandidates, { session });
     await campaignsCollection(db).updateMany(
       {
         electionId: predecessorElectionId,

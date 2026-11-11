@@ -19,8 +19,10 @@ export async function resolveCampaignRedirect(
   query: CampaignRedirectQuery
 ): Promise<string | null> {
   if (!ObjectId.isValid(campaignId)) return null;
-  const campaign = await campaignsCollection(db)
-    .findOne({ _id: new ObjectId(campaignId) }, { projection: { electionId: 1 } });
+  const campaign = await campaignsCollection(db).findOne(
+    { _id: new ObjectId(campaignId) },
+    { projection: { electionId: 1 } }
+  );
   if (!campaign) return null;
 
   const election = await electionsCollection(db).findOne(

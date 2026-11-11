@@ -70,8 +70,10 @@ async function materializeHu2011Count(input: {
     { session, projection: { preset: 1, huAssemblyReformedAtYear: 1 } }
   );
   if (game?.preset !== "1991-default") return null;
-  const country = await countryGameStatesCollection(db)
-    .findOne({ _id: "HU" }, { session, projection: { huElectoralSystem2011SinceTurn: 1 } });
+  const country = await countryGameStatesCollection(db).findOne(
+    { _id: "HU" },
+    { session, projection: { huElectoralSystem2011SinceTurn: 1 } }
+  );
   const polls = await electionsCollection(db)
     .find(
       { countryId: "HU", electionType: "nationalAssembly", cycle },
@@ -256,12 +258,11 @@ async function materializeHu2011Count(input: {
     installed: assembly.installed,
     createdAt: now,
   };
-  await electionVoteTalliesCollection(db)
-    .updateMany(
-      { electionId: { $in: polls.map((row) => row._id) }, finalized: false },
-      { $set: { updatedAt: now } },
-      { session }
-    );
+  await electionVoteTalliesCollection(db).updateMany(
+    { electionId: { $in: polls.map((row) => row._id) }, finalized: false },
+    { $set: { updatedAt: now } },
+    { session }
+  );
   await journal.insertOne(receipt, { session });
   return receipt;
 }

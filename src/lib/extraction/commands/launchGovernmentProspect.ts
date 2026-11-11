@@ -111,8 +111,10 @@ export async function launchGovernmentProspect(
   let fundedPaymentKey = fundedClaim?.fundingKey;
   let fundedSurveyId = fundedClaim?._id;
   if (fundedClaim && fundedPaymentKey) {
-    const prior = await bankMoneyMovesCollection<{ _id: string }>(db)
-      .findOne({ _id: fundedPaymentKey }, { projection: { _id: 1 } });
+    const prior = await bankMoneyMovesCollection<{ _id: string }>(db).findOne(
+      { _id: fundedPaymentKey },
+      { projection: { _id: 1 } }
+    );
     if (prior) {
       const resumed = await resumeSettlement(db, fundedPaymentKey);
       if (resumed.status === "rejected") {

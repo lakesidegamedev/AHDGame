@@ -125,11 +125,10 @@ async function loadCurrentRate(
   if (scope === "regional") {
     const normalizedRegionId = regionId?.trim().toUpperCase();
     if (!normalizedRegionId) return null;
-    const budget = await stateBudgetsCollection(db)
-      .findOne(
-        { _id: normalizedRegionId, countryId: countryId as StateBudget["countryId"] },
-        { projection: { taxRates: 1 } }
-      );
+    const budget = await stateBudgetsCollection(db).findOne(
+      { _id: normalizedRegionId, countryId: countryId as StateBudget["countryId"] },
+      { projection: { taxRates: 1 } }
+    );
     const tier = incomeTierForTaxKey(taxType);
     const rate =
       tier && budget?.taxRates

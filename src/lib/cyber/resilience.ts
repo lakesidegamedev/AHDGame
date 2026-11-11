@@ -81,7 +81,9 @@ export async function loadCyberResilience(
     const countryId = mandateIds.get(policy.legislationTypeId);
     if (countryId && finite(policy.policyOptionIndex)) {
       const isBook = BOOK_COUNTRIES.has(countryId);
-      const index = isBook ? mandateIndexForLevel(policy.policyOptionIndex) : policy.policyOptionIndex;
+      const index = isBook
+        ? mandateIndexForLevel(policy.policyOptionIndex)
+        : policy.policyOptionIndex;
       if (index !== null) mandateByCountry.set(countryId, index);
     }
   }

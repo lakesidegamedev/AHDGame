@@ -60,8 +60,10 @@ export async function settlePriorCorporateCashArrears(input: CashArrearsInput): 
   if (operatingPaid > 0) {
     // Existence only: the receipt is read by resumeSettlement under its own
     // projection when it is there, so this check needs no status or legs.
-    const existing = await bankMoneyMovesCollection<{ _id: string }>(db)
-      .findOne({ _id: operatingKey }, { projection: { _id: 1 } });
+    const existing = await bankMoneyMovesCollection<{ _id: string }>(db).findOne(
+      { _id: operatingKey },
+      { projection: { _id: 1 } }
+    );
     if (existing) {
       const resumed = await resumeSettlement(db, operatingKey);
       if (resumed.status !== "applied" && resumed.status !== "replayed") {
@@ -146,8 +148,10 @@ export async function settlePriorCorporateCashArrears(input: CashArrearsInput): 
   if (!(totalPaidAnchor > 0)) return cash;
 
   const taxKey = `${taxPrefix}${turn}`;
-  const existingTax = await bankMoneyMovesCollection<{ _id: string }>(db)
-    .findOne({ _id: taxKey }, { projection: { _id: 1 } });
+  const existingTax = await bankMoneyMovesCollection<{ _id: string }>(db).findOne(
+    { _id: taxKey },
+    { projection: { _id: 1 } }
+  );
   if (existingTax) {
     const resumed = await resumeSettlement(db, taxKey);
     if (resumed.status !== "applied" && resumed.status !== "replayed") {

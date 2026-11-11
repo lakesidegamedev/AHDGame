@@ -1130,9 +1130,8 @@ async function clearStaleConstructionBatchLocks(
     if (complete || unfunded) cleared.push(owner);
   }
   if (cleared.length === 0) return;
-  await bankLoansCollection(db)
-    .updateMany(
-      { constructionSettlementOwner: { $in: cleared } },
-      { $unset: { constructionSettlementOwner: "" } }
-    );
+  await bankLoansCollection(db).updateMany(
+    { constructionSettlementOwner: { $in: cleared } },
+    { $unset: { constructionSettlementOwner: "" } }
+  );
 }

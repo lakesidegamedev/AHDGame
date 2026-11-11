@@ -26,8 +26,10 @@ export async function resolveGoverningPartyIdsFromDocuments(
 
   const coalitionId = govFormation?.coalitionId;
   if (coalitionId != null) {
-    const coalition = await coalitionsCollection(db)
-      .findOne({ sequentialId: coalitionId, countryId });
+    const coalition = await coalitionsCollection(db).findOne({
+      sequentialId: coalitionId,
+      countryId,
+    });
     if (coalition?.members?.length) {
       return new Set([
         governingPartyId,

@@ -398,10 +398,12 @@ export const POST = withAdminRoute(async (_auth) => {
       await electionsCollection(db).bulkWrite(renumberOps);
     }
     if (toDeletePremature.length > 0) {
-      await electionCandidatesCollection<Document>(db)
-        .deleteMany({ electionId: { $in: toDeletePremature } });
-      await electionVoteTalliesCollection<Document>(db)
-        .deleteMany({ electionId: { $in: toDeletePremature } });
+      await electionCandidatesCollection<Document>(db).deleteMany({
+        electionId: { $in: toDeletePremature },
+      });
+      await electionVoteTalliesCollection<Document>(db).deleteMany({
+        electionId: { $in: toDeletePremature },
+      });
       await electionsCollection(db).deleteMany({ _id: { $in: toDeletePremature } });
     }
   } catch (err) {

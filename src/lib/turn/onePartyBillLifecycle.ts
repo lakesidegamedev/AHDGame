@@ -104,8 +104,10 @@ export async function processOnePartyBillLifecycleForCountry(
     // These registry entries also host the democratic 1991 institutions.
     // Other converted one-party countries keep their existing conversion guard.
     if (preset === "1991-default" && DEMOCRATIC_1991_COUNTRIES.includes(countryId)) {
-      const state = await countryGameStatesCollection(db)
-        .findOne({ _id: countryId }, { projection: { dissolvedTurn: 1 } });
+      const state = await countryGameStatesCollection(db).findOne(
+        { _id: countryId },
+        { projection: { dissolvedTurn: 1 } }
+      );
       if (state?.dissolvedTurn != null) return { enacted: 0, failed: 0 };
       const lifecycle = buildConfiguredCountryBillLifecycle(countryId, preset);
       if (countryHasFeature("huTurn", countryId)) {

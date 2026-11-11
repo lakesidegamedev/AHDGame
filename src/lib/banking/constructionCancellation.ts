@@ -96,8 +96,7 @@ export async function cancelFinancedConstruction(input: {
     if (cleared.matchedCount !== 1) return { ok: false, error: "Cancellation recovery changed" };
     claim = { ...claim, cancellation: undefined };
   }
-  const loan = await bankLoansCollection(db)
-    .findOne({ _id: new ObjectId(claim.loanId) });
+  const loan = await bankLoansCollection(db).findOne({ _id: new ObjectId(claim.loanId) });
   if (
     !loan?.constructionCollateral ||
     loan.constructionCollateral.claimId !== claim.claimId ||

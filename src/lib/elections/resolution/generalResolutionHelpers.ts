@@ -328,13 +328,14 @@ export async function resolveElectionWithZeroVotes(
   now: Date,
   currentTurn = 0
 ): Promise<OneElectionResult> {
-  await electionVoteTalliesCollection(db)
-    .updateOne({ electionId: election._id }, { $set: { finalized: true, updatedAt: now } });
-  await electionCandidatesCollection<Document>(db)
-    .updateMany(
-      { electionId: election._id, status: "active" },
-      { $set: { status: "withdrawn", withdrawnAt: now } }
-    );
+  await electionVoteTalliesCollection(db).updateOne(
+    { electionId: election._id },
+    { $set: { finalized: true, updatedAt: now } }
+  );
+  await electionCandidatesCollection<Document>(db).updateMany(
+    { electionId: election._id, status: "active" },
+    { $set: { status: "withdrawn", withdrawnAt: now } }
+  );
   if (election.electionType === "house") {
     await spawnHouseElection(db, election, now);
     await triggerLeadershipElectionsAfterChamberVote(db, "house", now);
@@ -437,13 +438,14 @@ export async function resolveElectionWithNoRankedCandidates(
   now: Date,
   currentTurn = 0
 ): Promise<OneElectionResult> {
-  await electionVoteTalliesCollection(db)
-    .updateOne({ electionId: election._id }, { $set: { finalized: true, updatedAt: now } });
-  await electionCandidatesCollection<Document>(db)
-    .updateMany(
-      { electionId: election._id, status: "active" },
-      { $set: { status: "withdrawn", withdrawnAt: now } }
-    );
+  await electionVoteTalliesCollection(db).updateOne(
+    { electionId: election._id },
+    { $set: { finalized: true, updatedAt: now } }
+  );
+  await electionCandidatesCollection<Document>(db).updateMany(
+    { electionId: election._id, status: "active" },
+    { $set: { status: "withdrawn", withdrawnAt: now } }
+  );
   if (election.electionType === "house") {
     await spawnHouseElection(db, election, now);
     await triggerLeadershipElectionsAfterChamberVote(db, "house", now);

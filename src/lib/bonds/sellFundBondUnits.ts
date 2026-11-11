@@ -109,11 +109,10 @@ export async function sellFundBondHoldingsForCash(
 
     const proceedsAnchor =
       Math.round(corpCapitalToAnchor(proceedsLocal, currency, rate) * 100) / 100;
-    await indexFundsCollection<Document>(db)
-      .updateOne(
-        { _id: fund._id },
-        { $inc: { cashAnchor: proceedsAnchor }, $set: { updatedAt: now } }
-      );
+    await indexFundsCollection<Document>(db).updateOne(
+      { _id: fund._id },
+      { $inc: { cashAnchor: proceedsAnchor }, $set: { updatedAt: now } }
+    );
     await insertFundTransaction(db, {
       fundId: fund._id,
       kind: "bond_sale",

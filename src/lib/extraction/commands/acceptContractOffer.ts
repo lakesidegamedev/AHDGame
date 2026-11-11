@@ -61,11 +61,10 @@ export async function acceptContractOffer(
   const possibleFundedFee = treasuryCashLedgerEnabled && feeAnchor > 0;
   const stateTreasuryFallback =
     possibleFundedFee && contract.grantedByLevel === "state"
-      ? !(await stateBudgetsCollection(db)
-          .findOne(
-            { _id: contract.stateId, countryId: contract.countryId },
-            { projection: { _id: 1 } }
-          ))
+      ? !(await stateBudgetsCollection(db).findOne(
+          { _id: contract.stateId, countryId: contract.countryId },
+          { projection: { _id: 1 } }
+        ))
       : false;
   const fundedTreasuryFee =
     possibleFundedFee &&
@@ -144,10 +143,9 @@ export async function acceptContractOffer(
   if (fundedTreasuryFee && existingAttempt) {
     const key = `extraction-signing-fee:${existingAttempt}`;
     const prior = await bankMoneyMovesCollection<{
-        _id: string;
-        event?: { amount?: number };
-      }>(db)
-      .findOne({ _id: key }, { projection: { _id: 1, event: 1 } });
+      _id: string;
+      event?: { amount?: number };
+    }>(db).findOne({ _id: key }, { projection: { _id: 1, event: 1 } });
     if (prior) {
       const resumed = await resumeSettlement(db, key);
       if ((resumed.status === "applied" || resumed.status === "replayed") && !resumed.error) {

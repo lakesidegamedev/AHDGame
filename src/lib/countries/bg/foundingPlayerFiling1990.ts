@@ -186,11 +186,10 @@ export async function materializeBgFoundingPlayerFiling(input: {
       (requestedDistrictId && requestedDistrictId !== saved.constituencyId)
     )
       return reject("party-changed");
-    const prior = await electionCandidatesCollection(db)
-      .findOne(
-        { _id: saved.candidateId, characterId: candidate.characterId, electionId },
-        { session }
-      );
+    const prior = await electionCandidatesCollection(db).findOne(
+      { _id: saved.candidateId, characterId: candidate.characterId, electionId },
+      { session }
+    );
     if (!prior) throw new Error("Bulgarian filing reservation has lost its original candidate");
     if (prior.status === "active") return reject("already-filed");
     await electionCandidatesCollection(db).updateOne(

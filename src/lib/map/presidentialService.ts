@@ -89,8 +89,7 @@ export async function computePresidentialMap(
   }
 
   const [voteTally, electionCandidates] = await Promise.all([
-    electionVoteTalliesCollection(db)
-      .findOne({ electionId: presidentElection._id }),
+    electionVoteTalliesCollection(db).findOne({ electionId: presidentElection._id }),
     electionCandidatesCollection(db)
       .find({ electionId: presidentElection._id, status: { $in: ["active", "withdrawn"] } })
       .project({ _id: 1, characterName: 1 })

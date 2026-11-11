@@ -48,8 +48,10 @@ export async function POST(
     const db = await getDb();
 
     // Find coalition
-    const coalition = await coalitionsCollection(db)
-      .findOne({ sequentialId: Number(id), countryId });
+    const coalition = await coalitionsCollection(db).findOne({
+      sequentialId: Number(id),
+      countryId,
+    });
     if (!coalition) {
       throw notFound("Coalition not found.");
     }

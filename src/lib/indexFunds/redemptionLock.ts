@@ -31,10 +31,9 @@ export async function claimFundRedemptionLock(
   if (claim.matchedCount === 0) return null;
 
   return async () => {
-    await indexFundsCollection(db)
-      .updateOne(
-        { _id: fundId, "redemptionLock.token": token },
-        { $unset: { redemptionLock: "" }, $set: { updatedAt: new Date() } }
-      );
+    await indexFundsCollection(db).updateOne(
+      { _id: fundId, "redemptionLock.token": token },
+      { $unset: { redemptionLock: "" }, $set: { updatedAt: new Date() } }
+    );
   };
 }

@@ -111,11 +111,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
         : Promise.resolve([]),
       board.board.scope === "regional" && board.board.regionId
         ? countryId === COUNTRY_CONFIGS.US.id
-          ? stateBudgetsCollection(db)
-              .findOne(
-                { _id: board.board.regionId, countryId: COUNTRY_CONFIGS.US.id },
-                { projection: { regionalProgramSettlements: 1 } }
-              )
+          ? stateBudgetsCollection(db).findOne(
+              { _id: board.board.regionId, countryId: COUNTRY_CONFIGS.US.id },
+              { projection: { regionalProgramSettlements: 1 } }
+            )
           : db
               .collection<RegionalBudget>("regionalBudgets")
               .findOne(

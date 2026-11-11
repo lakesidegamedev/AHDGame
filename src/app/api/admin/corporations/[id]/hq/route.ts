@@ -149,8 +149,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     if (corp.ceoId && corp.ceoVacant !== true) {
       const ceoRecord =
         corp.ceoType === "imperial"
-          ? await imperialCharactersCollection(db)
-              .findOne({ _id: corp.ceoId }, { projection: { homeState: 1 } })
+          ? await imperialCharactersCollection(db).findOne(
+              { _id: corp.ceoId },
+              { projection: { homeState: 1 } }
+            )
           : await charactersCollection(db).findOne(
               { _id: corp.ceoId },
               { projection: { homeState: 1 } }

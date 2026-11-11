@@ -242,11 +242,10 @@ export async function processNppUnionBehavior(
     }
   }
   if (orphaned.length > 0) {
-    await unionsCollection(db)
-      .updateMany(
-        { _id: { $in: orphaned } },
-        { $set: { ownerId: null, updatedAt: now }, $unset: { ownerType: "" } }
-      );
+    await unionsCollection(db).updateMany(
+      { _id: { $in: orphaned } },
+      { $set: { ownerId: null, updatedAt: now }, $unset: { ownerType: "" } }
+    );
   }
   if (clearOps.length > 0) await unionsCollection(db).bulkWrite(clearOps);
 

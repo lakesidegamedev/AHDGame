@@ -55,9 +55,7 @@ export async function computePartyOrgMap(
 
   // Fetch statePartyOrg records for this country
   // Filter by countryId to ensure we only get orgs for the correct country
-  const allPartyOrgs = await statePartyOrgCollection(db)
-    .find({ countryId })
-    .toArray();
+  const allPartyOrgs = await statePartyOrgCollection(db).find({ countryId }).toArray();
 
   // Filter out any orgs whose partyId is not a valid sequentialId for this country
   // This removes stale records with old slug-based partyIds

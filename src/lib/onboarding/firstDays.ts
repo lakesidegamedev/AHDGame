@@ -94,8 +94,10 @@ export async function loadFirstDays(
         { characterId: character._id, actionType: "campaign" },
         { limit: FIRST_DAYS_CAMPAIGN_GOAL }
       ),
-    electionCandidatesCollection<Document>(db)
-      .countDocuments({ characterId: character._id }, { limit: 1 }),
+    electionCandidatesCollection<Document>(db).countDocuments(
+      { characterId: character._id },
+      { limit: 1 }
+    ),
     electionsCollection<ElectionRow>(db)
       .find(
         {
@@ -124,7 +126,9 @@ export async function loadFirstDays(
       id: e._id.toString(),
       label: formatElectionTypeLabel(e.electionType, character.countryId as CountryId),
       closesInHours: Number.isNaN(end) ? null : Math.floor((end - now.getTime()) / 3_600_000),
-      candidates: await electionCandidatesCollection<Document>(db).countDocuments({ electionId: e._id }),
+      candidates: await electionCandidatesCollection<Document>(db).countDocuments({
+        electionId: e._id,
+      }),
     }))
   );
 

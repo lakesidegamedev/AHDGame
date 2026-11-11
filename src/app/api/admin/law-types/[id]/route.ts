@@ -75,8 +75,11 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         updatedAt: now,
       } as LegislationType;
 
-      await legislationTypesCollection(db)
-        .updateOne({ _id: id }, { $set: updatedType }, { upsert: true });
+      await legislationTypesCollection(db).updateOne(
+        { _id: id },
+        { $set: updatedType },
+        { upsert: true }
+      );
 
       const isNew = !adminType;
       return NextResponse.json({
@@ -92,11 +95,12 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         updatedAt: now,
       } as Partial<LegislationType>;
 
-      await legislationTypesCollection(db)
-        .updateOne({ _id: id, source: "admin" }, { $set: updatedType });
+      await legislationTypesCollection(db).updateOne(
+        { _id: id, source: "admin" },
+        { $set: updatedType }
+      );
 
-      const finalType = await legislationTypesCollection(db)
-        .findOne({ _id: id });
+      const finalType = await legislationTypesCollection(db).findOne({ _id: id });
 
       return NextResponse.json({
         lawType: finalType,

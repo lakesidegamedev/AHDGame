@@ -30,8 +30,7 @@ export async function GET(
 
     const db = await getDb();
 
-    const coalition = await coalitionsCollection(db)
-      .findOne({ sequentialId, countryId });
+    const coalition = await coalitionsCollection(db).findOne({ sequentialId, countryId });
 
     if (!coalition) {
       throw notFound("Coalition not found");

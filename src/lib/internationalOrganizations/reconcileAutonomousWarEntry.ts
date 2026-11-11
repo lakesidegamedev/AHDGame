@@ -117,11 +117,10 @@ export async function reconcileAutonomousWarEntryBills(db: Db): Promise<number> 
       if (chosen.includes(countryId)) {
         if (bill && bill.status !== "signed") {
           const now = new Date();
-          await billsCollection(db)
-            .updateOne(
-              { _id: bill._id, status: { $nin: ["signed", "failed", "withdrawn"] } },
-              { $set: { status: "signed", enactedAt: now, updatedAt: now } }
-            );
+          await billsCollection(db).updateOne(
+            { _id: bill._id, status: { $nin: ["signed", "failed", "withdrawn"] } },
+            { $set: { status: "signed", enactedAt: now, updatedAt: now } }
+          );
         }
         continue;
       }
@@ -138,11 +137,10 @@ export async function reconcileAutonomousWarEntryBills(db: Db): Promise<number> 
         });
         const now = new Date();
         if (bill && bill.status !== "signed") {
-          await billsCollection(db)
-            .updateOne(
-              { _id: bill._id, status: { $nin: ["signed", "failed", "withdrawn"] } },
-              { $set: { status: "signed", enactedAt: now, updatedAt: now } }
-            );
+          await billsCollection(db).updateOne(
+            { _id: bill._id, status: { $nin: ["signed", "failed", "withdrawn"] } },
+            { $set: { status: "signed", enactedAt: now, updatedAt: now } }
+          );
         }
         await recordOrgHistoryEvent(
           db,
@@ -192,8 +190,10 @@ export async function reconcileAutonomousWarEntryBills(db: Db): Promise<number> 
       if (!autonomousPolicyActive || bill || !hasBillLifecycle(countryId)) continue;
       if (!(await isNppAutonomyActive(db, countryId))) continue;
 
-      const formation = await governmentFormationsCollection(db)
-        .findOne({ _id: countryId, status: "formed" });
+      const formation = await governmentFormationsCollection(db).findOne({
+        _id: countryId,
+        status: "formed",
+      });
       const headId = formation?.presidentNppId ?? formation?.pmNppId ?? null;
       if (!headId) continue;
       const head = await nppsCollection(db).findOne(

@@ -60,8 +60,11 @@ export async function POST(
     }
     const [partyDoc, stateParty] = await Promise.all([
       politicalPartiesCollection(db).findOne({ countryId, sequentialId: Number(partyId) }),
-      statePartyOrgCollection(db)
-        .findOne({ countryId, stateId: ref.regionId, partyId: String(partyId) }),
+      statePartyOrgCollection(db).findOne({
+        countryId,
+        stateId: ref.regionId,
+        partyId: String(partyId),
+      }),
     ]);
     if (!partyDoc) {
       return errorResponse(400, "Party not found.");

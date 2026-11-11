@@ -107,8 +107,10 @@ export async function POST(
     }
 
     priorities[priorityIndex] = priority;
-    await coalitionsCollection<Document>(db)
-      .updateOne({ _id: context.coalition._id }, { $set: { priorities, updatedAt: now } });
+    await coalitionsCollection<Document>(db).updateOne(
+      { _id: context.coalition._id },
+      { $set: { priorities, updatedAt: now } }
+    );
 
     return NextResponse.json({
       success: true,

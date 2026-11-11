@@ -137,8 +137,7 @@ export async function handleSpawnNPPs(
     const state = pickState();
 
     const statePartyKey = `${state}_${partyIdStr}`;
-    const orgDoc = await statePartyOrgCollection(db)
-      .findOne({ _id: statePartyKey });
+    const orgDoc = await statePartyOrgCollection(db).findOne({ _id: statePartyKey });
     const partyOrg = orgDoc?.organization ?? 50;
     const quality = calculateQualityBonus(partyOrg);
 

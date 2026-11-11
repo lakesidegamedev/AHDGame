@@ -25,8 +25,10 @@ export async function generateMetadata({
 
   const db = await getDb();
   if (!(await isCountryEnabledForPlayers(db, countryId))) return {};
-  const coalition = await coalitionsCollection(db)
-    .findOne({ sequentialId, countryId }, { projection: { name: 1 } });
+  const coalition = await coalitionsCollection(db).findOne(
+    { sequentialId, countryId },
+    { projection: { name: 1 } }
+  );
   if (!coalition) return {};
 
   const title = `${coalition.name} | A House Divided`;

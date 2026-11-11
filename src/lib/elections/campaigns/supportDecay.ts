@@ -104,11 +104,10 @@ export async function processClearResolvedSupport(
   if (resolvedElections.length === 0) return { candidatesCleared: 0 };
 
   const resolvedElectionIds = resolvedElections.map((e) => e._id);
-  const result = await electionCandidatesCollection(db)
-    .updateMany(
-      { electionId: { $in: resolvedElectionIds }, support: { $exists: true } },
-      { $unset: { support: "" } }
-    );
+  const result = await electionCandidatesCollection(db).updateMany(
+    { electionId: { $in: resolvedElectionIds }, support: { $exists: true } },
+    { $unset: { support: "" } }
+  );
 
   return { candidatesCleared: result.modifiedCount ?? 0 };
 }

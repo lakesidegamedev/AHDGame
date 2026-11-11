@@ -162,20 +162,18 @@ export const POST = withAdminRoute(
     }
 
     if (action === "force_veto") {
-      await billsCollection(db)
-        .updateOne(
-          { _id: bill._id },
-          { $set: { status: "vetoed", presidentAction: "vetoed", updatedAt: now } }
-        );
+      await billsCollection(db).updateOne(
+        { _id: bill._id },
+        { $set: { status: "vetoed", presidentAction: "vetoed", updatedAt: now } }
+      );
       return NextResponse.json({ message: `"${bill.title}" force-vetoed.` });
     }
 
     if (action === "force_fail") {
-      await billsCollection(db)
-        .updateOne(
-          { _id: bill._id },
-          { $set: { status: "failed", failedAt: now, updatedAt: now } }
-        );
+      await billsCollection(db).updateOne(
+        { _id: bill._id },
+        { $set: { status: "failed", failedAt: now, updatedAt: now } }
+      );
       return NextResponse.json({ message: `"${bill.title}" marked as failed.` });
     }
 

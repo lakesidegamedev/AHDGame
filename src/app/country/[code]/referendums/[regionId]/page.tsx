@@ -188,8 +188,11 @@ export default async function ReferendumDetailPage({
     const viewerParty = String(user.character.party);
     const [viewerPartyDoc, viewerStateParty] = await Promise.all([
       politicalPartiesCollection(db).findOne({ countryId, sequentialId: Number(viewerParty) }),
-      statePartyOrgCollection(db)
-        .findOne({ countryId, stateId: regionId.toUpperCase(), partyId: viewerParty }),
+      statePartyOrgCollection(db).findOne({
+        countryId,
+        stateId: regionId.toUpperCase(),
+        partyId: viewerParty,
+      }),
     ]);
     if (viewerPartyDoc) {
       viewerIsPartyOfficer = canSpendOnStateParty(viewerPartyDoc, viewerStateParty, user);

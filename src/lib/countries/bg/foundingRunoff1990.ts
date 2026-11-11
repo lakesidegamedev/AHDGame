@@ -168,8 +168,7 @@ async function materializeBgFoundingRunoffOpening(input: {
   if (updated.modifiedCount !== 1) throw new Error("Bulgarian runoff opening changed concurrently");
   await electionsCollection(db).insertMany(polls, { session });
   if (renewedCandidates.length) {
-    await electionCandidatesCollection(db)
-      .insertMany(renewedCandidates, { session });
+    await electionCandidatesCollection(db).insertMany(renewedCandidates, { session });
     await electionCandidatesCollection(db).updateMany(
       { _id: { $in: retainedCandidates.map((row) => row._id) }, status: "active" },
       {

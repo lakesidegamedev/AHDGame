@@ -86,12 +86,11 @@ export async function organizeUnion(
     };
   }
 
-  const updatedUnion = await unionsCollection(db)
-    .findOneAndUpdate(
-      { _id: union._id },
-      { $inc: { strength: ORGANIZE_STRENGTH_GAIN }, $set: { updatedAt: now } },
-      { returnDocument: "after" }
-    );
+  const updatedUnion = await unionsCollection(db).findOneAndUpdate(
+    { _id: union._id },
+    { $inc: { strength: ORGANIZE_STRENGTH_GAIN }, $set: { updatedAt: now } },
+    { returnDocument: "after" }
+  );
   if (!updatedUnion) {
     // Refund: the union vanished between the read and the write.
     await charactersCollection(db).updateOne(

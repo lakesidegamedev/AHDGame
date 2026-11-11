@@ -67,8 +67,9 @@ async function seatHouseElectedPresident(
   const winnerId = vote.presidentWinnerId;
   if (!winnerId) return false;
   const tallies = electionVoteTalliesCollection(db);
-  const winnerCandidate = await electionCandidatesCollection(db)
-    .findOne({ _id: new ObjectId(winnerId) });
+  const winnerCandidate = await electionCandidatesCollection(db).findOne({
+    _id: new ObjectId(winnerId),
+  });
   if (!winnerCandidate) {
     logger.error(
       "Turn",

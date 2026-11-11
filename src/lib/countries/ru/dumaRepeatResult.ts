@@ -233,12 +233,11 @@ export async function materializeRussianDumaRepeatResult(input: {
   );
   if (resolved.matchedCount !== cohort.length)
     throw new Error("Duma repeat ballots changed during certification");
-  const retired = await electionCandidatesCollection(db)
-    .updateMany(
-      { electionId: { $in: opening.electionIds }, status: "active" },
-      { $set: { status: "withdrawn", withdrawnAt: now } },
-      { session }
-    );
+  const retired = await electionCandidatesCollection(db).updateMany(
+    { electionId: { $in: opening.electionIds }, status: "active" },
+    { $set: { status: "withdrawn", withdrawnAt: now } },
+    { session }
+  );
   if (retired.matchedCount !== loaded.candidates.filter((row) => row.status === "active").length)
     throw new Error("Duma repeat candidacies changed during certification");
   const bound = await countries.updateOne(

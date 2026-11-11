@@ -30,9 +30,7 @@ export async function GET() {
 
     const db = await getDb();
 
-    const allUkSpos = await statePartyOrgCollection(db)
-      .find({ countryId: "UK" })
-      .toArray();
+    const allUkSpos = await statePartyOrgCollection(db).find({ countryId: "UK" }).toArray();
 
     let ukSpoWithNaNOrg = 0;
     for (const spo of allUkSpos) {

@@ -53,8 +53,9 @@ export async function resolveSlateAuthority(args: {
     return buildAuthority("national_vice_chair");
   }
 
-  const stateParty = await statePartyOrgCollection(args.db)
-    .findOne({ _id: getStatePartyOrgDocumentId(args.stateId, args.party) });
+  const stateParty = await statePartyOrgCollection(args.db).findOne({
+    _id: getStatePartyOrgDocumentId(args.stateId, args.party),
+  });
   if (stateParty?.chairId?.toString() === actorId) {
     return buildAuthority("state_chair");
   }

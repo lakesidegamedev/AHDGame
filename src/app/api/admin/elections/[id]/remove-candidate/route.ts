@@ -78,8 +78,10 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(404, "Candidate not found or already withdrawn");
     }
 
-    await electionCandidatesCollection(db)
-      .updateOne({ _id: candidateObjectId }, { $set: { status: "withdrawn", withdrawnAt: now } });
+    await electionCandidatesCollection(db).updateOne(
+      { _id: candidateObjectId },
+      { $set: { status: "withdrawn", withdrawnAt: now } }
+    );
 
     // Archive (not delete) their campaign so it survives until the election
     // resolves and a re-entry can reactivate it.

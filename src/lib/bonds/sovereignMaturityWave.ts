@@ -129,14 +129,14 @@ export function sovereignMaturityWaveKey(
  */
 async function loadPartialWaveReceipts(db: Db, wave: SovereignMaturityWave): Promise<void> {
   const rows = await bankMoneyMovesCollection<{
-      _id: string;
-      legs?: Array<{
-        kind?: string;
-        collection?: string;
-        path?: string;
-        filter?: { _id?: unknown };
-      }>;
-    }>(db)
+    _id: string;
+    legs?: Array<{
+      kind?: string;
+      collection?: string;
+      path?: string;
+      filter?: { _id?: unknown };
+    }>;
+  }>(db)
     .find(
       { _id: { $regex: "^sovereign-maturity-wave:" }, status: "partial" },
       {

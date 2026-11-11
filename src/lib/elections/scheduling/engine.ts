@@ -366,11 +366,10 @@ export async function cleanupDuplicateElections(
     // Withdraw first. If cancellation then fails, the next turn still sees the
     // live duplicate and retries. The opposite order could strand an active
     // candidacy on an already-cancelled election.
-    await electionCandidatesCollection<Document>(db)
-      .updateMany(
-        { electionId: { $in: toCancel }, status: "active" },
-        { $set: { status: "withdrawn", withdrawnAt: now } }
-      );
+    await electionCandidatesCollection<Document>(db).updateMany(
+      { electionId: { $in: toCancel }, status: "active" },
+      { $set: { status: "withdrawn", withdrawnAt: now } }
+    );
     await campaignsCollection<Document>(db).updateMany(
       { electionId: { $in: toCancel }, status: { $ne: "archived" } },
       {
@@ -969,11 +968,10 @@ export async function cleanupStaleElectionCandidates(now: Date): Promise<void> {
     }>({ _id: 1, electionId: 1, characterId: 1, nppId: 1, isNPP: 1 })
     .toArray();
 
-  const result = await electionCandidatesCollection<Document>(db)
-    .updateMany(
-      { electionId: { $in: completedElectionIds }, status: "active" },
-      { $set: { status: "withdrawn", withdrawnAt: now } }
-    );
+  const result = await electionCandidatesCollection<Document>(db).updateMany(
+    { electionId: { $in: completedElectionIds }, status: "active" },
+    { $set: { status: "withdrawn", withdrawnAt: now } }
+  );
 
   // Archive their campaigns so a completed race's Campaign Operations list
   // stops rendering candidates who are no longer standing (#1313).

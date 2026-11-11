@@ -71,8 +71,10 @@ export async function createEndorsement(
     };
   }
 
-  const candidate = await electionCandidatesCollection(db)
-    .findOne({ _id: candidateId, electionId });
+  const candidate = await electionCandidatesCollection(db).findOne({
+    _id: candidateId,
+    electionId,
+  });
   if (!candidate || candidate.status !== "active") {
     return { status: 400, body: { error: "Candidate is not active." } };
   }

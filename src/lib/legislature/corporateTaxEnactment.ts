@@ -43,11 +43,10 @@ export async function applyCorporateTaxBillChange(
             { _id: getNationalBudgetId(input.countryId) },
             { projection: { taxRates: 1, taxRatePhaseIn: 1 } }
           )
-        : await stateBudgetsCollection(transactionDb)
-            .findOne(
-              { _id: input.stateId, countryId: input.countryId },
-              { projection: { taxRates: 1 } }
-            );
+        : await stateBudgetsCollection(transactionDb).findOne(
+            { _id: input.stateId, countryId: input.countryId },
+            { projection: { taxRates: 1 } }
+          );
     // Preserve the existing no-op for an uninitialized budget. No tax change
     // means no political reward and no completed receipt.
     if (!budget?.taxRates) return;

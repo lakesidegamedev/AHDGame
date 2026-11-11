@@ -320,8 +320,10 @@ export async function returnDepositBook(
       return { ...EMPTY, error: "Another bank operation owns deposit return" };
   }
   if (previous?.kind === "returning") {
-    const original = await bankMoneyMovesCollection<{ _id: string }>(db)
-      .findOne({ _id: key }, { projection: { _id: 1 } });
+    const original = await bankMoneyMovesCollection<{ _id: string }>(db).findOne(
+      { _id: key },
+      { projection: { _id: 1 } }
+    );
     if (original) {
       const recovered = await resumeSettlement(db, key);
       if (recovered.error || !["applied", "replayed"].includes(recovered.status))
@@ -844,11 +846,10 @@ export async function freezeAccountsAt(
   currency: CurrencyCode,
   now: Date
 ): Promise<number> {
-  const frozen = await savingsAccountsCollection(db)
-    .updateMany(
-      { currency, holder: bankIdHex, status: "open" },
-      { $set: { status: "frozen", updatedAt: now } }
-    );
+  const frozen = await savingsAccountsCollection(db).updateMany(
+    { currency, holder: bankIdHex, status: "open" },
+    { $set: { status: "frozen", updatedAt: now } }
+  );
   return frozen.modifiedCount ?? 0;
 }
 
@@ -864,11 +865,10 @@ export async function releaseAccountsFrom(
   currency: CurrencyCode,
   now: Date
 ): Promise<number> {
-  const released = await savingsAccountsCollection(db)
-    .updateMany(
-      { currency, holder: bankIdHex },
-      { $set: { holder: CENTRAL_BANK_HOLDER, status: "open", updatedAt: now } }
-    );
+  const released = await savingsAccountsCollection(db).updateMany(
+    { currency, holder: bankIdHex },
+    { $set: { holder: CENTRAL_BANK_HOLDER, status: "open", updatedAt: now } }
+  );
   return released.modifiedCount ?? 0;
 }
 

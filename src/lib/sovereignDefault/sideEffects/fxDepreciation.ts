@@ -29,8 +29,10 @@ export async function applyExchangeRateDepreciation(
   const previousRate = row.rate;
   const newRate = previousRate * (1 + percent);
 
-  await exchangeRatesCollection(db)
-    .updateOne({ _id: countryId }, { $set: { rate: newRate, updatedAt: new Date() } });
+  await exchangeRatesCollection(db).updateOne(
+    { _id: countryId },
+    { $set: { rate: newRate, updatedAt: new Date() } }
+  );
 
   return { ok: true, previousRate, newRate };
 }

@@ -330,7 +330,8 @@ export async function executeCorporationBondRestructure(
         },
       };
     });
-    if (imperialOps.length > 0) await imperialCharactersCollection<Document>(db).bulkWrite(imperialOps);
+    if (imperialOps.length > 0)
+      await imperialCharactersCollection<Document>(db).bulkWrite(imperialOps);
   }
 
   if (corpIncs.size > 0) {

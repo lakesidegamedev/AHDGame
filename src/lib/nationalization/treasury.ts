@@ -254,12 +254,11 @@ export async function settleFundedTreasuryCompensation(
 }> {
   const settlementKey = `treasury-nationalization-compensation:${input.key}`;
   const prior = await bankMoneyMovesCollection<{
-      _id: string;
-      status?: string;
-      legs?: { kind: string; amount: number; collection?: string; path?: string }[];
-      event?: { meta?: { payoutAnchor?: number } };
-    }>(db)
-    .findOne({ _id: settlementKey }, { projection: { status: 1, legs: 1, event: 1 } });
+    _id: string;
+    status?: string;
+    legs?: { kind: string; amount: number; collection?: string; path?: string }[];
+    event?: { meta?: { payoutAnchor?: number } };
+  }>(db).findOne({ _id: settlementKey }, { projection: { status: 1, legs: 1, event: 1 } });
   if (prior) {
     const wasApplied = prior.status === "applied";
     const settled = await resumeSettlement(db, settlementKey);
@@ -424,12 +423,11 @@ export async function settleFundedTreasuryCompensation(
   }
   if (!newlySettled) {
     const original = await bankMoneyMovesCollection<{
-        _id: string;
-        status?: string;
-        legs?: { kind: string; amount: number; collection?: string; path?: string }[];
-        event?: { meta?: { payoutAnchor?: number } };
-      }>(db)
-      .findOne({ _id: transition.key }, { projection: { status: 1, legs: 1, event: 1 } });
+      _id: string;
+      status?: string;
+      legs?: { kind: string; amount: number; collection?: string; path?: string }[];
+      event?: { meta?: { payoutAnchor?: number } };
+    }>(db).findOne({ _id: transition.key }, { projection: { status: 1, legs: 1, event: 1 } });
     const frozenDebit = original?.legs?.find(
       (leg) =>
         leg.kind === "debit" &&

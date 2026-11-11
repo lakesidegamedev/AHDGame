@@ -54,8 +54,10 @@ async function openRunoff(
     })),
     { ordered: false }
   );
-  const existingTally = await electionVoteTalliesCollection(db)
-    .findOne({ electionId }, { projection: { _id: 1 } });
+  const existingTally = await electionVoteTalliesCollection(db).findOne(
+    { electionId },
+    { projection: { _id: 1 } }
+  );
   if (!existingTally) {
     await initElectionVoteTally(electionId, nextCandidates, election.state, {
       byParty: {},
@@ -145,16 +147,14 @@ export async function resolveSpecialPresidentElection(
       ...(winner.characterName ? { holderName: winner.characterName } : {}),
     });
   }
-  await electionCandidatesCollection(db)
-    .updateMany(
-      { electionId: election._id, status: "active" },
-      { $set: { status: "withdrawn", withdrawnAt: now } }
-    );
-  await electionVoteTalliesCollection(db)
-    .updateOne(
-      { electionId: election._id },
-      { $set: { finalized: true, resolvedAtTurn: turn, updatedAt: now } }
-    );
+  await electionCandidatesCollection(db).updateMany(
+    { electionId: election._id, status: "active" },
+    { $set: { status: "withdrawn", withdrawnAt: now } }
+  );
+  await electionVoteTalliesCollection(db).updateOne(
+    { electionId: election._id },
+    { $set: { finalized: true, resolvedAtTurn: turn, updatedAt: now } }
+  );
   await campaignsCollection(db).deleteMany({ electionId: election._id });
   await captureElectionResultSnapshot(db, election, now);
   await markResolved(db, election, now);

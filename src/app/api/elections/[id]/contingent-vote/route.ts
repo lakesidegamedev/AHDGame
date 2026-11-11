@@ -36,8 +36,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
       return errorResponse(404, "Election not found");
     }
     const election = resolved.election;
-    const tally = await electionVoteTalliesCollection(db)
-      .findOne({ electionId: election._id });
+    const tally = await electionVoteTalliesCollection(db).findOne({ electionId: election._id });
     if (election.electionType !== "president" || !tally?.contingentHouseVote) {
       return NextResponse.json({ vote: null }, { headers: NO_STORE });
     }

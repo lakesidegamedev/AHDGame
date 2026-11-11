@@ -61,8 +61,9 @@ export async function GET(_request: Request, { params }: RouteParams) {
       return errorResponse(404, "Party not found");
     }
 
-    const statePartyOrg = await statePartyOrgCollection(db)
-      .findOne({ _id: `${stateId.toUpperCase()}_${partyId}` });
+    const statePartyOrg = await statePartyOrgCollection(db).findOne({
+      _id: `${stateId.toUpperCase()}_${partyId}`,
+    });
     if (!statePartyOrg) {
       return errorResponse(404, "State party not found");
     }
@@ -202,8 +203,9 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
     const result = results[0];
 
-    const updatedStateParty = await statePartyOrgCollection(db)
-      .findOne({ _id: `${stateId.toUpperCase()}_${partyId}` });
+    const updatedStateParty = await statePartyOrgCollection(db).findOne({
+      _id: `${stateId.toUpperCase()}_${partyId}`,
+    });
 
     return NextResponse.json({
       success: result.success,

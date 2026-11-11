@@ -117,9 +117,7 @@ export async function advanceWindDowns(
     errors: [],
   };
 
-  const funds = await indexFundsCollection(db)
-    .find({ status: "winding_down" })
-    .toArray();
+  const funds = await indexFundsCollection(db).find({ status: "winding_down" }).toArray();
 
   // Funds whose stocks are gone sell their bonds this pass; they complete
   // only once no bond units remain (checked in one batched read below).
@@ -276,8 +274,10 @@ export async function completeWindUp(
   currentTurn: number
 ): Promise<number> {
   return withSessionDb(db, async (tx) => {
-    const current = await indexFundsCollection(tx)
-      .findOne({ _id: fund._id }, { projection: { floatSettlementPlan: 0 } });
+    const current = await indexFundsCollection(tx).findOne(
+      { _id: fund._id },
+      { projection: { floatSettlementPlan: 0 } }
+    );
     if (!current || current.status === "delisted") return 0;
     if (current.status !== "winding_down") throw new Error("Fund is not winding down");
     if (current.holdings.some((holding) => holding.shares > 0))
@@ -285,8 +285,10 @@ export async function completeWindUp(
     const bonds = await bondsCollection(tx).countDocuments({
       holders: { $elemMatch: { fundId: fund._id, units: { $gt: 0 } } },
     });
-    const orders = await shareOrdersCollection<Document>(tx)
-      .countDocuments({ placerFundId: fund._id, status: "open" });
+    const orders = await shareOrdersCollection<Document>(tx).countDocuments({
+      placerFundId: fund._id,
+      status: "open",
+    });
     const withdrawals = await tx
       .collection("indexFundRedemptionQueue")
       .countDocuments({ fundId: fund._id, status: { $in: ["queued", "partial", "processing"] } });

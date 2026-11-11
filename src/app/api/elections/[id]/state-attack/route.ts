@@ -174,8 +174,10 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(409, "You already have an attack running on them there");
     }
 
-    const campaign = await campaignsCollection(db)
-      .findOne({ electionId: election._id, candidateId: character._id });
+    const campaign = await campaignsCollection(db).findOne({
+      electionId: election._id,
+      candidateId: character._id,
+    });
     if (!campaign) {
       return errorResponse(403, "You have no campaign in this race");
     }
@@ -199,8 +201,10 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     // The target's Rapid Response, stamped onto the row now so a later retune
     // of their tree cannot rewrite an attack already paid for.
-    const targetCampaign = await campaignsCollection(db)
-      .findOne({ electionId: election._id, candidateId: target.characterId });
+    const targetCampaign = await campaignsCollection(db).findOne({
+      electionId: election._id,
+      candidateId: target.characterId,
+    });
     const shieldTree = targetCampaign?.mediaSpendingTree;
     const shieldApplied =
       terms.shielded && shieldTree?.starter && shieldTree.c > 0

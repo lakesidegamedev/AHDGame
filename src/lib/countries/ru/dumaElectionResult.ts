@@ -187,12 +187,11 @@ export async function materializeRussianDumaElectionResult(input: {
   // Release the global active-candidacy index for future and repeat ballots.
   // The immutable result above retains the nominees and counted votes.
   const expectedActive = candidates.filter((row) => row.status === "active").length;
-  const retired = await electionCandidatesCollection(db)
-    .updateMany(
-      { electionId: { $in: electionIds }, status: "active" },
-      { $set: { status: "withdrawn", withdrawnAt: now } },
-      { session }
-    );
+  const retired = await electionCandidatesCollection(db).updateMany(
+    { electionId: { $in: electionIds }, status: "active" },
+    { $set: { status: "withdrawn", withdrawnAt: now } },
+    { session }
+  );
   if (retired.matchedCount !== expectedActive)
     throw new Error("Duma candidacies changed during certification");
   // Take a write conflict on the bound mandate without activating the Assembly.

@@ -35,8 +35,9 @@ export async function withdrawExecutiveEndorsement(
   // its characterId — `endorsement.candidateId` may key by candidate
   // row id depending on schema.
   if (endorsement && !endorsement.candidateIsNPP) {
-    const candidate = await electionCandidatesCollection(db)
-      .findOne({ _id: endorsement.candidateId });
+    const candidate = await electionCandidatesCollection(db).findOne({
+      _id: endorsement.candidateId,
+    });
     if (candidate?.characterId) {
       await applyEndorsementSupportBump(db, candidate.characterId, true);
     }

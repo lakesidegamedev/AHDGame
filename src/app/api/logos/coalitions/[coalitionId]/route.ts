@@ -30,8 +30,10 @@ export async function GET(
 
     const db = await getDb();
 
-    const coalition = await coalitionsCollection(db)
-      .findOne({ sequentialId, countryId }, { projection: { logoUrl: 1 } });
+    const coalition = await coalitionsCollection(db).findOne(
+      { sequentialId, countryId },
+      { projection: { logoUrl: 1 } }
+    );
 
     if (!coalition || !coalition.logoUrl) {
       return redirectToFallbackImage("/ahd-logo.png", request.url, CACHE_CONTROL);

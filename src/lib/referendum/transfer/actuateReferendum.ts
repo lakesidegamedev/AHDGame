@@ -44,11 +44,10 @@ async function withdrawActiveConsentBills(db: Db, ref: Referendum): Promise<void
     (x): x is NonNullable<typeof x> => x != null
   );
   if (ids.length === 0) return;
-  await billsCollection(db)
-    .updateMany(
-      { _id: { $in: ids }, status: "active" },
-      { $set: { status: "withdrawn", updatedAt: new Date() } }
-    );
+  await billsCollection(db).updateMany(
+    { _id: { $in: ids }, status: "active" },
+    { $set: { status: "withdrawn", updatedAt: new Date() } }
+  );
 }
 
 /**

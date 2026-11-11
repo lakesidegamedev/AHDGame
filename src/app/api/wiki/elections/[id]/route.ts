@@ -83,9 +83,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     }
 
     // For completed elections, fetch ALL candidates (active + withdrawn) to show who ran
-    const candidates = await electionCandidatesCollection(db)
-      .find({ electionId })
-      .toArray();
+    const candidates = await electionCandidatesCollection(db).find({ electionId }).toArray();
 
     const gameStatePromise =
       election.electionYear == null

@@ -123,8 +123,9 @@ export async function checkElectionEntryAchievements(
     const db = await getDb();
     const slugs: string[] = [];
 
-    const totalCandidacies = await electionCandidatesCollection<Document>(db)
-      .countDocuments({ characterId });
+    const totalCandidacies = await electionCandidatesCollection<Document>(db).countDocuments({
+      characterId,
+    });
     if (totalCandidacies >= 1) slugs.push("first_candidate");
 
     const typeSlugs: Record<string, string> = {

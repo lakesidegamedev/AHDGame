@@ -86,20 +86,18 @@ export async function releaseConstructionServiceLease(
   if (batchLoanIds.length > 0) {
     // Locks first: recovery reaches a batch's locks only through its lease,
     // so the lease must outlive them.
-    await bankLoansCollection(db)
-      .updateMany(
-        { _id: { $in: [loanId, ...batchLoanIds] }, constructionSettlementOwner: key },
-        { $unset: { constructionSettlementOwner: "" } }
-      );
+    await bankLoansCollection(db).updateMany(
+      { _id: { $in: [loanId, ...batchLoanIds] }, constructionSettlementOwner: key },
+      { $unset: { constructionSettlementOwner: "" } }
+    );
     await corporationsCollection(db).updateOne(lease, { $unset: { bankConstructionFunding: "" } });
     return;
   }
   await corporationsCollection(db).updateOne(lease, { $unset: { bankConstructionFunding: "" } });
-  await bankLoansCollection(db)
-    .updateOne(
-      { _id: loanId, constructionSettlementOwner: key },
-      { $unset: { constructionSettlementOwner: "" } }
-    );
+  await bankLoansCollection(db).updateOne(
+    { _id: loanId, constructionSettlementOwner: key },
+    { $unset: { constructionSettlementOwner: "" } }
+  );
 }
 
 /** Includes a crash after application but before admission cleanup. */

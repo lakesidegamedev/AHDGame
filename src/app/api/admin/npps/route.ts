@@ -92,11 +92,10 @@ export async function GET() {
       count: p.count,
     }));
 
-    const nppCandidates = await electionCandidatesCollection(db)
-      .countDocuments({
-        isNPP: true,
-        status: "active",
-      });
+    const nppCandidates = await electionCandidatesCollection(db).countDocuments({
+      isNPP: true,
+      status: "active",
+    });
 
     const recentNPPs = await nppsCollection(db)
       .find({ retiredAt: null })
@@ -256,8 +255,9 @@ export async function DELETE(request: Request) {
       let candidatesRemoved = 0;
       if (independentCandidates.length > 0) {
         const candidateIds = independentCandidates.map((c) => c._id);
-        const result = await electionCandidatesCollection(db)
-          .deleteMany({ _id: { $in: candidateIds } });
+        const result = await electionCandidatesCollection(db).deleteMany({
+          _id: { $in: candidateIds },
+        });
         candidatesRemoved = result.deletedCount;
       }
 

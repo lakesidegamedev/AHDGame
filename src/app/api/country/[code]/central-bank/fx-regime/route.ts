@@ -48,8 +48,7 @@ export async function GET(_request: Request, context: RouteContext) {
     const db = await getDb();
     const scope = await getMonetaryPolicyScope(db, countryId);
     const fxCountryId = scope.currencyCode === "EUR" ? "DE" : countryId;
-    const fx = await exchangeRatesCollection(db)
-      .findOne({ countryId: fxCountryId });
+    const fx = await exchangeRatesCollection(db).findOne({ countryId: fxCountryId });
     const regime: FxRegime = fx?.fxRegime ?? (fx?.interventionPolicy ? "band" : "float");
     const capitalControls = fx?.capitalControls === true;
     const trinity = resolveTrinity(regime, capitalControls);
@@ -109,8 +108,7 @@ export async function POST(request: Request, context: RouteContext) {
     if (regime === "peg" && !(pegTarget && pegTarget > 0))
       return errorResponse(400, "A peg needs a target rate.");
 
-    const fx = await exchangeRatesCollection(db)
-      .findOne({ countryId: fxCountryId });
+    const fx = await exchangeRatesCollection(db).findOne({ countryId: fxCountryId });
     if (!fx)
       return NextResponse.json(notFound("No exchange rate for this country").toJson(), {
         status: 404,

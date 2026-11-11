@@ -286,11 +286,10 @@ export async function runOppositionResearchFlow(
   }
 
   // Sandbox fixture grant, recorded in the evidence (live worlds accrue).
-  await campaignsCollection(db)
-    .updateOne(
-      { _id: buyerCampaignId },
-      { $set: { funds: options.fixtureFunds, actions: options.fixtureActions } }
-    );
+  await campaignsCollection(db).updateOne(
+    { _id: buyerCampaignId },
+    { $set: { funds: options.fixtureFunds, actions: options.fixtureActions } }
+  );
   const before = await campaignsCollection(db).findOne({ _id: buyerCampaignId });
   if (!before) throw new OppoDriverError("buyer campaign unreadable after fixture grant");
   // Snapshot primitives now: the purchase mutates the stored document in

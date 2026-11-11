@@ -80,8 +80,10 @@ export async function POST(
     }
 
     // Find the target coalition
-    const coalition = await coalitionsCollection(db)
-      .findOne({ sequentialId: Number(id), countryId });
+    const coalition = await coalitionsCollection(db).findOne({
+      sequentialId: Number(id),
+      countryId,
+    });
     if (!coalition) {
       throw notFound("Coalition not found.");
     }
@@ -93,8 +95,10 @@ export async function POST(
     }
 
     // Check if the party already has a pending join request to ANY coalition
-    const existingRequest = await coalitionsCollection(db)
-      .findOne({ countryId, "joinRequests.partyId": party._id });
+    const existingRequest = await coalitionsCollection(db).findOne({
+      countryId,
+      "joinRequests.partyId": party._id,
+    });
     if (existingRequest) {
       throw badRequest("Your party already has a pending join request to another coalition.");
     }

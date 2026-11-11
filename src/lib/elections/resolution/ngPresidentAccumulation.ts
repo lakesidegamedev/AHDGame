@@ -72,9 +72,7 @@ export async function accumulateNGPresidentVoteTurn(
     .toArray();
   const popByZone = new Map(states.map((s) => [s._id as string, s.population ?? 0]));
 
-  const orgRows = await statePartyOrgCollection(db)
-    .find({ countryId: "NG" })
-    .toArray();
+  const orgRows = await statePartyOrgCollection(db).find({ countryId: "NG" }).toArray();
   // (zoneId → (partyId → organization))
   const orgByZoneParty = new Map<string, Map<string, number>>();
   for (const row of orgRows) {

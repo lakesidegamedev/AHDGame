@@ -26,8 +26,10 @@ import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameSt
 
 export async function bindHu2011Campaigns(db: Db, game: GameState, turn: number, now: Date) {
   if (game.preset !== "1991-default") return false;
-  const country = await countryGameStatesCollection(db)
-    .findOne({ _id: "HU" }, { projection: { huElectoralSystem2011SinceTurn: 1 } });
+  const country = await countryGameStatesCollection(db).findOne(
+    { _id: "HU" },
+    { projection: { huElectoralSystem2011SinceTurn: 1 } }
+  );
   if (
     huAssemblyElectionSystem({
       calendarTurn: calendarTurn(turn, {

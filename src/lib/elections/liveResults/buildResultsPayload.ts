@@ -141,9 +141,7 @@ export async function buildResultsPayload(
 ): Promise<ElectionResultsResponse> {
   const isAdmin = opts.isAdmin;
   const [candidates, tally, partyMap] = await Promise.all([
-    electionCandidatesCollection(db)
-      .find({ electionId: election._id })
-      .toArray(),
+    electionCandidatesCollection(db).find({ electionId: election._id }).toArray(),
     electionVoteTalliesCollection(db).findOne({ electionId: election._id }),
     loadPartyMap(db, election.countryId),
   ]);

@@ -243,11 +243,10 @@ async function compensateRefusal(
       },
     }
   );
-  const frozen = await indexFundsCollection<SettlementFund>(db)
-    .findOne(
-      { _id: fundId, "floatSettlementPlan.key": plan.key },
-      { projection: { floatSettlementPlan: 1 } }
-    );
+  const frozen = await indexFundsCollection<SettlementFund>(db).findOne(
+    { _id: fundId, "floatSettlementPlan.key": plan.key },
+    { projection: { floatSettlementPlan: 1 } }
+  );
   if (!frozen?.floatSettlementPlan?.compensation)
     throw new Error("Fund refund plan is unavailable");
   const result = await finish(db, frozen.floatSettlementPlan.compensation);
@@ -258,11 +257,10 @@ async function compensateRefusal(
 
 /** Unknown acknowledgements resume the original plan; only proven refusals reverse it. */
 export async function settleFundFloatPlan(db: Db, fundId: ObjectId, plan: FundFloatPlan) {
-  const original = await indexFundsCollection<SettlementFund>(db)
-    .findOne(
-      { _id: fundId, "floatSettlementPlan.key": plan.key },
-      { projection: { floatSettlementPlan: 1 } }
-    );
+  const original = await indexFundsCollection<SettlementFund>(db).findOne(
+    { _id: fundId, "floatSettlementPlan.key": plan.key },
+    { projection: { floatSettlementPlan: 1 } }
+  );
   if (!original?.floatSettlementPlan)
     throw new Error("The original fund float quote is unavailable");
   plan = original.floatSettlementPlan;
@@ -294,11 +292,10 @@ export async function reverseCompletedFundFloatPlan(db: Db, fundId: ObjectId, pl
     if (!completed(result)) throw new Error(result.error ?? "Fund trade reversal is incomplete");
     return false;
   }
-  const current = await indexFundsCollection<SettlementFund>(db)
-    .findOne(
-      { _id: fundId },
-      { projection: { floatSettlementPlan: 1, holdings: 1, floatSettlementGeneration: 1 } }
-    );
+  const current = await indexFundsCollection<SettlementFund>(db).findOne(
+    { _id: fundId },
+    { projection: { floatSettlementPlan: 1, holdings: 1, floatSettlementGeneration: 1 } }
+  );
   if (!current?.floatSettlementPlan)
     throw new Error("The original completed fund trade is unavailable");
   const active = current.floatSettlementPlan;

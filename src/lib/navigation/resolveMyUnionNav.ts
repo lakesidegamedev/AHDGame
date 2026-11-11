@@ -16,8 +16,10 @@ export async function resolveMyUnionNav(
   character: { _id: ObjectId; unionLeaderOf?: ObjectId | null }
 ): Promise<MyUnionNav | null> {
   if (character.unionLeaderOf) {
-    const led = await unionsCollection(db)
-      .findOne({ _id: character.unionLeaderOf }, { projection: { _id: 1 } });
+    const led = await unionsCollection(db).findOne(
+      { _id: character.unionLeaderOf },
+      { projection: { _id: 1 } }
+    );
     if (led) return { id: led._id.toString() };
   }
 
@@ -29,7 +31,9 @@ export async function resolveMyUnionNav(
     );
   if (!organizer) return null;
 
-  const organized = await unionsCollection(db)
-    .findOne({ _id: organizer.unionId }, { projection: { _id: 1 } });
+  const organized = await unionsCollection(db).findOne(
+    { _id: organizer.unionId },
+    { projection: { _id: 1 } }
+  );
   return organized ? { id: organized._id.toString() } : null;
 }

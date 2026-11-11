@@ -25,8 +25,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     }
 
     // Set isPermanent to false
-    await legislationTypesCollection(db)
-      .updateOne({ _id: id }, { $set: { isPermanent: false, updatedAt: new Date() } });
+    await legislationTypesCollection(db).updateOne(
+      { _id: id },
+      { $set: { isPermanent: false, updatedAt: new Date() } }
+    );
 
     // Get remaining permanent types from DB
     const permanentTypes = await legislationTypesCollection(db)

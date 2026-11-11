@@ -39,7 +39,9 @@ describe("Canada opening party organization", () => {
   it("puts the right-of-centre party ahead in Alberta and the governing party ahead in Ontario", () => {
     const org = (stateId: string, slug: string) =>
       rows.find((row) => row.stateId === stateId && row.partyId === slugToId[slug])!.organization;
-    expect(org("CA_AB", "ca_national_prosperity")).toBeGreaterThan(org("CA_AB", "ca_federal_unity"));
+    expect(org("CA_AB", "ca_national_prosperity")).toBeGreaterThan(
+      org("CA_AB", "ca_federal_unity")
+    );
     expect(org("CA_ON", "ca_federal_unity")).toBeGreaterThan(
       org("CA_ON", "ca_national_prosperity")
     );

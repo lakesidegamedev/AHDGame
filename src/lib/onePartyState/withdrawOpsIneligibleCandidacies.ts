@@ -87,11 +87,10 @@ export async function withdrawOpsIneligibleCandidacies(
 
   if (toWithdraw.length === 0) return { withdrawn: 0 };
 
-  const result = await electionCandidatesCollection(db)
-    .updateMany(
-      { _id: { $in: toWithdraw.map((candidate) => candidate._id) } },
-      { $set: { status: "withdrawn", withdrawnAt: now } }
-    );
+  const result = await electionCandidatesCollection(db).updateMany(
+    { _id: { $in: toWithdraw.map((candidate) => candidate._id) } },
+    { $set: { status: "withdrawn", withdrawnAt: now } }
+  );
 
   for (const candidate of toWithdraw) {
     await removeWithdrawnCandidateFromTally(db, candidate.electionId, candidate._id.toString());

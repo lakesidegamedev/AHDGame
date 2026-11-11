@@ -27,11 +27,10 @@ export async function POST(
     if (!parsed.success) return errorResponse(parsed.status, parsed.error);
 
     const db = await getDb();
-    const result = await exchangeRatesCollection(db)
-      .updateOne(
-        { _id: currencyId },
-        { $set: { rate: parsed.data.rate, hardPeg: parsed.data.rate, updatedAt: new Date() } }
-      );
+    const result = await exchangeRatesCollection(db).updateOne(
+      { _id: currencyId },
+      { $set: { rate: parsed.data.rate, hardPeg: parsed.data.rate, updatedAt: new Date() } }
+    );
     if (result.matchedCount === 0) throw notFound("Currency not found");
 
     return NextResponse.json({ success: true, hardPeg: parsed.data.rate });
@@ -50,8 +49,10 @@ export async function DELETE(
 
     const { currencyId } = await params;
     const db = await getDb();
-    const result = await exchangeRatesCollection(db)
-      .updateOne({ _id: currencyId }, { $set: { hardPeg: null, updatedAt: new Date() } });
+    const result = await exchangeRatesCollection(db).updateOne(
+      { _id: currencyId },
+      { $set: { hardPeg: null, updatedAt: new Date() } }
+    );
     if (result.matchedCount === 0) throw notFound("Currency not found");
 
     return NextResponse.json({ success: true });

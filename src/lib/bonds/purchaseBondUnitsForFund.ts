@@ -44,12 +44,11 @@ async function atomicallyDebitFundCashAnchor(
 ): Promise<{ ok: true; newCashAnchor: number } | { ok: false }> {
   if (!Number.isFinite(amountAnchor) || amountAnchor <= 0) return { ok: false };
   const rounded = Math.round(amountAnchor * 100) / 100;
-  const result = await indexFundsCollection(db)
-    .findOneAndUpdate(
-      { _id: fundId, cashAnchor: { $gte: rounded + minimumRemainingCashAnchor } },
-      { $inc: { cashAnchor: -rounded }, $set: { updatedAt: new Date() } },
-      { returnDocument: "after", projection: { cashAnchor: 1 } }
-    );
+  const result = await indexFundsCollection(db).findOneAndUpdate(
+    { _id: fundId, cashAnchor: { $gte: rounded + minimumRemainingCashAnchor } },
+    { $inc: { cashAnchor: -rounded }, $set: { updatedAt: new Date() } },
+    { returnDocument: "after", projection: { cashAnchor: 1 } }
+  );
   if (!result) return { ok: false };
   return { ok: true, newCashAnchor: result.cashAnchor };
 }
@@ -57,8 +56,10 @@ async function atomicallyDebitFundCashAnchor(
 async function refundFundCashAnchor(db: Db, fundId: ObjectId, amountAnchor: number): Promise<void> {
   if (!Number.isFinite(amountAnchor) || amountAnchor <= 0) return;
   const rounded = Math.round(amountAnchor * 100) / 100;
-  await indexFundsCollection<Document>(db)
-    .updateOne({ _id: fundId }, { $inc: { cashAnchor: rounded }, $set: { updatedAt: new Date() } });
+  await indexFundsCollection<Document>(db).updateOne(
+    { _id: fundId },
+    { $inc: { cashAnchor: rounded }, $set: { updatedAt: new Date() } }
+  );
 }
 
 type BondPurchaseFund = Pick<IndexFund, "_id" | "name" | "quotedNav" | "anchorCurrencyCode">;
@@ -387,8 +388,7 @@ export async function settleBondPurchasesInTransaction(
     });
   }
 
-  const debited = await indexFundsCollection(db)
-    .bulkWrite(debits, { ordered: true, session });
+  const debited = await indexFundsCollection(db).bulkWrite(debits, { ordered: true, session });
   if (debited.matchedCount !== debits.length) throw new BondBatchGuardMiss("fund cash");
 
   const reserved = await bondsCollection(db).bulkWrite(reservations, { ordered: true, session });

@@ -83,11 +83,10 @@ export async function resolvePresenceSubject(
     throw badRequest("Campaign Presence is not available for this ticket.");
   }
 
-  const candidateRow = await electionCandidatesCollection(db)
-    .findOne(
-      { electionId: campaign.electionId, characterId: campaign.candidateId, status: "active" },
-      { projection: { campaignSuspended: 1 } }
-    );
+  const candidateRow = await electionCandidatesCollection(db).findOne(
+    { electionId: campaign.electionId, characterId: campaign.candidateId, status: "active" },
+    { projection: { campaignSuspended: 1 } }
+  );
   if (candidateRow?.campaignSuspended) {
     throw badRequest("This campaign is suspended. Management actions are disabled.");
   }

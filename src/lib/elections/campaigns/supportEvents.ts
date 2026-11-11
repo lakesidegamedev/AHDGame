@@ -21,8 +21,9 @@ import { electionCandidatesCollection } from "@/lib/db/repositories/electionCand
  */
 async function applySupportDelta(db: Db, characterId: ObjectId, delta: number): Promise<number> {
   if (delta === 0) return 0;
-  const result = await electionCandidatesCollection(db)
-    .updateMany({ characterId, status: "active" }, [
+  const result = await electionCandidatesCollection(db).updateMany(
+    { characterId, status: "active" },
+    [
       {
         $set: {
           support: {
@@ -30,7 +31,8 @@ async function applySupportDelta(db: Db, characterId: ObjectId, delta: number): 
           },
         },
       },
-    ]);
+    ]
+  );
   return result.modifiedCount;
 }
 

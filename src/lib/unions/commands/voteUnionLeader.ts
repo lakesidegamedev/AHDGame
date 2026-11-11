@@ -140,11 +140,10 @@ export async function voteUnionLeader(
   // always differs from the seated NPP and should get an offer.
   if (!leaderId || leaderId === incumbentId) {
     if (prevPending) {
-      await unionsCollection(db)
-        .updateOne(
-          { _id: union._id },
-          { $set: { pendingLeaderCharacterId: null, updatedAt: now } }
-        );
+      await unionsCollection(db).updateOne(
+        { _id: union._id },
+        { $set: { pendingLeaderCharacterId: null, updatedAt: now } }
+      );
     }
     return { ok: true, status: 200, pendingLeaderCharacterId: null };
   }
@@ -153,11 +152,10 @@ export async function voteUnionLeader(
     return { ok: true, status: 200, pendingLeaderCharacterId: leaderId };
   }
 
-  await unionsCollection(db)
-    .updateOne(
-      { _id: union._id },
-      { $set: { pendingLeaderCharacterId: new ObjectId(leaderId), updatedAt: now } }
-    );
+  await unionsCollection(db).updateOne(
+    { _id: union._id },
+    { $set: { pendingLeaderCharacterId: new ObjectId(leaderId), updatedAt: now } }
+  );
 
   const leaderChar = await charactersCollection(db).findOne(
     { _id: new ObjectId(leaderId) },

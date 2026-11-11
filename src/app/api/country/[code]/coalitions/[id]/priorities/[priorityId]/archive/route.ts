@@ -72,8 +72,10 @@ export async function POST(
       resolvedBy: auth.user.character._id,
     };
 
-    await coalitionsCollection<Document>(db)
-      .updateOne({ _id: context.coalition._id }, { $set: { priorities, updatedAt: now } });
+    await coalitionsCollection<Document>(db).updateOne(
+      { _id: context.coalition._id },
+      { $set: { priorities, updatedAt: now } }
+    );
 
     return NextResponse.json({
       success: true,

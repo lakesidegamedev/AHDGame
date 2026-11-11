@@ -54,9 +54,7 @@ export async function buildPartyOrgAnalytics(
   countryId: CountryId,
   partyId: string
 ): Promise<PartyAnalyticsOrgSection> {
-  const statePartyOrgs = await statePartyOrgCollection(db)
-    .find({ countryId, partyId })
-    .toArray();
+  const statePartyOrgs = await statePartyOrgCollection(db).find({ countryId, partyId }).toArray();
 
   if (statePartyOrgs.length === 0) {
     return {
@@ -127,8 +125,7 @@ export async function buildStatePartyOrgAnalytics(
   partyId: string,
   stateId: string
 ): Promise<PartyAnalyticsStateMetric | null> {
-  const statePartyOrg = await statePartyOrgCollection(db)
-    .findOne({ countryId, partyId, stateId });
+  const statePartyOrg = await statePartyOrgCollection(db).findOne({ countryId, partyId, stateId });
   if (!statePartyOrg) return null;
 
   const [state, budget] = await Promise.all([

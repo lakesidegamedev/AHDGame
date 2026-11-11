@@ -43,11 +43,10 @@ export async function isCampaignRunningMateUser(
 ): Promise<boolean> {
   if (campaign.candidateIsNPP) return false;
 
-  const candidateRow = await electionCandidatesCollection(db)
-    .findOne(
-      { electionId: campaign.electionId, characterId: campaign.candidateId, status: "active" },
-      { projection: { runningMateId: 1 } }
-    );
+  const candidateRow = await electionCandidatesCollection(db).findOne(
+    { electionId: campaign.electionId, characterId: campaign.candidateId, status: "active" },
+    { projection: { runningMateId: 1 } }
+  );
   const runningMateId = candidateRow?.runningMateId;
   if (!runningMateId) return false;
 

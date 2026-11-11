@@ -51,8 +51,10 @@ export async function POST(
     if (transferGuard) return transferGuard;
 
     // Find coalition
-    const coalition = await coalitionsCollection(db)
-      .findOne({ sequentialId: Number(id), countryId });
+    const coalition = await coalitionsCollection(db).findOne({
+      sequentialId: Number(id),
+      countryId,
+    });
     if (!coalition) {
       throw notFound("Coalition not found.");
     }

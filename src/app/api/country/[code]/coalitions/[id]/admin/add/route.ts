@@ -40,8 +40,10 @@ export async function POST(
 
     const db = await getDb();
 
-    const coalition = await coalitionsCollection(db)
-      .findOne({ sequentialId: parseInt(id, 10), countryId });
+    const coalition = await coalitionsCollection(db).findOne({
+      sequentialId: parseInt(id, 10),
+      countryId,
+    });
     if (!coalition) {
       throw notFound("Coalition not found.");
     }
@@ -82,11 +84,10 @@ export async function POST(
     };
 
     await Promise.all([
-      coalitionsCollection(db)
-        .updateOne(
-          { _id: coalition._id },
-          { $push: { members: newMember }, $set: { updatedAt: now } }
-        ),
+      coalitionsCollection(db).updateOne(
+        { _id: coalition._id },
+        { $push: { members: newMember }, $set: { updatedAt: now } }
+      ),
       politicalPartiesCollection(db).updateOne(
         { _id: party._id },
         { $set: { coalitionId: coalition._id, updatedAt: now } }

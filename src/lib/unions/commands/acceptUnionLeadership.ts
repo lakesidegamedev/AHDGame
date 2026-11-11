@@ -40,11 +40,10 @@ export async function acceptUnionLeadership(
     union.ownerType !== "npp" &&
     union.ownerId.toString() === character._id.toString()
   ) {
-    await unionsCollection(db)
-      .updateOne(
-        { _id: union._id },
-        { $unset: { pendingLeaderCharacterId: "" }, $set: { updatedAt: new Date() } }
-      );
+    await unionsCollection(db).updateOne(
+      { _id: union._id },
+      { $unset: { pendingLeaderCharacterId: "" }, $set: { updatedAt: new Date() } }
+    );
     return { ok: true, status: 200, unionId: union._id };
   }
   if (

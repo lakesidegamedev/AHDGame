@@ -84,11 +84,10 @@ export async function materializeRussianConstitutionalProposal(input: {
   const proposalId = `1991-default:ru-constitution:${kind}`;
   const existing = await proposals.findOne({ _id: proposalId }, { session });
   if (existing) {
-    const oldBill = await billsCollection(db)
-      .findOne(
-        { _id: existing.billId },
-        { session, projection: { status: 1, russianConstitutionalMandate: 1, countryId: 1 } }
-      );
+    const oldBill = await billsCollection(db).findOne(
+      { _id: existing.billId },
+      { session, projection: { status: 1, russianConstitutionalMandate: 1, countryId: 1 } }
+    );
     if (
       !oldBill ||
       oldBill.countryId !== "RU" ||
@@ -298,8 +297,10 @@ export async function loadRussianConstitutionalDecisions(
 ) {
   if (game.preset !== "1991-default") return [];
   const kinds: RussianConstitutionalDecisionKind[] = ["presidency", "federalAssembly"];
-  const country = await countryGameStatesCollection(db)
-    .findOne({ _id: "RU" }, { projection: markerProjection });
+  const country = await countryGameStatesCollection(db).findOne(
+    { _id: "RU" },
+    { projection: markerProjection }
+  );
   const proposals = await db
     .collection<RussianConstitutionalProposal>(RUSSIAN_CONSTITUTIONAL_PROPOSALS_COLLECTION)
     .find(

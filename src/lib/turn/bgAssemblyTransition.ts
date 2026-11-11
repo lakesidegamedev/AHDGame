@@ -43,8 +43,10 @@ export async function processBgAssemblyTransition(
   if (!Number.isSafeInteger(turn) || turn < 1 || !Number.isFinite(now.getTime()))
     throw new Error("Bulgarian handover needs a valid turn and time");
   if (clock(game, turn) < BG_ORDINARY_ASSEMBLY_START_TURN) return false;
-  const ready = await countryGameStatesCollection(db)
-    .findOne({ _id: "BG" }, { projection: { bgOrdinaryAssemblySinceTurn: 1, dissolvedTurn: 1 } });
+  const ready = await countryGameStatesCollection(db).findOne(
+    { _id: "BG" },
+    { projection: { bgOrdinaryAssemblySinceTurn: 1, dissolvedTurn: 1 } }
+  );
   if (!ready || ready.dissolvedTurn != null || ready.bgOrdinaryAssemblySinceTurn != null)
     return false;
   return runRequiredTransaction((session) => materializeBgLegacyHandover(db, turn, now, session), {

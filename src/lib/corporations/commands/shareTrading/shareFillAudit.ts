@@ -787,8 +787,10 @@ export async function recoverShareFillAttempt(
  */
 export async function repairStrandedShareFillClaim(db: Db, order: ShareOrder): Promise<boolean> {
   if (order.status !== "filled" || order.sharesRemaining <= 0) return false;
-  await shareOrdersCollection(db)
-    .updateOne({ _id: order._id }, { $set: { status: "open", updatedAt: new Date() } });
+  await shareOrdersCollection(db).updateOne(
+    { _id: order._id },
+    { $set: { status: "open", updatedAt: new Date() } }
+  );
   return true;
 }
 

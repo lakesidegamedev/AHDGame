@@ -95,11 +95,10 @@ export async function GET(
     );
 
     if (changed) {
-      await coalitionsCollection<Document>(db)
-        .updateOne(
-          { _id: context.coalition._id },
-          { $set: { priorities: normalizedPriorities, updatedAt: now } }
-        );
+      await coalitionsCollection<Document>(db).updateOne(
+        { _id: context.coalition._id },
+        { $set: { priorities: normalizedPriorities, updatedAt: now } }
+      );
     }
 
     return NextResponse.json(payload);
@@ -231,8 +230,10 @@ export async function POST(
     }
 
     const priorities = [...existingPriorities, nextPriority];
-    await coalitionsCollection<Document>(db)
-      .updateOne({ _id: context.coalition._id }, { $set: { priorities, updatedAt: now } });
+    await coalitionsCollection<Document>(db).updateOne(
+      { _id: context.coalition._id },
+      { $set: { priorities, updatedAt: now } }
+    );
 
     return NextResponse.json({
       success: true,

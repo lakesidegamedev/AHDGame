@@ -217,8 +217,10 @@ export async function openRussianDumaConvocation(
 ) {
   if (input.game.preset !== "1991-default") return null;
   // Waiting turns do not start a transaction or allocate hundreds of ids.
-  const country = await countryGameStatesCollection(input.db)
-    .findOne({ _id: "RU" }, { projection: RUSSIAN_DUMA_AUTHORITY_PROJECTION });
+  const country = await countryGameStatesCollection(input.db).findOne(
+    { _id: "RU" },
+    { projection: RUSSIAN_DUMA_AUTHORITY_PROJECTION }
+  );
   if (!country) return null;
   const current = await loadCurrentRussianDumaClock({ db: input.db, country, turn: input.turn });
   if (!current) return null;

@@ -142,8 +142,7 @@ async function executeStatePartyInfluenceCore(
   }
 
   const statePartyKey = `${input.stateId}_${input.partyId}`;
-  const statePartyOrg = await statePartyOrgCollection(db)
-    .findOne({ _id: statePartyKey });
+  const statePartyOrg = await statePartyOrgCollection(db).findOne({ _id: statePartyKey });
   const npp = await nppsCollection(db).findOne({ _id: input.nppId });
   const party = await findPartyForInfluence(db, input);
 
@@ -221,11 +220,10 @@ async function executeStatePartyInfluenceCore(
   // Guarded by `$exists:false` → idempotent under concurrent spends.
   if (statePartyOrg.nppActionPoints == null) {
     const apCap = nppActionPointCap("state", resolvePartyTier(party));
-    await statePartyOrgCollection(db)
-      .updateOne(
-        { _id: statePartyKey, nppActionPoints: { $exists: false } },
-        { $set: { nppActionPoints: apCap } }
-      );
+    await statePartyOrgCollection(db).updateOne(
+      { _id: statePartyKey, nppActionPoints: { $exists: false } },
+      { $set: { nppActionPoints: apCap } }
+    );
     statePartyOrg.nppActionPoints = apCap;
   }
 
@@ -416,8 +414,7 @@ async function executeNationalPartyInfluenceCore(
   const gameState = await gameStateCollection(db).findOne({ _id: "current" });
   const currentTurn = gameState?.currentTurn || 1;
   const statePartyKey = `${npp.homeState}_${input.partyId}`;
-  const statePartyOrg = await statePartyOrgCollection(db)
-    .findOne({ _id: statePartyKey });
+  const statePartyOrg = await statePartyOrgCollection(db).findOne({ _id: statePartyKey });
   const organizationLevel = statePartyOrg?.organization || 50;
   // Fund lever retired — NPP work no longer spends treasury, so no fund bonus.
   const calculation = calculatePartyInfluenceChance(npp, input.partyId, organizationLevel, 0);
