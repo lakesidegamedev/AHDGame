@@ -1,5 +1,5 @@
 /**
- * Opening program spending for the US, the UK, Japan and China, per preset. It sets the
+ * Opening program spending for the US, the UK, Germany, Japan and China, per preset. It sets the
  * envelope the first budget refresh calibrates non-law spending against.
  * Keys are `country|fiscalYear|gdp|population`, so a re-based config never reads
  * a mismatched row. `all` is every national spending program; `active` is the
@@ -527,6 +527,118 @@ export const OPENING_PROGRAM_SPENDING: Readonly<
         other: 3108919052070,
         publicSafety: 2278195742610,
         agriculture: 2378889477090,
+      },
+      stateGrants: 0,
+    },
+  },
+  "DE|2020|4500000000000|84400000": {
+    all: {
+      byCategory: {
+        environment: 54868440000,
+        welfare: 678373440000,
+        healthcare: 614692796000,
+        education: 211160360000,
+        defense: 89784720000,
+        other: 229449840000,
+        transport: 48217720000,
+      },
+      stateGrants: 0,
+    },
+  },
+  "DE|1979|1254000000000|61400000": {
+    all: {
+      byCategory: {
+        environment: 13510229104,
+        welfare: 167035559829,
+        healthcare: 151355506051,
+        education: 51993912006,
+        defense: 22107647624,
+        other: 56497321707,
+        transport: 11872625576,
+      },
+      stateGrants: 0,
+    },
+  },
+  "DE|1991|1600000000000|80000000": {
+    all: {
+      byCategory: {
+        environment: 25480000000,
+        welfare: 211120000000,
+        healthcare: 192244000000,
+        education: 51480000000,
+        defense: 28080000000,
+        other: 140088000000,
+        transport: 16120000000,
+      },
+      stateGrants: 0,
+    },
+  },
+  "DE|1999|1600000000000|80000000": {
+    all: {
+      byCategory: {
+        environment: 25480000000,
+        welfare: 211120000000,
+        healthcare: 192244000000,
+        education: 51480000000,
+        defense: 28080000000,
+        other: 140088000000,
+        transport: 16120000000,
+      },
+      stateGrants: 0,
+    },
+  },
+  "DE|2007|1600000000000|80000000": {
+    all: {
+      byCategory: {
+        environment: 25480000000,
+        welfare: 211120000000,
+        healthcare: 192244000000,
+        education: 51480000000,
+        defense: 28080000000,
+        other: 140088000000,
+        transport: 16120000000,
+      },
+      stateGrants: 0,
+    },
+  },
+  "DE|2023|4500000000000|84400000": {
+    all: {
+      byCategory: {
+        environment: 54868440000,
+        welfare: 678373440000,
+        healthcare: 614692796000,
+        education: 211160360000,
+        defense: 89784720000,
+        other: 229449840000,
+        transport: 48217720000,
+      },
+      stateGrants: 0,
+    },
+  },
+  "DE|2027|4881139000000|84400000": {
+    all: {
+      byCategory: {
+        environment: 54868440000,
+        welfare: 678373440000,
+        healthcare: 614692796000,
+        education: 211160360000,
+        defense: 89784720000,
+        other: 229449840000,
+        transport: 48217720000,
+      },
+      stateGrants: 0,
+    },
+  },
+  "DE|2027|4881139000000|83140237": {
+    all: {
+      byCategory: {
+        environment: 54049468074,
+        welfare: 668247968911,
+        healthcare: 605517828692,
+        education: 208008558950,
+        defense: 88444584121,
+        other: 226025048308,
+        transport: 47498017398,
       },
       stateGrants: 0,
     },
