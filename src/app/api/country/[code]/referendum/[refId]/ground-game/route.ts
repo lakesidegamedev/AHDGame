@@ -18,7 +18,7 @@ import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 //   belong to the referendum's country). Official mode requires the actor be a
 //   party Chair/Vice/Campaigner (canSpendOnStateParty) and debits Political
 //   Strength; volunteer mode debits the player's Actions + Campaign Funds.
-//   UK-only. Errors: 400, 401, 403, 404.
+//   Any country that hosts sovereignty referendums. Errors: 400, 401, 403, 404.
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ code: string; refId: string }> }
