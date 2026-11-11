@@ -11,7 +11,15 @@ import { loadFinancialCrisisDemand } from "@/lib/livingConflict/financialDemand"
  * logic lives in ./commodity/.
  */
 import { getDb } from "@/lib/mongodb";
-import type { CommodityPrice, StateMetrics, Corporation, CentralBank, ExchangeRate, StateBudget, GameConfig } from "@/lib/db/types";
+import type {
+  CommodityPrice,
+  StateMetrics,
+  Corporation,
+  CentralBank,
+  ExchangeRate,
+  StateBudget,
+  GameConfig,
+} from "@/lib/db/types";
 import {
   COUNTRY_CURRENCY_MAP,
   INITIAL_RATES,

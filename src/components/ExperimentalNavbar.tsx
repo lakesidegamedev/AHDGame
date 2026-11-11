@@ -1045,14 +1045,9 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
             {/* Brand */}
             <Link
               href="/profile"
-              aria-label="A House Divided"
               className="flex shrink-0 items-center gap-2.5 transition-opacity hover:opacity-80"
             >
               <span className="flex h-[30px] w-[30px] items-center justify-center rounded-full bg-white p-0.5 ring-1 ring-white/10">
-                {/* Decorative: the wordmark beside it names the link, and the
-                    link's aria-label keeps that name when the wordmark is
-                    hidden. A text alt here duplicated the wordmark and failed
-                    the redundant-alt audit. */}
                 <Image
                   src={CDN_LOGO_URL}
                   priority
