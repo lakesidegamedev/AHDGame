@@ -50,7 +50,7 @@ import { snapshotBillPolicyProvisions, validateBillProvisions } from "@/lib/cong
 import { RESET_V2_READY } from "@/lib/resetVersions/availability";
 import { isResetV2Country, resetSystemVersionsForCountry } from "@/lib/resetVersions/rules";
 import { loadBillLegislationTypes } from "@/lib/legislature/queries/loadBillLegislationTypes";
-import { resetTaxesFor } from "@/lib/resetLegislation/taxCatalog";
+import { resetTaxForLegislationType, resetTaxesFor } from "@/lib/resetLegislation/taxCatalog";
 import type { ResetCountry } from "@/lib/resetLegislation/fundingOwner";
 import { getNationalDocId } from "@/lib/constants/nationalScope";
 import { charactersCollection } from "@/lib/db/repositories/characters";
@@ -489,7 +489,11 @@ export async function proposeCabinetBill({
   const resetTaxes = reviewedCountryLegislation
     ? resetTaxesFor(countryId as ResetCountry, "national")
     : [];
-  const resetTaxByTypeId = new Map(resetTaxes.map((tax) => [tax.existingLegislationTypeId, tax]));
+  const resetTaxByTypeId = {
+    get: (legislationTypeId: string) => resetTaxForLegislationType(resetTaxes, legislationTypeId),
+    has: (legislationTypeId: string) =>
+      resetTaxForLegislationType(resetTaxes, legislationTypeId) !== undefined,
+  };
   const rawResetTaxProvisions = (input.provisions ?? []).filter((provision) => {
     const legislationTypeId =
       typeof provision === "object" && provision !== null && "legislationTypeId" in provision

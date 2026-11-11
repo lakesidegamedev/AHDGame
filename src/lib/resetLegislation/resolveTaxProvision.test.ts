@@ -80,6 +80,26 @@ describe("resolveResetTaxProvisionFields", () => {
     });
   });
 
+  it("resolves the old Japanese tax type a saved world still holds", async () => {
+    const result = await resolveResetTaxProvisionFields(
+      db as unknown as Db,
+      {
+        _id: "jp_foreign_corporation_tax",
+        taxRateChange: { scope: "federal", taxType: "foreignCorporateTax" },
+        policyOptions: [
+          { id: "zero", name: "0%", rate: 0 },
+          { id: "maximum", name: "65%", rate: 65 },
+        ],
+      } as LegislationType,
+      25,
+      undefined,
+      "JP",
+      "national"
+    );
+
+    expect(result).toMatchObject({ ok: true, fields: { proposedRate: 25 } });
+  });
+
   it("rejects catalog entries whose stored tax metadata targets another budget field", async () => {
     const result = await resolveResetTaxProvisionFields(
       db as unknown as Db,

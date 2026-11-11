@@ -37,6 +37,11 @@ export interface ResetTaxDefinition {
   country: ResetCountry;
   scope: TaxScope;
   existingLegislationTypeId: string;
+  /**
+   * The type that carried this instrument in worlds seeded before the country
+   * moved to its law book. Those worlds hold no document for the book type.
+   */
+  savedWorldLegislationTypeId?: string;
   overseeingSeatId: string | null;
 }
 
@@ -77,6 +82,15 @@ const federal: ReadonlyArray<[string, string, ResetTaxType, string, string, stri
   ["T06", "Tariffs", "tariffs", "us.tax.tariffs", "uk.tax.tariffs", "jp.tax.tariffs"],
 ];
 
+const JP_SAVED_WORLD_TAX_TYPE: Readonly<Record<string, string>> = {
+  T01: "jp_income_tax_rate",
+  T02: "jp_domestic_corporation_tax",
+  T03: "jp_foreign_corporation_tax",
+  T04: "jp_social_insurance",
+  T05: "jp_consumption_tax",
+  T06: "jp_customs_tariff",
+};
+
 const treasurySeat: Record<ResetCountry, string> = {
   US: "secretary_of_treasury",
   UK: "chancellor",
@@ -112,6 +126,7 @@ const nationalTaxes: ResetTaxDefinition[] = federal.flatMap(([id, title, taxType
     country: "JP",
     scope: "national",
     existingLegislationTypeId: jp,
+    savedWorldLegislationTypeId: JP_SAVED_WORLD_TAX_TYPE[id],
     overseeingSeatId: treasurySeat.JP,
   },
   {
@@ -236,6 +251,9 @@ export const resetTaxes: readonly ResetTaxDefinition[] = [
           title: INCOME_TIER_LABELS[tier] + " Tax",
           taxType: INCOME_TAX_KEYS[tier],
           existingLegislationTypeId: tax.existingLegislationTypeId + "__income_" + tier,
+          ...(tax.savedWorldLegislationTypeId && {
+            savedWorldLegislationTypeId: tax.savedWorldLegislationTypeId + "__income_" + tier,
+          }),
         },
         {
           ...tax,
@@ -243,6 +261,9 @@ export const resetTaxes: readonly ResetTaxDefinition[] = [
           title: INCOME_TIER_LABELS[tier] + " Capital Gains Tax",
           taxType: CAPITAL_GAINS_TAX_KEYS[tier],
           existingLegislationTypeId: tax.existingLegislationTypeId + "__capital_" + tier,
+          ...(tax.savedWorldLegislationTypeId && {
+            savedWorldLegislationTypeId: tax.savedWorldLegislationTypeId + "__capital_" + tier,
+          }),
         },
       ])
     : [tax]
@@ -253,4 +274,53 @@ export function resetTaxesFor(
   scope: TaxScope
 ): readonly ResetTaxDefinition[] {
   return resetTaxes.filter((tax) => tax.country === country && tax.scope === scope);
+}
+
+/** The instrument a legislation type files, under either of its type ids. */
+export function resetTaxForLegislationType(
+  taxes: readonly ResetTaxDefinition[],
+  legislationTypeId: string
+): ResetTaxDefinition | undefined {
+  return taxes.find(
+    (tax) =>
+      tax.existingLegislationTypeId === legislationTypeId ||
+      tax.savedWorldLegislationTypeId === legislationTypeId
+  );
+}
+
+/** Every type id that can file one of these instruments. */
+export function resetTaxLegislationTypeIds(taxes: readonly ResetTaxDefinition[]): string[] {
+  return taxes.flatMap((tax) =>
+    tax.savedWorldLegislationTypeId
+      ? [tax.existingLegislationTypeId, tax.savedWorldLegislationTypeId]
+      : [tax.existingLegislationTypeId]
+  );
+}
+
+const baseTypeId = (id: string) => id.split(/__(?:income|capital)_/)[0];
+
+/**
+ * Point each instrument at the type this world holds: the book type when it
+ * exists, else the saved-world type when that exists.
+ */
+export function resetTaxesForWorld(
+  taxes: readonly ResetTaxDefinition[],
+  presentTypeIds: ReadonlySet<string>
+): ResetTaxDefinition[] {
+  return taxes.map((tax) => {
+    const saved = tax.savedWorldLegislationTypeId;
+    if (
+      !saved ||
+      presentTypeIds.has(baseTypeId(tax.existingLegislationTypeId)) ||
+      !presentTypeIds.has(baseTypeId(saved))
+    ) {
+      return tax;
+    }
+    return { ...tax, existingLegislationTypeId: saved };
+  });
+}
+
+/** Base legislation type ids to look up before {@link resetTaxesForWorld}. */
+export function resetTaxBaseTypeIds(taxes: readonly ResetTaxDefinition[]): string[] {
+  return [...new Set(resetTaxLegislationTypeIds(taxes).map(baseTypeId))];
 }

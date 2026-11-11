@@ -12,7 +12,7 @@ import {
   type ResolvedTaxSliderFields,
 } from "@/lib/politicalLegislation/taxSlider";
 import type { ResetCountry } from "./fundingOwner";
-import { resetTaxesFor, type TaxScope } from "./taxCatalog";
+import { resetTaxForLegislationType, resetTaxesFor, type TaxScope } from "./taxCatalog";
 import { taxRateBoundsFromExistingOptions, validateExactTaxRate } from "./rules/taxRate";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
@@ -32,8 +32,9 @@ export async function resolveResetTaxProvisionFields(
   scope: TaxScope,
   regionId?: string
 ): Promise<ResolvedTaxSliderFields> {
-  const definition = resetTaxesFor(countryId, scope).find(
-    (tax) => tax.existingLegislationTypeId === legislationType._id
+  const definition = resetTaxForLegislationType(
+    resetTaxesFor(countryId, scope),
+    legislationType._id
   );
   if (!definition) {
     return { ok: false, error: "This tax instrument is unavailable in this jurisdiction." };
