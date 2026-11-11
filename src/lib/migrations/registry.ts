@@ -1,5 +1,6 @@
 import { migration as financialTxLogTurnOrderIndex } from "./entries/2026-11-10-financial-tx-log-turn-order-index";
 import { migration as electoratePriorityLawBook } from "./entries/2026-11-11-electorate-priority-law-book";
+import { migration as deLawBookBackfill } from "./entries/2026-11-12-de-law-book-backfill";
 import { migration as successorTaxTypes } from "./entries/2026-11-09-successor-tax-types";
 import { migration as jpLawLeanEffects } from "./entries/2026-11-09-jp-law-lean-effects";
 import { migration as ukJpSubdivisionPopulations } from "./entries/2026-11-01-uk-jp-subdivision-populations";
@@ -445,6 +446,7 @@ export const HELD_MIGRATIONS: Migration[] = [
   ukJpSubdivisionPopulations,
   jpLawLeanEffects,
   electoratePriorityLawBook,
+  deLawBookBackfill,
 ];
 
 // Deferred (need bootstrap-marker pass on production first):
