@@ -269,11 +269,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     );
     const executiveTermSnapshot: Pick<Character, "careerHistory" | "executiveTermsServed"> | null =
       isNationwideExecutive
-        ? await charactersCollection(db)
-            .findOne(
-              { _id: character._id },
-              { projection: { careerHistory: 1, executiveTermsServed: 1 } }
-            )
+        ? await charactersCollection(db).findOne(
+            { _id: character._id },
+            { projection: { careerHistory: 1, executiveTermsServed: 1 } }
+          )
         : null;
 
     // All candidates must declare during the primary phase

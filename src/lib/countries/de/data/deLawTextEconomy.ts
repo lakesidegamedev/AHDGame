@@ -115,7 +115,10 @@ export const DE_LAW_TEXT_ECONOMY: Record<string, DeLawText> = {
       ["Debt Reporting", "Debt is reported openly, with no binding limit."],
       ["Budget Rules", "Medium term budget planning and deficit targets guide spending."],
       ["Debt Brake", "A constitutional debt brake caps structural borrowing."],
-      ["Iron Discipline", "A strict balanced budget rule with automatic correction applies at every level."],
+      [
+        "Iron Discipline",
+        "A strict balanced budget rule with automatic correction applies at every level.",
+      ],
     ],
   ],
   "economy.competition.primary": [
@@ -126,8 +129,14 @@ export const DE_LAW_TEXT_ECONOMY: Record<string, DeLawText> = {
       ["No Enforcement", "Cartels and dominant firms operate without scrutiny."],
       ["Cartel Prohibition", "A basic prohibition on price fixing is on the books."],
       ["Active Enforcement", "The cartel office reviews mergers and fines abuse of dominance."],
-      ["Structural Enforcement", "Remedies can break up dominant positions and block anticompetitive deals."],
-      ["Open Markets Charter", "Strong enforcement covers every sector, including platforms and regulated utilities."],
+      [
+        "Structural Enforcement",
+        "Remedies can break up dominant positions and block anticompetitive deals.",
+      ],
+      [
+        "Open Markets Charter",
+        "Strong enforcement covers every sector, including platforms and regulated utilities.",
+      ],
     ],
   ],
   "sec.agriculturalSupport": [
@@ -139,7 +148,10 @@ export const DE_LAW_TEXT_ECONOMY: Record<string, DeLawText> = {
       ["Marketing Aid", "Cooperatives and marketing boards help farmers sell their produce."],
       ["Direct Payments", "Per-hectare payments give farms a steady income base."],
       ["Broad Support System", "Payments, price floors and rural programmes work together."],
-      ["Full Income Guarantee", "Farm incomes are guaranteed against both price and weather shocks."],
+      [
+        "Full Income Guarantee",
+        "Farm incomes are guaranteed against both price and weather shocks.",
+      ],
     ],
   ],
   "sec.codeterminationAndBargaining": [
@@ -149,9 +161,18 @@ export const DE_LAW_TEXT_ECONOMY: Record<string, DeLawText> = {
     [
       ["No Framework", "Workers have no formal voice in company decisions or pay setting."],
       ["Mediation Service", "A public mediation service helps settle disputes."],
-      ["Bargaining Framework", "Sector bargaining is recognized and agreements reach the whole branch."],
-      ["Board Representation", "Employee representatives sit on supervisory boards of large firms."],
-      ["Industrial Partnership", "Parity codetermination and strong bargaining make labour a full partner."],
+      [
+        "Bargaining Framework",
+        "Sector bargaining is recognized and agreements reach the whole branch.",
+      ],
+      [
+        "Board Representation",
+        "Employee representatives sit on supervisory boards of large firms.",
+      ],
+      [
+        "Industrial Partnership",
+        "Parity codetermination and strong bargaining make labour a full partner.",
+      ],
     ],
   ],
   "sec.cartelOffice": [
@@ -175,7 +196,10 @@ export const DE_LAW_TEXT_ECONOMY: Record<string, DeLawText> = {
       ["Credit Guarantees", "State guarantees cover the risk of unpaid foreign invoices."],
       ["Export Credit Agency", "A dedicated agency insures larger deals and offers financing."],
       ["Expanded Guarantees", "Guarantees reach new markets and smaller firms."],
-      ["Enterprise Nation Drive", "A full export drive supports every mid-sized firm that wants to go abroad."],
+      [
+        "Enterprise Nation Drive",
+        "A full export drive supports every mid-sized firm that wants to go abroad.",
+      ],
     ],
   ],
 };

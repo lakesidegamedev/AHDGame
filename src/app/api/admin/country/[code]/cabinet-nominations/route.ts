@@ -173,11 +173,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
           partyCountryId: "US",
           date: now,
         };
-        await charactersCollection(db)
-          .updateOne(
-            { _id: nomination.nomineeCharacterId },
-            { $push: { careerHistory: careerEvent } }
-          );
+        await charactersCollection(db).updateOne(
+          { _id: nomination.nomineeCharacterId },
+          { $push: { careerHistory: careerEvent } }
+        );
       }
 
       return NextResponse.json({

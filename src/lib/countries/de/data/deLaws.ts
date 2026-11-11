@@ -212,7 +212,4 @@ for (const slug of Object.keys(DE_LAW_TEXT)) {
  * Primary ids follow the "{cc}.{metricId}.primary" convention, so the metric id
  * is the slug minus its suffix; secondaries are "{cc}.sec.{slug}".
  */
-export const DE_LAWS: PoliticalLaw[] = [
-  ...DE_TAX_LAWS,
-  ...DE_LAW_STRUCTURE.map(program),
-];
+export const DE_LAWS: PoliticalLaw[] = [...DE_TAX_LAWS, ...DE_LAW_STRUCTURE.map(program)];

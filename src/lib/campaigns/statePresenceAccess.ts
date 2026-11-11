@@ -91,11 +91,10 @@ export async function resolvePresenceSubject(
     throw badRequest("This campaign is suspended. Management actions are disabled.");
   }
 
-  const candidate = await charactersCollection(db)
-    .findOne(
-      { _id: campaign.candidateId },
-      { projection: { countryId: 1, party: 1, homeState: 1 } }
-    );
+  const candidate = await charactersCollection(db).findOne(
+    { _id: campaign.candidateId },
+    { projection: { countryId: 1, party: 1, homeState: 1 } }
+  );
   if (!candidate) throw notFound("Candidate not found");
   if (!countryHasFeature("usLib", candidate.countryId)) {
     throw forbidden("Campaign Presence is currently a US-only feature");

@@ -70,7 +70,10 @@ export const DE_LAW_TEXT_INFRASTRUCTURE: Record<string, DeLawText> = {
       ["Savings Framework", "Building savings contracts get a premium."],
       ["Guarantee Scheme", "Guarantees ease mortgage access."],
       ["Ownership Drive", "Subsidies and tax relief help first time buyers."],
-      ["Property-Owning Society", "Broad ownership is a stated national aim backed by large support."],
+      [
+        "Property-Owning Society",
+        "Broad ownership is a stated national aim backed by large support.",
+      ],
     ],
   ],
   "infrastructure.development.primary": [
@@ -141,7 +144,10 @@ export const DE_LAW_TEXT_INFRASTRUCTURE: Record<string, DeLawText> = {
       ["No Programme", "Local transit receives no public support."],
       ["Operating Support", "Grants cover operating gaps."],
       ["Fleet Investment", "Funds renew vehicles and lines."],
-      ["Metropolitan Programme", "A flat fare ticket and frequent service cover metropolitan areas."],
+      [
+        "Metropolitan Programme",
+        "A flat fare ticket and frequent service cover metropolitan areas.",
+      ],
       ["Transit Renaissance", "High frequency service reaches every town."],
     ],
   ],

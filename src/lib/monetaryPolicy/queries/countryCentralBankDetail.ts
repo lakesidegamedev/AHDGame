@@ -159,8 +159,9 @@ export async function buildCentralBankChairData(
   } | null = null;
 
   if (bank.chairCharacterId) {
-    const character = await charactersCollection(db)
-      .findOne({ _id: new ObjectId(bank.chairCharacterId) });
+    const character = await charactersCollection(db).findOne({
+      _id: new ObjectId(bank.chairCharacterId),
+    });
     if (character) {
       const chairParty =
         character.party != null
