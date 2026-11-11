@@ -44,8 +44,11 @@ const RUSupremeSovietPage = dynamic(
   () => import("./RUSupremeSovietPage").then((m) => ({ default: m.RUSupremeSovietPage })),
   { ssr: false }
 );
-const DevolvedParliamentPage = dynamic(
-  () => import("./DevolvedParliamentPage").then((m) => ({ default: m.DevolvedParliamentPage })),
+const SingleChamberParliamentPage = dynamic(
+  () =>
+    import("./SingleChamberParliamentPage").then((m) => ({
+      default: m.SingleChamberParliamentPage,
+    })),
   { ssr: false }
 );
 const DDVolkskammerPage = dynamic(
@@ -69,8 +72,10 @@ const LEGISLATURE_COMPONENTS: Partial<Record<CountryId, ComponentType<{ countryI
     RU: RUSupremeSovietPage,
     DD: DDVolkskammerPage,
     NG: NGAssemblyPage,
-    SCO: DevolvedParliamentPage,
-    WAL: DevolvedParliamentPage,
+    SCO: SingleChamberParliamentPage,
+    WAL: SingleChamberParliamentPage,
+    QC: SingleChamberParliamentPage,
+    CA: SingleChamberParliamentPage,
   };
 
 interface Props {
