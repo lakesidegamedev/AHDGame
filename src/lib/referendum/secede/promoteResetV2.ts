@@ -41,7 +41,12 @@ import {
   resetSystemVersionsForCountry,
 } from "@/lib/resetVersions/rules";
 import { groupOpeningDepartmentClaims } from "@/lib/resetFinance/rules/departmentOpening";
-import { secessionSource, type SecedingCountryId } from "./subRegions";
+import {
+  isResetV2Successor,
+  secessionSource,
+  type ResetV2Successor,
+  type SecedingCountryId,
+} from "./subRegions";
 import { buildSuccessorMetricRows, buildSuccessorRegionalRows } from "./rules/resetV2Promotion";
 import { verifyDemographicsV2Opening } from "@/lib/demographics/v2/verifyOpening";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
@@ -50,7 +55,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
 
 function rekeyReference(
   reference: OpeningLawReference,
-  country: SecedingCountryId,
+  country: ResetV2Successor,
   scope: "national" | "regional"
 ): OpeningLawReference {
   return {
@@ -65,9 +70,11 @@ function rekeyReference(
 /** Promote the parent's live v2 aggregate when a registered region becomes sovereign. */
 export async function promoteResetV2ForIndependence(
   db: Db,
-  countryId: SecedingCountryId,
+  successorId: SecedingCountryId,
   conversionTurn?: number
 ): Promise<{ promoted: boolean }> {
+  if (!isResetV2Successor(successorId)) return { promoted: false };
+  const countryId = successorId;
   const gameState = await gameStateCollection(db).findOne(
     { _id: "current" },
     {

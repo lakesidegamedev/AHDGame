@@ -10,6 +10,7 @@ import {
   sovereigntyRegion,
   sovereigntyRegionIds,
   sovereigntyRegionIn,
+  independenceCopy,
 } from "./sovereigntyRegions";
 
 describe("sovereignty registry", () => {
@@ -74,6 +75,22 @@ describe("getSovereigntyGovernmentNames", () => {
     expect(getSovereigntyGovernmentNames("TX")).toEqual({
       regional: "First Minister",
       national: "Westminster",
+    });
+  });
+
+  it("writes independence copy from each region's own parent", () => {
+    const names: Record<string, string> = { SCO: "Scotland", QC: "Quebec" };
+    expect(independenceCopy("SCO", (id) => names[id])).toEqual({
+      region: "Scotland",
+      parent: "the United Kingdom",
+      national: "Westminster",
+      sponsor: "His Majesty's Government",
+    });
+    expect(independenceCopy("CA_QC", (id) => names[id])).toEqual({
+      region: "Quebec",
+      parent: "Canada",
+      national: "Ottawa",
+      sponsor: "Government of Canada",
     });
   });
 });

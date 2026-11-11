@@ -29,7 +29,7 @@ import type { State } from "@/lib/db/types";
 import { computeNationalMetrics } from "@/lib/nationalMetrics";
 import { recordCountryEvent } from "@/lib/turn/history/recordCountryEvent";
 import { activateCountry } from "@/lib/country/registeredCountries";
-import { CAPITAL_SUBREGION, isSecedingCountryId } from "./subRegions";
+import { CAPITAL_SUBREGION, isResetV2Successor, isSecedingCountryId } from "./subRegions";
 import { sovereigntyRegionIn } from "../rules/sovereigntyRegions";
 import { expandToSubRegions } from "./expandToSubRegions";
 import { promoteEconomyToNational } from "./promoteEconomyToNational";
@@ -109,7 +109,9 @@ async function secedeRegionInTransaction(
   await promoteEconomyToNational(db, fromCountryId, toCountryId, currentTurn);
   await promoteResetV2ForIndependence(db, toCountryId, currentTurn);
 
-  await convertLawPrograms(db, { regionId, countryId: toCountryId, independent: true });
+  if (isResetV2Successor(toCountryId)) {
+    await convertLawPrograms(db, { regionId, countryId: toCountryId, independent: true });
+  }
 
   // 4-5. Government: parties then officials (officials consume the split idMap).
   const split = await splitParties(db, regionId, fromCountryId, toCountryId);

@@ -28,6 +28,7 @@ import { secedeRegion } from "@/lib/referendum/secede/secedeRegion";
 import { isCountryEnabledForPlayers } from "@/lib/countryAccess";
 import { enterCountryForPlayers } from "@/lib/world/playerHandoff";
 import { billsCollection } from "@/lib/db/repositories/bills";
+import { sovereigntyRegion } from "@/lib/referendum/rules/sovereigntyRegions";
 
 /** Province grouping for NI under Ireland. */
 const NIR_PROVINCE = "Ulster";
@@ -120,7 +121,7 @@ async function runReferendumActuationInTransaction(
       ? await billsCollection(db).findOne({ _id: ref.westminsterBillId })
       : null;
     if (bill == null || (bill.status !== "signed" && bill.enactedAt == null)) {
-      return { ok: false, error: "Westminster consent bill is not signed." };
+      return { ok: false, error: "The independence consent bill is not signed." };
     }
     const res = await secedeRegion(db, {
       regionId: ref.regionId,
@@ -147,7 +148,7 @@ async function runReferendumActuationInTransaction(
       turn: currentTurn,
       kind: "seceded",
       side: "yes",
-      summary: `${ref.regionId} became an independent country.`,
+      summary: `${sovereigntyRegion(ref.regionId)?.successorCountryId ?? ref.regionId} became an independent country.`,
     }).catch(() => {});
     return { ok: true, report: res.report };
   }

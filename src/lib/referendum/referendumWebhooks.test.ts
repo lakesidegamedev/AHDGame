@@ -140,6 +140,22 @@ describe("referendum webhook builders", () => {
     const wal = buildSecessionCompleteEmbed({ region: "Wales", regionId: "WAL" });
     expect(wal.color).not.toBe(sco.color);
   });
+
+  it("names Ottawa and Canada when Quebec leaves", () => {
+    const consent = buildIndependenceConsentBillEmbed({
+      region: "Quebec",
+      passed: true,
+      national: "Ottawa",
+    });
+    expect(consent.title).toBe("Ottawa Consents: Quebec (Independence) Bill Passes");
+    const done = buildSecessionCompleteEmbed({
+      region: "Quebec",
+      regionId: "CA_QC",
+      parent: "Canada",
+    });
+    expect(done.description).toContain("formally left Canada");
+    expect(done.description).not.toContain("United Kingdom");
+  });
 });
 
 describe("referendum webhook targeting", () => {
