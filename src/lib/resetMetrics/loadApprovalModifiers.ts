@@ -11,7 +11,11 @@ import type { ActiveModifier } from "@/lib/utils/approvalModifiers";
 import { RESET_V2_READY } from "@/lib/resetVersions/availability";
 import { isResetV2Country, resetSystemVersionsForCountry } from "@/lib/resetVersions/rules";
 import { resolveGameYear } from "@/lib/era/era";
-import { buildResetMetricSnapshot, type ResetMetricSnapshot } from "./rules/snapshot";
+import {
+  buildResetMetricSnapshot,
+  normalizeNationalMetricBoard,
+  type ResetMetricSnapshot,
+} from "./rules/snapshot";
 import type { StateMetrics } from "@/lib/db/types/stateMetrics";
 import { evaluateResetApprovalModifiers, resetApprovalBaseMetrics } from "./rules/approval";
 import { loadCabinetGameplayEffects } from "@/lib/resetCabinet/loadGameplayEffects";
@@ -75,7 +79,9 @@ export async function loadResetApprovalModifiers(
         }
       )
       .toArray())
-  ).filter((board) => board.countryId === countryId);
+  )
+    .filter((board) => board.countryId === countryId)
+    .map(normalizeNationalMetricBoard);
   const byId = new Map(boards.map((board) => [board._id, board]));
   const expectedTurn = turn ?? gameState!.currentTurn;
   // A whole country one failed refresh behind reads its last refresh. A mix of

@@ -50,6 +50,37 @@ function ownerReadings(
 }
 
 describe("v2 metric turn persistence shell", () => {
+  it("refreshes and unsets legacy national BSON-null region ids in the existing batch", async () => {
+    const db = createMockDb();
+    const stored = boards.map((board) => ({
+      ...board,
+      ...(board.scope === "national" ? { regionId: null } : {}),
+    }));
+    db.collection("resetMetricSnapshots").find.mockReturnValue({
+      toArray: vi.fn().mockResolvedValue(stored),
+    });
+    db.collection("resetMetricSnapshots").bulkWrite.mockResolvedValue({
+      matchedCount: stored.length,
+    });
+    await refreshResetMetricSnapshotsTurn({
+      db: db as unknown as Db,
+      gameState: state,
+      turn: 2,
+      ready,
+      ownerReadings: async (current) => {
+        for (const board of current.filter((row) => row.scope === "national"))
+          expect(board).not.toHaveProperty("regionId");
+        return ownerReadings(current);
+      },
+    });
+    const operations = db.collectionMocks.resetMetricSnapshots!.bulkWrite.mock.calls[0]![0];
+    for (const operation of operations) {
+      if (operation.updateOne.filter._id.endsWith(":national"))
+        expect(operation.updateOne.update.$unset).toEqual({ regionId: "" });
+      else expect(operation.updateOne.update).not.toHaveProperty("$unset");
+    }
+    expect(db.collectionMocks.resetMetricSnapshots!.bulkWrite).toHaveBeenCalledOnce();
+  });
   it("captures a legacy opening baseline once without replacing observations or history", async () => {
     const db = createMockDb();
     const legacy = boards.map(({ openingValues: _openingValues, ...board }) => board);

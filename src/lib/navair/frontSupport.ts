@@ -178,21 +178,15 @@ export function frontSupportFor(
 }
 
 /**
- * Whether a marine formation can land across water onto this front.
+ * Sea control a side needs to keep an amphibious force properly supplied ashore.
  *
- * The one place sea control touches the ground directly. Below the threshold the
- * reinforcement does not arrive; marines already ashore fight normally regardless,
- * because the sea decides whether you can land, not how you fight once you have.
+ * There is no landing order: marines are deployed like any other formation. Sea control
+ * reaches them only through sustainment, so below this value they fight as light infantry
+ * (see `sideAgg` in the battle resolver).
  */
-export function canLandMarines(seaControl: number): boolean {
-  return seaControl >= MARINE_LANDING_THRESHOLD;
-}
+export const MARINE_SUSTAINMENT_SEA_CONTROL = 40;
 
-/**
- * Sea control needed to put marines ashore.
- *
- * Set above parity on purpose. An opposed landing into contested water is the single most
- * dangerous operation in this era, and letting it happen at 50 would make amphibious
- * assault the default answer to any coastal front.
- */
-export const MARINE_LANDING_THRESHOLD = 65;
+/** Whether marines on this front are properly supplied across the water. */
+export function marinesSustained(seaControl: number): boolean {
+  return seaControl >= MARINE_SUSTAINMENT_SEA_CONTROL;
+}

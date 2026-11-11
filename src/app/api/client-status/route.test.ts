@@ -124,6 +124,41 @@ function seedIndependentCharacter(userId: ObjectId): Record<string, FakeSeed> {
 }
 
 describe("GET /api/client-status", () => {
+  it.each([
+    ["SCO", "LOT"],
+    ["WAL", "CDF"],
+    ["IE", "NIR"],
+  ])("returns status bar income after conversion to %s", async (countryId, homeState) => {
+    const userId = new ObjectId();
+    const seeds = seedIndependentCharacter(userId);
+    seeds.characters.findOne = {
+      ...seeds.characters.findOne,
+      countryId,
+      homeState,
+    };
+    seeds.states.findOne = {
+      _id: homeState,
+      countryId,
+      population: 1000000,
+      gdp: 30000,
+    };
+    seeds.gameState.findOne = { _id: "current", preset: "1991-default" };
+    const { requireBasicAuth } = await import("@/lib/api/requireAuth");
+    vi.mocked(requireBasicAuth).mockResolvedValue({
+      ok: true,
+      user: { userId: userId.toHexString() },
+    } as never);
+    const { getDb } = await import("@/lib/mongodb");
+    vi.mocked(getDb).mockResolvedValue(createFakeDb(seeds, []));
+
+    const response = await GET(new Request("http://localhost/api/client-status?layout=standard"));
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.name).toBe("Test Character");
+    expect(body.campaignIncomeBreakdown).toBeTruthy();
+    expect(Number.isFinite(body.campaignIncomeBreakdown.netPerTurn)).toBe(true);
+  });
+
   it("returns the shared auth failure response for banned or revoked sessions", async () => {
     const { requireBasicAuth } = await import("@/lib/api/requireAuth");
     vi.mocked(requireBasicAuth).mockResolvedValue({
