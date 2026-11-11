@@ -120,10 +120,20 @@ export interface CountryClientConfig {
   usdExchangeRate: number;
 }
 
+/** A value as written to JSON, where an optional field cleared by an override is `null`. */
+export type JsonCleared<T> = T extends readonly (infer U)[]
+  ? JsonCleared<U>[]
+  : T extends object
+    ? { [K in keyof T]: undefined extends T[K] ? JsonCleared<T[K]> | null : JsonCleared<T[K]> }
+    : T;
+
+/** An era override as written to JSON: any field may be absent, `null` clears it. */
+export type JsonEraOverride<T> = { [K in keyof T]?: JsonCleared<T[K]> | null };
+
 /** One country's `clientConfig.json`. `null` in an era override clears the base field. */
 export interface CountryClientFile {
   config: CountryClientConfig;
-  eraOverrides?: Record<string, Partial<CountryClientConfig>>;
+  eraOverrides?: Record<string, JsonEraOverride<CountryClientConfig>>;
   eraNames?: Record<string, string>;
   nationalAddressName?: string;
   regionalAssentOfficeKey?: string;
@@ -180,6 +190,6 @@ export interface CountryOfficeConfig {
 /** One country's `officesClient.json`. */
 export interface CountryOfficesFile {
   config: CountryOfficeConfig;
-  eraOverrides?: Record<string, Partial<CountryOfficeConfig>>;
+  eraOverrides?: Record<string, JsonEraOverride<CountryOfficeConfig>>;
   regionalAssentOfficeKey?: string;
 }

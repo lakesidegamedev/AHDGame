@@ -1,5 +1,5 @@
 import type { CountryId } from "@/lib/constants/countriesCore";
-import type { CountryClientFile, CountryOfficesFile } from "./clientConfigTypes";
+import type { CountryClientFile, CountryOfficesFile, JsonEraOverride } from "./clientConfigTypes";
 import usClient from "./us/data/clientConfig.json";
 import usOffices from "./us/data/officesClient.json";
 import ukClient from "./uk/data/clientConfig.json";
@@ -98,18 +98,20 @@ export const CLIENT_COUNTRY_IDS: readonly CountryId[] = [
   "CA",
 ];
 
-/** Turns the generator's `null` (clear this field) back into `undefined`. */
-export function restoreCleared<T>(value: T): T {
-  if (value === null) return undefined as T;
-  if (Array.isArray(value)) return value.map(restoreCleared) as T;
+function restoreClearedValue(value: unknown): unknown {
+  if (value === null) return undefined;
+  if (Array.isArray(value)) return value.map(restoreClearedValue);
   if (typeof value !== "object") return value;
-  return Object.fromEntries(
-    Object.entries(value as Record<string, unknown>).map(([k, v]) => [k, restoreCleared(v)])
-  ) as T;
+  return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, restoreClearedValue(v)]));
 }
 
-// The JSON files are typed by `clientConfigFiles.test.ts`, which checks each
-// against the full registry; the cast is the one place the literal types widen.
+/** Turns the generator's `null` (clear this field) back into `undefined`. */
+export function restoreCleared<T>(value: JsonEraOverride<T>): Partial<T> {
+  return restoreClearedValue(value) as Partial<T>;
+}
+
+// JSON imports widen literal unions to `string`; the countryClientConfig and
+// countryOfficesClient tests check each file against the full registry.
 export const CLIENT_FILES = {
   US: usClient,
   UK: ukClient,
@@ -141,7 +143,7 @@ export const CLIENT_FILES = {
   FI: fiClient,
   DD: ddClient,
   CA: caClient,
-} as unknown as Record<CountryId, CountryClientFile>;
+} as Record<CountryId, CountryClientFile>;
 
 export const OFFICE_FILES = {
   US: usOffices,
@@ -174,4 +176,4 @@ export const OFFICE_FILES = {
   FI: fiOffices,
   DD: ddOffices,
   CA: caOffices,
-} as unknown as Record<CountryId, CountryOfficesFile>;
+} as Record<CountryId, CountryOfficesFile>;
