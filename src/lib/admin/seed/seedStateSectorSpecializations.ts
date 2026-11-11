@@ -6,6 +6,7 @@ import {
   type StateSectorSpecialization,
 } from "@/lib/constants/corporations";
 import { JP_SECTOR_SPECIALIZATION } from "@/lib/countries/jp/economy";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 const US_OVERRIDES: Record<string, StateSectorSpecialization> = {
   AL: { primary: "manufacturing", secondary: "defense" },
@@ -182,7 +183,8 @@ function byKeyword(state: State): StateSectorSpecialization | null {
 }
 
 export function inferStateSectorSpecialization(state: State): StateSectorSpecialization {
-  if (state.countryId === "US" && US_OVERRIDES[state._id]) return US_OVERRIDES[state._id];
+  if (countryHasFeature("usAdmin", state.countryId) && US_OVERRIDES[state._id])
+    return US_OVERRIDES[state._id];
   const explicit = REGIONAL_OVERRIDES[`${state.countryId}:${state._id}`];
   if (explicit) return explicit;
   return byKeyword(state) ?? COUNTRY_DEFAULTS[state.countryId] ?? rotateFallback(state._id);

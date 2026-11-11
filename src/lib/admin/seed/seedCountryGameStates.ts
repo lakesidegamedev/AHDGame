@@ -5,6 +5,7 @@ import type { CountryStatus } from "@/lib/constants/countries";
 import { isShippingPreset, tierFor, type CountryEraTier } from "@/lib/world/eraRoster";
 import { isKnownPreset } from "@/lib/seeds/presetSelector";
 import { assertCanOpenCountryToPlayers } from "@/lib/world/countryReadinessContract";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /**
  * Per-preset country enablement. `countryGameStates` rows are normally written
@@ -169,8 +170,10 @@ export async function seedCountryGameStates(
           nextScheduledTurn: null,
           createdAt: now,
         },
-        ...(cid === "BG" ? { $unset: { bgOrdinaryAssemblySinceTurn: "" } } : {}),
-        ...(cid === "YU"
+        ...(countryHasFeature("bgAdmin", cid)
+          ? { $unset: { bgOrdinaryAssemblySinceTurn: "" } }
+          : {}),
+        ...(countryHasFeature("yuAdmin", cid)
           ? {
               $unset: {
                 yuSuccessionMandateSinceTurn: "",
@@ -179,7 +182,7 @@ export async function seedCountryGameStates(
               },
             }
           : {}),
-        ...(cid === "RU"
+        ...(countryHasFeature("ruAdmin", cid)
           ? {
               $unset: {
                 ruSovietSuccessionSinceTurn: "",

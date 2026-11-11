@@ -16,6 +16,7 @@ import {
   modernRegions2019,
   type Modern2019CountryId,
 } from "@/lib/seeds/reference/modernRegions2019";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 const COUNTRY_IDS = [
   "RU",
@@ -77,8 +78,9 @@ export async function seedModern2019(
     // RU/PL/HU/RO use the modern democratic voter model. Bulgaria's
     // five-region geometry currently has only the 1991 transition model, which
     // is an explicit fallback rather than a reintroduced communist model.
-    const model =
-      countryId === "BG" ? getSuccessor1991Model("BG") : getCountryLayer1Model(countryId, "2027");
+    const model = countryHasFeature("bgAdmin", countryId)
+      ? getSuccessor1991Model("BG")
+      : getCountryLayer1Model(countryId, "2027");
     if (!model) throw new Error(`Missing democratic voter model for ${countryId}`);
     const demographics = buildModelRegionDemographics(model);
     if (demographics.length !== regions.length)
@@ -143,7 +145,7 @@ export async function seedModern2019(
         );
       }
     }
-    if (countryId !== "RU") {
+    if (!countryHasFeature("ruAdmin", countryId)) {
       const totalSeats = regions.reduce((n, region) => n + region.houseDistricts, 0);
       const formation: Omit<GovernmentFormation, "createdAt" | "updatedAt"> = {
         _id: countryId,

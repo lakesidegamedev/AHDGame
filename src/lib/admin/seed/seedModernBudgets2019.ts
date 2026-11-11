@@ -8,6 +8,7 @@ import {
 } from "@/lib/seeds/reference/budgets";
 import { upsertCountryOwnedCorpEntries } from "./upsertCountryOwnedCorps";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 const COUNTRY_IDS = ["RU", "PL", "HU", "RO", "BG"] as const;
 
@@ -55,7 +56,7 @@ export async function seedModernBudgets2019(
       updateOne: { filter: { _id }, update: { $set: budget }, upsert: true },
     }))
   );
-  const ruRegions = regions.filter((region) => region.countryId === "RU");
+  const ruRegions = regions.filter((region) => countryHasFeature("ruAdmin", region.countryId));
   const issuer = generateCountryOwnedSeedData(
     ruRegions.map((region) => ({
       id: region._id,
@@ -68,7 +69,8 @@ export async function seedModernBudgets2019(
     log
   ).find(
     (entry) =>
-      entry.corporation.countryOwnerId === "RU" && entry.corporation.isPrimaryNationalCorporation
+      countryHasFeature("ruAdmin", entry.corporation.countryOwnerId) &&
+      entry.corporation.isPrimaryNationalCorporation
   );
   if (!issuer) throw new Error("Missing 2019 RU sovereign issuer template");
   await upsertCountryOwnedCorpEntries(db, "RU", [
