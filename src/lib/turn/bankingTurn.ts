@@ -84,6 +84,7 @@ import { serviceInterbankAndCbMargin } from "./bankingInterbankTurn";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 const BANK_CHARTER_ONLY = { projection: { bankCharter: 1 } };
 
@@ -278,8 +279,7 @@ async function runBankingTurn(
   // turn-level snapshots, so hoisting them cannot reorder a money movement.
   const passCaches: BankPassCaches = { npcShareByBankId, cbById, premiumReceiptByKey };
   if (options.batchPerBankReads !== false && depositTakers.length > 0) {
-    const sectors = await db
-      .collection<CorporateSector>("corporateSectors")
+    const sectors = await corporateSectorsCollection(db)
       .find(
         {
           corporationId: { $in: depositTakers.map((row) => row.corp._id) },

@@ -4,6 +4,7 @@ import { getEffectiveStrategyRatesForOperatingModel } from "@/lib/constants/sect
 import { partitionByGdp } from "./apportion";
 import { extractionAllocationWeights } from "./rules/extraction";
 import type { FanoutContext } from "./fanoutDriver";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 type FanoutSector = CorporateSector & { capacityBase?: number; outputBase?: number };
 
 /** Freeze one placement plan so reserve allocation and sector relocation agree. */
@@ -22,8 +23,7 @@ export async function planSectorFanout(db: Db, ctx: FanoutContext, turn: number)
     mediaDiscriminator: 1,
   } as const;
   const [owned, unowned] = await Promise.all([
-    db
-      .collection<FanoutSector>("corporateSectors")
+    corporateSectorsCollection<FanoutSector>(db)
       .find({ stateId: ctx.countryId }, { projection })
       .toArray(),
     db

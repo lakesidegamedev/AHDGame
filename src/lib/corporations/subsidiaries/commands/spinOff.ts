@@ -57,6 +57,7 @@ import {
 } from "@/lib/banking/constructionBorrowerTransfer";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 // PLANTS-GATED: a spin-off only re-points `corporationId` on the existing row, so
 // capitalStock, buildQueue, CIP and plantsStartTurn ride along untouched. There
@@ -133,8 +134,7 @@ export async function spinOff(
   if (capRejection) return fail(capRejection.error, capRejection.status);
 
   // Parent must have ≥1 sector of the requested type.
-  const sectors = await db
-    .collection<CorporateSector>("corporateSectors")
+  const sectors = await corporateSectorsCollection(db)
     .find({ corporationId: parent._id, ...operatingSectorIdentity(sectorType) })
     .toArray();
   if (sectors.length === 0) {
@@ -315,7 +315,7 @@ export async function spinOff(
         writeCorpEconomicLocal(revenueAnchor, currencyCode, newFx)
       );
       const newGrowthLocal = Math.round(writeCorpEconomicLocal(growthAnchor, currencyCode, newFx));
-      const moved = await db.collection<CorporateSector>("corporateSectors").updateOne(
+      const moved = await corporateSectorsCollection(db).updateOne(
         {
           _id: sector._id,
           corporationId: parent._id,
@@ -422,7 +422,7 @@ export async function spinOff(
     if (transferredSectorIds.length > 0) {
       // A financed site goes back with its claim naming the parent again, so
       // the settle below leaves its loan with the parent.
-      const rollback = await db.collection<CorporateSector>("corporateSectors").bulkWrite(
+      const rollback = await corporateSectorsCollection(db).bulkWrite(
         transferredSectorIds.map((sectorId) => {
           const index = sectors.findIndex((sector) => sector._id.equals(sectorId));
           return {

@@ -10,6 +10,8 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQuery";
 import type { GameConfig } from "@/lib/db/types";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import type { Document } from "mongodb";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -51,9 +53,10 @@ export async function PUT(request: Request, { params }: RouteParams) {
     const denied = requireCeo(corporation, auth.user.userId);
     if (denied) return denied;
 
-    const mediaSector = await db
-      .collection("corporateSectors")
-      .findOne({ corporationId: corporation._id, sectorType: "media" }, { projection: { _id: 1 } });
+    const mediaSector = await corporateSectorsCollection<Document>(db).findOne(
+      { corporationId: corporation._id, sectorType: "media" },
+      { projection: { _id: 1 } }
+    );
     if (!mediaSector) {
       return errorResponse(403, "Only a media publisher can set an editorial stance");
     }

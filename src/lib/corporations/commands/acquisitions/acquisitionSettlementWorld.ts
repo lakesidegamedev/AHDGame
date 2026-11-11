@@ -9,8 +9,6 @@
 
 import { ObjectId, type Db } from "mongodb";
 import { createInMemoryDb, type InMemoryDb } from "@/lib/test-utils/inMemoryDb";
-import { charactersCollection } from "@/lib/db/repositories/characters";
-import type { Document } from "mongodb";
 
 export const PRICE = 1_000_000;
 export const SHELL_CASH = 5_000_000;
@@ -241,18 +239,25 @@ export interface WorldBalances {
   acquirerSectors: number;
 }
 
+/** The in-memory world is not a driver Db, so it is opened by name here rather than through the typed repositories. */
+function memoryCollection(w: AcquisitionWorld, name: string) {
+  const existing = w.memory.collections.get(name);
+  if (!existing) throw new Error(`In-memory collection ${name} was never seeded`);
+  return existing;
+}
+
 export async function readBalances(w: AcquisitionWorld): Promise<WorldBalances> {
   const acquirer = await w.memory.collection("corporations").findOne({ _id: w.acq });
-  const charA = await charactersCollection<Document>(w.memory).findOne({ _id: w.charA });
-  const charB = await charactersCollection<Document>(w.memory).findOne({ _id: w.charB });
+  const charA = await memoryCollection(w, "characters").findOne({ _id: w.charA });
+  const charB = await memoryCollection(w, "characters").findOne({ _id: w.charB });
   const imperial = await w.memory.collection("imperialCharacters").findOne({ _id: w.imperial });
   const corpHolder = await w.memory.collection("corporations").findOne({ _id: w.corpHolder });
   const fund = await w.memory.collection("indexFunds").findOne({ _id: w.fund });
   const treasury = await w.memory.collection("federalBudget").findOne({ countryId: "US" });
   const target = await w.memory.collection("corporations").findOne({ _id: w.tgt });
-  const acquirerSectors = await w.memory
-    .collection("corporateSectors")
-    .countDocuments({ corporationId: w.acq });
+  const acquirerSectors = await memoryCollection(w, "corporateSectors").countDocuments({
+    corporationId: w.acq,
+  });
   return {
     acquirer: (acquirer?.liquidCapital as number) ?? NaN,
     charA: (charA?.cashOnHand as number) ?? NaN,

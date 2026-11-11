@@ -53,6 +53,7 @@ import { openSettlementRatification } from "./ratifySettlement";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 function campaignResult(campaign: BargainingCampaign): Extract<UnionActionResult, { ok: true }> {
   return {
@@ -349,8 +350,7 @@ export async function openBargainingCampaignFromLiveConditions(
     preloaded?.employerKnownToExist
       ? Promise.resolve({ _id: employerId })
       : corporationsCollection(db).findOne({ _id: employerId }, { projection: { _id: 1 } }),
-    db
-      .collection<CorporateSector>("corporateSectors")
+    corporateSectorsCollection(db)
       .find(
         {
           corporationId: employerId,
@@ -555,7 +555,7 @@ export async function restoreEscalationExpectations(
 ): Promise<number> {
   const recorded = campaign.escalationExpectations ?? [];
   if (recorded.length === 0) return 0;
-  const result = await db.collection<CorporateSector>("corporateSectors").bulkWrite(
+  const result = await corporateSectorsCollection(db).bulkWrite(
     recorded.map((entry) => ({
       updateOne: {
         filter: { _id: entry.sectorId },
@@ -737,8 +737,7 @@ export async function persistUnionBargainingEscalation(
   readCache?: BargainingReadCache
 ): Promise<UnionActionResult> {
   const now = new Date();
-  const sectors = await db
-    .collection<CorporateSector>("corporateSectors")
+  const sectors = await corporateSectorsCollection(db)
     .find(
       { _id: { $in: campaign.sectorIds } },
       {
@@ -790,7 +789,7 @@ export async function persistUnionBargainingEscalation(
 
   const campaignCollection = db.collection<BargainingCampaign>("bargainingCampaigns");
   const unionCollection = db.collection<Union>("unions");
-  const sectorCollection = db.collection<CorporateSector>("corporateSectors");
+  const sectorCollection = corporateSectorsCollection(db);
   const claimCampaign = async (session?: ClientSession) => {
     const result = await campaignCollection.updateOne(
       {

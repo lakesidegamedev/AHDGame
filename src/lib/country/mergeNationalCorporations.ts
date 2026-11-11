@@ -38,6 +38,7 @@ import {
 } from "@/lib/corporations/securedConstructionProperty";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export interface MergeNationalCorporationsArgs {
   fromCountryId: CountryId;
@@ -60,7 +61,7 @@ export async function mergeNationalCorporations(
   const { fromCountryId, toCountryId } = args;
   const now = new Date();
   const corps = corporationsCollection(db);
-  const sectors = db.collection<CorporateSector>("corporateSectors");
+  const sectors = corporateSectorsCollection(db);
   const bonds = bondsCollection(db);
 
   // The survivor's primary exists (or is created) FIRST, so there is always a

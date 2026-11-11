@@ -11,6 +11,7 @@ import { isNationalIssuer, isStateIssuer } from "@/lib/extraction/contractIssuer
 import { createNotifications } from "@/lib/notifications";
 import { CONTRACT_OFFER_EXPIRY_TURNS } from "@/lib/constants/prospecting";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export interface IssueContractOfferInput {
   countryId: CountryId;
@@ -121,9 +122,10 @@ export async function issueContractOffer(
       error: "Contracts can only be offered to extraction corporations.",
     };
   }
-  const sector = await db
-    .collection<CorporateSector>("corporateSectors")
-    .findOne({ corporationId: corpId, stateId }, { projection: { _id: 1 } });
+  const sector = await corporateSectorsCollection(db).findOne(
+    { corporationId: corpId, stateId },
+    { projection: { _id: 1 } }
+  );
   if (!sector) {
     return { ok: false, status: 400, error: "That corporation has no operations in this state." };
   }

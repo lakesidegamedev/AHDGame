@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { publicApiGuard } from "@/lib/publicApi/middleware";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import type { Document } from "mongodb";
 
 // GET /api/public/v1/market?type=SECTOR&country=CODE&page=N&view=share|unowned
 export async function GET(request: Request) {
@@ -46,13 +48,12 @@ export async function GET(request: Request) {
     }
 
     const [companies, total] = await Promise.all([
-      db
-        .collection("corporateSectors")
+      corporateSectorsCollection<Document>(db)
         .find(query)
         .skip((page - 1) * 20)
         .limit(20)
         .toArray(),
-      db.collection("corporateSectors").countDocuments(query),
+      corporateSectorsCollection<Document>(db).countDocuments(query),
     ]);
     return NextResponse.json({
       ok: true,

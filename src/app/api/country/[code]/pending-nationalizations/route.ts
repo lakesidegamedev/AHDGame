@@ -15,6 +15,7 @@ import type { NationalizationTrigger } from "@/lib/nationalization/eligibility";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 const CURABLE: ReadonlySet<NationalizationTrigger> = new Set(["strategic", "monopoly"]);
 
@@ -51,8 +52,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const sectorIds = rows.map((r) => r.targetSectorId).filter(Boolean) as ObjectId[];
     const sectorById = new Map<string, CorporateSector>();
     if (sectorIds.length > 0) {
-      const sectors = await db
-        .collection<CorporateSector>("corporateSectors")
+      const sectors = await corporateSectorsCollection(db)
         .find({ _id: { $in: sectorIds } })
         .toArray();
       for (const s of sectors) sectorById.set(String(s._id), s);

@@ -12,6 +12,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 interface CountryBudgetSeedOptions {
   countryId: CountryId;
@@ -147,13 +148,11 @@ export async function seedCountryBudgets(
     );
     for (const sector of entry.sectors) {
       const { _id: _sectorId, ...sectorData } = sector;
-      await db
-        .collection<CorporateSector>("corporateSectors")
-        .updateOne(
-          { corporationId: corpId, stateId: sector.stateId, sectorType: sector.sectorType },
-          { $set: sectorData },
-          { upsert: true }
-        );
+      await corporateSectorsCollection(db).updateOne(
+        { corporationId: corpId, stateId: sector.stateId, sectorType: sector.sectorType },
+        { $set: sectorData },
+        { upsert: true }
+      );
     }
   }
   if (corpData.length > 0)

@@ -25,6 +25,7 @@ import { bookFor, loadReachableBooks } from "@/lib/trade/queries/loadReachableBo
 import { loadFundedBuildDemand } from "./loadFundedBuildDemand";
 import { isCountryBookCommodity } from "@/lib/market/rules/commodityMarketScope";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 type Balance = { supply: number; demand: number };
 
@@ -205,8 +206,7 @@ async function loadBuildingSectors(
     .toArray();
   const countryByState = new Map(states.map((s) => [s._id, s.countryId as string]));
   if (countryByState.size === 0) return [];
-  const building = await db
-    .collection<CorporateSector>("corporateSectors")
+  const building = await corporateSectorsCollection(db)
     .find(
       {
         stateId: { $in: [...countryByState.keys()] },

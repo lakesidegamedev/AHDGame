@@ -74,6 +74,7 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 import { projectStrategyRevenuePerTurn } from "@/lib/corporations/strategyRevenuePreview";
 import { calculatePlantSectorSplit } from "@/lib/corporations/plantSectorSplit";
 import { capacityRescaleRatio } from "@/lib/constants/capacityEconomy";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 export { buildSectorPlantsSection } from "./sectorDetailPlants";
 export { computeSectorMarketPosition, computeSectorMarginSection } from "./sectorDetailMarket";
 
@@ -398,7 +399,7 @@ export async function buildSectorForSaleInfo(
   if (!listing || !viewerCorporation || isCeo) return null;
   // Detect buyers who already operate this sector type in this state; the
   // purchase is still allowed — it becomes a merge rather than a transfer.
-  const conflict = await db.collection<CorporateSector>("corporateSectors").findOne(
+  const conflict = await corporateSectorsCollection(db).findOne(
     {
       corporationId: viewerCorporation._id,
       stateId: sector.stateId,

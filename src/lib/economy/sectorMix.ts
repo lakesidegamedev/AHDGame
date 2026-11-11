@@ -46,6 +46,7 @@ import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFla
 import { withFundedNationalBalances } from "@/lib/market/producerMarket/loadFundedCountryBooks";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export interface CountrySectorMixEntry {
   type: OperatingSectorType;
@@ -465,7 +466,7 @@ export async function aggregateCountrySectorMix(
         .find({ countryId })
         .project<Pick<State, "_id" | "name" | "gdp">>({ name: 1, gdp: 1 })
         .toArray(),
-      db.collection<CorporateSector>("corporateSectors").find({ countryId }).toArray(),
+      corporateSectorsCollection(db).find({ countryId }).toArray(),
       loadFxRatesByCurrency(db),
       loadWorldPreset(db),
       getMarketSystemModeForDb(db),

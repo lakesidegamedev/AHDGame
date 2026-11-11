@@ -28,6 +28,7 @@ import {
   releaseConstructionAdmission,
 } from "./constructionAdmission";
 import { unprotectedConstructionPropertyFilter } from "./rules/constructionProperty";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export type {
   ConstructionFundingBankCorporation,
@@ -82,7 +83,7 @@ export async function requestConstructionFinance(input: {
       .digest("hex")
       .slice(0, 24)
   );
-  const sectors = db.collection<CorporateSector>("corporateSectors");
+  const sectors = corporateSectorsCollection(db);
   const existing = await sectors.findOne(
     { _id: sector._id },
     { projection: { constructionFinancing: 1 } }
@@ -303,9 +304,10 @@ export async function approveConstructionFinance(
   const collateral = loan?.constructionCollateral;
   if (!loan || !collateral || loan.constructionDecision === "reject")
     return { ok: false, error: "This construction loan is unavailable" };
-  const sector = await db
-    .collection<CorporateSector>("corporateSectors")
-    .findOne({ _id: collateral.sectorId }, { projection: { constructionFinancing: 1 } });
+  const sector = await corporateSectorsCollection(db).findOne(
+    { _id: collateral.sectorId },
+    { projection: { constructionFinancing: 1 } }
+  );
   const claim = sector?.constructionFinancing;
   if (
     !sector ||
@@ -358,7 +360,7 @@ export async function approveConstructionFinance(
     if (claimed.matchedCount !== 1)
       return { ok: false, error: "Another construction loan decision already owns this request" };
   }
-  await db.collection<CorporateSector>("corporateSectors").updateOne(
+  await corporateSectorsCollection(db).updateOne(
     {
       _id: sector._id,
       "constructionFinancing.claimId": claim.claimId,
@@ -405,9 +407,10 @@ export async function rejectConstructionFinance(
     if (owned.matchedCount !== 1)
       return { ok: false, error: "Another construction decision owns this request" };
   }
-  const sector = await db
-    .collection<CorporateSector>("corporateSectors")
-    .findOne({ _id: collateral.sectorId }, { projection: { constructionFinancing: 1 } });
+  const sector = await corporateSectorsCollection(db).findOne(
+    { _id: collateral.sectorId },
+    { projection: { constructionFinancing: 1 } }
+  );
   const claim = sector?.constructionFinancing;
   if (!claim || claim.claimId !== collateral.claimId || claim.bankId !== bankId.toHexString())
     return { ok: false, error: "The construction site no longer has this claim" };
@@ -471,7 +474,7 @@ export async function recoverConstructionFunding(
   db: Db,
   turn: number
 ): Promise<Array<{ key: string; error: string }>> {
-  const sectors = db.collection<CorporateSector>("corporateSectors");
+  const sectors = corporateSectorsCollection(db);
   const unfinished = await sectors
     .find(
       {

@@ -25,6 +25,7 @@ import {
 import { normalizeAndMergeCorporateSectors } from "@/lib/corporations/repairDuplicateSectors";
 import type { Defect, DetectResult, HealPlan, HealResult, VerifyResult } from "../types";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 interface Survey {
   /** Sectors whose stamped countryId disagrees with their state's country. */
@@ -40,11 +41,7 @@ interface Survey {
 }
 
 async function survey(db: Db): Promise<Survey> {
-  const sectors = await db
-    .collection<CorporateSector>("corporateSectors")
-    .find({})
-    .sort({ createdAt: 1 })
-    .toArray();
+  const sectors = await corporateSectorsCollection(db).find({}).sort({ createdAt: 1 }).toArray();
   const states = await statesCollection(db)
     .find({}, { projection: { _id: 1, countryId: 1 } })
     .toArray();

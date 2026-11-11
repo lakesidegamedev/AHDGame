@@ -30,6 +30,7 @@ import { NUMERIC_BSON_TYPE } from "@/lib/db/queryHelpers";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export interface ReconcileCommandEconomyUnownedResult {
   commandCountries: CountryId[];
@@ -220,7 +221,7 @@ export async function reconcileCommandEconomyUnowned(
     // (an absorbed region the seed has no row for) keeps its sectors; the
     // nationalization mechanic, with compensation, is what moves those.
     if (!dryRun && entry.sectors.length > 0) {
-      await db.collection<CorporateSector>("corporateSectors").deleteMany({
+      await corporateSectorsCollection(db).deleteMany({
         countryId,
         ...operatingSectorFilter(sectorType),
         stateId: { $in: [...new Set(entry.sectors.map((s) => s.stateId))] },
@@ -231,7 +232,7 @@ export async function reconcileCommandEconomyUnowned(
     for (const sector of entry.sectors) {
       if (!dryRun) {
         const { _id: _sectorId, corporationId: _ignored, ...sectorData } = sector;
-        await db.collection<CorporateSector>("corporateSectors").updateOne(
+        await corporateSectorsCollection(db).updateOne(
           {
             corporationId: corpId,
             stateId: sector.stateId,

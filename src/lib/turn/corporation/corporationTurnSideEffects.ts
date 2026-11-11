@@ -66,6 +66,8 @@ import type { CorpLoyaltyUpdate } from "@/lib/turn/corporation/brandLoyaltyTurn"
 import type { VentureDomain } from "@/lib/products/venture/types";
 import type { PoliticalMediaSettlementPlan } from "@/lib/politicalMedia/journal";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import type { Document } from "mongodb";
 
 /** Runs the side effects that follow sector processing and the bulk writes; returns the NPP sectors founded this turn. */
 export async function runCorporationTurnSideEffects({
@@ -308,7 +310,7 @@ export async function runCorporationTurnSideEffects({
     // Every op is keyed by its sector `_id`; ops on one sector (the flip-turn
     // `$push` after the main update) stay together and in order.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await partitionedBulkWrite(db.collection("corporateSectors"), sectorOps as any[]);
+    await partitionedBulkWrite(corporateSectorsCollection<Document>(db), sectorOps as any[]);
   }
   // After the sector writes, which carry each sector's own stamp: a sector
   // founded before the next run catches its builds up from this turn.

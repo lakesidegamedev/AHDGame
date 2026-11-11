@@ -24,6 +24,7 @@ import { getBankId } from "@/lib/centralBank/helpers";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 const adjustGrowthSchema = z.object({
   sectorId: z.string().min(1, "Sector ID is required"),
@@ -89,7 +90,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(400, "Invalid sector ID");
     }
 
-    const sector = await db.collection<CorporateSector>("corporateSectors").findOne({
+    const sector = await corporateSectorsCollection(db).findOne({
       _id: new ObjectId(sectorId),
       corporationId: corporation._id,
       stateId,
@@ -161,7 +162,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     // Claim the step on the rate this request read, so parallel clicks cannot
     // each pay or refund against the same starting rate.
-    const sectors = db.collection<CorporateSector>("corporateSectors");
+    const sectors = corporateSectorsCollection(db);
     const claimed = await sectors.updateOne(
       { _id: sector._id, targetGrowthRate: sector.targetGrowthRate },
       {

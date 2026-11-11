@@ -22,6 +22,7 @@ import { hasCurrentTenderCapacity } from "./rules/viewerCapacity";
 import type { GovernmentTender } from "./types";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 export async function viewerTenderIds(
   db: Db,
   countryId: CountryId,
@@ -57,8 +58,7 @@ export async function viewerTenderIds(
       .toArray()
   ).filter((c) => !isNppOwned(c));
   if (!corps.length) return [];
-  const sectors = await db
-    .collection<CorporateSector>("corporateSectors")
+  const sectors = await corporateSectorsCollection(db)
     .find(
       { corporationId: { $in: corps.map((c) => c._id) } },
       { projection: { corporationId: 1, stateId: 1, sectorType: 1, strategyId: 1, revenue: 1 } }

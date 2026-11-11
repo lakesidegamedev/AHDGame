@@ -95,6 +95,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 /**
  * Sector capacity commands (plants tier, P3a of the buildable-sectors plan).
@@ -258,7 +259,7 @@ export async function buildCapacity(request: Request, { params }: RouteParams) {
     if (!ObjectId.isValid(sectorId)) {
       return errorResponse(400, "Invalid sector ID");
     }
-    const sector = await db.collection<CorporateSector>("corporateSectors").findOne({
+    const sector = await corporateSectorsCollection(db).findOne({
       _id: new ObjectId(sectorId),
       corporationId: corporation._id,
     });
@@ -324,7 +325,7 @@ export async function buildCapacity(request: Request, { params }: RouteParams) {
       ) {
         return errorResponse(400, "Sector already has these capacity settings.");
       }
-      const changed = await db.collection<CorporateSector>("corporateSectors").updateOne(
+      const changed = await corporateSectorsCollection(db).updateOne(
         { _id: sector._id, ...capacityMutationFilter(sector) },
         {
           $set: {
@@ -412,7 +413,7 @@ export async function buildCapacity(request: Request, { params }: RouteParams) {
       // CAS: the refund below is only paid if THIS request is the one that
       // actually removed the order. A replayed or concurrent cancel of the same
       // index matches nothing and refunds nothing.
-      const cancelWrite = await db.collection<CorporateSector>("corporateSectors").updateOne(
+      const cancelWrite = await corporateSectorsCollection(db).updateOne(
         { _id: sector._id, ...queueCasFilter(sector) },
         {
           $set: {
@@ -684,8 +685,7 @@ export async function loadOperatingReserve(
       ? configured
       : OPERATING_RESERVE_TURNS;
   if (!(turns > 0)) return { turns: 0, billsPerTurnAnchor: 0, revenuePerTurnAnchor: 0 };
-  const sectors = await db
-    .collection<CorporateSector>("corporateSectors")
+  const sectors = await corporateSectorsCollection(db)
     .find(
       { corporationId },
       {
@@ -1151,7 +1151,7 @@ export async function placeCapacityBuild(
   // queue since we read it, our $set would silently erase their work, so
   // fail instead, and hand the money back rather than charging for an order
   // that was never queued.
-  const queueWrite = await db.collection<CorporateSector>("corporateSectors").updateOne(
+  const queueWrite = await corporateSectorsCollection(db).updateOne(
     { _id: sector._id, ...queueCasFilter(sector) },
     {
       $set: {

@@ -3,6 +3,7 @@ import type { Corporation, CorporateSector } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import type { CountryOwnedSeedData } from "@/lib/seeds/reference/budgets";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export interface CountryOwnedCorpUpsertResult {
   /** Corporations upserted by canonical `_id`. */
@@ -69,7 +70,7 @@ export async function upsertCountryOwnedCorpEntries(
   ).map((corp) => corp._id as ObjectId);
   const staleOwnerIds = countryOwnedIds.filter((id) => !canonicalSectorOwnerIds.has(String(id)));
 
-  const sectors = db.collection<CorporateSector>("corporateSectors");
+  const sectors = corporateSectorsCollection(db);
   const sectorOps: AnyBulkWriteOperation<CorporateSector>[] = [];
 
   for (const entry of entries) {

@@ -15,6 +15,7 @@ import { computeMarketSharePercent } from "../marketShare";
 import { loadIndustryBasis } from "../corpMarketShare";
 import { controlGroupMemberIds, controlGroupRootByCorpId } from "../groups/controlGroups";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 /** gameConfig.groupSizeCostsStage at which merger concentration reads both sides' control groups. */
 export const GROUP_MERGER_CONCENTRATION_STAGE = 5;
@@ -76,8 +77,7 @@ export async function computeMergerConcentration(
 
   // Industries either side operates in ANYWHERE — filtered to the reviewing
   // country by the rollup itself, which only reads that country's states.
-  const sectors = await db
-    .collection<CorporateSector>("corporateSectors")
+  const sectors = await corporateSectorsCollection(db)
     .find({ corporationId: { $in: [...acquirerIds, ...targetIds].map((id) => new ObjectId(id)) } })
     .project<Pick<CorporateSector, "sectorType">>({ sectorType: 1 })
     .toArray();

@@ -19,6 +19,7 @@ import { resolveGameYear } from "@/lib/era/era";
 import { getStartingYearForPreset, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import type { GovernmentTender, ContractBid } from "./types";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 export async function automatedDefenceBids(
   db: Db,
   t: GovernmentTender
@@ -44,8 +45,7 @@ export async function automatedDefenceBids(
         }
       )
       .toArray(),
-    db
-      .collection<CorporateSector>("corporateSectors")
+    corporateSectorsCollection(db)
       .find(
         { sectorType: "defense" },
         { projection: { corporationId: 1, strategyId: 1, revenue: 1 } }

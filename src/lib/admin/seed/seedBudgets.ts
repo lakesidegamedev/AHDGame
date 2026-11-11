@@ -7,6 +7,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 /**
  * Seeds US-only budget data: federal budget, US enacted laws, US state budgets,
@@ -107,7 +108,7 @@ export async function seedBudgets(
 
     for (const sector of entry.sectors) {
       const { _id: _sectorId, ...sectorData } = sector;
-      await db.collection<CorporateSector>("corporateSectors").updateOne(
+      await corporateSectorsCollection(db).updateOne(
         {
           corporationId: corpId,
           stateId: sector.stateId,

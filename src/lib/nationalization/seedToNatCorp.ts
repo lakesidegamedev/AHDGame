@@ -16,6 +16,7 @@ import {
   readSectorPlantFields,
 } from "@/lib/corporations/sectorTransferCapex";
 import { seedPlantLedger } from "@/lib/corporations/plantLedger";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 const DEFAULT_PROFIT_MARGIN = 20;
 const DEFAULT_GROWTH_RATE = 1;
@@ -121,7 +122,7 @@ export async function incrementNatCorpSectorRevenue(
       )
     : 0;
 
-  const sectors = db.collection<CorporateSector>("corporateSectors");
+  const sectors = corporateSectorsCollection(db);
   const existing = await sectors.findOne({
     corporationId: corp._id,
     stateId: params.stateId,
@@ -254,7 +255,7 @@ export async function absorbOwnedSectorIntoNatCorp(
   opts?: { dryRun?: boolean }
 ): Promise<number> {
   const revenue = Math.round(sector.revenue ?? 0);
-  const sectors = db.collection<CorporateSector>("corporateSectors");
+  const sectors = corporateSectorsCollection(db);
   const plantsEnabled = marketAtLeast(await getMarketSystemModeForDb(db), "plants");
 
   // PLANT STATE decides whether this row is empty — not `revenue`.

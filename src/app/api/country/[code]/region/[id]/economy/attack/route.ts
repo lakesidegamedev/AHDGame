@@ -73,6 +73,7 @@ import { attackCostAnchorUnderPlants, resolveWorldYear } from "@/lib/corporation
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 const splitSchema = z.object({
   sectorType: z.enum(OPERATING_SECTOR_TYPES),
@@ -203,8 +204,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     // Calculate how much is already owned in this sector type and read unowned from DB
     const [existingSectors, unownedDoc] = await Promise.all([
-      db
-        .collection<CorporateSector>("corporateSectors")
+      corporateSectorsCollection(db)
         .find({ stateId, ...laneIdentity })
         .toArray(),
       db.collection<UnownedSector>("unownedSectors").findOne({ stateId, ...laneIdentity }),
@@ -467,7 +467,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     if (existingOwnSector) {
       // Add to existing sector (capacity under plants, revenue below it)
-      await db.collection<CorporateSector>("corporateSectors").updateOne(
+      await corporateSectorsCollection(db).updateOne(
         { _id: existingOwnSector._id },
         plantsEnabled
           ? { $inc: { capitalStock: capitalStockDelta }, $set: { updatedAt: now } }
@@ -511,27 +511,25 @@ export async function POST(request: Request, { params }: RouteParams) {
         updatedAt: now,
       };
       try {
-        const inserted = await db
-          .collection<CorporateSector>("corporateSectors")
-          .insertOne(newSector as CorporateSector);
+        const inserted = await corporateSectorsCollection(db).insertOne(
+          newSector as CorporateSector
+        );
         capturedSectorId = inserted.insertedId;
       } catch (error) {
         if (isCorporateSectorDuplicateKey(error)) {
-          const recovered = await db
-            .collection<CorporateSector>("corporateSectors")
-            .findOneAndUpdate(
-              {
-                corporationId: corporation._id,
-                stateId,
-                ...laneIdentity,
-              },
-              plantsEnabled
-                ? { $inc: { capitalStock: capitalStockDelta }, $set: { updatedAt: now } }
-                : {
-                    $inc: { revenue: actualCaptureLocal },
-                    $set: { updatedAt: now },
-                  }
-            );
+          const recovered = await corporateSectorsCollection(db).findOneAndUpdate(
+            {
+              corporationId: corporation._id,
+              stateId,
+              ...laneIdentity,
+            },
+            plantsEnabled
+              ? { $inc: { capitalStock: capitalStockDelta }, $set: { updatedAt: now } }
+              : {
+                  $inc: { revenue: actualCaptureLocal },
+                  $set: { updatedAt: now },
+                }
+          );
           capturedSectorId = recovered?._id ?? null;
         } else {
           throw error;

@@ -45,6 +45,7 @@ import {
 } from "@/lib/corporations/securedConstructionProperty";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 /**
  * Witness escrow cash that landed on a bidder: a bid moves it into escrow, and a
@@ -269,7 +270,7 @@ export async function reabsorbSpunOutCorp(
   ledger?: TreasuryCashOptions
 ): Promise<void> {
   const now = new Date();
-  const sectors = db.collection<CorporateSector>("corporateSectors");
+  const sectors = corporateSectorsCollection(db);
   const shellSectors = await sectors.find({ corporationId: shell._id }).toArray();
 
   // Route each sector back to the NatCorp that owns its type.
@@ -560,8 +561,7 @@ export async function resolveNationalizationAuction(
 
   // Public State Ownership Register row (best-effort — never abort the sale).
   try {
-    const soldSectors = await db
-      .collection<CorporateSector>("corporateSectors")
+    const soldSectors = await corporateSectorsCollection(db)
       .find({ corporationId: shell._id }, { projection: { sectorType: 1 } })
       .toArray();
     await recordNationalizationLedger(db, {

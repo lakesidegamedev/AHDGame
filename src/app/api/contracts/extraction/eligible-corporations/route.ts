@@ -10,6 +10,7 @@ import { EXTRACTABLE_RESOURCES } from "@/lib/constants/commodities";
 import type { CorporateSector } from "@/lib/db/types";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export async function GET(request: Request) {
   try {
@@ -23,8 +24,7 @@ export async function GET(request: Request) {
 
     const db = await getDb();
 
-    const sectors = await db
-      .collection<CorporateSector>("corporateSectors")
+    const sectors = await corporateSectorsCollection(db)
       .find({ stateId }, { projection: { corporationId: 1 } })
       .toArray();
     const corpIds = [...new Set(sectors.map((s) => s.corporationId.toString()))].map(

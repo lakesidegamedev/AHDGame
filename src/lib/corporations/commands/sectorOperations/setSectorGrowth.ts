@@ -17,6 +17,7 @@ import { logEconomicAction } from "@/lib/corporations/economicActionLog";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 interface RouteParams {
   params: Promise<{ id: string; sectorId: string }>;
@@ -77,7 +78,7 @@ export async function setSectorGrowth(request: Request, { params }: RouteParams)
       return errorResponse(400, "Invalid sector ID");
     }
 
-    const sector = await db.collection<CorporateSector>("corporateSectors").findOne({
+    const sector = await corporateSectorsCollection(db).findOne({
       _id: new ObjectId(sectorId),
       corporationId: corporation._id,
     });
@@ -149,7 +150,7 @@ export async function setSectorGrowth(request: Request, { params }: RouteParams)
       });
     }
 
-    await db.collection<CorporateSector>("corporateSectors").updateOne(
+    await corporateSectorsCollection(db).updateOne(
       { _id: sector._id },
       {
         $set: {

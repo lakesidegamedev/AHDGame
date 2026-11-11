@@ -19,6 +19,7 @@ import { isStateOwned } from "./nationalCorporation";
 import { maxCarveFractionForMarketShare } from "./constants";
 import { privatizeAsset } from "./privatizeAsset";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export async function applyPrivatizeProvision(
   db: Db,
@@ -37,7 +38,7 @@ export async function applyPrivatizeProvision(
   // capped down to the largest legal fraction rather than rejected outright — a
   // passed law must not void silently. Uses the same per-sector share computation
   // `privatizeAsset` validates against so the clamped value always passes.
-  const sectors = db.collection<CorporateSector>("corporateSectors");
+  const sectors = corporateSectorsCollection(db);
   const selections: PrivatizeProvision["selections"] = [];
   for (const sel of provision.selections) {
     const sector = await sectors.findOne({ _id: sel.sectorId, corporationId: source._id });

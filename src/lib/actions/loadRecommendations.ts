@@ -21,6 +21,7 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 interface StateEconomySector {
   type: string;
@@ -66,12 +67,11 @@ async function fetchStateEconomy(
     return { stateId, stateName, countryId, sectors: [] };
   }
 
-  const sectors = await db
-    .collection<{
-      corporationId: ObjectId;
-      sectorType: string;
-      revenue: number;
-    }>("corporateSectors")
+  const sectors = await corporateSectorsCollection<{
+    corporationId: ObjectId;
+    sectorType: string;
+    revenue: number;
+  }>(db)
     .find({ stateId })
     .toArray();
 
@@ -191,14 +191,13 @@ async function fetchMarketPositions(
   const corpIds = corporations.map((c) => c._id);
   const corpMap = new Map(corporations.map((c) => [c._id.toString(), c]));
 
-  const sectors = await db
-    .collection<{
-      _id: ObjectId;
-      corporationId: ObjectId;
-      stateId: string;
-      sectorType: string;
-      revenue: number;
-    }>("corporateSectors")
+  const sectors = await corporateSectorsCollection<{
+    _id: ObjectId;
+    corporationId: ObjectId;
+    stateId: string;
+    sectorType: string;
+    revenue: number;
+  }>(db)
     .find({ corporationId: { $in: corpIds } })
     .toArray();
 
@@ -212,10 +211,12 @@ async function fetchMarketPositions(
 
   // Find sibling corps competing in these state+sectorType slots so market-share
   // math normalizes every revenue figure — not just the character's own corps.
-  const siblingSectors = await db
-    .collection<{ corporationId: ObjectId; stateId: string; sectorType: string; revenue: number }>(
-      "corporateSectors"
-    )
+  const siblingSectors = await corporateSectorsCollection<{
+    corporationId: ObjectId;
+    stateId: string;
+    sectorType: string;
+    revenue: number;
+  }>(db)
     .find({
       $or: Array.from(stateSectorKeys).map((key) => {
         const [stateId, sectorType] = key.split(":");

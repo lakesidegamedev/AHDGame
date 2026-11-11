@@ -22,6 +22,7 @@ import { getStartingYearForPreset, TURNS_PER_YEAR } from "@/lib/constants/turnTi
 import { isProcurementBlocked } from "@/lib/military/procurementGate";
 import type { GovernmentTender, ContractBid } from "./types";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export class ContractError extends Error {
   constructor(
@@ -49,9 +50,10 @@ export async function validateBid(
   )
     throw new ContractError("The bid is no longer authorized by this corporation's CEO.");
   if (t.terms.type === "extraction") {
-    const sector = await db
-      .collection<CorporateSector>("corporateSectors")
-      .findOne({ corporationId: corp._id, stateId: t.terms.stateId }, { projection: { _id: 1 } });
+    const sector = await corporateSectorsCollection(db).findOne(
+      { corporationId: corp._id, stateId: t.terms.stateId },
+      { projection: { _id: 1 } }
+    );
     const invalid = extractionBidError({
       corporationType: corp.type,
       hasOperations: !!sector,
@@ -64,12 +66,10 @@ export async function validateBid(
   const gate = await isProcurementBlocked(db, t.countryId, turn);
   if (gate.blocked) throw new ContractError(gate.reason ?? "Procurement is paused.");
   if (!bid.sectorId) throw new ContractError("Choose a defence plant.", 400);
-  const sector = await db
-    .collection<CorporateSector>("corporateSectors")
-    .findOne(
-      { _id: new ObjectId(bid.sectorId), corporationId: corp._id, sectorType: "defense" },
-      { projection: { corporationId: 1, sectorType: 1, strategyId: 1, revenue: 1 } }
-    );
+  const sector = await corporateSectorsCollection(db).findOne(
+    { _id: new ObjectId(bid.sectorId), corporationId: corp._id, sectorType: "defense" },
+    { projection: { corporationId: 1, sectorType: 1, strategyId: 1, revenue: 1 } }
+  );
   if (!sector)
     throw new ContractError("The selected defence plant does not belong to this corporation.");
   const state = await getGameState(db);

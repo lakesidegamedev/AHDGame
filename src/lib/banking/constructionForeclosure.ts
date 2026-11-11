@@ -9,11 +9,11 @@ import {
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 /** Expose defaulted security to funded buyers. A book mark never pays a creditor. */
 export async function listDefaultedConstructionCollateral(db: Db, turn: number): Promise<number> {
-  const sectors = await db
-    .collection<CorporateSector>("corporateSectors")
+  const sectors = await corporateSectorsCollection(db)
     .find({
       "constructionFinancing.status": "building",
       "constructionFinancing.defaultedTurn": { $lt: turn },
@@ -71,7 +71,7 @@ export async function listDefaultedConstructionCollateral(db: Db, turn: number):
     });
     if (!Number.isFinite(valuation.priceAnchor) || valuation.priceAnchor <= 0) continue;
     const now = new Date();
-    const result = await db.collection<CorporateSector>("corporateSectors").updateOne(
+    const result = await corporateSectorsCollection(db).updateOne(
       {
         _id: sector._id,
         corporationId: owner._id,

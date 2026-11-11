@@ -5,6 +5,7 @@
  */
 import type { Db } from "mongodb";
 import { lossShareByCountry } from "./lossShare";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export const MARKET_ADJUSTMENT_SIGNALS = "marketAdjustmentSignals";
 /** Turns of loss-share history kept per country. */
@@ -31,12 +32,11 @@ export async function marketAdjustmentEnabled(db: Db): Promise<boolean> {
 
 /** Record this turn's loss share for every country with settled funded capacity. Idempotent per turn. */
 export async function recordLossShares(db: Db, turn: number): Promise<number> {
-  const rows = await db
-    .collection<{
-      countryId?: string;
-      capitalStock?: number;
-      producerSettlement?: { turn?: number; profit?: number };
-    }>("corporateSectors")
+  const rows = await corporateSectorsCollection<{
+    countryId?: string;
+    capitalStock?: number;
+    producerSettlement?: { turn?: number; profit?: number };
+  }>(db)
     .find(
       { "producerSettlement.turn": turn },
       {

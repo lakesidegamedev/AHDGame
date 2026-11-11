@@ -49,6 +49,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export type CommodityGlobalDeltaPreview = {
   commodity: CommodityType;
@@ -253,8 +254,7 @@ export async function previewQuickDissolve(
     .findOne({ _id: "default" }, { projection: { stateGdpAnchorPhaseStartTurn: 1 } });
 
   const [allSectors, allCorps, allStates, stateMetrics, centralBanks] = await Promise.all([
-    db
-      .collection<CorporateSector>("corporateSectors")
+    corporateSectorsCollection(db)
       .find(
         {},
         {

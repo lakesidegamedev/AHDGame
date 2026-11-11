@@ -27,6 +27,7 @@ import { emitTx } from "@/lib/financialTxLog/emit";
 import { resolveCorpLiquidCurrencyCode } from "@/lib/currency/corporationCapital";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export type AttemptUnionBustingResult =
   | {
@@ -86,9 +87,10 @@ export async function attemptUnionBusting(
     };
   }
   const sectorObjectId = new ObjectId(sectorId);
-  const sector = await db
-    .collection<CorporateSector>("corporateSectors")
-    .findOne({ _id: sectorObjectId, corporationId: corporation._id });
+  const sector = await corporateSectorsCollection(db).findOne({
+    _id: sectorObjectId,
+    corporationId: corporation._id,
+  });
   if (!sector) {
     return { ok: false, status: 404, error: "Sector not found" };
   }
@@ -173,9 +175,11 @@ export async function attemptUnionBusting(
   try {
     await runWithOptionalTransaction(
       async (session) => {
-        const sectorUpdate = await db
-          .collection<CorporateSector>("corporateSectors")
-          .updateOne(sectorFilter, sectorSet, { session });
+        const sectorUpdate = await corporateSectorsCollection(db).updateOne(
+          sectorFilter,
+          sectorSet,
+          { session }
+        );
         if (sectorUpdate.modifiedCount === 0) throw new Error("COOLDOWN_ACTIVE");
 
         const corpUpdate = await corporationsCollection(db).updateOne(
@@ -190,9 +194,10 @@ export async function attemptUnionBusting(
         if (corpUpdate.modifiedCount === 0) throw new Error("INSUFFICIENT_FUNDS");
       },
       async () => {
-        const sectorUpdate = await db
-          .collection<CorporateSector>("corporateSectors")
-          .updateOne(sectorFilter, sectorSet);
+        const sectorUpdate = await corporateSectorsCollection(db).updateOne(
+          sectorFilter,
+          sectorSet
+        );
         if (sectorUpdate.modifiedCount === 0) throw new Error("COOLDOWN_ACTIVE");
 
         try {
@@ -205,16 +210,12 @@ export async function attemptUnionBusting(
             { $inc: { liquidCapital: -cashCost }, $set: { updatedAt: now } }
           );
           if (corpUpdate.modifiedCount === 0) {
-            await db
-              .collection<CorporateSector>("corporateSectors")
-              .updateOne({ _id: sectorObjectId }, revertSector);
+            await corporateSectorsCollection(db).updateOne({ _id: sectorObjectId }, revertSector);
             throw new Error("INSUFFICIENT_FUNDS");
           }
         } catch (error) {
           if ((error as Error).message !== "INSUFFICIENT_FUNDS") {
-            await db
-              .collection<CorporateSector>("corporateSectors")
-              .updateOne({ _id: sectorObjectId }, revertSector);
+            await corporateSectorsCollection(db).updateOne({ _id: sectorObjectId }, revertSector);
           }
           throw error;
         }

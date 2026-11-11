@@ -82,6 +82,7 @@ import { paidUnionServices } from "@/lib/unions/rules";
 import { normalizeServiceIds } from "@/lib/unions/unionServices";
 import { clampPoliticalContributionPct } from "@/lib/unions/unionPoliticalContributions";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -116,8 +117,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
       bargainingCampaigns,
       pensionScheme,
     ] = await Promise.all([
-      db
-        .collection<CorporateSector>("corporateSectors")
+      corporateSectorsCollection(db)
         .find(
           { countryId: union.countryId, sectorType: union.sectorType },
           {

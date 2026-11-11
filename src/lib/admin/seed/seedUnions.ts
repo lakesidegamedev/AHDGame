@@ -13,6 +13,7 @@ import { getUnionName } from "@/lib/unions/unionNames";
 import { BASE_APPROVAL } from "@/lib/unions/unionDues";
 import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 /**
  * Starting annual dues charged per member on a freshly seeded union. 0, not a
@@ -182,9 +183,9 @@ export async function seedUnions(
       });
     }
     if (sectorOps.length > 0) {
-      const sectorResult = await db
-        .collection<CorporateSector>("corporateSectors")
-        .bulkWrite(sectorOps, { ordered: false });
+      const sectorResult = await corporateSectorsCollection(db).bulkWrite(sectorOps, {
+        ordered: false,
+      });
       sectorsAssigned = sectorResult.modifiedCount;
     }
   }

@@ -6,6 +6,7 @@ import { getDesignatedSectorTypes, corpHasStrategicSector } from "./strategicSec
 import { fetchMarketSharePercentForSectors } from "@/lib/corporations/marketShare";
 import { loadGroupTopMarketShares } from "./monopolyTrigger";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export interface ResolvedCorpEligibility {
   ownerKind: "player" | "npc";
@@ -47,8 +48,7 @@ export async function resolveCorpEligibilityBatch(
       defaulted: true,
       matured: false,
     }),
-    db
-      .collection<CorporateSector>("corporateSectors")
+    corporateSectorsCollection(db)
       .find({ corporationId: { $in: corpIds } })
       .toArray(),
     getDesignatedSectorTypes(db, countryId),

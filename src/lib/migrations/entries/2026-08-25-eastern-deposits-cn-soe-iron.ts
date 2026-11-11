@@ -7,6 +7,7 @@ import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFla
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import type { Migration, MigrationResult } from "../types";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 /**
  * Markets repair plan P2a: author the eastern-bloc deposits and point the
@@ -127,8 +128,7 @@ async function backfillEasternDeposits(db: Db, dryRun: boolean): Promise<Migrati
   );
 
   // ── Part 2: CN SOE iron flip ───────────────────────────────────────────
-  const cnSectors = await db
-    .collection<CorporateSector>("corporateSectors")
+  const cnSectors = await corporateSectorsCollection(db)
     .find({
       countryId: "CN",
       sectorType: "extraction",
@@ -165,7 +165,7 @@ async function backfillEasternDeposits(db: Db, dryRun: boolean): Promise<Migrati
       buildQueue: sector.buildQueue,
       otherOpexPerUnitAnchor: sector.otherOpexPerUnitAnchor,
     });
-    await db.collection<CorporateSector>("corporateSectors").updateOne(
+    await corporateSectorsCollection(db).updateOne(
       { _id: sector._id },
       {
         $set: {

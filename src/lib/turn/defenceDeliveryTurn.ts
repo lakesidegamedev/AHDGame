@@ -42,6 +42,7 @@ import { resolveDefenseLine } from "@/lib/turn/defenseEnvelope";
 import { emitTx } from "@/lib/financialTxLog/emit";
 import { getCorporateSectorsCollection } from "@/lib/db/collections/corporateSectors";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 /**
  * Idempotency key for one contract's settlement in one turn.
@@ -127,7 +128,7 @@ export async function applyDefenceDeliveries(
 
   for (const contract of contracts) {
     const [sector, corp] = await Promise.all([
-      db.collection<CorporateSector>("corporateSectors").findOne({ _id: contract.sectorId }),
+      corporateSectorsCollection(db).findOne({ _id: contract.sectorId }),
       // Eligibility and payment read the corp's country, currency and cash; its
       // settlement stamps are never read on this path and are most of the doc.
       corporationsCollection(db).findOne(

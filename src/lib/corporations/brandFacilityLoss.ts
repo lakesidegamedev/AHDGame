@@ -3,6 +3,7 @@ import { ObjectId } from "mongodb";
 import type { CorporateSector } from "@/lib/db/types";
 import { applyFacilityLoss } from "@/lib/market/brandLoyalty";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 /**
  * Brand facility-loss hook (the "Boeing rule", Package A). Losing a sector —
@@ -34,8 +35,7 @@ export async function applyBrandFacilityLoss(
   // Total revenue across the corp's remaining + lost sectors (local currency is
   // fine here — it's a RATIO, so the currency cancels as long as both legs are
   // the same corp's local units, which they are).
-  const agg = await db
-    .collection<CorporateSector>("corporateSectors")
+  const agg = await corporateSectorsCollection(db)
     .aggregate<{ total: number }>([
       { $match: { corporationId: corpId } },
       { $group: { _id: null, total: { $sum: "$revenue" } } },

@@ -44,6 +44,7 @@ import {
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export interface CarveSelection {
   sectorId: ObjectId;
@@ -113,7 +114,7 @@ export async function privatizeAsset(
 
   const now = new Date();
   const corps = corporationsCollection(db);
-  const sectors = db.collection<CorporateSector>("corporateSectors");
+  const sectors = corporateSectorsCollection(db);
 
   if (params.selections.length === 0) throw new Error("No sectors selected to privatize");
   // Reject duplicate sector selections — otherwise a repeated id double-counts the

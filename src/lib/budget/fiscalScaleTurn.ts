@@ -26,6 +26,8 @@ import {
   type FiscalScaleState,
 } from "@/lib/budget/rules/fiscalScale";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import type { Document } from "mongodb";
 
 type ScaleBudget = Pick<
   FederalBudget,
@@ -37,8 +39,7 @@ export async function loadFundedOutputAnchorByCountry(
   db: Db,
   turn: number
 ): Promise<Map<string, number>> {
-  const rows = await db
-    .collection("corporateSectors")
+  const rows = await corporateSectorsCollection<Document>(db)
     .aggregate<{ _id: string; valueAdded: number }>([
       { $match: { "producerSettlement.turn": turn } },
       {

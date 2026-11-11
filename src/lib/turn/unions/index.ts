@@ -42,6 +42,7 @@ import { processLabourRelationsTurn } from "./labourRelationsTurn";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export interface UnionsTurnResult {
   unionsProcessed: number;
@@ -65,8 +66,7 @@ export interface UnionsTurnResult {
  * sector already pointing at a union is never touched.
  */
 export async function adoptUnrepresentedSectors(db: Db): Promise<number> {
-  const unrepresented = await db
-    .collection<CorporateSector>("corporateSectors")
+  const unrepresented = await corporateSectorsCollection(db)
     .find({ representingUnionId: null }, { projection: { _id: 1, countryId: 1, sectorType: 1 } })
     .toArray();
   if (unrepresented.length === 0) return 0;
@@ -100,7 +100,7 @@ export async function adoptUnrepresentedSectors(db: Db): Promise<number> {
     });
   }
   if (ops.length === 0) return 0;
-  const result = await db.collection<CorporateSector>("corporateSectors").bulkWrite(ops);
+  const result = await corporateSectorsCollection(db).bulkWrite(ops);
   return result.modifiedCount ?? 0;
 }
 
@@ -324,8 +324,7 @@ export async function processUnionsTurn(db: Db, turn?: number): Promise<UnionsTu
 
   if (stillOwned.length > 0) {
     const stillOwnedIds = stillOwned.map((u) => u._id);
-    const representedSectors = await db
-      .collection<CorporateSector>("corporateSectors")
+    const representedSectors = await corporateSectorsCollection(db)
       .find(
         { representingUnionId: { $in: stillOwnedIds } },
         { projection: { representingUnionId: 1, workers: 1, unionization: 1, wagePerWorker: 1 } }

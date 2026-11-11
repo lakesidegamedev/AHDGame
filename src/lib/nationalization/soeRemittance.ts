@@ -30,6 +30,7 @@ import { loadSoeGovernanceInputs } from "./soeGovernanceInputs";
 import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
 import { CORPORATE_SECTOR_LEAN_FIELDS } from "@/lib/db/collections/corporateSectors";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 /** One corp's profit-remittance leg this turn, in the corp's own currency. */
 export interface SoeRemittedCorp {
@@ -65,8 +66,7 @@ export async function processSoeRemittance(
   const options = await resolveTreasuryCashOptions(db, ledger);
   const turn = options.context?.treasuryCashLedgerEnabled ? options.context.turn : null;
   const [allSectors, fxByCurrency, plants, receipts] = await Promise.all([
-    db
-      .collection<CorporateSector>("corporateSectors")
+    corporateSectorsCollection(db)
       .find({ corporationId: { $in: corpIds } }, { projection: CORPORATE_SECTOR_LEAN_FIELDS })
       .toArray(),
     loadFxRatesByCurrency(db),

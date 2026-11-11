@@ -18,6 +18,7 @@ import {
   type StageTimings,
 } from "@/lib/market/producerMarket/stageTimings";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 /** Stop on convergence, with a bounded fallback for difficult live markets. */
 export const LIVE_PLANNING_PASSES = 64;
@@ -244,8 +245,7 @@ async function publishHostState(
         { projection: { liquidCapital: 1, pendingOperatingCash: 1, producerPayables: 1 } }
       )
       .toArray(),
-    db
-      .collection<CorporateSector>("corporateSectors")
+    corporateSectorsCollection(db)
       .find(
         { _id: { $in: settled.targets.map((target) => new ObjectId(target.sectorId)) } },
         {

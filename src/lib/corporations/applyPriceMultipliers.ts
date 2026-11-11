@@ -12,6 +12,7 @@ import { computeOrderFlowMultiplier } from "./orderFlowEngine";
 import { loadActiveFtaPairs } from "@/lib/tariffs/ftaOverrides";
 import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export interface ApplyPriceMultipliersResult {
   updated: number;
@@ -82,8 +83,7 @@ export async function applyPriceMultipliers(db?: Db): Promise<ApplyPriceMultipli
         }
       )
       .toArray(),
-    database
-      .collection<CorporateSector>("corporateSectors")
+    corporateSectorsCollection(database)
       .find(
         {},
         {

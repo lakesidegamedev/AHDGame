@@ -26,6 +26,7 @@ import {
 } from "@/lib/currency/corporationCapital";
 import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 /** Price ratio at or above this: the resource is short enough to survey. */
 export const NPP_PROSPECT_SHORTAGE_RATIO = 1.15;
@@ -109,8 +110,7 @@ export async function processNppProspecting(db: Db, turn: number, now: Date): Pr
   if (nppCorps.length === 0) return 0;
 
   const corpIds = nppCorps.map((c) => c._id);
-  const sectors = await db
-    .collection<CorporateSector>("corporateSectors")
+  const sectors = await corporateSectorsCollection(db)
     .find(
       { corporationId: { $in: corpIds }, sectorType: "extraction" },
       {

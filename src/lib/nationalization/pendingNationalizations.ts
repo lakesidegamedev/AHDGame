@@ -15,6 +15,7 @@ import { getTopMarketSharePercent } from "./monopolyTrigger";
 import { allCitedConditionsCleared } from "./noticeWindow";
 import { MONOPOLY_SHARE_THRESHOLD } from "./constants";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export async function processPendingNationalizations(
   db: Db,
@@ -76,9 +77,7 @@ async function resolveOne(
   let corp: Corporation | null = null;
   let sector: CorporateSector | null = null;
   if (pending.targetSectorId) {
-    sector = await db
-      .collection<CorporateSector>("corporateSectors")
-      .findOne({ _id: pending.targetSectorId });
+    sector = await corporateSectorsCollection(db).findOne({ _id: pending.targetSectorId });
     if (sector) corp = await corporationsCollection(db).findOne({ _id: sector.corporationId });
   } else if (pending.targetCorporationId) {
     corp = await corporationsCollection(db).findOne({ _id: pending.targetCorporationId });
@@ -97,8 +96,7 @@ async function resolveOne(
   // nationalization the legislature already voted through.)
   if (pending.method !== "legislative") {
     // Re-check the cited curable conditions.
-    const corpSectors = await db
-      .collection<CorporateSector>("corporateSectors")
+    const corpSectors = await corporateSectorsCollection(db)
       .find({ corporationId: corp._id })
       .toArray();
     const designated = await getDesignatedSectorTypes(db, pending.countryId);

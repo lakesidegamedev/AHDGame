@@ -12,6 +12,7 @@ import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -42,7 +43,7 @@ export async function queryCorporation(db: Db, params: { name?: string; id?: str
       ? charactersCollection(db).findOne({ _id: corp.ceoId }, { projection: { name: 1 } })
       : Promise.resolve(null),
     bondsCollection(db).find({ corporationId: corp._id }).toArray(),
-    db.collection<CorporateSector>("corporateSectors").find({ corporationId: corp._id }).toArray(),
+    corporateSectorsCollection(db).find({ corporationId: corp._id }).toArray(),
     holderCharacterIds.length > 0
       ? charactersCollection(db)
           .find({ _id: { $in: holderCharacterIds } }, { projection: { name: 1 } })

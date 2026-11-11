@@ -37,6 +37,8 @@ import type {
 import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import type { Document } from "mongodb";
 
 /**
  * Whole plants conversion (one time, between turns, before
@@ -363,8 +365,7 @@ export interface ConversionReport {
 /** READ ONLY. Everything the conversion would do. */
 export async function buildConversionReport(db: Db): Promise<ConversionReport> {
   const world = await loadWorld(db);
-  const sectors = await db
-    .collection<SectorRow>("corporateSectors")
+  const sectors = await corporateSectorsCollection<SectorRow>(db)
     .find(
       { $or: [{ capitalStock: { $gt: 0 } }, { "buildQueue.0": { $exists: true } }] },
       { projection: SECTOR_PROJECTION }
@@ -472,8 +473,9 @@ export async function buildConversionReport(db: Db): Promise<ConversionReport> {
 
 /** Converted sectors whose owner credit or tx row has not landed yet. */
 async function pendingCredits(db: Db) {
-  const credited = await db
-    .collection<CorporateSector & { [SECTOR_MARKER]?: Record<string, unknown> }>("corporateSectors")
+  const credited = await corporateSectorsCollection<
+    CorporateSector & { [SECTOR_MARKER]?: Record<string, unknown> }
+  >(db)
     .find(
       { [`${SECTOR_MARKER}.creditAnchor`]: { $gt: 0 } },
       {
@@ -547,8 +549,7 @@ async function pendingCredits(db: Db) {
 }
 
 async function invariantViolations(db: Db): Promise<number> {
-  const converted = await db
-    .collection<SectorRow>("corporateSectors")
+  const converted = await corporateSectorsCollection<SectorRow>(db)
     .find({ [SECTOR_MARKER]: { $exists: true } }, { projection: SECTOR_PROJECTION })
     .toArray();
   return converted.filter((s) => !isWholePlantStock(s.capitalStock ?? 0, plantSizeForSector(s)))
@@ -619,7 +620,7 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
     turn: number;
     conversions: SectorConversion[];
   };
-  const sectors = db.collection("corporateSectors");
+  const sectors = corporateSectorsCollection<Document>(db);
   let converted = 0;
   let casMisses = 0;
 

@@ -1,6 +1,7 @@
 import type { Db, ObjectId } from "mongodb";
 import type { CorporateSector, SoeMandate } from "@/lib/db/types";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 /**
  * State-official mandate setters for National Corporations (spec §11.4 / §24).
@@ -41,7 +42,7 @@ export async function setSectorMandate(
   sectorId: ObjectId,
   mandate: SoeMandate
 ): Promise<void> {
-  const sectors = db.collection<CorporateSector>("corporateSectors");
+  const sectors = corporateSectorsCollection(db);
   const sector = await sectors.findOne({ _id: sectorId, corporationId: corpId });
   if (!sector) throw new Error("Sector not found for this National Corporation");
   await sectors.updateOne(
@@ -64,7 +65,7 @@ export async function clearSectorMandate(
   corpId: ObjectId,
   sectorId: ObjectId
 ): Promise<void> {
-  const sectors = db.collection<CorporateSector>("corporateSectors");
+  const sectors = corporateSectorsCollection(db);
   const sector = await sectors.findOne({ _id: sectorId, corporationId: corpId });
   if (!sector) throw new Error("Sector not found for this National Corporation");
   await sectors.updateOne(

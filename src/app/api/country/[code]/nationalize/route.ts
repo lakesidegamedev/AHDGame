@@ -28,6 +28,7 @@ import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import { isWithinRenationalizeCooldown } from "@/lib/nationalization/privatizationShares";
 import { generateStockExchangeSnapshots } from "@/lib/turn/stockExchangeSnapshot";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 interface RouteParams {
   params: Promise<{ code: string }>;
@@ -87,9 +88,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     if (corporationId) {
       targetCorp = await corps.findOne({ _id: new ObjectId(corporationId) });
     } else if (sectorId) {
-      targetSector = await db
-        .collection<CorporateSector>("corporateSectors")
-        .findOne({ _id: new ObjectId(sectorId) });
+      targetSector = await corporateSectorsCollection(db).findOne({ _id: new ObjectId(sectorId) });
       if (targetSector) {
         targetCorp = await corps.findOne({ _id: targetSector.corporationId });
       }

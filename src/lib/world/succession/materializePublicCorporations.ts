@@ -9,6 +9,7 @@ import {
   type FederationArchivedRegionRow,
 } from "./materializeTerritory";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export const FEDERATION_ARCHIVED_PUBLIC_CORPORATIONS_COLLECTION =
   "federationArchivedPublicCorporations";
@@ -67,8 +68,7 @@ export async function materializeFederationPublicCorporations(input: {
   );
   const corporationIds = publicCorporations.map((corp) => corp._id);
   const sectors = corporationIds.length
-    ? await db
-        .collection<CorporateSector>("corporateSectors")
+    ? await corporateSectorsCollection(db)
         .find({ corporationId: { $in: corporationIds } }, { session })
         .toArray()
     : [];

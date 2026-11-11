@@ -50,6 +50,7 @@ import {
 import { NPP_BILL_VOTING_DURATION_HOURS } from "./constants";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 const PRIVATIZATION_BILL_CATEGORY = "state ownership";
 
@@ -171,8 +172,7 @@ export async function proposeNppPrivatizationBill(
   if (natCorps.length === 0) return { ok: false, reason: "no National Corporation" };
 
   const [sectorRows, strategicTypes] = await Promise.all([
-    db
-      .collection<CorporateSector>("corporateSectors")
+    corporateSectorsCollection(db)
       .find(
         { corporationId: { $in: natCorps.map((c) => c._id) }, countryId },
         {

@@ -24,6 +24,7 @@ import { computeNoticeTurns } from "./noticeWindow";
 import { isWithinRenationalizeCooldown } from "./privatizationShares";
 import { nationalizeSectorWide } from "./nationalizeSectorWide";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export async function applyNationalizeProvision(
   db: Db,
@@ -53,9 +54,7 @@ export async function applyNationalizeProvision(
   let targetCorp: Corporation | null = null;
   let targetSector: CorporateSector | null = null;
   if (provision.targetSectorId) {
-    targetSector = await db
-      .collection<CorporateSector>("corporateSectors")
-      .findOne({ _id: provision.targetSectorId });
+    targetSector = await corporateSectorsCollection(db).findOne({ _id: provision.targetSectorId });
     if (targetSector) targetCorp = await corps.findOne({ _id: targetSector.corporationId });
   } else if (provision.targetCorporationId) {
     targetCorp = await corps.findOne({ _id: provision.targetCorporationId });
@@ -85,8 +84,7 @@ export async function applyNationalizeProvision(
   // reach is locked, so these never GATE the taking — they only shape the
   // consequences (a monopoly break-up polls well; a strategic taking is
   // contested). The donor's whole-corp footprint frames a sector taking too.
-  const corpSectors = await db
-    .collection<CorporateSector>("corporateSectors")
+  const corpSectors = await corporateSectorsCollection(db)
     .find({ corporationId: targetCorp._id })
     .toArray();
   const designatedTypes = await getDesignatedSectorTypes(db, countryId);

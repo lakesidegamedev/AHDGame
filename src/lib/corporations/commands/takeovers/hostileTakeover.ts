@@ -104,6 +104,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 type TakeoverTxInput = Omit<FinancialTxLogEntry, "_id" | "expiresAt" | "flagged">;
 
@@ -426,8 +427,7 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
       if (!freshTarget) {
         return errorResponse(409, "The target corporation no longer exists.");
       }
-      const targetSectors = await db
-        .collection<CorporateSector>("corporateSectors")
+      const targetSectors = await corporateSectorsCollection(db)
         .find({ corporationId: target._id })
         .toArray();
       const takeoverTurn = await getCurrentTurn(db);
@@ -763,8 +763,7 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
         const targetSectorRevenue = targetSectors.reduce((sum, s) => sum + (s.revenue ?? 0), 0);
         await applyBrandFacilityLoss(db, target._id, targetSectorRevenue);
 
-        const parentSectors = await db
-          .collection<CorporateSector>("corporateSectors")
+        const parentSectors = await corporateSectorsCollection(db)
           .find({ corporationId: parent._id })
           .toArray();
 
@@ -891,15 +890,13 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
         }
 
         if (sectorMergeOps.length > 0) {
-          const merged = await db
-            .collection<CorporateSector>("corporateSectors")
-            .bulkWrite(sectorMergeOps);
+          const merged = await corporateSectorsCollection(db).bulkWrite(sectorMergeOps);
           if (merged.matchedCount !== sectorMergeOps.length) {
             throw new Error("A takeover destination became secured during the sector merge");
           }
         }
         if (sectorDeleteIds.length > 0) {
-          const removed = await db.collection<CorporateSector>("corporateSectors").deleteMany({
+          const removed = await corporateSectorsCollection(db).deleteMany({
             _id: { $in: sectorDeleteIds },
             ...unprotectedConstructionPropertyFilter(),
           });
@@ -908,9 +905,7 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
           }
         }
         if (sectorReassignOps.length > 0) {
-          const reassigned = await db
-            .collection<CorporateSector>("corporateSectors")
-            .bulkWrite(sectorReassignOps);
+          const reassigned = await corporateSectorsCollection(db).bulkWrite(sectorReassignOps);
           if (reassigned.matchedCount !== sectorReassignOps.length) {
             throw new Error("A takeover source sector became secured before reassignment");
           }

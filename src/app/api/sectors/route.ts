@@ -30,6 +30,8 @@ import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import type { Document } from "mongodb";
 
 export type SectorView = "unowned" | "owned" | "forSale";
 export type SectorSort = "revenue" | "type" | "state" | "country" | "margin" | "growth";
@@ -269,8 +271,7 @@ export async function GET(request: Request) {
         corpFilter.forSale = { $ne: null };
       }
 
-      const ownedSectors = await db
-        .collection<CorporateSector>("corporateSectors")
+      const ownedSectors = await corporateSectorsCollection(db)
         .find(corpFilter, {
           projection: {
             sectorType: 1,
@@ -405,8 +406,8 @@ export async function GET(request: Request) {
 
     const [unownedCount, ownedCount, forSaleCount] = await Promise.all([
       db.collection("unownedSectors").countDocuments(unownedCountFilter),
-      db.collection("corporateSectors").countDocuments(corpCountFilter),
-      db.collection("corporateSectors").countDocuments({
+      corporateSectorsCollection<Document>(db).countDocuments(corpCountFilter),
+      corporateSectorsCollection<Document>(db).countDocuments({
         forSale: { $ne: null },
         ...corpCountFilter,
       }),

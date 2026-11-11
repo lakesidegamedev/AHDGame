@@ -41,6 +41,7 @@ import { notifySupplyAgreementEvent } from "@/lib/corporations/supplyExchange/no
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 /**
  * Private supply agreement lifecycle (bilateral, both-consent). Either CEO can
@@ -103,8 +104,7 @@ export async function validateCapacity(
   }
 
   const [sectors, config] = await Promise.all([
-    db
-      .collection<CorporateSector>("corporateSectors")
+    corporateSectorsCollection(db)
       .find(
         { corporationId: supplier._id },
         {

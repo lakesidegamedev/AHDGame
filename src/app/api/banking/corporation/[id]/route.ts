@@ -55,6 +55,7 @@ import type { BankCharter, BankCharterType, BankLoan, InterbankLoan } from "@/li
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -168,12 +169,10 @@ async function handleGET(_request: Request, { params }: RouteParams) {
     const privateEnabled = policy.privateBanking;
     const propTradingEnabled = policy.propTrading;
 
-    const ownsFinancial = !!(await db
-      .collection<CorporateSector>("corporateSectors")
-      .findOne(
-        { corporationId: corporation._id, sectorType: "financial" },
-        { projection: { _id: 1 } }
-      ));
+    const ownsFinancial = !!(await corporateSectorsCollection(db).findOne(
+      { corporationId: corporation._id, sectorType: "financial" },
+      { projection: { _id: 1 } }
+    ));
 
     const charter = corporation.bankCharter;
     const hasActiveCharter = charter?.status === "active";

@@ -14,6 +14,7 @@ import type { Db, Document, UpdateFilter } from "mongodb";
 import type { GameConfig } from "@/lib/db/types/gameConfig";
 import type { GameState } from "@/lib/db/types/gameState";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 /** Funded rules a rebuilt economy starts with, keyed from its last legacy turn. */
 export function fundedSwitchGameConfigUpdate(currentTurn: number): UpdateFilter<GameConfig> {
@@ -103,9 +104,8 @@ export async function applyFundedSwitch(
       { _id: "default" },
       { projection: Object.fromEntries(Object.keys(set).map((key) => [key, 1])) }
     );
-  const transitionStamps = await db
-    .collection("corporateSectors")
-    .countDocuments(TRANSITION_STAMP_FILTER);
+  const transitionStamps =
+    await corporateSectorsCollection<Document>(db).countDocuments(TRANSITION_STAMP_FILTER);
   if (transitionStamps === 0 && matches(config, set))
     return {
       status: "alreadyApplied",
@@ -116,7 +116,7 @@ export async function applyFundedSwitch(
     };
 
   if (transitionStamps > 0)
-    await db.collection("corporateSectors").updateMany(TRANSITION_STAMP_FILTER, {
+    await corporateSectorsCollection<Document>(db).updateMany(TRANSITION_STAMP_FILTER, {
       $unset: { cutoverTransition: "", cutoverStruggling: "" },
     });
   const written = await db

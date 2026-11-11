@@ -62,6 +62,7 @@ import type { Document } from "mongodb";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 /** Readiness check names that are expected-empty pre-founding / pre-seat. */
 const PRE_FOUNDING_READINESS = new Set(["NPPs", "ElectedOfficials", "GovernmentFormation"]);
@@ -386,8 +387,7 @@ export async function checkSectors(
         .toArray();
       const owned = owners.length
         ? (
-            await db
-              .collection<LaneRow>("corporateSectors")
+            await corporateSectorsCollection<LaneRow>(db)
               .find(
                 { countryId, corporationId: { $in: owners.map((owner) => owner._id) } },
                 {

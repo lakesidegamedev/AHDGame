@@ -3,6 +3,7 @@ import type { Bill, NationalizeProvision } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import type { CorporateSector } from "@/lib/db/types";
 import type { SectorScope } from "./sectorScope";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 /** What a signed sector-wide nationalization bill authorized. */
 export interface EnactedSectorTaking {
@@ -78,8 +79,7 @@ async function loadSectorWideTakingsFromNatCorpSectors(
   db: Db,
   nationalCorpIds: ReadonlySet<string>
 ): Promise<Map<string, EnactedSectorTaking>> {
-  const rows = await db
-    .collection<CorporateSector>("corporateSectors")
+  const rows = await corporateSectorsCollection(db)
     .find(
       { sectorNationalizationScope: { $exists: true } },
       {

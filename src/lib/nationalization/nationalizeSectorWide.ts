@@ -54,6 +54,7 @@ import { getCorporateSectorLaneQuery } from "@/lib/corporations/sectorLocation";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 export { SECTOR_SCOPE_LABELS, type SectorScope };
 
 export interface NationalizeSectorWideParams {
@@ -100,7 +101,7 @@ export async function nationalizeSectorWide(
     return { affectedCorps: 0, sectorsCarved: 0, unownedCarved: 0, totalCompensationAnchor: 0 };
   }
 
-  const sectors = db.collection<CorporateSector>("corporateSectors");
+  const sectors = corporateSectorsCollection(db);
   const corps = corporationsCollection(db);
   const sectorLane = getCorporateSectorLaneQuery({
     sectorType: params.sectorType,

@@ -35,6 +35,7 @@ import { sovereignBondCapError } from "@/lib/bonds/holderCap";
 import { emitTx } from "@/lib/financialTxLog/emit";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 /** Keep this many days of revenue as operating cash. Revenue is already daily. */
 export const NPP_TREASURY_REVENUE_DAYS = 1;
@@ -165,8 +166,7 @@ async function runNppCorpTreasury(db: Db, turn: number, now: Date): Promise<numb
   if (nppCorps.length === 0) return 0;
 
   const corpIds = nppCorps.map((c) => c._id);
-  const sectors = await db
-    .collection<CorporateSector>("corporateSectors")
+  const sectors = await corporateSectorsCollection(db)
     .find(
       { corporationId: { $in: corpIds } },
       { projection: { corporationId: 1, countryId: 1, stateId: 1, revenue: 1, realizedRevenue: 1 } }

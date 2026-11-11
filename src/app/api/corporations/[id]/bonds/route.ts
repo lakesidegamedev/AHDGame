@@ -72,6 +72,7 @@ import { resolvePrimaryUnderwritingOffer } from "@/lib/banking/underwritingOffer
 import { settlePrimaryUnderwritingFill } from "@/lib/banking/underwritingSettlement";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -99,10 +100,7 @@ export async function GET(request: Request, { params }: RouteParams) {
         .find({ corporationId: corporation._id })
         .sort({ createdAt: -1 })
         .toArray(),
-      db
-        .collection<CorporateSector>("corporateSectors")
-        .find({ corporationId: corporation._id })
-        .toArray(),
+      corporateSectorsCollection(db).find({ corporationId: corporation._id }).toArray(),
       getTurnReferenceData(db, currentTurn),
       loadFxRatesByCurrency(db),
       getMarketSystemModeForDb(db),
@@ -513,10 +511,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     // setting the wrong coupon rate for the bond's entire lifetime.
     const [existingBonds, sectors, refData, fxByCurrency, postMarketMode] = await Promise.all([
       bondsCollection(db).find({ corporationId: corporation._id, matured: false }).toArray(),
-      db
-        .collection<CorporateSector>("corporateSectors")
-        .find({ corporationId: corporation._id })
-        .toArray(),
+      corporateSectorsCollection(db).find({ corporationId: corporation._id }).toArray(),
       getTurnReferenceData(db, currentTurn),
       loadFxRatesByCurrency(db),
       getMarketSystemModeForDb(db),

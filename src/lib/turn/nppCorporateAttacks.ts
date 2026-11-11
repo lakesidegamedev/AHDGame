@@ -69,6 +69,7 @@ import { getCorporateSectorsCollection } from "@/lib/db/collections/corporateSec
 import { getCorporationsCollection } from "@/lib/db/collections/corporations";
 import { getStatesCollection } from "@/lib/db/collections/states";
 import { getNppsCollection } from "@/lib/db/collections/npps";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 /** Turns between autonomous attacks by the same corp (telegraphed, not a barrage). */
 export const ATTACK_COOLDOWN_TURNS = 24;
@@ -240,7 +241,7 @@ export async function executeNppSectorAttack(
   // defender is written so the P5 basis transfer sees both sides' pre-attack state.
   const stateId = targetSector.stateId;
   // Only the match is wanted: the found sector is credited in place by _id.
-  const existing = await db.collection<Pick<CorporateSector, "_id">>("corporateSectors").findOne(
+  const existing = await corporateSectorsCollection<Pick<CorporateSector, "_id">>(db).findOne(
     {
       stateId,
       sectorType: targetSector.sectorType,

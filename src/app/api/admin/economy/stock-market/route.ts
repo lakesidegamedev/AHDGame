@@ -17,6 +17,7 @@ import {
 import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export async function GET(request: Request) {
   try {
@@ -36,7 +37,7 @@ export async function GET(request: Request) {
 
     const [corps, sectors, fxByCurrency] = await Promise.all([
       corporationsCollection(db).find(corpFilter).toArray(),
-      db.collection<CorporateSector>("corporateSectors").find({}).toArray(),
+      corporateSectorsCollection(db).find({}).toArray(),
       loadValuationFxRates(db),
     ]);
 

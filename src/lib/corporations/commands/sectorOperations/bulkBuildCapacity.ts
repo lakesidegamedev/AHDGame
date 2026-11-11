@@ -41,6 +41,7 @@ import {
 } from "@/lib/corporations/rules/operatingReserve";
 import { placeCapacityBuild } from "./buildCapacity";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -146,7 +147,7 @@ export async function bulkBuildCapacity(request: Request, { params }: RouteParam
       );
     }
 
-    const sectorsCol = db.collection<CorporateSector>("corporateSectors");
+    const sectorsCol = corporateSectorsCollection(db);
     const holdings = await sectorsCol
       .find(
         { corporationId: corporation._id },

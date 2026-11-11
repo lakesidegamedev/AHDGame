@@ -65,6 +65,7 @@ import {
 } from "@/lib/corporations/securedConstructionProperty";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 const buySectorSchema = z.object({
   buyerCorporationId: schemas.objectId,
@@ -116,9 +117,7 @@ export async function buyListedSector(request: Request, { params }: RouteParams)
       return errorResponse(403, "You must be the CEO of the buying corporation");
     }
 
-    const sector = await db
-      .collection<CorporateSector>("corporateSectors")
-      .findOne({ _id: new ObjectId(sectorId) });
+    const sector = await corporateSectorsCollection(db).findOne({ _id: new ObjectId(sectorId) });
     const securedClaim = sector?.constructionFinancing;
     const saleRetry =
       securedClaim?.borrowerId === String(seller._id) &&
@@ -196,7 +195,7 @@ export async function buyListedSector(request: Request, { params }: RouteParams)
     // If the buyer already operates this sector type in this state, allow the
     // purchase but merge the acquired sector into the existing one rather than
     // transferring it (which would violate the unique index).
-    const existingBuyerSector = await db.collection<CorporateSector>("corporateSectors").findOne({
+    const existingBuyerSector = await corporateSectorsCollection(db).findOne({
       corporationId: buyer._id,
       stateId: sector.stateId,
       ...getCorporateSectorLaneQuery(sector),
@@ -290,12 +289,10 @@ export async function buyListedSector(request: Request, { params }: RouteParams)
       // Buyer already owns this sector type in this state. Claim the listing
       // atomically, merge stats into the existing sector, then delete the
       // purchased doc.
-      const claimResult = await db
-        .collection<CorporateSector>("corporateSectors")
-        .updateOne(
-          { _id: sector._id, corporationId: seller._id, forSale: { $ne: null } },
-          { $unset: { forSale: "" }, $set: { updatedAt: now } }
-        );
+      const claimResult = await corporateSectorsCollection(db).updateOne(
+        { _id: sector._id, corporationId: seller._id, forSale: { $ne: null } },
+        { $unset: { forSale: "" }, $set: { updatedAt: now } }
+      );
       if (claimResult.matchedCount === 0) {
         await refundCorpLiquidCapital(db, buyer._id, priceInBuyerCapital);
         return errorResponse(
@@ -349,7 +346,7 @@ export async function buyListedSector(request: Request, { params }: RouteParams)
         const mergedPlant = plantsEnabled
           ? mergeSectorPlantFields(existingBuyerSector, sector)
           : {};
-        const mergeResult = await db.collection<CorporateSector>("corporateSectors").updateOne(
+        const mergeResult = await corporateSectorsCollection(db).updateOne(
           { _id: existingBuyerSector._id, ...unprotectedConstructionPropertyFilter() },
           {
             $set: {
@@ -370,7 +367,7 @@ export async function buyListedSector(request: Request, { params }: RouteParams)
         if (mergeResult.matchedCount !== 1) {
           throw new Error("The buyer's destination sector became secured during the purchase");
         }
-        const deleteResult = await db.collection<CorporateSector>("corporateSectors").deleteOne({
+        const deleteResult = await corporateSectorsCollection(db).deleteOne({
           _id: sector._id,
           ...unprotectedConstructionPropertyFilter(),
         });
@@ -495,16 +492,14 @@ export async function buyListedSector(request: Request, { params }: RouteParams)
         });
       } catch (error) {
         if (!mergeApplied) {
-          await db
-            .collection<CorporateSector>("corporateSectors")
-            .updateOne(
-              { _id: sector._id, corporationId: seller._id },
-              { $set: { forSale: sector.forSale, updatedAt: new Date() } }
-            );
+          await corporateSectorsCollection(db).updateOne(
+            { _id: sector._id, corporationId: seller._id },
+            { $set: { forSale: sector.forSale, updatedAt: new Date() } }
+          );
         } else if (!sellerCredited) {
           // Sector was merged+deleted but seller wasn't credited. Restore the
           // existing sector's original stats and recreate the seller's sector.
-          await db.collection<CorporateSector>("corporateSectors").updateOne(
+          await corporateSectorsCollection(db).updateOne(
             { _id: existingBuyerSector._id },
             {
               $set: {
@@ -527,7 +522,7 @@ export async function buyListedSector(request: Request, { params }: RouteParams)
               },
             }
           );
-          await db.collection<CorporateSector>("corporateSectors").insertOne({
+          await corporateSectorsCollection(db).insertOne({
             ...sector,
             forSale: sector.forSale,
             updatedAt: new Date(),
@@ -547,7 +542,7 @@ export async function buyListedSector(request: Request, { params }: RouteParams)
       // forSale presence so a concurrent unlist or another buy attempt can't
       // double-spend the listing.
       try {
-        const transferResult = await db.collection<CorporateSector>("corporateSectors").updateOne(
+        const transferResult = await corporateSectorsCollection(db).updateOne(
           { _id: sector._id, corporationId: seller._id, forSale: { $ne: null } },
           {
             $set: {
@@ -704,7 +699,7 @@ export async function buyListedSector(request: Request, { params }: RouteParams)
       // wasn't credited, return the sector to the seller and refund the buyer
       // so neither side ends up with stolen value.
       if (sectorTransferred && !sellerCredited) {
-        await db.collection<CorporateSector>("corporateSectors").updateOne(
+        await corporateSectorsCollection(db).updateOne(
           { _id: sector._id, corporationId: buyer._id },
           {
             $set: {

@@ -26,6 +26,7 @@ import { ownSiteSupplySummary } from "@/lib/corporations/rules/ownSiteSupplySumm
 import type { CorporateSector, GameConfig, GameState } from "@/lib/db/types";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export const internalSupplyPolicySchema = z
   .object({
@@ -99,8 +100,7 @@ export async function internalSupplyPolicy(request: Request, { params }: Params)
         ? unsetPolicy
         : effective.policy;
     if (request.method === "GET") {
-      const sectors = await db
-        .collection<CorporateSector>("corporateSectors")
+      const sectors = await corporateSectorsCollection(db)
         .find(
           { corporationId: corporation._id },
           {

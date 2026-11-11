@@ -30,6 +30,7 @@ import { emitBankingAuditEvent } from "@/lib/banking/auditEvents";
 import { depositBookReturnKey } from "@/lib/banking/depositBookReturn";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 /**
  * Charter capital as a multiple of the corporation founding cost.
@@ -132,9 +133,10 @@ export async function getCharterCapitalRequirement(
 }
 
 async function corpOwnsFinancialSector(db: Db, corporationId: ObjectId): Promise<boolean> {
-  const sector = await db
-    .collection<CorporateSector>("corporateSectors")
-    .findOne({ corporationId, sectorType: "financial" }, { projection: { _id: 1 } });
+  const sector = await corporateSectorsCollection(db).findOne(
+    { corporationId, sectorType: "financial" },
+    { projection: { _id: 1 } }
+  );
   return sector != null;
 }
 

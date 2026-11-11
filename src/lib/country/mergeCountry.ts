@@ -59,6 +59,7 @@ import type { Document } from "mongodb";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export interface MergeCountryArgs {
   /** The country being absorbed. Retired when this completes. */
@@ -517,8 +518,7 @@ async function mergeNationalCorporations(
   const survivor = await corps.findOne({ _id: survivorId });
   if (!survivor) return;
   const absorbed = await corps.find({ _id: { $in: absorbedIds } }).toArray();
-  const absorbedSectors = await db
-    .collection<CorporateSector>("corporateSectors")
+  const absorbedSectors = await corporateSectorsCollection(db)
     .find({ corporationId: { $in: absorbedIds } })
     .toArray();
   const transitionKeys = await reserveSectorsForTransition(
@@ -545,7 +545,7 @@ async function mergeNationalCorporations(
     )) {
       const transitionKey = transitionKeyBySectorId.get(sector._id.toHexString());
       if (!transitionKey) throw new Error("A secured sector reservation was lost");
-      const moved = await db.collection<CorporateSector>("corporateSectors").updateOne(
+      const moved = await corporateSectorsCollection(db).updateOne(
         {
           _id: sector._id,
           corporationId: shell._id,

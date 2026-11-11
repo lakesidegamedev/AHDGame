@@ -33,6 +33,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import type { Document } from "mongodb";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export { PERSONS_PER_HOUSEHOLD, HOUSEHOLD_LIQUID_RATIO, HOUSEHOLD_SAVINGS_RATIO };
 
@@ -220,10 +221,9 @@ export async function snapshotMoneySupply(db: Db, turn: number): Promise<number>
   // construction-in-progress or collateral mark. Read it only when both the
   // funded Treasury ledger and bank construction finance are enabled.
   const constructionEscrows = constructionCashEnabled
-    ? await db
-        .collection<{
-          constructionFinancing?: { currency?: CurrencyCode; escrowLocal?: number };
-        }>("corporateSectors")
+    ? await corporateSectorsCollection<{
+        constructionFinancing?: { currency?: CurrencyCode; escrowLocal?: number };
+      }>(db)
         .find(
           { "constructionFinancing.escrowLocal": { $gt: 0 } },
           {

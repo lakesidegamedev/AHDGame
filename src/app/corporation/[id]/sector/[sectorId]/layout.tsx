@@ -12,6 +12,7 @@ import {
 import { PageCountryOverrideBridge } from "@/components/navbar/PageCountryOverrideBridge";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -32,12 +33,10 @@ export async function generateMetadata({
     corporationsCollection(db).findOne(corpQuery, {
       projection: { name: 1, logoUrl: 1, countryId: 1 },
     }),
-    db
-      .collection<CorporateSector>("corporateSectors")
-      .findOne(
-        { _id: new ObjectId(sectorId) },
-        { projection: { sectorType: 1, displayName: 1, stateId: 1 } }
-      ),
+    corporateSectorsCollection(db).findOne(
+      { _id: new ObjectId(sectorId) },
+      { projection: { sectorType: 1, displayName: 1, stateId: 1 } }
+    ),
   ]);
   if (!corp || !sector) return {};
 
@@ -71,12 +70,10 @@ export default async function SectorLayout({ children, params }: LayoutProps) {
   if (resolved.ok) {
     pageCountryId = resolved.corporation.countryId;
     if (ObjectId.isValid(sectorId)) {
-      const sector = await db
-        .collection<CorporateSector>("corporateSectors")
-        .findOne(
-          { _id: new ObjectId(sectorId), corporationId: resolved.corporation._id },
-          { projection: { countryId: 1, stateId: 1 } }
-        );
+      const sector = await corporateSectorsCollection(db).findOne(
+        { _id: new ObjectId(sectorId), corporationId: resolved.corporation._id },
+        { projection: { countryId: 1, stateId: 1 } }
+      );
 
       if (sector?.countryId) {
         pageCountryId = sector.countryId;

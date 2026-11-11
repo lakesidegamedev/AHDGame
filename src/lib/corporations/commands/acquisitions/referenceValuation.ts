@@ -27,6 +27,7 @@ import { acquisitionBalanceSheet } from "./rules";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export interface ReferenceValuation {
   /** Canonical whole-corp reference valuation (₳). */
@@ -52,10 +53,7 @@ export async function referenceValuationAnchor(db: Db, target: Corporation): Pro
 export async function referenceValuation(db: Db, target: Corporation): Promise<ReferenceValuation> {
   const [sectors, centralBanks, fxByCurrency, targetFxRate, marketMode, gameState] =
     await Promise.all([
-      db
-        .collection<CorporateSector>("corporateSectors")
-        .find({ corporationId: target._id })
-        .toArray(),
+      corporateSectorsCollection(db).find({ corporationId: target._id }).toArray(),
       centralBanksCollection(db).find({}).toArray(),
       loadFxRatesByCurrency(db),
       getCorpFxRate(db, target),

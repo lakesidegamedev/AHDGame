@@ -65,6 +65,7 @@ import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 /** Human-readable label for a `category.field` metric path (region-aware). */
 function mandateMetricLabel(path: string, stateId?: string): string {
@@ -295,10 +296,7 @@ export async function buildNationalCorporationView(
     COUNTRY_CURRENCY_MAP[countryId] ??
     "USD") as CurrencyCode;
 
-  const sectors = await db
-    .collection<CorporateSector>("corporateSectors")
-    .find({ corporationId: corp._id })
-    .toArray();
+  const sectors = await corporateSectorsCollection(db).find({ corporationId: corp._id }).toArray();
 
   const stateIds = Array.from(new Set(sectors.map((s) => s.stateId)));
 

@@ -44,6 +44,8 @@ import type {
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import type { Document } from "mongodb";
 
 export const DEFECT_ID = "AHD-1271-merged-state-extraction";
 
@@ -131,7 +133,7 @@ async function survey(db: Db): Promise<Survey> {
       .collection<{ stateId: string; resources?: Record<string, number> }>("stateResourceCapacity")
       .find({ stateId: { $in: stateIds } }, { projection: { stateId: 1, resources: 1 } })
       .toArray(),
-    db.collection("corporateSectors").distinct("stateId", {
+    corporateSectorsCollection<Document>(db).distinct("stateId", {
       stateId: { $in: stateIds },
       sectorType: "extraction",
     }),
@@ -438,9 +440,10 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
   // beside it would count the same capacity twice.
   const stateIds = docs.map((d) => d.stateId as string);
   const [ownedNow, unownedNow] = await Promise.all([
-    db
-      .collection("corporateSectors")
-      .distinct("stateId", { stateId: { $in: stateIds }, sectorType: "extraction" }),
+    corporateSectorsCollection<Document>(db).distinct("stateId", {
+      stateId: { $in: stateIds },
+      sectorType: "extraction",
+    }),
     db
       .collection("unownedSectors")
       .distinct("stateId", { stateId: { $in: stateIds }, sectorType: "extraction" }),
@@ -471,7 +474,7 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
   const failures: string[] = [];
   for (const doc of stamped) {
     try {
-      await db.collection("corporateSectors").insertOne(doc as never);
+      await corporateSectorsCollection<Document>(db).insertOne(doc as never);
       insertedIdList.push(String(doc._id));
     } catch (error) {
       failures.push(`${doc.stateId}: ${error instanceof Error ? error.message : String(error)}`);

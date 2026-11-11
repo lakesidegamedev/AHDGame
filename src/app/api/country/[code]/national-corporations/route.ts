@@ -12,6 +12,7 @@ import { OPERATING_SECTOR_TYPES } from "@/lib/constants/corporations";
 import type { Character, CorporateSector } from "@/lib/db/types";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 interface RouteParams {
   params: Promise<{ code: string }>;
@@ -31,8 +32,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const corpIds = corps.map((c) => c._id);
     const sectors =
       corpIds.length > 0
-        ? await db
-            .collection<CorporateSector>("corporateSectors")
+        ? await corporateSectorsCollection(db)
             .find({ corporationId: { $in: corpIds } })
             .project<{
               corporationId: CorporateSector["corporationId"];

@@ -74,6 +74,7 @@ import { loadSectorDetailContext } from "./sectorDetailContext";
 import { buildSectorDetailPlantsTier } from "./sectorDetailPlantsTier";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 interface RouteParams {
   params: Promise<{ id: string; sectorId: string }>;
@@ -124,7 +125,7 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
       }
     );
 
-    const sector = await db.collection<CorporateSector>("corporateSectors").findOne(
+    const sector = await corporateSectorsCollection(db).findOne(
       { _id: new ObjectId(sectorId), corporationId: corporation._id },
       {
         projection:

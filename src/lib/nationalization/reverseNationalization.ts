@@ -14,6 +14,7 @@ import {
   rehomeSpinOutRecovery,
 } from "./clawbackCompensation";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export interface ReverseNationalizationParams {
   countryId: string;
@@ -99,7 +100,7 @@ async function reverseNextTaking(
   result: ReverseNationalizationResult,
   progress: { reversedAny: boolean }
 ): Promise<boolean> {
-  const sectorsCol = db.collection<CorporateSector>("corporateSectors");
+  const sectorsCol = corporateSectorsCollection(db);
   const corps = corporationsCollection(db);
   {
     const sector = await sectorsCol.findOne({ _id: sectorId });

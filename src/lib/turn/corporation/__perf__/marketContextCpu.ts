@@ -27,6 +27,8 @@ import {
 } from "../__fixtures__/productionTurnWorld";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import type { Document } from "mongodb";
 
 interface ProfileNode {
   id: number;
@@ -289,7 +291,7 @@ async function main() {
     db = client.db(process.env.MONGODB_DB ?? "a-house-divided");
     console.log(
       `lookup database: ${await corporationsCollection(db).countDocuments({})} corporations, ` +
-        `${await db.collection("corporateSectors").countDocuments({})} sectors`
+        `${await corporateSectorsCollection<Document>(db).countDocuments({})} sectors`
     );
     const config = (await db
       .collection<GameConfig>("gameConfig")

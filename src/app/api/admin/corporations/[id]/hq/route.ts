@@ -37,6 +37,7 @@ import {
 } from "@/lib/corporations/securedConstructionProperty";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 const schema = z.object({
   countryId: z.enum(["US", "UK", "JP", "DE"]),
@@ -63,8 +64,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       );
     }
 
-    const propertySectors = await db
-      .collection<CorporateSector>("corporateSectors")
+    const propertySectors = await corporateSectorsCollection(db)
       .find({ corporationId: corp._id })
       .toArray();
     if (hasProtectedConstructionPropertyIn(propertySectors)) {

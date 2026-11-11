@@ -18,6 +18,7 @@ import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export async function getFinancialData(characterId: ObjectId) {
   const db = await getDb();
@@ -125,8 +126,7 @@ export async function getFinancialData(characterId: ObjectId) {
 
   let corporateSectorSummary: { sectorCount: number; totalRevenuePerTurn: number } | null = null;
   if (corporation) {
-    const sectorAgg = await db
-      .collection<CorporateSector>("corporateSectors")
+    const sectorAgg = await corporateSectorsCollection(db)
       .aggregate<{ total: number; n: number }>([
         { $match: { corporationId: corporation._id } },
         { $group: { _id: null, total: { $sum: "$revenue" }, n: { $sum: 1 } } },

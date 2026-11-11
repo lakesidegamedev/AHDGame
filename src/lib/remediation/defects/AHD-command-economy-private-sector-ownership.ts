@@ -26,6 +26,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export const DEFECT_ID = "AHD-command-economy-private-sector-ownership";
 
@@ -302,8 +303,7 @@ async function survey(db: Db): Promise<Survey> {
     (id) => new ObjectId(id)
   );
   const [sectors, sourceCorps, fxByCurrency, budgets, gameState, openAuctions] = await Promise.all([
-    db
-      .collection<CorporateSector>("corporateSectors")
+    corporateSectorsCollection(db)
       .find({ _id: { $in: sectorIds } })
       .toArray(),
     corporationsCollection(db)
@@ -344,7 +344,7 @@ async function survey(db: Db): Promise<Survey> {
         throw new Error(`no state enterprise target for ${row.countryId}/${row.sectorType}`);
       invalidIds.push(row.sectorId);
       affectedKeys.add(row.sectorId);
-      const survivor = await db.collection<CorporateSector>("corporateSectors").findOne({
+      const survivor = await corporateSectorsCollection(db).findOne({
         corporationId: target._id,
         stateId: row.stateId,
         sectorType: row.sectorType,
@@ -555,7 +555,7 @@ async function applySectorMerge(
   ctx: HealContext
 ): Promise<{ updated: number; deleted: number }> {
   if (!ctx.runId) throw new Error("command-economy ownership heal requires a run id");
-  const sectors = db.collection<CorporateSector>("corporateSectors");
+  const sectors = corporateSectorsCollection(db);
   const [source, survivor] = await Promise.all([
     sectors.findOne({
       _id: new ObjectId(row.sourceSectorId),
@@ -687,7 +687,7 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
       .collection<NationalizationAuction>("nationalizationAuctions")
       .countDocuments({ corporationId: new ObjectId(DD_SOURCE_CORPORATION_ID), status: "open" });
     if (openAuctionCount !== 0) throw new Error("East German shell still has an open auction");
-    const remaining = await db.collection<CorporateSector>("corporateSectors").countDocuments({
+    const remaining = await corporateSectorsCollection(db).countDocuments({
       corporationId: new ObjectId(DD_SOURCE_CORPORATION_ID),
     });
     if (remaining !== 0) throw new Error(`East German shell still owns ${remaining} sector(s)`);

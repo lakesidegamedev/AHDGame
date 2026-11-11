@@ -25,6 +25,7 @@ import { resumeSettlement, settleTransition } from "./settlementJournal";
 import type { TransitionLeg } from "./rules/boundary";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 type Result = { ok: true; quote: ConstructionSaleQuote } | { ok: false; error: string };
 
@@ -37,7 +38,7 @@ export async function buySecuredConstructionProperty(input: {
   turn: number;
 }): Promise<Result> {
   const { db, sectorId, borrowerId, buyerId, turn } = input;
-  const sectors = db.collection<CorporateSector>("corporateSectors");
+  const sectors = corporateSectorsCollection(db);
   const sector = await sectors.findOne({ _id: sectorId });
   const claim = sector?.constructionFinancing;
   if (
@@ -319,8 +320,7 @@ export async function recoverConstructionSales(
   db: Db,
   turn: number
 ): Promise<Array<{ key: string; error: string }>> {
-  const sectors = await db
-    .collection<CorporateSector>("corporateSectors")
+  const sectors = await corporateSectorsCollection(db)
     .find(
       {
         "constructionFinancing.sale.turn": { $lt: turn },

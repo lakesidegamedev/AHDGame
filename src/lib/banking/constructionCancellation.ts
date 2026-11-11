@@ -19,6 +19,7 @@ import {
   type ConstructionCancellationQuote,
 } from "./rules/constructionRecovery";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 const complete = (result: SettlementResult) =>
   !result.error && ["applied", "replayed"].includes(result.status);
@@ -38,7 +39,7 @@ export async function cancelFinancedConstruction(input: {
 }): Promise<Result> {
   if (!input.enabled) return { ok: false, error: "Construction finance is not enabled" };
   const { db, sectorId, borrowerId, turn } = input;
-  const sectors = db.collection<CorporateSector>("corporateSectors");
+  const sectors = corporateSectorsCollection(db);
   const sector = await sectors.findOne(
     { _id: sectorId, corporationId: borrowerId },
     {
@@ -324,8 +325,7 @@ export async function recoverConstructionCancellations(
   db: Db,
   turn: number
 ): Promise<Array<{ key: string; error: string }>> {
-  const sectors = await db
-    .collection<CorporateSector>("corporateSectors")
+  const sectors = await corporateSectorsCollection(db)
     .find(
       {
         "constructionFinancing.cancellation.turn": { $lt: turn },

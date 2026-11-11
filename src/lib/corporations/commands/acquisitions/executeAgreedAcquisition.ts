@@ -78,6 +78,7 @@ import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export interface ExecuteAgreedAcquisitionParams {
   db: Db;
@@ -325,10 +326,7 @@ async function runAgreedAcquisition(
     // A subsidiary keeps its sectors where they are.
     subsidiary
       ? Promise.resolve<CorporateSector[]>([])
-      : db
-          .collection<CorporateSector>("corporateSectors")
-          .find({ corporationId: target._id })
-          .toArray(),
+      : corporateSectorsCollection(db).find({ corporationId: target._id }).toArray(),
     loadFxRatesByCurrency(db),
     getCorpFxRate(db, acquirer),
     getCorpFxRate(db, target),
@@ -707,9 +705,9 @@ async function runAgreedAcquisition(
       );
     }
     await settleConstructionBorrowerTransfers(db, constructionTransfers);
-    const sectorsRemain = await db
-      .collection<CorporateSector>("corporateSectors")
-      .countDocuments({ corporationId: target._id });
+    const sectorsRemain = await corporateSectorsCollection(db).countDocuments({
+      corporationId: target._id,
+    });
     if (sectorsRemain > 0) {
       throw new Error(
         `Acquisition cannot delete target while ${sectorsRemain} sector property row(s) remain`
@@ -901,9 +899,7 @@ async function handleMissingParty(
     );
     const moneyDone = moneyLegs.every((leg) => leg.applied);
     const sectorsRemain = target
-      ? await db
-          .collection<CorporateSector>("corporateSectors")
-          .countDocuments({ corporationId: target._id })
+      ? await corporateSectorsCollection(db).countDocuments({ corporationId: target._id })
       : 0;
     // Target gone, money fully delivered, nothing left to move: the crash
     // landed between the shell delete and its flag. Finish the tail.

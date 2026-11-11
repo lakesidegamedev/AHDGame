@@ -34,6 +34,7 @@ import { emitSectorRetoolTx } from "@/lib/corporations/sectorRetoolTxLog";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 interface RouteParams {
   params: Promise<{ id: string; sectorId: string }>;
@@ -77,9 +78,10 @@ export async function cancelSectorStrategy(request: Request, { params }: RoutePa
       return errorResponse(400, "Invalid sector ID");
     }
 
-    const sector = await db
-      .collection<CorporateSector>("corporateSectors")
-      .findOne({ _id: new ObjectId(sectorId), corporationId: corporation._id });
+    const sector = await corporateSectorsCollection(db).findOne({
+      _id: new ObjectId(sectorId),
+      corporationId: corporation._id,
+    });
 
     if (!sector) {
       return errorResponse(404, "Sector not found");
@@ -233,7 +235,7 @@ export async function cancelSectorStrategy(request: Request, { params }: RoutePa
       toStrategyId: newStrategyId,
     });
     await Promise.all([
-      db.collection<CorporateSector>("corporateSectors").updateOne(
+      corporateSectorsCollection(db).updateOne(
         { _id: sector._id },
         {
           $set: {

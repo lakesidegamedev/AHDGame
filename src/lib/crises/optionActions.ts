@@ -67,6 +67,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 /** Crisis actions name an operating lane; rows store its identity. */
 function laneFilter(sectorType: string) {
@@ -120,8 +121,7 @@ async function executiveNationalize(ctx: CrisisActionContext, sectorType: string
   const country = ctx.countryId as CountryId;
   const label = sectorLabelFor(sectorType);
 
-  const sectors = await db
-    .collection<CorporateSector>("corporateSectors")
+  const sectors = await corporateSectorsCollection(db)
     .find({ countryId: ctx.countryId as CountryId, ...laneFilter(sectorType) })
     .toArray();
   if (sectors.length === 0) {
@@ -473,8 +473,7 @@ async function openCrisisDispute(
   for (const union of unions) {
     // Largest local first: a national strike should be brokered with the
     // industry's biggest employer, not whichever row sorts first.
-    const locals = await db
-      .collection<CorporateSector>("corporateSectors")
+    const locals = await corporateSectorsCollection(db)
       .find(
         { countryId: union.countryId, sectorType: union.sectorType },
         { projection: { corporationId: 1, workers: 1, wageLevel: 1 } }
@@ -622,8 +621,7 @@ async function settleWageFloor(ctx: CrisisActionContext, sectorType: string): Pr
   const country = ctx.countryId as CountryId;
   const label = sectorLabelFor(sectorType);
 
-  const sectors = await db
-    .collection<CorporateSector>("corporateSectors")
+  const sectors = await corporateSectorsCollection(db)
     .find(
       { countryId: ctx.countryId as CountryId, ...laneFilter(sectorType) },
       { projection: { _id: 1, corporationId: 1 } }

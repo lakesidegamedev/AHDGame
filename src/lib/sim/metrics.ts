@@ -27,6 +27,7 @@ import type { Document } from "mongodb";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 /**
  * Read-only balance-metric aggregations over a (sandbox) world DB, for the
@@ -826,8 +827,7 @@ async function collectEconomyMetrics(db: Db): Promise<EconomyMetrics> {
  * cheap enough to run unconditionally alongside the other collectors.
  */
 async function collectCapacityMetrics(db: Db): Promise<CapacityMetrics> {
-  const sectors = await db
-    .collection("corporateSectors")
+  const sectors = await corporateSectorsCollection<Document>(db)
     .find(
       {},
       {

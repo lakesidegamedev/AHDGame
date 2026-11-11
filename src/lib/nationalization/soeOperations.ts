@@ -76,6 +76,7 @@ import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
 import { CORPORATE_SECTOR_LEAN_FIELDS } from "@/lib/db/collections/corporateSectors";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 interface MetricOpInput {
   countryId: CountryId;
@@ -370,8 +371,7 @@ export async function processSoeOperations(
   );
 
   const corpIds = soeCorps.map((c) => c._id);
-  const sectors = await db
-    .collection<CorporateSector>("corporateSectors")
+  const sectors = await corporateSectorsCollection(db)
     .find({ corporationId: { $in: corpIds } }, { projection: CORPORATE_SECTOR_LEAN_FIELDS })
     .toArray();
 
@@ -921,7 +921,7 @@ async function applyStateCapexGrants(
       ops.push({ updateOne: { filter: { _id: buy.sectorId }, update: capacityUpdate(buy) } });
     }
   }
-  await db.collection<CorporateSector>("corporateSectors").bulkWrite(ops);
+  await corporateSectorsCollection(db).bulkWrite(ops);
   for (const [countryId, { grantAnchor }] of grantByCountry) {
     await debitTreasurySoeCapex(
       db,
@@ -987,8 +987,7 @@ async function applyStateCapexGrowth(
         }
       )
       .toArray(),
-    db
-      .collection<CorporateSector>("corporateSectors")
+    corporateSectorsCollection(db)
       .find({ _id: { $in: candidates.map((s) => s._id) } }, { projection: { buildQueue: 1 } })
       .toArray(),
   ]);

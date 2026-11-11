@@ -67,6 +67,7 @@ import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export interface CorporationDissolutionResult {
   bondRecoveryPool: number;
@@ -104,8 +105,7 @@ export async function executeCorporationBondDefaultDissolution(
     throw badRequest("Bond default dissolution requires at least one defaulted bond");
   }
 
-  const sectors = await db
-    .collection<CorporateSector>("corporateSectors")
+  const sectors = await corporateSectorsCollection(db)
     .find({ corporationId: corporation._id })
     .toArray();
   if (!(await reserveSectorsForRestore(db, sectors))) {

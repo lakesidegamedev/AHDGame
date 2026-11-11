@@ -22,6 +22,7 @@ import { hasTenderOpportunity } from "./rules/opportunities";
 import { canBid } from "./rules";
 import type { GovernmentTender } from "./types";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 /** One projected read per dataset, then one idempotent bulk write per published tender. */
 export async function notifyTenderBidders(
@@ -59,8 +60,7 @@ export async function notifyTenderBidders(
     .toArray();
   const humans = corps.filter((c) => !isNppOwned(c));
   if (!humans.length) return;
-  const sectors = await db
-    .collection<CorporateSector>("corporateSectors")
+  const sectors = await corporateSectorsCollection(db)
     .find(
       {
         corporationId: { $in: humans.map((c) => c._id) },

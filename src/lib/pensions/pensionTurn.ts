@@ -42,6 +42,7 @@ import {
   loadFxRatesByCurrency,
 } from "@/lib/currency/corporationCapital";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export { PENSION_SCHEMES };
 
@@ -181,8 +182,7 @@ export async function runPensionTurn(db: Db, currentTurn: number): Promise<Pensi
   // Sectors live in their own collection, so load every covered sector for the
   // whole sweep in one read rather than per agreement.
   const coveredSectorIds = agreements.flatMap((a) => a.sectorIds);
-  const sectors = await db
-    .collection<CorporateSector>("corporateSectors")
+  const sectors = await corporateSectorsCollection(db)
     .find({ _id: { $in: coveredSectorIds } }, { projection: { laborCost: 1 } })
     .toArray();
   const sectorById = new Map(sectors.map((s) => [s._id.toString(), s]));

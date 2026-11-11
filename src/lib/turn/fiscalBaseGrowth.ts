@@ -31,6 +31,7 @@ import {
 import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
 import { getStatesCollection } from "@/lib/db/collections/states";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 /* Applies 1/TURNS_PER_YEAR of the annual wage/trade/gdp rates to tax bases
  * each turn, so bases and accrued revenue track the live economy instead of
@@ -84,8 +85,7 @@ async function loadLabourWagePlantsByState(
   db: Awaited<ReturnType<typeof getDb>>,
   turn: number
 ): Promise<Map<string, LabourWagePlant[]>> {
-  const sectors = await db
-    .collection<LabourWageSector>("corporateSectors")
+  const sectors = await corporateSectorsCollection<LabourWageSector>(db)
     .find(
       { "producerSettlement.turn": turn },
       {

@@ -36,6 +36,7 @@ import {
 } from "@/lib/advertising/persistence";
 import { countAdvertisingMediaSectorModels } from "@/lib/advertising/suppliers";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 function serializeAdvertisingAgreement(agreement: AdvertisingAgreement) {
   return {
@@ -182,8 +183,7 @@ export async function proposeAdvertisingAgreement(request: Request, initiatingCo
     const initiatorHex = initiator._id.toString();
     const counterpartyHex = counterparty._id.toString();
     const supplier = isSupplierInitiated ? initiator : counterparty;
-    const supplierSectors = await db
-      .collection<CorporateSector>("corporateSectors")
+    const supplierSectors = await corporateSectorsCollection(db)
       .find({ corporationId: supplier._id, sectorType: "media" })
       .project<{ strategyId?: string | null }>({ strategyId: 1 })
       .toArray();

@@ -69,6 +69,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 type AuthedViewer = Awaited<ReturnType<typeof getAuthUser>>;
 
@@ -215,10 +216,7 @@ export async function buildRegionEconomyResponse({
   );
 
   // Get all corporate sectors in this state
-  const sectors = await db
-    .collection<CorporateSector>("corporateSectors")
-    .find({ stateId })
-    .toArray();
+  const sectors = await corporateSectorsCollection(db).find({ stateId }).toArray();
 
   // Get unowned sectors for this state from DB
   const unownedDocs = await db

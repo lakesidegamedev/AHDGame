@@ -49,6 +49,7 @@ import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -91,10 +92,7 @@ export async function GET(request: Request) {
         { _id: corporation.ceoId },
         { projection: { name: 1, sequentialId: 1 } }
       ),
-      db
-        .collection<CorporateSector>("corporateSectors")
-        .find({ corporationId: corporation._id })
-        .toArray(),
+      corporateSectorsCollection(db).find({ corporationId: corporation._id }).toArray(),
       bondsCollection(db)
         .find({ corporationId: corporation._id, matured: false })
         .sort({ createdAt: -1 })

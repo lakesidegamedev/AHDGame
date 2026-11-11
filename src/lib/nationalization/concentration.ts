@@ -19,6 +19,7 @@ import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
 import { clampConcentration, sociMultiplier } from "./concentrationClamp";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export { clampConcentration, sociMultiplier };
 
@@ -77,8 +78,7 @@ export async function computeCountryStateOwnershipConcentration(
   countryId: CountryId,
   fxByCurrency?: ReadonlyMap<CurrencyCode, number>
 ): Promise<number> {
-  const sectors = await db
-    .collection<CorporateSector>("corporateSectors")
+  const sectors = await corporateSectorsCollection(db)
     .find({ countryId })
     .project<{ corporationId: ObjectId; revenue: number }>({ corporationId: 1, revenue: 1 })
     .toArray();
