@@ -78,11 +78,12 @@ describe("1991 current-law references", () => {
       "JP:jp_resident_tax",
       "JP:jp_fixed_asset_tax",
     ]);
-    // JP's budget-neutral academic reform remains a legal reference, without
-    // a costed legacy fiscal law in the balanced opening.
-    // US and UK source ids are provenance for the opening ledger only; their
-    // laws now live in the one law book and have no legacy policy seed.
-    const expectedBudgetOptionDifferences = { JP: 12 };
+    // JP's legacy source ids remain legal-policy references, but its fiscal
+    // opening is costed by the one law book, so no legacy budget law exists
+    // to disagree with them. US and UK source ids are provenance for the
+    // opening ledger only.
+    expect(laws.filter((law) => law.countryId === "JP")).toHaveLength(0);
+    const expectedBudgetOptionDifferences = { JP: 0 };
     for (const country of ["JP"] as const) {
       let budgetOptionDifferences = 0;
       for (const reference of openingLawReferences.filter(

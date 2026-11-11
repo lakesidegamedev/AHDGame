@@ -168,10 +168,10 @@ describe("generated data files", () => {
   it("rejects a board file missing a listed country or carrying a playable", () => {
     const boards = file("data:non-playable-boards");
     const missing = copy(boards.load()) as Record<string, Record<string, unknown>>;
-    delete missing["2019-default"].JP;
+    delete missing["2019-default"].FR;
     expect(dataFileGaps(boards, missing).length).toBeGreaterThan(0);
     const extra = copy(boards.load()) as Record<string, Record<string, unknown>>;
-    extra["2019-default"].US = extra["2019-default"].JP;
+    extra["2019-default"].US = extra["2019-default"].FR;
     expect(dataFileGaps(boards, extra).length).toBeGreaterThan(0);
   });
 
