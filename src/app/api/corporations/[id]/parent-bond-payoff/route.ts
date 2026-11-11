@@ -39,6 +39,7 @@ import { getGameState } from "@/lib/gameState";
 import { withCorporationSettlementLock } from "@/lib/corporations/settlementLock";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -267,8 +268,7 @@ export async function POST(request: Request, { params }: RouteParams) {
           let charReverseOps: AnyBulkWriteOperation<Character>[] = [];
           if (charIncs.size > 0) {
             const charIds = [...charIncs.keys()].map((entryId) => new ObjectId(entryId));
-            const charDocs = await db
-              .collection<Character>("characters")
+            const charDocs = await charactersCollection(db)
               .find({ _id: { $in: charIds } }, sessionOpt)
               .project<Pick<Character, "_id" | "countryId" | "name">>({
                 _id: 1,
@@ -438,12 +438,12 @@ export async function POST(request: Request, { params }: RouteParams) {
           // 2–4. Credit holders. Register each reversal only after the write lands.
           if (charOps.length > 0) {
             try {
-              await db.collection<Character>("characters").bulkWrite(charOps, sessionOpt);
+              await charactersCollection(db).bulkWrite(charOps, sessionOpt);
             } catch (err) {
               return compensateAndThrow(err);
             }
             undo.push(async () => {
-              await db.collection<Character>("characters").bulkWrite(charReverseOps, sessionOpt);
+              await charactersCollection(db).bulkWrite(charReverseOps, sessionOpt);
             });
           }
           if (imperialOps.length > 0) {

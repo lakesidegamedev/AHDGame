@@ -66,6 +66,7 @@ import {
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface CorporationDissolutionResult {
   bondRecoveryPool: number;
@@ -246,8 +247,7 @@ export async function executeCorporationBondDefaultDissolution(
 
   const [shareholderChars, imperialShareholderChars, corpShareholderDocs] = await Promise.all([
     regularShareholderIds.length > 0
-      ? db
-          .collection<Character>("characters")
+      ? charactersCollection(db)
           .find({ _id: { $in: regularShareholderIds } }, { projection: { _id: 1, name: 1 } })
           .toArray()
       : [],
@@ -368,8 +368,7 @@ export async function executeCorporationBondDefaultDissolution(
   if (charAll.size > 0) {
     const forexEnabled = await isForexEnabled();
     const charIds = [...charAll].map((id) => new ObjectId(id));
-    const charDocs = await db
-      .collection<Character>("characters")
+    const charDocs = await charactersCollection(db)
       .find({ _id: { $in: charIds } })
       .project<Pick<Character, "_id" | "countryId">>({ _id: 1, countryId: 1 })
       .toArray();
@@ -432,7 +431,7 @@ export async function executeCorporationBondDefaultDissolution(
         },
       };
     });
-    await db.collection<Character>("characters").bulkWrite(charOps);
+    await charactersCollection(db).bulkWrite(charOps);
   }
 
   // Merge imperial bond + share payouts and write to imperialCharacters

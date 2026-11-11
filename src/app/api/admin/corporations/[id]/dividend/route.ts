@@ -16,6 +16,7 @@ import { buildPersonalBalanceBulkOp } from "@/lib/currency/characterFunds";
 import { resolveCorpLiquidCurrencyCode } from "@/lib/currency/corporationCapital";
 import { dividendShareBasis, dividendShareFraction } from "@/lib/corporations/rules/dividendShares";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -76,7 +77,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     );
 
     await Promise.all([
-      db.collection<Character>("characters").bulkWrite(charOps),
+      charactersCollection(db).bulkWrite(charOps),
       corporationsCollection(db).updateOne(
         { _id: new ObjectId(id) },
         { $inc: { liquidCapital: -totalPayout }, $set: { updatedAt: new Date() } }

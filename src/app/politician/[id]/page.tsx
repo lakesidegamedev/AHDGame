@@ -1,6 +1,6 @@
 import { ObjectId } from "mongodb";
 import { notFound, redirect } from "next/navigation";
-import type { Character, NPP } from "@/lib/db/types";
+import type { NPP } from "@/lib/db/types";
 import { getDb } from "@/lib/mongodb";
 import {
   buildCharacterHref,
@@ -8,6 +8,7 @@ import {
   parseCharacterId,
   parseNppId,
 } from "@/lib/utils/profileUrls";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -24,9 +25,9 @@ export default async function PoliticianRedirectPage({ params }: PageProps) {
         ? { _id: new ObjectId(parsedCharacterId.value) }
         : null;
   const character = characterQuery
-    ? await db
-        .collection<Character>("characters")
-        .findOne(characterQuery, { projection: { _id: 1, sequentialId: 1 } })
+    ? await charactersCollection(db).findOne(characterQuery, {
+        projection: { _id: 1, sequentialId: 1 },
+      })
     : null;
   if (character) {
     redirect(buildCharacterHref(character));

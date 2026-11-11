@@ -10,7 +10,8 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { createNotification } from "@/lib/notifications";
 import { getCabinetPositionById } from "@/lib/constants";
-import type { CabinetNomination, ElectedOfficial, Character } from "@/lib/db/types";
+import type { CabinetNomination, ElectedOfficial } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 // POST /api/whitehouse/cabinet/nominations/[id]/withdraw — President withdraws an active cabinet nomination and notifies the nominee.
 // Auth: requireBasicAuth
@@ -52,7 +53,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       return errorResponse(400, "No President in office");
     }
 
-    const myCharacter = await db.collection<Character>("characters").findOne({
+    const myCharacter = await charactersCollection(db).findOne({
       userId: new ObjectId(authUser.userId),
     });
     if (!myCharacter || !presidentOfficial.characterId.equals(myCharacter._id)) {
@@ -65,9 +66,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
     const posName = getCabinetPositionById(nomination.positionId)?.name ?? nomination.positionId;
     const nomineeChar = nomination.nomineeCharacterId
-      ? await db
-          .collection<Character>("characters")
-          .findOne({ _id: nomination.nomineeCharacterId }, { projection: { userId: 1 } })
+      ? await charactersCollection(db).findOne(
+          { _id: nomination.nomineeCharacterId },
+          { projection: { userId: 1 } }
+        )
       : null;
     if (nomineeChar?.userId) {
       await createNotification({

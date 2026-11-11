@@ -31,12 +31,12 @@ import {
   getCorpFxRate,
   loadFxRatesByCurrency,
 } from "@/lib/currency/corporationCapital";
-import type { Character } from "@/lib/db/types";
 import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -154,8 +154,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
       .filter((id): id is ObjectId => id !== undefined);
     const [shareholderChars, imperialShareholderChars, corpShareholderDocs] = await Promise.all([
       regularShareholderIds.length > 0
-        ? db
-            .collection<Character>("characters")
+        ? charactersCollection(db)
             .find({ _id: { $in: regularShareholderIds } }, { projection: { _id: 1, name: 1 } })
             .toArray()
         : [],

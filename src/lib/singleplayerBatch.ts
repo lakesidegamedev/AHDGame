@@ -9,6 +9,7 @@ import {
   checkSingleplayerTurnAllowed,
   type SingleplayerTurnOutcome,
 } from "@/lib/singleplayerTurn";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * Multi-turn advance for a normal singleplayer world.
@@ -498,7 +499,7 @@ export function createDbBatchPorts(db: Db): BatchPorts {
         db
           .collection("gameState")
           .findOne({ _id: "current" } as never, { projection: { currentTurn: 1 } }),
-        db.collection("characters").findOne(
+        charactersCollection(db).findOne(
           { userId, retiredAt: { $exists: false } },
           {
             projection: {

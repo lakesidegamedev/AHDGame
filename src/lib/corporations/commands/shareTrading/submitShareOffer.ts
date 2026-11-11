@@ -40,7 +40,7 @@ import { emitTx } from "@/lib/financialTxLog/emit";
 import { CURRENCY_SYMBOLS } from "@/lib/constants/currencies";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { isPendingShareOfferDuplicateKey } from "@/lib/elections/duplicateKey";
-import type { Character, Notification, ShareListing, ShareOffer } from "@/lib/db/types";
+import type { Notification, ShareListing, ShareOffer } from "@/lib/db/types";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { assertCeoAcquisitionWithinCap } from "@/lib/corporations/ceoShareAcquisitionCap";
 import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
@@ -48,6 +48,7 @@ import { checkNegotiatedSale } from "@/lib/corporations/negotiatedSaleGuards";
 import { getGameTime } from "@/lib/time/gameTime";
 import { settleListingOffer } from "./acceptShareOffer";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteParams {
   params: Promise<{ id: string; listingId: string }>;
@@ -155,12 +156,10 @@ export async function submitShareOffer(request: Request, { params }: RouteParams
       if (!negotiated.buyerCharacterId.equals(character._id)) {
         return errorResponse(403, "This sale is reserved for another player");
       }
-      const seller = await db
-        .collection<Character>("characters")
-        .findOne(
-          { _id: listing.sellerCharacterId },
-          { projection: { _id: 1, userId: 1, name: 1, createdTurn: 1, createdAt: 1 } }
-        );
+      const seller = await charactersCollection(db).findOne(
+        { _id: listing.sellerCharacterId },
+        { projection: { _id: 1, userId: 1, name: 1, createdTurn: 1, createdAt: 1 } }
+      );
       if (!seller) return errorResponse(404, "Seller not found");
       const gameTime = await getGameTime();
       const guard = await checkNegotiatedSale(
@@ -459,9 +458,10 @@ export async function submitShareOffer(request: Request, { params }: RouteParams
         );
       }
       void (async () => {
-        const sellerChar = await db
-          .collection<Character>("characters")
-          .findOne({ _id: listing.sellerCharacterId }, { projection: { userId: 1 } });
+        const sellerChar = await charactersCollection(db).findOne(
+          { _id: listing.sellerCharacterId },
+          { projection: { userId: 1 } }
+        );
         if (!sellerChar) return;
         await db.collection<Omit<Notification, "_id">>("notifications").insertOne({
           userId: sellerChar.userId,
@@ -478,9 +478,10 @@ export async function submitShareOffer(request: Request, { params }: RouteParams
 
     // Notify the seller
     void (async () => {
-      const sellerChar = await db
-        .collection<Character>("characters")
-        .findOne({ _id: listing.sellerCharacterId }, { projection: { userId: 1 } });
+      const sellerChar = await charactersCollection(db).findOne(
+        { _id: listing.sellerCharacterId },
+        { projection: { userId: 1 } }
+      );
 
       if (!sellerChar) return;
 

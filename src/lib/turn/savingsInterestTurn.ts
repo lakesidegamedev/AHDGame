@@ -29,6 +29,7 @@ import { loadBankingPolicy } from "@/lib/banking/policy";
 import { ensureCentralBankPricingPhaseIn } from "@/lib/monetaryPolicy/centralBankPricing";
 import { getCharactersCollection } from "@/lib/db/collections/characters";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const DEFAULT_PRIME = 2.5;
 
@@ -212,7 +213,7 @@ export async function processSavingsInterestTurn(
       }
     }
     if (accrualOps.length > 0) {
-      await db.collection("characters").bulkWrite(accrualOps);
+      await charactersCollection(db).bulkWrite(accrualOps);
     }
     if (accountAccrualOps.length > 0) {
       await db.collection("savingsAccounts").bulkWrite(accountAccrualOps);

@@ -7,7 +7,6 @@ import { getDb } from "@/lib/mongodb";
 import { getAuthUser } from "@/lib/auth"; // Optional auth with current account state.
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import type { Bond, Corporation, BondHistory, IndexFund, NPP, User } from "@/lib/db/types";
-import type { Character } from "@/lib/db/types/character";
 import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
 import { bulkFetchCharacterNames } from "@/lib/db/characterLookup";
 import { BOND_UNIT_FACE_VALUE, BOND_MATURITY_LABELS } from "@/lib/db/types/bond";
@@ -30,6 +29,7 @@ import { calculateBondYieldToMaturityPercent } from "@/lib/constants/bonds";
 import { isBankPropTradingEnabled } from "@/lib/banking/featureFlag";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteParams {
   params: Promise<{ bondId: string }>;
@@ -184,7 +184,7 @@ export const GET = withNoStore(async function GET(_request: Request, { params }:
         const characterQuery = userDoc?.activeCharacterId
           ? { _id: userDoc.activeCharacterId, userId: new ObjectId(user.userId) }
           : { userId: new ObjectId(user.userId) };
-        const character = await db.collection<Character>("characters").findOne(characterQuery);
+        const character = await charactersCollection(db).findOne(characterQuery);
         if (character) {
           myCharacterId = character._id.toString();
           myCashOnHand = getTotalPersonalLiquidWealth(character, forexEnabled, exchangeRates);

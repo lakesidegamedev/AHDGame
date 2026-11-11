@@ -1,5 +1,5 @@
 import type { Db, ObjectId } from "mongodb";
-import type { Character, Corporation } from "@/lib/db/types";
+import type { Corporation } from "@/lib/db/types";
 import { getControllingCorporateParent } from "@/lib/corporations/corporateOwnership";
 import {
   isFormalizedSubsidiary,
@@ -7,6 +7,7 @@ import {
   type SubsidiaryCeoBlockReason,
 } from "./helpers";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const SYSTEM_USER_ID = "000000000000000000000000";
 
@@ -22,9 +23,10 @@ export async function resolveParentCeoUserId(
 ): Promise<ObjectId> {
   if (parent.caretakerCeo?.underlyingUserId) return parent.caretakerCeo.underlyingUserId;
   if (parent.ceoType === "character" && parent.ceoId) {
-    const ceo = await db
-      .collection<Character>("characters")
-      .findOne({ _id: parent.ceoId }, { projection: { userId: 1 } });
+    const ceo = await charactersCollection(db).findOne(
+      { _id: parent.ceoId },
+      { projection: { userId: 1 } }
+    );
     if (ceo?.userId) return ceo.userId;
   }
   return parent.userId;

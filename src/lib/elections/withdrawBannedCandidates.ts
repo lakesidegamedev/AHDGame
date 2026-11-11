@@ -7,11 +7,12 @@
  */
 
 import type { Db, ObjectId } from "mongodb";
-import type { Character, ElectionCandidate } from "@/lib/db/types";
+import type { ElectionCandidate } from "@/lib/db/types";
 import { removeWithdrawnCandidateFromTally } from "@/lib/elections/engine/tallyCleaner";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export async function withdrawAllCandidatesForUser(db: Db, userId: ObjectId): Promise<number> {
-  const character = await db.collection<Character>("characters").findOne({ userId });
+  const character = await charactersCollection(db).findOne({ userId });
   if (!character) return 0;
 
   const activeCandidates = await db

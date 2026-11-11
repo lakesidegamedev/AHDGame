@@ -5,13 +5,14 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import { moderatorResourcesGrantSchema } from "@/lib/api/schemas/admin";
 import { createModAuditLog } from "@/lib/modAuditLog";
-import type { Character, ExchangeRate } from "@/lib/db/types";
+import type { ExchangeRate } from "@/lib/db/types";
 import { ObjectId } from "mongodb";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import {
   buildHomeCurrencyCashGrantSetStage,
   buildCampaignFundsGrantExpression,
 } from "@/lib/currency/grantCashBuilder";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 // POST /api/moderator/resources/grant — Grant resources to players.
 // Auth: requireModerator
@@ -80,17 +81,15 @@ export async function POST(request: Request) {
     let affectedCount = 0;
 
     if (allPlayers) {
-      const result = await db
-        .collection<Character>("characters")
-        .updateMany({}, [{ $set: setStage }]);
+      const result = await charactersCollection(db).updateMany({}, [{ $set: setStage }]);
       affectedCount = result.modifiedCount;
     } else {
       const ids = characterIds ?? [];
       const objectIds = ids.map((id: string) => new ObjectId(id));
 
-      const result = await db
-        .collection<Character>("characters")
-        .updateMany({ _id: { $in: objectIds } }, [{ $set: setStage }]);
+      const result = await charactersCollection(db).updateMany({ _id: { $in: objectIds } }, [
+        { $set: setStage },
+      ]);
       affectedCount = result.modifiedCount;
     }
 

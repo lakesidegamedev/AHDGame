@@ -11,6 +11,7 @@ import { MS_PER_TURN } from "@/lib/constants/turnTime";
 import { BG_FOUNDING_COUNTS_COLLECTION, type BgFoundingAssemblyRecord } from "./foundingCount1990";
 import { BG_FOUNDING_OFFICE_ARCHIVES_COLLECTION } from "./foundingSeating1990";
 import { planBg1991ListReplacements, type Bg1991ListReplacement } from "./rules/listVacancies1991";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export const BG_1991_LIST_REPLACEMENTS_COLLECTION = "bg1991ListReplacements";
 interface ReplacementReceipt {
@@ -121,8 +122,7 @@ export async function advanceBg1991ListVacancies(
           .toArray()
       : [];
     const players = playerIds.length
-      ? await db
-          .collection<Character>("characters")
+      ? await charactersCollection(db)
           .find(
             {
               _id: { $in: playerIds },
@@ -248,9 +248,7 @@ export async function advanceBg1991ListVacancies(
         (row) => row.isNpc === isNpc && owners.has(row.id)
       );
       if (!selected.length) continue;
-      const collection = isNpc
-        ? db.collection<NPP>("npps")
-        : db.collection<Character>("characters");
+      const collection = isNpc ? db.collection<NPP>("npps") : charactersCollection(db);
       await collection.bulkWrite(
         selected.map(({ id }) => {
           const owner = owners.get(id)!,

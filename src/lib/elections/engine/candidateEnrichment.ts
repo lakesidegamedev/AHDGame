@@ -21,6 +21,7 @@ import {
 } from "@/lib/nppEndorsements";
 import { buildPartyChairMaps, resolvePartyChairPrimaryRole } from "@/lib/primaryScore";
 import type { StatePartyOrg } from "@/lib/db/types/statePartyOrg";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 // ─── Fetch & enrich candidate stats ──────────────────────────────────────────
 
@@ -110,8 +111,7 @@ export async function loadCandidateEnrichmentPreload(
   ];
   const [characters, npps, statePartyChairRows, endorsements] = await Promise.all([
     characterIds.length
-      ? db
-          .collection<Character>("characters")
+      ? charactersCollection(db)
           .find({ _id: { $in: characterIds } })
           .toArray()
       : Promise.resolve([]),
@@ -268,8 +268,7 @@ export async function fetchEnrichedCandidates(
           })
         )
       : characterIds.length > 0
-        ? db
-            .collection<Character>("characters")
+        ? charactersCollection(db)
             .find({ _id: { $in: characterIds } })
             .toArray()
         : Promise.resolve([] as Character[]),

@@ -5,10 +5,11 @@ import { requireModerator } from "@/lib/api/requireModerator";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import { createModAuditLog } from "@/lib/modAuditLog";
-import type { Character, State } from "@/lib/db/types";
+import type { State } from "@/lib/db/types";
 import { performRelocation } from "@/lib/character/performRelocation";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { isCountryEnabledForPlayers } from "@/lib/countryAccess";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const updateCountrySchema = z.object({
   username: z.string().min(1, "Username is required"),
@@ -50,7 +51,7 @@ export async function PATCH(request: Request) {
       return errorResponse(403, "Cannot perform actions on admin accounts");
     }
 
-    const character = await db.collection<Character>("characters").findOne({ userId: user._id });
+    const character = await charactersCollection(db).findOne({ userId: user._id });
     if (!character) {
       return errorResponse(404, `No character found for user '${username}'`);
     }

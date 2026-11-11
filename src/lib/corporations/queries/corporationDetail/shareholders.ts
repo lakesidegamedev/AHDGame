@@ -8,6 +8,7 @@ import type { IndexFund } from "@/lib/db/types/indexFund";
 import { fetchBordersByUserIds } from "@/lib/db/patreonBorders";
 import { computeAccountedShares } from "@/lib/corporations/shareInvariant";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * Shareholder display context: CEO + every named holder class.
@@ -62,7 +63,7 @@ export async function loadShareholderContext(db: Db, corporation: Corporation) {
             },
           }
         )
-      : db.collection<Character>("characters").findOne(
+      : charactersCollection(db).findOne(
           { _id: corporation.ceoId },
           {
             projection: {
@@ -86,8 +87,7 @@ export async function loadShareholderContext(db: Db, corporation: Corporation) {
   ] = await Promise.all([
     ceoPromise,
     shareholderIds.length > 0
-      ? db
-          .collection<Character>("characters")
+      ? charactersCollection(db)
           .find(
             { _id: { $in: shareholderIds } },
             {

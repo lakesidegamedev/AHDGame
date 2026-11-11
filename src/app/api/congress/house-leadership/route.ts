@@ -52,9 +52,9 @@ import type {
   HouseLeadershipNomination,
   SpeakerNomination,
   SenateLeadershipNomination,
-  Character,
   ElectedOfficial,
 } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const ROLE_TO_LABEL: Record<HouseLeadershipElectionRole, string> = {
   majority_leader: "Majority Leader",
@@ -88,7 +88,7 @@ export async function GET() {
     let myParty: string | null = null;
     let isHouseMember = false;
     if (authUser) {
-      const char = await db.collection<Character>("characters").findOne({
+      const char = await charactersCollection(db).findOne({
         userId: new ObjectId(authUser.userId),
       });
       myCharacterId = char?._id?.toString() ?? null;
@@ -243,7 +243,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const character = await db.collection<Character>("characters").findOne({
+    const character = await charactersCollection(db).findOne({
       userId: new ObjectId(authUser.userId),
     });
     if (!character) return errorResponse(400, "No character");
@@ -361,9 +361,10 @@ export async function POST(request: Request) {
 
       const now = new Date();
       // Deduct 3 NPI
-      await db
-        .collection<Character>("characters")
-        .updateOne({ _id: character._id }, { $inc: { politicalInfluence: -3 } });
+      await charactersCollection(db).updateOne(
+        { _id: character._id },
+        { $inc: { politicalInfluence: -3 } }
+      );
 
       // Log transaction
       await db.collection("influenceHistory").insertOne({

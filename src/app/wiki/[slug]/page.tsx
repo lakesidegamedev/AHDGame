@@ -24,6 +24,7 @@ import { getAuthUserWithCharacter } from "@/lib/auth";
 import { getDb } from "@/lib/mongodb";
 import { getWikiCanonicalUrl } from "@/lib/siteMetadata";
 import { getLowValueWikiSlugs } from "@/lib/wiki/starterStub";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface WikiPageProps {
   params: Promise<{ slug: string }>;
@@ -156,12 +157,10 @@ export default async function WikiPage({ params }: WikiPageProps) {
   if (slug === "getting-started" && user?.character) {
     getDb()
       .then((db) =>
-        db
-          .collection("characters")
-          .updateOne(
-            { _id: user.character!._id, hasReadWiki: { $ne: true } },
-            { $set: { hasReadWiki: true } }
-          )
+        charactersCollection(db).updateOne(
+          { _id: user.character!._id, hasReadWiki: { $ne: true } },
+          { $set: { hasReadWiki: true } }
+        )
       )
       .catch(() => {});
   }

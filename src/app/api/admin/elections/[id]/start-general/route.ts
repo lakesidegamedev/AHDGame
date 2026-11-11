@@ -17,7 +17,6 @@ import {
 } from "@/lib/primaryScore";
 import { initPresidentVoteTally } from "@/lib/elections/presidential/presidentialElectionEngine";
 import type {
-  Character,
   Election,
   ElectionCandidate,
   NPP,
@@ -27,6 +26,7 @@ import type {
 import { createInitialCampaign } from "@/lib/campaigns/createInitialCampaign";
 import { isCampaignEligibleElection } from "@/lib/campaigns/isCampaignEligible";
 import { getGameTime } from "@/lib/time/gameTime";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -94,8 +94,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       const nppIds = candidates.filter((c) => c.isNPP && c.nppId).map((c) => c.nppId!);
       const [chars, electionNpps, statePartyOrgs] = await Promise.all([
         characterIds.length > 0
-          ? db
-              .collection<Character>("characters")
+          ? charactersCollection(db)
               .find({ _id: { $in: characterIds } })
               .toArray()
           : [],

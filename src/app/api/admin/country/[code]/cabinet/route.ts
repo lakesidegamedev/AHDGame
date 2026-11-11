@@ -28,7 +28,7 @@ import { getLiveGameYear } from "@/lib/cabinet/liveGameYear";
 import { getCabinetEligibleOfficeTypes } from "@/lib/legislature/chamberOfficeType";
 import { getCountryState } from "@/lib/countryState";
 import { getOfficeLabel } from "@/lib/utils/officeTitle";
-import type { Character, ElectedOfficial, CareerEvent } from "@/lib/db/types";
+import type { ElectedOfficial, CareerEvent } from "@/lib/db/types";
 import type { OfficeType } from "@/lib/db/types/character";
 import { getUKCabinetCooldownsCollection } from "@/lib/db/collections/ukGovernment";
 import { getCabinetMembersCollection } from "@/lib/db/collections/cabinetMembers";
@@ -40,6 +40,7 @@ import {
 } from "@/lib/countries/uk/dualMinistry/rules";
 import { reconcileUkSharedPool } from "@/lib/cabinet/ministerialActionPool";
 import { preserveSurvivingCabinetRow } from "@/lib/countries/uk/dualMinistry/survivor";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const actionSchema = z
   .object({
@@ -112,19 +113,15 @@ async function vacateSeat(
     });
     if (seat) {
       const restoreOffice = { type: seat.officeType, state: seat.state! } as OfficeType;
-      await db
-        .collection<Character>("characters")
-        .updateOne(
-          { _id: member.characterId },
-          { $set: { currentOffice: restoreOffice, updatedAt: now } }
-        );
+      await charactersCollection(db).updateOne(
+        { _id: member.characterId },
+        { $set: { currentOffice: restoreOffice, updatedAt: now } }
+      );
     } else {
-      await db
-        .collection<Character>("characters")
-        .updateOne(
-          { _id: member.characterId },
-          { $unset: { currentOffice: "" }, $set: { updatedAt: now } }
-        );
+      await charactersCollection(db).updateOne(
+        { _id: member.characterId },
+        { $unset: { currentOffice: "" }, $set: { updatedAt: now } }
+      );
     }
   }
 
@@ -193,7 +190,7 @@ export const POST = withAdminRoute(
 
     // action === "appoint"
     const characterId = new ObjectId(parsed.data.characterId!);
-    const targetChar = await db.collection<Character>("characters").findOne({ _id: characterId });
+    const targetChar = await charactersCollection(db).findOne({ _id: characterId });
     if (!targetChar) {
       throw notFound("Character");
     }
@@ -264,7 +261,7 @@ export const POST = withAdminRoute(
       partyCountryId: countryId,
       date: now,
     };
-    await db.collection<Character>("characters").updateOne(
+    await charactersCollection(db).updateOne(
       { _id: targetChar._id },
       {
         $set: { currentOffice: cabinetOffice, updatedAt: now },

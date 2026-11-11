@@ -7,7 +7,7 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, badRequest, forbidden, notFound, errorResponse } from "@/lib/api/errors";
 import { createNotification } from "@/lib/notifications";
 import { findPartyBySequentialId } from "@/lib/db/partyLookup";
-import type { Character, PoliticalParty } from "@/lib/db/types";
+import type { PoliticalParty } from "@/lib/db/types";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { canActAsChair } from "@/lib/parties/actingChair";
@@ -15,6 +15,7 @@ import { applyCharacterPartyJoin } from "@/lib/parties/applyCharacterPartyJoin";
 import { canCharacterJoinParty } from "@/lib/parties/partyFrontier";
 import { isSameCountry } from "@/lib/api/sameCountry";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const bodySchema = z.object({
   action: z.enum(["accept", "decline"]),
@@ -88,7 +89,7 @@ export async function POST(
           { $pull: { pendingJoinRequests: { characterId: requesterId } }, $set: { updatedAt: now } }
         );
 
-    const requester = await db.collection<Character>("characters").findOne({ _id: requesterId });
+    const requester = await charactersCollection(db).findOne({ _id: requesterId });
 
     if (action === "decline") {
       await removeRequest();

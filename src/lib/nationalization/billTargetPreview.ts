@@ -5,7 +5,7 @@
 // cooldown skip — see spec §13.4).
 import { operatingSectorFilter, type OperatingSectorType } from "@/lib/constants/corporations";
 import type { Db, ObjectId } from "mongodb";
-import type { Character, Corporation, CorporateSector, State } from "@/lib/db/types";
+import type { Corporation, CorporateSector, State } from "@/lib/db/types";
 import type { UnownedSector } from "@/lib/db/types/unownedSector";
 import type { CountryId } from "@/lib/constants/countries";
 
@@ -23,6 +23,7 @@ import type { SectorScope } from "./nationalizeSectorWide";
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface SectorPreviewAffectedCorp {
   corporationId: string;
@@ -241,9 +242,10 @@ export async function computeNationalizationTargetDetail(
 
   let ceoName: string | null = null;
   if (!corp.ceoVacant && corp.ceoId) {
-    const ceo = await db
-      .collection<Character>("characters")
-      .findOne({ _id: corp.ceoId }, { projection: { name: 1 } });
+    const ceo = await charactersCollection(db).findOne(
+      { _id: corp.ceoId },
+      { projection: { name: 1 } }
+    );
     ceoName = ceo?.name ?? null;
   }
 

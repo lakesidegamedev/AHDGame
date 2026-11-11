@@ -8,7 +8,8 @@ import {
   type CountryId,
 } from "@/lib/constants/countries";
 import { getRegionOfficialBuckets } from "@/lib/legislature/chamberOfficeType";
-import type { ElectedOfficial, State, Character, User } from "@/lib/db/types";
+import type { ElectedOfficial, State, User } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -48,8 +49,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const characterIds = officials.filter((o) => o.characterId).map((o) => o.characterId!);
 
     // Get the characters to find their user IDs
-    const characters = await db
-      .collection<Character>("characters")
+    const characters = await charactersCollection(db)
       .find({ _id: { $in: characterIds } })
       .toArray();
 

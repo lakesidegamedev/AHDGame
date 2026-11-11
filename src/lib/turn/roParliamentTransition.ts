@@ -4,7 +4,7 @@ import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
 import { calendarTurn } from "@/lib/utils/gameDate";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { reconcileRoDelegateCapacity } from "@/lib/countries/ro/rules/handover1992";
-import type { NPP, Character } from "@/lib/db/types";
+import type { NPP } from "@/lib/db/types";
 import {
   RO_1992_DEPUTIES_BY_REGION,
   RO_1992_DEPUTY_SEATS,
@@ -17,6 +17,7 @@ import {
 import { getStatesCollection } from "@/lib/db/collections/states";
 import { getElectionsCollection } from "@/lib/db/collections/elections";
 import { getElectedOfficialsCollection } from "@/lib/db/collections/electedOfficials";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * Seat the parliament returned by the September 1992 election once both
@@ -246,8 +247,7 @@ async function materializeRoParliamentTransition(
             { session, projection: { currentOffice: 1 } }
           )
           .toArray()
-      : await db
-          .collection<Character>("characters")
+      : await charactersCollection(db)
           .find(
             { _id: { $in: ids }, countryId: "RO" },
             { session, projection: { currentOffice: 1 } }
@@ -280,7 +280,7 @@ async function materializeRoParliamentTransition(
       };
     });
     if (isNpc) await db.collection<NPP>("npps").bulkWrite(ops, { session });
-    else await db.collection<Character>("characters").bulkWrite(ops, { session });
+    else await charactersCollection(db).bulkWrite(ops, { session });
   }
   await db.collection<GovernmentFormation>("governmentFormations").updateOne(
     { _id: "RO" },

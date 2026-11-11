@@ -10,11 +10,11 @@ import { escapeRegex } from "@/lib/utils/escapeRegex";
 import { canActAsChair } from "@/lib/parties/actingChair";
 import type { Coalition } from "@/lib/db/types/coalition";
 import type { PoliticalParty } from "@/lib/db/types/party";
-import type { Character } from "@/lib/db/types/character";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { canInviteToCoalition, isBannedParty } from "@/lib/turn/onePartyConstraints";
 import { getCountryState } from "@/lib/countryState";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const createCoalitionSchema = z.object({
   name: z.string().min(3).max(60).trim(),
@@ -134,12 +134,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
       throw badRequest("Your party is already a member of a coalition.");
     }
 
-    const actionDebit = await db
-      .collection<Character>("characters")
-      .updateOne(
-        { _id: character._id, actions: { $gte: 25 } },
-        { $inc: { actions: -25 }, $set: { updatedAt: now } }
-      );
+    const actionDebit = await charactersCollection(db).updateOne(
+      { _id: character._id, actions: { $gte: 25 } },
+      { $inc: { actions: -25 }, $set: { updatedAt: now } }
+    );
 
     if (actionDebit.matchedCount === 0) {
       await db
@@ -185,9 +183,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
             { _id: party._id, coalitionId },
             { $set: { coalitionId: null, updatedAt: now } }
           ),
-        db
-          .collection<Character>("characters")
-          .updateOne({ _id: character._id }, { $inc: { actions: 25 }, $set: { updatedAt: now } }),
+        charactersCollection(db).updateOne(
+          { _id: character._id },
+          { $inc: { actions: 25 }, $set: { updatedAt: now } }
+        ),
       ]);
       throw error;
     }
@@ -236,8 +235,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
         .collection<PoliticalParty>("politicalParties")
         .find({ _id: { $in: allPartyIds } })
         .toArray(),
-      db
-        .collection<Character>("characters")
+      charactersCollection(db)
         .find({ _id: { $in: allChairCharacterIds } }, { projection: { _id: 1, name: 1 } })
         .toArray(),
     ]);
@@ -245,8 +243,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     // Compute live member counts using party sequentialId (the field used on characters/NPPs)
     const partySeqIds = parties.map((p) => String(p.sequentialId));
     const [charCounts, nppCounts] = await Promise.all([
-      db
-        .collection<Character>("characters")
+      charactersCollection(db)
         .aggregate<{ _id: string; count: number }>([
           { $match: { party: { $in: partySeqIds }, countryId } },
           { $group: { _id: "$party", count: { $sum: 1 } } },

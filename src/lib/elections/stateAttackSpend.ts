@@ -11,7 +11,8 @@ import {
   type MoneyFlowStepRef,
 } from "@/lib/db/nonAtomicMoneyFlow";
 import { runWithOptionalTransaction } from "@/lib/db/runWithOptionalTransaction";
-import type { Campaign, Character, PrimaryStateAction } from "@/lib/db/types";
+import type { Campaign, PrimaryStateAction } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface StateAttackSpendInput {
   characterId: ObjectId;
@@ -80,7 +81,7 @@ export async function applyStateAttackSpend(
     throw new RangeError("State attack idempotency key must be 1-128 characters");
   }
 
-  const characters = db.collection<Character>("characters");
+  const characters = charactersCollection(db);
   const campaigns = db.collection<Campaign>("campaigns");
   const actions = db.collection<PrimaryStateAction>("primaryStateActions");
   const receipts = await getMoneyFlowReceiptsCollection(db);

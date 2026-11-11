@@ -5,9 +5,10 @@
  * - house: state's House delegation (lumped)
  */
 import { getDb } from "@/lib/mongodb";
-import type { State, ElectedOfficial, Character, NPP, PoliticalParty } from "@/lib/db/types";
+import type { State, ElectedOfficial, NPP, PoliticalParty } from "@/lib/db/types";
 import { SENATE_CLASSES } from "@/lib/constants";
 import { buildCharacterHref, buildNppHref } from "@/lib/utils/profileUrls";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export type SeatSlugType = "governor" | "senate" | "house";
 
@@ -122,8 +123,7 @@ export async function getSeatData(slug: string): Promise<SeatData | null> {
   const nppIds = officials.filter((o) => o.nppId).map((o) => o.nppId!);
   const [characters, npps, parties] = await Promise.all([
     characterIds.length
-      ? db
-          .collection<Character>("characters")
+      ? charactersCollection(db)
           .find({ _id: { $in: characterIds } })
           .toArray()
       : [],

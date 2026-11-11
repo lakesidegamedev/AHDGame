@@ -39,6 +39,7 @@ import { getBankId } from "@/lib/centralBank/helpers";
 import { getGameState } from "@/lib/gameState";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const DEFAULT_PRIME = 2.5;
 
@@ -155,8 +156,7 @@ export async function loadAdminLoanTracker(params: { db: Db; countryId: CountryI
     primeByCountryId.set(id, bank.primeRate ?? DEFAULT_PRIME);
   }
 
-  const characters = await db
-    .collection<Character>("characters")
+  const characters = await charactersCollection(db)
     .find({
       userId: { $exists: true },
       $or: [

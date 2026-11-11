@@ -9,6 +9,8 @@
 
 import { ObjectId, type Db } from "mongodb";
 import { createInMemoryDb, type InMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import type { Document } from "mongodb";
 
 export const PRICE = 1_000_000;
 export const SHELL_CASH = 5_000_000;
@@ -241,8 +243,8 @@ export interface WorldBalances {
 
 export async function readBalances(w: AcquisitionWorld): Promise<WorldBalances> {
   const acquirer = await w.memory.collection("corporations").findOne({ _id: w.acq });
-  const charA = await w.memory.collection("characters").findOne({ _id: w.charA });
-  const charB = await w.memory.collection("characters").findOne({ _id: w.charB });
+  const charA = await charactersCollection<Document>(w.memory).findOne({ _id: w.charA });
+  const charB = await charactersCollection<Document>(w.memory).findOne({ _id: w.charB });
   const imperial = await w.memory.collection("imperialCharacters").findOne({ _id: w.imperial });
   const corpHolder = await w.memory.collection("corporations").findOne({ _id: w.corpHolder });
   const fund = await w.memory.collection("indexFunds").findOne({ _id: w.fund });

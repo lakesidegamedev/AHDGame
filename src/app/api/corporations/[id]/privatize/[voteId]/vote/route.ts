@@ -12,7 +12,8 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { getGameState } from "@/lib/gameState";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
-import type { Character, CorporationPrivatizationVote } from "@/lib/db/types";
+import type { CorporationPrivatizationVote } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteParams {
   params: Promise<{ id: string; voteId: string }>;
@@ -60,9 +61,9 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(404, "Vote not found");
     }
 
-    const voterCharacter = await db
-      .collection<Character>("characters")
-      .findOne({ userId: new ObjectId(auth.user.userId) });
+    const voterCharacter = await charactersCollection(db).findOne({
+      userId: new ObjectId(auth.user.userId),
+    });
     if (!voterCharacter) {
       return errorResponse(404, "Character not found");
     }

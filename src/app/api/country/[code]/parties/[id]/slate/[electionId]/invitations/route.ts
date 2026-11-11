@@ -12,12 +12,13 @@ import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { formatElectionTypeLabel } from "@/lib/utils/electionLabels";
 import { computeSlateAssignmentScore, isNppSlateCompliant } from "@/lib/slateAssignments";
 import { countSlateAssignmentUsage } from "@/lib/slateAssignmentCap";
-import type { Character, Election, ElectionCandidate, NPP, SlateCandidate } from "@/lib/db/types";
+import type { Election, ElectionCandidate, NPP, SlateCandidate } from "@/lib/db/types";
 import { getSlateAcceptanceStatBonus, resolveSlateAuthority } from "@/lib/slateAuthority";
 import { getPartyNppControlStatus } from "@/lib/parties/antiAbuseGuards";
 import { findBlockingActiveCandidacy } from "@/lib/elections/activeCandidacy";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { isPrimaryClosed } from "@/lib/elections/electionDeadlineFilters";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; electionId: string }>;
@@ -390,9 +391,7 @@ async function buildCharacterSlateCandidate(args: {
   assignedByRole: SlateCandidate["assignedByRole"];
   electionId: string;
 }): Promise<BuiltSlateCandidate> {
-  const character = await args.db
-    .collection<Character>("characters")
-    .findOne({ _id: args.candidateObjId });
+  const character = await charactersCollection(args.db).findOne({ _id: args.candidateObjId });
   if (!character) return { error: "Character not found", status: 404 };
 
   if ((character.countryId ?? "US") !== args.countryId) {

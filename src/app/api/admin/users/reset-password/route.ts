@@ -12,6 +12,7 @@ import { withNoStore } from "@/lib/api/withNoStore";
 import { createAdminLog } from "@/lib/adminLog";
 import { parseJsonBody } from "@/lib/api/validate";
 import { adminResetPasswordSchema } from "@/lib/api/schemas/admin";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 // POST /api/admin/users/reset-password — Reset a user's password to a new value.
 // Auth: requireAdmin
@@ -96,7 +97,7 @@ export const POST = withNoStore(async (request: Request) => {
     // Never log the secret.
     let characterName: string | undefined;
     try {
-      const character = await db.collection("characters").findOne({ userId: objectId });
+      const character = await charactersCollection(db).findOne({ userId: objectId });
       characterName = character?.name;
     } catch {
       characterName = undefined;

@@ -23,7 +23,8 @@ import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQu
 import { getLegalStructureForCorp } from "@/lib/corporations/legalStructure";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { createNotification } from "@/lib/notifications";
-import type { Character, Corporation, CorporationShareInvite, User } from "@/lib/db/types";
+import type { Corporation, CorporationShareInvite, User } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const INVITE_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
@@ -150,7 +151,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(400, "CEO is already the sole shareholder");
     }
 
-    const invitee = await db.collection<Character>("characters").findOne({ _id: inviteeId });
+    const invitee = await charactersCollection(db).findOne({ _id: inviteeId });
     if (!invitee) {
       return errorResponse(404, "Invited character not found");
     }
@@ -217,7 +218,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const issuingCharacterId = corporation.ceoId ?? new ObjectId(auth.user.userId);
     const issuingCharacter = corporation.ceoId
-      ? await db.collection<Character>("characters").findOne({ _id: corporation.ceoId })
+      ? await charactersCollection(db).findOne({ _id: corporation.ceoId })
       : null;
 
     const invite: CorporationShareInvite = {

@@ -6,8 +6,9 @@ import { checkRateLimit, rateLimitResponse, BOT_READ_LIMITS } from "@/lib/api/ra
 import { escapeRegex } from "@/lib/utils/escapeRegex";
 import { getEnabledCountryIdsFromDb } from "@/lib/countryAccess";
 import { resolvePresetIdFromGameState } from "@/lib/world/countryReadinessContract";
-import type { Character, State, GameState } from "@/lib/db/types";
+import type { State, GameState } from "@/lib/db/types";
 import { filterCountryResults } from "./countryResults";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 // GET /api/discord-bot/autocomplete — Returns name/ID matches for Discord slash command option prefills. Supports type=characters, type=states, and type=countries.
 // Auth: requireAdminOrApiKey
@@ -80,8 +81,7 @@ export async function GET(request: Request) {
       });
     }
 
-    const characters = await db
-      .collection<Character>("characters")
+    const characters = await charactersCollection(db)
       .find(
         { name: { $regex: escapeRegex(query), $options: "i" } },
         { projection: { _id: 1, name: 1 } }

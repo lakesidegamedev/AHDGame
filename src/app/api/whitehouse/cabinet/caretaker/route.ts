@@ -26,8 +26,9 @@ import {
 } from "@/lib/nppAutonomy/caretakerMinister";
 import { getCabinetPositionById } from "@/lib/constants";
 import type { CountryId } from "@/lib/constants/countries";
-import type { ElectedOfficial, Character } from "@/lib/db/types";
+import type { ElectedOfficial } from "@/lib/db/types";
 import type { Db } from "mongodb";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const appointSchema = z.object({
   positionId: z.string().min(1, "positionId required"),
@@ -49,9 +50,7 @@ async function requirePresident(
       response: errorResponse(400, "No President in office"),
     };
   }
-  const myCharacter = await db
-    .collection<Character>("characters")
-    .findOne({ userId: new ObjectId(userId) });
+  const myCharacter = await charactersCollection(db).findOne({ userId: new ObjectId(userId) });
   if (!myCharacter || !presidentOfficial.characterId.equals(myCharacter._id)) {
     return {
       ok: false,

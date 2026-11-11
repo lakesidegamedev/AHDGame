@@ -15,7 +15,6 @@ import { expandSectorSchema } from "@/lib/api/schemas/corporations";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQuery";
 import type {
-  Character,
   CorporateSector,
   GameState,
   GameConfig,
@@ -72,6 +71,7 @@ import {
   retailDemandTransitionTurnsRemaining,
 } from "@/lib/market/retailDemandTransition";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /** HTTP status for each entry refusal. */
 const MARKET_ENTRY_STATUS: Record<MarketEntryBlockReason, number> = {
@@ -258,9 +258,10 @@ export async function expandSector(request: Request, { params }: RouteParams) {
       const [primeRate, ceoChar, hostMetrics, nationalMarketSharePercent] = await Promise.all([
         resolveCountryPrimeRate(db, state.countryId),
         corporation.ceoId
-          ? db
-              .collection<Character>("characters")
-              .findOne({ _id: corporation.ceoId }, { projection: { "stats.businessAcumen": 1 } })
+          ? charactersCollection(db).findOne(
+              { _id: corporation.ceoId },
+              { projection: { "stats.businessAcumen": 1 } }
+            )
           : Promise.resolve(null),
         db
           .collection<StateMetrics>("macroMetrics")

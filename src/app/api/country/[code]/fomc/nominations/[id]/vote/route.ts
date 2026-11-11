@@ -22,7 +22,8 @@ import { getGameTime } from "@/lib/time/gameTime";
 import { isVotingDeadlinePassed } from "@/lib/legislature/billVotingWindow";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import type { FomcNomination } from "@/lib/db/types/centralBank";
-import type { ElectedOfficial, Character } from "@/lib/db/types";
+import type { ElectedOfficial } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const voteSchema = z.object({
   vote: z.enum(["for", "against", "abstain"]),
@@ -84,7 +85,7 @@ export async function POST(
       return errorResponse(409, "Voting has ended");
     }
 
-    const myCharacter = await db.collection<Character>("characters").findOne({
+    const myCharacter = await charactersCollection(db).findOne({
       userId: new ObjectId(authUser.userId),
     });
     if (!myCharacter) {

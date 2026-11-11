@@ -6,7 +6,7 @@ import { requireCorporationActionsEnabled } from "@/lib/api/requireCorporationAc
 import { parseJsonBody } from "@/lib/api/validate";
 import { sellBondSchema } from "@/lib/api/schemas/bonds";
 import { badRequest, handleRouteError, notFound, errorResponse } from "@/lib/api/errors";
-import type { Bond, Character, ExchangeRate, User } from "@/lib/db/types";
+import type { Bond, ExchangeRate, User } from "@/lib/db/types";
 import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
@@ -47,6 +47,7 @@ import {
 } from "@/lib/bonds/saleRecovery";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteParams {
   params: Promise<{ bondId: string }>;
@@ -720,7 +721,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const characterQuery = userDoc?.activeCharacterId
       ? { _id: userDoc.activeCharacterId, userId: new ObjectId(user.userId) }
       : { userId: new ObjectId(user.userId) };
-    const character = await db.collection<Character>("characters").findOne(characterQuery);
+    const character = await charactersCollection(db).findOne(characterQuery);
     if (!character) {
       return errorResponse(404, "Character not found");
     }
@@ -765,9 +766,11 @@ export async function POST(request: Request, { params }: RouteParams) {
         );
         if (!poolDebit.ok) throw await poolDepthRefusal();
 
-        const payoutResult = await db
-          .collection<Character>("characters")
-          .updateOne({ _id: character._id }, payoutUpdate, { session });
+        const payoutResult = await charactersCollection(db).updateOne(
+          { _id: character._id },
+          payoutUpdate,
+          { session }
+        );
         if (payoutResult.matchedCount === 0) {
           throw notFound("Character not found");
         }

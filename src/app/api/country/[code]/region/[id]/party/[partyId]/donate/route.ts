@@ -5,7 +5,7 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
 import { parseJsonBody } from "@/lib/api/validate";
 import { partyDonateSchema } from "@/lib/api/schemas/settings";
-import type { StatePartyOrg, Character, State } from "@/lib/db/types";
+import type { StatePartyOrg, State } from "@/lib/db/types";
 import {
   findPartyBySequentialId,
   getPartyIdString,
@@ -32,6 +32,7 @@ import {
   type MoneyFlowLegOutcome,
 } from "@/lib/db/nonAtomicMoneyFlow";
 import { isSameCountry } from "@/lib/api/sameCountry";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; partyId: string }>;
@@ -102,7 +103,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     // Check authorization: must be a member of this state party
     const [character, forexEnabled] = await Promise.all([
-      db.collection<Character>("characters").findOne({ _id: authUser.character._id }),
+      charactersCollection(db).findOne({ _id: authUser.character._id }),
       isForexEnabled(),
     ]);
 
@@ -133,7 +134,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
     const flowKey = headerKey ?? randomUUID();
     const fingerprint = `${authUser.character._id.toHexString()}:${statePartyKey}:${amount}:${campaignFundsField}`;
-    const characters = db.collection<Character>("characters");
+    const characters = charactersCollection(db);
     const stateParties = db.collection<StatePartyOrg>("statePartyOrg");
     const receipts = await getMoneyFlowReceiptsCollection(db);
     const previousReceipt = headerKey ? await receipts.findOne({ _id: flowKey }) : null;

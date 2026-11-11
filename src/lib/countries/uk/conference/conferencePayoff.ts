@@ -26,10 +26,11 @@ import {
   pushConferenceHistory,
 } from "@/lib/countries/uk/conference/conferenceStore";
 import type { UKPartyConference } from "@/lib/countries/uk/conference/types";
-import type { Character, PoliticalParty } from "@/lib/db/types";
+import type { PoliticalParty } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { partySeqIdOf } from "./conferenceShared";
 import { runtimeConfig } from "@/lib/config/runtime";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface ConferencePayoff {
   applied: boolean;
@@ -232,9 +233,10 @@ export async function applyConferencePayoff(
   // never fail the turn or double-pay on retry.
   try {
     const chair = party.chairId
-      ? await db
-          .collection<Character>("characters")
-          .findOne({ _id: party.chairId }, { projection: { userId: 1, name: 1 } })
+      ? await charactersCollection(db).findOne(
+          { _id: party.chairId },
+          { projection: { userId: 1, name: 1 } }
+        )
       : null;
     if (chair?.userId) {
       await createNotification({

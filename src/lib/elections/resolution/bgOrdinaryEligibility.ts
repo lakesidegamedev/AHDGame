@@ -5,18 +5,13 @@ import {
   type BgOrdinaryRace,
 } from "@/lib/countries/bg/rules/ordinaryElectionPlan";
 import { TALLY_WITH_LATEST_SNAPSHOT_ONLY } from "@/lib/elections/engine/tallyProjections";
-import type {
-  Character,
-  Election,
-  ElectionCandidate,
-  ElectionVoteTally,
-  NPP,
-} from "@/lib/db/types";
+import type { Election, ElectionCandidate, ElectionVoteTally, NPP } from "@/lib/db/types";
 import {
   BG_ORDINARY_ASSEMBLY_SEATS,
   BG_LEGACY_ORDINARY_ASSEMBLY_SEATS,
 } from "@/lib/countries/bg/rules/assemblyTransition";
 import { bgNationwideEligibleParties } from "@/lib/countries/bg/rules/ordinaryElection";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /** Read the full 1991 slate once before any regional race is seated. */
 export async function readBgOrdinaryEligibleParties(db: Db): Promise<ReadonlySet<string> | null> {
@@ -153,8 +148,7 @@ export async function readBgOrdinaryElectionPlan(
           .toArray()
       : Promise.resolve([]),
     playerIds.length
-      ? db
-          .collection<Character>("characters")
+      ? charactersCollection(db)
           .find(
             {
               _id: { $in: playerIds },

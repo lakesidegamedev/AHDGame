@@ -12,11 +12,11 @@ import type {
   NationalPartyCandidate,
   NationalCommitteeElection,
   NationalCommitteeCandidate,
-  Character,
   PoliticalParty,
   State,
 } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface OrphanedCandidate {
   candidateId: string;
@@ -108,9 +108,7 @@ export async function GET() {
         .toArray();
 
       for (const candidate of candidates) {
-        const character = await db
-          .collection<Character>("characters")
-          .findOne({ _id: candidate.characterId });
+        const character = await charactersCollection(db).findOne({ _id: candidate.characterId });
 
         if (character) {
           const charCountryId = (character.countryId ?? "US") as CountryId;
@@ -146,9 +144,7 @@ export async function GET() {
         .toArray();
 
       for (const candidate of candidates) {
-        const character = await db
-          .collection<Character>("characters")
-          .findOne({ _id: candidate.characterId });
+        const character = await charactersCollection(db).findOne({ _id: candidate.characterId });
 
         if (character) {
           const charCountryId = (character.countryId ?? "US") as CountryId;
@@ -186,9 +182,7 @@ export async function GET() {
         .toArray();
 
       for (const candidate of candidates) {
-        const character = await db
-          .collection<Character>("characters")
-          .findOne({ _id: candidate.characterId });
+        const character = await charactersCollection(db).findOne({ _id: candidate.characterId });
 
         if (character) {
           const charCountryId = (character.countryId ?? "US") as CountryId;
@@ -291,9 +285,7 @@ export async function POST() {
         .toArray();
 
       for (const candidate of candidates) {
-        const character = await db
-          .collection<Character>("characters")
-          .findOne({ _id: candidate.characterId });
+        const character = await charactersCollection(db).findOne({ _id: candidate.characterId });
 
         if (character) {
           const charCountryId = (character.countryId ?? "US") as CountryId;
@@ -324,9 +316,7 @@ export async function POST() {
         .toArray();
 
       for (const candidate of candidates) {
-        const character = await db
-          .collection<Character>("characters")
-          .findOne({ _id: candidate.characterId });
+        const character = await charactersCollection(db).findOne({ _id: candidate.characterId });
 
         if (character) {
           const charCountryId = (character.countryId ?? "US") as CountryId;
@@ -359,9 +349,7 @@ export async function POST() {
         .toArray();
 
       for (const candidate of candidates) {
-        const character = await db
-          .collection<Character>("characters")
-          .findOne({ _id: candidate.characterId });
+        const character = await charactersCollection(db).findOne({ _id: candidate.characterId });
 
         if (character) {
           const charCountryId = (character.countryId ?? "US") as CountryId;

@@ -10,6 +10,7 @@ import { CAMPAIGN_CATEGORIES } from "@/lib/campaigns/dto/campaignView";
 import type { UpgradeCategory } from "@/lib/campaigns/upgradeCosts";
 import type { Election, PrimaryStateActionKind } from "@/lib/db/types";
 import { campaignPageHref } from "@/lib/campaignManager/links";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * Emitters for the per-race wire.
@@ -60,9 +61,10 @@ function leverLabel(category: UpgradeCategory): string {
  * and non-player politicians, so both collections are tried.
  */
 async function candidateName(db: Db, candidateId: ObjectId): Promise<string | null> {
-  const character = await db
-    .collection<{ name?: string }>("characters")
-    .findOne({ _id: candidateId }, { projection: { name: 1 } });
+  const character = await charactersCollection<{ name?: string }>(db).findOne(
+    { _id: candidateId },
+    { projection: { name: 1 } }
+  );
   if (character?.name) return character.name;
 
   const npp = await db

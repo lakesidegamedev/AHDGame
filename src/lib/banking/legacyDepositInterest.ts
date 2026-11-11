@@ -23,6 +23,7 @@ import {
 } from "./moneyMove";
 import type { SettlementResult } from "./settlementJournal";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface Credit {
   characterId: ObjectId;
@@ -207,8 +208,7 @@ async function deliverLegacyDepositInterest(
     newlyCredited: new Map(),
   };
   if (record.status === "applied") return result;
-  const recipients = await db
-    .collection<InterestBalanceDocument>("characters")
+  const recipients = await charactersCollection<InterestBalanceDocument>(db)
     .find(
       { _id: { $in: plan.credits.map((credit) => credit.characterId) } },
       { projection: { [SETTLED_KEYS_FIELD]: 1 } }
@@ -262,7 +262,7 @@ async function deliverLegacyDepositInterest(
     for (const credit of incomeCredits)
       netCreditsByCharacter.set(credit.characterId.toHexString(), credit.net);
   } else {
-    await db.collection<InterestBalanceDocument>("characters").bulkWrite(
+    await charactersCollection<InterestBalanceDocument>(db).bulkWrite(
       plan.credits.map((credit, i) => ({
         updateOne: {
           filter: {
@@ -287,8 +287,7 @@ async function deliverLegacyDepositInterest(
       { ordered: false }
     );
   }
-  const after = await db
-    .collection<InterestBalanceDocument>("characters")
+  const after = await charactersCollection<InterestBalanceDocument>(db)
     .find(
       { _id: { $in: plan.credits.map((credit) => credit.characterId) } },
       { projection: { [SETTLED_KEYS_FIELD]: 1 } }

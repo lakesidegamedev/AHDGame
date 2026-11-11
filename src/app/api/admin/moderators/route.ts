@@ -4,6 +4,7 @@ import { getDb } from "@/lib/mongodb";
 import { withAdminAuth } from "@/lib/api/withAdminAuth";
 import { parseBoundedIntParam } from "@/lib/api/validate";
 import type { User } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 // GET /api/admin/moderators — List users holding a grantable staff role.
 // Query: ?role=moderator|junior_dev (default moderator)
@@ -34,8 +35,7 @@ export const GET = withAdminAuth(async (_auth, request: Request) => {
       .map((m) => m.activeCharacterId!);
 
     const characters = characterIds.length
-      ? await db
-          .collection("characters")
+      ? await charactersCollection(db)
           .find({ _id: { $in: characterIds } })
           .toArray()
       : [];

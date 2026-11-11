@@ -16,6 +16,7 @@ import { getOfficeLabel } from "@/lib/utils/officeTitle";
 import { generatePoliticianFlavor } from "@/lib/wiki/politicianFlavor";
 import type { PoliticianOverride, PoliticianElectionEntry } from "@/lib/db/types";
 import { formatElectionTypeLabel, MULTI_SEAT_TYPES } from "@/lib/utils/electionLabels";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export async function POST() {
   try {
@@ -26,7 +27,7 @@ export async function POST() {
     const now = new Date();
 
     const [characters, states, parties] = await Promise.all([
-      db.collection<Character>("characters").find({}).toArray(),
+      charactersCollection(db).find({}).toArray(),
       db.collection<State>("states").find({}).toArray(),
       db.collection<PoliticalParty>("politicalParties").find({}).toArray(),
     ]);

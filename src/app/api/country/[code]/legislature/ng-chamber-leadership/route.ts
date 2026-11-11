@@ -48,6 +48,7 @@ import { getNgChamberComposition } from "@/lib/congress/ngChamberLeadership/comp
 import { resolveNgChamberLeadershipElection } from "@/lib/congress/ngChamberLeadership/resolveElection";
 import { handleNgChamberLeadershipAction } from "@/lib/congress/ngChamberLeadership/actions";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const actionSchema = z.object({
   role: z.enum(["speaker_ng_reps", "president_ng_senate"]),
@@ -75,8 +76,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     let myParty: string | null = null;
     let myCharObjId: ObjectId | null = null;
     if (authUser) {
-      const char = await db
-        .collection<Character>("characters")
+      const char = await charactersCollection(db)
         .findOne({ userId: new ObjectId(authUser.userId) });
       if (char) {
         myCharacterId = char._id.toString();

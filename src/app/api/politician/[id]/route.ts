@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
-import type { Character, NPP, State, PoliticalParty } from "@/lib/db/types";
+import type { NPP, State, PoliticalParty } from "@/lib/db/types";
 import { getOfficeLabel } from "@/lib/utils/officeTitle";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export type PoliticianType = "character" | "npp";
 
@@ -39,7 +40,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     const db = await getDb();
     const objectId = new ObjectId(id);
 
-    const character = await db.collection<Character>("characters").findOne({ _id: objectId });
+    const character = await charactersCollection(db).findOne({ _id: objectId });
     if (character) {
       const homeState = await db
         .collection<State>("states")

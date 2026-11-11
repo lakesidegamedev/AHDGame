@@ -23,6 +23,7 @@ import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
 import { campaignAnchorToLocal, getCampaignCurrency } from "@/lib/campaigns/campaignCurrency";
 import { isCampaignUpgradeGeneralPhase } from "@/lib/elections/phases";
 import { getGameTime } from "@/lib/time/gameTime";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -157,8 +158,7 @@ export async function GET(request: Request, { params }: RouteParams) {
         )
         .toArray(),
       characterIds.length > 0
-        ? db
-            .collection<Character>("characters")
+        ? charactersCollection(db)
             .find({ _id: { $in: characterIds } })
             .toArray()
         : Promise.resolve([]),
@@ -169,8 +169,7 @@ export async function GET(request: Request, { params }: RouteParams) {
             .toArray()
         : Promise.resolve([]),
       managerIds.length > 0
-        ? db
-            .collection<Character>("characters")
+        ? charactersCollection(db)
             .find({ _id: { $in: managerIds } })
             .toArray()
         : Promise.resolve([]),

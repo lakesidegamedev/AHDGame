@@ -14,7 +14,6 @@ import { resolveBillCardTally, scopeStateBillVotes } from "@/lib/legislature/sta
 import { snapshotWeightMap } from "@/lib/legislature/voteSnapshot";
 import type {
   AxisPositions,
-  Character,
   ElectedOfficial,
   LegislationType,
   NPP,
@@ -41,6 +40,7 @@ import {
   type ProvisionDisplay,
   type SnapshottedProvision,
 } from "@/lib/legislature/provisionEnrichment";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface StateLegislatureBillsPage {
   blockedProvisions: { legislationTypeId: string; policyOptionId: string }[];
@@ -130,9 +130,10 @@ export async function listStateLegislatureBills(
   let myCharacterId: string | null = null;
   let myPolicies: AxisPositions | undefined;
   if (authUser) {
-    const character = await db
-      .collection<Character>("characters")
-      .findOne({ userId: new ObjectId(authUser.userId) }, { projection: { _id: 1, policies: 1 } });
+    const character = await charactersCollection(db).findOne(
+      { userId: new ObjectId(authUser.userId) },
+      { projection: { _id: 1, policies: 1 } }
+    );
     myCharacterId = character?._id.toString() ?? null;
     myPolicies = character?.policies;
   }
@@ -163,8 +164,7 @@ export async function listStateLegislatureBills(
   ];
   const sponsorChars =
     sponsorObjectIds.length > 0
-      ? await db
-          .collection<Character>("characters")
+      ? await charactersCollection(db)
           .find({ _id: { $in: sponsorObjectIds } }, { projection: { _id: 1, sequentialId: 1 } })
           .toArray()
       : [];
@@ -367,9 +367,10 @@ export async function getStateLegislatureBillDetail(
   let myCharacterId: string | null = null;
   let myPolicies: AxisPositions | undefined;
   if (authUser) {
-    const character = await db
-      .collection<Character>("characters")
-      .findOne({ userId: new ObjectId(authUser.userId) }, { projection: { _id: 1, policies: 1 } });
+    const character = await charactersCollection(db).findOne(
+      { userId: new ObjectId(authUser.userId) },
+      { projection: { _id: 1, policies: 1 } }
+    );
     myCharacterId = character?._id.toString() ?? null;
     myPolicies = character?.policies;
   }
@@ -410,8 +411,7 @@ export async function getStateLegislatureBillDetail(
 
   const characters =
     characterIds.length > 0
-      ? await db
-          .collection<Character>("characters")
+      ? await charactersCollection(db)
           .find({ _id: { $in: characterIds.map((id) => new ObjectId(id)) } })
           .project({ _id: 1, party: 1 })
           .toArray()
@@ -466,8 +466,7 @@ export async function getStateLegislatureBillDetail(
     const overrideCharacterIds = overrideKeys.filter((key) => ObjectId.isValid(key));
     const overrideCharacters =
       overrideCharacterIds.length > 0
-        ? await db
-            .collection<Character>("characters")
+        ? await charactersCollection(db)
             .find({ _id: { $in: overrideCharacterIds.map((id) => new ObjectId(id)) } })
             .project({ _id: 1, party: 1 })
             .toArray()
@@ -603,9 +602,10 @@ export async function getStateLegislatureBillDetail(
 
   let sponsorSequentialId: number | undefined;
   if (bill.sponsorId) {
-    const sponsorChar = await db
-      .collection<Character>("characters")
-      .findOne({ _id: bill.sponsorId }, { projection: { sequentialId: 1 } });
+    const sponsorChar = await charactersCollection(db).findOne(
+      { _id: bill.sponsorId },
+      { projection: { sequentialId: 1 } }
+    );
     sponsorSequentialId = sponsorChar?.sequentialId;
   }
 

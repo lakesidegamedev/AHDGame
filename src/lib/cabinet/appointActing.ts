@@ -28,7 +28,8 @@ import {
   type ActingChargeKey,
 } from "@/lib/db/collections/actingAppointmentCharges";
 import { getCabinetMembersCollection } from "@/lib/db/collections/cabinetMembers";
-import type { CabinetNomination, ElectedOfficial, Character } from "@/lib/db/types";
+import type { CabinetNomination, ElectedOfficial } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const actingSchema = z.object({
   // Validated against the country's own roster below, not here: a bare id
@@ -97,7 +98,7 @@ export async function appointActingCabinetMember(
       return errorResponse(400, "No President in office");
     }
 
-    const myCharacter = await db.collection<Character>("characters").findOne({
+    const myCharacter = await charactersCollection(db).findOne({
       userId: new ObjectId(authUser.userId),
     });
     if (!myCharacter || !presidentOfficial.characterId.equals(myCharacter._id)) {
@@ -105,7 +106,7 @@ export async function appointActingCabinetMember(
     }
 
     const appointeeOid = new ObjectId(characterId);
-    const appointee = await db.collection<Character>("characters").findOne({ _id: appointeeOid });
+    const appointee = await charactersCollection(db).findOne({ _id: appointeeOid });
     if (!appointee) {
       return errorResponse(404, "Character not found");
     }

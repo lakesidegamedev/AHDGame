@@ -1,5 +1,5 @@
 import { ObjectId, type Db } from "mongodb";
-import type { Character, GameState } from "@/lib/db/types";
+import type { GameState } from "@/lib/db/types";
 import { SINGLEPLAYER_USER_ID } from "@/lib/singleplayer";
 import { loadOnboardingSignals } from "@/lib/onboarding/checklist";
 import {
@@ -7,6 +7,7 @@ import {
   type SingleplayerGuide,
   type SingleplayerGuideCharacter,
 } from "@/lib/singleplayerGuide";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * Load the first-game guide for the local world. Cheap for the common case: a
@@ -28,7 +29,7 @@ export async function loadSingleplayerGuide(db: Db): Promise<SingleplayerGuide> 
     });
   }
 
-  const character = await db.collection<Character>("characters").findOne(
+  const character = await charactersCollection(db).findOne(
     { userId: new ObjectId(SINGLEPLAYER_USER_ID), retiredAt: { $exists: false } },
     {
       projection: {

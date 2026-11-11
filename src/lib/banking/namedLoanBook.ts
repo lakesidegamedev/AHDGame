@@ -8,7 +8,7 @@
  * locks.
  */
 import type { Db, ObjectId } from "mongodb";
-import type { Character, Corporation } from "@/lib/db/types";
+import type { Corporation } from "@/lib/db/types";
 import type { BankLoan } from "@/lib/db/types/bank";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { MoneyTarget } from "@/lib/banking/moneyMove";
@@ -32,6 +32,7 @@ import {
   type LoanServiceBatchRow,
 } from "@/lib/banking/loanServiceBatch";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export type LoanServiceResult = {
   interestCollected: number;
@@ -219,12 +220,10 @@ async function readBorrowerAvailable(
 ): Promise<{ available: number; name: string }> {
   if (!loan.borrowerId) return { available: 0, name: "Borrower" };
   if (loan.borrowerType === "character") {
-    const ch = await db
-      .collection<Character>("characters")
-      .findOne(
-        { _id: loan.borrowerId },
-        { projection: { name: 1, [`currencyBalances.personal.${currency}`]: 1 } }
-      );
+    const ch = await charactersCollection(db).findOne(
+      { _id: loan.borrowerId },
+      { projection: { name: 1, [`currencyBalances.personal.${currency}`]: 1 } }
+    );
     return {
       available: Math.max(0, ch?.currencyBalances?.personal?.[currency] ?? 0),
       // The ledger leg needs the name; read it with the balance instead of
@@ -295,8 +294,7 @@ export async function serviceNamedLoanBook(
   }
   const [preloadChars, preloadCorps] = await Promise.all([
     characterIds.size
-      ? db
-          .collection<Character>("characters")
+      ? charactersCollection(db)
           .find(
             { _id: { $in: [...characterIds.values()] } },
             { projection: { name: 1, "currencyBalances.personal": 1 } }

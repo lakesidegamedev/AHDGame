@@ -53,6 +53,7 @@ import {
   japanShugiinDistrictPartyKey,
 } from "@/lib/countries/jp/elections/shugiinFilingIndexes";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const hu1991EntryBody = z
   .object({
@@ -268,8 +269,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     );
     const executiveTermSnapshot: Pick<Character, "careerHistory" | "executiveTermsServed"> | null =
       isNationwideExecutive
-        ? await db
-            .collection<Character>("characters")
+        ? await charactersCollection(db)
             .findOne(
               { _id: character._id },
               { projection: { careerHistory: 1, executiveTermsServed: 1 } }

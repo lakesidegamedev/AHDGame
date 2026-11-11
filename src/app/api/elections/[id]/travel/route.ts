@@ -19,8 +19,9 @@ import {
   type MoneyFlowLegOutcome,
   type MoneyFlowStepRef,
 } from "@/lib/db/nonAtomicMoneyFlow";
-import type { ElectionCandidate, Character, GameState } from "@/lib/db/types";
+import type { ElectionCandidate, GameState } from "@/lib/db/types";
 import { z } from "zod";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const schema = z.object({
   stateId: z.string().min(1),
@@ -111,7 +112,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
     const flowKey = headerKey ?? randomUUID();
     const fingerprint = `${character._id.toHexString()}:${candidate._id.toHexString()}:travel:${stateId}:${actionCost}`;
-    const characters = db.collection<Character>("characters");
+    const characters = charactersCollection(db);
     const candidates = db.collection<ElectionCandidate>("electionCandidates");
     const receipts = await getMoneyFlowReceiptsCollection(db);
     const previousReceipt = headerKey ? await receipts.findOne({ _id: flowKey }) : null;
@@ -132,9 +133,10 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(400, "You are already campaigning in this state");
     }
     if (!recovering) {
-      const freshChar = await db
-        .collection<Character>("characters")
-        .findOne({ _id: character._id }, { projection: { actions: 1 } });
+      const freshChar = await charactersCollection(db).findOne(
+        { _id: character._id },
+        { projection: { actions: 1 } }
+      );
       if (!freshChar || freshChar.actions < actionCost) {
         return errorResponse(
           400,

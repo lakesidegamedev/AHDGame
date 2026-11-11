@@ -7,6 +7,7 @@ import {
   hasScotusConfirmationEvent,
 } from "@/lib/scotus/careerEvents";
 import type { Character } from "@/lib/db/types/character";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * Adds the Supreme Court achievement definitions and backfills what past
@@ -36,8 +37,7 @@ export const migration: Migration = {
       )
       .toArray();
     const characters = confirmed.length
-      ? await db
-          .collection("characters")
+      ? await charactersCollection(db)
           .find(
             { _id: { $in: confirmed.map((n) => n.nomineeCharacterId as ObjectId) } },
             { projection: { userId: 1, careerHistory: 1 } }
@@ -87,8 +87,7 @@ export const migration: Migration = {
           },
         }))
       );
-      if (historyWrites.length)
-        await db.collection<Character>("characters").bulkWrite(historyWrites);
+      if (historyWrites.length) await charactersCollection(db).bulkWrite(historyWrites);
       const definition = await db
         .collection("achievements")
         .findOne({ slug: SCOTUS_CONFIRMED_SLUG }, { projection: { _id: 1 } });

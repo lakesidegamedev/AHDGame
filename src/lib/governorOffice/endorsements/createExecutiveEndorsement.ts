@@ -1,7 +1,6 @@
 import type { Db, ObjectId } from "mongodb";
 import { ObjectId as MongoObjectId } from "mongodb";
 import type {
-  Character,
   ExecutiveEndorsement,
   GovernorOfficeState,
   Election,
@@ -13,6 +12,7 @@ import { getNationalStateId } from "@/lib/policy/nationalStateId";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { applyEndorsementSupportBump } from "@/lib/elections/campaigns/supportEvents";
 import { partiesMatchInCountry } from "@/lib/parties/partyMatch";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface CreateExecutiveEndorsementInput {
   countryId: CountryId;
@@ -63,9 +63,10 @@ export async function createExecutiveEndorsement(
   }
   let candidateParty = candidate.party;
   if (!candidate.isNPP && candidate.characterId) {
-    const candChar = await db
-      .collection<Character>("characters")
-      .findOne({ _id: candidate.characterId }, { projection: { party: 1 } });
+    const candChar = await charactersCollection(db).findOne(
+      { _id: candidate.characterId },
+      { projection: { party: 1 } }
+    );
     if (candChar?.party) candidateParty = candChar.party;
   }
   const sameParty = await partiesMatchInCountry(db, countryId, character.party, candidateParty);

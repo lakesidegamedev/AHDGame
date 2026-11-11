@@ -1,6 +1,5 @@
 import { ObjectId, type ClientSession, type Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { Character } from "@/lib/db/types/character";
 import type { State } from "@/lib/db/types/state";
 import { getCountryAccessFromDb } from "@/lib/countryAccess";
 import {
@@ -15,6 +14,7 @@ import {
   FEDERATION_RELOCATIONS_COLLECTION,
   type FederationRelocationRecord,
 } from "./relocationLedger";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface FederationResidentDestination {
   countryId: CountryId;
@@ -48,7 +48,7 @@ export async function chooseFederationResidentHome(input: {
   const holds = db.collection<FederationResidentHold>(FEDERATION_RESIDENT_HOLDS_COLLECTION);
   const holdId = `${applicationId}:${characterId}`;
   const hold = await holds.findOne({ _id: holdId }, { session });
-  const characters = db.collection<Character>("characters");
+  const characters = charactersCollection(db);
   const character = await characters.findOne({ _id: new ObjectId(characterId) }, { session });
   if (!hold || !character || character.userId.toString() !== ownerUserId)
     throw new Error("Federation residence choice is not owned or pending");

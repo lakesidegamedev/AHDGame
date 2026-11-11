@@ -9,11 +9,12 @@ import { getDb } from "@/lib/mongodb";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { COUNTRY_CONFIGS, isParliamentarySystem, type CountryId } from "@/lib/constants/countries";
 import { getGovernmentFormationsCollection } from "@/lib/db/collections/governmentFormation";
-import type { Character, ParliamentaryGovernment, PoliticalParty } from "@/lib/db/types";
+import type { ParliamentaryGovernment, PoliticalParty } from "@/lib/db/types";
 import {
   resolveGoverningPartyIdsFromDocuments,
   resolveOppositionLeader,
 } from "@/lib/turn/parliamentaryGovernment";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ code: string }> }) {
   try {
@@ -51,7 +52,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
       ? (govFormation?.pmCharacterId ?? null)
       : (govDoc?.pmCharacterId ?? null);
     let hogChar = pmCharacterId
-      ? await db.collection<Character>("characters").findOne({ _id: pmCharacterId })
+      ? await charactersCollection(db).findOne({ _id: pmCharacterId })
       : null;
 
     // Keep legacy and presidential callers working when there is no canonical
@@ -61,7 +62,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
       !formationHasPmField &&
       (govDoc === null || !Object.prototype.hasOwnProperty.call(govDoc, "pmCharacterId"));
     if (!hogChar && (!isParliamentarySystem(config) || noCanonicalPmField)) {
-      hogChar = await db.collection<Character>("characters").findOne({
+      hogChar = await charactersCollection(db).findOne({
         countryId,
         "currentOffice.type": executiveKey,
       });
@@ -123,9 +124,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
       );
 
       if (result) {
-        const oppositionChar = await db
-          .collection<Character>("characters")
-          .findOne({ _id: result.chairId });
+        const oppositionChar = await charactersCollection(db).findOne({ _id: result.chairId });
 
         if (oppositionChar) {
           oppositionLeader = {

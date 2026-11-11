@@ -8,8 +8,8 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { rateLimitResponse } from "@/lib/api/rateLimit";
 import { resolveCorporation } from "@/lib/api/corporations/resolveQuery";
 import { createNotification } from "@/lib/notifications";
-import type { Character } from "@/lib/db/types";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const schema = z.object({
   body: z.string().min(1).max(1000),
@@ -68,8 +68,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       return NextResponse.json({ success: true, notified: 0 });
     }
 
-    const shareholderCharacters = await db
-      .collection<Character>("characters")
+    const shareholderCharacters = await charactersCollection(db)
       .find({ _id: { $in: shareholderCharIds } }, { projection: { _id: 1, userId: 1 } })
       .toArray();
 

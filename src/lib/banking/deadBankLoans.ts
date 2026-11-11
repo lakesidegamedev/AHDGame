@@ -18,7 +18,7 @@
 
 import type { Db, ObjectId } from "mongodb";
 import { lifecycleStage, stageAllows } from "@/lib/banking/rules/lifecycle";
-import type { Character, Corporation } from "@/lib/db/types";
+import type { Corporation } from "@/lib/db/types";
 import type { BankCharterHistoryEntry, BankLoan } from "@/lib/db/types/bank";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { getCountryIdForCurrency } from "@/lib/constants/currencies";
@@ -45,6 +45,7 @@ import type { TransitionLeg, TransitionProjection } from "@/lib/banking/rules/bo
 import { emitTxBulk, loadTxThresholds, type TxInput } from "@/lib/financialTxLog/emit";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export type DeadBankLoanSummary = {
   /** Loans belonging to a wound-up bank that were serviced this turn. */
@@ -306,8 +307,7 @@ async function loadDeadBankLoanPrefetch(
 
   const [characters, corporations, centralBanks] = await Promise.all([
     characterIds.size > 0
-      ? db
-          .collection<Character>("characters")
+      ? charactersCollection(db)
           .find(
             { _id: { $in: [...characterIds.values()] } },
             { projection: { name: 1, "currencyBalances.personal": 1 } }

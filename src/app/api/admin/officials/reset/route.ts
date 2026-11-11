@@ -8,6 +8,7 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError } from "@/lib/api/errors";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 // POST /api/admin/officials/reset — Deletes all elected officials and clears currentOffice on all characters and NPPs.
 // Auth: requireAdmin
@@ -22,12 +23,10 @@ export async function POST() {
 
     const officialsResult = await db.collection("electedOfficials").deleteMany({});
 
-    const charsResult = await db
-      .collection("characters")
-      .updateMany(
-        { currentOffice: { $ne: null } },
-        { $set: { currentOffice: null, updatedAt: now } }
-      );
+    const charsResult = await charactersCollection(db).updateMany(
+      { currentOffice: { $ne: null } },
+      { $set: { currentOffice: null, updatedAt: now } }
+    );
 
     const nppsResult = await db
       .collection("npps")

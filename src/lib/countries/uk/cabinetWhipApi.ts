@@ -18,6 +18,7 @@ import {
   requireCurrentPrimeMinister,
 } from "@/lib/countries/uk/cabinetEligibility";
 import { getGovernmentFormationsCollection } from "@/lib/db/collections/governmentFormation";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const whipTargetSchema = z.object({
   characterId: z.string().regex(/^[a-f0-9]{24}$/, "Invalid character ID"),
@@ -48,9 +49,7 @@ async function resolveWhipTarget(
   countryId: CountryId,
   characterIdStr: string
 ): Promise<WhipTarget> {
-  const targetChar = await db
-    .collection<Character>("characters")
-    .findOne({ _id: new ObjectId(characterIdStr) });
+  const targetChar = await charactersCollection(db).findOne({ _id: new ObjectId(characterIdStr) });
   if (!targetChar) {
     throw notFound("Character");
   }
@@ -86,7 +85,7 @@ async function resolveWhipTarget(
   }
   // The PM suspends rebels from their own parliamentary party, not the opposition.
   const pmChar = govFormation.pmCharacterId
-    ? await db.collection<Character>("characters").findOne({ _id: govFormation.pmCharacterId })
+    ? await charactersCollection(db).findOne({ _id: govFormation.pmCharacterId })
     : null;
   const governingParty = govFormation.governingPartyId ?? pmChar?.party ?? null;
   const targetParty = official.party ?? targetChar.party ?? null;

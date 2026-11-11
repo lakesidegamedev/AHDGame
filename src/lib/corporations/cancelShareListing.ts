@@ -18,6 +18,7 @@ import {
 import { emitTx } from "@/lib/financialTxLog/emit";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface CancelListingResult {
   ok: true;
@@ -124,8 +125,7 @@ export async function cancelShareListingAndRefund(
           .toArray()
       : Promise.resolve([] as Corporation[]),
     buyerCharIds.length > 0
-      ? db
-          .collection<Character>("characters")
+      ? charactersCollection(db)
           .find(
             { _id: { $in: buyerCharIds.map((id) => new ObjectId(id)) } },
             { projection: { _id: 1, countryId: 1, name: 1 } }
@@ -217,7 +217,7 @@ export async function cancelShareListingAndRefund(
           throw new Error("Buyer corporation not found");
         }
       } else {
-        const refundResult = await db.collection<Character>("characters").updateOne(
+        const refundResult = await charactersCollection(db).updateOne(
           { _id: refund.subjectId },
           {
             $inc: buildPersonalBalanceInc(refund.refundAmount, refund.currencyCode, forexEnabled),
@@ -240,7 +240,7 @@ export async function cancelShareListingAndRefund(
             }
           );
         } else {
-          await db.collection<Character>("characters").updateOne(
+          await charactersCollection(db).updateOne(
             { _id: refund.subjectId },
             {
               $inc: buildPersonalBalanceInc(

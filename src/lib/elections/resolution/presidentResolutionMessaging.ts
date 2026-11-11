@@ -3,7 +3,6 @@ import type { Db } from "@/lib/mongodb";
 import type {
   Election,
   ElectionCandidate,
-  Character,
   NPP,
   PoliticalParty,
   CareerEvent,
@@ -17,6 +16,7 @@ import { getGameStateCollection } from "@/lib/db/collections";
 import { isNppContingentId } from "@/lib/elections/resolution/contingentPersonIds";
 import type { ContingentElectionResult } from "@/lib/elections/resolution/contingentElection";
 import { logger } from "@/lib/observability/logger";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export type PresidentialResolutionMode = "majority" | "contingent" | "contingent_deadlock";
 
@@ -60,9 +60,10 @@ export async function sendPresidentResolutionMessaging(
   );
 
   if (!winnerCandidate.isNPP && winnerCandidate.characterId) {
-    const char = await db
-      .collection<Character>("characters")
-      .findOne({ _id: winnerCandidate.characterId }, { projection: { userId: 1 } });
+    const char = await charactersCollection(db).findOne(
+      { _id: winnerCandidate.characterId },
+      { projection: { userId: 1 } }
+    );
     if (char) {
       const houseDelegationVotes = contingentResult?.houseVoteTotals[winnerId] ?? 0;
       const isContingent =
@@ -109,9 +110,10 @@ export async function sendPresidentResolutionMessaging(
   }
 
   if (vpCharId) {
-    const vpCharForNotify = await db
-      .collection<Character>("characters")
-      .findOne({ _id: vpCharId }, { projection: { userId: 1 } });
+    const vpCharForNotify = await charactersCollection(db).findOne(
+      { _id: vpCharId },
+      { projection: { userId: 1 } }
+    );
     if (vpCharForNotify?.userId) {
       const isContingentVp =
         resolutionMode === "contingent" || resolutionMode === "contingent_deadlock";
@@ -151,7 +153,7 @@ export async function sendPresidentResolutionMessaging(
   for (const [candidateId, candidateEv] of ranked.filter(([id]) => id !== winnerId)) {
     const candidate = candidateMap.get(candidateId);
     if (candidate && !candidate.isNPP && candidate.characterId) {
-      await db.collection<Character>("characters").updateOne(
+      await charactersCollection(db).updateOne(
         { _id: candidate.characterId },
         {
           $push: {
@@ -167,9 +169,10 @@ export async function sendPresidentResolutionMessaging(
           },
         }
       );
-      const char = await db
-        .collection<Character>("characters")
-        .findOne({ _id: candidate.characterId }, { projection: { userId: 1 } });
+      const char = await charactersCollection(db).findOne(
+        { _id: candidate.characterId },
+        { projection: { userId: 1 } }
+      );
       if (char) {
         const isContingentRace =
           resolutionMode === "contingent" || resolutionMode === "contingent_deadlock";
@@ -298,9 +301,10 @@ async function sendPresidentialElectionWebhook(
           .collection<NPP>("npps")
           .findOne({ _id: winnerCandidate.nppId }, { projection: { avatarUrl: 1 } })
       : null
-    : await db
-        .collection<Character>("characters")
-        .findOne({ _id: winnerCandidate.characterId }, { projection: { avatarUrl: 1 } });
+    : await charactersCollection(db).findOne(
+        { _id: winnerCandidate.characterId },
+        { projection: { avatarUrl: 1 } }
+      );
 
   const resultsLines: string[] = [];
   for (const [candidateId, evCount] of ranked) {
@@ -335,9 +339,10 @@ async function sendPresidentialElectionWebhook(
   const vpNameById = new Map<string, string>();
   for (const candidate of candidateMap.values()) {
     if (candidate.runningMateId) {
-      const rmChar = await db
-        .collection<Character>("characters")
-        .findOne({ _id: candidate.runningMateId }, { projection: { name: 1 } });
+      const rmChar = await charactersCollection(db).findOne(
+        { _id: candidate.runningMateId },
+        { projection: { name: 1 } }
+      );
       if (rmChar) vpNameById.set(candidate.runningMateId.toString(), rmChar.name);
     }
   }
@@ -349,8 +354,7 @@ async function sendPresidentialElectionWebhook(
     const nppVpIds = contingentVpIds.filter(isNppContingentId).map((id) => id.slice(4));
     const [vpChars, vpNpps] = await Promise.all([
       charVpIds.length > 0
-        ? db
-            .collection<Character>("characters")
+        ? charactersCollection(db)
             .find({ _id: { $in: charVpIds.map((id) => new ObjectId(id)) } })
             .project({ _id: 1, name: 1 })
             .toArray()

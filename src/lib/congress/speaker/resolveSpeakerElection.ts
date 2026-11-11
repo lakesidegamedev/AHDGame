@@ -10,12 +10,12 @@ import { leadershipRoleLabel } from "@/lib/congress/leadership/electionRoleMap";
 import { computeCongressLeadershipTally } from "@/lib/congress/governmentVoteBreakdown";
 import { claimStatusTransition } from "@/lib/turn/atomicClaim";
 import type {
-  Character,
   CongressLeader,
   SpeakerElection,
   SpeakerNomination,
   PoliticalParty,
 } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export async function resolveSpeakerElection(
   db: Db,
@@ -101,9 +101,10 @@ export async function resolveSpeakerElection(
   if (claimed) {
     const roleLabel = leadershipRoleLabel("speaker_of_the_house");
     const nomineeAvatarUrl = (
-      await db
-        .collection<Character>("characters")
-        .findOne({ _id: winner.nomineeId }, { projection: { avatarUrl: 1 } })
+      await charactersCollection(db).findOne(
+        { _id: winner.nomineeId },
+        { projection: { avatarUrl: 1 } }
+      )
     )?.avatarUrl;
     sendCountryGameEvent("US", {
       title: `Leadership Election Result — ${roleLabel}`,

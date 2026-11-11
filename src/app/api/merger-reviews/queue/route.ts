@@ -4,7 +4,6 @@ import { withNoStore } from "@/lib/api/withNoStore";
 import { getDb } from "@/lib/mongodb";
 import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { handleRouteError } from "@/lib/api/errors";
-import type { Character } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import type { MergerReview } from "@/lib/db/types/mergerReview";
 import { MERGER_REVIEWS } from "@/lib/corporations/mergerReview/gate";
@@ -22,6 +21,7 @@ import {
   thresholdForLevel,
 } from "@/lib/corporations/mergerReview/constants";
 import type { MergerReviewSummary } from "../route";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * National referral queue for the officeholder's seat, plus referrals that
@@ -43,9 +43,7 @@ async function handleGET() {
     const userId = new ObjectId(auth.user.userId);
 
     const [character, gameState] = await Promise.all([
-      db
-        .collection<Character>("characters")
-        .findOne({ userId }, { projection: { _id: 1, countryId: 1 } }),
+      charactersCollection(db).findOne({ userId }, { projection: { _id: 1, countryId: 1 } }),
       getGameState(db),
     ]);
     if (!character?.countryId) return NextResponse.json({ applies: false });

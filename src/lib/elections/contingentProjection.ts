@@ -22,7 +22,6 @@
  */
 import { ObjectId, type Db } from "mongodb";
 import type {
-  Character,
   Election,
   ElectionCandidate,
   ElectionVoteTally,
@@ -55,6 +54,7 @@ import {
   type ContingentChamberOfficials,
 } from "@/lib/elections/resolution/loadContingentElectionData";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const CHAMBER_TYPES = ["house", "senate"] as const;
 
@@ -103,8 +103,7 @@ async function projectChamberRace(
           .toArray()
       : Promise.resolve([]),
     charIds.length > 0
-      ? db
-          .collection<Character>("characters")
+      ? charactersCollection(db)
           .find({ _id: { $in: charIds } }, { projection: { _id: 1, currentOffice: 1 } })
           .toArray()
       : Promise.resolve([]),
@@ -319,9 +318,10 @@ async function personName(db: Db, personId: string | null): Promise<string | nul
     return npp?.name ?? null;
   }
   if (!ObjectId.isValid(personId)) return null;
-  const char = await db
-    .collection<Character>("characters")
-    .findOne({ _id: new ObjectId(personId) }, { projection: { name: 1 } });
+  const char = await charactersCollection(db).findOne(
+    { _id: new ObjectId(personId) },
+    { projection: { name: 1 } }
+  );
   return char?.name ?? null;
 }
 

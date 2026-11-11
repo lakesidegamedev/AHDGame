@@ -1,9 +1,9 @@
 import { ObjectId, type Db } from "mongodb";
 import type { BankCharter } from "@/lib/db/types/bank";
-import type { Character } from "@/lib/db/types";
 import { getAllFundDefinitions } from "@/lib/indexFunds/fundDefinitions";
 import { isPrivateBankingEnabled } from "@/lib/banking/featureFlag";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export type BankBlacklist = NonNullable<BankCharter["blacklist"]>;
 
@@ -96,9 +96,7 @@ export async function setBlacklist(
 
   if (characterIds.length > 0) {
     const objectIds = characterIds.map((id) => new ObjectId(id));
-    const count = await db
-      .collection<Character>("characters")
-      .countDocuments({ _id: { $in: objectIds } });
+    const count = await charactersCollection(db).countDocuments({ _id: { $in: objectIds } });
     if (count !== characterIds.length) {
       return { ok: false, error: "One or more character ids do not exist" };
     }

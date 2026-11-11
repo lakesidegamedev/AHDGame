@@ -20,6 +20,7 @@ import {
 import { isExecutiveOffice } from "@/lib/elections/executiveOffice";
 import { isPresidentialElectionType } from "@/lib/elections/nationwideExecutive";
 import { applyConversionVotePenalty } from "./conversionTerms";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /** Loads the candidates, drops the ineligible ones and adjusts the vote totals to match. */
 export async function loadGeneralElectionCandidates({
@@ -135,8 +136,7 @@ export async function loadGeneralElectionCandidates({
       .map((c) => c.nppId);
     const [holderChars, holderMpps] = await Promise.all([
       holderCharIds.length > 0
-        ? db
-            .collection<Character>("characters")
+        ? charactersCollection(db)
             .find({ _id: { $in: holderCharIds } }, { projection: { currentOffice: 1 } })
             .toArray()
         : Promise.resolve([]),
@@ -249,8 +249,7 @@ export async function loadGeneralElectionCandidates({
     .map((c) => c.characterId);
   const deletedCandidateIds = new Set<string>();
   if (candidateCharIds.length > 0) {
-    const existingChars = await db
-      .collection<Character>("characters")
+    const existingChars = await charactersCollection(db)
       .find(
         {
           _id: { $in: candidateCharIds },

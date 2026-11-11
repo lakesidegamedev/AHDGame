@@ -44,6 +44,7 @@ import { loadCentralBankPricingAdjustment } from "@/lib/monetaryPolicy/centralBa
 import type { ObjectId } from "mongodb";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 // GET /api/banking/hub - World banking hub payload (CBs, private banks, savings, loans).
 // Auth: requireAuth
@@ -287,8 +288,7 @@ async function handleGET() {
         .map((corp) => corp.ceoId);
       const [characterCeoDocs, nppCeoDocs, imperialCeoDocs] = await Promise.all([
         characterCeoIds.length
-          ? db
-              .collection<Character>("characters")
+          ? charactersCollection(db)
               .find({ _id: { $in: characterCeoIds } })
               .project({ _id: 1, name: 1, avatarUrl: 1 })
               .toArray()

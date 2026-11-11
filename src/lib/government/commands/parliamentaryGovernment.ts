@@ -23,6 +23,7 @@ import { getCountryState } from "@/lib/countryState";
 import { ObjectId, type Db } from "mongodb";
 import type { Character, ElectedOfficial, PoliticalParty } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export async function proposePmAppointment(
   db: Db,
@@ -109,9 +110,12 @@ export async function proposePmAppointment(
     }
 
     const nomineeId = new ObjectId(nomineeCharacterId);
-    const nomineeChar = await db
-      .collection<{ _id: ObjectId; name: string; party?: string; userId?: ObjectId }>("characters")
-      .findOne({ _id: nomineeId, userId: { $exists: true } });
+    const nomineeChar = await charactersCollection<{
+      _id: ObjectId;
+      name: string;
+      party?: string;
+      userId?: ObjectId;
+    }>(db).findOne({ _id: nomineeId, userId: { $exists: true } });
     if (!nomineeChar) {
       throw notFound("Nominee not found or is not a player character");
     }
@@ -262,9 +266,12 @@ export async function proposeHosAppointment(
     nomineePartyStr = nomineeOfficial.party ?? nomineeNpp.party ?? "";
   } else {
     nomineeId = new ObjectId(nomineeCharacterId);
-    const nomineeChar = await db
-      .collection<{ _id: ObjectId; name: string; party?: string; userId?: ObjectId }>("characters")
-      .findOne({ _id: nomineeId, userId: { $exists: true } });
+    const nomineeChar = await charactersCollection<{
+      _id: ObjectId;
+      name: string;
+      party?: string;
+      userId?: ObjectId;
+    }>(db).findOne({ _id: nomineeId, userId: { $exists: true } });
     if (!nomineeChar) {
       throw notFound("Nominee not found or is not a player character");
     }
@@ -466,9 +473,9 @@ export async function proposeNoConfidence(
 
   let targetPmName = govFormation.pmName ?? "Unknown";
   if (!govFormation.pmName) {
-    const pmChar = await db
-      .collection<{ _id: ObjectId; name: string }>("characters")
-      .findOne({ _id: govFormation.pmCharacterId });
+    const pmChar = await charactersCollection<{ _id: ObjectId; name: string }>(db).findOne({
+      _id: govFormation.pmCharacterId,
+    });
     targetPmName = pmChar?.name ?? "Unknown";
   }
 
@@ -636,7 +643,7 @@ async function notifyNoConfidenceParticipants(
   executiveTitle: string
 ): Promise<void> {
   const [pmChar, allLowerMps] = await Promise.all([
-    db.collection<Character>("characters").findOne({ _id: pmCharacterId }),
+    charactersCollection(db).findOne({ _id: pmCharacterId }),
     db
       .collection<ElectedOfficial>("electedOfficials")
       .find({ officeType: lowerChamberKey, countryId, isNPP: { $ne: true } })
@@ -665,8 +672,7 @@ async function notifyNoConfidenceParticipants(
     return;
   }
 
-  const mpCharacters = await db
-    .collection<Character>("characters")
+  const mpCharacters = await charactersCollection(db)
     .find({ _id: { $in: mpCharacterIds } })
     .toArray();
   const notifications = mpCharacters

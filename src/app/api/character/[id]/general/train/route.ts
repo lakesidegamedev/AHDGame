@@ -16,7 +16,7 @@ import {
 import { trainNode } from "@/lib/military/generalsTree";
 import { resolveGeneralEra } from "@/lib/military/currentGeneralEra";
 import { parseCharacterId } from "@/lib/utils/profileUrls";
-import type { Character } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const bodySchema = z.object({ nodeId: z.string().min(1) });
 
@@ -37,13 +37,11 @@ export async function POST(request: Request, { params }: RouteParams) {
     if (!body.success) return errorResponse(body.status, body.error);
 
     const db = await getDb();
-    const character = await db
-      .collection<Character>("characters")
-      .findOne(
-        parsed.type === "sequential"
-          ? { sequentialId: parsed.value }
-          : { _id: new ObjectId(parsed.value) }
-      );
+    const character = await charactersCollection(db).findOne(
+      parsed.type === "sequential"
+        ? { sequentialId: parsed.value }
+        : { _id: new ObjectId(parsed.value) }
+    );
     if (!character) return errorResponse(404, "Character not found");
 
     const charId = character._id.toString();

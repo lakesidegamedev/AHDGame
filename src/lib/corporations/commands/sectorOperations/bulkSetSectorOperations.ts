@@ -14,7 +14,7 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { bulkSectorOperationsSchema } from "@/lib/api/schemas/corporations";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQuery";
-import type { Character, Corporation, CorporateSector } from "@/lib/db/types";
+import type { Corporation, CorporateSector } from "@/lib/db/types";
 import {
   OPERATING_SECTOR_TYPE_LABELS,
   type OperatingSectorType,
@@ -30,6 +30,7 @@ import { NEUTRAL_STAT } from "@/lib/stats/statsConstants";
 import { logEconomicAction } from "@/lib/corporations/economicActionLog";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { ownerRestartFields } from "@/lib/corporations/commands/sectorOperations/ownerRestart";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -149,9 +150,10 @@ export async function bulkSetSectorOperations(request: Request, { params }: Rout
       // CEO Business Acumen lowers growth cost — read once so persisted/projected
       // costs match what the turn engine charges.
       const ceoChar = corporation.ceoId
-        ? await db
-            .collection<Character>("characters")
-            .findOne({ _id: corporation.ceoId }, { projection: { "stats.businessAcumen": 1 } })
+        ? await charactersCollection(db).findOne(
+            { _id: corporation.ceoId },
+            { projection: { "stats.businessAcumen": 1 } }
+          )
         : null;
       const ceoAcumen = ceoChar?.stats?.businessAcumen ?? NEUTRAL_STAT;
       // Sector tech-tree growth-cost discount, scoped per sector type.

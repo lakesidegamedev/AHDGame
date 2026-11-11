@@ -38,6 +38,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import { captureOfficeTransition } from "@/lib/analytics/officeTransitionAnalytics";
 import { cabinetOfficeTypeForCountry } from "@/lib/actions/officeActionBonus";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * NPP vote based on party lines: same party as nominee -> for; opposite -> against.
@@ -215,8 +216,7 @@ async function seatConfirmedVicePresident(
     .collection<ElectedOfficial>("electedOfficials")
     .findOne(getExecutiveOfficialFilter(countryId, "vicePresident"));
   if (existingVp?.characterId) {
-    await db
-      .collection<Character>("characters")
+    await charactersCollection(db)
       .updateOne(
         { _id: existingVp.characterId },
         { $set: { currentOffice: null, updatedAt: now } }
@@ -250,7 +250,7 @@ async function seatConfirmedVicePresident(
     partyCountryId: countryId,
     date: now,
   };
-  await db.collection<Character>("characters").updateOne(
+  await charactersCollection(db).updateOne(
     { _id: nom.nomineeCharacterId },
     {
       $set: { currentOffice: vpOffice, updatedAt: now },
@@ -459,11 +459,10 @@ export async function processCabinetNominationLifecycle(
     // Both branches notify the same two people, so read each once per
     // nomination and share the call site: a duplicated read here counts as a
     // new per-row Mongo operation in the turn-code architecture review.
-    const presidentChar = await db
-      .collection<Character>("characters")
+    const presidentChar = await charactersCollection(db)
       .findOne({ _id: nom.proposedByPresidentId });
     const nomineeChar = nom.nomineeCharacterId
-      ? await db.collection<Character>("characters").findOne({ _id: nom.nomineeCharacterId })
+      ? await charactersCollection(db).findOne({ _id: nom.nomineeCharacterId })
       : null;
     const posName = isVpNomination
       ? "Vice President"
@@ -597,8 +596,7 @@ export async function processCabinetNominationLifecycle(
             partyCountryId: nom.countryId,
             date: now,
           };
-          await db
-            .collection<Character>("characters")
+          await charactersCollection(db)
             .updateOne({ _id: nom.nomineeCharacterId }, { $push: { careerHistory: careerEvent } });
         }
         const outgoing = new Map(

@@ -8,6 +8,7 @@ import { getCountryConfig, type CountryId } from "@/lib/constants/countries";
 import type { ElectedOfficial } from "@/lib/db/types/officials";
 import type { ParliamentaryGovernment } from "@/lib/db/types/parliamentaryGovernment";
 import { CAPITAL_SUBREGION, type SecedingCountryId } from "./subRegions";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface CarryOverOfficialsResult {
   msps: number;
@@ -28,8 +29,7 @@ export async function carryOverOfficials(
     officeType: "governor",
     state: regionId,
   });
-  const residents = await db
-    .collection("characters")
+  const residents = await charactersCollection(db)
     .find({ countryId: toCountryId }, { projection: { _id: 1 } })
     .toArray();
   const npps = await db
@@ -55,12 +55,10 @@ export async function carryOverOfficials(
   await officials.deleteMany({ countryId: fromCountryId, $or: [{ state: regionId }, ...holders] });
   await db.collection("cabinetMembers").deleteMany({ countryId: fromCountryId, $or: holders });
   await db.collection("seats").deleteMany({ countryId: fromCountryId, state: regionId });
-  await db
-    .collection("characters")
-    .updateMany(
-      { _id: { $in: characterIds } },
-      { $set: { currentOffice: null, updatedAt: now }, $unset: { cabinetPosition: "" } }
-    );
+  await charactersCollection(db).updateMany(
+    { _id: { $in: characterIds } },
+    { $set: { currentOffice: null, updatedAt: now }, $unset: { cabinetPosition: "" } }
+  );
   await db
     .collection("npps")
     .updateMany({ _id: { $in: nppIds } }, { $set: { currentOffice: null, updatedAt: now } });

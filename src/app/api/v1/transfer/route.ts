@@ -19,7 +19,7 @@ import {
   getNewCharacterTransferBarrier,
   NEW_CHARACTER_TRANSFER_BARRIER_TURNS,
 } from "@/lib/character/newCharacterTransferBarrier";
-import type { Character } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const apiTransferSchema = z.object({
   targetCharacterId: schemas.objectId,
@@ -76,7 +76,7 @@ export async function POST(request: Request) {
     const characterQuery = userDoc.activeCharacterId
       ? { _id: userDoc.activeCharacterId, userId: new ObjectId(apiAuth.ownerUserId) }
       : { userId: new ObjectId(apiAuth.ownerUserId) };
-    const sender = await db.collection<Character>("characters").findOne(characterQuery);
+    const sender = await charactersCollection(db).findOne(characterQuery);
     if (!sender) {
       return errorResponse(400, "You need a character to transfer funds");
     }
@@ -97,7 +97,7 @@ export async function POST(request: Request) {
       return errorResponse(400, "You cannot transfer funds to yourself");
     }
 
-    const target = await db.collection<Character>("characters").findOne({ _id: targetObjectId });
+    const target = await charactersCollection(db).findOne({ _id: targetObjectId });
     if (!target) {
       return errorResponse(404, "Target character not found");
     }
@@ -135,7 +135,7 @@ export async function POST(request: Request) {
       idempotencyKey: parsed.data.idempotencyKey,
     });
     if (transferDuplicate) {
-      const freshSender = await db.collection<Character>("characters").findOne({ _id: sender._id });
+      const freshSender = await charactersCollection(db).findOne({ _id: sender._id });
       if (freshSender) {
         Object.assign(sender, freshSender);
       }

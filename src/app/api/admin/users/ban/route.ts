@@ -14,6 +14,7 @@ import { loadUserCharacterAndCeoCorpIds } from "@/lib/account/loadUserCharacterA
 import { syncSuspiciousFlagsForBanState } from "@/lib/account/syncSuspiciousFlagsForBanState";
 import type { BannedDeviceKind } from "@/lib/db/types";
 import { invalidateCachedUser } from "@/lib/auth/userDocCache";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 // POST /api/admin/users/ban — Ban or unban a user by userId.
 // Auth: requireAdmin
@@ -51,7 +52,7 @@ export async function POST(request: Request) {
     }
 
     // Get character name for logging
-    const character = await db.collection("characters").findOne({ userId: objectId });
+    const character = await charactersCollection(db).findOne({ userId: objectId });
 
     // Update the ban status
     if (ban) {

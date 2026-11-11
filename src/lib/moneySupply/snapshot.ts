@@ -27,6 +27,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export { PERSONS_PER_HOUSEHOLD, HOUSEHOLD_LIQUID_RATIO, HOUSEHOLD_SAVINGS_RATIO };
 
@@ -82,8 +83,7 @@ export async function snapshotMoneySupply(db: Db, turn: number): Promise<number>
     equityPools,
     producerAccounts,
   ] = await Promise.all([
-    db
-      .collection("characters")
+    charactersCollection(db)
       .find(
         {},
         {

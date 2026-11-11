@@ -6,7 +6,7 @@ import { requireAuth } from "@/lib/api/requireAuth";
 import { parseJsonBody } from "@/lib/api/validate";
 import { foundCorporationSchema } from "@/lib/api/schemas/corporations";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
-import type { Character, CorporateSector, State, User } from "@/lib/db/types";
+import type { CorporateSector, State, User } from "@/lib/db/types";
 import {
   INACTIVE_CEO_TURN_THRESHOLD,
   isInactiveCeoPenaltyCandidate,
@@ -23,6 +23,7 @@ import { getAuthUser } from "@/lib/auth";
 import { getEnabledCountryIds } from "@/lib/countryAccess";
 import { foundCorporation } from "@/lib/corporations/commands/founding/foundCorporation";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const INACTIVE_CEO_THRESHOLD_MS = INACTIVE_CEO_TURN_THRESHOLD * 60 * 60 * 1000;
 
@@ -77,8 +78,7 @@ export async function GET(request: Request) {
 
     // Fetch CEO characters for display
     const ceoIds = corporations.map((c) => c.ceoId).filter((id): id is ObjectId => id != null);
-    const characters = await db
-      .collection<Character>("characters")
+    const characters = await charactersCollection(db)
       .find({ _id: { $in: ceoIds } })
       .project<{ _id: ObjectId; name: string; avatarUrl?: string; sequentialId?: number }>({
         _id: 1,

@@ -19,6 +19,7 @@ import { CONTINGENT_EXCLUDED_HOUSE_STATE } from "@/lib/elections/contingentConst
 import { createNotifications, type NotificationInput } from "@/lib/notifications";
 import { createSystemNewsPost } from "@/lib/news";
 import { logger } from "@/lib/observability/logger";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 type HouseVote = NonNullable<ElectionVoteTally["contingentHouseVote"]>;
 type Role = "member" | "candidate" | "whip";
@@ -30,8 +31,7 @@ interface Audience {
 
 async function userIdsFor(db: Db, characterIds: ObjectId[]): Promise<Map<string, ObjectId>> {
   if (characterIds.length === 0) return new Map();
-  const chars = await db
-    .collection<Character>("characters")
+  const chars = await charactersCollection(db)
     .find({ _id: { $in: characterIds } })
     .project<Pick<Character, "_id" | "userId">>({ _id: 1, userId: 1 })
     .toArray();

@@ -20,7 +20,6 @@ import type {
   StatePartyVote,
   StatePartyOrg,
   State,
-  Character,
 } from "@/lib/db/types";
 import {
   findPartyBySequentialId,
@@ -29,6 +28,7 @@ import {
 } from "@/lib/db/partyLookup";
 import { COUNTRY_CONFIGS, getCountryConfig, type CountryId } from "@/lib/constants/countries";
 import { pickCanonicalVotingElectionPerKey } from "@/lib/elections/canonicalVotingElection";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /** Get position labels appropriate for the country (UK uses "Regional Chair") */
 function getPositionLabels(countryId: CountryId): Record<StatePartyElectionPosition, string> {
@@ -312,8 +312,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const candidateCharacterIds = allCandidates.map((c) => c.characterId);
     const candidateCharacters =
       candidateCharacterIds.length > 0
-        ? await db
-            .collection<Character>("characters")
+        ? await charactersCollection(db)
             .find({ _id: { $in: candidateCharacterIds } })
             .toArray()
         : [];

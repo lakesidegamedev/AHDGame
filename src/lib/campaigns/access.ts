@@ -1,5 +1,6 @@
 import { ObjectId, type Db } from "mongodb";
 import type { Campaign, ElectionCandidate } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export async function isCampaignNomineeUser(
   db: Db,
@@ -17,12 +18,10 @@ export async function isCampaignNomineeUser(
     }
   }
 
-  const ownedCandidate = await db
-    .collection("characters")
-    .findOne(
-      { _id: campaign.candidateId, userId: new ObjectId(userId) },
-      { projection: { _id: 1 } }
-    );
+  const ownedCandidate = await charactersCollection(db).findOne(
+    { _id: campaign.candidateId, userId: new ObjectId(userId) },
+    { projection: { _id: 1 } }
+  );
   return ownedCandidate?._id?.equals(campaign.candidateId) ?? false;
 }
 
@@ -64,9 +63,10 @@ export async function isCampaignRunningMateUser(
   } catch {
     return false;
   }
-  const ownedMate = await db
-    .collection("characters")
-    .findOne({ _id: runningMateId, userId: userOid }, { projection: { _id: 1 } });
+  const ownedMate = await charactersCollection(db).findOne(
+    { _id: runningMateId, userId: userOid },
+    { projection: { _id: 1 } }
+  );
   return ownedMate != null;
 }
 

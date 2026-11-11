@@ -17,6 +17,7 @@ import { captureOfficeTransition } from "@/lib/analytics/officeTransitionAnalyti
 import type { Db, ObjectId } from "mongodb";
 import type { ElectedOfficial } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface BanPartyInput {
   countryId: CountryId;
@@ -54,7 +55,7 @@ export async function processBanPartyEffects(
     await db.collection("electedOfficials").deleteOne({ _id: official._id });
 
     if (official.characterId) {
-      await db.collection("characters").updateOne(
+      await charactersCollection(db).updateOne(
         { _id: official.characterId },
         {
           $set: {

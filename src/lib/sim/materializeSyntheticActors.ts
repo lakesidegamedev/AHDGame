@@ -70,6 +70,8 @@ import {
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import type { Document } from "mongodb";
 
 /** Database-name prefix every sandbox sim world uses (`ahd_sim_<seed>`). */
 export const SIM_SANDBOX_DB_PREFIX = "ahd_sim_";
@@ -683,7 +685,7 @@ async function queueSyntheticFedNomination(
   // character in a member country who does not hold the executive office.
   if (!isNominationWindowOpen(bank, turn)) return 0;
   if (nominations.length >= 3) return 0;
-  const target = await db.collection("characters").findOne({ _id: nomineeId });
+  const target = await charactersCollection<Document>(db).findOne({ _id: nomineeId });
   if (!target?.userId) return 0;
   if (!memberCountries.includes((target.countryId ?? "US") as CountryId)) return 0;
   const execOffice = COUNTRY_CONFIGS.US?.officeTypes.find((o) => o.isExecutive);
@@ -732,13 +734,12 @@ export async function readActorPopulation(
 ): Promise<ActorPopulationSnapshot> {
   const simUsernamePrefix = escapeRegExp(SIM_ACTOR_USERNAME_PREFIX);
   const [characters, users, syntheticCharacters, syntheticUsers] = await Promise.all([
-    db.collection("characters").countDocuments({}),
+    charactersCollection<Document>(db).countDocuments({}),
     db.collection("users").countDocuments({}),
-    db.collection("characters").countDocuments({ isSynthetic: true }),
+    charactersCollection<Document>(db).countDocuments({ isSynthetic: true }),
     db.collection("users").countDocuments({ username: { $regex: `^${simUsernamePrefix}` } }),
   ]);
-  const syntheticIds = await db
-    .collection("characters")
+  const syntheticIds = await charactersCollection<Document>(db)
     .find({ isSynthetic: true }, { projection: { _id: 1 } })
     .toArray();
   const syntheticIdSet = syntheticIds.map((d) => d._id);

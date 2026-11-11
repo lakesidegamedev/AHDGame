@@ -4,7 +4,7 @@ import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { CAMPAIGN_ACTION_LIMITS, checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { resolveElectionRouteParam } from "@/lib/elections/electionParamResolution";
-import type { Character, ElectionCandidate } from "@/lib/db/types";
+import type { ElectionCandidate } from "@/lib/db/types";
 import { getGameTime } from "@/lib/time/gameTime";
 import { isPrimaryEnded } from "@/lib/elections/phases";
 import { getHomeCurrency, loadCharacterFxRate } from "@/lib/currency/characterFunds";
@@ -27,6 +27,7 @@ import {
   PRIMARY_HOME_SURGE_COST_FUNDS,
   PRIMARY_HOME_SURGE_PCT,
 } from "@/lib/elections/engine/constants";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -90,12 +91,10 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(403, "You are not an active candidate in this election");
     }
 
-    const freshChar = await db
-      .collection<Character>("characters")
-      .findOne(
-        { _id: character._id },
-        { projection: { actions: 1, funds: 1, currencyBalances: 1, homeState: 1, countryId: 1 } }
-      );
+    const freshChar = await charactersCollection(db).findOne(
+      { _id: character._id },
+      { projection: { actions: 1, funds: 1, currencyBalances: 1, homeState: 1, countryId: 1 } }
+    );
 
     if (!freshChar) {
       return errorResponse(404, "Character not found");
@@ -126,7 +125,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
     const flowKey = headerKey ?? randomUUID();
     const fingerprint = `${character._id.toHexString()}:${candidate._id.toHexString()}:surge:${PRIMARY_HOME_SURGE_COST_ACTIONS}:${costFundsLocal}`;
-    const characters = db.collection<Character>("characters");
+    const characters = charactersCollection(db);
     const candidates = db.collection<ElectionCandidate>("electionCandidates");
     const receipts = await getMoneyFlowReceiptsCollection(db);
     const previousReceipt = headerKey ? await receipts.findOne({ _id: flowKey }) : null;

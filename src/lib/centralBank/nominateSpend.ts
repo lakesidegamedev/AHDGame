@@ -10,8 +10,8 @@ import {
   type MoneyFlowStepRef,
 } from "@/lib/db/nonAtomicMoneyFlow";
 import { runWithOptionalTransaction } from "@/lib/db/runWithOptionalTransaction";
-import type { Character } from "@/lib/db/types";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface CentralBankNomination {
   characterId: ObjectId;
@@ -74,7 +74,7 @@ export async function applyNominateSpend(
     throw new RangeError("Nominate idempotency key must be 1-128 characters");
   }
 
-  const characters = db.collection<Character>("characters");
+  const characters = charactersCollection(db);
   const centralBanks = centralBanksCollection(db);
   const receipts = await getMoneyFlowReceiptsCollection(db);
   const now = new Date();

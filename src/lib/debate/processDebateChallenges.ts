@@ -1,5 +1,5 @@
 import { ObjectId, type Db } from "mongodb";
-import type { Character, Election, ElectionCandidate } from "@/lib/db/types";
+import type { Election, ElectionCandidate } from "@/lib/db/types";
 import { getDebateSessionsCollection } from "@/lib/db/collections/debateSessions";
 import { seededRoll, makeSeededRng } from "@/lib/events/substrate/rng";
 import { isInPrimaryPhase } from "@/lib/elections/electionDeadlineFilters";
@@ -10,6 +10,7 @@ import {
   createDebateChallenge,
   sweepExpiredDebates,
 } from "./debateSessionLifecycle";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const CHALLENGE_THRESHOLD = Math.round(DEBATE_CHALLENGE_CHANCE * 100);
 
@@ -107,8 +108,7 @@ export async function processDebateChallenges(
     .map((c) => c.characterId!);
   const chars =
     playerCandIds.length > 0
-      ? await db
-          .collection<Character>("characters")
+      ? await charactersCollection(db)
           .find(
             { _id: { $in: playerCandIds } },
             {

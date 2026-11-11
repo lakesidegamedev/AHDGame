@@ -1,5 +1,5 @@
 import { ObjectId, type Db } from "mongodb";
-import type { Character, IndexFund } from "@/lib/db/types";
+import type { IndexFund } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { withSessionDb } from "@/lib/db/sessionDb";
 import { errorResponse, statusResponse, badRequest } from "@/lib/api/errors";
@@ -19,6 +19,7 @@ import { autoConvertForPurchase, convertForExplicitPay } from "@/lib/currency/au
 import { quoteIndexFundSubscription } from "./unitAccounting";
 import { witnessSubscription, type BankSubscription } from "./subscriptions";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export async function queueBankFundSubscription(
   db: Db,
@@ -65,9 +66,7 @@ export async function queueBankFundSubscription(
         !(await bankFundAcceptsSubscriptions(tx, fund))
       )
         return errorResponse(403, "This fund is not accepting investments.");
-      const character = await tx
-        .collection<Character>("characters")
-        .findOne({ _id: input.characterId });
+      const character = await charactersCollection(tx).findOne({ _id: input.characterId });
       if (!character || String(character.userId) !== input.userId)
         return errorResponse(403, "An active character is required.");
       const corporationId = input.corporationId ? new ObjectId(input.corporationId) : undefined;

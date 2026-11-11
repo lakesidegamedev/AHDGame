@@ -23,6 +23,7 @@ import { lifecycleStage, type BankLifecycleStage } from "@/lib/banking/rules/lif
 import { buildSavingsComparison, readCohort, type SavingsComparison } from "@/lib/savings/shadow";
 import { getCurrentTurn } from "@/lib/currentTurn";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface CurrencyBankingHealth {
   currency: CurrencyCode;
@@ -85,8 +86,7 @@ function finite(value: unknown): number {
 /** Player savings pointed at each bank, keyed by bank hex, for one currency. */
 async function playerHeldByBank(db: Db, currency: CurrencyCode): Promise<Map<string, number>> {
   const holderPath = `currencyBalances.savingsHolder.${currency}`;
-  const rows = await db
-    .collection<Character>("characters")
+  const rows = await charactersCollection(db)
     .find({ [holderPath]: { $exists: true, $ne: "centralBank" } })
     .project<Pick<Character, "currencyBalances">>({
       [holderPath]: 1,

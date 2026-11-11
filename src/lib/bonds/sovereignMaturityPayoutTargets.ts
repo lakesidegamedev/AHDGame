@@ -10,6 +10,7 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
 import { frozenPoolCashPerFace } from "@/lib/budget/rules/fiscalScale";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface SovereignMaturityCashLeg {
   collection: string;
@@ -165,7 +166,7 @@ export async function resolveSovereignMaturityPayoutLegs(
   const live = new Set<string>(preloaded?.live ?? []);
   for (const id of (
     await Promise.all([
-      liveIds("characters", db.collection<{ _id: unknown }>("characters")),
+      liveIds("characters", charactersCollection<{ _id: unknown }>(db)),
       liveIds("imperialCharacters", db.collection<{ _id: unknown }>("imperialCharacters")),
       liveIds("corporations", corporationsCollection<{ _id: unknown }>(db)),
       liveIds("indexFunds", db.collection<{ _id: unknown }>("indexFunds")),

@@ -50,10 +50,11 @@ import {
   bandsForProfile,
   getCreditBand,
 } from "@/lib/banking/creditBands";
-import type { Character, CorporateSector } from "@/lib/db/types";
+import type { CorporateSector } from "@/lib/db/types";
 import type { BankCharter, BankCharterType, BankLoan, InterbankLoan } from "@/lib/db/types/bank";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -363,8 +364,7 @@ async function handleGET(_request: Request, { params }: RouteParams) {
 
     const [namedCharacters, namedCorporations] = await Promise.all([
       characterIdsToName.size > 0
-        ? db
-            .collection<Character>("characters")
+        ? charactersCollection(db)
             .find(
               { _id: { $in: [...characterIdsToName].map((id) => new ObjectId(id)) } },
               { projection: { name: 1, sequentialId: 1 } }

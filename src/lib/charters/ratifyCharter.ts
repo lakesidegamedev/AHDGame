@@ -1,7 +1,6 @@
 import type { Db, ObjectId } from "mongodb";
 import { ObjectId as ObjectIdCtor } from "mongodb";
 import type {
-  Character,
   PartyCharter,
   PartyCharterPlatform,
   PoliticalParty,
@@ -15,6 +14,7 @@ import { recomputePartyMemberCount } from "@/lib/parties/recomputePartyMemberCou
 import { withdrawFromPartyLeadershipElections } from "@/lib/elections/withdrawFromPartyLeadershipElections";
 import { cleanupCaucusParticipationForCharacters } from "@/lib/caucus/cleanupCaucusParticipationForCharacters";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * Internal helper called by `signCharter` once the 3-of-3 threshold is hit.
@@ -78,7 +78,7 @@ export async function ratifyCharter(
   // function; the chair seat is uncontested only for this first term.
   const anchorFounderCharacterId = charter.foundersCharacterIds[0];
   const anchorFounder = anchorFounderCharacterId
-    ? await db.collection<Character>("characters").findOne({ _id: anchorFounderCharacterId })
+    ? await charactersCollection(db).findOne({ _id: anchorFounderCharacterId })
     : null;
 
   const sequentialId = await getNextSequentialId(db, "party", charter.countryId);
@@ -223,8 +223,7 @@ export async function ratifyCharter(
   // userId→characters pivot). This also makes multi-character users work
   // correctly: each chartered character moves to the new party
   // independently, even if two of them share a userId.
-  const founderCharacters = await db
-    .collection<Character>("characters")
+  const founderCharacters = await charactersCollection(db)
     .find({ _id: { $in: charter.foundersCharacterIds } })
     .toArray();
   // Founders join the new party now — stamp the tenure anchor (leadershipTenure.ts).
@@ -237,7 +236,7 @@ export async function ratifyCharter(
     const oldPartySeqId =
       oldPartyStr && oldPartyStr !== "independent" ? parseInt(oldPartyStr, 10) : Number.NaN;
     if (oldPartyStr === partyIdStr) continue;
-    await db.collection<Character>("characters").updateOne(
+    await charactersCollection(db).updateOne(
       { _id: ch._id },
       {
         $set: {

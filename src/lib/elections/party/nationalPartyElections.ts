@@ -8,7 +8,6 @@ import type {
   NationalPartyVote,
   NationalPartyCandidate,
   PoliticalParty,
-  Character,
   GameState,
   User,
 } from "@/lib/db/types";
@@ -47,6 +46,7 @@ import {
   NATIONAL_ELECTION_MAX_DURATION_TURNS,
   FOUNDING_CHAIR_ELECTION_DURATION_TURNS,
 } from "./nationalPartyElectionConstants";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export {
   NATIONAL_ELECTION_DURATION_TURNS,
@@ -871,8 +871,7 @@ export async function vacateInactiveNationalLeadership(
   const holderIds = Array.from(holderIdByHex.values());
   if (holderIds.length === 0) return 0;
 
-  const characters = await db
-    .collection<Character>("characters")
+  const characters = await charactersCollection(db)
     .find({ _id: { $in: holderIds } })
     .project<{ _id: ObjectId; userId: ObjectId }>({ _id: 1, userId: 1 })
     .toArray();

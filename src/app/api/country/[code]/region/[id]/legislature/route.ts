@@ -10,6 +10,7 @@ import { subNationalChamberSeats } from "@/lib/constants/states";
 import { getGameStatePreset } from "@/lib/db/collections/gameState";
 import type { State, ElectedOfficial, PoliticalParty, Character, NPP } from "@/lib/db/types";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 // GET /api/country/[code]/region/[id]/legislature — Return the state senate composition and current officials for a region
 // Auth: public
@@ -87,8 +88,7 @@ export async function GET(
 
     const [characters, npps] = await Promise.all([
       characterIds.length > 0
-        ? db
-            .collection<Character>("characters")
+        ? charactersCollection(db)
             .find(
               { _id: { $in: characterIds } },
               { projection: { _id: 1, sequentialId: 1, avatarUrl: 1 } }

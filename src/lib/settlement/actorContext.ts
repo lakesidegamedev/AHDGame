@@ -12,12 +12,12 @@
  * should let that story happen.
  */
 import type { Db, ObjectId } from "mongodb";
-import type { Character } from "@/lib/db/types";
 import { getSettlementCrisesCollection } from "@/lib/db/collections";
 import type { SettlementSeatKey } from "@/lib/constants/settlementCrisis";
 import { resolveSettlementSeat, type SettlementSeatRole } from "./seatResolution";
 import { resolveSeatDirection, type SettlementDirection } from "./direction";
 import { seatBudgetFor, type AffordabilityReason, type SeatBudget } from "./affordability";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface SettlementSeatContext {
   id: SettlementSeatKey;
@@ -45,9 +45,10 @@ export async function loadSettlementActorContext(
   db: Db,
   characterId: ObjectId
 ): Promise<SettlementActorContext> {
-  const character = await db
-    .collection<Character>("characters")
-    .findOne({ _id: characterId }, { projection: { actions: 1 } });
+  const character = await charactersCollection(db).findOne(
+    { _id: characterId },
+    { projection: { actions: 1 } }
+  );
   const personal = { actionsRemaining: character?.actions ?? 0 };
 
   const crises = await getSettlementCrisesCollection(db);

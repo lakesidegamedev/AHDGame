@@ -32,6 +32,7 @@ import {
 import { launchGovernmentProspect } from "@/lib/extraction/commands/launchGovernmentProspect";
 import { buildSyntheticActorPlan } from "./syntheticActors";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface DriveSyntheticActorsOptions {
   seed: string;
@@ -69,9 +70,9 @@ async function driveCrisisDecision(
   ].filter((a) => a !== undefined);
   const interactions = (await db.collection("crisisInteractions").find({}).toArray()).slice(0, 5);
   for (const decider of ordered) {
-    const character = await db
-      .collection("characters")
-      .findOne({ _id: new ObjectId(decider.characterIdHex) });
+    const character = await charactersCollection(db).findOne({
+      _id: new ObjectId(decider.characterIdHex),
+    });
     if (!character?.userId) continue;
     const roles = await resolveCharacterRoles(db, {
       _id: character._id as ObjectId,
@@ -128,9 +129,9 @@ async function driveDdSurvey(
   const plan = buildSyntheticActorPlan(seed);
   const minister = plan.actors.find((a) => a.role === "dd-finance-minister");
   if (!minister) return;
-  const character = await db
-    .collection("characters")
-    .findOne({ _id: new ObjectId(minister.characterIdHex) });
+  const character = await charactersCollection(db).findOne({
+    _id: new ObjectId(minister.characterIdHex),
+  });
   if (!character?.userId) return;
   if (!COUNTRY_CONFIGS.DD?.financeMinisterCabinetId) return;
   const caps = await db

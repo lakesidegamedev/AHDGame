@@ -6,7 +6,7 @@
  */
 import type { Db } from "mongodb";
 import type { ObjectId } from "mongodb";
-import type { Character, Corporation, CorporateSector, State, StateMetrics } from "@/lib/db/types";
+import type { Corporation, CorporateSector, State, StateMetrics } from "@/lib/db/types";
 import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
 import { ApiError } from "@/lib/api/errors";
 import { corporationDissolutionAgeBlock } from "@/lib/corporations/dissolutionAgeGuard";
@@ -46,6 +46,7 @@ import { buildStateLookups, stateGdpAnchorBlend } from "@/lib/turn/commodity/sec
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export type CommodityGlobalDeltaPreview = {
   commodity: CommodityType;
@@ -166,7 +167,7 @@ export async function previewQuickDissolve(
     )
   );
 
-  const ceoChar = await db.collection<Character>("characters").findOne({ _id: corporation.ceoId });
+  const ceoChar = await charactersCollection(db).findOne({ _id: corporation.ceoId });
   const forexEnabled = await isForexEnabled();
 
   let returnedCapitalHome = returnedCapitalCorp;
@@ -204,8 +205,7 @@ export async function previewQuickDissolve(
     .filter((id): id is ObjectId => id !== undefined);
   const [shareholderChars, imperialShareholderChars, corpShareholderDocs] = await Promise.all([
     regularShareholderIds.length > 0
-      ? db
-          .collection<Character>("characters")
+      ? charactersCollection(db)
           .find({ _id: { $in: regularShareholderIds } }, { projection: { _id: 1, name: 1 } })
           .toArray()
       : [],

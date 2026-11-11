@@ -7,12 +7,12 @@ import { handleRouteError, badRequest, forbidden, notFound, errorResponse } from
 import { createNotification } from "@/lib/notifications";
 import type { Coalition } from "@/lib/db/types/coalition";
 import type { PoliticalParty } from "@/lib/db/types/party";
-import type { Character } from "@/lib/db/types/character";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { isBannedParty } from "@/lib/turn/onePartyConstraints";
 import { getCountryState } from "@/lib/countryState";
 import { admitPartyToCoalition } from "@/lib/coalitions/admitParty";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const acceptSchema = z.object({
   partySequentialId: z.number().int().positive(),
@@ -119,9 +119,10 @@ export async function POST(
 
     // Notify the requesting party's chair
     if (requestingParty.chairId) {
-      const chairChar = await db
-        .collection<Character>("characters")
-        .findOne({ _id: requestingParty.chairId }, { projection: { userId: 1 } });
+      const chairChar = await charactersCollection(db).findOne(
+        { _id: requestingParty.chairId },
+        { projection: { userId: 1 } }
+      );
       if (chairChar) {
         await createNotification({
           userId: chairChar.userId,

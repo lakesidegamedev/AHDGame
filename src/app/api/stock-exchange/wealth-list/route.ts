@@ -21,6 +21,7 @@ import {
 } from "@/lib/wealth/computeCharacterWealth";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 function resolveCountryId(character: Pick<Character, "countryId">): CountryId {
   return character.countryId as CountryId;
@@ -50,8 +51,7 @@ async function computeWealthListFallback(
   forexEnabled: boolean,
   exchangeRates?: Partial<Record<CurrencyCode, number>>
 ) {
-  const characters = await db
-    .collection<Character>("characters")
+  const characters = await charactersCollection(db)
     .find({})
     .project<
       Pick<
@@ -310,8 +310,7 @@ export async function GET(request: Request) {
       .map((id) => new ObjectId(id));
     const characters =
       charIds.length > 0
-        ? await db
-            .collection<Character>("characters")
+        ? await charactersCollection(db)
             .find({ _id: { $in: charIds } })
             .project<Pick<Character, "_id" | "userId">>({ _id: 1, userId: 1 })
             .toArray()

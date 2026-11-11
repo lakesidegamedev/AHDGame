@@ -3,6 +3,7 @@ import { getDb } from "@/lib/mongodb";
 import { errorResponse } from "@/lib/api/errors";
 import { escapeRegex } from "@/lib/utils/escapeRegex";
 import type { Character, User } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export type BotCharacterLookup =
   { ok: false; response: Response } | { ok: true; db: Db; character: Character | null };
@@ -26,18 +27,16 @@ export async function lookupBotCharacter(request: Request): Promise<BotCharacter
   let character: Character | null = null;
 
   if (characterId && ObjectId.isValid(characterId)) {
-    character = await db
-      .collection<Character>("characters")
-      .findOne({ _id: new ObjectId(characterId) });
+    character = await charactersCollection(db).findOne({ _id: new ObjectId(characterId) });
   } else if (discordId) {
     const user = await db.collection<User>("users").findOne({ discordId });
     if (user) {
-      character = await db.collection<Character>("characters").findOne({ userId: user._id });
+      character = await charactersCollection(db).findOne({ userId: user._id });
     }
   } else if (name) {
-    character = await db
-      .collection<Character>("characters")
-      .findOne({ name: { $regex: `^${escapeRegex(name)}$`, $options: "i" } });
+    character = await charactersCollection(db).findOne({
+      name: { $regex: `^${escapeRegex(name)}$`, $options: "i" },
+    });
   }
 
   return { ok: true, db, character };

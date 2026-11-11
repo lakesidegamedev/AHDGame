@@ -1,9 +1,10 @@
 import { CONCURRENT_VOTE_STAGE } from "@/lib/turn/billLifecycle/configs/concurrentVoteStage";
 import type { Db } from "mongodb";
 import { createNotifications } from "@/lib/notifications";
-import type { Bill, Character } from "@/lib/db/types";
+import type { Bill } from "@/lib/db/types";
 import { getOfficeTypeForChamber } from "@/lib/legislature/chamberOfficeType";
 import type { BillLifecycleConfig, SponsorNotifier } from "@/lib/turn/billLifecycle/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const VOTING_HOURS = 24;
 
@@ -30,9 +31,10 @@ const notifyJPSponsor: SponsorNotifier = async (db: Db, bill: Bill, status: Bill
               : null;
   if (!message) return;
   try {
-    const sponsor = await db
-      .collection<Character>("characters")
-      .findOne({ _id: bill.sponsorId }, { projection: { userId: 1 } });
+    const sponsor = await charactersCollection(db).findOne(
+      { _id: bill.sponsorId },
+      { projection: { userId: 1 } }
+    );
     if (!sponsor) return;
     await createNotifications([
       {

@@ -11,7 +11,6 @@ import {
   type HuModernByElectionCount,
 } from "./rules/constituencyByElection2011";
 import type {
-  Character,
   Election,
   ElectionCandidate,
   ElectedOfficial,
@@ -27,6 +26,7 @@ import { MS_PER_TURN } from "@/lib/constants/turnTime";
 import { scalePoolToRegistered } from "@/lib/elections/rules/registration";
 import { apportionSeats } from "@/lib/seeds/reference/rules/apportionSeats";
 import { HU_2011_COUNTS_COLLECTION, type Hu2011AssemblyRecord } from "./assemblyCount2011";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export const HU_2011_BY_ELECTIONS_COLLECTION = "hu2011ConstituencyByElections";
 export interface HuModernByElectionRecord {
@@ -498,8 +498,7 @@ async function materializeHuModernByElectionResolution(input: {
       }
     )
     .toArray();
-  const players = await db
-    .collection<Character>("characters")
+  const players = await charactersCollection(db)
     .find(
       {
         countryId: "HU",
@@ -667,7 +666,7 @@ async function materializeHuModernByElectionResolution(input: {
   }
   const newlyElected = players.filter((row) => playerWinners.has(row._id.toHexString()));
   if (newlyElected.length) {
-    await db.collection<Character>("characters").bulkWrite(
+    await charactersCollection(db).bulkWrite(
       newlyElected.map((player) => {
         const official = officials.find((row) => row.characterId?.equals(player._id))!;
         return {

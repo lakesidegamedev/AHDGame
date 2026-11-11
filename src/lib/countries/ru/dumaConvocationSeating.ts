@@ -5,14 +5,7 @@
  */
 import { russianDumaElectoralLaw } from "./rules/dumaElectoralLaw";
 import { ObjectId, type ClientSession, type Db } from "mongodb";
-import type {
-  Character,
-  CountryGameState,
-  ElectedOfficial,
-  Election,
-  NPP,
-  GameState,
-} from "@/lib/db/types";
+import type { CountryGameState, ElectedOfficial, Election, NPP, GameState } from "@/lib/db/types";
 import type { UnifiedCabinetMember } from "@/lib/db/types/unifiedCabinetMember";
 import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
@@ -38,6 +31,7 @@ import { applyRussianAssemblyOwnerEligibility } from "./rules/assemblyOwnerEligi
 import { russianDumaConvocationOfficeCompatible } from "./rules/dumaConvocation";
 import { planRussianAssemblyVacancySeating } from "./rules/assemblyVacancySeating";
 import type { RussianCouncilCompositionSeating } from "./councilCompositionSeating";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export async function materializeRussianDumaConvocationSeating(input: {
   db: Db;
@@ -234,8 +228,7 @@ export async function materializeRussianDumaConvocationSeating(input: {
     ...new Set(planned.seats.filter((row) => !row.isNpc).map((row) => row.ownerId)),
   ].map((id) => new ObjectId(id));
   const characters = playerIds.length
-    ? await db
-        .collection<Character>("characters")
+    ? await charactersCollection(db)
         .find(
           { _id: { $in: playerIds } },
           {
@@ -464,13 +457,11 @@ export async function materializeRussianDumaConvocationSeating(input: {
       .filter((row) => !row.isNPP && row.characterId)
       .map((row) => row.characterId!);
     if (oldPlayerIds.length)
-      await db
-        .collection<Character>("characters")
-        .updateMany(
-          { _id: { $in: oldPlayerIds }, "currentOffice.type": "dumaDeputy" },
-          { $set: { currentOffice: null, updatedAt: now } },
-          { session }
-        );
+      await charactersCollection(db).updateMany(
+        { _id: { $in: oldPlayerIds }, "currentOffice.type": "dumaDeputy" },
+        { $set: { currentOffice: null, updatedAt: now } },
+        { session }
+      );
     const oldNpcIds = retired.filter((row) => row.isNPP && row.nppId).map((row) => row.nppId!);
     if (!latest && oldNpcIds.length) {
       await db
@@ -569,7 +560,7 @@ export async function materializeRussianDumaConvocationSeating(input: {
     }));
     const result = isNpc
       ? await db.collection<NPP>("npps").bulkWrite(operations, { session })
-      : await db.collection<Character>("characters").bulkWrite(operations, { session });
+      : await charactersCollection(db).bulkWrite(operations, { session });
     if (result.matchedCount !== selected.length)
       throw new Error("Duma owner changed during seating");
   }

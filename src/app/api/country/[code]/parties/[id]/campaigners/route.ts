@@ -9,7 +9,7 @@ import { findPartyBySequentialId } from "@/lib/db/partyLookup";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { MAX_NATIONAL_CAMPAIGNERS } from "@/lib/parties/access";
 import { canActAsChair } from "@/lib/parties/actingChair";
-import type { Character, CommitteeProposal, PoliticalParty } from "@/lib/db/types";
+import type { CommitteeProposal, PoliticalParty } from "@/lib/db/types";
 import type { AuthUserWithCharacter } from "@/lib/auth";
 import type { Db } from "mongodb";
 import { getGameTime } from "@/lib/time/gameTime";
@@ -17,6 +17,7 @@ import {
   getPartyTenure,
   STATE_LEADERSHIP_RELOCATION_DELAY_TURNS,
 } from "@/lib/parties/leadershipTenure";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -41,8 +42,7 @@ async function validateCandidates(
 ): Promise<NextResponse | null> {
   if (candidateIds.length === 0) return null;
 
-  const characters = await db
-    .collection<Character>("characters")
+  const characters = await charactersCollection(db)
     .find({ _id: { $in: candidateIds } })
     .toArray();
   if (characters.length !== candidateIds.length) {

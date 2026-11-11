@@ -11,7 +11,6 @@ import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, notFound, errorResponse } from "@/lib/api/errors";
-import type { Character } from "@/lib/db/types";
 import { adminImfBailoutSchema } from "@/lib/api/schemas/adminImfBailout";
 import { getImfCorporation } from "@/lib/imf/resolveImfCorporation";
 import { roundFaceToBondUnits } from "@/lib/bonds/corporateBondDefault";
@@ -28,6 +27,7 @@ import {
 } from "@/lib/imf/imfFacilityMath";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -344,8 +344,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     if (bonds.length > 0) {
       if (holderCharIds.size > 0) {
-        const chars = await db
-          .collection<Character>("characters")
+        const chars = await charactersCollection(db)
           .find(
             { _id: { $in: [...holderCharIds].map((x) => new ObjectId(x)) } },
             { projection: { _id: 1, name: 1, userId: 1, sequentialId: 1 } }

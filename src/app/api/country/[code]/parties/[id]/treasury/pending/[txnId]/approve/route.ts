@@ -24,7 +24,8 @@ import {
   getApproverSlotForRow,
   isPendingTransactionComplete,
 } from "@/lib/parties/pendingTreasuryTransactions";
-import type { Character, PendingTreasuryTransaction, State } from "@/lib/db/types";
+import type { PendingTreasuryTransaction, State } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; txnId: string }>;
@@ -267,9 +268,9 @@ export async function POST(_request: Request, { params }: RouteParams) {
         if (!ready.targetCharacterId) {
           return releaseSlot(errorResponse(500, "Pending row missing target character"));
         }
-        const targetCharacter = await db
-          .collection<Character>("characters")
-          .findOne({ _id: ready.targetCharacterId });
+        const targetCharacter = await charactersCollection(db).findOne({
+          _id: ready.targetCharacterId,
+        });
         if (!targetCharacter) {
           return releaseSlot(errorResponse(404, "Recipient character no longer exists."));
         }

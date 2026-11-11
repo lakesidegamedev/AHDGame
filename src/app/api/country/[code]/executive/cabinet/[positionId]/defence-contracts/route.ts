@@ -35,6 +35,7 @@ import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { resolveDefenseLineFrom } from "@/lib/turn/defenseEnvelope";
 import { getDefenceContractAvailability } from "@/lib/db/collections/defenceProcurementAllocations";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteParams {
   params: Promise<{ code: string; positionId: string }>;
@@ -243,12 +244,10 @@ export async function DELETE(request: Request, { params }: RouteParams) {
     // but the voters find out and the minister wears it.
     if (basis === "convenience" && guard.user.character) {
       if (favorabilityPenalty > 0) {
-        await db
-          .collection("characters")
-          .updateOne(
-            { _id: guard.user.character._id },
-            { $inc: { favorability: -favorabilityPenalty } }
-          );
+        await charactersCollection(db).updateOne(
+          { _id: guard.user.character._id },
+          { $inc: { favorability: -favorabilityPenalty } }
+        );
       }
       await createSystemNewsPost(
         terminationDisclosure({

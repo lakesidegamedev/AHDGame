@@ -5,10 +5,10 @@ import { handleRouteError, badRequest, forbidden, notFound, errorResponse } from
 import { createNotification } from "@/lib/notifications";
 import type { Coalition } from "@/lib/db/types/coalition";
 import type { PoliticalParty } from "@/lib/db/types/party";
-import type { Character } from "@/lib/db/types/character";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { canActAsChair } from "@/lib/parties/actingChair";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 // POST /api/coalitions/[id]/leave?country= — Leave a coalition
 export async function POST(
@@ -101,9 +101,10 @@ export async function POST(
 
       // Notify new chair
       if (newChairCharacterId) {
-        const newChairChar = await db
-          .collection<Character>("characters")
-          .findOne({ _id: newChairCharacterId }, { projection: { userId: 1 } });
+        const newChairChar = await charactersCollection(db).findOne(
+          { _id: newChairCharacterId },
+          { projection: { userId: 1 } }
+        );
         if (newChairChar) {
           await createNotification({
             userId: newChairChar.userId,

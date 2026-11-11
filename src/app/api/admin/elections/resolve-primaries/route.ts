@@ -37,6 +37,7 @@ import { ObjectId } from "mongodb";
 import { parseSeatId } from "@/lib/seats/seatId";
 import { getGameTime } from "@/lib/time/gameTime";
 import { primaryClosedFilter, electionOpenFilter } from "@/lib/elections/electionDeadlineFilters";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 // POST /api/admin/elections/resolve-primaries — Eliminates primary losers and initializes vote tallies for elections whose primary phase has ended.
 // Auth: requireAdmin
@@ -170,8 +171,7 @@ export const POST = withAdminRoute(async (_auth) => {
         const characterIds = candidates.filter((c) => !c.isNPP).map((c) => c.characterId);
         const [chars, statePartyOrgs] = await Promise.all([
           characterIds.length > 0
-            ? db
-                .collection<Character>("characters")
+            ? charactersCollection(db)
                 .find({ _id: { $in: characterIds } })
                 .toArray()
             : [],

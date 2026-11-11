@@ -1,7 +1,8 @@
 import { ObjectId, type Db } from "mongodb";
 import { logWarning } from "@/lib/utils/errorLog";
-import type { Achievement, User, Character } from "@/lib/db/types";
+import type { Achievement, User } from "@/lib/db/types";
 import { getAchievementDocsForSeed } from "@/lib/seeds/achievements";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export async function seedAchievements(db: Db, reset: boolean, log: (msg: string) => void) {
   if (reset)
@@ -71,8 +72,7 @@ export async function seedAchievements(db: Db, reset: boolean, log: (msg: string
     const adminUserIds = adminUsers.map((u: User) => u._id);
     const adminCharacters =
       adminUserIds.length > 0
-        ? await db
-            .collection<Character>("characters")
+        ? await charactersCollection(db)
             .find({ userId: { $in: adminUserIds } })
             .toArray()
         : [];

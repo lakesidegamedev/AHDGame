@@ -18,11 +18,11 @@ import type {
   SenateLeadershipElection,
   SenateLeadershipNomination,
   CongressLeader,
-  Character,
   ConfidenceVote,
 } from "@/lib/db/types";
 import type { NoConfidenceVote } from "@/lib/db/types/governmentFormation";
 import { getGovernmentFormationsCollection } from "@/lib/db/collections/governmentFormation";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const ELECTION_TYPES = [
   "speaker",
@@ -186,8 +186,7 @@ async function getConfidenceVotes(db: Awaited<ReturnType<typeof getDb>>) {
   const charIds = votes.map((v) => v.nominatedCharacterId);
   const characters =
     charIds.length > 0
-      ? await db
-          .collection<Character>("characters")
+      ? await charactersCollection(db)
           .find({ _id: { $in: charIds } })
           .project({ _id: 1, name: 1 })
           .toArray()
@@ -537,12 +536,10 @@ async function handleUKAction(
       db.collection("ukCabinetCooldowns").deleteMany({ countryId: "UK" }),
     ]);
     // Clear PM office from UK characters only — other countries have their own PM
-    await db
-      .collection("characters")
-      .updateMany(
-        { "currentOffice.type": "primeMinister", countryId: "UK" },
-        { $set: { currentOffice: null, updatedAt: now } }
-      );
+    await charactersCollection(db).updateMany(
+      { "currentOffice.type": "primeMinister", countryId: "UK" },
+      { $set: { currentOffice: null, updatedAt: now } }
+    );
   }
 
   const actionLabel = action === "pass" ? "passed" : action === "fail" ? "failed" : "cancelled";

@@ -3,6 +3,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import type { Character } from "@/lib/db/types/character";
 import type { SuccessionResident, SuccessionResidencePlan } from "./rules/residency";
 import type { FederationStateTransferPlan } from "./territoryTransferPlan";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export const FEDERATION_RESIDENT_HOLDS_COLLECTION = "federationResidentHolds";
 
@@ -64,7 +65,7 @@ export async function materializeFederationResidentHolds(input: {
     affected.push({ resident, plan });
   }
   if (affected.length === 0) return 0;
-  const characters = db.collection<Character>("characters");
+  const characters = charactersCollection(db);
   const ids = affected.map(({ resident }) => new ObjectId(resident.characterId));
   const live = await characters
     .find(

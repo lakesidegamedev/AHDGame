@@ -13,6 +13,7 @@ import { z } from "zod";
 import { recordAudit } from "@/lib/audit/recordAudit";
 import { getClientIp } from "@/lib/utils/network";
 import { createHash } from "crypto";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const schema = z.object({
   characterId: schemas.objectId,
@@ -55,7 +56,7 @@ async function handleGET(request: Request) {
     const clientIp = await getClientIp();
     const net = { ipMasked: maskIp(clientIp), ipHash: hashIp(clientIp) };
 
-    const character = await db.collection("characters").findOne({ _id: characterId, userId });
+    const character = await charactersCollection(db).findOne({ _id: characterId, userId });
     if (!character) {
       recordAudit({
         source: "api",
@@ -119,7 +120,7 @@ export async function PATCH(request: Request) {
     const net = { ipMasked: maskIp(clientIp), ipHash: hashIp(clientIp) };
 
     // Verify the character belongs to this admin
-    const character = await db.collection("characters").findOne({ _id: characterId, userId });
+    const character = await charactersCollection(db).findOne({ _id: characterId, userId });
     if (!character) {
       recordAudit({
         source: "api",

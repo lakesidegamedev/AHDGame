@@ -49,6 +49,7 @@ import type {
 import type { RetiredCharacter } from "@/lib/db/types/retiredCharacter";
 import { applyExperimentalUiCookie } from "@/lib/api/experimentalUiCookie";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * Whether to show the "Campaign Manager" navbar link. Returns true for: admins,
@@ -69,8 +70,7 @@ async function computeCanSeeCampaignManager(args: {
   if (presidentElectionIds.length === 0) return false;
 
   const userOid = new ObjectId(userId);
-  const ownedChars = await db
-    .collection<Character>("characters")
+  const ownedChars = await charactersCollection(db)
     .find({ userId: userOid })
     .project({ _id: 1 })
     .toArray();
@@ -289,7 +289,7 @@ export async function GET() {
     const characterQuery = user.activeCharacterId
       ? { _id: user.activeCharacterId, userId: userOid }
       : { userId: userOid };
-    const character = await db.collection<Character>("characters").findOne(characterQuery, {
+    const character = await charactersCollection(db).findOne(characterQuery, {
       projection: {
         _id: 1,
         actions: 1,
@@ -587,8 +587,7 @@ export async function GET() {
     } | null = null;
     if (user.isAdmin) {
       const [allChars, imperialChar] = await Promise.all([
-        db
-          .collection("characters")
+        charactersCollection(db)
           .find({ userId: userOid })
           .project({ _id: 1, name: 1, countryId: 1, party: 1 })
           .toArray(),
@@ -682,8 +681,7 @@ export async function GET() {
     // act on; ratified / migrated / migrated-incomplete charters live
     // behind the party page itself rather than the charter list.
     let pendingCharterCount = 0;
-    const ownedCharacters = await db
-      .collection<Character>("characters")
+    const ownedCharacters = await charactersCollection(db)
       .find({ userId: userOid })
       .project<{ _id: ObjectId }>({ _id: 1 })
       .toArray();

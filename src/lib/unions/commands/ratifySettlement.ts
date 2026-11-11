@@ -32,6 +32,7 @@ import {
 import { persistBargainingSettlement, restoreEscalationExpectations } from "./bargaining";
 import { rejectIfTurnProcessing, type UnionActionResult } from "./unionActions";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export const RATIFICATION_BALLOTS = "bargainingRatificationBallots";
 
@@ -122,8 +123,7 @@ async function notifyOrganizers(
   campaign: BargainingCampaign,
   ratification: BargainingRatification
 ): Promise<void> {
-  const characters = await db
-    .collection<Character>("characters")
+  const characters = await charactersCollection(db)
     .find(
       { _id: { $in: ratification.weights.map((weight) => weight.characterId) } },
       { projection: { userId: 1 } }
@@ -415,9 +415,10 @@ async function notifyRatificationClosed(
   // An NPP-led union has no User behind its leader, and a vacant presidency has
   // nobody to tell. The vote still closed on schedule either way.
   if (!union?.ownerId || union.ownerType === "npp") return;
-  const leader = await db
-    .collection<Character>("characters")
-    .findOne({ _id: union.ownerId }, { projection: { userId: 1 } });
+  const leader = await charactersCollection(db).findOne(
+    { _id: union.ownerId },
+    { projection: { userId: 1 } }
+  );
   if (!leader?.userId) return;
   await createNotification({
     userId: leader.userId,

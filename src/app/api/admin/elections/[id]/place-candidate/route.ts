@@ -10,16 +10,10 @@ import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import { z } from "zod";
-import type {
-  Election,
-  ElectionCandidate,
-  Character,
-  NPP,
-  ElectionVoteTally,
-  Campaign,
-} from "@/lib/db/types";
+import type { Election, ElectionCandidate, NPP, ElectionVoteTally, Campaign } from "@/lib/db/types";
 import { isCampaignEligibleElection } from "@/lib/campaigns/isCampaignEligible";
 import { DEFAULT_CANDIDATE_SUPPORT } from "@/lib/elections/engine/electionFormulaFactors";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const placeCandidateSchema = z
   .object({
@@ -83,7 +77,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     if (characterId) {
       const charIdObj = new ObjectId(characterId);
-      const char = await db.collection<Character>("characters").findOne({ _id: charIdObj });
+      const char = await charactersCollection(db).findOne({ _id: charIdObj });
       if (!char) {
         return errorResponse(404, "Character not found");
       }

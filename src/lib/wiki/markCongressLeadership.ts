@@ -5,14 +5,15 @@
  */
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
-import type { Character, PoliticianOverride } from "@/lib/db/types";
+import type { PoliticianOverride } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export async function markCongressLeadershipHeld(
   db: Db,
   assignedId: string,
   now: Date
 ): Promise<void> {
-  const char = await db.collection<Character>("characters").findOne({
+  const char = await charactersCollection(db).findOne({
     _id: new ObjectId(assignedId),
   });
   if (!char) return;

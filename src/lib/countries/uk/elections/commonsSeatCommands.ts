@@ -14,6 +14,7 @@ import type { Db } from "@/lib/mongodb";
 import type { Character, ElectedOfficial, ElectionCandidate } from "@/lib/db/types";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { vacateCommonsSeat } from "@/lib/countries/uk/elections/commonsVacancyShell";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export type CommonsSeatCommandResult =
   | { ok: true; officialId: ObjectId; vacancyId: ObjectId; label: string }
@@ -37,9 +38,10 @@ async function hasActiveCandidacy(db: Db, characterId: ObjectId): Promise<boolea
 
 async function clearCommonsCurrentOffice(db: Db, character: Character, now: Date): Promise<void> {
   if (character.currentOffice?.type !== "commons") return;
-  await db
-    .collection<Character>("characters")
-    .updateOne({ _id: character._id }, { $set: { currentOffice: null, updatedAt: now } });
+  await charactersCollection(db).updateOne(
+    { _id: character._id },
+    { $set: { currentOffice: null, updatedAt: now } }
+  );
 }
 
 /**
@@ -112,12 +114,10 @@ export async function defectCommonsSeat(
     };
   }
   const currentTurn = await getCurrentTurn(db);
-  await db
-    .collection<Character>("characters")
-    .updateOne(
-      { _id: character._id },
-      { $set: { party: toParty, partyInfluence: 0, updatedAt: now } }
-    );
+  await charactersCollection(db).updateOne(
+    { _id: character._id },
+    { $set: { party: toParty, partyInfluence: 0, updatedAt: now } }
+  );
   const vacancy = await vacateCommonsSeat(db, official, "defection", currentTurn, now);
   if (!vacancy) {
     return { ok: false, status: 409, error: "That seat changed. Refresh and try again." };

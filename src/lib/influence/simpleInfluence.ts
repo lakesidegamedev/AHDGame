@@ -17,6 +17,7 @@ import { quoteAdvertiseAction, quoteCampaignAction } from "@/lib/actions/rules";
 import { resolveCampaignPriceLevel } from "@/lib/campaigns/rules/priceLevel";
 import { NEUTRAL_STAT } from "@/lib/stats/statsConstants";
 import { EXTERNAL_ATTACK_PREMIUM, priceExternalBoost, quoteSelfActionsForGain } from "./rules";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * Maximum NET favorability any one target can be moved by player support/attack
@@ -522,7 +523,7 @@ export async function executeSimpleInfluence(
       [campaignFundsField]: { $gte: fundsCostLocal },
     };
 
-    const debitResult = await db.collection<Character>("characters").updateOne(debitFilter, {
+    const debitResult = await charactersCollection(db).updateOne(debitFilter, {
       $inc: {
         actions: -actionCost,
         [campaignFundsField]: -fundsCostLocal,
@@ -582,7 +583,7 @@ export async function executeSimpleInfluence(
       }
     }
 
-    const updatedMyCharacter = await db.collection<Character>("characters").findOne({
+    const updatedMyCharacter = await charactersCollection(db).findOne({
       _id: myCharacter._id,
     });
 
@@ -667,7 +668,7 @@ export async function executeSimpleInfluence(
 
   // Debit the quoted action and campaign-fund costs atomically before applying
   // the effect. Failed attacks still consume both, matching their AP behavior.
-  const debitResult = await db.collection<Character>("characters").updateOne(
+  const debitResult = await charactersCollection(db).updateOne(
     {
       _id: myCharacter._id,
       actions: { $gte: actionCost },
@@ -752,7 +753,7 @@ export async function executeSimpleInfluence(
   }
 
   // Get updated character
-  const updatedMyCharacter = await db.collection<Character>("characters").findOne({
+  const updatedMyCharacter = await charactersCollection(db).findOne({
     _id: myCharacter._id,
   });
 

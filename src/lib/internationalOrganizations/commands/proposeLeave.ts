@@ -11,6 +11,7 @@ import {
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { BILL_PROPOSE_ACTION_COST } from "@shared/constants/legislation";
 import { recordOrgHistoryEvent } from "@/lib/internationalOrganizations/service";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 function buildOrganizationWithdrawalBill(
   countryId: CountryId,
@@ -199,7 +200,7 @@ export async function proposeInternationalOrganizationLeave(params: {
     };
   }
 
-  const spendResult = await db.collection("characters").updateOne(
+  const spendResult = await charactersCollection(db).updateOne(
     { _id: actor.characterId, actions: { $gte: actionCost } },
     {
       $inc: { actions: -actionCost },
@@ -247,12 +248,10 @@ export async function proposeInternationalOrganizationLeave(params: {
       updatedAt: now,
     });
   } catch (error) {
-    await db
-      .collection("characters")
-      .updateOne(
-        { _id: actor.characterId },
-        { $inc: { actions: actionCost }, $set: { updatedAt: new Date() } }
-      );
+    await charactersCollection(db).updateOne(
+      { _id: actor.characterId },
+      { $inc: { actions: actionCost }, $set: { updatedAt: new Date() } }
+    );
     throw error;
   }
 

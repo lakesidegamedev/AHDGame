@@ -1,6 +1,7 @@
 import type { ObjectId, Db } from "mongodb";
 import type { IndexFundPosition } from "@/lib/db/types";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export type EnrichedFundHolder = {
   holderKind: IndexFundPosition["holderKind"];
@@ -41,8 +42,7 @@ export async function enrichFundPositions(
 
   const [characters, npps, imperials] = await Promise.all([
     characterIds.length
-      ? db
-          .collection<{ _id: ObjectId; name: string }>("characters")
+      ? charactersCollection<{ _id: ObjectId; name: string }>(db)
           .find({ _id: { $in: characterIds } })
           .project({ name: 1 })
           .toArray()

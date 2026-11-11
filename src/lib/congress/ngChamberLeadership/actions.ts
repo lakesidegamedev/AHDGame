@@ -23,13 +23,13 @@ import type {
   NgChamberLeadershipElection,
   NgChamberLeadershipNomination,
   NgChamberLeadershipRole,
-  Character,
   ElectedOfficial,
   PoliticalParty,
 } from "@/lib/db/types";
 import { NG_ROLE_CONFIG, NG_ELECTION_COLLECTION, NG_NOMINATION_COLLECTION } from "./config";
 import { getNgChamberComposition } from "./composition";
 import { resolveNgChamberLeadershipElection } from "./resolveElection";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const ELECTION_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours — parity with DE/US
 
@@ -55,9 +55,9 @@ export async function handleNgChamberLeadershipAction(ctx: ActionContext): Promi
   const { db, partyMap, role, authUser, nominationId } = ctx;
   const cfg = NG_ROLE_CONFIG[role];
 
-  const character = await db
-    .collection<Character>("characters")
-    .findOne({ userId: new ObjectId(authUser.userId) });
+  const character = await charactersCollection(db).findOne({
+    userId: new ObjectId(authUser.userId),
+  });
   if (!character) return { success: false, error: "No character", status: 400 };
 
   const myOfficial = await db.collection<ElectedOfficial>("electedOfficials").findOne({

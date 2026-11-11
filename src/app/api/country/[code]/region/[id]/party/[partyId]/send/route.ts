@@ -9,7 +9,7 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { parseObjectId } from "@/lib/utils/objectId";
 import { parseJsonBody } from "@/lib/api/validate";
 import { sendFundsSchema } from "@/lib/api/schemas/send";
-import type { StatePartyOrg, Character, AdminLog } from "@/lib/db/types";
+import type { StatePartyOrg, AdminLog } from "@/lib/db/types";
 import {
   findPartyBySequentialId,
   getPartyIdString,
@@ -35,6 +35,7 @@ import {
 import { getGameTime } from "@/lib/time/gameTime";
 import { isSameCountry } from "@/lib/api/sameCountry";
 import { TreasuryExecutionUncertainError } from "@/lib/treasury/executionUncertain";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; partyId: string }>;
@@ -119,7 +120,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     // Verify target character exists and is a member of this state party
-    const targetCharacter = await db.collection<Character>("characters").findOne({
+    const targetCharacter = await charactersCollection(db).findOne({
       _id: targetCharacterOid,
     });
 
@@ -203,9 +204,11 @@ export async function POST(request: Request, { params }: RouteParams) {
         throw badRequest("Insufficient treasury funds");
       }
 
-      const creditResult = await db
-        .collection<Character>("characters")
-        .updateOne({ _id: targetCharacterOid }, characterCredit, { session });
+      const creditResult = await charactersCollection(db).updateOne(
+        { _id: targetCharacterOid },
+        characterCredit,
+        { session }
+      );
 
       if (creditResult.matchedCount === 0) {
         throw notFound("Character not found");
@@ -261,9 +264,10 @@ export async function POST(request: Request, { params }: RouteParams) {
 
       let creditResult;
       try {
-        creditResult = await db
-          .collection<Character>("characters")
-          .updateOne({ _id: targetCharacterOid }, characterCredit);
+        creditResult = await charactersCollection(db).updateOne(
+          { _id: targetCharacterOid },
+          characterCredit
+        );
       } catch (creditError) {
         await refundDebit("credit threw", creditError);
         throw creditError;

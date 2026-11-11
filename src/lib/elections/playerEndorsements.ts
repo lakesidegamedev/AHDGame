@@ -1,6 +1,7 @@
 import { ObjectId, type Db } from "mongodb";
-import type { Character, Election, ElectionCandidate, PlayerEndorsement } from "@/lib/db/types";
+import type { Election, ElectionCandidate, PlayerEndorsement } from "@/lib/db/types";
 import { applyEndorsementSupportBump } from "@/lib/elections/campaigns/supportEvents";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * Party-alignment lifecycle for player endorsements.
@@ -70,8 +71,7 @@ async function withdrawPrimaryMisalignedRows(
       .collection<ElectionCandidate>("electionCandidates")
       .find({ _id: { $in: candidateIds } })
       .toArray(),
-    db
-      .collection<Character>("characters")
+    charactersCollection(db)
       .find({ _id: { $in: endorserIds } }, { projection: { _id: 1, party: 1 } })
       .toArray(),
   ]);

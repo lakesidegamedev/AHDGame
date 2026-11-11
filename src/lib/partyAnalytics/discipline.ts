@@ -11,6 +11,7 @@ import type {
   PartyAnalyticsDisciplineSection,
   PartyAnalyticsRiskItem,
 } from "./types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const LOW_LOYALTY_THRESHOLD = 40;
 const WHIP_BREAKER_STUBBORNNESS = 70;
@@ -150,8 +151,7 @@ export async function buildPartyDisciplineAnalytics(
           .toArray(),
     caucusIds.length === 0
       ? Promise.resolve([] as Character[])
-      : db
-          .collection<Character>("characters")
+      : charactersCollection(db)
           .find({ _id: { $in: activeChairIds } })
           .project<Pick<Character, "_id" | "name">>({ _id: 1, name: 1 })
           .toArray(),

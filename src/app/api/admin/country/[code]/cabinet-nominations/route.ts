@@ -20,6 +20,7 @@ import { resetCabinetSettingCooldowns } from "@/lib/db/collections/cabinetSettin
 import { getGameTime } from "@/lib/time/gameTime";
 import { z } from "zod";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const actionSchema = z.object({
   nominationId: z.string().length(24),
@@ -172,8 +173,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
           partyCountryId: "US",
           date: now,
         };
-        await db
-          .collection<Character>("characters")
+        await charactersCollection(db)
           .updateOne(
             { _id: nomination.nomineeCharacterId },
             { $push: { careerHistory: careerEvent } }

@@ -1,6 +1,7 @@
 import { ObjectId, type Db } from "mongodb";
-import type { Character, PoliticalParty, User } from "@/lib/db/types";
+import type { PoliticalParty, User } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface ReporterDisplay {
   characterName: string | null;
@@ -20,8 +21,7 @@ export async function loadReporterDisplayMap(
   const map = new Map<string, ReporterDisplay>();
   if (unique.length === 0) return map;
 
-  const characters = await db
-    .collection<Character>("characters")
+  const characters = await charactersCollection(db)
     .find({ userId: { $in: unique.map((id) => new ObjectId(id)) } })
     .toArray();
   const charByUser = new Map(characters.map((c) => [c.userId.toString(), c]));

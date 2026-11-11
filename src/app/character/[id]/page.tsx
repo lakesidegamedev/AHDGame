@@ -90,6 +90,7 @@ import { truncate, loadCharacterByUrlId } from "./characterLoaders";
 import { buildPublicSummary, getCharacterById, type OverviewStatItem } from "./characterData";
 import { raceHref } from "@/lib/campaignManager/links";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const MIN_BASE_ACTIONS_PER_TURN = 4;
 
@@ -251,8 +252,7 @@ export default async function CharacterPage({ params }: PageProps) {
         .collection<SupremeCourtSeat>("supremeCourtSeats")
         .findOne({ justiceCharacterId: character._id }, { projection: { _id: 1 } }),
       needsPartyPool
-        ? apDb
-            .collection<Character>("characters")
+        ? charactersCollection(apDb)
             .aggregate<{ totalInfluence: number; memberCount: number }>([
               {
                 $match: {

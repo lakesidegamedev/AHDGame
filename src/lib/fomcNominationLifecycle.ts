@@ -22,9 +22,10 @@ import { computeCabinetNominationTally } from "@/lib/congress/governmentVoteBrea
 import { getGameState } from "@/lib/gameState";
 import { nppCabinetVote } from "@/lib/cabinetNominationLifecycle";
 import type { CountryId } from "@/lib/constants/countries";
-import type { ElectedOfficial, NPP, Character } from "@/lib/db/types";
+import type { ElectedOfficial, NPP } from "@/lib/db/types";
 import { FOMC_TERM_TURNS, type FomcNomination } from "@/lib/db/types/centralBank";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /** Resolve a player character's owning userId for notifications. */
 async function nomineeUserId(
@@ -32,9 +33,10 @@ async function nomineeUserId(
   characterId: ObjectId | null
 ): Promise<ObjectId | null> {
   if (!characterId) return null;
-  const char = await db
-    .collection<Character>("characters")
-    .findOne({ _id: characterId }, { projection: { userId: 1 } });
+  const char = await charactersCollection(db).findOne(
+    { _id: characterId },
+    { projection: { userId: 1 } }
+  );
   return char?.userId ?? null;
 }
 

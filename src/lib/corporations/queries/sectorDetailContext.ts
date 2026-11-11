@@ -6,7 +6,6 @@ import type {
   User,
   ImperialCharacter,
   State,
-  Character,
   CommodityPrice,
   GameState,
   StateBudget,
@@ -42,6 +41,7 @@ import type { AuthUser } from "@/lib/auth";
 import type { Db, WithId } from "mongodb";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /** Reads the state, country, tariff, sibling and market context for one sector. */
 export async function loadSectorDetailContext({
@@ -201,7 +201,7 @@ export async function loadSectorDetailContext({
                 { _id: corporation.ceoId },
                 { projection: { name: 1, sequentialId: 1, avatarUrl: 1 } }
               )
-          : db.collection<Character>("characters").findOne(
+          : charactersCollection(db).findOne(
               { _id: corporation.ceoId },
               {
                 projection: {

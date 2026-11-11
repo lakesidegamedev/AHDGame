@@ -10,6 +10,7 @@ import { updateCountryState } from "@/lib/countryState";
 import { getGovernmentFormationsCollection } from "@/lib/db/collections/governmentFormation";
 import { recordCountryEvent } from "@/lib/turn/history/recordCountryEvent";
 import { ensureInitialEscalationState } from "@/lib/turn/regimeEscalationTurn";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * Turn a country into a one-party state.
@@ -222,12 +223,10 @@ async function vacateSeatsOfParties(
   const clearNpps = nppIds.filter((id) => !seatedNpps.has(id.toString()));
 
   if (clearCharacters.length > 0) {
-    await db
-      .collection("characters")
-      .updateMany(
-        { _id: { $in: clearCharacters } },
-        { $set: { currentOffice: null, updatedAt: now } }
-      );
+    await charactersCollection(db).updateMany(
+      { _id: { $in: clearCharacters } },
+      { $set: { currentOffice: null, updatedAt: now } }
+    );
   }
   if (clearNpps.length > 0) {
     await db

@@ -15,11 +15,11 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { createNotification } from "@/lib/notifications";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
-import type { Character } from "@/lib/db/types";
 import { assertTreasuryAuthority } from "@/lib/nationalization/authority";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import { corporationQueryFromParamId } from "@/lib/api/corporations/resolveQuery";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const appointSchema = z.object({ nomineeCharacterId: z.string().length(24) });
 
@@ -76,7 +76,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     // Nominee must exist and reside in this country (country-wide appointment).
-    const nominee = await db.collection<Character>("characters").findOne({ _id: nomineeId });
+    const nominee = await charactersCollection(db).findOne({ _id: nomineeId });
     if (!nominee) {
       return errorResponse(404, "Nominee not found");
     }

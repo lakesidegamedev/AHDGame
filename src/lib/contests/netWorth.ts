@@ -7,7 +7,6 @@
  * the contest nets out of growth.
  */
 import type { Db, Document, ObjectId } from "mongodb";
-import type { Character } from "@/lib/db/types";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
 import type { IndexFund, IndexFundPosition } from "@/lib/db/types/indexFund";
 import type { CurrencyCode } from "@/lib/constants/currencies";
@@ -22,6 +21,7 @@ import { fetchExchangeRateMap, getRateDoc, toInternalAmount } from "@/lib/world/
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const add = (m: Map<string, number>, key: string, value: number) =>
   m.set(key, (m.get(key) ?? 0) + value);
@@ -34,8 +34,7 @@ export async function loadCharacterNetWorths(
   const out = new Map<string, number>();
   if (characterIds.length === 0) return out;
   const [characters, rateMap, fx, corps, bonds, positions] = await Promise.all([
-    db
-      .collection<Character>("characters")
+    charactersCollection(db)
       .find(
         { _id: { $in: characterIds } },
         { projection: { countryId: 1, currencyBalances: 1, cashOnHand: 1, savingsOnHand: 1 } }

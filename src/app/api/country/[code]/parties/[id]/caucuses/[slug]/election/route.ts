@@ -16,10 +16,10 @@ import type {
   CaucusChairElection,
   CaucusChairVote,
   CaucusMembership,
-  Character,
   GameState,
   NationalPartyElection,
 } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; slug: string }>;
@@ -199,8 +199,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const characterIds = candidates.map((entry) => entry.characterId);
     const characters =
       characterIds.length > 0
-        ? await db
-            .collection<Character>("characters")
+        ? await charactersCollection(db)
             .find({ _id: { $in: characterIds } })
             .toArray()
         : [];

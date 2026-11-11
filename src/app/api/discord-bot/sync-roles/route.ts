@@ -3,7 +3,7 @@ import { getDb } from "@/lib/mongodb";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { requireBotToken } from "@/lib/api/requireBotToken";
 import { checkRateLimit, rateLimitResponse, BOT_FINANCIAL_LIMITS } from "@/lib/api/rateLimit";
-import type { Character, User, PoliticalParty, ElectedOfficial } from "@/lib/db/types";
+import type { User, PoliticalParty, ElectedOfficial } from "@/lib/db/types";
 import { COUNTRY_ORDER, type CountryId } from "@/lib/constants/countries";
 import {
   getHeadOfGovernmentCharacterId,
@@ -17,6 +17,7 @@ import {
 import { buildSyncRoleTokens } from "./buildSyncRoles";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 // GET /api/discord-bot/sync-roles — Returns the Discord roles a user should hold based on their in-game party, office, and investment status.
 // Auth: requireAdminOrApiKey
@@ -50,7 +51,7 @@ export async function GET(request: Request) {
     }
 
     // Find character
-    const character = await db.collection<Character>("characters").findOne({ userId: user._id });
+    const character = await charactersCollection(db).findOne({ userId: user._id });
     if (!character) {
       return NextResponse.json({ found: false, roles: [] });
     }
@@ -229,8 +230,7 @@ export async function POST(request: Request) {
     const discordIdMap = new Map(linkedUsers.map((u) => [u._id.toString(), u.discordId]));
 
     // Fetch all characters for linked users
-    const characters = await db
-      .collection<Character>("characters")
+    const characters = await charactersCollection(db)
       .find({ userId: { $in: userIds } })
       .toArray();
 

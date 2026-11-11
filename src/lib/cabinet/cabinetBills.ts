@@ -53,6 +53,7 @@ import { loadBillLegislationTypes } from "@/lib/legislature/queries/loadBillLegi
 import { resetTaxesFor } from "@/lib/resetLegislation/taxCatalog";
 import type { ResetCountry } from "@/lib/resetLegislation/fundingOwner";
 import { getNationalDocId } from "@/lib/constants/nationalScope";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const CABINET_VOTE_DURATION_MS = 24 * 3_600_000; // 24 hours
 type BillListProvisionDisplay = NonNullable<BillDisplay["provisions"]>[number];
@@ -585,7 +586,7 @@ export async function proposeCabinetBill({
     const npiCost = getProvisionCostTotal(reviewedProvisionCount);
     const actionCost = BILL_PROPOSE_ACTION_COST;
     if (!isAdmin) {
-      const spendResult = await db.collection<Character>("characters").updateOne(
+      const spendResult = await charactersCollection(db).updateOne(
         {
           _id: character._id,
           actions: { $gte: actionCost },
@@ -646,7 +647,7 @@ export async function proposeCabinetBill({
       });
     } catch (error) {
       if (!isAdmin) {
-        await db.collection<Character>("characters").updateOne(
+        await charactersCollection(db).updateOne(
           { _id: character._id },
           {
             $inc: {
@@ -687,9 +688,7 @@ export async function proposeCabinetBill({
     const npiCost = getProvisionCostTotal(natValidation.provisions.length);
     const actionCost = BILL_PROPOSE_ACTION_COST;
     if (!isAdmin) {
-      const freshChar = await db
-        .collection<Character>("characters")
-        .findOne({ _id: character._id });
+      const freshChar = await charactersCollection(db).findOne({ _id: character._id });
       const currentActions = freshChar?.actions ?? 0;
       const liveNational = freshChar?.nationalInfluence ?? 0;
       if (currentActions < actionCost) {
@@ -704,7 +703,7 @@ export async function proposeCabinetBill({
           `This bill costs ${npiCost} national political influence (you have ${liveNational.toFixed(0)}).`
         );
       }
-      const spendResult = await db.collection<Character>("characters").updateOne(
+      const spendResult = await charactersCollection(db).updateOne(
         {
           _id: character._id,
           actions: { $gte: actionCost },
@@ -756,7 +755,7 @@ export async function proposeCabinetBill({
       });
     } catch (error) {
       if (!isAdmin) {
-        await db.collection<Character>("characters").updateOne(
+        await charactersCollection(db).updateOne(
           { _id: character._id },
           {
             $inc: { actions: actionCost, ...(npiCost > 0 ? { nationalInfluence: npiCost } : {}) },
@@ -843,7 +842,7 @@ export async function proposeCabinetBill({
   const npiCost = getProvisionCostTotal(1); // Cabinet bills always have 1 provision
   const actionCost = BILL_PROPOSE_ACTION_COST;
   if (!isAdmin) {
-    const freshChar = await db.collection<Character>("characters").findOne({ _id: character._id });
+    const freshChar = await charactersCollection(db).findOne({ _id: character._id });
     const currentActions = freshChar?.actions ?? 0;
     const liveNational = freshChar?.nationalInfluence ?? 0;
     if (currentActions < actionCost) {
@@ -858,7 +857,7 @@ export async function proposeCabinetBill({
         `This bill costs ${npiCost} national political influence (you have ${liveNational.toFixed(0)}).`
       );
     }
-    const spendResult = await db.collection<Character>("characters").updateOne(
+    const spendResult = await charactersCollection(db).updateOne(
       {
         _id: character._id,
         actions: { $gte: actionCost },
@@ -923,7 +922,7 @@ export async function proposeCabinetBill({
     });
   } catch (error) {
     if (!isAdmin) {
-      await db.collection<Character>("characters").updateOne(
+      await charactersCollection(db).updateOne(
         { _id: character._id },
         {
           $inc: {

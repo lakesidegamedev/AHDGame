@@ -46,6 +46,7 @@ import { getConfidenceConsequenceLevel } from "@/lib/turn/rulingPartyPriorities"
 import { executiveStatusPayload } from "@/lib/elections/rules/successionFill";
 import { loadExecutiveStatus } from "@/lib/elections/executiveStatus";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * Coerce a character id that is typed `ObjectId` but may have been persisted as
@@ -106,8 +107,7 @@ async function handlePresidential(countryId: CountryId) {
   ]);
 
   const myCharacter = authUser
-    ? await db
-        .collection<Character>("characters")
+    ? await charactersCollection(db)
         .findOne({ userId: new ObjectId(authUser.userId) })
     : null;
   const isPresident =
@@ -163,7 +163,7 @@ async function handleUS() {
   let vicePresident: ExecutiveInfo = null;
 
   if (presCharId) {
-    const char = await db.collection<Character>("characters").findOne({ _id: presCharId });
+    const char = await charactersCollection(db).findOne({ _id: presCharId });
     if (char) {
       const charCountry: CountryId = char.countryId ?? ("US" as CountryId);
       const party = char.party
@@ -186,7 +186,7 @@ async function handleUS() {
   }
 
   if (vpCharId) {
-    const char = await db.collection<Character>("characters").findOne({ _id: vpCharId });
+    const char = await charactersCollection(db).findOne({ _id: vpCharId });
     if (char) {
       const charCountry: CountryId = char.countryId ?? ("US" as CountryId);
       const party = char.party
@@ -209,8 +209,7 @@ async function handleUS() {
   }
 
   const myCharacter = authUser
-    ? await db
-        .collection<Character>("characters")
+    ? await charactersCollection(db)
         .findOne({ userId: new ObjectId(authUser.userId) })
     : null;
   const isPresident =
@@ -307,7 +306,7 @@ async function handleParliamentary(countryId: CountryId) {
   const pmCharacterId = toObjectIdOrNull(govFormation?.pmCharacterId);
 
   if (pmCharacterId) {
-    const char = await db.collection<Character>("characters").findOne({ _id: pmCharacterId });
+    const char = await charactersCollection(db).findOne({ _id: pmCharacterId });
     if (char) {
       const charCountry: CountryId = char.countryId ?? countryId;
       const party = char.party
@@ -341,8 +340,7 @@ async function handleParliamentary(countryId: CountryId) {
       .collection<ElectedOfficial>("electedOfficials")
       .findOne({ officeType: headOfStateOfficeType, countryId });
     if (hosOfficial?.characterId) {
-      const hosChar = await db
-        .collection<Character>("characters")
+      const hosChar = await charactersCollection(db)
         .findOne({ _id: hosOfficial.characterId });
       if (hosChar) {
         const hosCountry: CountryId = hosChar.countryId ?? countryId;
@@ -368,8 +366,7 @@ async function handleParliamentary(countryId: CountryId) {
   }
 
   const myCharacter = authUser
-    ? await db
-        .collection<Character>("characters")
+    ? await charactersCollection(db)
         .findOne({ userId: new ObjectId(authUser.userId) })
     : null;
   const isPrimeMinister = !!pmCharacterId && !!myCharacter && pmCharacterId.equals(myCharacter._id);

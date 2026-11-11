@@ -17,7 +17,7 @@ import { isAuthMigrationFenced } from "@/lib/auth/sourceFence";
 import { needsCharacterHint } from "@/lib/auth/characterGate";
 import { setCharacterGateCookie } from "@/lib/auth/characterGateCookie";
 import { AUTH_COOKIE_NAME } from "@/lib/authCookieName";
-import type { Character, Notification, PoliticalParty, State, User } from "@/lib/db/types";
+import type { Notification, PoliticalParty, State, User } from "@/lib/db/types";
 import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { isPatreonActive } from "@/lib/db/types";
@@ -30,6 +30,7 @@ import { getClientIp } from "@/lib/utils/network";
 import { recordIdentitySignals } from "@/lib/identityHistory/recordObservation";
 import { resolveStaffRole } from "@/lib/staff/rules";
 import { unifiedSessionIsCurrent } from "@/lib/auth/unifiedSession";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 function getPatreonAdPreference(
   user: User | null | undefined
@@ -158,7 +159,7 @@ export const GET = withNoStore(async () => {
       const characterQuery = user?.activeCharacterId
         ? { _id: user.activeCharacterId, userId: new ObjectId(userId) }
         : { userId: new ObjectId(userId) };
-      character = await db.collection<Character>("characters").findOne(characterQuery);
+      character = await charactersCollection(db).findOne(characterQuery);
     }
 
     // Ensure persistent tracking cookie exists for anti-fraud duplicate detection

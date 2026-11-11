@@ -7,7 +7,6 @@ import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError, notFound, errorResponse } from "@/lib/api/errors";
-import type { Character } from "@/lib/db/types";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { COUNTRY_CURRENCY_MAP, FOREX_ACTIVE_COUNTRIES } from "@/lib/constants/currencies";
 import type { CurrencyCode } from "@/lib/constants/currencies";
@@ -30,6 +29,7 @@ import { getGameState } from "@/lib/gameState";
 import { getBankId } from "@/lib/centralBank/helpers";
 import { loadCentralBankPricingAdjustment } from "@/lib/monetaryPolicy/centralBankPricing";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteContext {
   params: Promise<{ code: string }>;
@@ -64,7 +64,7 @@ export async function GET(request: Request, context: RouteContext) {
     const db = await getDb();
     const nationalCurrency = COUNTRY_CURRENCY_MAP[countryId] as CurrencyCode;
 
-    const character = await db.collection<Character>("characters").findOne({
+    const character = await charactersCollection(db).findOne({
       _id: new ObjectId(characterId),
     });
     if (!character || !character.userId) {

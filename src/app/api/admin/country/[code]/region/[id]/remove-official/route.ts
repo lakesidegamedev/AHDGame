@@ -10,8 +10,9 @@ import { requireAdmin } from "@/lib/api/requireAdmin";
 import { parseJsonBody } from "@/lib/api/validate";
 import { adminRemoveOfficialSchema } from "@/lib/api/schemas/admin";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
-import type { ElectedOfficial, Character, NPP } from "@/lib/db/types";
+import type { ElectedOfficial, NPP } from "@/lib/db/types";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export async function POST(
   request: Request,
@@ -53,9 +54,10 @@ export async function POST(
 
     // Clear the character/NPP's currentOffice
     if (official.characterId) {
-      await db
-        .collection<Character>("characters")
-        .updateOne({ _id: official.characterId }, { $unset: { currentOffice: "" } });
+      await charactersCollection(db).updateOne(
+        { _id: official.characterId },
+        { $unset: { currentOffice: "" } }
+      );
     } else if (official.nppId) {
       await db
         .collection<NPP>("npps")

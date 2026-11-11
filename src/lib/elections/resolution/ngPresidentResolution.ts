@@ -20,6 +20,7 @@ import {
 } from "@/lib/elections/presidential/nigeriaPresidentialElectionEngine";
 import { captureElectionResultSnapshot } from "@/lib/elections/liveResults/captureResultSnapshot";
 import { captureElectionWon } from "@/lib/analytics/electionAnalytics";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /** Minimal candidate shape the decision needs (id + party key). */
 export interface NGPresidentCandidate {
@@ -226,8 +227,7 @@ export async function resolveNGPresidentElection(
     const runnerVotes = Object.entries(totals)
       .filter(([candidateId]) => candidateId !== winnerCandidateId)
       .reduce((highest, [, votes]) => Math.max(highest, votes), 0);
-    const winnerAccount = await db
-      .collection<{ userId?: ObjectId }>("characters")
+    const winnerAccount = await charactersCollection<{ userId?: ObjectId }>(db)
       .findOne({ _id: winnerCandidate.characterId }, { projection: { userId: 1 } })
       .catch(() => null);
     await captureElectionWon({

@@ -7,6 +7,7 @@ import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { parseJsonBody } from "@/lib/api/validate";
 import { displayCurrencyPreferenceSchema } from "@/lib/api/schemas/settings";
 import type { User } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 // PATCH /api/settings/display-currency — Saves the player's currency display preference to their
 // active regular or imperial character, matching the currently selected mode.
@@ -59,7 +60,7 @@ export async function PATCH(request: Request) {
       const characterFilter = userDoc.activeCharacterId
         ? { _id: userDoc.activeCharacterId, userId: new ObjectId(auth.user.userId) }
         : { userId: new ObjectId(auth.user.userId) };
-      const result = await db.collection("characters").updateOne(characterFilter, update);
+      const result = await charactersCollection(db).updateOne(characterFilter, update);
       matchedCount = result.matchedCount ?? 0;
     }
 

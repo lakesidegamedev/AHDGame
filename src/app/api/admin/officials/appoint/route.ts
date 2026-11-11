@@ -7,7 +7,8 @@ import { createAdminLog } from "@/lib/adminLog";
 import { createNotification } from "@/lib/notifications";
 import { parseJsonBody } from "@/lib/api/validate";
 import { adminOfficialsAppointSchema } from "@/lib/api/schemas/admin";
-import type { Character, ElectedOfficial, OfficeType, User } from "@/lib/db/types";
+import type { ElectedOfficial, OfficeType, User } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 // POST /api/admin/officials/appoint — Appoints or vacates a character in an elected office position, with admin logging.
 // Auth: requireAdmin
@@ -36,7 +37,7 @@ export async function POST(request: Request) {
         return errorResponse(400, "Invalid characterId format");
       }
 
-      const character = await db.collection<Character>("characters").findOne({
+      const character = await charactersCollection(db).findOne({
         _id: characterObjectId,
       });
 
@@ -77,7 +78,7 @@ export async function POST(request: Request) {
       const result = await db.collection("electedOfficials").insertOne(newOfficial);
 
       // Update character's current office
-      await db.collection("characters").updateOne(
+      await charactersCollection(db).updateOne(
         { _id: characterObjectId },
         {
           $set: {
@@ -130,7 +131,7 @@ export async function POST(request: Request) {
 
     // If there's a current office holder, remove their office
     if (official.characterId) {
-      await db.collection("characters").updateOne(
+      await charactersCollection(db).updateOne(
         { _id: official.characterId },
         {
           $set: {
@@ -150,12 +151,10 @@ export async function POST(request: Request) {
     // touched here).
     if (official.officeType === "president" || official.officeType === "vicePresident") {
       const officialCountryId = official.countryId ?? "US";
-      await db
-        .collection("characters")
-        .updateMany(
-          { countryId: officialCountryId, "currentOffice.type": official.officeType },
-          { $set: { currentOffice: null, updatedAt: now } }
-        );
+      await charactersCollection(db).updateMany(
+        { countryId: officialCountryId, "currentOffice.type": official.officeType },
+        { $set: { currentOffice: null, updatedAt: now } }
+      );
     }
 
     // If appointing a new character
@@ -168,7 +167,7 @@ export async function POST(request: Request) {
       }
 
       // Find the character
-      const character = await db.collection<Character>("characters").findOne({
+      const character = await charactersCollection(db).findOne({
         _id: characterObjectId,
       });
 
@@ -329,7 +328,7 @@ export async function POST(request: Request) {
       );
 
       // Update the character's current office
-      await db.collection("characters").updateOne(
+      await charactersCollection(db).updateOne(
         { _id: characterObjectId },
         {
           $set: {
@@ -389,9 +388,7 @@ export async function POST(request: Request) {
       // Vacating the position - log removal if there was a previous holder
       if (official.characterId && official.characterName) {
         // Get the previous holder's user for logging
-        const prevCharacter = await db
-          .collection<Character>("characters")
-          .findOne({ _id: official.characterId });
+        const prevCharacter = await charactersCollection(db).findOne({ _id: official.characterId });
         const prevUser = prevCharacter
           ? await db.collection<User>("users").findOne({ _id: prevCharacter.userId })
           : null;
@@ -444,8 +441,7 @@ export async function GET(request: Request) {
     const filter: Record<string, unknown> = {};
     if (countryId) filter.countryId = countryId;
 
-    const characters = await db
-      .collection<Character>("characters")
+    const characters = await charactersCollection(db)
       .find(filter)
       .project({
         _id: 1,

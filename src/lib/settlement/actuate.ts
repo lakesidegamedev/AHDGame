@@ -54,6 +54,8 @@ import {
   type InternationalOrganizationId,
 } from "@/lib/constants/internationalOrganizations";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import type { Document } from "mongodb";
 
 export interface ActuationResult {
   actuated: boolean;
@@ -474,14 +476,12 @@ async function clearCabinetPointers(
   const nppIds = ministers.map((m) => m.nppId).filter(Boolean) as ObjectId[];
 
   if (characterIds.length > 0) {
-    await db
-      .collection("characters")
+    await charactersCollection<Document>(db)
       .updateMany(
         { _id: { $in: characterIds }, "currentOffice.type": "parliamentaryCabinet" },
         { $set: { currentOffice: null, updatedAt: now }, $unset: { cabinetPosition: "" } }
       );
-    await db
-      .collection("characters")
+    await charactersCollection<Document>(db)
       .updateMany(
         { _id: { $in: characterIds }, "currentOffice.type": { $ne: null } },
         { $unset: { cabinetPosition: "" }, $set: { updatedAt: now } }
@@ -639,7 +639,7 @@ async function retireNationalRemnants(
     // field.
     const standDown = { $set: { currentOffice: null, updatedAt: now } };
     if (absorbedGov.pmCharacterId) {
-      await db.collection("characters").updateOne({ _id: absorbedGov.pmCharacterId }, standDown);
+      await charactersCollection<Document>(db).updateOne({ _id: absorbedGov.pmCharacterId }, standDown);
     }
     if (absorbedGov.pmNppId) {
       await db.collection("npps").updateOne({ _id: absorbedGov.pmNppId }, standDown);

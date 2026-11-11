@@ -7,7 +7,6 @@ import { isSoloCharterTestingEnabled } from "@/lib/deploymentIdentity";
 import type { Db, ObjectId } from "mongodb";
 import { ObjectId as ObjectIdCtor } from "mongodb";
 import type {
-  Character,
   FoundingCohortPick,
   PartyCharter,
   PartyCharterPlatform,
@@ -25,6 +24,7 @@ import { deParties } from "@/lib/seeds/de/deParties";
 import { jpParties } from "@/lib/countries/jp/data/jpParties";
 import { getEnabledCountryIdsFromDb } from "@/lib/countryAccess";
 import { retainsDefaultPartyNameReservation } from "./rules/defaultNameReservation";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * Names + abbreviations reserved for preset-gated default parties (e.g.
@@ -120,8 +120,7 @@ export async function draftCharter(input: DraftCharterInput, db: Db): Promise<Dr
   // real `userId` (humans only), and belong to the charter's country.
   // Also load `homeState` so founder adjacency and the F4 founding-cohort
   // picks can be validated against the proposer's adjacency.
-  const founderCharacters = await db
-    .collection<Character>("characters")
+  const founderCharacters = await charactersCollection(db)
     .find({ _id: { $in: founders } })
     .project<{
       _id: ObjectId;

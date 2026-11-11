@@ -19,6 +19,8 @@ import { getPresetMonetaryScope } from "@/lib/monetaryPolicy/presetMonetaryScope
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import type { Document } from "mongodb";
 
 const BATCH_SIZE = 500;
 
@@ -48,7 +50,7 @@ export async function migrateCharacterBalances(
    */
   preset?: string
 ): Promise<MigrationResult> {
-  const col = db.collection("characters");
+  const col = charactersCollection<Document>(db);
   const cursor = col
     .find({})
     .project({ _id: 1, countryId: 1, funds: 1, cashOnHand: 1, currencyBalances: 1 })

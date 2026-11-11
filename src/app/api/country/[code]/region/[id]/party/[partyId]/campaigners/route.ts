@@ -7,12 +7,13 @@ import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
 import { parseJsonBody } from "@/lib/api/validate";
 import { findPartyBySequentialId, getStatePartyOrgDocumentId } from "@/lib/db/partyLookup";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
-import type { Character, State, StatePartyOrg } from "@/lib/db/types";
+import type { State, StatePartyOrg } from "@/lib/db/types";
 import { getGameTime } from "@/lib/time/gameTime";
 import {
   getPartyTenure,
   STATE_LEADERSHIP_RELOCATION_DELAY_TURNS,
 } from "@/lib/parties/leadershipTenure";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; partyId: string }>;
@@ -89,9 +90,7 @@ export async function POST(request: Request, { params }: RouteParams) {
         return errorResponse(400, "Malformed campaigner id");
       }
 
-      const character = await db
-        .collection<Character>("characters")
-        .findOne({ _id: campaignerObjectId });
+      const character = await charactersCollection(db).findOne({ _id: campaignerObjectId });
       if (!character) {
         return errorResponse(400, "Character not found");
       }

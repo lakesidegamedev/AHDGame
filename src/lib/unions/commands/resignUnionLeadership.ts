@@ -7,6 +7,7 @@ import {
   isUnionProsecutionBarred,
   UNION_PROSECUTION_MESSAGE,
 } from "@/lib/unions/unionProsecutionBar";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export type ResignUnionLeadershipResult =
   { ok: true; status: 200 } | { ok: false; status: number; error: string };
@@ -55,13 +56,11 @@ export async function resignUnionLeadership(
         },
         { session }
       );
-      await db
-        .collection<Character>("characters")
-        .updateOne(
-          { _id: character._id },
-          { $set: { unionLeaderOf: null, updatedAt: now } },
-          { session }
-        );
+      await charactersCollection(db).updateOne(
+        { _id: character._id },
+        { $set: { unionLeaderOf: null, updatedAt: now } },
+        { session }
+      );
       await db.collection("unionLeaderVotes").deleteMany({ unionId: unionObjectId }, { session });
     },
     async () => {
@@ -72,9 +71,10 @@ export async function resignUnionLeadership(
           $unset: { pendingLeaderCharacterId: "", ownerType: "" },
         }
       );
-      await db
-        .collection<Character>("characters")
-        .updateOne({ _id: character._id }, { $set: { unionLeaderOf: null, updatedAt: now } });
+      await charactersCollection(db).updateOne(
+        { _id: character._id },
+        { $set: { unionLeaderOf: null, updatedAt: now } }
+      );
       await db.collection("unionLeaderVotes").deleteMany({ unionId: unionObjectId });
     }
   );

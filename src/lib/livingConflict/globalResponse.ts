@@ -78,6 +78,7 @@ import {
   type CampaignRequirementResult,
 } from "./campaign";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * The deep module for shared world-event responses. Callers only need to ask
@@ -500,8 +501,7 @@ async function applyEffectsForCountry(
     .find({ countryId }, { projection: { _id: 1 } })
     .toArray();
   const characters = effects.some((effect) => effect.targetType === "stat")
-    ? await db
-        .collection<{ _id: ObjectId }>("characters")
+    ? await charactersCollection<{ _id: ObjectId }>(db)
         .find({ countryId }, { projection: { _id: 1 } })
         .toArray()
     : [];

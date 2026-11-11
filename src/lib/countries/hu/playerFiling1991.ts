@@ -4,16 +4,11 @@
  * withdrawal and re-entry reuse the original person and their recorded ballots.
  */
 import { MongoServerError, ObjectId, type ClientSession, type Db } from "mongodb";
-import type {
-  Character,
-  Election,
-  ElectionCandidate,
-  GameState,
-  PoliticalParty,
-} from "@/lib/db/types";
+import type { Election, ElectionCandidate, GameState, PoliticalParty } from "@/lib/db/types";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { chooseHu1991PlayerDistrict } from "./rules/playerFiling1991";
 import { isHu1991AssemblyCampaign } from "./rules/assemblyCampaign1991";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 export const HU_1991_FILING_LOCKS_COLLECTION = "hu1991AssemblyFilingLocks";
 export type Hu1991FilingFailure =
   | "invalid-ballot"
@@ -97,7 +92,7 @@ export async function materializeHu1991PlayerFiling(input: {
       : !election.primaryEndTime || now >= election.primaryEndTime)
   )
     return reject("filing-closed");
-  const character = await db.collection<Character>("characters").findOne(
+  const character = await charactersCollection(db).findOne(
     { _id: candidate.characterId },
     {
       session,

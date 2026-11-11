@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError } from "@/lib/api/errors";
-import type { Character } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * One-time migration endpoint to fix account_created logs that are missing character names.
@@ -49,7 +49,7 @@ export async function POST() {
       }
 
       // Find the character for this user
-      const character = await db.collection<Character>("characters").findOne({ userId: user._id });
+      const character = await charactersCollection(db).findOne({ userId: user._id });
       if (!character) {
         // User exists but has no character - leave the log as is
         continue;

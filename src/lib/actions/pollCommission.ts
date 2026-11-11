@@ -26,7 +26,6 @@ import { eraForPreset } from "@/lib/seeds/presetSelector";
 import { clampPercentStat } from "@/lib/numeric/rules";
 import { eraYearContextFromGameState } from "@/lib/era/context";
 import type {
-  Character,
   State,
   StatePartyOrg,
   StateDemographicTurnout,
@@ -44,6 +43,7 @@ import {
   resolvePresidentApproval,
 } from "@/lib/elections/engine/presidentialCoattail";
 import { getPresidentialConsecutiveTerms } from "@/lib/elections/resolution/presidentialTenureLedger";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 // Poll pricing lives in the shared rules module: quotePollAction is the single
 // source of truth the effect, validation and the POST debit all call.
@@ -67,7 +67,7 @@ export async function buildPollOverview({
   const characterQuery = userDoc?.activeCharacterId
     ? { _id: userDoc.activeCharacterId, userId: new ObjectId(userId) }
     : { userId: new ObjectId(userId) };
-  const character = await db.collection<Character>("characters").findOne(characterQuery);
+  const character = await charactersCollection(db).findOne(characterQuery);
   if (!character) {
     return errorResponse(404, "Character not found");
   }
@@ -136,9 +136,10 @@ export async function buildPollOverview({
   // The granular electorate is the only poll shape. A stored snapshot without
   // it predates the bucket model and cannot be displayed.
   if (storedPoll && !storedPoll.granular) {
-    await db
-      .collection<Character>("characters")
-      .updateOne({ _id: character._id }, { $unset: { [storedPollKey]: 1 } });
+    await charactersCollection(db).updateOne(
+      { _id: character._id },
+      { $unset: { [storedPollKey]: 1 } }
+    );
     storedPoll = undefined;
   }
 
@@ -234,7 +235,7 @@ export async function commissionPoll({ userId, pollType }: { userId: string; pol
     ? { _id: userDoc.activeCharacterId, userId: new ObjectId(userId) }
     : { userId: new ObjectId(userId) };
   const [character, forexEnabled] = await Promise.all([
-    db.collection<Character>("characters").findOne(characterQuery),
+    charactersCollection(db).findOne(characterQuery),
     isForexEnabled(),
   ]);
   if (!character) {
@@ -413,7 +414,7 @@ export async function commissionPoll({ userId, pollType }: { userId: string; pol
     actions: { $gte: actionCost },
     [campaignFundsField]: { $gte: fundCostLocal },
   };
-  const spendResult = await db.collection("characters").updateOne(spendFilter, {
+  const spendResult = await charactersCollection(db).updateOne(spendFilter, {
     $inc: {
       actions: -actionCost,
       [campaignFundsField]: -fundCostLocal,
@@ -458,7 +459,7 @@ export async function commissionPoll({ userId, pollType }: { userId: string; pol
     console.error("Achievement check failed:", e);
   }
 
-  const updatedCharacter = await db.collection<Character>("characters").findOne({
+  const updatedCharacter = await charactersCollection(db).findOne({
     _id: character._id,
   });
 

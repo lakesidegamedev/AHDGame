@@ -6,7 +6,6 @@
 import { createHash } from "node:crypto";
 import { ObjectId, type ClientSession, type Db } from "mongodb";
 import type {
-  Character,
   ElectedOfficial,
   Election,
   ElectionCandidate,
@@ -21,6 +20,7 @@ import { MS_PER_TURN } from "@/lib/constants/turnTime";
 import { HU_2011_COUNTS_COLLECTION, type Hu2011AssemblyRecord } from "./assemblyCount2011";
 import { settleHuModernAssembly } from "./rules/modernAssembly2011";
 import { calendarTurn, turnToGameMonth } from "@/lib/utils/gameDate";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const HU_2011_OFFICE_ARCHIVES_COLLECTION = "hu2011AssemblyOfficeArchives";
 interface Hu2011AssemblyArchive {
@@ -131,8 +131,7 @@ async function materializeHu2011AssemblySeating(input: {
         .toArray()
     : [];
   const players = playerIds.length
-    ? await db
-        .collection<Character>("characters")
+    ? await charactersCollection(db)
         .find(
           {
             _id: { $in: playerIds },
@@ -213,7 +212,7 @@ async function materializeHu2011AssemblySeating(input: {
       { session }
     );
   for (const isNpc of [false, true]) {
-    const collection = isNpc ? db.collection<NPP>("npps") : db.collection<Character>("characters");
+    const collection = isNpc ? db.collection<NPP>("npps") : charactersCollection(db);
     await collection.updateMany(
       { countryId: "HU", "currentOffice.type": { $in: ["assemblyDelegate", "assemblyDeputy"] } },
       {
@@ -249,7 +248,7 @@ async function materializeHu2011AssemblySeating(input: {
   for (const isNpc of [false, true]) {
     const selected = [...owners.values()].filter((row) => row.isNpc === isNpc);
     if (!selected.length) continue;
-    const collection = isNpc ? db.collection<NPP>("npps") : db.collection<Character>("characters");
+    const collection = isNpc ? db.collection<NPP>("npps") : charactersCollection(db);
     await collection.bulkWrite(
       selected.map((row) => {
         const originalOffice = (isNpc ? npcMap : playerMap).get(row.ownerId)?.currentOffice;

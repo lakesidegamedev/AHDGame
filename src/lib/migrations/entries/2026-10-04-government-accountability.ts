@@ -9,6 +9,7 @@ import {
   getHeadOfGovernmentOfficeKey,
   type CountryId,
 } from "@/lib/constants/countries";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export const migration: Migration = {
   id: "2026-10-04-government-accountability",
@@ -49,8 +50,7 @@ export const migration: Migration = {
     const turn = game?.currentTurn ?? 0;
     type Actor = { _id: ObjectId; party?: string };
     const [characters, npps] = await Promise.all([
-      db
-        .collection<Actor>("characters")
+      charactersCollection<Actor>(db)
         .find(
           {
             _id: {

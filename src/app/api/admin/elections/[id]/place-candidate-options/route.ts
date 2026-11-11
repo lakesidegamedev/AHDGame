@@ -7,7 +7,8 @@ import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
-import type { Election, Character, NPP, PoliticalParty } from "@/lib/db/types";
+import type { Election, NPP, PoliticalParty } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -54,8 +55,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     );
 
     const [characters, npps, parties] = await Promise.all([
-      db
-        .collection<Character>("characters")
+      charactersCollection(db)
         .find({})
         .project({ _id: 1, name: 1, party: 1, homeState: 1 })
         .sort({ name: 1 })

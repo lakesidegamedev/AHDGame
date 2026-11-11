@@ -14,6 +14,7 @@ import { officeResignsOnRelocation } from "@/lib/character/officeResignsOnReloca
 import { severFromChainOfCommand } from "@/lib/military/severFromChainOfCommand";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface RelocationOutcome {
   resignedFromOffice: string | null;
@@ -339,7 +340,7 @@ export async function performRelocation(
   // re-add into the founded party revive the leadership tenure exemption
   // (see lib/parties/leadershipTenure.ts). Moves retaining the party leave
   // these fields untouched. Existing lastPartySwitchAt is never rearmed.
-  await db.collection<Character>("characters").updateOne(
+  await charactersCollection(db).updateOne(
     { _id: characterId },
     {
       $set: update,

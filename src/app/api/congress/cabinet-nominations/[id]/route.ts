@@ -7,9 +7,10 @@ import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { getAuthUser } from "@/lib/auth";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
-import type { CabinetNomination, ElectedOfficial, Character } from "@/lib/db/types";
+import type { CabinetNomination, ElectedOfficial } from "@/lib/db/types";
 import { getCabinetPositionById } from "@/lib/constants";
 import { computeCabinetNominationTally } from "@/lib/congress/governmentVoteBreakdown";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 // GET /api/congress/cabinet-nominations/[id] — Returns full detail for a single cabinet nomination including vote tallies.
 // Auth: public
@@ -38,9 +39,7 @@ export const GET = withNoStore(async function GET(
 
     const authUser = await getAuthUser();
     const myCharacter = authUser
-      ? await db
-          .collection<Character>("characters")
-          .findOne({ userId: new ObjectId(authUser.userId) })
+      ? await charactersCollection(db).findOne({ userId: new ObjectId(authUser.userId) })
       : null;
     const senatorOfficial = myCharacter
       ? await db.collection<ElectedOfficial>("electedOfficials").findOne({
@@ -58,12 +57,10 @@ export const GET = withNoStore(async function GET(
     // Fetch the nominee's sequentialId and countryId (fallback for legacy docs without countryId).
     // NPP nominees have no character doc, so skip the lookup for them.
     const nomineeChar = nomination.nomineeCharacterId
-      ? await db
-          .collection<Character>("characters")
-          .findOne(
-            { _id: nomination.nomineeCharacterId },
-            { projection: { sequentialId: 1, countryId: 1 } }
-          )
+      ? await charactersCollection(db).findOne(
+          { _id: nomination.nomineeCharacterId },
+          { projection: { sequentialId: 1, countryId: 1 } }
+        )
       : null;
     const nomineeSequentialId = nomineeChar?.sequentialId;
     const countryId = nomination.countryId ?? nomineeChar?.countryId ?? "US";

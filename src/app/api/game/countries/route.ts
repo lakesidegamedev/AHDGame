@@ -18,6 +18,7 @@ import { getStartingYearForPreset } from "@/lib/constants/turnTime";
 import { calendarTurn } from "@/lib/utils/gameDate";
 import type { CountryCreationInfo } from "@/lib/registration/types";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export type { CountryCreationInfo };
 
@@ -86,8 +87,7 @@ export async function GET() {
 
     // Get active player count per country (characters tied to non-retired users)
     const playerCountsByCountry: Record<string, number> = {};
-    const players = await db
-      .collection("characters")
+    const players = await charactersCollection(db)
       .aggregate([
         { $match: { retiredAt: { $exists: false } } },
         { $group: { _id: "$countryId", count: { $sum: 1 } } },

@@ -9,6 +9,7 @@ import type { CharacterStats, StatKey } from "@/lib/stats/statsConstants";
 import { STAT_MIN, STAT_MAX } from "@/lib/stats/statsConstants";
 import { resolveCrisisMetricPath } from "@/lib/crises/rules/metricPath";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * Clamp a stat value to the legal [STAT_MIN, STAT_MAX] range.
@@ -213,8 +214,7 @@ async function applyStatEffects(
   if (statKeys.length === 0 || characterIds.length === 0) return;
 
   // Pull current stats, apply drops, write back
-  const chars = await db
-    .collection<{ _id: ObjectId; stats?: CharacterStats }>("characters")
+  const chars = await charactersCollection<{ _id: ObjectId; stats?: CharacterStats }>(db)
     .find({ _id: { $in: characterIds } }, { projection: { _id: 1, stats: 1 } })
     .toArray();
 
@@ -242,6 +242,6 @@ async function applyStatEffects(
   }
 
   if (ops.length > 0) {
-    await db.collection("characters").bulkWrite(ops);
+    await charactersCollection(db).bulkWrite(ops);
   }
 }

@@ -5,6 +5,7 @@ import { getDb } from "@/lib/mongodb";
 import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
 import { handleRouteError } from "@/lib/api/errors";
 import type { TradeHistoryEntry, TradeSource } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * GET /api/forex/transactions
@@ -147,8 +148,7 @@ async function handleGET(request: Request) {
     }
     const charNames =
       charRefIds.size > 0
-        ? await db
-            .collection("characters")
+        ? await charactersCollection(db)
             .find({ _id: { $in: [...charRefIds].map((s) => new ObjectId(s)) } })
             .project<{ _id: ObjectId; name: string; sequentialId?: number }>({
               _id: 1,

@@ -24,7 +24,8 @@ import {
   getNewCharacterTransferBarrier,
   NEW_CHARACTER_TRANSFER_BARRIER_TURNS,
 } from "@/lib/character/newCharacterTransferBarrier";
-import type { CurrencyOrder, Character, GameConfig, PlayerMail } from "@/lib/db/types";
+import type { CurrencyOrder, GameConfig, PlayerMail } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const directTradeSchema = z
   .object({
@@ -71,9 +72,7 @@ export async function POST(request: Request) {
     }
 
     // Verify target exists
-    const target = await db
-      .collection<Character>("characters")
-      .findOne({ _id: new ObjectId(targetCharacterId) });
+    const target = await charactersCollection(db).findOne({ _id: new ObjectId(targetCharacterId) });
     if (!target) throw notFound("Target character not found");
 
     // New characters cannot move money via direct trades for their first 48 turns
@@ -137,13 +136,11 @@ export async function POST(request: Request) {
     let requestId: ObjectId | null = null;
     await runWithOptionalTransaction(
       async (session) => {
-        const escrowResult = await db
-          .collection("characters")
-          .updateOne(
-            { _id: character._id, [balanceField]: { $gte: amount } },
-            { $inc: escrowInc },
-            { session }
-          );
+        const escrowResult = await charactersCollection(db).updateOne(
+          { _id: character._id, [balanceField]: { $gte: amount } },
+          { $inc: escrowInc },
+          { session }
+        );
         if (escrowResult.modifiedCount === 0) {
           const balance = getPersonalBalance(character, fromCurrency, true);
           throw badRequest(
@@ -157,9 +154,10 @@ export async function POST(request: Request) {
         requestId = result.insertedId;
       },
       async () => {
-        const escrowResult = await db
-          .collection("characters")
-          .updateOne({ _id: character._id, [balanceField]: { $gte: amount } }, { $inc: escrowInc });
+        const escrowResult = await charactersCollection(db).updateOne(
+          { _id: character._id, [balanceField]: { $gte: amount } },
+          { $inc: escrowInc }
+        );
         if (escrowResult.modifiedCount === 0) {
           const balance = getPersonalBalance(character, fromCurrency, true);
           throw badRequest(
@@ -173,12 +171,10 @@ export async function POST(request: Request) {
             .insertOne(order as CurrencyOrder);
           requestId = result.insertedId;
         } catch (error) {
-          await db
-            .collection("characters")
-            .updateOne(
-              { _id: character._id },
-              { $inc: buildPersonalBalanceInc(amount, fromCurrency, true) }
-            );
+          await charactersCollection(db).updateOne(
+            { _id: character._id },
+            { $inc: buildPersonalBalanceInc(amount, fromCurrency, true) }
+          );
           throw error;
         }
       }

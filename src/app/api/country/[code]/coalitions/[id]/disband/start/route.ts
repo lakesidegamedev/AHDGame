@@ -5,10 +5,10 @@ import { handleRouteError, badRequest, forbidden, notFound, errorResponse } from
 import { createNotification } from "@/lib/notifications";
 import type { Coalition } from "@/lib/db/types/coalition";
 import type { PoliticalParty } from "@/lib/db/types/party";
-import type { Character } from "@/lib/db/types/character";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { getGameTime } from "@/lib/time/gameTime";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const DISBAND_VOTE_DURATION_HOURS = 24;
 const DISBAND_VOTE_DURATION_MS = DISBAND_VOTE_DURATION_HOURS * 60 * 60 * 1000;
@@ -92,8 +92,7 @@ export async function POST(
       .map((p) => p.chairId)
       .filter((cid): cid is NonNullable<typeof cid> => cid != null);
 
-    const chairCharacters = await db
-      .collection<Character>("characters")
+    const chairCharacters = await charactersCollection(db)
       .find({ _id: { $in: chairCharacterIds } }, { projection: { _id: 1, userId: 1 } })
       .toArray();
 

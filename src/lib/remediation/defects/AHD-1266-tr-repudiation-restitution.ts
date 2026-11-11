@@ -16,6 +16,7 @@ import type {
 } from "../types";
 import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * Restitution for a sovereign bond repudiation whose cascade debited holder CASH
@@ -296,8 +297,7 @@ async function loadRecipients(
   const corporationIds = toObjectIds(rows, "corporation");
   const [characters, corporations] = await Promise.all([
     characterIds.length > 0
-      ? db
-          .collection<CharacterDoc>("characters")
+      ? charactersCollection<CharacterDoc>(db)
           .find({ _id: { $in: characterIds } })
           .toArray()
       : Promise.resolve([]),

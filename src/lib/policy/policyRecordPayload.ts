@@ -1,6 +1,6 @@
 import { getDb } from "@/lib/mongodb";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
-import type { Character, ElectedOfficial, State } from "@/lib/db/types";
+import type { ElectedOfficial, State } from "@/lib/db/types";
 import type { EnactedLaw } from "@/lib/db/types/budget";
 import {
   getLegislationTypeById,
@@ -17,6 +17,7 @@ import {
 import { loadResetLawProvenance } from "@/lib/policy/resetLawPolicyRecords";
 import { getGovernmentFormationsCollection } from "@/lib/db/collections/governmentFormation";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /** Per-law provenance for the statute book's mono sublines + fiscal chips. */
 export interface PolicyProvenance {
@@ -37,9 +38,10 @@ async function resolveCurrentEra(
       .collection<ElectedOfficial>("electedOfficials")
       .findOne({ countryId, officeType: "president" });
     if (!presidentOfficial?.characterId) return null;
-    const character = await db
-      .collection<Character>("characters")
-      .findOne({ _id: presidentOfficial.characterId }, { projection: { name: 1 } });
+    const character = await charactersCollection(db).findOne(
+      { _id: presidentOfficial.characterId },
+      { projection: { name: 1 } }
+    );
     if (!character) return null;
     const lastName = character.name.split(" ").slice(-1)[0];
     return {

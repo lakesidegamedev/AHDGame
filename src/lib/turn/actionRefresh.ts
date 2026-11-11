@@ -51,6 +51,7 @@ import {
 import { getPoliticalPartiesCollection } from "@/lib/db/collections/politicalParties";
 import { getNppsCollection } from "@/lib/db/collections/npps";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 /*
  * Fallback if `gameConfig.chairActionBonus` is missing on legacy configs.
  * The per-country config in `countries.ts` sets each centralBankChair office
@@ -458,7 +459,7 @@ export async function processActionRefresh(
   }
 
   if (ops.length > 0) {
-    await db.collection("characters").bulkWrite(ops);
+    await charactersCollection(db).bulkWrite(ops);
   }
 
   // Seat and chair achievements are awarded here, not on profile visits, so a

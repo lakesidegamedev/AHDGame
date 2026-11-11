@@ -31,6 +31,7 @@ import { buildEscrowFundingTxEntry } from "@/lib/corporations/escrowTxLog";
 import type { CorporationLookups, CorpSnapshot } from "./types";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * v2: persist the per-state labour wage index (+ v2-3b: automation index) to
@@ -648,8 +649,7 @@ export async function emitCorporationTurnTx(args: {
   }
   const [regularNameDocs, imperialNameDocs] = await Promise.all([
     allRegularIds.length > 0
-      ? db
-          .collection<Character>("characters")
+      ? charactersCollection(db)
           .find({ _id: { $in: allRegularIds } }, { projection: { _id: 1, name: 1 } })
           .toArray()
       : Promise.resolve([] as Pick<Character, "_id" | "name">[]),

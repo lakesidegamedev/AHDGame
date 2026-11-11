@@ -43,6 +43,7 @@ import { parseSeatId } from "@/lib/seats/seatId";
 import { getGameTime } from "@/lib/time/gameTime";
 import { primaryOpenFilter } from "@/lib/elections/electionDeadlineFilters";
 import { archiveCampaignsForCandidates } from "@/lib/campaigns/archiveWithdrawnCampaigns";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export async function POST(request: Request, { params }: { params: Promise<{ code: string }> }) {
   try {
@@ -188,8 +189,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
         const nppIds = activeCandidates.filter((c) => c.isNPP && c.nppId).map((c) => c.nppId!);
         const [chars, npps, statePartyOrgs] = await Promise.all([
           characterIds.length > 0
-            ? db
-                .collection<Character>("characters")
+            ? charactersCollection(db)
                 .find({ _id: { $in: characterIds } })
                 .toArray()
             : [],

@@ -19,7 +19,6 @@
  * once-per-turn index is refunded because there is no effect to have paid for.
  */
 import { ObjectId, type Db } from "mongodb";
-import type { Character } from "@/lib/db/types";
 import type { SettlementPaymentMode, SettlementPlayDoc } from "@/lib/db/types/settlementPlay";
 import { capitalPriceFor } from "../capitalPrice";
 import { getPlay, PERSONAL_PLAY_USES_PER_TURN } from "@/lib/constants/settlementCrisis";
@@ -29,6 +28,7 @@ import { spendFromTreasury } from "@/lib/budget/treasurySpend";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { loadSettlementActorContext } from "../actorContext";
 import { resolvePersonalFunds, seatFundsLocal } from "../playCost";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface CommitPlayInput {
   characterId: ObjectId;
@@ -214,14 +214,12 @@ export async function commitSettlementPlay(
     return fail(409, "You have already used this play this turn. It resets next turn.");
   }
 
-  const character = await db
-    .collection<Character>("characters")
-    .findOne({ _id: input.characterId });
+  const character = await charactersCollection(db).findOne({ _id: input.characterId });
   if (!character) return fail(404, "Character not found.");
 
   const funds = await resolvePersonalFunds(db, character, play);
 
-  const debited = await db.collection<Character>("characters").updateOne(
+  const debited = await charactersCollection(db).updateOne(
     {
       _id: input.characterId,
       actions: { $gte: play.actionCost },
@@ -257,7 +255,7 @@ export async function commitSettlementPlay(
     // The debit already happened, so give it back. This is the one place the
     // file's usual ordering — money moves before the effect exists — has to be
     // undone, because there IS no effect to pay for.
-    await db.collection<Character>("characters").updateOne(
+    await charactersCollection(db).updateOne(
       { _id: input.characterId },
       {
         $inc: { actions: play.actionCost, [funds.field]: funds.local },

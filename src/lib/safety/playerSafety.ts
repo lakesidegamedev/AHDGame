@@ -2,13 +2,13 @@ import { ObjectId, type Db } from "mongodb";
 import { ApiError, badRequest, notFound } from "@/lib/api/errors";
 import { createNotifications } from "@/lib/notifications";
 import type {
-  Character,
   PlayerContentReport,
   PlayerMail,
   PlayerReportContext,
   PlayerReportReason,
   User,
 } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * Player-to-player safety: reporting objectionable content and blocking
@@ -39,9 +39,10 @@ export const PLAYER_REPORT_CONTEXTS: readonly PlayerReportContext[] = [
 
 async function loadTargetCharacter(db: Db, characterId: string) {
   if (!ObjectId.isValid(characterId)) throw notFound("Player not found");
-  const character = await db
-    .collection<Character>("characters")
-    .findOne({ _id: new ObjectId(characterId) }, { projection: { _id: 1, name: 1, userId: 1 } });
+  const character = await charactersCollection(db).findOne(
+    { _id: new ObjectId(characterId) },
+    { projection: { _id: 1, name: 1, userId: 1 } }
+  );
   if (!character?.userId) throw notFound("Player not found");
   return character;
 }
@@ -163,8 +164,7 @@ async function setMailHiddenFrom(
   sender: ObjectId,
   hidden: boolean
 ): Promise<void> {
-  const senderCharacterIds = await db
-    .collection<Character>("characters")
+  const senderCharacterIds = await charactersCollection(db)
     .find({ userId: sender }, { projection: { _id: 1 } })
     .map((c) => c._id)
     .toArray();
@@ -202,8 +202,7 @@ export async function listBlockedPlayers(db: Db, userId: string): Promise<Blocke
   const ids = self?.blockedUserIds ?? [];
   if (ids.length === 0) return [];
   // Character names only: account usernames are login identifiers, not public.
-  const characters = await db
-    .collection<Character>("characters")
+  const characters = await charactersCollection(db)
     .find({ userId: { $in: ids } }, { projection: { userId: 1, name: 1 } })
     .toArray();
   const nameByUser = new Map(characters.map((c) => [c.userId.toHexString(), c.name]));

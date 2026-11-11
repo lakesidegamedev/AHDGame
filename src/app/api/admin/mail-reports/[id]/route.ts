@@ -14,6 +14,7 @@ import { stripPartyMembershipForBannedUser } from "@/lib/account/stripPartyMembe
 import { loadUserCharacterAndCeoCorpIds } from "@/lib/account/loadUserCharacterAndCeoCorpIds";
 import { syncSuspiciousFlagsForBanState } from "@/lib/account/syncSuspiciousFlagsForBanState";
 import { getMailReportDetail } from "@/lib/mail/queries/mailReportDetail";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const mailReportActionSchema = z.object({
   action: z.enum(["dismiss", "delete_mail", "warn", "ban"]),
@@ -99,7 +100,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       const mail = await db.collection<PlayerMail>("playerMail").findOne({ _id: report.mailId });
 
       if (mail) {
-        const senderChar = await db.collection("characters").findOne({ _id: mail.fromCharacterId });
+        const senderChar = await charactersCollection(db).findOne({ _id: mail.fromCharacterId });
 
         if (senderChar) {
           await createNotification({
@@ -121,7 +122,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       const mail = await db.collection<PlayerMail>("playerMail").findOne({ _id: report.mailId });
 
       if (mail) {
-        const senderChar = await db.collection("characters").findOne({ _id: mail.fromCharacterId });
+        const senderChar = await charactersCollection(db).findOne({ _id: mail.fromCharacterId });
 
         if (senderChar) {
           const { ceoCorpIds } = await loadUserCharacterAndCeoCorpIds(db, senderChar.userId);

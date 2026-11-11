@@ -15,6 +15,7 @@ import {
 } from "./rules/capitalGainsTax";
 import { incomeTaxRate } from "./rules/incomeTaxTiers";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export type StockSeller = { id: ObjectId; collection: "characters" | "imperialCharacters" };
 export const stockSellerKey = (seller: StockSeller) =>
@@ -44,8 +45,7 @@ export async function loadStockWithholdingContexts(
     return contexts;
   const reads = [
     () =>
-      db
-        .collection<Character>("characters")
+      charactersCollection(db)
         .find(
           { _id: { $in: sellers.filter((s) => s.collection === "characters").map((s) => s.id) } },
           {

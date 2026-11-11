@@ -37,6 +37,7 @@ import {
 } from "./countryModifiers";
 import { applyCivilLibertiesDelta } from "@/lib/politicalMetrics/civilLiberties";
 import type { EventResolveContext } from "./types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 function isCompletedSettlement(result: SettlementResult): boolean {
   return result.status === "applied" || (result.status === "replayed" && !result.error);
@@ -97,7 +98,7 @@ function clampStat(value: number): number {
 }
 
 async function loadCharacter(ctx: EventResolveContext): Promise<Character | null> {
-  return ctx.db.collection<Character>("characters").findOne({ _id: ctx.instance.scopeId });
+  return charactersCollection(ctx.db).findOne({ _id: ctx.instance.scopeId });
 }
 
 /**
@@ -646,5 +647,5 @@ export async function applyDeclarativeEffects(
   if (Object.keys(charUpdates).length > 0) {
     update.$inc = charUpdates;
   }
-  await ctx.db.collection<Character>("characters").updateOne({ _id: characterId }, update);
+  await charactersCollection(ctx.db).updateOne({ _id: characterId }, update);
 }

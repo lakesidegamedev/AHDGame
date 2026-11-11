@@ -5,6 +5,7 @@ import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError } from "@/lib/api/errors";
 import type { Character, State, User } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 // GET /api/admin/heal/discord-users — Diagnoses user/character linkage issues and characters missing countryId
 // Auth: requireAdmin
@@ -18,7 +19,7 @@ export async function GET() {
 
     const [allUsers, allChars] = await Promise.all([
       db.collection<User>("users").find({}).toArray(),
-      db.collection<Character>("characters").find({}).toArray(),
+      charactersCollection(db).find({}).toArray(),
     ]);
 
     // Build a map of userId -> character for fast lookups
@@ -56,7 +57,7 @@ export async function GET() {
     }
 
     // C: Characters missing countryId
-    const charactersMissingCountryId = await db.collection<Character>("characters").countDocuments({
+    const charactersMissingCountryId = await charactersCollection(db).countDocuments({
       countryId: { $exists: false },
     });
 
@@ -93,7 +94,7 @@ export async function POST() {
 
     const [allUsers, allChars] = await Promise.all([
       db.collection<User>("users").find({}).toArray(),
-      db.collection<Character>("characters").find({}).toArray(),
+      charactersCollection(db).find({}).toArray(),
     ]);
 
     const charByUserId = new Map<string, Character>();
@@ -183,12 +184,10 @@ export async function POST() {
       for (const char of charsMissingCountryId) {
         const countryId = stateCountryMap.get(char.homeState);
         if (countryId) {
-          await db
-            .collection<Character>("characters")
-            .updateOne(
-              { _id: char._id },
-              { $set: { countryId: countryId as CountryId, updatedAt: now } }
-            );
+          await charactersCollection(db).updateOne(
+            { _id: char._id },
+            { $set: { countryId: countryId as CountryId, updatedAt: now } }
+          );
           fixedCharacterCountryIds++;
         } else {
           console.warn(

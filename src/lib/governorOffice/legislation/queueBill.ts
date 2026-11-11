@@ -1,7 +1,6 @@
 import type { Db, ObjectId } from "mongodb";
 import { ObjectId as MongoObjectId } from "mongodb";
 import type {
-  Character,
   GovernorQueuedBill,
   NPP,
   ElectedOfficial,
@@ -14,6 +13,7 @@ import { BILL_PROPOSE_ACTION_COST, getProvisionCostTotal } from "@shared/constan
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { getGameState } from "@/lib/gameState";
 import { validateStateBillProvisions } from "@/lib/legislature/commands/validateStateBillProvisions";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface QueueBillInput {
   countryId: CountryId;
@@ -117,7 +117,7 @@ export async function queueBill(
   const actionCost = BILL_PROPOSE_ACTION_COST;
 
   // Atomic spend.
-  const spend = await db.collection<Character>("characters").updateOne(
+  const spend = await charactersCollection(db).updateOne(
     {
       _id: character._id,
       actions: { $gte: actionCost },

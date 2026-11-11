@@ -1,12 +1,13 @@
 /** Recoverable exclusion between increasing LOC obligations and reserve-pool quotes. */
 import type { Db } from "mongodb";
-import type { CentralBank, Character } from "@/lib/db/types";
+import type { CentralBank } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { getCountryIdForCurrency } from "@/lib/constants/currencies";
 import { getBankId } from "@/lib/centralBank/helpers";
 import { SETTLED_KEYS_CAP } from "@/lib/banking/moneyMove";
 import type { LocPlan } from "./settlement";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 function locAdmissionBanks(plan: LocPlan): string[] {
   const next = plan.effect.locAfter;
@@ -81,7 +82,7 @@ export async function releaseLocBookAdmission(db: Db, key: string, plan: LocPlan
 /** Reuse production underwriting under admission; preserve the original FX amount. */
 export async function validateLocDrawAdmission(db: Db, plan: LocPlan): Promise<string | null> {
   if (!plan.drawAdmission) return null;
-  const character = await db.collection<Character>("characters").findOne({ _id: plan.characterId });
+  const character = await charactersCollection(db).findOne({ _id: plan.characterId });
   const c = plan.request.currency as CurrencyCode;
   if (!character?.lineOfCredit?.accountsOpened?.[c] || character.lineOfCredit.drawFrozen)
     return "The credit account is no longer eligible for this draw";

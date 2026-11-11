@@ -25,6 +25,7 @@ import { loadLocSettlement, settleLocPlan } from "@/lib/lineOfCredit/settlement"
 
 import { getCountryIdForCurrency, ZOD_ACTIVE_CURRENCY_ENUM } from "@/lib/constants/currencies";
 import type { CurrencyCode } from "@/lib/constants/currencies";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const drawSchema = z.object({
   currency: z.enum(ZOD_ACTIVE_CURRENCY_ENUM),
@@ -204,9 +205,7 @@ export async function POST(request: Request) {
       },
     });
     if (settled.error) {
-      const freshCharacter = await db
-        .collection<Character>("characters")
-        .findOne({ _id: character._id });
+      const freshCharacter = await charactersCollection(db).findOne({ _id: character._id });
       if (!freshCharacter?.lineOfCredit?.accountsOpened?.[c]) {
         return NextResponse.json(
           badRequest("Open an LOC account for this currency first").toJson(),

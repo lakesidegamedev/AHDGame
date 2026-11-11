@@ -30,6 +30,8 @@ import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import type { Document } from "mongodb";
 
 type SeatScopedOfficial = ElectedOfficial & { seatId?: string };
 
@@ -538,7 +540,7 @@ async function collectPopulationStats(db: Db): Promise<PopulationStats> {
     enabledIds,
   ] = await Promise.all([
     db.collection("users").countDocuments({ banned: { $ne: true } }),
-    db.collection("characters").countDocuments(),
+    charactersCollection<Document>(db).countDocuments(),
     db.collection("npps").countDocuments(),
     db.collection("seats").countDocuments(),
     db.collection("politicalParties").countDocuments(),
@@ -570,8 +572,7 @@ async function collectPopulationStats(db: Db): Promise<PopulationStats> {
 
   // Batch per-country counts with $group aggregates instead of looping countDocuments
   const [charCounts, nppCounts, seatCounts, partyCounts, officialCounts] = await Promise.all([
-    db
-      .collection("characters")
+    charactersCollection<Document>(db)
       .aggregate([
         { $match: { countryId: { $in: activeCountryIds } } },
         { $group: { _id: "$countryId", count: { $sum: 1 } } },
@@ -758,8 +759,7 @@ async function collectEconomyStats(db: Db): Promise<EconomyStats> {
         { $group: { _id: "$countryId", gdp: { $sum: "$gdp" } } },
       ])
       .toArray(),
-    db
-      .collection("characters")
+    charactersCollection<Document>(db)
       .aggregate([
         { $match: { countryId: { $in: countryIds } } },
         {

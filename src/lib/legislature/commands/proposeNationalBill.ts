@@ -28,7 +28,6 @@ import type {
   Bill,
   BillChamber,
   BillStatus,
-  Character,
   ElectedOfficial,
   PoliticalParty,
 } from "@/lib/db/types";
@@ -56,6 +55,7 @@ import { RESET_V2_READY } from "@/lib/resetVersions/availability";
 import { isResetV2Country, resetSystemVersionsForCountry } from "@/lib/resetVersions/rules";
 import { getGovernmentFormationsCollection } from "@/lib/db/collections/governmentFormation";
 import { caretakerBlocksBill, CARETAKER_BILL_MESSAGE } from "@/lib/elections/rules/caretaker";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const VOTING_DURATION_HOURS = 24;
 const VOTING_DURATION_MS = VOTING_DURATION_HOURS * 60 * 60 * 1000;
@@ -345,7 +345,7 @@ export async function proposeNationalBill(
           },
         };
       }
-      const spendResult = await db.collection<Character>("characters").updateOne(
+      const spendResult = await charactersCollection(db).updateOne(
         {
           _id: character._id,
           actions: { $gte: actionCost },
@@ -423,7 +423,7 @@ export async function proposeNationalBill(
       };
     } catch (error) {
       if (!isAdmin) {
-        await db.collection<Character>("characters").updateOne(
+        await charactersCollection(db).updateOne(
           { _id: character._id },
           {
             $inc: {
@@ -651,7 +651,7 @@ export async function proposeNationalBill(
         },
       };
     }
-    const spendResult = await db.collection<Character>("characters").updateOne(
+    const spendResult = await charactersCollection(db).updateOne(
       {
         _id: character._id,
         actions: { $gte: actionCost },
@@ -749,7 +749,7 @@ export async function proposeNationalBill(
     };
   } catch (error) {
     if (!isAdmin) {
-      await db.collection<Character>("characters").updateOne(
+      await charactersCollection(db).updateOne(
         { _id: character._id },
         {
           $inc: {

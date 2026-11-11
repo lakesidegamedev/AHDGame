@@ -19,6 +19,7 @@ import {
   type UKDevolutionState,
   type UKExecutiveRegion,
 } from "./rules";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export async function readUKDevolutionState(
   db: Db,
@@ -168,7 +169,7 @@ export async function vacateUKRegionalExecutives(
       { $set: { status: "cancelled", updatedAt: now } }
     );
     if (characters.length)
-      await db.collection("characters").updateMany(
+      await charactersCollection(db).updateMany(
         {
           _id: { $in: characters },
           "currentOffice.type": "governor",

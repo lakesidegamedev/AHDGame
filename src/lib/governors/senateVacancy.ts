@@ -1,5 +1,6 @@
 import type { Db } from "mongodb";
-import type { Character, ElectedOfficial, Notification } from "@/lib/db/types";
+import type { ElectedOfficial, Notification } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export function isFilledOfficial(official: Pick<ElectedOfficial, "characterId" | "nppId"> | null) {
   return Boolean(official?.characterId || official?.nppId);
@@ -20,7 +21,7 @@ export async function notifyGovernorOfSenateVacancy(
 
   if (!governorOfficial?.characterId) return;
 
-  const governorChar = await db.collection<Character>("characters").findOne({
+  const governorChar = await charactersCollection(db).findOne({
     _id: governorOfficial.characterId,
   });
 

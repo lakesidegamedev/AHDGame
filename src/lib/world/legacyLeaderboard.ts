@@ -4,7 +4,7 @@ import { computeCareerScore, careerRecordTotals, CAREER_SCORE_VERSION } from "./
 import { loadCareerLegislation, loadCareerContests, loadCareerLoans } from "./careerEvidence";
 import { ObjectId, type Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { Character, ExchangeRate } from "@/lib/db/types";
+import type { ExchangeRate } from "@/lib/db/types";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
 import type { IndexFund, IndexFundPosition } from "@/lib/db/types/indexFund";
 import type { RetiredCharacter } from "@/lib/db/types/retiredCharacter";
@@ -31,6 +31,7 @@ import type {
 } from "./legacyLeaderboardTypes";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 function sameIteration(a: GameIteration | null, b: GameIteration | null): boolean {
   if (!a || !b) return false;
@@ -129,8 +130,7 @@ export async function getLegacyLeaderboardData(
     contestsByCharacter,
     loans,
   ] = await Promise.all([
-    db
-      .collection<Character>("characters")
+    charactersCollection(db)
       .find(
         { userId: { $exists: true }, isSynthetic: { $ne: true } },
         {

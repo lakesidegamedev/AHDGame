@@ -2,9 +2,9 @@ import { ObjectId, type Db } from "mongodb";
 import type { Corporation } from "@/lib/db/types";
 import type { BankCharter, BankLoan, InterbankLoan } from "@/lib/db/types/bank";
 import type { SavingsAccount } from "@/lib/db/types/savingsAccount";
-import type { Character } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export type TransferBankCharterResult =
   | {
@@ -238,9 +238,10 @@ async function rekeySatellites(
       { holder: targetHex, status: { $ne: "closed" } },
       { $set: { holder: destHex, updatedAt: now } }
     );
-  const pointers = await db
-    .collection<Character>("characters")
-    .updateMany({ [holderPath]: targetHex }, { $set: { [holderPath]: destHex, updatedAt: now } });
+  const pointers = await charactersCollection(db).updateMany(
+    { [holderPath]: targetHex },
+    { $set: { [holderPath]: destHex, updatedAt: now } }
+  );
 
   return {
     loansRekeyed: loans.modifiedCount ?? 0,

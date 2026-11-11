@@ -27,6 +27,7 @@ import {
   requireNationalGdpPerCapita,
 } from "@/lib/campaigns/rules/gdpBaseline";
 import type { ObjectId } from "mongodb";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface CaucusTaxResult {
   caucusesProcessed: number;
@@ -107,8 +108,7 @@ export async function processCaucusTax(
 
       const [characters, npps] = await Promise.all([
         characterIds.length
-          ? db
-              .collection<Character>("characters")
+          ? charactersCollection(db)
               .find({ _id: { $in: characterIds } })
               .toArray()
           : Promise.resolve([] as Character[]),
@@ -183,7 +183,7 @@ export async function processCaucusTax(
           const results = await Promise.all(
             pendingDebits.map((d) =>
               landedOrNull(
-                db.collection<Character>("characters").updateOne(
+                charactersCollection(db).updateOne(
                   { _id: d.character._id, [d.field]: { $gte: d.tax } },
                   {
                     $inc: { [d.field]: -d.tax },

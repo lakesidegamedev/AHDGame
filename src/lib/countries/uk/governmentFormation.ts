@@ -12,7 +12,6 @@
 
 import type { Db } from "mongodb";
 import { getDb } from "@/lib/mongodb";
-import type { Character } from "@/lib/db/types";
 import type { UKGovernment } from "@/lib/db/types/ukGovernment";
 import type { ParliamentaryGovernment } from "@/lib/db/types/parliamentaryGovernment";
 import type { PoliticalParty } from "@/lib/db/types/party";
@@ -38,6 +37,7 @@ import {
   updateParliamentaryGovernmentSeats,
   resetParliamentaryGovernmentAfterElection,
 } from "@/lib/turn/parliamentaryGovernment";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 // ---------------------------------------------------------------------------
 // Exported helpers — delegate to shared system, maintain original signatures
@@ -164,9 +164,7 @@ async function seedGovernmentFormation(db: Db): Promise<void> {
     .findOne({ _id: "UK" });
   const legacyPmId = ukGov?.pmCharacterId ?? parlGov?.pmCharacterId ?? null;
 
-  const pmChar = legacyPmId
-    ? await db.collection<Character>("characters").findOne({ _id: legacyPmId })
-    : null;
+  const pmChar = legacyPmId ? await charactersCollection(db).findOne({ _id: legacyPmId }) : null;
 
   if (legacyPmId && pmChar) {
     const pmParty =

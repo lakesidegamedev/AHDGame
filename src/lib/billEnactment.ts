@@ -108,6 +108,7 @@ import { applyResetLawBillEnactment } from "@/lib/resetLegislation/enactBill";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 type EnactableBill = Pick<
   Bill | StateBill,
@@ -777,8 +778,7 @@ export async function onBillEnacted(
   const proposalPayerId =
     bill.proposalPayerId ?? bill.proposedByGovernor?.characterId ?? bill.sponsorId;
   if (proposalPayerId && (bill.proposalNpiCost || bill.proposalActionCost)) {
-    const sponsor = await db
-      .collection<Character>("characters")
+    const sponsor = await charactersCollection(db)
       .findOne(
         { _id: proposalPayerId },
         { projection: { actions: 1, nationalInfluence: 1, stats: 1 } }
@@ -795,7 +795,7 @@ export async function onBillEnacted(
       if (refundNpi > 0) {
         updateOp.$inc = { nationalInfluence: refundNpi };
       }
-      await db.collection<Character>("characters").updateOne({ _id: proposalPayerId }, updateOp);
+      await charactersCollection(db).updateOne({ _id: proposalPayerId }, updateOp);
     }
   }
 
@@ -1137,8 +1137,7 @@ async function applyBucketImpactsToVoters(
   if (validObjectIds.length === 0) return;
 
   // Update characters
-  await db
-    .collection<Character>("characters")
+  await charactersCollection(db)
     .updateMany({ _id: { $in: validObjectIds } }, { $inc: incUpdates });
 
   // Update NPPs (some voter IDs might be NPPs)
@@ -1147,8 +1146,7 @@ async function applyBucketImpactsToVoters(
     .updateMany({ _id: { $in: validObjectIds } }, { $inc: incUpdates });
 
   // Clamp values for characters
-  const characters = await db
-    .collection<Character>("characters")
+  const characters = await charactersCollection(db)
     .find({ _id: { $in: validObjectIds }, bucketApprovals: { $exists: true } })
     .toArray();
 
@@ -1174,7 +1172,7 @@ async function applyBucketImpactsToVoters(
     }
   }
   if (charBulkOps.length > 0) {
-    await db.collection<Character>("characters").bulkWrite(charBulkOps);
+    await charactersCollection(db).bulkWrite(charBulkOps);
   }
 
   // Clamp values for NPPs

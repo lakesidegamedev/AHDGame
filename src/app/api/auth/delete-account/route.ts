@@ -21,6 +21,7 @@ import {
   revokeAppleRefreshToken,
 } from "@/lib/auth/apple";
 import { heldBlocRowIds, releaseVacatedBlocSeats } from "@/lib/elections/vacatedBlocSeats";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 // DELETE /api/auth/delete-account — Permanently deletes the authenticated user's account, character, and clears offices held.
 // Auth: requireBasicAuth
@@ -37,7 +38,7 @@ export const DELETE = withNoStore(async () => {
     const objectId = new ObjectId(userId);
     const db = await getDb();
     const usersCollection = db.collection<User>("users");
-    const charactersCollection = db.collection("characters");
+    const charactersHandle = charactersCollection(db);
     const actionLogsCollection = db.collection("actionLogs");
     const officialsCollection = db.collection("electedOfficials");
 
@@ -67,7 +68,7 @@ export const DELETE = withNoStore(async () => {
     }
 
     // Find the user's character
-    const character = await charactersCollection.findOne({ userId: objectId });
+    const character = await charactersHandle.findOne({ userId: objectId });
 
     // Log account self-deletion with tracking data (before actually deleting)
     // WHY: Self-deleted alt accounts lose all IP/fingerprint data — this preserves an audit trail for fraud investigation
@@ -159,7 +160,7 @@ export const DELETE = withNoStore(async () => {
       });
 
       // Delete the character
-      await charactersCollection.deleteOne({ _id: character._id });
+      await charactersHandle.deleteOne({ _id: character._id });
     }
 
     if (!character) {

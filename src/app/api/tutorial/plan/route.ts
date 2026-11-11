@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { withNoStore } from "@/lib/api/withNoStore";
 import { z } from "zod";
 import { getDb } from "@/lib/mongodb";
-import type { Character } from "@/lib/db/types";
 import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
@@ -14,6 +13,7 @@ import {
   normalizeInterests,
   resolveTutorialPlan,
 } from "@/lib/onboarding/tutorialPlan";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * The player's guided-tour plan and their place in it.
@@ -117,15 +117,16 @@ export async function PUT(request: Request) {
     }
 
     const db = await getDb();
-    await db.collection<Character>("characters").updateOne({ _id: character._id }, {
+    await charactersCollection(db).updateOne({ _id: character._id }, {
       ...(Object.keys(set).length ? { $set: { ...set, updatedAt: new Date() } } : {}),
       ...(Object.keys(addToSet).length ? { $addToSet: addToSet } : {}),
       ...(Object.keys(unset).length ? { $unset: unset } : {}),
     } as never);
 
-    const updated = await db
-      .collection<Character>("characters")
-      .findOne({ _id: character._id }, { projection: { tutorial: 1, tutorialTrack: 1 } });
+    const updated = await charactersCollection(db).findOne(
+      { _id: character._id },
+      { projection: { tutorial: 1, tutorialTrack: 1 } }
+    );
 
     return NextResponse.json({
       success: true,

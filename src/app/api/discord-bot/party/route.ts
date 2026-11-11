@@ -9,6 +9,7 @@ import { partyUrl } from "@/lib/urls";
 import { getEnabledCountryIds } from "@/lib/countryAccess";
 import type { PoliticalParty, Character } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -58,16 +59,16 @@ export async function GET(request: Request) {
     // Top 5 members by influence + chair name in parallel
     // Filter by both party sequentialId AND countryId to avoid cross-country matches
     const [topMembers, chairDoc] = await Promise.all([
-      db
-        .collection<Character>("characters")
+      charactersCollection(db)
         .find({ party: partySeqStr, countryId: country as CountryId })
         .sort({ politicalInfluence: -1 })
         .limit(5)
         .toArray(),
       party.chairId
-        ? db
-            .collection<Pick<Character, "_id" | "name">>("characters")
-            .findOne({ _id: party.chairId }, { projection: { name: 1 } })
+        ? charactersCollection<Pick<Character, "_id" | "name">>(db).findOne(
+            { _id: party.chairId },
+            { projection: { name: 1 } }
+          )
         : Promise.resolve(null),
     ]);
 

@@ -16,7 +16,7 @@ import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { buildPartyCaucusHealthSnapshot } from "@/lib/caucus/caucusHealth";
 import { cleanupCaucusParticipationForCharacters } from "@/lib/caucus/cleanupCaucusParticipationForCharacters";
 import type { Caucus, CaucusMembership } from "@/lib/db/types";
-import type { Character } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 // GET /api/country/[code]/parties/[id]/caucuses — List caucuses for a party with member counts
 // Auth: requireAuth
@@ -61,8 +61,7 @@ export async function GET(
       .filter((value): value is NonNullable<typeof value> => !!value);
     const chairs =
       chairIds.length > 0
-        ? await db
-            .collection<Character>("characters")
+        ? await charactersCollection(db)
             .find({ _id: { $in: chairIds } }, { projection: { _id: 1, name: 1 } })
             .toArray()
         : [];
@@ -208,12 +207,10 @@ export async function POST(
       // Defensive: if membership was already closed but factionId lingered,
       // cleanup won't clear it (it only clears when an active membership is
       // found). Force-clear the stale pointer so founding can proceed.
-      await db
-        .collection<Character>("characters")
-        .updateOne(
-          { _id: auth.user.character._id, factionId: auth.user.character.factionId },
-          { $set: { factionId: null, updatedAt: new Date() } }
-        );
+      await charactersCollection(db).updateOne(
+        { _id: auth.user.character._id, factionId: auth.user.character.factionId },
+        { $set: { factionId: null, updatedAt: new Date() } }
+      );
     }
 
     let slug: string;
@@ -287,12 +284,10 @@ export async function POST(
       createdAt: now,
       updatedAt: now,
     });
-    await db
-      .collection("characters")
-      .updateOne(
-        { _id: auth.user.character._id },
-        { $set: { factionId: caucusId, updatedAt: now } }
-      );
+    await charactersCollection(db).updateOne(
+      { _id: auth.user.character._id },
+      { $set: { factionId: caucusId, updatedAt: now } }
+    );
 
     return NextResponse.json({
       success: true,

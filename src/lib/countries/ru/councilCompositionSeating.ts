@@ -4,7 +4,7 @@
  * members and their mirrors atomically, finishing with a bound composition receipt.
  */
 import { ObjectId, type ClientSession, type Db } from "mongodb";
-import type { Character, CountryGameState, ElectedOfficial, GameState, NPP } from "@/lib/db/types";
+import type { CountryGameState, ElectedOfficial, GameState, NPP } from "@/lib/db/types";
 import type { UnifiedCabinetMember } from "@/lib/db/types/unifiedCabinetMember";
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
 import { loadEnactedRussianCouncilFormation } from "./councilFormationProposals";
@@ -30,6 +30,7 @@ import {
 import { russianAssemblyOfficialId } from "./assemblyOfficialIdentity";
 import type { RussianAssemblySeatingRecord, RussianAssemblyOfficeArchive } from "./assemblySeating";
 import { GAME_STATE_PRE_ITERATION_FIELDS } from "@/lib/db/collections/gameState";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const RUSSIAN_COUNCIL_COMPOSITION_SEATINGS_COLLECTION = "russianCouncilCompositionSeatings";
 export interface RussianCouncilCompositionSeating {
@@ -127,8 +128,7 @@ export async function materializeRussianCouncilCompositionSeating(input: {
     ),
   ].map((id) => new ObjectId(id));
   const players = playerIds.length
-    ? await db
-        .collection<Character>("characters")
+    ? await charactersCollection(db)
         .find(
           { _id: { $in: playerIds } },
           {
@@ -348,7 +348,7 @@ export async function materializeRussianCouncilCompositionSeating(input: {
         ...(isNpc ? { $unset: { seatsHeld: "" as const } } : {}),
       };
       if (isNpc) await db.collection<NPP>("npps").updateMany(filter, update, { session });
-      else await db.collection<Character>("characters").updateMany(filter, update, { session });
+      else await charactersCollection(db).updateMany(filter, update, { session });
     }
     if (owners.size) {
       const operations = [...owners].map(([ownerId, row]) => ({
@@ -390,7 +390,7 @@ export async function materializeRussianCouncilCompositionSeating(input: {
       }));
       const updated = isNpc
         ? await db.collection<NPP>("npps").bulkWrite(operations, { session })
-        : await db.collection<Character>("characters").bulkWrite(operations, { session });
+        : await charactersCollection(db).bulkWrite(operations, { session });
       if (updated.matchedCount !== owners.size)
         throw new Error("Regional Council owner changed during handover");
     }

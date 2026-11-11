@@ -41,6 +41,7 @@ import type {
   ElectedOfficial,
 } from "@/lib/db/types";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const bundestagspraesidentActionSchema = z.object({
   action: z.enum(["declare", "withdraw", "vote", "start_election", "force_end"]),
@@ -67,8 +68,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     let myParty: string | null = null;
     let isSittingMdB = false;
     if (authUser) {
-      const char = await db
-        .collection<Character>("characters")
+      const char = await charactersCollection(db)
         .findOne({ userId: new ObjectId(authUser.userId) });
       if (char) {
         myCharacterId = char._id.toString();

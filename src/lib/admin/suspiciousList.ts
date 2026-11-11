@@ -2,6 +2,7 @@ import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import type { SuspiciousCharacter } from "@/lib/db/types/activityLog";
 import { AUTOMATION_FLAG_TYPE } from "@/lib/turn/automationDetection";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export type RawSuspicious = SuspiciousCharacter;
 export type SuspiciousEntryOut = SuspiciousCharacter & { accountDeleted: boolean };
@@ -164,8 +165,7 @@ export async function fetchSuspiciousList(
   );
 
   const [liveChars, liveUsers] = await Promise.all([
-    db
-      .collection("characters")
+    charactersCollection(db)
       .find({ _id: { $in: charIds } }, { projection: { _id: 1 } })
       .toArray(),
     db

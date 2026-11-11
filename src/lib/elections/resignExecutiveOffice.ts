@@ -8,6 +8,7 @@ import {
 import { getOfficeLabel } from "@/lib/utils/officeTitle";
 import { captureOfficeTransition } from "@/lib/analytics/officeTransitionAnalytics";
 import type { GameState } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /** Vacate a US executive slot when the seated player resigns. */
 export async function resignExecutiveOffice(
@@ -50,7 +51,7 @@ export async function resignExecutiveOffice(
     date: now,
   };
 
-  await db.collection<Character>("characters").updateOne(
+  await charactersCollection(db).updateOne(
     { _id: character._id },
     {
       $set: { currentOffice: null, updatedAt: now },

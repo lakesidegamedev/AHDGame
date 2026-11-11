@@ -10,6 +10,7 @@ import {
   nppCanPlausiblyEndorseElection,
   type RequestedEndorsementLikelihood,
 } from "@/lib/nppEndorsements";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface EndorsementRequestEvaluation {
   relationshipRequirement: number;
@@ -53,7 +54,7 @@ export async function getNppDirectActionView(
   const relationshipKey = `${characterId.toString()}_${nppId.toString()}`;
   const [npp, characterDoc, relationship] = await Promise.all([
     db.collection<NPP>("npps").findOne({ _id: nppId }),
-    db.collection<Character>("characters").findOne(
+    charactersCollection(db).findOne(
       { _id: characterId },
       {
         projection: {

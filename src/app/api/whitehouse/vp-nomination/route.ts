@@ -13,6 +13,7 @@ import { CONGRESS_LIMITS, checkRateLimit, rateLimitResponse } from "@/lib/api/ra
 import { getGameTime } from "@/lib/time/gameTime";
 import type { CabinetNomination, ElectedOfficial, Character } from "@/lib/db/types";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const VOTING_DURATION_HOURS = 24;
 const VOTING_DURATION_MS = VOTING_DURATION_HOURS * 60 * 60 * 1000;
@@ -53,7 +54,7 @@ export async function POST(request: Request) {
       return errorResponse(400, "No President in office");
     }
 
-    const myCharacter = await db.collection<Character>("characters").findOne({
+    const myCharacter = await charactersCollection(db).findOne({
       userId: new ObjectId(authUser.userId),
     });
     if (!myCharacter || !presidentOfficial.characterId.equals(myCharacter._id)) {
@@ -84,7 +85,7 @@ export async function POST(request: Request) {
       return errorResponse(400, "Invalid nomineeCharacterId");
     }
 
-    const nominee = await db.collection<Character>("characters").findOne({ _id: nomineeOid });
+    const nominee = await charactersCollection(db).findOne({ _id: nomineeOid });
     if (!nominee) {
       return errorResponse(404, "Nominee character not found");
     }
@@ -142,8 +143,7 @@ export async function POST(request: Request) {
       })
       .toArray();
     const legislatorCharIds = legislators.map((s) => s.characterId!).filter(Boolean);
-    const legislatorChars = await db
-      .collection<Character>("characters")
+    const legislatorChars = await charactersCollection(db)
       .find({ _id: { $in: legislatorCharIds } }, { projection: { _id: 1, userId: 1 } })
       .toArray();
     for (const c of legislatorChars) {

@@ -20,6 +20,7 @@ import {
   turnsUntilReservePoolTransferReady,
   type ReservePoolTransferDirection,
 } from "./reservePoolTransfer";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const COLLECTION = "reservePoolTransferCommands";
 export class ReservePoolTransferRejected extends Error {}
@@ -63,8 +64,7 @@ interface Receipt extends Document {
   error?: string;
 }
 async function outstandingLoans(db: Db, currency: string): Promise<number> {
-  const rows = await db
-    .collection("characters")
+  const rows = await charactersCollection(db)
     .aggregate<{ totalBalance: number; totalArrears: number }>([
       {
         $match: {

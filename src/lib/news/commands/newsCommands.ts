@@ -19,6 +19,7 @@ import type {
 } from "@/lib/db/types";
 import type { NewsPostView, NewsReplyView } from "@/lib/news/dto/newsView";
 import { serializeNewsPost, serializeNewsReply } from "@/lib/news/dto/newsView";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface CreateNewsPostInput {
   userId: string;
@@ -52,9 +53,7 @@ export async function createNewsPost(
   db: Db,
   { userId, title, content, feedType, imageUrl: imageUrlRaw }: CreateNewsPostInput
 ): Promise<{ post: NewsPostView }> {
-  const character = await db
-    .collection<Character>("characters")
-    .findOne({ userId: new ObjectId(userId) });
+  const character = await charactersCollection(db).findOne({ userId: new ObjectId(userId) });
   if (!character) {
     throw forbidden("Character required to post");
   }
@@ -136,7 +135,7 @@ export async function createNewsPost(
   if (feedType === "advertisement") {
     const homeCurrency = getHomeCurrency(character);
     const balanceField = forexEnabled ? `currencyBalances.personal.${homeCurrency}` : "cashOnHand";
-    const spendResult = await db.collection<Character>("characters").updateOne(
+    const spendResult = await charactersCollection(db).updateOne(
       {
         _id: character._id,
         actions: { $gte: actionCostAd },
@@ -161,7 +160,7 @@ export async function createNewsPost(
       const result = await db.collection("newsPosts").insertOne(post);
       return finishNewsPost(db, userId, character, post, result.insertedId, now);
     } catch (error) {
-      await db.collection<Character>("characters").updateOne(
+      await charactersCollection(db).updateOne(
         { _id: character._id },
         {
           $inc: {
@@ -187,9 +186,7 @@ export async function editNewsPost(
     throw badRequest("Invalid post ID");
   }
 
-  const character = await db
-    .collection<Character>("characters")
-    .findOne({ userId: new ObjectId(userId) });
+  const character = await charactersCollection(db).findOne({ userId: new ObjectId(userId) });
   if (!character) {
     throw forbidden("Character required to edit a post");
   }
@@ -289,9 +286,7 @@ export async function createNewsReply(
     throw notFound("Post not found");
   }
 
-  const character = await db
-    .collection<Character>("characters")
-    .findOne({ userId: new ObjectId(userId) });
+  const character = await charactersCollection(db).findOne({ userId: new ObjectId(userId) });
   if (!character) {
     throw forbidden("Character required to reply");
   }

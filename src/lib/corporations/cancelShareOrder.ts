@@ -18,6 +18,7 @@ import { emitTx } from "@/lib/financialTxLog/emit";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { cancelFundShareOrder } from "@/lib/indexFunds/fundShareOrders";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 type CancelResult = { ok: true } | { ok: false; error: string };
 
@@ -154,9 +155,9 @@ export async function cancelShareOrderAndRefund(db: Db, order: ShareOrder): Prom
     }
     const orderCharacterId = order.characterId;
 
-    let charDoc: Pick<Character, "countryId" | "name"> | null = await db
-      .collection<Character>("characters")
-      .findOne({ _id: orderCharacterId }, { projection: { countryId: 1, name: 1 } });
+    let charDoc: Pick<Character, "countryId" | "name"> | null = await charactersCollection(
+      db
+    ).findOne({ _id: orderCharacterId }, { projection: { countryId: 1, name: 1 } });
     let collectionName: "characters" | "imperialCharacters" = "characters";
     if (!charDoc) {
       const imperialDoc = await db

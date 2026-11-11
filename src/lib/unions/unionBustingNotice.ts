@@ -25,8 +25,9 @@
 import type { Db, ObjectId } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import { OPERATING_SECTOR_TYPE_LABELS, type CorporationType } from "@/lib/constants/corporations";
-import type { Character, Union, UnionOrganizer } from "@/lib/db/types";
+import type { Union, UnionOrganizer } from "@/lib/db/types";
 import { createNotifications, type NotificationInput } from "@/lib/notifications";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface UnionBustingNoticeInput {
   countryId: CountryId;
@@ -77,8 +78,7 @@ export async function notifyUnionOfBustingAttempt(
     ];
     if (characterIds.length === 0) return 0;
 
-    const characters = await db
-      .collection<Character>("characters")
+    const characters = await charactersCollection(db)
       .find({ _id: { $in: characterIds } }, { projection: { userId: 1 } })
       .toArray();
 

@@ -16,7 +16,7 @@
 import type { Db } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { Character, ElectedOfficial, State } from "@/lib/db/types";
+import type { ElectedOfficial, State } from "@/lib/db/types";
 import type { EnactedLaw, StateBudget } from "@/lib/db/types/budget";
 import {
   canonicalizeLegislationTypeId,
@@ -29,6 +29,7 @@ import { loadCountryLegislationTypes } from "@/lib/policy/nationalPolicyRecords"
 import { resolveExecutiveOffice } from "@/lib/states/regionalExecutive";
 import { loadResetLawProvenance } from "@/lib/policy/resetLawPolicyRecords";
 import type { PolicyProvenance } from "@/lib/policy/policyRecordPayload";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * "<Surname> administration", from whichever office actually governs this
@@ -49,9 +50,10 @@ async function resolveRegionalEra(
       { sort: { electedAt: -1 } }
     );
   if (!official?.characterId) return null;
-  const character = await db
-    .collection<Character>("characters")
-    .findOne({ _id: official.characterId }, { projection: { name: 1 } });
+  const character = await charactersCollection(db).findOne(
+    { _id: official.characterId },
+    { projection: { name: 1 } }
+  );
   if (!character) return null;
   const lastName = character.name.split(" ").slice(-1)[0];
   return {

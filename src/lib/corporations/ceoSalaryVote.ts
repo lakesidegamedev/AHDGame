@@ -5,7 +5,6 @@
  */
 import { ObjectId, type Db } from "mongodb";
 import type { Corporation } from "@/lib/db/types";
-import type { Character } from "@/lib/db/types/character";
 import type { CorporationVote } from "@/lib/db/types/corporationVote";
 import {
   anchorToCorpCapital,
@@ -21,6 +20,7 @@ import {
   trailingDailyNetIncome,
   type CeoSalaryVoteCheck,
 } from "@/lib/corporations/rules/ceoSalaryVote";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export async function evaluateCeoSalaryVote(
   db: Db,
@@ -62,9 +62,7 @@ export async function openCeoSalaryVote(opts: {
   currentTurn: number;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   const { db, corporation, newSalary, currentTurn } = opts;
-  const character = await db
-    .collection<Character>("characters")
-    .findOne({ _id: corporation.ceoId });
+  const character = await charactersCollection(db).findOne({ _id: corporation.ceoId });
   if (!character) return { ok: false, error: "CEO character not found" };
   const result = await openCorporationVote({
     db,

@@ -50,6 +50,7 @@ import { loadSettlementActorContext } from "../actorContext";
 import { resolvePersonalFunds } from "../playCost";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface DossierPaymentView {
   mode: SettlementPaymentMode;
@@ -530,8 +531,7 @@ export async function loadGermanQuestionDossier(
   // renders disabled here instead of looking live and being refused by the
   // route. `resolvePersonalFunds` short-circuits the FX lookup for free plays,
   // so this costs at most one rate read for the whole board.
-  const character = await db
-    .collection<Character>("characters")
+  const character = await charactersCollection(db)
     .findOne(
       { _id: characterId },
       { projection: { actions: 1, funds: 1, currencyBalances: 1, countryId: 1 } }

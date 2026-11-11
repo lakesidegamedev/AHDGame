@@ -4,9 +4,9 @@ import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import type { Campaign } from "@/lib/db/types/campaign";
 import type { Election } from "@/lib/db/types/election";
-import type { Character } from "@/lib/db/types/character";
 import type { NPP } from "@/lib/db/types/npp";
 import { getSiteUrl } from "@/lib/siteMetadata";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -59,9 +59,10 @@ export async function generateMetadata({
       .findOne({ _id: campaign.electionId }, { projection: { electionType: 1, state: 1 } }),
     campaign.candidateIsNPP
       ? Promise.resolve(null)
-      : db
-          .collection<Character>("characters")
-          .findOne({ _id: campaign.candidateId }, { projection: { name: 1, avatarUrl: 1 } }),
+      : charactersCollection(db).findOne(
+          { _id: campaign.candidateId },
+          { projection: { name: 1, avatarUrl: 1 } }
+        ),
     campaign.candidateIsNPP
       ? db
           .collection<NPP>("npps")

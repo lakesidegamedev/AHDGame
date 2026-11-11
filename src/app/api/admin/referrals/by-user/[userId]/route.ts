@@ -8,6 +8,7 @@ import { schemas } from "@/lib/api/validate";
 import { buildCharacterHref } from "@/lib/utils/profileUrls";
 import type { GameConfig } from "@/lib/db/types";
 import type { User } from "@/lib/db/types/user";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /** Minimal character fields for referral list (aligned with referral credit on character creation). */
 type ReferralCharacterDoc = {
@@ -81,8 +82,7 @@ export const GET = withAdminRoute(
     const refereeIds = refereeDocs.map((u) => u._id);
     const chars: ReferralCharacterDoc[] =
       refereeIds.length > 0
-        ? ((await db
-            .collection("characters")
+        ? ((await charactersCollection(db)
             .find({ userId: { $in: refereeIds } })
             .project({ userId: 1, sequentialId: 1, createdAt: 1 })
             .toArray()) as ReferralCharacterDoc[])

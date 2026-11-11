@@ -16,6 +16,7 @@ import { getGameStatePreset } from "@/lib/db/collections/gameState";
 import { getContestRoundsCollection } from "./collection";
 import { CONTEST_KINDS, CORP_CONTEST_KINDS, contestPrizeAnchor } from "./rules";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const LEADERS_SHOWN = 10;
 const PAST_ROUNDS_SHOWN = 12;
@@ -244,8 +245,7 @@ async function loadEntryImages(
           .toArray(),
     characterIds.size === 0
       ? []
-      : db
-          .collection<Character>("characters")
+      : charactersCollection(db)
           .find(
             { _id: { $in: toIds(characterIds) } },
             { projection: { avatarUrl: 1, sequentialId: 1 } }

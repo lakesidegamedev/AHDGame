@@ -5,6 +5,7 @@ import { buildCharacterHref } from "@/lib/utils/profileUrls";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import type { CountryId } from "@/lib/constants/countries";
 import { fetchExchangeRateMap, getRateDoc, toInternalAmount } from "@/lib/world/forex";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -63,8 +64,7 @@ export async function queryLeaderboard(
     // Pull all (banned-filtered) candidates and rank by internal-unit funds in
     // JS — a country-less query mixes currencies, so an in-DB sort on raw funds
     // would be meaningless. Consistent with the global leaderboard's full scan.
-    const candidates = await db
-      .collection<Character>("characters")
+    const candidates = await charactersCollection(db)
       .aggregate<Character>([...basePipeline, { $project: { _user: 0, _userDoc: 0 } }])
       .toArray();
 
@@ -77,8 +77,7 @@ export async function queryLeaderboard(
       .slice(0, limitN)
       .map((x) => x.c);
   } else {
-    characters = await db
-      .collection<Character>("characters")
+    characters = await charactersCollection(db)
       .aggregate<Character>([
         ...basePipeline,
         { $sort: sort },

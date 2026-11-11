@@ -8,6 +8,7 @@ import {
   CAMPAIGN_STRENGTH_LEADER_PULLBACK_MAX_PER_TURN,
 } from "@/lib/campaigns/campaignStrength";
 import type { GameState } from "@/lib/db/types/gameState";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -88,8 +89,7 @@ export async function GET(request: Request, { params }: RouteParams) {
       .filter((id): id is string => Boolean(id));
     const charDocs =
       characterIds.length > 0
-        ? await db
-            .collection("characters")
+        ? await charactersCollection(db)
             .find({ _id: { $in: characterIds.map((id: string) => new ObjectId(id)) } })
             .project({ _id: 1, name: 1, party: 1 })
             .toArray()

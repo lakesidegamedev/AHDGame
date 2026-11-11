@@ -75,6 +75,7 @@ import {
   registrationPresenceKey,
 } from "@/lib/parties/rules/registrationPresence";
 import { getPoliticalPartiesCollection } from "@/lib/db/collections/politicalParties";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 type StoredPartyBudget = PartyBudget & { countryId?: CountryId };
 
@@ -454,8 +455,7 @@ export async function processPartyGOTV(
     const [statePartyOrgs, parties, allCharacters, allNPPs, allStates] = await Promise.all([
       db.collection<StatePartyOrg>("statePartyOrg").find({}).toArray(),
       db.collection<PoliticalParty>("politicalParties").find({}).toArray(),
-      db
-        .collection<Character>("characters")
+      charactersCollection(db)
         .find(
           {},
           {

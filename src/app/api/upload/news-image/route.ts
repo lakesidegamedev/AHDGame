@@ -15,9 +15,9 @@ import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { parseFormData } from "@/lib/api/validate";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
-import type { Character } from "@/lib/db/types";
 import { optimizeImage, IMAGE_PRESETS } from "@/lib/imageOptimize";
 import { isR2Enabled, uploadFile } from "@/lib/r2";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const ALLOWED_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
 const MAX_SIZE = 8 * 1024 * 1024;
@@ -48,7 +48,7 @@ export async function POST(request: Request) {
     }
 
     const db = await getDb();
-    const character = await db.collection<Character>("characters").findOne({
+    const character = await charactersCollection(db).findOne({
       userId: new ObjectId(auth.user.userId),
     });
     if (!character) {

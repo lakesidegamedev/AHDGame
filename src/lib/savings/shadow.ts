@@ -41,6 +41,7 @@ import { countBankingEvent, timedBankingStage } from "@/lib/banking/telemetry";
 import { emitBankingAuditEvent } from "@/lib/banking/auditEvents";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export const SAVINGS_ACCOUNTS_COLLECTION = "savingsAccounts";
 
@@ -95,8 +96,7 @@ export async function loadLegacySavingsRows(db: Db): Promise<LegacySavingsRow[]>
       { [`savingsAccountsOpened.${c}`]: true },
     ]),
   };
-  const characters = await db
-    .collection<Character>("characters")
+  const characters = await charactersCollection(db)
     .find(filter)
     .project<Pick<Character, "_id" | "currencyBalances" | "savingsAccountsOpened">>({
       currencyBalances: 1,

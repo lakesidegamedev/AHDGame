@@ -20,6 +20,7 @@ import type {
 } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -55,13 +56,12 @@ export async function GET(request: Request) {
       // Find user by Discord ID, then their character
       const user = await db.collection<User>("users").findOne({ discordId });
       if (user) {
-        const char = await db.collection<Character>("characters").findOne({ userId: user._id });
+        const char = await charactersCollection(db).findOne({ userId: user._id });
         if (char) characters = [char];
       }
     } else if (name) {
       // Search by character name (case-insensitive, partial match)
-      characters = await db
-        .collection<Character>("characters")
+      characters = await charactersCollection(db)
         .find({
           name: { $regex: escapeRegex(name), $options: "i" },
         })

@@ -10,6 +10,7 @@ import type { Db, ObjectId } from "mongodb";
 import type { Character, User } from "@/lib/db/types";
 import { discordCreatedAtFromSnowflake, getDiscordAvatarUrl } from "@/lib/discord";
 import { maskEmail, maskIp } from "@/lib/altDetection/signals";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface HydratedAltMember {
   userId: string;
@@ -145,8 +146,7 @@ export async function hydrateAltMembers(
       .collection<User>("users")
       .find({ _id: { $in: unique } }, { projection: USER_PROJECTION })
       .toArray(),
-    db
-      .collection<Character>("characters")
+    charactersCollection(db)
       .find({ userId: { $in: unique } }, { projection: CHARACTER_PROJECTION })
       .toArray(),
   ]);

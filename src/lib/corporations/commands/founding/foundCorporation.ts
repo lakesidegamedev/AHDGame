@@ -65,6 +65,7 @@ import {
   type PreparedEquityPlacement,
 } from "@/lib/equities/primaryMarket";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export type FoundCorporationRequest = z.infer<typeof foundCorporationSchema>;
 
@@ -712,9 +713,7 @@ export async function foundCorporation({
       turn: foundedAtTurn,
     });
 
-    await db
-      .collection<Character>("characters")
-      .updateOne({ _id: character._id }, { $set: { updatedAt: now } });
+    await charactersCollection(db).updateOne({ _id: character._id }, { $set: { updatedAt: now } });
 
     // Auto-vote the founder as CEO so the vote record exists from creation
     await db.collection("corporationCeoVotes").insertOne({

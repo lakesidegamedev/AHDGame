@@ -6,13 +6,13 @@ import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
-import type { Character } from "@/lib/db/types";
 import type { MergerReview } from "@/lib/db/types/mergerReview";
 import { MERGER_REVIEWS } from "@/lib/corporations/mergerReview/gate";
 import { resolveMergerAuthority } from "@/lib/corporations/mergerReview/authority";
 import { decideMergerReview } from "@/lib/corporations/mergerReview/lifecycle";
 import { getGameState } from "@/lib/gameState";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -62,9 +62,10 @@ export async function POST(request: Request, { params }: RouteParams) {
         "The reviewing seat is vacant; this referral will resolve on its deadline."
       );
 
-    const character = await db
-      .collection<Character>("characters")
-      .findOne({ userId: new ObjectId(auth.user.userId) }, { projection: { _id: 1 } });
+    const character = await charactersCollection(db).findOne(
+      { userId: new ObjectId(auth.user.userId) },
+      { projection: { _id: 1 } }
+    );
     if (!character || !authority.holderCharacterId.equals(character._id))
       return errorResponse(403, `Only the ${authority.seatName} can decide this referral.`);
 

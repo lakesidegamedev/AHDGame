@@ -29,6 +29,7 @@ import {
 } from "./rules/incomeTaxTiers";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * Pass-through distributions already taxed at source (the owner tax on
@@ -100,8 +101,7 @@ export async function processPlayerIncomeTax(
         }
       )
       .toArray(),
-    db
-      .collection<Character>("characters")
+    charactersCollection(db)
       .find(
         { incomeTaxStartTurn: { $lte: turn } },
         {
@@ -517,7 +517,7 @@ export async function processPlayerIncomeTax(
       },
     });
   }
-  if (tierOps.length) await db.collection<Character>("characters").bulkWrite(tierOps);
+  if (tierOps.length) await charactersCollection(db).bulkWrite(tierOps);
   if (imperialTierOps.length)
     await db.collection<ImperialCharacter>("imperialCharacters").bulkWrite(imperialTierOps);
   const inserted = assessmentOps.length

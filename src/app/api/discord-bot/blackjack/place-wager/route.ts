@@ -4,7 +4,6 @@ import { z } from "zod";
 import { getDb } from "@/lib/mongodb";
 import { errorResponse, handleRouteError } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
-import type { Character } from "@/lib/db/types";
 import { getTotalPersonalWealth } from "@/lib/currency/characterFunds";
 import {
   houseLimits,
@@ -14,6 +13,7 @@ import {
   takeStake,
 } from "@/lib/casino/house";
 import { casinoFailure, guardCasinoPlayer, guardCasinoRequest } from "@/lib/casino/routeSupport";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const placeWagerSchema = z.object({
   discordId: z.string().min(1, "discordId is required"),
@@ -65,9 +65,7 @@ export async function POST(request: Request) {
       throw error;
     }
 
-    const character = await db
-      .collection<Character>("characters")
-      .findOne({ _id: player.characterId });
+    const character = await charactersCollection(db).findOne({ _id: player.characterId });
     const newCash = character ? getTotalPersonalWealth(character, true) : 0;
 
     return NextResponse.json({

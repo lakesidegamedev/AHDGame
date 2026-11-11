@@ -16,6 +16,7 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { isSameCountry } from "@/lib/api/sameCountry";
 import { emitPartyMembershipEvent, buildPartyEventSnapshots } from "@/lib/parties/membershipEvents";
 import { withPartyTerritoryMutation } from "@/lib/parties/territoryMutation";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 // POST /api/country/[code]/parties/[id]/leave — Leave a political party and become independent
 // Auth: requireAuthWithCharacter
@@ -64,7 +65,7 @@ export async function POST(
         // Becoming independent is NOT a party switch: leave lastPartySwitchAt
         // untouched so a recent join's cooldown still applies, but clear
         // partyJoinedAt since the third cooldown anchor no longer applies.
-        await db.collection("characters").updateOne(
+        await charactersCollection(db).updateOne(
           { _id: characterId },
           {
             $set: {

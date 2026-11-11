@@ -10,6 +10,7 @@ import {
   verifySaveArchive,
   writeSaveArchive,
 } from "@/lib/singleplayer/saveArchive";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * Save slots and autosaves for a local world.
@@ -273,12 +274,10 @@ async function readWorldFacts(db: Db): Promise<WorldFacts | null> {
       { projection: { currentTurn: 1, preset: 1, isProcessing: 1, singleplayerConfig: 1 } }
     );
   if (!state) return null;
-  const character = await db
-    .collection("characters")
-    .findOne(
-      { userId: new ObjectId(SINGLEPLAYER_USER_ID), retiredAt: { $exists: false } },
-      { projection: { name: 1 } }
-    );
+  const character = await charactersCollection(db).findOne(
+    { userId: new ObjectId(SINGLEPLAYER_USER_ID), retiredAt: { $exists: false } },
+    { projection: { name: 1 } }
+  );
   return {
     turn: typeof state.currentTurn === "number" ? state.currentTurn : null,
     preset: typeof state.preset === "string" ? state.preset : null,

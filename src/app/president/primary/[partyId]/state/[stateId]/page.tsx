@@ -8,7 +8,6 @@ import type {
   ElectionCandidate,
   ElectionVoteTally,
   PoliticalParty,
-  Character,
   NPP,
   State,
   StateDemographics,
@@ -37,6 +36,7 @@ import { allocateDelegates } from "@/lib/primaryDelegateAllocation";
 import { loadRegionalBonusMaps } from "@/lib/primaryRegionalBonusLoader";
 import { StateOrganizationPanel } from "./StateOrganizationPanel";
 import { NppAbbr } from "@/components/elections/NppAbbr";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 // This page is a live view over turn-processed delegate awards and per-state
 // projections. It must render from current DB state every request so its
@@ -126,8 +126,7 @@ export default async function PartyPrimaryStatePage({ params }: PageProps) {
   });
 
   const [chars, npps, partyOrgs, campaigns] = await Promise.all([
-    db
-      .collection<Character>("characters")
+    charactersCollection(db)
       .find({ _id: { $in: candidates.filter((c) => !c.isNPP).map((c) => c.characterId) } })
       .toArray(),
     db

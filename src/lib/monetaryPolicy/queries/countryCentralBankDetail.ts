@@ -73,6 +73,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 type ViewerCharacter = Character | null;
 
@@ -158,8 +159,7 @@ export async function buildCentralBankChairData(
   } | null = null;
 
   if (bank.chairCharacterId) {
-    const character = await db
-      .collection<Character>("characters")
+    const character = await charactersCollection(db)
       .findOne({ _id: new ObjectId(bank.chairCharacterId) });
     if (character) {
       const chairParty =
@@ -493,8 +493,7 @@ export async function loadCountryCentralBankDetail(params: {
   const lobbyCharIds = [...lobbyTotalsMap.keys()].map((id) => new ObjectId(id));
   const lobbyChars =
     lobbyCharIds.length > 0
-      ? await db
-          .collection<Character>("characters")
+      ? await charactersCollection(db)
           .find({ _id: { $in: lobbyCharIds } })
           .project<Pick<Character, "_id" | "avatarUrl" | "sequentialId">>({
             _id: 1,
@@ -520,8 +519,7 @@ export async function loadCountryCentralBankDetail(params: {
   const homeCurrency = nationalCurrency;
   const [locAgg, savingsInterestAgg, locInterestAccrualAgg, locPaymentInterestAgg] =
     await Promise.all([
-      db
-        .collection<Character>("characters")
+      charactersCollection(db)
         .aggregate<{ totalBalance: number; totalArrears: number }>([
           {
             $match: {

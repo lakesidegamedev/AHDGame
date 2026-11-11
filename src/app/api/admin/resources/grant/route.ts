@@ -4,7 +4,7 @@ import { getDb } from "@/lib/mongodb";
 import { errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import { adminResourcesGrantSchema } from "@/lib/api/schemas/admin";
-import type { Character, ExchangeRate } from "@/lib/db/types";
+import type { ExchangeRate } from "@/lib/db/types";
 import { ObjectId } from "mongodb";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import {
@@ -20,6 +20,7 @@ import {
 import { ENERGY_MAX_ACTION_CAP } from "@/lib/stats/statsConstants";
 import { emitTxBulk, loadTxThresholds } from "@/lib/financialTxLog/emit";
 import { POSITION_UPDATE_VOUCHER_GRANT_AMOUNT } from "@/lib/positionUpdateVouchers/rules";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export const POST = withAdminRoute(async (auth, request: Request) => {
   const { admin } = auth;
@@ -100,17 +101,15 @@ export const POST = withAdminRoute(async (auth, request: Request) => {
   let affectedCount = 0;
 
   if (allPlayers) {
-    const result = await db
-      .collection<Character>("characters")
-      .updateMany({}, [{ $set: setStage }]);
+    const result = await charactersCollection(db).updateMany({}, [{ $set: setStage }]);
     affectedCount = result.modifiedCount;
   } else {
     const ids = characterIds ?? [];
     const objectIds = ids.map((id: string) => new ObjectId(id));
 
-    const result = await db
-      .collection<Character>("characters")
-      .updateMany({ _id: { $in: objectIds } }, [{ $set: setStage }]);
+    const result = await charactersCollection(db).updateMany({ _id: { $in: objectIds } }, [
+      { $set: setStage },
+    ]);
     affectedCount = result.modifiedCount;
   }
 
@@ -157,8 +156,7 @@ export const POST = withAdminRoute(async (auth, request: Request) => {
     ((funds !== undefined && funds !== 0) || (cashOnHand !== undefined && cashOnHand !== 0))
   ) {
     const objectIds = characterIds.map((id: string) => new ObjectId(id));
-    const affectedChars = await db
-      .collection<Character>("characters")
+    const affectedChars = await charactersCollection(db)
       .find({ _id: { $in: objectIds } }, { projection: { _id: 1, name: 1, countryId: 1 } })
       .toArray();
     const transferThresholds = await loadTxThresholds(db);

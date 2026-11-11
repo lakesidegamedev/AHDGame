@@ -45,6 +45,7 @@ import { getQueuedRedemptionLiabilityAnchor } from "@/lib/indexFunds/fundValuati
 import { recordAudit } from "@/lib/audit/recordAudit";
 import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
 import { claimFundRedemptionLock } from "@/lib/indexFunds/redemptionLock";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 class FundQuoteMovedError extends Error {}
 
@@ -366,13 +367,11 @@ export async function handleRedeemFundShares(
               fundState!.anchorCurrencyCode,
               forexEnabled
             );
-            const creditResult = await db
-              .collection("characters")
-              .updateOne(
-                { _id: characterId },
-                { $inc: creditInc, $set: { updatedAt: new Date() } },
-                s
-              );
+            const creditResult = await charactersCollection(db).updateOne(
+              { _id: characterId },
+              { $inc: creditInc, $set: { updatedAt: new Date() } },
+              s
+            );
             if (creditResult.matchedCount === 0) {
               // Holder gone. Unwind everything already applied (position,
               // supply and cash) via the compensation stack instead of
@@ -386,9 +385,10 @@ export async function handleRedeemFundShares(
                 negatedInc[field] = -value;
               }
               undo.push(async () => {
-                await db
-                  .collection("characters")
-                  .updateOne({ _id: characterId }, { $inc: negatedInc });
+                await charactersCollection(db).updateOne(
+                  { _id: characterId },
+                  { $inc: negatedInc }
+                );
               });
             }
 

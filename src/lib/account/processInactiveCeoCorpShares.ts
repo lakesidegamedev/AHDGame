@@ -1,5 +1,5 @@
 import { ObjectId, type Db } from "mongodb";
-import type { Character, User } from "@/lib/db/types";
+import type { User } from "@/lib/db/types";
 import { cleanupShareMarketActivityForCorporations } from "@/lib/corporations/cleanupShareMarketActivity";
 import { releaseCorporationHeldSharesToFloat } from "@/lib/corporations/releaseHeldSharesToFloat";
 import { isInactiveCeoPenaltyCandidate } from "@/lib/turn/corporation/inactiveCeoSectorShed";
@@ -10,6 +10,7 @@ import {
 } from "@/lib/players/playerActivity";
 import { createNotifications, type NotificationInput } from "@/lib/notifications";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const TURN_MS = 60 * 60 * 1000;
 
@@ -149,8 +150,7 @@ export async function processInactiveCeoCorpShares(
 
     const charUserMap = new Map<string, string>();
     if (charHolderIdSet.size > 0) {
-      const holderChars = await db
-        .collection<Character>("characters")
+      const holderChars = await charactersCollection(db)
         .find(
           { _id: { $in: [...charHolderIdSet].map((id) => new ObjectId(id)) } },
           { projection: { _id: 1, userId: 1 } }

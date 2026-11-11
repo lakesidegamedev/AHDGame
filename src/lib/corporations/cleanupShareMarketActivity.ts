@@ -1,5 +1,5 @@
 import { ObjectId, type Db } from "mongodb";
-import type { Character, ShareListing, ShareOffer, ShareOrder } from "@/lib/db/types";
+import type { ShareListing, ShareOffer, ShareOrder } from "@/lib/db/types";
 import { cancelShareListingAndRefund } from "@/lib/corporations/cancelShareListing";
 import { cancelShareOrderAndRefund } from "@/lib/corporations/cancelShareOrder";
 import {
@@ -16,6 +16,7 @@ import {
 import { emitTx } from "@/lib/financialTxLog/emit";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface ShareMarketCleanupResult {
   ordersCancelled: number;
@@ -86,9 +87,10 @@ export async function cancelPendingShareOfferAndRefund(
     return true;
   }
 
-  const buyerChar = await db
-    .collection<Character>("characters")
-    .findOne({ _id: offer.buyerCharacterId }, { projection: { countryId: 1, name: 1 } });
+  const buyerChar = await charactersCollection(db).findOne(
+    { _id: offer.buyerCharacterId },
+    { projection: { countryId: 1, name: 1 } }
+  );
   if (!buyerChar) {
     const cancelRes = await db
       .collection<ShareOffer>("shareOffers")
@@ -116,7 +118,7 @@ export async function cancelPendingShareOfferAndRefund(
       { $set: { status: "cancelled", updatedAt: now } }
     );
   if (cancelRes.modifiedCount !== 1) return false;
-  await db.collection<Character>("characters").updateOne(
+  await charactersCollection(db).updateOne(
     { _id: offer.buyerCharacterId },
     {
       $inc: buildPersonalBalanceInc(refundInBuyerHome, buyerCurrency, forexEnabled),

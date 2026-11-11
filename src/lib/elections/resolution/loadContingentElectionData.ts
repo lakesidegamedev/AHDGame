@@ -1,7 +1,6 @@
 import { ObjectId } from "mongodb";
 import type { Db } from "@/lib/mongodb";
 import type {
-  Character,
   Coalition,
   ElectionCandidate,
   ElectionVoteTally,
@@ -20,6 +19,7 @@ import {
   type ContingentVoterProfile,
   type ResolveContingentElectionInput,
 } from "@/lib/elections/resolution/contingentElection";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 function partyKey(countryId: string, partyId: string): string {
   return `${countryId}:${partyId}`;
@@ -262,8 +262,7 @@ export async function loadContingentElectionData(
 
   const [characters, npps] = await Promise.all([
     charIds.size > 0
-      ? db
-          .collection<Character>("characters")
+      ? charactersCollection(db)
           .find({ _id: { $in: [...charIds].map((id) => new ObjectId(id)) } })
           .project({ _id: 1, party: 1, policies: 1, currentOffice: 1 })
           .toArray()

@@ -38,6 +38,7 @@ import {
   type PrimaryCalendarFamily,
 } from "@/lib/constants/primaryCalendar";
 import { ELECTORAL_VOTE_UNITS } from "@/lib/constants/states";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const ALL_STATE_IDS = [...new Set(ELECTORAL_VOTE_UNITS.map((u) => u.stateId))];
 
@@ -145,8 +146,7 @@ export async function GET(req: Request) {
     const nppIds = candidates.filter((c) => c.isNPP && c.nppId).map((c) => c.nppId!);
     const [chars, npps, partyOrgs, statesDocs, demographicsDocs, enriched] = await Promise.all([
       charIds.length
-        ? db
-            .collection<Character>("characters")
+        ? charactersCollection(db)
             .find({ _id: { $in: charIds } })
             .toArray()
         : Promise.resolve([] as Character[]),

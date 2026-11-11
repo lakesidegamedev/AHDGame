@@ -5,11 +5,12 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { formatElectionTypeLabel } from "@/lib/utils/electionLabels";
 import { ObjectId } from "mongodb";
-import type { Character, Election } from "@/lib/db/types";
+import type { Election } from "@/lib/db/types";
 import { findBlockingActiveCandidacy } from "@/lib/elections/activeCandidacy";
 import { resolveElection, resolveElections } from "@/lib/elections/resolveElection";
 import { conditionalJson } from "@/lib/api/conditionalJson";
 import { withApiMetrics } from "@/lib/observability/apiMetrics";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 // GET /api/elections — Unified election data endpoint. Single mode (?id=X) or list mode (?country=X).
 // Auth: public (optional auth for user-specific fields)
@@ -44,7 +45,7 @@ async function handleGet(request: Request) {
       const authUser = await getAuthUser();
       if (!authUser) return NextResponse.json({ myElection: null });
 
-      const character = await db.collection<Character>("characters").findOne({
+      const character = await charactersCollection(db).findOne({
         userId: new ObjectId(authUser.userId),
       });
       if (!character) return NextResponse.json({ myElection: null });

@@ -1,7 +1,6 @@
 import type { Db, Document, Filter, ObjectId } from "mongodb";
 import type { CommodityType } from "@/lib/constants/commodities";
 import { COMMODITY_TYPES } from "@/lib/constants/commodities";
-import type { Character } from "@/lib/db/types/character";
 import type { Corporation } from "@/lib/db/types/corporation";
 import type { SupplyListing, SupplyListingView } from "@/lib/db/types/supplyListing";
 import {
@@ -13,6 +12,7 @@ import {
   type OfferSortDir,
 } from "./offerOrdering";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export type PublisherFields = Pick<
   Corporation,
@@ -196,8 +196,7 @@ export async function loadOpenOffers(
   const characters =
     ceoIds.length === 0
       ? []
-      : await db
-          .collection<Character>("characters")
+      : await charactersCollection(db)
           .find({ _id: { $in: ceoIds } })
           .project<{ _id: ObjectId; name: string; avatarUrl?: string }>({
             name: 1,

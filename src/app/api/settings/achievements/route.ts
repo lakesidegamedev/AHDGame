@@ -4,9 +4,9 @@ import { getDb } from "@/lib/mongodb";
 import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
 import { parseJsonBody } from "@/lib/api/validate";
 import { z } from "zod";
-import type { Character } from "@/lib/db/types";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const patchSchema = z.object({
   highlightedAchievementIds: z
@@ -39,7 +39,7 @@ export async function PATCH(request: Request) {
 
     const db = await getDb();
 
-    const character = await db.collection<Character>("characters").findOne({
+    const character = await charactersCollection(db).findOne({
       userId: new ObjectId(user.userId),
     });
     if (!character) {
@@ -65,12 +65,10 @@ export async function PATCH(request: Request) {
       validIds.push(new ObjectId(idStr));
     }
 
-    await db
-      .collection<Character>("characters")
-      .updateOne(
-        { _id: character._id },
-        { $set: { highlightedAchievementIds: validIds, updatedAt: new Date() } }
-      );
+    await charactersCollection(db).updateOne(
+      { _id: character._id },
+      { $set: { highlightedAchievementIds: validIds, updatedAt: new Date() } }
+    );
 
     return NextResponse.json({
       success: true,

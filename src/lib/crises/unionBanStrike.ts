@@ -1,6 +1,6 @@
 import { ObjectId, type Db } from "mongodb";
 import type { Crisis, CrisisEffect, CrisisInteraction } from "@/lib/db/types/crisis";
-import type { Character, Union } from "@/lib/db/types";
+import type { Union } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { applyUnionLawProvision, isUnionsBanned } from "@/lib/labour/unionLaws";
 import { spendFromTreasury } from "@/lib/budget/treasurySpend";
@@ -15,6 +15,7 @@ import {
 } from "./unionBanStrikeCopy";
 import { announceUnionBanStrikeEnd, announceUnionBanStrikeStart } from "./unionBanStrikeWire";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * Wildcat general strike triggered by an enacted union ban.
@@ -314,14 +315,15 @@ async function chargeExecutive(
   }
   if (Object.keys(inc).length === 0) return;
 
-  await db.collection<Character>("characters").updateOne({ _id: characterId }, { $inc: inc });
+  await charactersCollection(db).updateOne({ _id: characterId }, { $inc: inc });
 
   // Clamp after the fact, exactly as `applyBucketImpactsToVoters` does:
   // favorability is a 0-100 scale and bucket approvals are -100..100, and a
   // bare `$inc` respects neither.
-  const character = await db
-    .collection<Character>("characters")
-    .findOne({ _id: characterId }, { projection: { favorability: 1, bucketApprovals: 1 } });
+  const character = await charactersCollection(db).findOne(
+    { _id: characterId },
+    { projection: { favorability: 1, bucketApprovals: 1 } }
+  );
   if (!character) return;
 
   const set: Record<string, unknown> = {};
@@ -338,7 +340,7 @@ async function chargeExecutive(
     if (drifted) set.bucketApprovals = clamped;
   }
   if (Object.keys(set).length > 0) {
-    await db.collection<Character>("characters").updateOne({ _id: characterId }, { $set: set });
+    await charactersCollection(db).updateOne({ _id: characterId }, { $set: set });
   }
 }
 

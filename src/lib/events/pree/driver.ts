@@ -35,6 +35,7 @@ import { processDebateChallenges } from "@/lib/debate/processDebateChallenges";
 import { sweepExpiredDebates } from "@/lib/debate/debateSessionLifecycle";
 import { makeSeededRng } from "@/lib/events/substrate/rng";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /** Eligibility maps are loaded per chunk to bound query sizes; all player characters are processed. */
 const CHARACTER_CHUNK_SIZE = 200;
@@ -170,8 +171,7 @@ async function sweepExpiredWithNotifications(
     .toArray();
 
   if (pending.length > 0) {
-    const chars = await db
-      .collection<Character>("characters")
+    const chars = await charactersCollection(db)
       .find({ _id: { $in: pending.map((p) => p.scopeId) } })
       .project({ _id: 1, userId: 1 })
       .toArray();
@@ -240,8 +240,7 @@ export async function processPlayerRandomEventsTurn(
 
   // Walk every player character in chunks — a hard cap here would silently
   // exclude everyone past the cap from ever receiving events.
-  const cursor = db
-    .collection<Character>("characters")
+  const cursor = charactersCollection(db)
     .find({ userId: { $exists: true } })
     .batchSize(CHARACTER_CHUNK_SIZE);
 

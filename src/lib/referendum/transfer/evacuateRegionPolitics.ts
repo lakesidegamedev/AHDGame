@@ -30,7 +30,7 @@ import { unformGovernmentAndVacatePM } from "@/lib/turn/parliamentaryGovernment"
  * out first so they stay in the source country, leaving only player residents
  * for the rescope.
  */
-import type { Db, ObjectId } from "mongodb";
+import type { Db, Document, ObjectId } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { ParliamentaryGovernment } from "@/lib/db/types/parliamentaryGovernment";
 import type { StatePartyOrg } from "@/lib/db/types/statePartyOrg";
@@ -38,6 +38,7 @@ import type { PoliticalParty } from "@/lib/db/types/party";
 import type { NPP } from "@/lib/db/types/npp";
 import { officeRemapFor, remapOffice } from "@/lib/country/dissolvingOfficeRemap";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * Region-scoped party collections.
@@ -167,15 +168,14 @@ export async function evacuateRegionPolitics(
   // they just won is the opposite of what a merge should do. Their `party` value
   // is already correct because `mergePartiesIntoCountry` renumbered it before
   // this region moved.
-  const playerDocs = await db
-    .collection("characters")
+  const playerDocs = await charactersCollection<Document>(db)
     .find({ homeState: regionId, userId: { $ne: null } })
     .project({ _id: 1 })
     .toArray();
   const playerIds = playerDocs.map((p) => p._id);
   let playersToIndependent = 0;
   if (playerIds.length > 0 && !dissolving) {
-    const upd = await db.collection("characters").updateMany(
+    const upd = await charactersCollection(db).updateMany(
       { _id: { $in: playerIds } },
       {
         $set: { party: "independent", updatedAt: now },
@@ -389,12 +389,10 @@ async function carryOfficials(
     // silently lose the bonus their seat is meant to carry. Most of these seats
     // are NPP-held rather than player-held, so both cases matter.
     if (official.characterId) {
-      await db
-        .collection("characters")
-        .updateOne(
-          { _id: official.characterId },
-          { $set: { "currentOffice.type": targetOffice, updatedAt: now } }
-        );
+      await charactersCollection(db).updateOne(
+        { _id: official.characterId },
+        { $set: { "currentOffice.type": targetOffice, updatedAt: now } }
+      );
     } else if (official.nppId) {
       await db
         .collection("npps")

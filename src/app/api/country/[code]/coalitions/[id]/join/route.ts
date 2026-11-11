@@ -5,12 +5,12 @@ import { handleRouteError, badRequest, forbidden, notFound, errorResponse } from
 import { createNotification } from "@/lib/notifications";
 import type { Coalition } from "@/lib/db/types/coalition";
 import type { PoliticalParty } from "@/lib/db/types/party";
-import type { Character } from "@/lib/db/types/character";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { canInviteToCoalition, isBannedParty } from "@/lib/turn/onePartyConstraints";
 import { getCountryState } from "@/lib/countryState";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { canActAsChair } from "@/lib/parties/actingChair";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 // POST /api/coalitions/[id]/join — Request to join a coalition
 export async function POST(
@@ -116,9 +116,10 @@ export async function POST(
 
     // Notify the coalition chair
     const chairChar = coalition.chairCharacterId
-      ? await db
-          .collection<Character>("characters")
-          .findOne({ _id: coalition.chairCharacterId }, { projection: { userId: 1 } })
+      ? await charactersCollection(db).findOne(
+          { _id: coalition.chairCharacterId },
+          { projection: { userId: 1 } }
+        )
       : null;
     if (chairChar) {
       await createNotification({

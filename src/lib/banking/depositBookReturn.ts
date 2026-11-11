@@ -73,7 +73,6 @@
 
 import { ObjectId, type Db } from "mongodb";
 import type { Corporation } from "@/lib/db/types";
-import type { Character } from "@/lib/db/types/character";
 import type { DepositInsuranceFund, InterbankLoan } from "@/lib/db/types/bank";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { getCountryIdForCurrency } from "@/lib/constants/currencies";
@@ -92,6 +91,7 @@ import type { BankFailurePoliticalEvent } from "./rules/failurePolitics";
 import { CENTRAL_BANK_HOLDER } from "@/lib/savings/rules/accounts";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /** Budget spending line a deposit insurance backstop is booked against. */
 export const DEPOSIT_INSURANCE_SPENDING_KEY = "depositInsurance";
@@ -407,12 +407,10 @@ async function returnDepositBookInner(
   // account disagreeing.
   let depositorsFlipped = 0;
   if (!playerDepositsAreLiabilities) {
-    const flip = await db
-      .collection<Character>("characters")
-      .updateMany(
-        { [holderPath]: bankIdHex },
-        { $set: { [holderPath]: "centralBank", updatedAt: now } }
-      );
+    const flip = await charactersCollection(db).updateMany(
+      { [holderPath]: bankIdHex },
+      { $set: { [holderPath]: "centralBank", updatedAt: now } }
+    );
     depositorsFlipped = flip.modifiedCount ?? 0;
   }
   const playerBookReturned = playerDepositsAreLiabilities
@@ -764,12 +762,10 @@ async function returnDepositBookInner(
       depositorsFlipped,
       await releaseAccountsFrom(db, bankIdHex, currency, now)
     );
-    await db
-      .collection<Character>("characters")
-      .updateMany(
-        { [holderPath]: bankIdHex },
-        { $set: { [holderPath]: "centralBank", updatedAt: now } }
-      );
+    await charactersCollection(db).updateMany(
+      { [holderPath]: bankIdHex },
+      { $set: { [holderPath]: "centralBank", updatedAt: now } }
+    );
   }
   if (policy.failurePolitics && options.cause === "failure") {
     // Activation follows completed cash and liability settlement, including replay.

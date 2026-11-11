@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { handleRouteError } from "@/lib/api/errors";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 // Maps CountryId to the ISO 3166-1 numeric code used by the world map
 const COUNTRY_TO_ISO: Record<string, string> = {
@@ -26,8 +27,7 @@ export async function GET() {
     const bannedUserIds = new Set(bannedUsers.map((u) => u._id.toString()));
 
     // Aggregate character counts by countryId + party, excluding banned users
-    const counts = await db
-      .collection("characters")
+    const counts = await charactersCollection(db)
       .aggregate<{ _id: { countryId: string; party: string }; userIds: ObjectId[] }>([
         { $match: { party: { $exists: true, $ne: null } } },
         {

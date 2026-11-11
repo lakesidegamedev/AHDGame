@@ -17,6 +17,7 @@ import {
   accountabilityDrain,
   continuingPartySinceTurn,
 } from "./rules/accountability";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /** The party holding a country's national executive, with that government's approval. */
 export interface NationalExecutiveParty {
@@ -104,8 +105,7 @@ export async function observeGovernmentAccountability(
   ];
   type Actor = { _id: ObjectId; party?: string };
   const [characters, npps, coalitions] = await Promise.all([
-    db
-      .collection<Actor>("characters")
+    charactersCollection<Actor>(db)
       .find({ _id: { $in: charIds } }, { projection: { party: 1 } })
       .toArray(),
     db

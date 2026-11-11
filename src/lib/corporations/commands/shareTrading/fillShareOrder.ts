@@ -75,6 +75,7 @@ import { CURRENCY_SYMBOLS } from "@/lib/constants/currencies";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteParams {
   params: Promise<{ id: string; orderId: string }>;
@@ -181,7 +182,7 @@ export async function fillShareOrder(request: Request, { params }: RouteParams) 
       const characterQuery = userDoc?.activeCharacterId
         ? { _id: userDoc.activeCharacterId, userId: new ObjectId(auth.user.userId) }
         : { userId: new ObjectId(auth.user.userId) };
-      const character = await db.collection<Character>("characters").findOne(characterQuery);
+      const character = await charactersCollection(db).findOne(characterQuery);
       if (!character) {
         return errorResponse(404, "Character not found");
       }
@@ -438,9 +439,10 @@ export async function fillShareOrder(request: Request, { params }: RouteParams) 
         pinnedSellerCurrency = (resolveCorpLiquidCurrencyCode(sellerCorp ?? {}) ??
           "USD") as CurrencyCode;
       } else {
-        const seller = await db
-          .collection<Character>("characters")
-          .findOne({ _id: orderCharacterId }, { projection: { countryId: 1, name: 1 } });
+        const seller = await charactersCollection(db).findOne(
+          { _id: orderCharacterId },
+          { projection: { countryId: 1, name: 1 } }
+        );
         pinnedSellerName = seller?.name ?? "Unknown character";
         pinnedSellerCurrency = seller ? getHomeCurrency(seller as Character) : fillerHomeCurrency;
         let sellerFxRate = 1.0;

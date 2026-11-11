@@ -66,6 +66,7 @@ import type { PoliticalMetricsDoc } from "@/lib/db/types/politicalMetrics";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /** Crisis actions name an operating lane; rows store its identity. */
 function laneFilter(sectorType: string) {
@@ -320,8 +321,7 @@ async function emergencyNationalizeBill(
   const now = new Date();
   const VOTING_DURATION_HOURS = 24;
 
-  const sponsor = await db
-    .collection<Character>("characters")
+  const sponsor = await charactersCollection(db)
     .findOne({ _id: ctx.characterId }, { projection: { name: 1 } });
 
   const provision: NationalizeProvision = {
@@ -395,8 +395,7 @@ async function concessionBill(
   const now = new Date();
   const VOTING_DURATION_HOURS = 24;
 
-  const sponsor = await db
-    .collection<Character>("characters")
+  const sponsor = await charactersCollection(db)
     .findOne({ _id: ctx.characterId }, { projection: { name: 1 } });
 
   const bill: Omit<Bill, "_id"> = {

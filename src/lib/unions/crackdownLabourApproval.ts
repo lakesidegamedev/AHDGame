@@ -1,9 +1,9 @@
 import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { Character } from "@/lib/db/types";
 import { getHeadOfGovernmentCharacterId } from "@/lib/api/headOfGovernment";
 import { segmentsFor } from "@/lib/crises/unionBanStrike";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /** A standing crackdown slowly costs the executive standing with labor voters. */
 export const CRACKDOWN_LABOUR_APPROVAL_COST_PER_TURN = 0.25;
@@ -40,9 +40,10 @@ export async function processCrackdownLabourApprovalTurn(
         ],
       };
     }
-    const result = await db
-      .collection<Character>("characters")
-      .updateOne({ _id: executiveId, [marker]: { $ne: currentTurn } }, [{ $set: set }]);
+    const result = await charactersCollection(db).updateOne(
+      { _id: executiveId, [marker]: { $ne: currentTurn } },
+      [{ $set: set }]
+    );
     if (result.modifiedCount > 0) charged += 1;
   }
   return charged;

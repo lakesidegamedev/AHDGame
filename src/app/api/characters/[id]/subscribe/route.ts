@@ -6,8 +6,9 @@ import { getAuthUser } from "@/lib/auth"; // Optional auth — intentionally use
 import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
-import type { Character, UserSubscription } from "@/lib/db/types";
+import type { UserSubscription } from "@/lib/db/types";
 import { getCharacterByUserId } from "@/lib/db/characterLookup";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 // GET /api/characters/[id]/subscribe — Returns the authenticated user's subscription status and subscriber count for a character
 // Auth: public
@@ -81,9 +82,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     }
 
     // Target must exist
-    const targetCharacter = await db
-      .collection<Character>("characters")
-      .findOne({ _id: targetCharacterId });
+    const targetCharacter = await charactersCollection(db).findOne({ _id: targetCharacterId });
 
     if (!targetCharacter) {
       return errorResponse(404, "Character not found");

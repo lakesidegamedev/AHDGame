@@ -1,6 +1,7 @@
 import type { Db, ObjectId } from "mongodb";
 import type { ActivityLog, Character, User } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * NPP slots each active member adds, with gentle diminishing returns. Small
@@ -65,8 +66,7 @@ export async function getPartyNppCapacity(
   now = new Date()
 ): Promise<PartyNppCapacity> {
   const [members, regionCount] = await Promise.all([
-    db
-      .collection<Character>("characters")
+    charactersCollection(db)
       .find({ countryId, party: partyId }, { projection: { userId: 1 } })
       .project<Pick<Character, "userId">>({ userId: 1 })
       .toArray(),

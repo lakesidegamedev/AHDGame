@@ -28,8 +28,9 @@ import { getCorpFxRate, corpLiquidCapitalToAnchor } from "@/lib/currency/corpora
 import { createNotification } from "@/lib/notifications";
 import { emitTx } from "@/lib/financialTxLog/emit";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
-import type { Character, CorporationShareInvite, User } from "@/lib/db/types";
+import type { CorporationShareInvite, User } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const actionSchema = z.object({
   action: z.enum(["accept", "decline", "cancel"]),
@@ -90,9 +91,7 @@ export async function POST(request: Request, { params }: RouteParams) {
           { _id: inviteOid, status: "pending" },
           { $set: { status: "cancelled", cancelledAt: now, updatedAt: now } }
         );
-      const invitee = await db
-        .collection<Character>("characters")
-        .findOne({ _id: invite.invitedCharacterId });
+      const invitee = await charactersCollection(db).findOne({ _id: invite.invitedCharacterId });
       if (invitee) {
         createNotification({
           userId: invitee.userId,
@@ -123,7 +122,7 @@ export async function POST(request: Request, { params }: RouteParams) {
         );
       const ceoId = corporation.ceoId;
       if (ceoId) {
-        const ceo = await db.collection<Character>("characters").findOne({ _id: ceoId });
+        const ceo = await charactersCollection(db).findOne({ _id: ceoId });
         if (ceo) {
           createNotification({
             userId: ceo.userId,
@@ -142,9 +141,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     // action === "accept": atomic flow — re-check cap and unissued capacity,
     // debit invitee cash, credit shares, credit corp liquidCapital.
-    const invitee = await db
-      .collection<Character>("characters")
-      .findOne({ _id: invite.invitedCharacterId });
+    const invitee = await charactersCollection(db).findOne({ _id: invite.invitedCharacterId });
     if (!invitee) {
       return errorResponse(404, "Invitee character not found");
     }
@@ -257,9 +254,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       }).catch(() => {});
 
       if (corporation.ceoId) {
-        const ceo = await db
-          .collection<Character>("characters")
-          .findOne({ _id: corporation.ceoId });
+        const ceo = await charactersCollection(db).findOne({ _id: corporation.ceoId });
         if (ceo) {
           createNotification({
             userId: ceo.userId,

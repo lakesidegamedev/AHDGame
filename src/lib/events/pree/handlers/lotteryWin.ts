@@ -2,6 +2,7 @@ import type { EventHandler } from "@/lib/events/substrate/types";
 import { registerEventHandler } from "@/lib/events/substrate/registry";
 import { applyDeclarativeEffects } from "@/lib/events/substrate/applyEffects";
 import { threeTierTable } from "./tiers";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const KIND = "pree.lotteryWin";
 
@@ -81,7 +82,7 @@ const handler: EventHandler = {
     if (piPerTurn <= 0 || turns <= 0) {
       return;
     }
-    await ctx.db.collection("characters").updateOne(
+    await charactersCollection(ctx.db).updateOne(
       { _id: ctx.instance.scopeId },
       {
         $set: {

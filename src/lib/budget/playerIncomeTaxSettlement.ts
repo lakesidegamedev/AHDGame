@@ -17,6 +17,7 @@ import type {
 import { computeExpiresAtSync } from "@/lib/financialTxLog/expiresAt";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface Payer {
   ownerCollection: Assessment["ownerCollection"];
@@ -111,11 +112,10 @@ async function deliver(db: Db, original: Batch): Promise<void> {
         });
     const regularOps = operations("characters"),
       imperialOps = operations("imperialCharacters");
-    if (regularOps.length) await db.collection("characters").bulkWrite(regularOps);
+    if (regularOps.length) await charactersCollection(db).bulkWrite(regularOps);
     if (imperialOps.length) await db.collection("imperialCharacters").bulkWrite(imperialOps);
     const [regularProof, imperialProof] = await Promise.all([
-      db
-        .collection<{ _id: ObjectId; incomeTaxBatchReceipt?: IncomeTaxBatchReceipt }>("characters")
+      charactersCollection<{ _id: ObjectId; incomeTaxBatchReceipt?: IncomeTaxBatchReceipt }>(db)
         .find(
           {
             _id: {
@@ -542,8 +542,7 @@ export async function settlePlayerIncomeTaxAssessments(
   if (active?.scanAfter && candidates.length < scanLimit)
     candidates.push(...(await scan(scanLimit - candidates.length, undefined, active.scanAfter)));
   const [regularWallets, imperialWallets] = await Promise.all([
-    db
-      .collection<WalletDoc>("characters")
+    charactersCollection<WalletDoc>(db)
       .find(
         {
           _id: {

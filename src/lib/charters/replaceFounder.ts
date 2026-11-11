@@ -1,6 +1,7 @@
 import type { Db, ObjectId } from "mongodb";
-import type { Character, PartyCharter, PartyCharterSignature } from "@/lib/db/types";
+import type { PartyCharter, PartyCharterSignature } from "@/lib/db/types";
 import { adjacentStates } from "@/lib/constants/stateAdjacency";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * Replace a founder slot. Accepts two entry states:
@@ -59,12 +60,10 @@ export async function replaceFounder(
   }
 
   // Validate the replacement character: exists, human-owned, same country.
-  const replacement = await db
-    .collection<Character>("characters")
-    .findOne(
-      { _id: replacementCharacterId },
-      { projection: { _id: 1, userId: 1, countryId: 1, homeState: 1 } }
-    );
+  const replacement = await charactersCollection(db).findOne(
+    { _id: replacementCharacterId },
+    { projection: { _id: 1, userId: 1, countryId: 1, homeState: 1 } }
+  );
   if (!replacement) return { ok: false, reason: "replacement-not-found" };
   if (!replacement.userId) return { ok: false, reason: "replacement-not-human" };
   if (replacement.countryId !== charter.countryId) {
@@ -79,9 +78,10 @@ export async function replaceFounder(
   // the anchor has no homeState (legacy seed data).
   const anchorCharacterId = charter.foundersCharacterIds[0];
   const anchor = anchorCharacterId
-    ? await db
-        .collection<Character>("characters")
-        .findOne({ _id: anchorCharacterId }, { projection: { _id: 1, homeState: 1 } })
+    ? await charactersCollection(db).findOne(
+        { _id: anchorCharacterId },
+        { projection: { _id: 1, homeState: 1 } }
+      )
     : null;
   const anchorHomeState = anchor?.homeState || null;
   if (anchorHomeState) {

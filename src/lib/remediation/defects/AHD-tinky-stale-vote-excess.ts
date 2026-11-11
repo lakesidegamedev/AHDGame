@@ -1,5 +1,5 @@
 import { ObjectId, type Db } from "mongodb";
-import type { Character, Corporation } from "@/lib/db/types";
+import type { Corporation } from "@/lib/db/types";
 import { COUNTRY_CURRENCY_MAP, type CurrencyCode } from "@/lib/constants/currencies";
 import { getHomeCurrency } from "@/lib/currency/characterFunds";
 import { loadFxRatesByCurrency } from "@/lib/currency/corporationCapital";
@@ -15,6 +15,7 @@ import type {
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export const DEFECT_ID = "AHD-tinky-stale-vote-excess";
 
@@ -178,8 +179,7 @@ async function survey(db: Db): Promise<Survey> {
 
   const [corporation, characters, budgets, sourceTradeCount, fxByCurrency] = await Promise.all([
     corporationsCollection(db).findOne({ _id: new ObjectId(CORPORATION_ID) }),
-    db
-      .collection<Character>("characters")
+    charactersCollection(db)
       .find({ _id: { $in: characterClaims.map((claim) => new ObjectId(claim.destinationId)) } })
       .toArray(),
     federalBudgetCollection(db)
@@ -368,7 +368,7 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
   let updated = 0;
   for (const credit of payload.characterCredits) {
     const path = `currencyBalances.personal.${credit.currencyCode}`;
-    const result = await db.collection<Character>("characters").updateOne(
+    const result = await charactersCollection(db).updateOne(
       { _id: new ObjectId(credit.characterId), [MARKER_PATH]: { $exists: false } },
       {
         $inc: { [path]: credit.localAmount },
@@ -525,7 +525,7 @@ async function verify(db: Db): Promise<VerifyResult> {
   const budgetIds = payload?.treasuryCredits.map((row) => row.budgetId) ?? [];
   const [markedCharacters, markedBudgets] = await Promise.all([
     recipientIds.length > 0
-      ? db.collection<Character>("characters").countDocuments({
+      ? charactersCollection(db).countDocuments({
           _id: { $in: recipientIds },
           [MARKER_PATH]: { $exists: true },
         })

@@ -6,8 +6,9 @@ import { getDb } from "@/lib/mongodb";
 import { errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import { createAdminLog } from "@/lib/adminLog";
-import type { Character, PatreonTier, User } from "@/lib/db/types";
+import type { PatreonTier, User } from "@/lib/db/types";
 import { applyPatreonStatus } from "@/lib/patreon/service";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const bodySchema = z.object({
   userId: z.string().refine((value) => ObjectId.isValid(value), "Invalid user ID"),
@@ -42,7 +43,7 @@ export const POST = withAdminRoute(async (auth, request: Request) => {
     patreonUserId,
   });
 
-  const character = await db.collection<Character>("characters").findOne({ userId: objectId });
+  const character = await charactersCollection(db).findOne({ userId: objectId });
 
   await createAdminLog({
     category: "account",

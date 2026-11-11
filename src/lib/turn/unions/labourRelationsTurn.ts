@@ -1,6 +1,5 @@
 import type { AnyBulkWriteOperation, Db, ObjectId } from "mongodb";
 import type {
-  Character,
   BargainingCampaign,
   CollectiveAgreement,
   CorporateSector,
@@ -18,6 +17,7 @@ import {
 } from "@/lib/unions/commands/bargaining";
 import { closeDueRatificationVotes } from "@/lib/unions/commands/ratifySettlement";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface LabourRelationsTurnResult {
   campaignsMovedToDispute: number;
@@ -153,8 +153,7 @@ async function notifyLabourRelationsEvents(
     .map((union) => union.ownerId)
     .filter((id): id is ObjectId => id != null);
   if (ownerIds.length === 0) return;
-  const characters = await db
-    .collection<Character>("characters")
+  const characters = await charactersCollection(db)
     .find({ _id: { $in: ownerIds } }, { projection: { userId: 1 } })
     .toArray();
   const userIdByCharacterId = new Map(

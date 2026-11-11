@@ -7,13 +7,14 @@ import { requireAuth } from "@/lib/api/requireAuth";
 import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
-import type { ElectedOfficial, Character } from "@/lib/db/types";
+import type { ElectedOfficial } from "@/lib/db/types";
 import {
   initialVpActionFields,
   VP_RALLY_INFLUENCE_GAIN,
   VP_SURROGATE_FAVORABILITY_GAIN,
 } from "@/lib/constants/vicePresidentActions";
 import { z } from "zod";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const actionSchema = z.object({
   actionId: z.enum(["surrogate_address", "rally_base"]),
@@ -76,7 +77,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(400, "No vice-president actions remaining");
     }
 
-    const charactersCol = db.collection<Character>("characters");
+    const charactersCol = charactersCollection(db);
 
     // Resolve the effect target BEFORE spending so a doomed action wastes no
     // action (mirrors the order route rejecting a region-less regional order).

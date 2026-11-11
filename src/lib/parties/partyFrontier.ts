@@ -29,6 +29,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import { connectedGrowthFrontier, type TerritoryAdjacency } from "./rules/territory";
 import { reentryRegions } from "./rules/partyRenewal";
 import { getPartyRenewalStatesCollection } from "@/lib/db/collections/partyRenewalStates";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /** Keep paths inside the country's current region set, including transferred regions. */
 export function getTerritoryAdjacency(
@@ -128,7 +129,7 @@ export async function getPartyPresenceStates(
   const countryScope = { $or: [{ countryId }, { countryId: { $exists: false } }] };
 
   const [memberStates, officialStates, nppStates] = await Promise.all([
-    db.collection<Character>("characters").distinct("homeState", {
+    charactersCollection(db).distinct("homeState", {
       ...countryScope,
       party: partyId,
       homeState: inCountry,
@@ -235,8 +236,7 @@ export async function getPartyPresenceMap(
   const homeState = { $in: regions };
   const countryScope = { $or: [{ countryId }, { countryId: { $exists: false } }] };
   const [members, officials, npps] = await Promise.all([
-    db
-      .collection<Character>("characters")
+    charactersCollection(db)
       .find({ ...countryScope, party, homeState }, { projection: { party: 1, homeState: 1 } })
       .toArray(),
     db

@@ -22,6 +22,7 @@ import { loadPartyGroupFavorability } from "@/lib/governorOffice/address/partyGr
 import type { CountryId } from "@/lib/constants/countries";
 import { ObjectId, type Db } from "mongodb";
 import { CAMPAIGN_ACTIVITY_HISTORY_CAP } from "@/lib/campaigns/constants/activityHistory";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 async function getCurrentTurn(db: Db): Promise<number> {
   const gameState = await db
@@ -271,9 +272,10 @@ async function resolveAffinityCandidate(
     if (!npp) return null;
     return { charEP: npp.policies.economic, charSP: npp.policies.social, party: input.party };
   }
-  const character = await db
-    .collection<Character>("characters")
-    .findOne({ _id: input.positionId }, { projection: { policies: 1 } });
+  const character = await charactersCollection(db).findOne(
+    { _id: input.positionId },
+    { projection: { policies: 1 } }
+  );
   if (!character) return null;
   return {
     charEP: character.policies.economic,

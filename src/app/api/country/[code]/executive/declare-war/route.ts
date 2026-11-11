@@ -20,8 +20,8 @@ import {
 } from "@/lib/military/warGoals";
 import { MS_PER_TURN } from "@/lib/constants/calendar";
 import type { Bill } from "@/lib/db/types/legislation";
-import type { Character } from "@/lib/db/types";
 import { BILL_PROPOSE_ACTION_COST } from "@shared/constants/legislation";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const bodySchema = z.object({
   targetCountry: z.string().min(2).max(3),
@@ -117,9 +117,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
     if (!auth.user.isAdmin) {
       // Re-read rather than trusting `auth.user.character`, which is a snapshot taken
       // at the top of the request and may have been spent down since.
-      const fresh = await db
-        .collection<Character>("characters")
-        .findOne({ _id: character._id }, { projection: { actions: 1 } });
+      const fresh = await charactersCollection(db).findOne(
+        { _id: character._id },
+        { projection: { actions: 1 } }
+      );
       const currentActions = fresh?.actions ?? 0;
       if (currentActions < actionCost) {
         return errorResponse(
@@ -129,12 +130,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
       }
       // Conditional $inc, not read-then-write: two declarations submitted at once
       // would both clear the check above and both spend the same points.
-      const spend = await db
-        .collection<Character>("characters")
-        .updateOne(
-          { _id: character._id, actions: { $gte: actionCost } },
-          { $inc: { actions: -actionCost }, $set: { updatedAt: new Date() } }
-        );
+      const spend = await charactersCollection(db).updateOne(
+        { _id: character._id, actions: { $gte: actionCost } },
+        { $inc: { actions: -actionCost }, $set: { updatedAt: new Date() } }
+      );
       if (spend.modifiedCount === 0) {
         return errorResponse(409, "Your actions changed. Please try again.");
       }
@@ -183,12 +182,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
       result = await db.collection<Bill>("bills").insertOne(bill as Bill);
     } catch (error) {
       if (!auth.user.isAdmin) {
-        await db
-          .collection<Character>("characters")
-          .updateOne(
-            { _id: character._id },
-            { $inc: { actions: actionCost }, $set: { updatedAt: new Date() } }
-          );
+        await charactersCollection(db).updateOne(
+          { _id: character._id },
+          { $inc: { actions: actionCost }, $set: { updatedAt: new Date() } }
+        );
       }
       throw error;
     }

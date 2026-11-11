@@ -1,8 +1,9 @@
 import { ObjectId } from "mongodb";
 import type { Db } from "@/lib/mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { Character, ElectedOfficial, NPP, PoliticalParty } from "@/lib/db/types";
+import type { ElectedOfficial, NPP, PoliticalParty } from "@/lib/db/types";
 import { buildVotesByParty, type VoteByParty } from "@/lib/congress/billVoting";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export type { VoteByParty };
 
@@ -37,8 +38,7 @@ export async function buildVoterPartyAndWeightMaps(
 
   const [characters, npps] = await Promise.all([
     charOids.length > 0
-      ? db
-          .collection<Character>("characters")
+      ? charactersCollection(db)
           .find({ _id: { $in: charOids } })
           .project({ _id: 1, party: 1 })
           .toArray()

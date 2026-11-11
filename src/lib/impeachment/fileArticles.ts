@@ -20,6 +20,7 @@ import {
   IMPEACHMENT_HOUSE_VOTING_TURNS,
   IMPEACHMENT_SENATE_VOTING_TURNS,
 } from "@/lib/constants/impeachment";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface FileImpeachmentOpts {
   /** "president" = national two-chamber; "governor" = single state-legislature vote. */
@@ -140,9 +141,10 @@ export async function fileArticlesOfImpeachment(
     initialStage = "house";
   }
 
-  const targetChar = await db
-    .collection<Character>("characters")
-    .findOne({ _id: targetCharacterId }, { projection: { _id: 1, name: 1, careerHistory: 1 } });
+  const targetChar = await charactersCollection(db).findOne(
+    { _id: targetCharacterId },
+    { projection: { _id: 1, name: 1, careerHistory: 1 } }
+  );
   if (!targetChar) throw badRequest("Target character not found.");
 
   const filingWindow = await loadImpeachmentFilingWindow(

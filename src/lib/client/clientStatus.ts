@@ -40,7 +40,6 @@ import {
 } from "@/lib/actions/officeActionBonus";
 import type { CountryId } from "@/lib/constants/countries";
 import type {
-  Character,
   CorporationHistory,
   Election,
   ElectionCandidate,
@@ -60,6 +59,7 @@ import { getRoundedPublicMarketCap } from "@/lib/corporations/marketQuote";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 // GET /api/client-status — Returns status bar enrichment data (funds, corp, election stats, income).
 // Auth: requireBasicAuth
@@ -388,7 +388,7 @@ export async function handleClientStatus(request: Request) {
     const characterQuery = user?.activeCharacterId
       ? { _id: user.activeCharacterId, userId: new ObjectId(userId) }
       : { userId: new ObjectId(userId) };
-    const character = await db.collection<Character>("characters").findOne(characterQuery);
+    const character = await charactersCollection(db).findOne(characterQuery);
 
     if (!character) {
       return NextResponse.json(
@@ -889,8 +889,7 @@ export async function handleClientStatus(request: Request) {
         partyDoc.economicPosition,
         partyDoc.socialPosition
       );
-      const poolAgg = await db
-        .collection<Character>("characters")
+      const poolAgg = await charactersCollection(db)
         .aggregate<{ totalInfluence: number; memberCount: number }>([
           {
             $match: {

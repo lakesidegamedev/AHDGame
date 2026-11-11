@@ -17,12 +17,13 @@ import {
   isProposalTypeLocked,
 } from "@/lib/parties/proposals";
 import { requiredYesVotes } from "@/lib/parties/proposalConstants";
-import type { CommitteeProposal, PoliticalParty, Character } from "@/lib/db/types";
+import type { CommitteeProposal, PoliticalParty } from "@/lib/db/types";
 import type {
   ProposalView,
   ProposalVoteSummary,
   ProposalsResponse,
 } from "@/lib/parties/dto/partyView";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -49,9 +50,10 @@ async function toProposalView(
   targetCommitteeSize: number | undefined,
   myCharacterId: ObjectId
 ): Promise<ProposalView> {
-  const proposer = await db
-    .collection<Character>("characters")
-    .findOne({ _id: proposal.proposedBy }, { projection: { name: 1 } });
+  const proposer = await charactersCollection(db).findOne(
+    { _id: proposal.proposedBy },
+    { projection: { name: 1 } }
+  );
 
   let mergeField: ProposalView["merge"] | undefined;
   if (proposal.type === "merge" && proposal.merge) {
@@ -66,12 +68,10 @@ async function toProposalView(
 
   let campaignerAppointmentField: ProposalView["campaignerAppointment"] | undefined;
   if (proposal.type === "campaignerAppointment" && proposal.campaignerAppointment) {
-    const targetCharacter = await db
-      .collection<Character>("characters")
-      .findOne(
-        { _id: proposal.campaignerAppointment.targetCharacterId },
-        { projection: { name: 1 } }
-      );
+    const targetCharacter = await charactersCollection(db).findOne(
+      { _id: proposal.campaignerAppointment.targetCharacterId },
+      { projection: { name: 1 } }
+    );
     campaignerAppointmentField = {
       targetCharacterId: proposal.campaignerAppointment.targetCharacterId.toString(),
       targetCharacterName: targetCharacter?.name ?? "Unknown",
@@ -80,9 +80,10 @@ async function toProposalView(
 
   let removeOfficeHolderField: ProposalView["removeOfficeHolder"] | undefined;
   if (proposal.type === "removeOfficeHolder" && proposal.removeOfficeHolder) {
-    const targetCharacter = await db
-      .collection<Character>("characters")
-      .findOne({ _id: proposal.removeOfficeHolder.targetCharacterId }, { projection: { name: 1 } });
+    const targetCharacter = await charactersCollection(db).findOne(
+      { _id: proposal.removeOfficeHolder.targetCharacterId },
+      { projection: { name: 1 } }
+    );
     removeOfficeHolderField = {
       role: proposal.removeOfficeHolder.role,
       targetCharacterId: proposal.removeOfficeHolder.targetCharacterId.toString(),

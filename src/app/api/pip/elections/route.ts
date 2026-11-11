@@ -17,6 +17,7 @@ import type {
   ElectedOfficial,
   ElectionVoteTally,
 } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export async function GET() {
   try {
@@ -26,9 +27,7 @@ export async function GET() {
     // Resolve character for auth-enriched fields
     let character: Character | null = null;
     if (authUser) {
-      character = await db
-        .collection<Character>("characters")
-        .findOne({ userId: new ObjectId(authUser.userId) });
+      character = await charactersCollection(db).findOne({ userId: new ObjectId(authUser.userId) });
     }
 
     const isAdmin = authUser?.isAdmin === true;

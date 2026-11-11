@@ -35,7 +35,7 @@ import {
   pushConferenceHistory,
 } from "@/lib/countries/uk/conference/conferenceStore";
 import type { ConferenceRulesMotion, UKPartyConference } from "@/lib/countries/uk/conference/types";
-import type { Character, PoliticalParty } from "@/lib/db/types";
+import type { PoliticalParty } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import {
   partySeqIdOf,
@@ -48,6 +48,7 @@ import {
   reconcileConferenceEffects,
   type ConferenceResolution,
 } from "./conferenceResolution";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export * from "./conferenceResolution";
 
@@ -99,9 +100,10 @@ async function requirePartyMemberCharacter(
   party: PoliticalParty,
   voter: ConferenceActor
 ): Promise<void> {
-  const member = await db
-    .collection<Character>("characters")
-    .findOne({ _id: voter._id, userId: { $exists: true } }, { projection: { party: 1 } });
+  const member = await charactersCollection(db).findOne(
+    { _id: voter._id, userId: { $exists: true } },
+    { projection: { party: 1 } }
+  );
   if (!member || member.party !== partySeqIdOf(party)) {
     throw forbidden("Only party members vote at conference");
   }

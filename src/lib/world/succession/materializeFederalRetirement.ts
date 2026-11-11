@@ -16,6 +16,7 @@ import type {
 import { FEDERATION_ARCHIVED_POLITICAL_ROWS_COLLECTION } from "./materializeRussianCongress";
 import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 type HistoricalPoliticalRow = { _id: ObjectId | string; [key: string]: unknown };
 
@@ -85,8 +86,7 @@ export async function materializeFederationFederalRetirement(input: {
       { $set: { status: "withdrawn", updatedAt: now } },
       { session }
     );
-  await db
-    .collection<Character>("characters")
+  await charactersCollection(db)
     .updateMany(
       { countryId: sourceCountryId, currentOffice: { $ne: null } },
       { $set: { currentOffice: null, updatedAt: now } },

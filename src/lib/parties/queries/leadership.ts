@@ -17,7 +17,6 @@ import {
 import { getBannedCharacterIds } from "@/lib/utils/bannedCharacters";
 import { vacateBannedOfficerSeats } from "@/lib/parties/bannedOfficers";
 import type {
-  Character,
   NationalCommitteeCandidate,
   NationalCommitteeElection,
   NationalCommitteeVote,
@@ -32,6 +31,7 @@ import type {
   CommitteeElection,
   NationalElectionsState,
 } from "@/lib/parties/dto/partyView";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 async function getOptionalViewer(): Promise<AuthUserWithCharacter | null> {
   try {
@@ -238,8 +238,7 @@ export async function getNationalPartyElectionState(
   const candidateCharacters =
     candidateCharacterIds.length === 0
       ? []
-      : await db
-          .collection<Character>("characters")
+      : await charactersCollection(db)
           .find(
             { _id: { $in: candidateCharacterIds } },
             { projection: { _id: 1, sequentialId: 1 } }
@@ -401,8 +400,7 @@ export async function getNationalCommitteeState(
     committeeIds.length === 0
       ? []
       : (
-          await db
-            .collection<Character>("characters")
+          await charactersCollection(db)
             .find({ _id: { $in: committeeIds } })
             .toArray()
         )
@@ -451,8 +449,7 @@ export async function getNationalCommitteeState(
     const candidateCharacters =
       candidates.length === 0
         ? []
-        : await db
-            .collection<Character>("characters")
+        : await charactersCollection(db)
             .find(
               { _id: { $in: [...new Set(candidates.map((candidate) => candidate.characterId))] } },
               { projection: { _id: 1, sequentialId: 1 } }

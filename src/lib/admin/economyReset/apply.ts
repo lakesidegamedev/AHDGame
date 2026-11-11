@@ -60,6 +60,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 type Log = (message: string) => void;
 
@@ -424,9 +425,10 @@ async function phaseUnset(db: Db, plan: EconomyResetPlan): Promise<void> {
     .updateMany({ extractedUnits: { $exists: true } }, { $unset: { extractedUnits: "" } });
   // Unions are wiped and reseeded vacant, so clear stale cached leadership:
   // a non-null unionLeaderOf blocks foundUnion with a 409.
-  await db
-    .collection("characters")
-    .updateMany({ unionLeaderOf: { $ne: null } }, { $set: { unionLeaderOf: null } });
+  await charactersCollection(db).updateMany(
+    { unionLeaderOf: { $ne: null } },
+    { $set: { unionLeaderOf: null } }
+  );
   // Each region's employment ledger fixes its corporate job share the first
   // time corporate demand is measured and never revisits it. Kept across a
   // reset, the old economy's share (up to 99% of a state's workforce) stays

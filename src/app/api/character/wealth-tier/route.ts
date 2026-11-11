@@ -7,7 +7,7 @@ import { requireHumanSession } from "@/lib/api/requireAuth";
 import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
-import type { Character, User } from "@/lib/db/types";
+import type { User } from "@/lib/db/types";
 import { loadCampaignCurrencyRates } from "@/lib/campaigns/campaignCurrency";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
@@ -16,6 +16,7 @@ import {
   wealthTierOptions,
   wealthTierRepickDelta,
 } from "@/lib/character/wealthTierRepick";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const repickSchema = z.object({
   wealth: z.enum(["low", "middle", "high"]),
@@ -30,7 +31,7 @@ async function loadActiveCharacter(userId: string) {
   const query = userDoc?.activeCharacterId
     ? { _id: userDoc.activeCharacterId, userId: new ObjectId(userId) }
     : { userId: new ObjectId(userId) };
-  const character = await db.collection<Character>("characters").findOne(query);
+  const character = await charactersCollection(db).findOne(query);
   return { db, character };
 }
 
@@ -101,9 +102,9 @@ export async function POST(request: Request) {
     });
     const personalPath = `currencyBalances.personal.${delta.currency}`;
     // Atomic guard on the pending flag: a double submit applies once.
-    const result = await db
-      .collection<Character>("characters")
-      .updateOne({ _id: character._id, wealthTierRepickPending: true }, [
+    const result = await charactersCollection(db).updateOne(
+      { _id: character._id, wealthTierRepickPending: true },
+      [
         {
           $set: {
             cashOnHand: clampedAdd("cashOnHand", delta.anchorDelta),
@@ -118,7 +119,8 @@ export async function POST(request: Request) {
             updatedAt: "$$NOW",
           },
         },
-      ]);
+      ]
+    );
     if (result.matchedCount === 0)
       return errorResponse(409, "Your wealth background is already set.");
 

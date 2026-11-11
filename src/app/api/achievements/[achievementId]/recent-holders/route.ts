@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
-import type { Character, CharacterAchievement, User } from "@/lib/db/types";
+import type { CharacterAchievement, User } from "@/lib/db/types";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteParams {
   params: Promise<{ achievementId: string }>;
@@ -30,8 +31,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
         .collection<User>("users")
         .find({ _id: { $in: userIds } })
         .toArray(),
-      db
-        .collection<Character>("characters")
+      charactersCollection(db)
         .find({ _id: { $in: characterIds } })
         .toArray(),
     ]);

@@ -7,8 +7,8 @@ import { requireAuth } from "@/lib/api/requireAuth";
 import { getDb } from "@/lib/mongodb";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { getImfCorporation } from "@/lib/imf/resolveImfCorporation";
-import type { Character } from "@/lib/db/types";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export async function GET(_req: Request) {
   const auth = await requireAuth();
@@ -33,8 +33,7 @@ export async function GET(_req: Request) {
 
   const boardCharacters =
     shareholderCharIds.length > 0
-      ? await db
-          .collection<Character>("characters")
+      ? await charactersCollection(db)
           .find({ _id: { $in: shareholderCharIds } })
           .project<{ _id: ObjectId; name: string; sequentialId?: number }>({
             name: 1,

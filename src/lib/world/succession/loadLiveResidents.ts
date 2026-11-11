@@ -1,9 +1,9 @@
 import type { ClientSession, Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { Character } from "@/lib/db/types/character";
 import type { State } from "@/lib/db/types/state";
 import type { SuccessionResident } from "./rules/residency";
 import { buildSourceRegionHierarchy } from "./sourceRegionHierarchy";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /** Read every character resident in the source country and resolve nested
  * home states to the actual top-level regions being partitioned. No character
@@ -18,8 +18,7 @@ export async function loadLiveSuccessionResidents(
     .find({ countryId: sourceCountryId }, { session })
     .toArray();
   const { topLevelFor } = buildSourceRegionHierarchy(states);
-  const characters = await db
-    .collection<Character>("characters")
+  const characters = await charactersCollection(db)
     .find({ countryId: sourceCountryId }, { session })
     .toArray();
   return characters

@@ -48,6 +48,7 @@ import { primaryOpenFilter } from "@/lib/elections/electionDeadlineFilters";
 import { findPartyBudgetForScope, getEffectivePartyBudgetSpending } from "@/lib/partyBudgetGuards";
 import { getTreasuryForecast, getTreasuryReserveSummary } from "@/lib/partyTreasuryPlan";
 import { countDistinctOfficers } from "@/lib/treasury/payoutCapValues";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; partyId: string }>;
@@ -122,7 +123,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
       leaderId: ObjectId | null | undefined
     ): Promise<LeaderInfo | null> => {
       if (!leaderId) return null;
-      const character = await db.collection<Character>("characters").findOne({ _id: leaderId });
+      const character = await charactersCollection(db).findOne({ _id: leaderId });
       if (!character) return null;
 
       // Check if user is banned
@@ -158,8 +159,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     // Filter out banned users AND players inactive for >96 turns — both the
     // roster display and the effective PS cap exclude inactive players, matching
     // partyActionGeneration's player-member check.
-    const characters = await db
-      .collection<Character>("characters")
+    const characters = await charactersCollection(db)
       .find({ homeState: stateId, party: partyKey })
       .toArray();
 

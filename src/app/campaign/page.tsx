@@ -2,11 +2,12 @@ import { getAuthUserWithCharacter } from "@/lib/auth";
 import { getDb } from "@/lib/mongodb";
 import { redirect } from "next/navigation";
 import { ObjectId, type Db } from "mongodb";
-import type { Campaign, Character, Election, PoliticalParty } from "@/lib/db/types";
+import type { Campaign, Election, PoliticalParty } from "@/lib/db/types";
 import { isCampaignEligibleElection } from "@/lib/campaigns/isCampaignEligible";
 import Link from "next/link";
 import { resolveCampaignRedirect } from "@/lib/campaigns/queries/campaignRedirect";
 import { standaloneCampaignHref } from "@/lib/campaignManager/links";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /** The viewer's campaign on its race page in Campaign mode, else the standalone page. */
 async function campaignDestination(db: Db, campaignId: string) {
@@ -26,8 +27,7 @@ export default async function CampaignPage() {
   // Multi-profile aware: find every character this user owns so campaigns on
   // any of their characters (not just the active one) resolve. Includes retired
   // characters — a presidential run from a prior life still surfaces the manager.
-  const userCharacters = await db
-    .collection<Character>("characters")
+  const userCharacters = await charactersCollection(db)
     .find({ userId: userOid }, { projection: { _id: 1 } })
     .toArray();
   const characterOids = userCharacters.map((c) => c._id);

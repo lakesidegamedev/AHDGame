@@ -1,6 +1,6 @@
 /** Closing steps of the corporation turn: capacity notices, audits, dividends, payouts and subsidiary upkeep. */
 import { ObjectId, type AnyBulkWriteOperation } from "mongodb";
-import type { GameState, Character } from "@/lib/db/types";
+import type { GameState } from "@/lib/db/types";
 import type { ActionAuditInput } from "@/lib/db/types/actionAuditLog";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { type SettleableSupplyAgreement, settleSupplyAgreements } from "./settleSupplyAgreements";
@@ -45,6 +45,7 @@ import type { CorporateSector, TxThresholds } from "@/lib/db/types";
 import type { Db } from "mongodb";
 import type { MarketContext } from "@/lib/market/marketContext";
 import { workerConfig } from "@/lib/config/worker";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 // Optional sim-run salt, same convention as nppActionProcessing.ts's RNG.
 export const CORP_TURN_RNG_SALT = workerConfig.simRngSalt() ? `:${workerConfig.simRngSalt()}` : "";
@@ -189,7 +190,7 @@ export async function settleCorporationTurnPayouts({
     }
   }
   if (ceoBestMarginById.size > 0) {
-    await db.collection<Character>("characters").bulkWrite(
+    await charactersCollection(db).bulkWrite(
       [...ceoBestMarginById.values()].map(({ id, margin }) => ({
         updateOne: {
           filter: { _id: id, stats: { $exists: true } },
@@ -590,8 +591,7 @@ export async function settleCorporationTurnPayouts({
       .map((id) => new ObjectId(id));
     const divChars =
       divCharIds.length > 0
-        ? await db
-            .collection<Character>("characters")
+        ? await charactersCollection(db)
             .find({ _id: { $in: divCharIds } })
             .toArray()
         : [];

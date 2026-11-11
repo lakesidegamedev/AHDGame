@@ -13,10 +13,10 @@ import { ObjectId } from "mongodb";
 import { parseJsonBody } from "@/lib/api/validate";
 import { badRequest, forbidden, handleRouteError, notFound, errorResponse } from "@/lib/api/errors";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
-import type { Character } from "@/lib/db/types/character";
 import { canAppointSoeDirector } from "@/lib/economy/commandEconomyAuth";
 import { resolveWriteContext } from "@/lib/economy/queries/commandEconomyWriteContext";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteContext {
   params: Promise<{ code: string; corpId: string }>;
@@ -91,12 +91,10 @@ export async function POST(request: Request, context: RouteContext) {
         if (!ObjectId.isValid(appointeeCharacterId)) {
           return NextResponse.json(badRequest("Invalid character id.").toJson(), { status: 400 });
         }
-        const appointee = await db
-          .collection<Character>("characters")
-          .findOne(
-            { _id: new ObjectId(appointeeCharacterId), countryId },
-            { projection: { _id: 1, name: 1 } }
-          );
+        const appointee = await charactersCollection(db).findOne(
+          { _id: new ObjectId(appointeeCharacterId), countryId },
+          { projection: { _id: 1, name: 1 } }
+        );
         if (!appointee) {
           return NextResponse.json(
             badRequest("That character is not a citizen of this country.").toJson(),

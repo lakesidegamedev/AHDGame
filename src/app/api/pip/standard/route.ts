@@ -17,14 +17,8 @@ import {
   projectFavorabilityDecay,
   projectInfamyDecay,
 } from "@/lib/utils/decayProjections";
-import type {
-  User,
-  Character,
-  Notification,
-  PoliticalParty,
-  State,
-  StatePartyOrg,
-} from "@/lib/db/types";
+import type { User, Notification, PoliticalParty, State, StatePartyOrg } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export async function GET() {
   try {
@@ -32,9 +26,9 @@ export async function GET() {
     if (!auth.ok) return auth.response;
 
     const db = await getDb();
-    const character = await db
-      .collection<Character>("characters")
-      .findOne({ userId: new ObjectId(auth.user.userId) });
+    const character = await charactersCollection(db).findOne({
+      userId: new ObjectId(auth.user.userId),
+    });
     if (!character) {
       return errorResponse(404, "Character not found");
     }

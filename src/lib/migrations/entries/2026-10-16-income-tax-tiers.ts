@@ -14,6 +14,7 @@ import {
 import { refreshIncomeTaxShares } from "@/lib/budget/incomeTaxShares";
 import type { Migration } from "../types";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export const migration: Migration = {
   id: "2026-10-16-income-tax-tiers",
@@ -31,7 +32,7 @@ export const migration: Migration = {
         .toArray(),
       db.collection<StatePolicy>("statePolicies").find({}).toArray(),
       db.collection<{ _id: string; currentTurn: number }>("gameState").findOne({ _id: "current" }),
-      db.collection("characters").countDocuments({ incomeTaxStartTurn: { $exists: false } }),
+      charactersCollection(db).countDocuments({ incomeTaxStartTurn: { $exists: false } }),
       db
         .collection("imperialCharacters")
         .countDocuments({ incomeTaxStartTurn: { $exists: false } }),
@@ -135,7 +136,7 @@ export const migration: Migration = {
       }
     }
     if (policyOps.length) await db.collection<StatePolicy>("statePolicies").bulkWrite(policyOps);
-    await db.collection("characters").updateMany({}, [
+    await charactersCollection(db).updateMany({}, [
       {
         $set: {
           initialIncomeTier: {

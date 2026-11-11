@@ -6,7 +6,8 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { ObjectId } from "mongodb";
 import { z } from "zod";
 import { schemas } from "@/lib/api/validate";
-import type { Campaign, Character } from "@/lib/db/types";
+import type { Campaign } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const assignManagerSchema = z.object({
   characterId: schemas.objectId,
@@ -45,7 +46,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     // Verify character exists
-    const character = await db.collection<Character>("characters").findOne({ _id: characterOid });
+    const character = await charactersCollection(db).findOne({ _id: characterOid });
 
     if (!character) {
       return errorResponse(404, "Character not found");

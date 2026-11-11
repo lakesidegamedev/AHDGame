@@ -22,12 +22,8 @@ import {
   notifyLeadershipAppointed,
   notifyLeadershipRemovedByAdmin,
 } from "@/lib/elections/party/statePartyElections";
-import type {
-  StatePartyElectionPosition,
-  StatePartyOrg,
-  Character,
-  AdminLog,
-} from "@/lib/db/types";
+import type { StatePartyElectionPosition, StatePartyOrg, AdminLog } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteParams {
   params: Promise<{ stateId: string; partyId: string }>;
@@ -74,7 +70,7 @@ export const POST = withAdminRoute(async (auth, request: Request, { params }: Ro
       return errorResponse(400, "Invalid characterId");
     }
 
-    const char = await db.collection<Character>("characters").findOne({ _id: charOid });
+    const char = await charactersCollection(db).findOne({ _id: charOid });
 
     if (!char) return errorResponse(404, "Character not found");
 

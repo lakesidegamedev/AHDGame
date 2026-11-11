@@ -37,6 +37,7 @@ import { CURRENCY_SYMBOLS, type CurrencyCode } from "@/lib/constants/currencies"
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { closeCeoTenure } from "@/lib/corporations/ceoHistory";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -249,12 +250,10 @@ export async function createShareListing(request: Request, { params }: RoutePara
     let negotiatedTerms: NegotiatedSaleTerms | undefined;
     let negotiatedBuyer: Pick<Character, "_id" | "userId" | "name"> | null = null;
     if (negotiated) {
-      const buyer = await db
-        .collection<Character>("characters")
-        .findOne(
-          { _id: new ObjectId(negotiated.buyerCharacterId) },
-          { projection: { _id: 1, userId: 1, name: 1, createdTurn: 1, createdAt: 1 } }
-        );
+      const buyer = await charactersCollection(db).findOne(
+        { _id: new ObjectId(negotiated.buyerCharacterId) },
+        { projection: { _id: 1, userId: 1, name: 1, createdTurn: 1, createdAt: 1 } }
+      );
       if (!buyer) return errorResponse(404, "Buyer not found");
       const gameTime = await getGameTime();
       const guard = await checkNegotiatedSale(

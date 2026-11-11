@@ -6,8 +6,9 @@ import { requireHumanSession } from "@/lib/api/requireAuth";
 import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
-import type { Character, User } from "@/lib/db/types";
+import type { User } from "@/lib/db/types";
 import { validateStatAllocation } from "@/lib/stats/validateStatAllocation";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const reallocateStatsSchema = z.object({
   stats: z.record(z.string(), z.number()),
@@ -22,7 +23,7 @@ async function loadActiveCharacter(userId: string) {
   const query = userDoc?.activeCharacterId
     ? { _id: userDoc.activeCharacterId, userId: new ObjectId(userId) }
     : { userId: new ObjectId(userId) };
-  const character = await db.collection<Character>("characters").findOne(query);
+  const character = await charactersCollection(db).findOne(query);
   return { db, character };
 }
 
@@ -65,7 +66,7 @@ export async function POST(request: Request) {
 
     // Atomic guard: only spend the reallocation if it is still unused (prevents
     // a double-submit from resetting earned growth twice).
-    const result = await db.collection<Character>("characters").updateOne(
+    const result = await charactersCollection(db).updateOne(
       { _id: character._id, statsAllocated: true, statsReallocationUsed: { $ne: true } },
       {
         $set: {

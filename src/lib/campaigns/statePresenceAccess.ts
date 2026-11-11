@@ -3,6 +3,7 @@ import { badRequest, forbidden, notFound } from "@/lib/api/errors";
 import { isCampaignManagerUser, isCampaignNomineeUser } from "@/lib/campaigns/access";
 import type { Campaign, Character, ElectionCandidate } from "@/lib/db/types";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export type PresenceCampaign = Pick<
   Campaign,
@@ -90,8 +91,7 @@ export async function resolvePresenceSubject(
     throw badRequest("This campaign is suspended. Management actions are disabled.");
   }
 
-  const candidate = await db
-    .collection<Character>("characters")
+  const candidate = await charactersCollection(db)
     .findOne(
       { _id: campaign.candidateId },
       { projection: { countryId: 1, party: 1, homeState: 1 } }

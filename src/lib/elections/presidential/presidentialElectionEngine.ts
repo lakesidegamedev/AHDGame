@@ -117,6 +117,7 @@ import {
   endorsementCredibilityMultiplier,
   type EndorsementOrgLink,
 } from "@/lib/campaigns/endorsementActivation";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /** Vote multiplier applied in a state when its sitting governor has endorsed
  *  the candidate. Half of the VP-home-state effect — a real in-state lift
@@ -542,8 +543,7 @@ export async function accumulatePresidentVoteTurn(
     .filter((id): id is ObjectId => id != null);
   const vpChars =
     vpCharIds.length > 0
-      ? await db
-          .collection<import("@/lib/db/types").Character>("characters")
+      ? await charactersCollection<import("@/lib/db/types").Character>(db)
           .find({ _id: { $in: vpCharIds } }, { projection: { _id: 1, homeState: 1 } })
           .toArray()
       : [];

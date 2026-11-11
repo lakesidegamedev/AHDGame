@@ -11,10 +11,11 @@ import { WAL_CABINET_POSITIONS } from "@/lib/constants/walCabinet";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { createNotifications, type NotificationInput } from "@/lib/notifications";
 import type { CabinetMember, CabinetNomination } from "@/lib/db/types/cabinet";
-import type { Character, ElectedOfficial } from "@/lib/db/types";
+import type { ElectedOfficial } from "@/lib/db/types";
 import type { OfficeType } from "@/lib/db/types/character";
 import { cabinetOfficeTypeForCountry } from "@/lib/actions/officeActionBonus";
 import { getCabinetEligibleOfficeTypes } from "@/lib/legislature/chamberOfficeType";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * For the cleared cabinet holders, (1) restore each holder's `currentOffice` so
@@ -46,8 +47,7 @@ export async function notifyAndRestoreClearedHolders(
   const cabinetType = cabinetOfficeTypeForCountry(countryId);
   const eligibleOfficeTypes = getCabinetEligibleOfficeTypes(countryId);
   const [chars, seats] = await Promise.all([
-    db
-      .collection<Character>("characters")
+    charactersCollection(db)
       .find({ _id: { $in: memberIds } }, { projection: { _id: 1, userId: 1, currentOffice: 1 } })
       .toArray(),
     db
@@ -81,13 +81,15 @@ export async function notifyAndRestoreClearedHolders(
             }
           : {}),
       } as OfficeType;
-      await db
-        .collection<Character>("characters")
-        .updateOne({ _id: c._id }, { $set: { currentOffice: restoreOffice, updatedAt: now } });
+      await charactersCollection(db).updateOne(
+        { _id: c._id },
+        { $set: { currentOffice: restoreOffice, updatedAt: now } }
+      );
     } else {
-      await db
-        .collection<Character>("characters")
-        .updateOne({ _id: c._id }, { $unset: { currentOffice: "" }, $set: { updatedAt: now } });
+      await charactersCollection(db).updateOne(
+        { _id: c._id },
+        { $unset: { currentOffice: "" }, $set: { updatedAt: now } }
+      );
     }
   }
 

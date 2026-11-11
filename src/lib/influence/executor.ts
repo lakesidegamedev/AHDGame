@@ -31,6 +31,7 @@ import {
   nppCanPlausiblyEndorseElection,
   upsertNppEndorsement,
 } from "@/lib/nppEndorsements";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface ExecuteInfluenceInput {
   characterId: ObjectId;
@@ -152,9 +153,7 @@ export async function executeInfluence(
   const [db, forexEnabled] = await Promise.all([getDb(), isForexEnabled()]);
   const actionConfig = INFLUENCE_ACTIONS[input.influenceType];
 
-  const character = await db
-    .collection<Character>("characters")
-    .findOne({ _id: input.characterId });
+  const character = await charactersCollection(db).findOne({ _id: input.characterId });
   const npp = await db.collection<NPP>("npps").findOne({ _id: input.nppId });
 
   if (!character) {
@@ -250,7 +249,7 @@ export async function executeInfluence(
   // and $inc — both must guard on the canonical local balance field.
   const totalFundCostLocal = forexEnabled ? totalFundCost * homeFxRate : totalFundCost;
   const campaignFundsField = forexEnabled ? "currencyBalances.campaign" : "funds";
-  const debitResult = await db.collection<Character>("characters").updateOne(
+  const debitResult = await charactersCollection(db).updateOne(
     {
       _id: character._id,
       actions: { $gte: totalActionCost },
@@ -459,7 +458,7 @@ export async function getInfluenceOptions(
 }> {
   const db = await getDb();
 
-  const character = await db.collection<Character>("characters").findOne({ _id: characterId });
+  const character = await charactersCollection(db).findOne({ _id: characterId });
   const npp = await db.collection<NPP>("npps").findOne({ _id: nppId });
 
   if (!character || !npp) {

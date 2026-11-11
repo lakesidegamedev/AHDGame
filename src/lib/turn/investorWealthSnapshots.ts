@@ -39,6 +39,7 @@ import {
 } from "@/lib/wealth/computeCharacterWealth";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * Generate pre-computed global investor rankings.
@@ -99,8 +100,7 @@ export async function generateInvestorRankingSnapshot(currentTurn: number, db?: 
   const topCharacterIds = sortedInvestors.map(([id]) => new ObjectId(id));
   const characters =
     topCharacterIds.length > 0
-      ? await database
-          .collection<Character>("characters")
+      ? await charactersCollection(database)
           .find({ _id: { $in: topCharacterIds } })
           .project<{ _id: ObjectId; name: string }>({ _id: 1, name: 1 })
           .toArray()
@@ -185,8 +185,7 @@ export async function generateWealthListSnapshots(currentTurn: number, db?: Db):
     : undefined;
 
   // Fetch all characters
-  const characters = await database
-    .collection<Character>("characters")
+  const characters = await charactersCollection(database)
     .find({})
     .project<
       Pick<

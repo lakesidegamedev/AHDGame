@@ -36,6 +36,7 @@ import { isUnionsBanned } from "@/lib/labour/unionLaws";
 import { isUnionProsecutionBarred } from "@/lib/unions/unionProsecutionBar";
 import type { CountryId } from "@/lib/constants/countries";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -138,8 +139,7 @@ async function handleGET(_request: Request, { params }: RouteParams) {
     // The vote command accepts a seated president even after they moved away,
     // so reaffirming them must stay possible from the ballot.
     const candidates = canVote
-      ? await db
-          .collection<Character>("characters")
+      ? await charactersCollection(db)
           .find(
             {
               $and: [

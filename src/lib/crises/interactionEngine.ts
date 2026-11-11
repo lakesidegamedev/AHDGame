@@ -46,6 +46,7 @@ import {
 } from "@/lib/livingConflict/globalResponse";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /** Read a country's national treasury balance (the unified fiscal cash position). */
 async function getTreasuryBalance(db: Db, countryId: string): Promise<number> {
@@ -299,8 +300,7 @@ async function applyEffectsForCountry(
 
   let affectedCharacterIds: ObjectId[] | undefined;
   if (effects.some((e) => e.targetType === "stat")) {
-    const chars = await db
-      .collection<{ _id: ObjectId }>("characters")
+    const chars = await charactersCollection<{ _id: ObjectId }>(db)
       .find({ "currentOffice.countryId": countryId, retiredAt: null }, { projection: { _id: 1 } })
       .toArray();
     affectedCharacterIds = chars.map((c) => c._id);
@@ -331,8 +331,7 @@ async function resolveAffectedCharacters(
     filter["currentOffice.stateId"] = { $in: targetStateIds };
   }
 
-  const chars = await db
-    .collection<{ _id: ObjectId }>("characters")
+  const chars = await charactersCollection<{ _id: ObjectId }>(db)
     .find(filter, { projection: { _id: 1 } })
     .toArray();
 
@@ -611,9 +610,10 @@ export async function answerMultiResponderNode(
     }
   }
 
-  const character = await db
-    .collection<{ name?: string }>("characters")
-    .findOne({ _id: characterId }, { projection: { name: 1 } });
+  const character = await charactersCollection<{ name?: string }>(db).findOne(
+    { _id: characterId },
+    { projection: { name: 1 } }
+  );
 
   const response = {
     countryId,

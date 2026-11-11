@@ -10,8 +10,9 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { errorResponse } from "@/lib/api/errors";
 import { z } from "zod";
 import { MAX_REGION_ID_LENGTH } from "@/lib/constants/states";
-import type { Character, State } from "@/lib/db/types";
+import type { State } from "@/lib/db/types";
 import { performRelocation } from "@/lib/character/performRelocation";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const updateStateSchema = z.object({
   username: z.string().min(1, "username is required"),
@@ -51,7 +52,7 @@ export const PATCH = withAdminRoute(async (_auth, request: Request) => {
     return errorResponse(404, `User '${username}' not found`);
   }
 
-  const character = await db.collection<Character>("characters").findOne({ userId: user._id });
+  const character = await charactersCollection(db).findOne({ userId: user._id });
   if (!character) {
     return errorResponse(404, `No character found for user '${username}'`);
   }

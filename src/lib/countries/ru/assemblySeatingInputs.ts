@@ -5,7 +5,6 @@
  */
 import { type ClientSession, type Db, ObjectId } from "mongodb";
 import type {
-  Character,
   NPP,
   CountryGameState,
   ElectedOfficial,
@@ -33,6 +32,7 @@ import {
   type RussianCouncilResultRecord,
 } from "./councilElectionResult";
 import { GAME_STATE_PRE_ITERATION_FIELDS } from "@/lib/db/collections/gameState";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 function currentOfficeType(office: NPP["currentOffice"] | string) {
   return typeof office === "string" ? office : office?.type;
 }
@@ -240,8 +240,7 @@ export async function loadRussianAssemblySeatingInputs(
     .map((row) => new ObjectId(row.ownerId));
   const npps = certified.owners.filter((row) => row.isNpc).map((row) => new ObjectId(row.ownerId));
   const characters = chars.length
-    ? await db
-        .collection<Character>("characters")
+    ? await charactersCollection(db)
         .find(
           { _id: { $in: chars } },
           {

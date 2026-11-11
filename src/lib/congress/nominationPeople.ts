@@ -1,8 +1,9 @@
 import { ObjectId, type Db } from "mongodb";
-import type { Character, NPP, PoliticalParty } from "@/lib/db/types";
+import type { NPP, PoliticalParty } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { getPartyHex } from "@/lib/utils/politics";
 import { buildCharacterHref, buildNppHref } from "@/lib/utils/profileUrls";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /** Display-ready person on a nomination card: portrait, profile link, party. */
 export interface NominationPerson {
@@ -44,8 +45,7 @@ export async function loadNominationPeople(
 
   const [chars, npps, parties] = await Promise.all([
     charIds.size > 0
-      ? db
-          .collection<Character>("characters")
+      ? charactersCollection(db)
           .find(
             { _id: { $in: [...charIds].map((id) => new ObjectId(id)) } },
             { projection: { _id: 1, sequentialId: 1, avatarUrl: 1, party: 1 } }
