@@ -1,3 +1,4 @@
+import { ANTITRUST_LAW_BY_COUNTRY } from "@/lib/corporations/mergerReview/constants";
 import { describe, expect, it } from "vitest";
 import { legislationTypes } from "@/lib/seeds/reference/legislationTypes";
 import {
@@ -10,7 +11,7 @@ import {
 
 const EFFECT_DIRECTION = [-1, -1, 0, 1, 1];
 
-const NEW_GENERATION_SCOPES = ["us", "uk", "ru", "dd"] as const;
+const NEW_GENERATION_SCOPES = ["us", "uk", "ru", "dd", "de", "jp", "cn"] as const;
 
 describe("mechanicalLegislationTypes", () => {
   it("makes every type national-only with five option levels", () => {
@@ -45,6 +46,13 @@ describe("mechanicalLegislationTypes", () => {
     expect(new Set(MECHANICAL_TYPE_IDS).size).toBe(mechanicalLegislationTypes.length);
   });
 
+  it("generates no competition law for a country whose law book carries one", () => {
+    for (const countryId of Object.keys(ANTITRUST_LAW_BY_COUNTRY)) {
+      const id = `${countryId.toLowerCase()}_competition_law`;
+      expect(MECHANICAL_TYPE_IDS, id).not.toContain(id);
+    }
+  });
+
   it("generates no competition law for the new-generation countries", () => {
     for (const type of mechanicalLegislationTypes) {
       if (type.countryScope == null) continue;
@@ -55,13 +63,13 @@ describe("mechanicalLegislationTypes", () => {
 });
 
 describe("MECHANICAL_RETAINED_IDS", () => {
-  it("names exactly the subsidiary and foreign investment laws of the four new-generation countries", () => {
+  it("names exactly the subsidiary and foreign investment laws of the law book countries", () => {
     const expected = NEW_GENERATION_SCOPES.flatMap((scope) => [
       `${scope}_subsidiary_limits_law`,
       `${scope}_foreign_investment_law`,
     ]);
     expect([...MECHANICAL_RETAINED_IDS].sort()).toEqual(expected.sort());
-    expect(MECHANICAL_RETAINED_IDS).toHaveLength(8);
+    expect(MECHANICAL_RETAINED_IDS).toHaveLength(14);
   });
 });
 

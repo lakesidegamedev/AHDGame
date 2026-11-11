@@ -39,7 +39,7 @@ describe("law administration catalog", () => {
   it("classifies every US, UK, and Japan law", () => {
     // The one law book for US, UK and Japan, and the mechanical laws.
     expect(initialCatalog.filter((type) => !/__(?:income|capital)_/.test(type._id))).toHaveLength(
-      456
+      455
     );
     expect(initialCatalog.some((type) => type._id.endsWith("__income_low"))).toBe(true);
     expect(initialCatalog.some((type) => type._id.endsWith("__capital_low"))).toBe(true);

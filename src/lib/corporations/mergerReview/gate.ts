@@ -130,25 +130,18 @@ export async function assertMergerClearance(
   // abroad is referred even below the concentration threshold.
   const screening = await foreignScreeningApplies(db, acquirer, target);
 
-  // A table miss is not always "no statute": a country merge hands the survivor
-  // the absorbed state's competition primary (post-reunification Germany owns
-  // the GDR's), and the winner's law governs the unified state. Costs one
-  // indexed lookup only on the miss path; still fails open when neither a
-  // native nor a carried statute exists.
-  // New-generation competition primaries first; then the country's own
-  // Competition Act (mechanicalLaws); then a statute carried by a country merge.
-  const nativeLawId = ANTITRUST_LAW_BY_COUNTRY[target.countryId as CountryId];
-  const mechanicalId = nativeLawId
-    ? null
-    : mechanicalLawId(target.countryId as CountryId, "competition");
+  // The country's own competition law (its law book's, else its Competition
+  // Act), read through the mechanical levels so a world seeded before the book
+  // keeps its act. Otherwise a statute carried by a country merge (unified
+  // Germany holds the GDR's); with neither, review fails open.
+  const ownLawId = mechanicalLawId(target.countryId as CountryId, "competition");
   const lawId =
-    nativeLawId ??
-    mechanicalId ??
+    ownLawId ??
     (await carriedLawIdFor(db, target.countryId, Object.values(ANTITRUST_LAW_BY_COUNTRY)));
   if (!lawId && !screening) return { ok: true };
   const level = !lawId
     ? 0
-    : mechanicalId != null
+    : ownLawId != null
       ? await getMechanicalLawLevel(db, target.countryId as CountryId, "competition")
       : await getEnactedLevel(db, target.countryId as LawCountryId, lawId);
   const threshold = thresholdForLevel(level);
