@@ -5,6 +5,13 @@ const crises: unknown[] = [];
 const tensions: { kind: string; delta: number }[] = [];
 vi.mock("@/lib/crises/createCrisisFromTemplate", () => ({
   createCrisisFromTemplate: vi.fn(async (_db: unknown, params: unknown) => {
+    // The unique crises_living_event index.
+    const key = (params as { livingConflictEventId?: string }).livingConflictEventId;
+    if (
+      key &&
+      crises.some((c) => (c as { livingConflictEventId?: string }).livingConflictEventId === key)
+    )
+      throw Object.assign(new Error("E11000 duplicate key"), { code: 11000 });
     crises.push(params);
     return "id";
   }),
@@ -58,6 +65,10 @@ vi.mock("@/lib/db/collections/intelligence", () => ({
         throw Object.assign(new Error("E11000 duplicate key"), { code: 11000 });
       logRows.push(row);
     },
+    deleteOne: async (filter: { _id: unknown }) => {
+      const at = logRows.findIndex((r) => r._id === filter._id);
+      if (at >= 0) logRows.splice(at, 1);
+    },
   }),
 }));
 
@@ -65,6 +76,7 @@ const db = {
   collection: () => ({ findOne: async () => ({ gdp: 1e12 }) }),
 } as unknown as Db;
 
+const { CYBER_REFUSAL_TEXT } = await import("./operations");
 const { foldCyberPairHistory, launchCyberOperation, loadCyberCrisisTargets, standDownCyber } =
   await import("./runCyberOperation");
 
@@ -208,6 +220,30 @@ describe("launchCyberOperation", () => {
     expect(credit).toHaveBeenCalledTimes(1);
     expect(logRows).toHaveLength(1);
     expect(crises).toHaveLength(1);
+  });
+
+  it("opens one crisis when two countries hit the same target at once, and refunds the other", async () => {
+    const launch = (attackerId: "CN" | "RU") =>
+      launchCyberOperation({
+        db,
+        attackerId,
+        targetId: "US",
+        turn: 10,
+        chargeAppropriation: true,
+        rolls: { success: 0, attribution: 0.999 },
+      });
+    const results = await Promise.all([launch("CN"), launch("RU")]);
+    expect(results.filter((r) => r.ok)).toHaveLength(1);
+    expect(results.find((r) => !r.ok)).toMatchObject({
+      ok: false,
+      status: 409,
+      error: CYBER_REFUSAL_TEXT.crisis_active,
+    });
+    expect(crises).toHaveLength(1);
+    expect(debit).toHaveBeenCalledTimes(2);
+    expect(credit).toHaveBeenCalledTimes(1);
+    // The refused launch leaves no operation behind, so it starts no cooldown.
+    expect(logRows).toHaveLength(1);
   });
 });
 
