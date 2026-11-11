@@ -15,7 +15,7 @@ import type { StateMetricBaseline } from "@/lib/db/types/statePolicy";
 /**
  * Legislative metric simulation — ENVIRONMENT category, 240 turns.
  *
- * Law: Japan's climate emissions law (jp_climate_emissions), strongest decarbonisation
+ * Law: Ireland's climate emissions law (ie_climate_policy), strongest decarbonisation
  * option (+1, ~$531/capita per its withPerCapitaCosts). Environment nodes read
  * `spending.environment` (and the sector-revenue provider for emissions
  * intensity); the healthcare tier runs alongside (air quality feeds health).
@@ -31,7 +31,7 @@ const TPY = 48;
 
 const CLUSTER = topoSort([...ENVIRONMENT_NODES, ...HEALTHCARE_NODES]);
 
-const law = legislationTypes.find((l) => l._id === "jp_climate_emissions");
+const law = legislationTypes.find((l) => l._id === "ie_climate_policy");
 const invest = law?.policyOptions?.find((o) => o.effectDirection === 1);
 
 const baselineDoc: StateMetricBaseline = {
@@ -84,7 +84,7 @@ const lawSpend = { environment: 639, healthcare: 2, social: 2 };
 
 describe("legislation sim: environment (climate emissions law, 240 turns)", () => {
   it("the seed law and its decarbonisation option exist", () => {
-    expect(law, "jp_climate_emissions present").toBeTruthy();
+    expect(law, "ie_climate_policy present").toBeTruthy();
     expect(invest, "a strong-action (+1) option exists").toBeTruthy();
   });
 

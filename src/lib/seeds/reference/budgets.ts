@@ -125,7 +125,7 @@ import { MODERN_NATIONAL_BUDGETS_2019 } from "./modernBudgets2019";
 import { legislationTypes } from "./legislationTypes";
 import { SEED_FISCAL_LEVERS } from "./seedFiscalLadders";
 import { OPENING_PROGRAM_SPENDING } from "./openingProgramSpending";
-import { jpLegislationTypes } from "@/lib/countries/jp/data/jpLegislationTypes";
+import { jpRegionalLevers } from "@/lib/countries/jp/data/jpRegionalLevers";
 import { ieLegislationTypes } from "@/lib/seeds/ie/ieLegislationTypes";
 import { cnLegislationTypes } from "@/lib/seeds/cn/cnLegislationTypes";
 import { brLegislationTypes } from "@/lib/seeds/br/brLegislationTypes";
@@ -248,7 +248,7 @@ export const SOVEREIGN_CORP_LEGAL_STRUCTURE: Partial<Record<CountryId, LegalStru
 
 const budgetLegislationTypes = [
   ...legislationTypes,
-  ...jpLegislationTypes,
+  ...jpRegionalLevers,
   ...ieLegislationTypes,
   ...cnLegislationTypes,
   ...brLegislationTypes,
@@ -799,7 +799,7 @@ function deriveSpending(
     }
   }
 
-  // US and UK carry no old law types; their opening program spending is data.
+  // US, UK and JP carry no old law types; their opening program spending is data.
   const frozen = hasPolicySpending
     ? undefined
     : OPENING_PROGRAM_SPENDING[openingProgramSpendingKey(config)]?.[activeOnly ? "active" : "all"];
@@ -1430,6 +1430,14 @@ const NATIONAL_BUDGET_SEED_CONFIGS: NationalBudgetSeedConfig[] = [
     baselineStateGrants: 18_000_000_000_000,
     policyDefaults: COUNTRY_POLICY_CONFIGS.jp.defaults,
     policyOptionOverrides: COUNTRY_POLICY_CONFIGS.jp.optionIndexes,
+    taxRateOverrides: {
+      incomeTax: 25,
+      domesticCorporateTax: 23,
+      foreignCorporateTax: 19,
+      payrollTax: 15,
+      tariffs: 0,
+      salesTax: 10,
+    },
     taxPolicyIds: {
       incomeTax: "jp_income_tax_rate",
       domesticCorporateTax: "jp_domestic_corporation_tax",

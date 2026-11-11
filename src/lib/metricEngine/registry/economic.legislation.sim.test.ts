@@ -8,7 +8,7 @@ import type { StateMetricBaseline } from "@/lib/db/types/statePolicy";
 /**
  * Legislative metric simulation — ECONOMIC category, 240 turns (the trade-Laffer).
  *
- * Law: Japan's customs tariff law (jp_customs_tariff). Unlike spending/policy
+ * Law: Ireland's customs tariff law (ie_customs_tariff_rate). Unlike spending/policy
  * laws, a tariff law lands in the budget tax rates → the `fiscalTradeInputs` provider
  * the `economic.tradeGrowth` node reads. We compare a low-tariff control (2%) against a
  * protectionist enactment (25%): the trade-Laffer wedge (TARIFF_WEDGE_K) should pull
@@ -17,7 +17,7 @@ import type { StateMetricBaseline } from "@/lib/db/types/statePolicy";
  */
 const TURNS = 240;
 
-const law = legislationTypes.find((l) => l._id === "jp_customs_tariff");
+const law = legislationTypes.find((l) => l._id === "ie_customs_tariff_rate");
 
 const baselineDoc: StateMetricBaseline = {
   _id: "federal",
@@ -56,7 +56,7 @@ const enacted = runLegislationSim({ ...common, providers: highTariff }, warm);
 
 describe("legislation sim: economic (customs tariff law, 240 turns)", () => {
   it("the seed tariff law exists", () => {
-    expect(law, "jp_customs_tariff present").toBeTruthy();
+    expect(law, "ie_customs_tariff_rate present").toBeTruthy();
   });
 
   it("prints the 240-turn trajectory report", () => {

@@ -20,30 +20,6 @@ export interface HistoricalPriorityCountry {
   regionalLevels?: Record<string, Partial<Record<PriorityTopic, PriorityReference>>>;
 }
 
-function economic(
-  lawTypeId: string,
-  prefix: string,
-  left = 1,
-  centre = 2,
-  right = 3
-): HistoricalPriorityTopic {
-  return {
-    lawTypeId,
-    levels: [left, centre, right].map((n) => `${prefix}_opt_${n}`) as [string, string, string],
-    axis: "economicLean",
-  };
-}
-
-function social(
-  lawTypeId: string,
-  prefix: string,
-  left = 2,
-  centre = 3,
-  right = 4
-): HistoricalPriorityTopic {
-  return { ...economic(lawTypeId, prefix, left, centre, right), axis: "socialLean" };
-}
-
 /** A request into the one law book: explicit left, centre and right option ids. */
 function book(
   lawTypeId: string,
@@ -321,24 +297,24 @@ export const YEAR_2000_PRIORITIES: Record<string, HistoricalPriorityCountry> = {
   },
   JP: {
     topics: {
-      jobs: economic("jp_regional_economic_development", "jp_regional_economic_development"),
-      business: economic("jp_sme_support", "jp_sme_support", 1, 2, 3),
-      skills: economic("jp_regional_skills", "jp_regional_skills"),
-      labor: economic("jp_labor_reform", "jp_labor_reform", 2, 3, 4),
-      health: economic("jp_national_health_insurance", "jp_national_health_insurance"),
-      pensions: economic("jp_pension", "jp_pension", 2, 2, 3),
-      care: economic("jp_elder_care", "jp_elder_care", 1, 2, 2),
-      schools: economic("jp_regional_education", "jp_regional_education"),
-      tuition: economic("jp_university_tuition", "jp_university_tuition", 2, 3, 3),
-      research: economic("jp_research_science", "jp_research_science"),
-      family: economic("jp_family_policy", "jp_family_policy", 2, 3, 3),
-      tax: economic("jp_resident_tax", "jp_resident_tax", 2, 3, 4),
-      rural: economic("jp_regional_agriculture", "jp_regional_agriculture", 1, 2, 2),
-      transport: economic("jp_regional_transport", "jp_regional_transport"),
-      disaster: economic("jp_disaster_preparedness", "jp_disaster_preparedness", 1, 2, 2),
-      environment: economic("jp_regional_environment", "jp_regional_environment", 2, 3, 4),
-      rights: social("jp_gender_equality", "jp_gender_equality", 2, 3, 3),
-      immigration: social("jp_visa_residency", "jp_visa_residency", 2, 3, 4),
+      jobs: book("jp.economy.mobility.primary", "economicLean", ["l4", "l3", "l2"]),
+      business: book("jp.sec.exportCreditsAndSmallFirms", "economicLean", ["l4", "l3", "l2"]),
+      skills: book("jp.education.adultSkills.primary", "economicLean", ["l4", "l3", "l2"]),
+      labor: book("jp.sec.enterpriseUnionBargaining", "economicLean", ["l3", "l2", "l1"]),
+      health: book("jp.health.universalCare.primary", "economicLean", ["l4", "l3", "l2"]),
+      pensions: book("jp.health.socialInsurance.primary", "economicLean", ["l4", "l3", "l2"]),
+      care: book("jp.sec.pensionCoverageExtension", "economicLean", ["l4", "l3", "l2"]),
+      schools: book("jp.education.universalSchooling.primary", "economicLean", ["l4", "l3", "l2"]),
+      tuition: book("jp.sec.universityFunding", "economicLean", ["l3", "l3", "l2"]),
+      research: book("jp.education.research.primary", "economicLean", ["l4", "l3", "l2"]),
+      family: book("jp.sec.parentalLeaveAndChildcare", "economicLean", ["l3", "l2", "l1"]),
+      tax: book("jp.tax.incomeTax", "economicLean", ["rate_45", "rate_33", "rate_22"]),
+      rural: book("jp.sec.agriculturalSupport", "economicLean", ["l4", "l3", "l2"]),
+      transport: book("jp.infrastructure.transit.primary", "economicLean", ["l4", "l3", "l2"]),
+      disaster: book("jp.sec.disasterPreparedness", "economicLean", ["l4", "l3", "l2"]),
+      environment: book("jp.environment.conservation.primary", "economicLean", ["l3", "l2", "l1"]),
+      rights: book("jp.society.womensOpportunity.primary", "socialLean", ["l4", "l3", "l2"]),
+      immigration: book("jp.sec.migrationAndResidence", "socialLean", ["l4", "l3", "l2"]),
     },
     groups: {
       "ethnicity:japanese": [

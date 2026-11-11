@@ -3,7 +3,6 @@ import type { LegislationType } from "@/lib/db/types";
 import { legislationTypes } from "./legislationTypes";
 import { cnLegislationTypes } from "../cn/cnLegislationTypes";
 import { ieLegislationTypes } from "../ie/ieLegislationTypes";
-import { jpLegislationTypes } from "@/lib/countries/jp/data/jpLegislationTypes";
 
 /**
  * §4.7 environment spending sweep guard (P3c). carbonEmissions / airQuality /
@@ -69,12 +68,7 @@ function tierHits(lt: LegislationType): string[] {
 }
 
 describe("§4.7 environment spending sweep", () => {
-  const all = [
-    ...legislationTypes,
-    ...cnLegislationTypes,
-    ...ieLegislationTypes,
-    ...jpLegislationTypes,
-  ];
+  const all = [...legislationTypes, ...cnLegislationTypes, ...ieLegislationTypes];
 
   it("no environment-budget FUNDING law targets a tier readout", () => {
     const offenders: string[] = [];

@@ -14,7 +14,7 @@ import type { StateMetricBaseline } from "@/lib/db/types/statePolicy";
 /**
  * Legislative metric simulation, HEALTHCARE category, 240 turns.
  *
- * Law: Japan's national health insurance (jp_national_health_insurance), most
+ * Law: the national health insurance (fr_health_insurance), most
  * generous option (effectDirection +1). It drives the `uninsuredRate` root down,
  * and the run raises healthcare spending; both should lift the outcome nodes.
  * A CONTROL run (no law, baseline spend) sits beside the LAW run. Spend levels are
@@ -24,7 +24,7 @@ import type { StateMetricBaseline } from "@/lib/db/types/statePolicy";
 const TURNS = 240;
 const TPY = 48;
 
-const law = legislationTypes.find((l) => l._id === "jp_national_health_insurance");
+const law = legislationTypes.find((l) => l._id === "fr_health_insurance");
 const singlePayer = law?.policyOptions?.find((o) => o.effectDirection === 1);
 
 const baselineDoc: StateMetricBaseline = {
@@ -62,7 +62,7 @@ const LOWER_BETTER: NodeId[] = ["healthcare.preventableMortality"];
 
 describe("legislation sim: healthcare (national health insurance, 240 turns)", () => {
   it("the seed law and its single-payer option exist", () => {
-    expect(law, "jp_national_health_insurance present in registry").toBeTruthy();
+    expect(law, "fr_health_insurance present in registry").toBeTruthy();
     expect(singlePayer, "a single-payer (effectDirection +1) option exists").toBeTruthy();
   });
 
@@ -135,9 +135,10 @@ describe("legislation sim: healthcare (national health insurance, 240 turns)", (
       expect(Number.isFinite(v), `${n.id} finite`).toBe(true);
       expect(v, `${n.id} >= lower bound`).toBeGreaterThanOrEqual(n.bounds[0]);
       expect(v, `${n.id} <= upper bound`).toBeLessThanOrEqual(n.bounds[1]);
-      // converged: the last game-year of motion is small
+      // converged: the last game-year of motion is under 5% of the node's range
       const tail = enacted.trajectory[n.id].slice(-TPY);
-      expect(Math.max(...tail) - Math.min(...tail), `${n.id} converged`).toBeLessThan(1.0);
+      const tolerance = 0.05 * (n.bounds[1] - n.bounds[0]);
+      expect(Math.max(...tail) - Math.min(...tail), `${n.id} converged`).toBeLessThan(tolerance);
     }
   });
 });

@@ -4,6 +4,7 @@ import { legislationTypes } from "@/lib/seeds/reference/legislationTypes";
 import { getCabinetPositions } from "@/lib/constants/cabinetMechanics";
 import { US_LAWS } from "@/lib/countries/us/data/usLaws";
 import { UK_LAWS } from "@/lib/countries/uk/data/ukLaws";
+import { JP_LAWS } from "@/lib/countries/jp/data/jpLaws";
 import { US_STATE_TAX_LAWS } from "@/lib/countries/us/data/usStateTaxLaws";
 import { projectLawToLegislationType } from "@/lib/politicalLegislation/project";
 import { resetTaxes, resetTaxesFor } from "./taxCatalog";
@@ -15,6 +16,7 @@ describe("reset tax instruments", () => {
       ...legislationTypes,
       ...US_LAWS.map(projectLawToLegislationType),
       ...UK_LAWS.map(projectLawToLegislationType),
+      ...JP_LAWS.map(projectLawToLegislationType),
       ...US_STATE_TAX_LAWS.map(projectLawToLegislationType),
     ]);
     for (const tax of resetTaxes) {

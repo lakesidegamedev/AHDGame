@@ -3,7 +3,6 @@ import type { LegislationType } from "@/lib/db/types";
 import { legislationTypes } from "./legislationTypes";
 import { cnLegislationTypes } from "../cn/cnLegislationTypes";
 import { ieLegislationTypes } from "../ie/ieLegislationTypes";
-import { jpLegislationTypes } from "@/lib/countries/jp/data/jpLegislationTypes";
 
 /**
  * §4.7 productivityGrowth sweep guard (P2d). productivityGrowth is now
@@ -45,12 +44,7 @@ function productivityHits(lt: LegislationType): string[] {
 }
 
 describe("§4.7 productivityGrowth sweep", () => {
-  const all = [
-    ...legislationTypes,
-    ...cnLegislationTypes,
-    ...ieLegislationTypes,
-    ...jpLegislationTypes,
-  ];
+  const all = [...legislationTypes, ...cnLegislationTypes, ...ieLegislationTypes];
 
   it("only non-basket-mechanism laws may target productivityGrowth", () => {
     const offenders: string[] = [];

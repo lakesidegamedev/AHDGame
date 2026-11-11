@@ -19,9 +19,9 @@ import type { StateMetricBaseline } from "@/lib/db/types/statePolicy";
  * policy-controlled metrics (the harness root path) and assert each moves in the
  * law's direction over 240 turns, then converges within bounds.
  *
- *   • Governance: Japan's digital governance law (jp_digital_governance, +1):
+ *   • Governance: Ireland's government ethics law (ie_government_ethics, +1):
  *     governmentTransparency ↑, publicTrust ↑.
- *   • Media: Japan's media and press law (jp_media_press, +1): pressFreedom ↑.
+ *   • Media: Ireland's media and press law (ie_media_press, +1): pressFreedom ↑.
  */
 const TURNS = 240;
 
@@ -54,21 +54,21 @@ function runLawOnRoots(lawId: string, roots: RootMetric[]) {
   return { law, reform, control, enacted };
 }
 
-describe("legislation sim: governance (digital governance, 240 turns)", () => {
+describe("legislation sim: governance (government ethics, 240 turns)", () => {
   const roots = [
     root("governance.governmentTransparency", "governmentTransparency", "governance", 55),
     root("governance.publicTrust", "publicTrust", "governance", 50),
   ];
-  const { law, reform, control, enacted } = runLawOnRoots("jp_digital_governance", roots);
+  const { law, reform, control, enacted } = runLawOnRoots("ie_government_ethics", roots);
   const ids = roots.map((r) => r.id);
 
   it("the seed law and its reform option exist", () => {
-    expect(law, "jp_digital_governance present").toBeTruthy();
+    expect(law, "ie_government_ethics present").toBeTruthy();
     expect(reform, "a pro-transparency (+1) option exists").toBeTruthy();
   });
 
   it("prints the 240-turn trajectory report", () => {
-    console.log(reportTrajectory("Governance: digital governance", ids, control, enacted));
+    console.log(reportTrajectory("Governance: government ethics", ids, control, enacted));
     expect(true).toBe(true);
   });
 
@@ -95,10 +95,10 @@ describe("legislation sim: governance (digital governance, 240 turns)", () => {
 
 describe("legislation sim: media (media and press law, 240 turns)", () => {
   const roots = [root("mediaInformation.pressFreedom", "pressFreedom", "mediaInformation", 69)];
-  const { law, reform, control, enacted } = runLawOnRoots("jp_media_press", roots);
+  const { law, reform, control, enacted } = runLawOnRoots("ie_media_press", roots);
 
   it("the seed law and its reform option exist", () => {
-    expect(law, "jp_media_press present").toBeTruthy();
+    expect(law, "ie_media_press present").toBeTruthy();
     expect(reform, "a pro-press-freedom (+1) option exists").toBeTruthy();
   });
 

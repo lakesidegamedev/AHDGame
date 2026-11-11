@@ -16,7 +16,7 @@ import type { StateMetricBaseline } from "@/lib/db/types/statePolicy";
 /**
  * Legislative metric simulation, SOCIAL category, 240 turns.
  *
- * Law: Japan's public pension (jp_pension), most generous option (+1). The
+ * Law: Ireland's public pension (ie_state_pensions), most generous option (+1). The
  * anti-poverty nodes read `spending.social`; the income, poverty and education
  * cluster runs alongside (poverty feeds inequality and child poverty). Control
  * spends ~$2,703/capita, enacted ~$5,303/capita, against SOCIAL_SPEND_HALF_SAT=2700.
@@ -33,7 +33,7 @@ const CLUSTER = topoSort([
   ...EDUCATION_NODES,
 ]);
 
-const law = legislationTypes.find((l) => l._id === "jp_pension");
+const law = legislationTypes.find((l) => l._id === "ie_state_pensions");
 const invest = law?.policyOptions?.find((o) => o.effectDirection === 1);
 
 const baselineDoc: StateMetricBaseline = {
@@ -70,7 +70,7 @@ const LOWER_BETTER: NodeId[] = [
 
 describe("legislation sim: social (public pension, 240 turns)", () => {
   it("the seed law and its high-benefit option exist", () => {
-    expect(law, "jp_pension present").toBeTruthy();
+    expect(law, "ie_state_pensions present").toBeTruthy();
     expect(invest, "an investment (+1) option exists").toBeTruthy();
   });
 

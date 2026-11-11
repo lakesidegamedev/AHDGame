@@ -56,7 +56,7 @@ describe("resolveResetTaxProvisionFields", () => {
     const result = await resolveResetTaxProvisionFields(
       db as unknown as Db,
       {
-        _id: "jp_foreign_corporation_tax",
+        _id: "jp.tax.foreignCorporateTax",
         taxRateChange: { scope: "federal", taxType: "foreignCorporateTax" },
         policyOptions: [
           { id: "zero", name: "0%", rate: 0 },
@@ -84,7 +84,7 @@ describe("resolveResetTaxProvisionFields", () => {
     const result = await resolveResetTaxProvisionFields(
       db as unknown as Db,
       {
-        _id: "jp_foreign_corporation_tax",
+        _id: "jp.tax.foreignCorporateTax",
         taxRateChange: { scope: "federal", taxType: "incomeTax" },
         policyOptions: [
           { id: "zero", name: "0%", rate: 0 },

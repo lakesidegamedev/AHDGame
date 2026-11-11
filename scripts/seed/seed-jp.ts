@@ -41,7 +41,6 @@ async function main() {
   //   src/lib/countries/jp/data/jpStateBaselines.ts
   //   src/lib/countries/jp/data/jpStatePartyOrgCalculations.ts
   //   src/lib/countries/jp/data/jpBudgets.ts
-  //   src/lib/countries/jp/data/jpLegislationTypes.ts
   //   src/lib/countries/jp/data/jpGovernmentFormation.ts
   //   src/lib/countries/jp/data/jpCorporations.ts
   //

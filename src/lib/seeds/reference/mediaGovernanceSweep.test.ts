@@ -3,7 +3,6 @@ import type { LegislationType } from "@/lib/db/types";
 import { legislationTypes } from "./legislationTypes";
 import { cnLegislationTypes } from "../cn/cnLegislationTypes";
 import { ieLegislationTypes } from "../ie/ieLegislationTypes";
-import { jpLegislationTypes } from "@/lib/countries/jp/data/jpLegislationTypes";
 
 /**
  * §4.7 governance/media sweep guard (P4). This tier has NO spending channel —
@@ -46,12 +45,7 @@ function lawTargets(lt: LegislationType): Array<{ cat: string; id: string }> {
 }
 
 describe("§4.7 governance/media root-vs-readout sweep", () => {
-  const all = [
-    ...legislationTypes,
-    ...cnLegislationTypes,
-    ...ieLegislationTypes,
-    ...jpLegislationTypes,
-  ];
+  const all = [...legislationTypes, ...cnLegislationTypes, ...ieLegislationTypes];
 
   it("no law targets BOTH a root and its engine-derived readout", () => {
     const offenders: string[] = [];

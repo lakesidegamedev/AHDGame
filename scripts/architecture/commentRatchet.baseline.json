@@ -6053,10 +6053,6 @@
       "longBlocks": 2,
       "narrativeLines": 0
     },
-    "src/lib/countries/jp/data/jpLegislationTypes.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
     "src/lib/countries/jp/data/jpMetricPresets1953.ts": {
       "longBlocks": 0,
       "narrativeLines": 1

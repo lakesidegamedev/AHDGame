@@ -49,20 +49,20 @@ export const MINIMUM_WAGE_LAW_SCALES: Readonly<Record<string, MinimumWageLawScal
     referenceMedianWage: 26,
     optionRates: [0, 7.25, 12, 17, 20],
   },
-  // EUR/hour. EUR 12 is 0.55 of the median.
-  de_minimum_wage: {
+  // EUR/hour, levels 0 to 4. EUR 12 is 0.55 of the median.
+  "de.economy.workerSecurity.primary": {
     referenceMedianWage: 22,
-    optionRates: [0, 5, 9, 12, 14, 16, 18],
+    optionRates: [0, 9, 12, 15, 18],
   },
   // EUR/hour. The EUR 15 option is named after the two-thirds-of-median target.
   ie_minimum_wage: {
     referenceMedianWage: 22.5,
     optionRates: [20, 17, 15, 13.5, 11, 9, 0],
   },
-  // JPY/hour. JPY 1,000 is 0.45 of the median.
-  jp_minimum_wage: {
+  // JPY/hour, levels 0 to 4. JPY 1,000 is 0.45 of the median.
+  "jp.economy.workerSecurity.primary": {
     referenceMedianWage: 2200,
-    optionRates: [1800, 1500, 1250, 1000, 800, 500, 0],
+    optionRates: [0, 800, 1000, 1250, 1500],
   },
   // Monthly floors from the option text (CNY 2,700, 2,200, 1,900, a moderate
   // floor of about 1,500) over an urban median near CNY 5,500 a month. The

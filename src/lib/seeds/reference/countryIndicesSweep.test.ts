@@ -3,18 +3,14 @@ import type { LegislationType } from "@/lib/db/types";
 import { legislationTypes } from "./legislationTypes";
 import { cnLegislationTypes } from "../cn/cnLegislationTypes";
 import { ieLegislationTypes } from "../ie/ieLegislationTypes";
-import { jpLegislationTypes } from "@/lib/countries/jp/data/jpLegislationTypes";
 
 // NOTE: reference `legislationTypes` already spreads the country files — dedupe
 // by _id so count-sensitive checks (the socialCredit primaries) aren't doubled.
 const all = [
   ...new Map(
-    [
-      ...legislationTypes,
-      ...cnLegislationTypes,
-      ...ieLegislationTypes,
-      ...jpLegislationTypes,
-    ].map((lt) => [lt._id, lt] as const)
+    [...legislationTypes, ...cnLegislationTypes, ...ieLegislationTypes].map(
+      (lt) => [lt._id, lt] as const
+    )
   ).values(),
 ];
 

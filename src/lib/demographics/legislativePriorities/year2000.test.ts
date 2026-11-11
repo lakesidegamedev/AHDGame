@@ -148,13 +148,13 @@ describe("year-2000 legislative calibration", () => {
     expect(requests("US", "FL", "age:senior")[0].lawTypeId).toBe(
       "us.health.providerChoice.primary"
     );
-    expect(requests("JP", "KAN", "age:young")[0].lawTypeId).toBe(
-      "jp_regional_economic_development"
+    expect(requests("JP", "KAN", "age:young")[0].lawTypeId).toBe("jp.economy.mobility.primary");
+    expect(requests("JP", "SHI", "age:senior")[0].lawTypeId).toBe(
+      "jp.sec.pensionCoverageExtension"
     );
-    expect(requests("JP", "SHI", "age:senior")[0].lawTypeId).toBe("jp_elder_care");
     const graduate = requests("JP", "CHU", "education:graduate");
-    expect(graduate.some((p) => p.lawTypeId === "jp_research_science")).toBe(true);
-    expect(graduate.some((p) => p.lawTypeId === "jp_university_tuition")).toBe(false);
+    expect(graduate.some((p) => p.lawTypeId === "jp.education.research.primary")).toBe(true);
+    expect(graduate.some((p) => p.lawTypeId === "jp.sec.universityFunding")).toBe(false);
   });
 
   it("uses live context on the board without mutating demographic leans or the source profile", () => {

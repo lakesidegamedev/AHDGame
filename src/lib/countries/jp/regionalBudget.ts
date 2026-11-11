@@ -185,17 +185,20 @@ export async function processJPRegionalBudgets(
   const fundingPolicy = nationalPolicies.find(
     (p) => p.legislationTypeId === LOCAL_ALLOCATION_TAX_TYPE_ID
   );
-  const legacyNationalGrantPerCapita = fundingPolicy
-    ? getOptionCostPerCapita(fundingPolicy, legTypeMap)
-    : 0;
 
   const nationalPopulation = jpRegions.reduce((sum, r) => sum + r.population, 0);
-  const nationalBudget = regionalFinanceEnabled
-    ? await federalBudgetCollection(db).findOne(
-        { countryId: "JP" },
-        { projection: { departmentAccounts: 1 } }
-      )
-    : null;
+  const nationalBudget =
+    regionalFinanceEnabled || !fundingPolicy
+      ? await federalBudgetCollection(db).findOne(
+          { countryId: "JP" },
+          { projection: { departmentAccounts: 1, "spending.stateGrants": 1 } }
+        )
+      : null;
+  // Worlds seeded with the one law book carry no allocation law; the budget's
+  // own state grants line is the pool.
+  const legacyNationalGrantPerCapita = fundingPolicy
+    ? getOptionCostPerCapita(fundingPolicy, legTypeMap)
+    : (nationalBudget?.spending?.stateGrants ?? 0) / Math.max(1, nationalPopulation);
   const departmentGrant = regionalFinanceEnabled
     ? resolveAnnualRegionalGrantPool({
         accounts: nationalBudget?.departmentAccounts ?? {},

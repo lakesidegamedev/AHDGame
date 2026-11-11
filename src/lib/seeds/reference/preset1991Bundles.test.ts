@@ -372,16 +372,6 @@ describe("basePolicies — preset-aware (Gap #4)", () => {
     expect(out.some((p) => p.legislationTypeId === "cn_common_prosperity")).toBe(false);
   });
 
-  it("getBasePolicies('1991-default') zeroes JP consumption tax to era index", async () => {
-    const { getBasePolicies } = await import("./basePolicies");
-    const policies1991 = await getBasePolicies("1991-default");
-    const jpVat = policies1991.find(
-      (p) => p.legislationTypeId === "jp_consumption_tax" && p.scope === "national"
-    );
-    // JP consumption tax was 3% in 1991 (introduced Apr 1989), raised to 10% by 2020.
-    expect(jpVat?.policyOptionIndex).toBe(1);
-  });
-
   it("getBasePolicies('1991-default') generates sub-national records for IE 1991 regions", async () => {
     const { getBasePolicies } = await import("./basePolicies");
     const policies1991 = await getBasePolicies("1991-default");

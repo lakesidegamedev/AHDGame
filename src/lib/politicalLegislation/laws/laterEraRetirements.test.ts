@@ -86,13 +86,12 @@ describe("later-era law retirements, legacy book", () => {
     }
   });
 
-  it("registers every retirement for every covered legislature, and the Japanese work culture law", () => {
+  it("registers every retirement for every covered legislature", () => {
     for (const spec of MODERN_ERA_LEGISLATURE_SPECS) {
       for (const law of retired) {
         expect(LEGISLATION_ERA_UNTIL[`${spec.prefix}_${law.slug}`], law.slug).toBe(law.until);
       }
     }
-    expect(LEGISLATION_ERA_UNTIL.jp_work_culture_reform).toBe(2040);
   });
 
   it("prices every option with a finite, non-negative cost", () => {
