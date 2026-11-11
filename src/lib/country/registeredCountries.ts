@@ -1,5 +1,6 @@
 import type { Db } from "mongodb";
 import { COUNTRY_ORDER, type CountryId } from "@/lib/constants/countries";
+import { seededInWorld } from "@/lib/country/rules/seededRegistration";
 import type { CountryGameState } from "@/lib/db/types/gameState";
 import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 
@@ -37,20 +38,17 @@ export async function getDissolvedCountryIds(db: Db): Promise<Set<string>> {
 }
 
 export async function getRegisteredCountryIds(db: Db): Promise<CountryId[]> {
-  // Three queries' worth of rows in one read: the actives that widen the base,
-  // and the dissolved and era-absent that narrow it.
+  // Every row, projected: actives widen the base, dissolved and era-absent rows
+  // narrow it, and a missing row keeps a late-joining country out.
   const docs = await countryGameStatesCollection(db)
-    .find({
-      $or: [{ status: "active" }, { dissolvedTurn: { $ne: null } }, { absentInEra: true }],
-    })
+    .find({}, { projection: { _id: 1, status: 1, dissolvedTurn: 1, absentInEra: 1 } })
     .toArray();
   return registeredIdsFrom(docs);
 }
 
 /**
- * The registry answer for a batch of `countryGameStates` rows. Rows that are
- * neither active, dissolved nor era-absent are ignored, so a caller may pass a
- * wider read (the tier loader does) and get the same list.
+ * The registry answer for a world's `countryGameStates` rows. Pass every row:
+ * a row-gated country is registered only when the world holds its row.
  */
 export function registeredIdsFrom(docs: CountryGameState[]): CountryId[] {
   const activeExtra = docs
@@ -78,8 +76,10 @@ export function registeredIdsFrom(docs: CountryGameState[]): CountryId[] {
    */
   const absent = new Set(docs.filter((d) => d.absentInEra === true).map((d) => String(d._id)));
   // Stable order: COUNTRY_ORDER base, then activated extras (sorted for determinism).
-  return [...COUNTRY_ORDER, ...activeExtra.sort()].filter(
-    (id) => !dissolved.has(id) && !absent.has(id)
+  const rowIds = new Set(docs.map((d) => String(d._id)));
+  return seededInWorld(
+    [...COUNTRY_ORDER, ...activeExtra.sort()].filter((id) => !dissolved.has(id) && !absent.has(id)),
+    rowIds
   );
 }
 
@@ -105,10 +105,9 @@ export async function getRegisteredCountryIdSet(db: Db): Promise<Set<string>> {
  * getRegisteredCountryIds + the access layer both read this row at runtime.
  */
 export async function activateCountry(db: Db, countryId: CountryId): Promise<void> {
-  await countryGameStatesCollection(db)
-    .updateOne(
-      { _id: countryId },
-      { $set: { status: "active", enabledForPlayers: true, updatedAt: new Date() } },
-      { upsert: true }
-    );
+  await countryGameStatesCollection(db).updateOne(
+    { _id: countryId },
+    { $set: { status: "active", enabledForPlayers: true, updatedAt: new Date() } },
+    { upsert: true }
+  );
 }

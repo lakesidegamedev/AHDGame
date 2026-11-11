@@ -5,6 +5,7 @@ import type { CountryGameState } from "@/lib/db/types/gameState";
 import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
 import { buildCountryTierSnapshot, getCountryTier, loadCountryTiers } from "./countryTier";
 import { resolveCountryTier } from "./rules/countryTier";
+import { getRegisteredCountryIds } from "./registeredCountries";
 
 const row = (id: string, fields: Partial<CountryGameState>) =>
   ({ _id: id, ...fields }) as unknown as CountryGameState;
@@ -62,8 +63,39 @@ describe("country tier snapshot", () => {
   it("leaves a world without background rows exactly as the registry has it", () => {
     const tiers = buildCountryTierSnapshot([row("UK", { enabledForPlayers: true })]);
     expect(tiers.backgroundIds).toEqual([]);
-    expect(tiers.fullSimulationIds).toEqual(COUNTRY_ORDER);
-    expect(tiers.registeredIds).toEqual(COUNTRY_ORDER);
+    const seededBefore = COUNTRY_ORDER.filter((id) => id !== "CA");
+    expect(tiers.fullSimulationIds).toEqual(seededBefore);
+    expect(tiers.registeredIds).toEqual(seededBefore);
+  });
+
+  it("keeps a country that joined the roster later out of a world seeded before it", () => {
+    // A live world's rows: every country it seeded, none for Canada.
+    const live = buildCountryTierSnapshot(
+      COUNTRY_ORDER.filter((id) => id !== "US" && id !== "CA").map((id) =>
+        row(id, { status: "beta" })
+      )
+    );
+    expect(live.tierOf("CA")).toBe("absent");
+    expect(live.registeredIds).not.toContain("CA");
+    expect(live.fullSimulationIds).not.toContain("CA");
+
+    const fresh = buildCountryTierSnapshot([
+      row("CA", { status: "active", enabledForPlayers: true }),
+    ]);
+    expect(fresh.tierOf("CA")).toBe("player");
+  });
+
+  it("loads a seeded late-joiner row whatever its status", async () => {
+    const memory = createInMemoryDb();
+    memory.seed("countryGameStates", [{ _id: "CA", status: "beta", enabledForPlayers: false }]);
+    const db = memory as unknown as Db;
+    expect(await getCountryTier(db, "CA")).toBe("npp");
+    expect(await getRegisteredCountryIds(db)).toContain("CA");
+    const preCanada = createInMemoryDb();
+    preCanada.seed("countryGameStates", [{ _id: "UK", status: "beta" }]);
+    expect(await getRegisteredCountryIds(preCanada as unknown as Db)).not.toContain("CA");
+    // A world mid-reset holds no rows yet and keeps the full registered list.
+    expect(await getRegisteredCountryIds(createInMemoryDb() as unknown as Db)).toContain("CA");
   });
 
   it("loads from countryGameStates in one read", async () => {

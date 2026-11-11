@@ -8,6 +8,9 @@ import {
 } from "./registeredCountries";
 import { COUNTRY_ORDER } from "@/lib/constants/countries";
 
+// A world with rows but none for Canada: seeded before Canada joined the roster.
+const SEEDED_BEFORE_CANADA = COUNTRY_ORDER.filter((id) => id !== "CA");
+
 function cursorOf<T>(docs: T[]) {
   // `project` returns the cursor so the chained form in getDissolvedCountryIds
   // works against the same helper as the unprojected reads.
@@ -36,13 +39,23 @@ describe("getRegisteredCountryIds", () => {
     );
     const ids = await getRegisteredCountryIds(db as unknown as Db);
     expect(ids).toContain("SCO");
-    expect(ids.slice(0, COUNTRY_ORDER.length)).toEqual(COUNTRY_ORDER);
+    expect(ids.slice(0, SEEDED_BEFORE_CANADA.length)).toEqual(SEEDED_BEFORE_CANADA);
     expect(ids.filter((x) => x === "SCO")).toHaveLength(1);
   });
 
   it("does not double-count an active row that is already in COUNTRY_ORDER", async () => {
     db.collection("countryGameStates").find.mockReturnValue(
       cursorOf([{ _id: "UK", status: "active" }])
+    );
+    expect(await getRegisteredCountryIds(db as unknown as Db)).toEqual(SEEDED_BEFORE_CANADA);
+  });
+
+  it("registers Canada only in a world that seeded its row", async () => {
+    db.collection("countryGameStates").find.mockReturnValue(
+      cursorOf([
+        { _id: "UK", status: "beta" },
+        { _id: "CA", status: "beta", absentInEra: false },
+      ])
     );
     expect(await getRegisteredCountryIds(db as unknown as Db)).toEqual(COUNTRY_ORDER);
   });
@@ -62,14 +75,14 @@ describe("getRegisteredCountryIds", () => {
     );
     const ids = await getRegisteredCountryIds(db as unknown as Db);
     expect(ids).not.toContain("DD");
-    expect(ids).toEqual(COUNTRY_ORDER.filter((id) => id !== "DD"));
+    expect(ids).toEqual(SEEDED_BEFORE_CANADA.filter((id) => id !== "DD"));
   });
 
   it("keeps a country whose absentInEra was cleared by a later reset", async () => {
     db.collection("countryGameStates").find.mockReturnValue(
       cursorOf([{ _id: "DD", status: "beta", absentInEra: false }])
     );
-    expect(await getRegisteredCountryIds(db as unknown as Db)).toEqual(COUNTRY_ORDER);
+    expect(await getRegisteredCountryIds(db as unknown as Db)).toEqual(SEEDED_BEFORE_CANADA);
   });
 
   it("does not activate an extra country that is absent from this era", async () => {

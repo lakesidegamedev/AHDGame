@@ -43,21 +43,13 @@ export function buildCountryTierSnapshot(docs: CountryGameState[]): CountryTierS
 }
 
 /**
- * Load the snapshot in one round trip. Reads only the rows that can change an
- * answer: the registry's own filter plus background and player-open rows.
+ * Load the snapshot in one round trip. Reads every row (one small row per
+ * country): whether a row exists at all is part of the registry's answer.
  */
 export async function loadCountryTiers(db: Db): Promise<CountryTierSnapshot> {
   const docs = await countryGameStatesCollection(db)
     .find(
-      {
-        $or: [
-          { status: "active" },
-          { dissolvedTurn: { $ne: null } },
-          { absentInEra: true },
-          { backgroundCountry: true },
-          { enabledForPlayers: true },
-        ],
-      },
+      {},
       {
         projection: {
           _id: 1,
