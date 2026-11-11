@@ -34,6 +34,9 @@ vi.mock("@/lib/db/collections/intelligence", () => ({
   getIntelligenceOpLogCollection: async () => ({
     find: () => ({ toArray: async () => logRows }),
     insertOne: async (row: Record<string, unknown>) => {
+      // The unique launch key index.
+      if (row.launchKey && logRows.some((r) => r.launchKey === row.launchKey))
+        throw Object.assign(new Error("E11000 duplicate key"), { code: 11000 });
       logRows.push(row);
     },
   }),
@@ -123,6 +126,25 @@ describe("launchCyberOperation", () => {
     });
     expect(result).toMatchObject({ ok: false });
     expect(logRows).toHaveLength(0);
+  });
+
+  it("charges one of two launches sent at once and refunds the other", async () => {
+    const launch = () =>
+      launchCyberOperation({
+        db,
+        attackerId: "CN",
+        targetId: "US",
+        turn: 10,
+        chargeAppropriation: true,
+        rolls: { success: 0, attribution: 0.999 },
+      });
+    const results = await Promise.all([launch(), launch()]);
+    expect(results.filter((r) => r.ok)).toHaveLength(1);
+    expect(results.find((r) => !r.ok)).toMatchObject({ ok: false, status: 409 });
+    expect(debit).toHaveBeenCalledTimes(2);
+    expect(credit).toHaveBeenCalledTimes(1);
+    expect(logRows).toHaveLength(1);
+    expect(crises).toHaveLength(1);
   });
 });
 
