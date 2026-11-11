@@ -208,10 +208,11 @@ try {
     fail(`capabilities file missing or unreadable: ${error.message}`, running);
   }
   const ready2027 = capabilities.presets?.find((entry) => entry.preset === "2027-default");
+  const players2027 = JSON.stringify(["US", "CA"]);
   if (
     capabilities.schemaVersion !== 1 ||
     !ready2027?.seedable ||
-    JSON.stringify(ready2027.playerCountries.map((entry) => entry.id)) !== JSON.stringify(["US"])
+    JSON.stringify(ready2027.playerCountries.map((entry) => entry.id)) !== players2027
   )
     fail(
       `capabilities file does not describe the 2027 world: ${JSON.stringify(capabilities)}`,
@@ -244,8 +245,8 @@ try {
     console.log(`[ahd-smoke] setup progress showed the stalled hint ${progress.stalled} time(s)`);
 
   const fresh = await json(running, "/api/singleplayer/status");
-  if (JSON.stringify(fresh.playerCountries) !== JSON.stringify(["US"]))
-    fail(`expected the US as the only player country: ${JSON.stringify(fresh)}`, running);
+  if (JSON.stringify(fresh.playerCountries) !== players2027)
+    fail(`expected the US and Canada as the player countries: ${JSON.stringify(fresh)}`, running);
 
   // A normal-mode world needs a character before any turn can run.
   await timed("create character", () =>
