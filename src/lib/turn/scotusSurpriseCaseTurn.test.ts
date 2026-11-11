@@ -173,6 +173,24 @@ describe("processScotusSurpriseCaseTurn", () => {
     expect(generateScotusSurpriseNews).not.toHaveBeenCalled();
   });
 
+  it("rules on a new case the turn it is filed when the pending docket is off", async () => {
+    mockDocketFind({});
+    const { processScotusSurpriseCaseTurn } = await import("./scotusSurpriseCaseTurn");
+    await processScotusSurpriseCaseTurn(100, db as unknown as Db, 0, 0, 0, false);
+
+    const inserted = db.collectionMocks.docketCases!.insertOne.mock.calls[0][0] as {
+      hearingDueTurn: number;
+    };
+    expect(inserted.hearingDueTurn).toBe(100);
+    const dueReads = db.collectionMocks.docketCases!.find.mock.calls.filter(
+      ([filter]) => (filter as { hearingDueTurn?: unknown }).hearingDueTurn !== undefined
+    );
+    expect(dueReads).toHaveLength(2);
+    const insertOrder = db.collectionMocks.docketCases!.insertOne.mock.invocationCallOrder[0];
+    const lastDueRead = db.collectionMocks.docketCases!.find.mock.invocationCallOrder.at(-1)!;
+    expect(lastDueRead).toBeGreaterThan(insertOrder);
+  });
+
   it("draws the hearing delay across the configured range", async () => {
     mockDocketFind({});
     const { processScotusSurpriseCaseTurn } = await import("./scotusSurpriseCaseTurn");

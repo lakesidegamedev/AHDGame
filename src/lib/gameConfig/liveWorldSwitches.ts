@@ -12,7 +12,11 @@ export type LiveWorldSwitch =
   | "crisisV2StagesEnabled"
   | "executiveSuccessionEnabled"
   | "leaderLegacyEnabled"
-  | "campaignLiveGdpBasisEnabled";
+  | "campaignLiveGdpBasisEnabled"
+  | "byElectionFillEnabled"
+  | "scotusNppNominationsEnabled"
+  | "scotusPendingDocketEnabled"
+  | "preeGenericFallbackEnabled";
 
 /** True only when the world's gameConfig sets the switch to true. An unreadable config reads off. */
 export async function isLiveWorldSwitchOn(db: Db, key: LiveWorldSwitch): Promise<boolean> {

@@ -15,7 +15,7 @@ import { processBillLifecycle } from "@/lib/billLifecycle";
 import { processStateBillTimers } from "@/lib/turn/billLifecycle/regionalEngine";
 import { processCabinetNominationLifecycle } from "@/lib/cabinetNominationLifecycle";
 import { processFomcNominationLifecycle } from "@/lib/fomcNominationLifecycle";
-import { processScotusTurn } from "@/lib/turn/scotusTurn";
+import { processScotusTurn, scotusSwitches } from "@/lib/turn/scotusTurn";
 import { processUkJrSurpriseTurn } from "@/lib/turn/ukJrSurpriseTurn";
 import { processUkLeadershipChallengeTurn } from "@/lib/turn/ukLeadershipChallengeTurn";
 import { processUkPartyConferenceTurn } from "@/lib/turn/ukPartyConferenceTurn";
@@ -33,7 +33,7 @@ import { processFundGeneration } from "@/lib/turn/fundGeneration";
 import { processPartyActionGeneration } from "@/lib/turn/partyActionGeneration";
 import { processPartyTierTurn } from "@/lib/turn/partyTierTurn";
 import { processCampaignTurn } from "@/lib/turn/campaignTurn";
-import { processPlayerRandomEventsTurn } from "@/lib/events/pree/driver";
+import { preeConfigFlags, processPlayerRandomEventsTurn } from "@/lib/events/pree/driver";
 import { sweepExpiredCountryModifiers } from "@/lib/events/substrate/countryModifiers";
 import { processWorldEventsTurn } from "@/lib/events/worldEvents/driver";
 import { processCampaignSpendReset } from "@/lib/elections/campaigns/campaignSpendReset";
@@ -1008,7 +1008,7 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
           // SCOTUS: parallel with cabinetNominations; must precede socialAxisDrift
           // so a diverged case's synthesized statePolicies are visible same turn.
           runtime.runPhase("scotusTurn", () =>
-            processScotusTurn(gameState.currentTurn, realNow, db)
+            processScotusTurn(gameState.currentTurn, realNow, db, scotusSwitches(context.config))
           ),
           // UK JR surprise flavor, same parallel group as SCOTUS; UK-only
           // mild uk_* enactments tagged uk_judicial_review_surprise.
@@ -1207,7 +1207,7 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
         const playerRandomEventsResult = await runtime.runPhase("playerRandomEvents", () =>
           processPlayerRandomEventsTurn(db, newTurn, {
             playerRandomEventsEnabled: gameState.playerRandomEventsEnabled,
-            treasuryCashLedgerEnabled: context.config?.treasuryCashLedgerEnabled === true,
+            ...preeConfigFlags(context.config),
             currentYear: eventsCurrentYear,
           })
         );
@@ -1484,7 +1484,7 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
         // being elected, so there are no "mid-term" vacancies to backfill.
         if (!foundingActive) {
           await runtime.runPhase("byElectionWatcher", () =>
-            processByElectionsWithFill(db, newTurn, gameNow)
+            processByElectionsWithFill(db, newTurn, gameNow, context.config)
           );
           // Immediately after the governor watcher: same settled seat state,
           // separate country scope (UK Commons), separate election type.

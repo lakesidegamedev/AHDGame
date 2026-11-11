@@ -131,6 +131,10 @@ describe("fresh-world flag policy", () => {
       "executiveSuccessionEnabled",
       "leaderLegacyEnabled",
       "campaignLiveGdpBasisEnabled",
+      "byElectionFillEnabled",
+      "scotusNppNominationsEnabled",
+      "scotusPendingDocketEnabled",
+      "preeGenericFallbackEnabled",
     ];
     const { settings, flags } = splitFreshWorldGameConfigFlags(referenceGameConfig);
     for (const key of switches) {

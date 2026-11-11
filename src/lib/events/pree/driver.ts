@@ -20,6 +20,7 @@ import { sweepExpired } from "@/lib/events/substrate/sweep";
 import type { ResolveEventHooks } from "@/lib/events/substrate/types";
 import { isCharacterEligibleForOffer } from "@/lib/events/substrate/cooldown";
 import { logger } from "@/lib/observability/logger";
+import type { GameConfig } from "@/lib/db/types/gameConfig";
 import { filterEligibleTemplates } from "./weighting";
 import type { CharacterEventContext } from "./eligibility";
 import { matchesEligibility } from "./eligibility";
@@ -188,6 +189,17 @@ async function sweepExpiredWithNotifications(
  * Per-turn PREE driver: sweep expired instances, then optionally offer one
  * event per eligible character when the feature flag is on.
  */
+/** The random event options a world's config sets; absent reads off. */
+export function preeConfigFlags(
+  config:
+    Pick<GameConfig, "treasuryCashLedgerEnabled" | "preeGenericFallbackEnabled"> | null | undefined
+): { treasuryCashLedgerEnabled: boolean; genericFallbackEnabled: boolean } {
+  return {
+    treasuryCashLedgerEnabled: config?.treasuryCashLedgerEnabled === true,
+    genericFallbackEnabled: config?.preeGenericFallbackEnabled === true,
+  };
+}
+
 export async function processPlayerRandomEventsTurn(
   db: Db,
   currentTurn: number,
@@ -196,6 +208,8 @@ export async function processPlayerRandomEventsTurn(
     treasuryCashLedgerEnabled?: boolean;
     /** In-game year for era gating (minYear/maxYear on definitions). Omit = no era filtering. */
     currentYear?: number;
+    /** Undated fallback when the dated packs are exhausted. Omit = on. */
+    genericFallbackEnabled?: boolean;
   }
 ): Promise<PlayerRandomEventsTurnResult> {
   await processLotteryAnnuities(db);
@@ -270,7 +284,8 @@ export async function processPlayerRandomEventsTurn(
         preloaded?.currentYear,
         broadcastDef,
         broadcastPreset,
-        preloaded?.treasuryCashLedgerEnabled
+        preloaded?.treasuryCashLedgerEnabled,
+        preloaded?.genericFallbackEnabled !== false
       );
       if (result === "offered") {
         offered++;
@@ -311,7 +326,8 @@ async function offerEventToCharacter(
   currentYear?: number,
   broadcastDef?: EventDefinition | null,
   broadcastPreset?: string,
-  treasuryCashLedgerEnabled = false
+  treasuryCashLedgerEnabled = false,
+  genericFallbackEnabled = true
 ): Promise<"offered" | "skipped" | "exhausted"> {
   const pendingInstance = await getEventInstancesCollection(db).findOne({
     scope: "character",
@@ -372,6 +388,7 @@ async function offerEventToCharacter(
       currentTurn,
       currentYear
     );
+    if (eligible.length === 0 && !genericFallbackEnabled) return "skipped";
     if (eligible.length === 0) {
       // Dated packs have run out for this character. The undated modern pool
       // keeps the world moving, even if it repeats a recent kind.
