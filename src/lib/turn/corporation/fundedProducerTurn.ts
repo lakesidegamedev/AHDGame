@@ -401,12 +401,9 @@ export async function runFundedProducerTurn(
         }
       : {}),
   });
-  // A live turn must settle every plant: a skipped one would run on legacy
-  // revenue beside the funded market. Fail the turn instead.
-  // A sector with no physical capacity yet (a new founding awaiting its first
-  // build) produces nothing: it settles as an explicit zero receipt below. Any
-  // other preparation failure would leave a plant on legacy revenue beside the
-  // funded market, so the turn fails instead.
+  // A sector with no physical capacity yet settles as an explicit zero receipt
+  // below. Any other preparation failure would leave a plant on legacy revenue
+  // beside the funded market, so the turn fails instead.
   const idleSectorIds = demand.skippedSectors
     .filter((s) => s.reason === NO_PHYSICAL_CAPACITY)
     .map((s) => s.sectorId);

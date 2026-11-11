@@ -441,12 +441,8 @@ export async function releaseForeignSectorToUnowned(
     // under plants it converts through the pool's default mix, the same
     // conversion `restoreSectorsToUnowned` applies to its capacity leg.
     const creditAmount = plantsEnabled ? revenueAnchor * unitsPerAnchor : revenueAnchor;
-    // The pool row this release creates carries a countryId every reader filters
-    // on, so it is the country the STATE is in and never whatever the sector
-    // last stored (: the same defect `buildCapacity`, `expandSector`,
-    // `restoreSectorsToUnowned` and the shed passes carried). Only read when the
-    // row may not exist yet, since `$ifNull` leaves an existing row's country
-    // alone either way.
+    // Readers filter the new pool row by country, so it takes the state's country,
+    // not the sector's stored one. `$ifNull` leaves an existing row's country alone.
     const releaseState = await statesCollection(db).findOne(
       { _id: sector.stateId },
       { projection: { countryId: 1 } }
