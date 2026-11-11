@@ -8,10 +8,15 @@ import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import { NATIONAL_POLICY_STATE_IDS } from "@/lib/policy/nationalStateId";
 import { getLaw } from "@/lib/politicalLegislation/catalog";
-import { MECHANICAL_LAW_BASELINE, mechanicalLawId } from "./registry";
+import {
+  MECHANICAL_LAW_BASELINE,
+  SUPERSEDED_COMPETITION_LAW_ID,
+  mechanicalLawId,
+} from "./registry";
 import {
   MECHANICAL_LAW_KEYS,
   clampMechanicalLevel,
+  resolveSupersededLevel,
   type MechanicalLawKey,
   type MechanicalLawLevel,
 } from "./rules";
@@ -31,8 +36,13 @@ export async function getMechanicalLawLevelsByCountry(
   countryIds: readonly CountryId[]
 ): Promise<Map<CountryId, MechanicalLawLevels>> {
   const out = new Map<CountryId, MechanicalLawLevels>();
-  const wanted: { countryId: CountryId; key: MechanicalLawKey; lawId: string; stateId: string }[] =
-    [];
+  const wanted: {
+    countryId: CountryId;
+    key: MechanicalLawKey;
+    lawId: string;
+    supersededId?: string;
+    stateId: string;
+  }[] = [];
   for (const countryId of new Set(countryIds)) {
     const stateId = NATIONAL_POLICY_STATE_IDS[countryId];
     const levels = {
@@ -43,12 +53,15 @@ export async function getMechanicalLawLevelsByCountry(
     for (const key of MECHANICAL_LAW_KEYS) {
       const lawId = mechanicalLawId(countryId, key);
       if (!lawId || !stateId) continue;
-      levels[key] = baselineFor(lawId, key);
-      wanted.push({ countryId, key, lawId, stateId });
+      const supersededId =
+        key === "competition" ? SUPERSEDED_COMPETITION_LAW_ID[countryId] : undefined;
+      levels[key] = supersededId ? MECHANICAL_LAW_BASELINE[key] : baselineFor(lawId, key);
+      wanted.push({ countryId, key, lawId, stateId, ...(supersededId && { supersededId }) });
     }
     out.set(countryId, levels);
   }
   if (wanted.length === 0) return out;
+  const lawIds = wanted.flatMap((w) => (w.supersededId ? [w.lawId, w.supersededId] : [w.lawId]));
   const rows = await statePoliciesCollection<{
     stateId: string;
     legislationTypeId: string;
@@ -57,16 +70,25 @@ export async function getMechanicalLawLevelsByCountry(
     .find(
       {
         stateId: { $in: [...new Set(wanted.map((w) => w.stateId))] },
-        legislationTypeId: { $in: [...new Set(wanted.map((w) => w.lawId))] },
+        legislationTypeId: { $in: [...new Set(lawIds)] },
       },
       { projection: { stateId: 1, legislationTypeId: 1, policyOptionIndex: 1 } }
     )
     .toArray();
   const byKey = new Map(rows.map((r) => [`${r.stateId}|${r.legislationTypeId}`, r]));
+  const indexOf = (stateId: string, lawId: string) =>
+    byKey.get(`${stateId}|${lawId}`)?.policyOptionIndex ?? undefined;
   for (const w of wanted) {
-    const row = byKey.get(`${w.stateId}|${w.lawId}`);
-    if (row && row.policyOptionIndex != null) {
-      out.get(w.countryId)![w.key] = clampMechanicalLevel(row.policyOptionIndex);
+    const current = indexOf(w.stateId, w.lawId);
+    const levels = out.get(w.countryId)!;
+    if (w.supersededId) {
+      levels[w.key] = resolveSupersededLevel({
+        current,
+        superseded: indexOf(w.stateId, w.supersededId),
+        supersededBaseline: MECHANICAL_LAW_BASELINE[w.key],
+      });
+    } else if (current != null) {
+      levels[w.key] = clampMechanicalLevel(current);
     }
   }
   return out;

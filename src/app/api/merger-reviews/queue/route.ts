@@ -10,6 +10,7 @@ import { MERGER_REVIEWS } from "@/lib/corporations/mergerReview/gate";
 import { resolveMergerAuthority } from "@/lib/corporations/mergerReview/authority";
 import { getGameState } from "@/lib/gameState";
 import { getEnactedLevel } from "@/lib/politicalLegislation/enactedLevels";
+import { getMechanicalLawLevel } from "@/lib/mechanicalLaws/levels";
 import { carriedLawIdFor } from "@/lib/politicalLegislation/carriedLaw";
 import type { LawCountryId } from "@/lib/politicalLegislation/types";
 import { loadCommandEconomyBlockedCountries } from "@/lib/economy/queries/commandEconomyMarketGate";
@@ -89,10 +90,15 @@ async function handleGET() {
     // absorbed state's competition statute with no entry of its own, and this
     // surface must read the law that actually armed the referrals — otherwise
     // the authority who can decide them is told enforcement is dead.
+    const ownLawId = ANTITRUST_LAW_BY_COUNTRY[authority.countryId as CountryId];
     const lawId =
-      ANTITRUST_LAW_BY_COUNTRY[authority.countryId as CountryId] ??
+      ownLawId ??
       (await carriedLawIdFor(db, authority.countryId, Object.values(ANTITRUST_LAW_BY_COUNTRY)));
-    const level = lawId ? await getEnactedLevel(db, authority.countryId as LawCountryId, lawId) : 0;
+    const level = !lawId
+      ? 0
+      : ownLawId
+        ? await getMechanicalLawLevel(db, authority.countryId as CountryId, "competition")
+        : await getEnactedLevel(db, authority.countryId as LawCountryId, lawId);
     const enforcementLive = thresholdForLevel(level) != null;
     if (!enforcementLive && pendingDocs.length === 0) return NextResponse.json({ applies: false });
 

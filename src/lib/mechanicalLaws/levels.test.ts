@@ -121,3 +121,38 @@ describe("getMechanicalLawLevelsByCountry", () => {
     expect(levels.competition).toBe(2);
   });
 });
+
+describe("competition in a country whose Competition Act predates its law book", () => {
+  const jpState = NATIONAL_POLICY_STATE_IDS.JP;
+  const bookId = ANTITRUST_LAW_BY_COUNTRY.JP!;
+
+  it("keeps a saved world's enacted Competition Act while the book law has no record", async () => {
+    const { db } = setup([
+      { stateId: jpState, legislationTypeId: "jp_competition_law", policyOptionIndex: 4 },
+    ]);
+
+    const levels = await getMechanicalLawLevels(db, "JP");
+
+    expect(levels.competition).toBe(4);
+  });
+
+  it("keeps the Competition Act's starting level in a saved world with no record at all", async () => {
+    const { db, find } = setup([]);
+
+    const levels = await getMechanicalLawLevels(db, "JP");
+
+    expect(levels.competition).toBe(2);
+    expect(find).toHaveBeenCalledTimes(1);
+  });
+
+  it("follows the book law once it has a record, as in a world seeded with the book", async () => {
+    const { db } = setup([
+      { stateId: jpState, legislationTypeId: "jp_competition_law", policyOptionIndex: 4 },
+      { stateId: jpState, legislationTypeId: bookId, policyOptionIndex: 1 },
+    ]);
+
+    const levels = await getMechanicalLawLevels(db, "JP");
+
+    expect(levels.competition).toBe(1);
+  });
+});

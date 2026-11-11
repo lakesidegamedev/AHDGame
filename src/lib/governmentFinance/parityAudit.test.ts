@@ -17,8 +17,8 @@ describe("legislative parity audit", () => {
       ["US", 168],
       ["UK", 154],
       // The one law book, the two regional taxes, banking separation and the
-      // three mechanical laws.
-      ["JP", 158],
+      // two mechanical laws the book does not carry.
+      ["JP", 157],
     ]);
     expect(audit.countries.every((country) => country.missingAdministration.length === 0)).toBe(
       true
