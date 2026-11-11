@@ -35,6 +35,7 @@ import { isSameCountry } from "@/lib/api/sameCountry";
 import { isUnionsBanned } from "@/lib/labour/unionLaws";
 import { isUnionProsecutionBarred } from "@/lib/unions/unionProsecutionBar";
 import type { CountryId } from "@/lib/constants/countries";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -131,10 +132,9 @@ async function handleGET(_request: Request, { params }: RouteParams) {
       myVote = myVoteDoc?.candidateCharacterId.toString() ?? null;
     }
 
-    const candidateCountryFilter: Filter<Character> =
-      union.countryId === "US"
-        ? { $or: [{ countryId: "US" as const }, { countryId: { $exists: false } }] }
-        : { countryId: union.countryId };
+    const candidateCountryFilter: Filter<Character> = countryHasFeature("usApi", union.countryId)
+      ? { $or: [{ countryId: "US" as const }, { countryId: { $exists: false } }] }
+      : { countryId: union.countryId };
     // The vote command accepts a seated president even after they moved away,
     // so reaffirming them must stay possible from the ballot.
     const candidates = canVote

@@ -20,6 +20,7 @@ import {
   getLiveUpperChamberSeats,
 } from "@/lib/legislature/lowerChamberSeats";
 import type { PoliticalParty, ElectedOfficial, State, Character, NPP } from "@/lib/db/types";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export async function GET(request: Request, { params }: { params: Promise<{ code: string }> }) {
   try {
@@ -32,7 +33,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
     const db = await getDb();
     const [preset, countryState] = await Promise.all([
       getGameStatePreset(db),
-      countryId === "RU"
+      countryHasFeature("ruApi", countryId)
         ? db
             .collection<{
               _id: string;

@@ -19,6 +19,7 @@ import { stateCensusData2027 } from "@/lib/seeds/stateCensusData2027";
 import { loadEraFullOverride, loadFullOverride } from "@/lib/seeds/loadEraPositionOverride";
 import { getCountryLayer1Model } from "@/lib/seeds/international";
 import type { EraId } from "@/lib/seeds/presetSelector";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 // Load era census bundles DIRECTLY (not the in-memory stateCensusDataByEra map,
 // which is only populated for 2019 at module init — empty for other eras on a
@@ -54,7 +55,7 @@ export async function GET(request: Request) {
       return errorResponse(400, "Unknown era");
     }
 
-    if (country === "US") {
+    if (countryHasFeature("usApi", country)) {
       const bundle = ERA_CENSUS[era];
 
       // Load the full DB override for this era (US only) so the editor reloads

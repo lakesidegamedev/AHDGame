@@ -47,6 +47,7 @@ import {
 import { getNgChamberComposition } from "@/lib/congress/ngChamberLeadership/composition";
 import { resolveNgChamberLeadershipElection } from "@/lib/congress/ngChamberLeadership/resolveElection";
 import { handleNgChamberLeadershipAction } from "@/lib/congress/ngChamberLeadership/actions";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 const actionSchema = z.object({
   role: z.enum(["speaker_ng_reps", "president_ng_senate"]),
@@ -55,7 +56,7 @@ const actionSchema = z.object({
 });
 
 function isNgRequest(code: string): boolean {
-  return code.toUpperCase() === "NG";
+  return countryHasFeature("ngApi", code.toUpperCase());
 }
 
 export async function GET(_request: Request, { params }: { params: Promise<{ code: string }> }) {

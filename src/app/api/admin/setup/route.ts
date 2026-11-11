@@ -52,6 +52,7 @@ import {
   removeLegacyJPCeremonialIdentity,
 } from "@/lib/admin/seed";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export async function GET() {
   try {
@@ -158,7 +159,7 @@ export async function POST(request: Request) {
 
     log("=== Step 1: Seeding reference and runtime data ===");
 
-    if (scope === "US" || seedAll) {
+    if (countryHasFeature("usApi", scope) || seedAll) {
       await seedStates(db, false, log, preset);
       await seedPolicies(db, false, log);
       await seedDemographics(db, false, log);
@@ -175,7 +176,7 @@ export async function POST(request: Request) {
       await seedUnownedSectors(db, log, 1, preset);
     }
 
-    if (scope === "UK" || seedAll) {
+    if (countryHasFeature("ukApi", scope) || seedAll) {
       const {
         seedUKRegions,
         seedUKParties,
@@ -201,7 +202,7 @@ export async function POST(request: Request) {
       await seedUKElections(log);
     }
 
-    if (scope === "JP" || seedAll) {
+    if (countryHasFeature("jpApi", scope) || seedAll) {
       await seedJPRegions(db, false, log, preset);
       await seedJPParties(db, log);
       await seedJPDemographics(db, false, log, preset);
@@ -218,7 +219,7 @@ export async function POST(request: Request) {
 
     await seedStateSectorSpecializations(db, false, log);
 
-    if (scope === "US" || seedAll) {
+    if (countryHasFeature("usApi", scope) || seedAll) {
       await seedCountyMapData(log);
     }
 

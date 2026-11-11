@@ -37,6 +37,7 @@ import {
   resolveAnnualBudgetAuthority,
 } from "@/lib/countries/uk/budget/annualBudget";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 const CHANCELLOR_POSITION_ID = "chancellor";
 
@@ -83,7 +84,7 @@ async function resolveContext(request: Request, code: string) {
   if (!COUNTRY_CONFIGS[countryId]) {
     return { error: errorResponse(400, "Invalid country") };
   }
-  if (countryId !== "UK") {
+  if (!countryHasFeature("ukApi", countryId)) {
     return { error: errorResponse(400, "The Budget is UK-only") };
   }
   const auth = await requireHumanSessionWithCharacter(request);

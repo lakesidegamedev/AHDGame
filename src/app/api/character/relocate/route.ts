@@ -48,6 +48,7 @@ import {
   loadUsPoliticalStateIds,
   unplayableTerritoryHomeError,
 } from "@/lib/elections/usPoliticalHome";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 const relocateBodySchema = z.object({
   targetStateId: z.string().min(1, "Target state/region ID required"),
@@ -98,7 +99,7 @@ export async function POST(request: Request) {
           return errorResponse(400, "Invalid target state or region");
         }
 
-        if (targetCountryId === "US") {
+        if (countryHasFeature("usApi", targetCountryId)) {
           const { admittedIds, preset } = await loadUsPoliticalStateIds(db);
           if (!isUsResidentPoliticalRegion(normalizedTarget, preset, admittedIds)) {
             return errorResponse(400, unplayableTerritoryHomeError(targetState.name));

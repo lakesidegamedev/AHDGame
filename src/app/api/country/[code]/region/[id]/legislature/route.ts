@@ -9,6 +9,7 @@ import {
 import { subNationalChamberSeats } from "@/lib/constants/states";
 import { getGameStatePreset } from "@/lib/db/collections/gameState";
 import type { State, ElectedOfficial, PoliticalParty, Character, NPP } from "@/lib/db/types";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 // GET /api/country/[code]/region/[id]/legislature — Return the state senate composition and current officials for a region
 // Auth: public
@@ -69,7 +70,7 @@ export async function GET(
     }
 
     let governor = null;
-    if (countryId !== "UK") {
+    if (!countryHasFeature("ukApi", countryId)) {
       governor = await db.collection<ElectedOfficial>("electedOfficials").findOne({
         officeType: "governor",
         state: stateId,

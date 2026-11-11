@@ -39,6 +39,7 @@ import type {
   CongressLeader,
   ElectedOfficial,
 } from "@/lib/db/types";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 const cppccChairActionSchema = z.object({
   action: z.enum(["declare", "withdraw", "vote", "start_election", "force_end"]),
@@ -51,7 +52,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
   try {
     const { code } = await params;
     const countryId = code.toUpperCase();
-    if (countryId !== "CN" || !COUNTRY_CONFIGS.CN) {
+    if (!countryHasFeature("cnApi", countryId) || !COUNTRY_CONFIGS.CN) {
       return errorResponse(400, "CPPCC Chairman endpoint is CN-only");
     }
     const db = await getDb();
@@ -161,7 +162,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
   try {
     const { code } = await params;
     const countryId = code.toUpperCase();
-    if (countryId !== "CN" || !COUNTRY_CONFIGS.CN) {
+    if (!countryHasFeature("cnApi", countryId) || !COUNTRY_CONFIGS.CN) {
       return errorResponse(400, "CPPCC Chairman endpoint is CN-only");
     }
 

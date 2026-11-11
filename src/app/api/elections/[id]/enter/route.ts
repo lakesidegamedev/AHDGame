@@ -52,6 +52,7 @@ import {
   ensureJapanShugiinFilingIndexes,
   japanShugiinDistrictPartyKey,
 } from "@/lib/countries/jp/elections/shugiinFilingIndexes";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 const hu1991EntryBody = z
   .object({
@@ -126,11 +127,11 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const hu1991 = isHu1991AssemblyCampaign(election) || election.hungarianModernByElection != null;
     const hu2014 =
-      election.countryId === "HU" &&
+      countryHasFeature("huApi", election.countryId) &&
       election.electionType === "nationalAssembly" &&
       election.hungarianModernAssembly?.ruleVersion === "mixed-2011-v1";
     const japanMixed =
-      election.countryId === "JP" &&
+      countryHasFeature("jpApi", election.countryId) &&
       (election.electionType === "shugiin" || election.electionType === "snap_shugiin") &&
       election.japanShugiinRules?.ruleVersion === "mixed-1994-v1";
     const bgFounding = isBgFoundingCampaign(election);

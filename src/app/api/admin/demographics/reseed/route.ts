@@ -10,7 +10,7 @@
  * Defaults: era="2019", countryId="US", skipPollClear=false
  * Callers that POST with no body get US/2019 behaviour.
  *
- * For countryId !== "US", uses the international Layer-1 model path
+ * For !countryHasFeature("usApi", countryId), uses the international Layer-1 model path
  * (getCountryLayer1Model + buildModelRegionDemographics). Returns 400 if
  * no model exists for the requested country+era.
  *
@@ -30,6 +30,7 @@ import { registerAndGenerate } from "@/lib/seeds/stateDemographics";
 import { calculateStateLeanForCache } from "@/lib/demographics/cachedStateLean";
 import type { Layer1Config } from "@/lib/seeds/stateDemographics";
 import { SEED_ERA_IDS, type EraId } from "@/lib/seeds/presetSelector";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 const VALID_ERAS = SEED_ERA_IDS;
 
@@ -66,7 +67,7 @@ export async function POST(request: Request) {
     const db = await getDb();
 
     // ── International path ──────────────────────────────────────────────────
-    if (countryId !== "US") {
+    if (!countryHasFeature("usApi", countryId)) {
       const { getCountryLayer1Model, buildModelRegionDemographics } =
         await import("@/lib/seeds/international");
       const { loadFullOverride } = await import("@/lib/seeds/loadEraPositionOverride");

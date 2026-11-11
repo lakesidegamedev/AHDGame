@@ -33,6 +33,7 @@ import type {
   CompositionResponse,
   PartySeats,
 } from "@/lib/elections/electionResponseTypes";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export type { PartySeats, CompositionResponse } from "@/lib/elections/electionResponseTypes";
 
@@ -72,7 +73,7 @@ export async function GET(request: Request) {
     // for the US only. Every other country is filtered strictly.
     const countryScope: Record<string, unknown> =
       // eslint-disable-next-line local/no-country-literals -- back-compat for legacy US rows without countryId
-      countryId === "US"
+      countryHasFeature("usApi", countryId)
         ? { $or: [{ countryId: "US" }, { countryId: { $exists: false } }] }
         : { countryId };
 

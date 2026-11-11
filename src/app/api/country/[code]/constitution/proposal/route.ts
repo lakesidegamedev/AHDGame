@@ -22,6 +22,7 @@ import {
   loadRussianDuma1995Decisions,
   openRussianDuma1995Proposal,
 } from "@/lib/countries/ru/dumaElectoralProposals1995";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 const bodySchema = z
   .object({
     kind: z.enum([
@@ -36,7 +37,7 @@ const bodySchema = z
 type RouteContext = { params: Promise<{ code: string }> };
 export async function GET(_request: Request, { params }: RouteContext) {
   try {
-    if ((await params).code.toUpperCase() !== "RU")
+    if (!countryHasFeature("ruApi", (await params).code.toUpperCase()))
       return errorResponse(404, "No Russian constitutional decision here");
     const auth = await requireBasicAuth();
     if (!auth.ok) return auth.response;
@@ -59,7 +60,7 @@ export async function GET(_request: Request, { params }: RouteContext) {
 }
 export async function POST(request: Request, { params }: RouteContext) {
   try {
-    if ((await params).code.toUpperCase() !== "RU")
+    if (!countryHasFeature("ruApi", (await params).code.toUpperCase()))
       return errorResponse(404, "No Russian constitutional decision here");
     const auth = await requireBasicAuth();
     if (!auth.ok) return auth.response;

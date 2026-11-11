@@ -6,6 +6,7 @@ import { regenerateCongressionalDistricts } from "@/lib/redistricting/regenerate
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import type { State } from "@/lib/db/types";
 import { regionRedistrictUrl } from "@/lib/urls";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 // POST /api/admin/country/[code]/region/[id]/redistrict/trigger — reset a state's
 // district map to a neutral baseline and open it for manual redraw.
@@ -23,7 +24,7 @@ export const POST = withAdminRoute(
     if (!COUNTRY_CONFIGS[countryId]) {
       return errorResponse(400, "Invalid country code");
     }
-    if (countryId !== "US") {
+    if (!countryHasFeature("usApi", countryId)) {
       return errorResponse(400, "Redistricting is only available for US states");
     }
 

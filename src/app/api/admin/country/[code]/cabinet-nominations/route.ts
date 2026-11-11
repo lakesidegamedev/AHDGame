@@ -19,6 +19,7 @@ import { getOfficeLabel } from "@/lib/utils/officeTitle";
 import { resetCabinetSettingCooldowns } from "@/lib/db/collections/cabinetSettings";
 import { getGameTime } from "@/lib/time/gameTime";
 import { z } from "zod";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 const actionSchema = z.object({
   nominationId: z.string().length(24),
@@ -161,7 +162,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
 
       // Add career history entry for cabinet confirmation (US only - UK uses direct appointment).
       // NPP nominees have no character doc, so skip the push for them.
-      if (nomination.countryId === "US" && nomination.nomineeCharacterId) {
+      if (countryHasFeature("usApi", nomination.countryId) && nomination.nomineeCharacterId) {
         const cabinetOffice: OfficeType = { type: "usCabinet", positionId: nomination.positionId };
         const careerEvent: CareerEvent = {
           type: "appointed",

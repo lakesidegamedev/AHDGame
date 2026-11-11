@@ -65,6 +65,7 @@ import { DEFAULT_DURATIONS } from "@/lib/elections/scheduling";
 import { electionToLarpYear } from "@/lib/utils/formatters";
 import { getLandtagAnchor } from "@/lib/seeds/de/deLandtag";
 import { getUKRegionalCouncilCycle1EndTurn } from "@/lib/elections/ukRegionalCouncilStagger";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /**
  * Derive the canonical LARP end-turn, primary-end-turn, and start-turn for
@@ -92,7 +93,9 @@ export function canonicalTurns(
   const customCycle1EndTurn =
     electionType === "landtag" && state
       ? getLandtagAnchor(state, ctx.preset)
-      : electionType === "regionalCouncil" && election.countryId === "UK" && state
+      : electionType === "regionalCouncil" &&
+          countryHasFeature("ukApi", election.countryId) &&
+          state
         ? getUKRegionalCouncilCycle1EndTurn(state, ctx)
         : undefined;
   return canonicalTurnsForCycle({
