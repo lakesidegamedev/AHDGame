@@ -16,6 +16,7 @@ import type { MetricFilter } from "./components/GlobeMetricPanel";
 import { hasBlocData } from "./worldBlocs";
 import { useActivePreset } from "@/contexts/RegisteredCountriesContext";
 import { rankNations, type RankingSelection } from "@/lib/world/rankings";
+import { toggleComparePair } from "@/lib/world/countryCompare";
 
 /** ISO numeric codes used by the world map TopoJSON */
 const COUNTRY_ID_TO_ISO: Record<CountryId, string> = {
@@ -79,6 +80,13 @@ type WorldMetricFilterContextValue = {
   countryIdToIso: (id: CountryId) => string | undefined;
   /** World rank for the active metric filter, or null when the filter has no rank. */
   rankFor: (id: CountryId) => number | null;
+  /** Whether a click on the map selects a nation for comparison instead of opening it. */
+  compareMode: boolean;
+  setCompareMode: (on: boolean) => void;
+  /** The two nations picked on the map, left to right. */
+  compareCountryIds: CountryId[];
+  toggleCompareCountry: (id: CountryId) => void;
+  clearCompare: () => void;
 };
 
 const WorldMetricFilterContext = createContext<WorldMetricFilterContextValue | null>(null);
@@ -104,6 +112,8 @@ export function WorldMetricFilterProvider({ children }: { children: ReactNode })
     countries: Record<string, { count: number }>;
     maxCount: number;
   } | null>(null);
+  const [compareMode, setCompareMode] = useState(false);
+  const [compareCountryIds, setCompareCountryIds] = useState<CountryId[]>([]);
 
   useEffect(() => {
     fetchJson<WorldMetricsData>("/api/world/metrics", { feature: "world-metrics" })
@@ -159,6 +169,17 @@ export function WorldMetricFilterProvider({ children }: { children: ReactNode })
   }, [metricFilter, worldMetrics]);
   const rankFor = useCallback((id: CountryId) => ranks?.get(id) ?? null, [ranks]);
 
+  const toggleCompareCountry = useCallback((id: CountryId) => {
+    setCompareCountryIds((current) => toggleComparePair(current, id) as CountryId[]);
+  }, []);
+  const clearCompare = useCallback(() => setCompareCountryIds([]), []);
+
+  // Leaving comparison mode drops the picks. Coming back should start a fresh
+  // pair, not silently reopen the last one the player has stopped thinking about.
+  useEffect(() => {
+    if (!compareMode) setCompareCountryIds([]);
+  }, [compareMode]);
+
   const value = useMemo(
     () => ({
       metricFilter,
@@ -168,8 +189,24 @@ export function WorldMetricFilterProvider({ children }: { children: ReactNode })
       corpsData,
       countryIdToIso,
       rankFor,
+      compareMode,
+      setCompareMode,
+      compareCountryIds,
+      toggleCompareCountry,
+      clearCompare,
     }),
-    [metricFilter, worldMetrics, partyData, corpsData, countryIdToIso, rankFor]
+    [
+      metricFilter,
+      worldMetrics,
+      partyData,
+      corpsData,
+      countryIdToIso,
+      rankFor,
+      compareMode,
+      compareCountryIds,
+      toggleCompareCountry,
+      clearCompare,
+    ]
   );
 
   return (

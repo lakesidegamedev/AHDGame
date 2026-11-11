@@ -25,6 +25,9 @@ areas: [frontend]
   category. Each figure carries its world rank, not just its value.
 - The world page's nation table now shows the world rank beside the figure when
   the map is filtered to a metric, a category or the overall score.
+- The globe has a compare mode: switch it on, click two nations, and their
+  scores and every figure in a category sit side by side, each with its world
+  rank and the stronger side of the row marked.
 
 ## Economy at a glance
 
