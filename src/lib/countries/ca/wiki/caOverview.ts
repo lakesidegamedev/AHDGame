@@ -44,6 +44,8 @@ The mood also moves votes. In Quebec elections, a mood above 50 shifts a small s
 
 Once the mood reaches 60, the Premier can ask Canada's Prime Minister for a sovereignty referendum. If it passes and the House of Commons consents, Quebec becomes an independent country with eight regions, a 125-seat National Assembly and the Canadian dollar. See [Referendums](/wiki/referendums) for every step.
 
+If Quebec leaves, Canada's Parliament shrinks with it. Quebec's 78 MPs leave the House of Commons, so the House has 265 seats and a majority becomes **133**. Quebec's 24 senators leave too, leaving 81. Quebec takes its share of the federal debt and treasury cash in proportion to its share of Canada's GDP.
+
 ## Parties
 
 All five default parties are fictional.
