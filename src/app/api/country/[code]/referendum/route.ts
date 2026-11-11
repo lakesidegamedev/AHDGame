@@ -1,4 +1,4 @@
-import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { hostsSovereigntyReferendums } from "@/lib/referendum/rules/sovereigntyRegions";
 import { NextResponse } from "next/server";
 import type { MacroMetricsDoc } from "@/lib/db/types/macroMetrics";
 import { requireHumanSessionWithCharacter } from "@/lib/api/requireAuth";
@@ -11,7 +11,7 @@ import { canDecideReferendum } from "@/lib/referendum/pmAccess";
 import { isCountryEnabledForPlayers } from "@/lib/countryAccess";
 
 // GET /api/country/[code]/referendum
-// Returns in-flight UK referendums (awaiting the PM's decision, campaigning, or
+// Returns in-flight sovereignty referendums (awaiting the PM's decision, campaigning, or
 // in their conversion window) plus the viewer's capabilities (PM / admin /
 // campaign side + spend eligibility), so the national surface can render the
 // grant / campaign / convert-or-block controls.
@@ -22,7 +22,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
     if (!COUNTRY_CONFIGS[countryId]) {
       return errorResponse(400, "Invalid country");
     }
-    if (!countryHasFeature("ukDevolutionAndConference", countryId)) {
+    if (!hostsSovereigntyReferendums(countryId)) {
       return NextResponse.json({ referendums: [], isPM: false, isAdmin: false, currentTurn: 0 });
     }
 
@@ -41,7 +41,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
     const isAdmin = auth.user.isAdmin === true;
 
     const [isPM, currentTurn, irelandPlayerEnabled] = await Promise.all([
-      canDecideReferendum(db, auth.user.character._id),
+      canDecideReferendum(db, countryId, auth.user.character._id),
       getCurrentTurn(db),
       isCountryEnabledForPlayers(db, "IE"),
     ]);

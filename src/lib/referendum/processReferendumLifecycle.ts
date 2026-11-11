@@ -39,7 +39,8 @@ import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
 import { referendumYesShare } from "@/lib/referendum/resolveYesShare";
 import { recordWireEvent, type WireInput } from "@/lib/referendum/wire";
 import { WIRE_SWING_THRESHOLD } from "@/lib/constants/referendum";
-import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { hostsSovereigntyReferendums } from "@/lib/referendum/rules/sovereigntyRegions";
+import { resolveWestminsterPolicy } from "@/lib/governorOffice/devolution/rules";
 
 /**
  * Snapshot a region's cohort baseline at campaign open, from the Layer-1
@@ -147,15 +148,37 @@ export async function processReferendumLifecycle(
   const active = await refs.find({ status: { $in: ACTIVE_STATUSES } }).toArray();
   if (active.length === 0) return null;
 
-  const hasRequests = active.some((ref) => ref.status === "requested");
-  const ministry = hasRequests
-    ? await getGovernmentFormationsCollection(db).findOne({ _id: "UK" })
-    : null;
-  const nationalOffice = hasRequests
-    ? await db
-        .collection<GovernorOfficeState>("governorOfficeState")
-        .findOne({ countryId: "UK", stateId: getNationalStateId("UK") })
-    : null;
+  // An NPP Prime Minister decides each pending request for its own country.
+  const requestCountries = [
+    ...new Set(
+      active
+        .filter((ref) => ref.status === "requested" && hostsSovereigntyReferendums(ref.countryId))
+        .map((ref) => ref.countryId)
+    ),
+  ];
+  const [ministries, nationalOffices] = requestCountries.length
+    ? await Promise.all([
+        getGovernmentFormationsCollection(db)
+          .find({ _id: { $in: requestCountries } })
+          .toArray(),
+        db
+          .collection<GovernorOfficeState>("governorOfficeState")
+          .find({
+            $or: requestCountries.map((countryId) => ({
+              countryId,
+              stateId: getNationalStateId(countryId),
+            })),
+          })
+          .project<Pick<GovernorOfficeState, "countryId" | "westminsterStances">>({
+            _id: 0,
+            countryId: 1,
+            westminsterStances: 1,
+          })
+          .toArray(),
+      ])
+    : [[], []];
+  const ministryByCountry = new Map(ministries.map((doc) => [String(doc._id), doc]));
+  const officeByCountry = new Map(nationalOffices.map((doc) => [doc.countryId, doc]));
   const transitions: ReferendumLifecycleResult["transitions"] = [];
   const failures: NonNullable<ReferendumLifecycleResult["failures"]> = [];
   const actuate = async (ref: Referendum, from: string) => {
@@ -186,19 +209,15 @@ export async function processReferendumLifecycle(
     const from = ref.status;
 
     if (ref.status === "requested") {
-      if (
-        countryHasFeature("ukLib", ref.countryId) &&
-        ministry?.status === "formed" &&
-        ministry.pmNppId &&
-        !ministry.pmCharacterId
-      ) {
-        const policy =
-          nationalOffice?.westminsterStances?.[ref.regionId as "SCO" | "WAL" | "NIR"]?.policy ??
-          "anti";
+      const ministry = ministryByCountry.get(ref.countryId);
+      if (ministry?.status === "formed" && ministry.pmNppId && !ministry.pmCharacterId) {
+        const policy = resolveWestminsterPolicy(
+          officeByCountry.get(ref.countryId)?.westminsterStances?.[ref.regionId]?.policy
+        );
         const action = nppReferendumDecision(currentTurn, ref.requestedTurn, policy);
         if (action) {
           const decision = await grantReferendum(db, {
-            countryId: "UK",
+            countryId: ref.countryId,
             referendumId: id,
             isPM: true,
             currentTurn,

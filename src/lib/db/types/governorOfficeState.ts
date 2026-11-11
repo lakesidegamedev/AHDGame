@@ -46,10 +46,13 @@ export interface GovernorOfficeState {
    *  cooldown before the next change is allowed. */
   devolutionPolicyChangedAtTurn?: number;
 
-  /** UK national office only. Missing regions fall back to anti; handovers preserve policy. */
+  /**
+   * National office only, keyed by sovereignty region id. Missing regions fall
+   * back to anti; handovers preserve policy.
+   */
   westminsterStances?: Partial<
     Record<
-      "SCO" | "WAL" | "NIR",
+      string,
       {
         policy: DevolutionPolicy;
         changedAtTurn?: number;

@@ -1,4 +1,4 @@
-import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { hostsSovereigntyReferendums } from "@/lib/referendum/rules/sovereigntyRegions";
 import { z } from "zod";
 import { requireHumanSessionWithCharacter } from "@/lib/api/requireAuth";
 import { handleRouteError, errorResponse, statusResponse } from "@/lib/api/errors";
@@ -10,7 +10,7 @@ import { requestReferendum } from "@/lib/referendum/requestReferendum";
 
 // POST /api/country/[code]/region/[id]/office/referendum
 // Auth: requireHumanSessionWithCharacter; must be the office-holder (FM) or an
-//   authorized party officer of an NPP-held office, for SCO/WAL/NIR. Admins may
+//   authorized party officer of an NPP-held office, for a sovereignty region. Admins may
 //   request via adminOverride.
 // Errors: 400, 401, 403
 export async function POST(
@@ -23,8 +23,8 @@ export async function POST(
     if (!COUNTRY_CONFIGS[countryId]) {
       return errorResponse(400, "Invalid country");
     }
-    if (!countryHasFeature("ukDevolutionAndConference", countryId)) {
-      return errorResponse(400, "Referendums are UK-only.");
+    if (!hostsSovereigntyReferendums(countryId)) {
+      return errorResponse(400, "This country holds no sovereignty referendums.");
     }
 
     const auth = await requireHumanSessionWithCharacter(request);

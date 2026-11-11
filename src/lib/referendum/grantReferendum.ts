@@ -20,14 +20,14 @@ import {
 } from "@/lib/constants/referendum";
 import { announceReferendumDecision } from "@/lib/referendum/referendumWebhooks";
 import { recordWireEvent } from "@/lib/referendum/wire";
-import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { hostsSovereigntyReferendums } from "@/lib/referendum/rules/sovereigntyRegions";
 
 export type GrantReferendumAction = "grant" | "decline";
 
 export interface GrantReferendumInput {
   countryId: CountryId;
   referendumId: string;
-  /** True when the acting character is the sitting UK PM. */
+  /** True when the acting character is the referendum country's sitting PM. */
   isPM: boolean;
   action: GrantReferendumAction;
   /** Turn hosts supply the phase turn; HTTP callers use persisted GameState. */
@@ -52,8 +52,8 @@ async function grantReferendumInTransaction(
   db: Db,
   input: GrantReferendumInput
 ): Promise<GrantReferendumResult> {
-  if (!countryHasFeature("ukLib", input.countryId)) {
-    return { status: 400, body: { error: "Referendums are UK-only." } };
+  if (!hostsSovereigntyReferendums(input.countryId)) {
+    return { status: 400, body: { error: "This country holds no sovereignty referendums." } };
   }
   if (!input.isPM && input.adminOverride !== true) {
     return { status: 403, body: { error: "Only the Prime Minister can decide on a referendum." } };
@@ -63,7 +63,9 @@ async function grantReferendumInTransaction(
     return { status: 400, body: { error: "Invalid referendum ID." } };
   const refs = getReferendumCollection(db);
   const ref = await refs.findOne({ _id: new ObjectId(input.referendumId) });
-  if (!ref) return { status: 404, body: { error: "Referendum not found." } };
+  // A Prime Minister decides only their own country's referendums.
+  if (!ref || ref.countryId !== input.countryId)
+    return { status: 404, body: { error: "Referendum not found." } };
   if (ref.status !== "requested") {
     return { status: 400, body: { error: "Referendum is not awaiting a decision." } };
   }

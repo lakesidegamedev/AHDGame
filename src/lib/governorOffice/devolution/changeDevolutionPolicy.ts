@@ -13,9 +13,8 @@ import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import {
   DEVOLUTION_POLICY_CHANGE_AP_COST,
   DEVOLUTION_POLICY_CHANGE_COOLDOWN_TURNS,
-  isUKDevolutionRegion,
 } from "@/lib/constants/devolution";
-import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { sovereigntyRegionIn } from "@/lib/referendum/rules/sovereigntyRegions";
 
 export interface ChangeDevolutionPolicyInput {
   countryId: CountryId;
@@ -42,10 +41,7 @@ export async function changeDevolutionPolicy(
   const { countryId, stateId, policy } = input;
   const adminOverride = input.adminOverride === true;
 
-  if (!countryHasFeature("ukLib", countryId)) {
-    return { status: 400, body: { error: "Devolution Policy is UK-only." } };
-  }
-  if (!isUKDevolutionRegion(stateId)) {
+  if (!sovereigntyRegionIn(countryId, stateId)) {
     return {
       status: 400,
       body: { error: "Region has no Devolution Policy axis." },

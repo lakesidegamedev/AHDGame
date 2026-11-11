@@ -1,14 +1,20 @@
 /**
  * Independence and Reunification Desire previews load both governments' stances,
- * approval and inflation. loadIndependenceDesireSnapshots supplies the turn engine
- * and both office dashboards with the same regional calculations.
+ * approval and inflation for every region in the sovereignty registry.
+ * loadIndependenceDesireSnapshots supplies the turn engine and both office
+ * dashboards with the same regional calculations.
  */
 import type { Db } from "mongodb";
-import type { GameState, State, StateMetrics } from "@/lib/db/types";
+import type { StateMetrics } from "@/lib/db/types";
 import { resolveGameYear } from "@/lib/era/era";
 import type { DevolutionPolicy, GovernorOfficeState } from "@/lib/db/types/governorOfficeState";
 import type { GovernmentApproval } from "@/lib/db/types/governmentApproval";
-import { UK_DEVOLUTION_REGIONS } from "@/lib/constants/devolution";
+import type { CountryId } from "@/lib/constants/countriesCore";
+import {
+  sovereigntyCountryIds,
+  sovereigntyRegion,
+  sovereigntyRegionIds,
+} from "@/lib/referendum/rules/sovereigntyRegions";
 import {
   BASE_APPROVAL,
   calculateStateApproval,
@@ -34,23 +40,23 @@ import { statesCollection } from "@/lib/db/repositories/states";
 export * from "@/lib/governorOffice/devolution/independenceDesireDrift";
 
 const DEFAULT_POLICY: DevolutionPolicy = "pro";
-/** Fallback when the UK national approval snapshot doesn't exist yet (turn 1). */
+/** Fallback when the national approval snapshot doesn't exist yet (turn 1). */
 const DEFAULT_NATIONAL_APPROVAL = 50;
 /** Fallback when independenceDesire hasn't been seeded for a region yet. */
 const DEFAULT_INDEPENDENCE_DESIRE = 50;
-/** Fallback when UK federalBudget hasn't been written yet. 2% sits in the
+/** Fallback when the national budget hasn't been written yet. 2% sits in the
  *  inflationDrift mid-band → 0 contribution. */
 const DEFAULT_INFLATION_PERCENT = 2;
 
 /**
- * Compute the next-turn drift snapshot for a single UK devolved region
- * (SCO/WAL/NIR) without writing to the DB. Same inputs the per-turn engine
- * would use — pulled fresh from the live collections. Returns null when the
- * state isn't a UK devolution region or its metric doc is missing.
+ * Compute the next-turn drift snapshot for a single sovereignty region without
+ * writing to the DB. Same inputs the per-turn engine would use, pulled fresh
+ * from the live collections. Returns null when the state is not in the
+ * sovereignty registry or its metric doc is missing.
  *
  * Used by the metric-detail API to surface the drift's net delta as a
  * tickRate on `governance.independenceDesire`, so the 48-turn forward
- * projection chart matches the Devolution tab's "Net drift next turn" line.
+ * projection chart matches the office tab's "Net drift next turn" line.
  */
 export async function computeIndependenceDesireDriftForRegion(
   db: Db,
@@ -61,96 +67,118 @@ export async function computeIndependenceDesireDriftForRegion(
   next: number;
   previous: number;
 } | null> {
-  const id = stateId.toUpperCase();
-  if (!UK_DEVOLUTION_REGIONS.has(id)) return null;
-  return (await loadIndependenceDesireSnapshots(db)).find((row) => row.stateId === id) ?? null;
+  const region = sovereigntyRegion(stateId);
+  if (!region) return null;
+  return (
+    (await loadIndependenceDesireSnapshots(db, region.countryId)).find(
+      (row) => row.stateId === region.regionId
+    ) ?? null
+  );
 }
 
-/** Read all three regional previews in one batch, shared by the engine and dashboards. */
+/**
+ * Read every sovereignty region's preview, shared by the engine and dashboards.
+ * A country with no seeded states costs nothing beyond the first states read,
+ * so a world without Canada pays the same round trips as before.
+ */
 export async function loadIndependenceDesireSnapshots(
-  db: Db
+  db: Db,
+  onlyCountryId?: CountryId
 ): Promise<IndependenceDesireDriftPerRegion[]> {
+  const countries = onlyCountryId ? [onlyCountryId] : sovereigntyCountryIds();
   // stateMetrics documents are not consistently tagged with countryId on UK
-  // seeds — resolve UK state IDs via the `states` collection (same pattern
-  // as snapshotApprovalHistory), then fetch metrics by _id.
-  const ukStateIds = await statesCollection(db).distinct("_id", { countryId: "UK" });
-  if (ukStateIds.length === 0) return [];
-
-  // SP5: UK regions live on macroMetrics; merge back to the legacy doc shape.
-  const ukMacroDocs = await db
-    .collection<MacroMetricsDoc>("macroMetrics")
-    .find({ _id: { $in: ukStateIds } })
+  // seeds, so resolve state ids through the `states` collection.
+  const stateRows = await statesCollection(db)
+    .find({ countryId: { $in: countries } }, { projection: { _id: 1, countryId: 1 } })
     .toArray();
-  const ukMetrics = ukMacroDocs
+  const seeded = countries.filter((countryId) =>
+    stateRows.some((row) => row.countryId === countryId)
+  );
+  if (seeded.length === 0) return [];
+
+  const gameStateDoc = await gameStateCollection(db).findOne({ _id: "current" });
+  const preset = gameStateDoc?.preset ?? DEFAULT_SEED_PRESET;
+  // Live year for era-aware scoring; null while the flag is off (legacy path).
+  const year = gameStateDoc ? resolveGameYear(gameStateDoc) : null;
+
+  const perRegion: IndependenceDesireDriftPerRegion[] = [];
+  for (const countryId of seeded) {
+    const stateIds = stateRows.filter((row) => row.countryId === countryId).map((row) => row._id);
+    perRegion.push(...(await loadCountrySnapshots(db, countryId, stateIds, preset, year)));
+  }
+  return perRegion;
+}
+
+async function loadCountrySnapshots(
+  db: Db,
+  countryId: CountryId,
+  stateIds: string[],
+  preset: string,
+  year: number | null
+): Promise<IndependenceDesireDriftPerRegion[]> {
+  const regionIds = sovereigntyRegionIds(countryId);
+  // SP5: regions live on macroMetrics; merge back to the legacy doc shape.
+  const macroDocs = await db
+    .collection<MacroMetricsDoc>("macroMetrics")
+    .find({ _id: { $in: stateIds } })
+    .toArray();
+  const metrics = macroDocs
     .map((doc) => mergeRegionMetrics(doc))
     .filter((m): m is StateMetrics => m !== null);
-  if (ukMetrics.length === 0) return [];
+  if (metrics.length === 0) return [];
 
-  const nationalAverages = computeNationalAveragesFromMetrics(ukMetrics);
+  const nationalAverages = computeNationalAveragesFromMetrics(metrics);
+  const nationalStateId = getNationalStateId(countryId);
 
-  // National (Westminster) approval from the last snapshot. One-turn lag is
-  // acceptable for a slowly changing constitutional preference.
-  const ukApprovalDoc = await db
-    .collection<GovernmentApproval>("governmentApprovals")
-    .findOne({ _id: "UK" });
-  const nationalApproval = ukApprovalDoc?.approvalRating ?? DEFAULT_NATIONAL_APPROVAL;
-
-  // National inflation (annualised percent) from the UK budget doc.
-  const ukBudget = await federalBudgetCollection(db).findOne({ _id: getNationalBudgetId("UK") });
-  const inflationPercent = ukBudget?.economicFactors?.inflationRate ?? DEFAULT_INFLATION_PERCENT;
-
-  // Read the regional and Westminster policies together, without another round trip.
-  const officeStates = await db
-    .collection<GovernorOfficeState>("governorOfficeState")
-    .find({
-      countryId: "UK",
-      stateId: { $in: [...UK_DEVOLUTION_REGIONS, getNationalStateId("UK")] },
-    })
-    .project<Pick<GovernorOfficeState, "stateId" | "devolutionPolicy" | "westminsterStances">>({
-      _id: 0,
-      stateId: 1,
-      devolutionPolicy: 1,
-      westminsterStances: 1,
-    })
-    .toArray();
+  // National approval from the last snapshot. One-turn lag is acceptable for a
+  // slowly changing constitutional preference.
+  const [approvalDoc, budget, officeStates, groupsByState, bases] = await Promise.all([
+    db.collection<GovernmentApproval>("governmentApprovals").findOne({ _id: countryId }),
+    federalBudgetCollection(db).findOne({ _id: getNationalBudgetId(countryId) }),
+    // Regional and national policies together, without another round trip.
+    db
+      .collection<GovernorOfficeState>("governorOfficeState")
+      .find({ countryId, stateId: { $in: [...regionIds, nationalStateId] } })
+      .project<Pick<GovernorOfficeState, "stateId" | "devolutionPolicy" | "westminsterStances">>({
+        _id: 0,
+        stateId: 1,
+        devolutionPolicy: 1,
+        westminsterStances: 1,
+      })
+      .toArray(),
+    // P6d: electorate-weighted regional approval (same value the snapshot stores).
+    loadElectorateGroups(db, { countryId }),
+    // SP4: hybrid political bases once for the whole country.
+    loadPoliticalApprovalBases(db, countryId),
+  ]);
+  const nationalApproval = approvalDoc?.approvalRating ?? DEFAULT_NATIONAL_APPROVAL;
+  const inflationPercent = budget?.economicFactors?.inflationRate ?? DEFAULT_INFLATION_PERCENT;
   const policyByState = new Map<string, DevolutionPolicy>(
     officeStates
       .filter((o) => o.devolutionPolicy != null)
       .map((o) => [o.stateId, o.devolutionPolicy as DevolutionPolicy])
   );
-
-  const nationalOffice = officeStates.find((o) => o.stateId === getNationalStateId("UK"));
-
-  // P6d: electorate-weighted regional approval (same value the snapshot stores).
-  const [groupsByState, gameStateDoc] = await Promise.all([
-    loadElectorateGroups(db, { countryId: "UK" }),
-    gameStateCollection(db).findOne({ _id: "current" }),
-  ]);
-  const preset = gameStateDoc?.preset ?? DEFAULT_SEED_PRESET;
-  // Live year for era-aware scoring; null while the flag is off (legacy path).
-  const year = gameStateDoc ? resolveGameYear(gameStateDoc) : null;
-  // SP4: hybrid political bases once for the whole drift pass.
-  const ukBases = await loadPoliticalApprovalBases(db, "UK");
+  const nationalOffice = officeStates.find((o) => o.stateId === nationalStateId);
 
   const perRegion: IndependenceDesireDriftPerRegion[] = [];
-  for (const stateId of UK_DEVOLUTION_REGIONS) {
-    const metric = ukMetrics.find((m) => m._id === stateId);
+  for (const stateId of regionIds) {
+    const metric = metrics.find((m) => m._id === stateId);
     if (!metric) continue;
 
     const previous = metric.governance?.independenceDesire?.value ?? DEFAULT_INDEPENDENCE_DESIRE;
     const policy = policyByState.get(stateId) ?? DEFAULT_POLICY;
     const westminsterPolicy = resolveWestminsterPolicy(
-      nationalOffice?.westminsterStances?.[stateId as "SCO" | "WAL" | "NIR"]?.policy
+      nationalOffice?.westminsterStances?.[stateId]?.policy
     );
     const regionalApproval = calculateStateApproval(
       metric,
       nationalAverages,
       [],
-      weightingFor(groupsByState, "UK", stateId),
+      weightingFor(groupsByState, countryId, stateId),
       preset,
       year,
-      ukBases?.byRegion.get(stateId) ?? BASE_APPROVAL,
-      ukBases?.modifiersByRegion?.get(stateId)
+      bases?.byRegion.get(stateId) ?? BASE_APPROVAL,
+      bases?.modifiersByRegion?.get(stateId)
     );
 
     const { drivers, delta, next } = computeIndependenceDesireDriftSnapshot({
