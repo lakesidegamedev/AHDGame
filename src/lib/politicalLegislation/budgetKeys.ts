@@ -10,7 +10,10 @@
 import type { PoliticalMetricCategoryId } from "../politicalMetrics/types";
 import type { CostAnchorCountryId } from "./types";
 
-const BUDGET_KEY_BY_CATEGORY: Record<CostAnchorCountryId, Record<PoliticalMetricCategoryId, string>> = {
+const BUDGET_KEY_BY_CATEGORY: Record<
+  CostAnchorCountryId,
+  Record<PoliticalMetricCategoryId, string>
+> = {
   US: {
     economy: "other",
     education: "education",
@@ -70,6 +73,17 @@ const BUDGET_KEY_BY_CATEGORY: Record<CostAnchorCountryId, Record<PoliticalMetric
     economy: "other",
     education: "education",
     health: "health",
+    infrastructure: "transport",
+    order: "other",
+    environment: "other",
+    society: "welfare",
+    governance: "other",
+    defense: "defense",
+  },
+  JP: {
+    economy: "other",
+    education: "education",
+    health: "healthcare",
     infrastructure: "transport",
     order: "other",
     environment: "other",
