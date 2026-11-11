@@ -21,6 +21,10 @@ import {
   computeEffectiveCommodityPressureRatio,
   type CommodityType,
 } from "@/lib/constants/commodities";
+import {
+  methodAdoptionSurchargeFraction,
+  methodBuildDelayTurns,
+} from "@/lib/corporations/rules/methodAdoption";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { fetchJson } from "@/lib/observability/fetchJson";
 
@@ -178,7 +182,11 @@ export default function StrategyChangeConfirm({
   const target = strategies.find((s) => s.id === targetStrategyId) as SectorStrategy | undefined;
   if (!current || !target) return null;
 
-  const retoolCost = dailyRevenue * STRATEGY_RETOOL_COST_FRACTION * retoolCostMultiplier;
+  // The downside charge is billed on top of the retool fee and no discount covers it.
+  const downsideCharge = dailyRevenue * methodAdoptionSurchargeFraction(target);
+  const retoolCost =
+    dailyRevenue * STRATEGY_RETOOL_COST_FRACTION * retoolCostMultiplier + downsideCharge;
+  const buildDelay = methodBuildDelayTurns(target);
   const sunsetDiscount = retoolCostMultiplier < 1;
   const hasMarketData = Object.keys(marketData).length > 0;
 
@@ -231,6 +239,12 @@ export default function StrategyChangeConfirm({
 
       {/* Description */}
       <p className="text-xs text-muted">{target.description}</p>
+      {downsideCharge > 0 && (
+        <p className="text-xs text-muted">
+          Downside charge {fmtMoney(downsideCharge)}, included above
+          {target.downside ? `: ${target.downside}` : "."}
+        </p>
+      )}
 
       {/* Commodity changes table */}
       <table className="w-full border-collapse">
@@ -380,6 +394,7 @@ export default function StrategyChangeConfirm({
       {/* Footer */}
       <div className="flex items-center justify-between pt-0.5">
         <span className="text-xs text-muted">
+          {buildDelay > 0 && `Runs your current method for ${buildDelay} turns while it is built. `}
           Phases in over {STRATEGY_TRANSITION_TURNS} turns, costs{" "}
           {Math.abs(STRATEGY_TRANSITION_MARGIN_PENALTY)} points of margin meanwhile, and locks
           further changes for {STRATEGY_COOLDOWN_TURNS} turns.
