@@ -1,4 +1,4 @@
-/** Direct access to the busiest collections, and untyped `.collection()` calls, may only shrink. */
+/** Every direct `.collection()` call outside the repositories, and untyped calls, may only shrink. */
 import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -491,6 +491,10 @@ export const FRONT_DOOR_COLLECTIONS = [
 ] as const;
 
 export const UNTYPED = "untyped";
+/** A direct call whose collection name is not a literal the scanner can read. */
+export const DYNAMIC = "dynamic";
+/** A direct call on a literal name that has no repository yet. */
+export const UNLISTED = "unlisted";
 
 /** Per file: direct calls per front-door collection, plus untyped `.collection()` calls. */
 export type FileCounts = Record<string, number>;
@@ -534,12 +538,11 @@ export function countAccess(source: string, file: string): FileCounts {
     ) {
       if (!node.typeArguments?.length) counts[UNTYPED] = (counts[UNTYPED] ?? 0) + 1;
       const argument = node.arguments[0]!;
-      if (
-        !getterModule &&
-        (ts.isStringLiteral(argument) || ts.isNoSubstitutionTemplateLiteral(argument)) &&
-        frontDoor.has(argument.text)
-      )
-        counts[argument.text] = (counts[argument.text] ?? 0) + 1;
+      const literal = ts.isStringLiteral(argument) || ts.isNoSubstitutionTemplateLiteral(argument);
+      if (!getterModule) {
+        const metric = !literal ? DYNAMIC : frontDoor.has(argument.text) ? argument.text : UNLISTED;
+        counts[metric] = (counts[metric] ?? 0) + 1;
+      }
     }
     ts.forEachChild(node, visit);
   };
@@ -612,7 +615,7 @@ export function totals(counts: AccessCounts): FileCounts {
 }
 
 const BASELINE_NOTE =
-  "Data access ratchet. Direct .collection() calls on front-door collections outside src/lib/db/collections, and untyped .collection() calls, may only go down. Use the getter in src/lib/db/collections; after converting call sites run `npm run data-access:lower`.";
+  "Data access ratchet. Direct .collection() calls outside src/lib/db/collections and src/lib/db/repositories (named, unlisted or dynamic), and untyped .collection() calls, may only go down. Use the repository handle for the collection; after converting call sites run `npm run data-access:lower`.";
 
 export function readBaseline(root = process.cwd()): DataAccessBaseline {
   return JSON.parse(readFileSync(join(root, BASELINE_PATH), "utf8")) as DataAccessBaseline;
