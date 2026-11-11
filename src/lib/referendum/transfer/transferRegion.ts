@@ -24,7 +24,7 @@ import { convertPublicCurrency } from "./convertPublicCurrency";
 import { loadFxScalePair } from "@/lib/country/mergeFxScale";
 import { carryNorthernIrelandMPs, mirrorNorthernIrelandMPs } from "./carryNorthernIrelandMPs";
 import type { ElectedOfficial } from "@/lib/db/types/officials";
-import type { State, Corporation } from "@/lib/db/types";
+import type { State } from "@/lib/db/types";
 import { computeNationalMetrics } from "@/lib/nationalMetrics";
 import { recordCountryEvent } from "@/lib/turn/history/recordCountryEvent";
 import {
@@ -154,8 +154,7 @@ async function transferRegionInTransaction(
     // The carried delegation can include NPPs living elsewhere in the UK.
     // Their corporations follow them after evacuation, so resolve worldwide
     // construction and freeze its native currency BEFORE either HQ changes.
-    const incomingCorps = await db
-      .collection<Corporation>("corporations")
+    const incomingCorps = await corporationsCollection(db)
       .find(
         {
           ceoType: "npp",
