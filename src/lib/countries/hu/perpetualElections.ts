@@ -35,8 +35,10 @@ export async function ensureHUElections(now: Date, inFlightTurn?: number): Promi
   );
   const country =
     game?.preset === "1991-default"
-      ? await countryGameStatesCollection(db)
-          .findOne({ _id: "HU" }, { projection: { huElectoralSystem2011SinceTurn: 1 } })
+      ? await countryGameStatesCollection(db).findOne(
+          { _id: "HU" },
+          { projection: { huElectoralSystem2011SinceTurn: 1 } }
+        )
       : null;
   const turn = inFlightTurn ?? game?.currentTurn ?? 1;
   const modern =

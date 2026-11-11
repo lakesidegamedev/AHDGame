@@ -166,8 +166,10 @@ export async function openFieldOffice(params: {
     { returnDocument: "after", projection: { funds: 1, actions: 1, fieldOfficeCount: 1 } }
   );
   if (!charged) {
-    const fresh = await campaignsCollection(db)
-      .findOne({ _id: campaignId }, { projection: { fieldOfficeCount: 1 } });
+    const fresh = await campaignsCollection(db).findOne(
+      { _id: campaignId },
+      { projection: { fieldOfficeCount: 1 } }
+    );
     if ((fresh?.fieldOfficeCount ?? 0) >= cap) {
       throw badRequest(`This race allows at most ${cap} field offices`);
     }
@@ -267,10 +269,9 @@ export async function closeFieldOffice(params: {
     .collection<CampaignFieldOffice>(FIELD_OFFICES_COLLECTION)
     .deleteOne({ _id: officeId, campaignId });
   if (res.deletedCount === 0) throw notFound("Field office not found");
-  await campaignsCollection(db)
-    .updateOne(
-      { _id: campaignId, fieldOfficeCount: { $gt: 0 } },
-      { $inc: { fieldOfficeCount: -1 } }
-    );
+  await campaignsCollection(db).updateOne(
+    { _id: campaignId, fieldOfficeCount: { $gt: 0 } },
+    { $inc: { fieldOfficeCount: -1 } }
+  );
   return { closed: true };
 }

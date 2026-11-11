@@ -123,8 +123,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const statePartyKey = getStatePartyOrgDocumentId(stateId, party);
     stageStartedAt = Date.now();
-    const stateParty = await statePartyOrgCollection(db)
-      .findOne({ _id: statePartyKey });
+    const stateParty = await statePartyOrgCollection(db).findOne({ _id: statePartyKey });
     timings.orgReadMs += Date.now() - stageStartedAt;
     if (!stateParty) {
       return finish(errorResponse(404, "Party has no presence in this state"));
@@ -147,11 +146,10 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const now = new Date();
     stageStartedAt = Date.now();
-    await statePartyOrgCollection(db)
-      .updateOne(
-        { _id: statePartyKey },
-        { $set: { psInvestmentBudget: parsed.data.budget, updatedAt: now } }
-      );
+    await statePartyOrgCollection(db).updateOne(
+      { _id: statePartyKey },
+      { $set: { psInvestmentBudget: parsed.data.budget, updatedAt: now } }
+    );
     timings.updateMs += Date.now() - stageStartedAt;
 
     return finish(

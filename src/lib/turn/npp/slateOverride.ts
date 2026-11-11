@@ -168,8 +168,10 @@ export async function reconcileSlateMoves(
     // never a race the chair never engaged with (preserves NPP autonomy there).
     if (!maps.chairManagedByPartyElection.has(partyElectionKey(npp.party, electionId))) continue;
 
-    await electionCandidatesCollection(db)
-      .updateOne({ _id: cand._id }, { $set: { status: "withdrawn", withdrawnAt: now } });
+    await electionCandidatesCollection(db).updateOne(
+      { _id: cand._id },
+      { $set: { status: "withdrawn", withdrawnAt: now } }
+    );
     await removeWithdrawnCandidateFromTally(db, cand.electionId, cand._id.toString());
     await campaignsCollection<Document>(db).updateOne(
       { electionId: cand.electionId, candidateId: cand.characterId, status: { $ne: "archived" } },

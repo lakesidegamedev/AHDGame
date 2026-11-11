@@ -201,8 +201,10 @@ export async function organizeSector(
 
   let incumbentApproval: number | null = null;
   if (currentRepresentingUnionId && currentRepresentingUnionId !== attackerId) {
-    const incumbentUnion = await unionsCollection(db)
-      .findOne({ _id: sector.representingUnionId! }, { projection: { approval: 1 } });
+    const incumbentUnion = await unionsCollection(db).findOne(
+      { _id: sector.representingUnionId! },
+      { projection: { approval: 1 } }
+    );
     incumbentApproval = incumbentUnion ? unionApproval(incumbentUnion) : null;
   }
 
@@ -230,11 +232,10 @@ export async function organizeSector(
     };
   }
 
-  const treasurySpend = await unionsCollection(db)
-    .updateOne(
-      { _id: union._id, treasury: { $gte: treasuryCost } },
-      { $inc: { treasury: -treasuryCost }, $set: { updatedAt: now } }
-    );
+  const treasurySpend = await unionsCollection(db).updateOne(
+    { _id: union._id, treasury: { $gte: treasuryCost } },
+    { $inc: { treasury: -treasuryCost }, $set: { updatedAt: now } }
+  );
   if (treasurySpend.modifiedCount === 0) {
     await charactersCollection(db).updateOne(
       { _id: character._id },
@@ -286,8 +287,7 @@ export async function organizeSector(
       { _id: character._id },
       { $inc: { actions: ORGANIZE_SECTOR_ACTION_COST } }
     );
-    await unionsCollection(db)
-      .updateOne({ _id: union._id }, { $inc: { treasury: treasuryCost } });
+    await unionsCollection(db).updateOne({ _id: union._id }, { $inc: { treasury: treasuryCost } });
     return { ok: false, status: 409, error: "Sector state changed, please retry." };
   }
 

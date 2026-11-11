@@ -31,8 +31,9 @@ export async function withdrawEndorsement(
   }
 
   if (endorsement && !endorsement.candidateIsNPP) {
-    const candidate = await electionCandidatesCollection(db)
-      .findOne({ _id: endorsement.candidateId });
+    const candidate = await electionCandidatesCollection(db).findOne({
+      _id: endorsement.candidateId,
+    });
     if (candidate?.characterId) {
       await applyEndorsementSupportBump(db, candidate.characterId, true);
     }

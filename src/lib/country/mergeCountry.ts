@@ -363,13 +363,14 @@ async function sweepNationalStrays(
   await db
     .collection("tariffs")
     .updateMany({ countryId: fromCountryId }, { $set: { countryId: toCountryId, updatedAt: now } });
-  await billsCollection<Document>(db)
-    .updateMany(
-      { countryId: fromCountryId, status: { $in: NON_TERMINAL_BILL_STATUSES } },
-      { $set: { status: "failed", failedAt: now, updatedAt: now } }
-    );
-  await billsCollection<Document>(db)
-    .updateMany({ countryId: fromCountryId }, { $set: { countryId: toCountryId, updatedAt: now } });
+  await billsCollection<Document>(db).updateMany(
+    { countryId: fromCountryId, status: { $in: NON_TERMINAL_BILL_STATUSES } },
+    { $set: { status: "failed", failedAt: now, updatedAt: now } }
+  );
+  await billsCollection<Document>(db).updateMany(
+    { countryId: fromCountryId },
+    { $set: { countryId: toCountryId, updatedAt: now } }
+  );
 
   // Intelligence is PURGED, not transferred.
   //

@@ -46,11 +46,10 @@ export async function processRoParliamentTransition(
   )
     return false;
 
-  const ready = await countryGameStatesCollection(db)
-    .findOne(
-      { _id: "RO" },
-      { projection: { roParliament1992SinceTurn: 1, roElectoralLaw1992SinceTurn: 1 } }
-    );
+  const ready = await countryGameStatesCollection(db).findOne(
+    { _id: "RO" },
+    { projection: { roParliament1992SinceTurn: 1, roElectoralLaw1992SinceTurn: 1 } }
+  );
   if (
     !ready ||
     ready.roParliament1992SinceTurn != null ||

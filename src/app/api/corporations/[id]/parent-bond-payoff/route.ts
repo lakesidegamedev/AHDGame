@@ -448,14 +448,12 @@ export async function POST(request: Request, { params }: RouteParams) {
           }
           if (imperialOps.length > 0) {
             try {
-              await imperialCharactersCollection(db)
-                .bulkWrite(imperialOps, sessionOpt);
+              await imperialCharactersCollection(db).bulkWrite(imperialOps, sessionOpt);
             } catch (err) {
               return compensateAndThrow(err);
             }
             undo.push(async () => {
-              await imperialCharactersCollection(db)
-                .bulkWrite(imperialReverseOps, sessionOpt);
+              await imperialCharactersCollection(db).bulkWrite(imperialReverseOps, sessionOpt);
             });
           }
           if (corpOps.length > 0) {

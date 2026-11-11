@@ -25,7 +25,10 @@ describe("cyberMandateTypeIdFor", () => {
     expect(ids.has(cyberMandateTypeIdFor("IE")!)).toBe(true);
     for (const countryId of ["DE", "JP", "CN"]) {
       const lawId = cyberMandateTypeIdFor(countryId)!;
-      expect(getCatalog(countryId as "DE").some((law) => law.id === lawId), countryId).toBe(true);
+      expect(
+        getCatalog(countryId as "DE").some((law) => law.id === lawId),
+        countryId
+      ).toBe(true);
     }
     expect(cyberMandateTypeIdFor("US")).toBeNull();
   });

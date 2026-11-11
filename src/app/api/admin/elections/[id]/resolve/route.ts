@@ -66,8 +66,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     // Ensure vote tally exists (init if missing so resolution can run)
-    const tally = await electionVoteTalliesCollection(db)
-      .findOne({ electionId: electionObjectId });
+    const tally = await electionVoteTalliesCollection(db).findOne({ electionId: electionObjectId });
     if (!tally) {
       const candidates = await electionCandidatesCollection(db)
         .find({ electionId: electionObjectId, status: "active" })

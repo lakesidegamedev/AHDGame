@@ -108,13 +108,14 @@ async function vacatePresidency(
   reason: string,
   currentTurn: number
 ): Promise<void> {
-  await electionVoteTalliesCollection(db)
-    .updateOne({ electionId: election._id }, { $set: { finalized: true, updatedAt: now } });
-  await electionCandidatesCollection<Document>(db)
-    .updateMany(
-      { electionId: election._id, status: "active" },
-      { $set: { status: "withdrawn", withdrawnAt: now } }
-    );
+  await electionVoteTalliesCollection(db).updateOne(
+    { electionId: election._id },
+    { $set: { finalized: true, updatedAt: now } }
+  );
+  await electionCandidatesCollection<Document>(db).updateMany(
+    { electionId: election._id, status: "active" },
+    { $set: { status: "withdrawn", withdrawnAt: now } }
+  );
   const vacateCountryId = election.countryId ?? "US";
   const departingPlayers = await charactersCollection(db)
     .find(
@@ -260,13 +261,14 @@ async function runPostFinalizeCleanup(
   electoralVotesByCandidate: Record<string, number>,
   now: Date
 ): Promise<void> {
-  await electionCandidatesCollection<Document>(db)
-    .updateMany(
-      { electionId: election._id, status: "active" },
-      { $set: { status: "withdrawn", withdrawnAt: now } }
-    );
-  await campaignsCollection(db)
-    .updateMany({ electionId: election._id }, { $set: { campaignStrength: 0, updatedAt: now } });
+  await electionCandidatesCollection<Document>(db).updateMany(
+    { electionId: election._id, status: "active" },
+    { $set: { status: "withdrawn", withdrawnAt: now } }
+  );
+  await campaignsCollection(db).updateMany(
+    { electionId: election._id },
+    { $set: { campaignStrength: 0, updatedAt: now } }
+  );
   await campaignsCollection<Document>(db).deleteMany({ electionId: election._id });
 
   // Half-up rounding via floor(x + 0.5) to match the previous Math.round behavior
@@ -532,11 +534,10 @@ export async function resolvePresidentElection(
         `[Turn] President election ${election._id}: acting presidency seating failed — will retry next turn`,
         err
       );
-      await electionVoteTalliesCollection(db)
-        .updateOne(
-          { electionId: election._id },
-          { $set: { executiveSeatingPending: true, updatedAt: now } }
-        );
+      await electionVoteTalliesCollection(db).updateOne(
+        { electionId: election._id },
+        { $set: { executiveSeatingPending: true, updatedAt: now } }
+      );
       return false;
     }
   }
@@ -593,19 +594,17 @@ export async function resolvePresidentElection(
       `[Turn] President election ${election._id}: executive seating failed — will retry next turn`,
       err
     );
-    await electionVoteTalliesCollection(db)
-      .updateOne(
-        { electionId: election._id },
-        { $set: { executiveSeatingPending: true, updatedAt: now } }
-      );
+    await electionVoteTalliesCollection(db).updateOne(
+      { electionId: election._id },
+      { $set: { executiveSeatingPending: true, updatedAt: now } }
+    );
     return false;
   }
 
-  await electionVoteTalliesCollection(db)
-    .updateOne(
-      { electionId: election._id },
-      { $set: { executiveSeatingPending: false, updatedAt: now } }
-    );
+  await electionVoteTalliesCollection(db).updateOne(
+    { electionId: election._id },
+    { $set: { executiveSeatingPending: false, updatedAt: now } }
+  );
 
   if (!winnerCandidate.isNPP && winnerCandidate.characterId) {
     const popularVotes =

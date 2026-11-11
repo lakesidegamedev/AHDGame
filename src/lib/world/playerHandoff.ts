@@ -290,8 +290,11 @@ export async function enterCountryForPlayers(
     updateFields.status = "active";
   }
 
-  await countryGameStatesCollection(db)
-    .updateOne({ _id: countryId }, { $set: updateFields }, { upsert: true });
+  await countryGameStatesCollection(db).updateOne(
+    { _id: countryId },
+    { $set: updateFields },
+    { upsert: true }
+  );
 
   return {
     countryId,

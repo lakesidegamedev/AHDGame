@@ -104,8 +104,7 @@ export default async function CampaignPage() {
             electionId: { $in: electionByCountry.get(p.countryId)! },
           }));
         if (orClauses.length > 0) {
-          const officerCampaign = await campaignsCollection(db)
-            .findOne({ $or: orClauses });
+          const officerCampaign = await campaignsCollection(db).findOne({ $or: orClauses });
           if (officerCampaign) {
             redirect(await campaignDestination(db, officerCampaign._id.toString()));
           }

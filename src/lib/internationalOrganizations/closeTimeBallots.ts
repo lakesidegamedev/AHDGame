@@ -26,11 +26,10 @@ async function headNppFor(
   db: Db,
   countryId: CountryId
 ): Promise<{ characterId: NPP["_id"]; characterName: string } | null> {
-  const formation = await governmentFormationsCollection(db)
-    .findOne(
-      { _id: countryId, status: "formed" },
-      { projection: { presidentNppId: 1, pmNppId: 1 } }
-    );
+  const formation = await governmentFormationsCollection(db).findOne(
+    { _id: countryId, status: "formed" },
+    { projection: { presidentNppId: 1, pmNppId: 1 } }
+  );
   const headNppId = formation?.presidentNppId ?? formation?.pmNppId ?? null;
   if (!headNppId) return null;
   const npp = await nppsCollection(db).findOne(

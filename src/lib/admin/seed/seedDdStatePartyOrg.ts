@@ -106,12 +106,11 @@ export async function seedDdStatePartyOrg(
   let upserted = 0;
   for (const org of orgs) {
     const { _id, ...orgData } = org;
-    const result = await statePartyOrgCollection(db)
-      .updateOne(
-        { _id },
-        { $set: { ...orgData, updatedAt: now }, $setOnInsert: { createdAt: now } },
-        { upsert: true }
-      );
+    const result = await statePartyOrgCollection(db).updateOne(
+      { _id },
+      { $set: { ...orgData, updatedAt: now }, $setOnInsert: { createdAt: now } },
+      { upsert: true }
+    );
     if (result.upsertedCount > 0) upserted++;
   }
 

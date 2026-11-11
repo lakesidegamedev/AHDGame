@@ -126,11 +126,10 @@ export async function resolveTaxSliderProvisionFields(
     if (!stateId) {
       return { ok: false, error: "A state is required for state tax legislation." };
     }
-    const stateBudget = await stateBudgetsCollection(db)
-      .findOne(
-        { _id: stateId, countryId: countryId.toUpperCase() as CountryId },
-        { projection: { taxRates: 1 } }
-      );
+    const stateBudget = await stateBudgetsCollection(db).findOne(
+      { _id: stateId, countryId: countryId.toUpperCase() as CountryId },
+      { projection: { taxRates: 1 } }
+    );
     currentRate =
       (incomeTierForTaxKey(slider.taxType) && stateBudget?.taxRates
         ? incomeTaxRate(stateBudget.taxRates, incomeTierForTaxKey(slider.taxType)!)

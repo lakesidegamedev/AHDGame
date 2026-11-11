@@ -21,9 +21,7 @@ export async function seedSuccessorStatePartyOrg1991(
 ): Promise<void> {
   if (preset !== "1991-default") return;
   const countries = Object.keys(SUCCESSOR_REGIONS_1991) as (keyof typeof SUCCESSOR_REGIONS_1991)[];
-  if (reset)
-    await statePartyOrgCollection(db)
-      .deleteMany({ countryId: { $in: countries } });
+  if (reset) await statePartyOrgCollection(db).deleteMany({ countryId: { $in: countries } });
   const parties = await politicalPartiesCollection(db)
     .find({ countryId: { $in: countries }, isDefault: true })
     .project({ countryId: 1, name: 1, sequentialId: 1 })

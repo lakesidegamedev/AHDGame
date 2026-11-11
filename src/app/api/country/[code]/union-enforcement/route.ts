@@ -342,8 +342,10 @@ export async function POST(request: Request, { params }: Context) {
       } catch (error) {
         // A standalone Mongo deployment cannot wrap these collections in a transaction.
         // If the write failed before applying, return the executive's spent points.
-        const persisted = await unionsCollection(db)
-          .findOne({ _id: union._id, countryId }, { projection: { lastUndergroundRaidId: 1 } });
+        const persisted = await unionsCollection(db).findOne(
+          { _id: union._id, countryId },
+          { projection: { lastUndergroundRaidId: 1 } }
+        );
         if (persisted?.lastUndergroundRaidId !== raidId) {
           await charactersCollection(db).updateOne(
             { _id: character._id },

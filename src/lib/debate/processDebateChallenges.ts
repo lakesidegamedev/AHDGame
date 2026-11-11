@@ -46,9 +46,7 @@ export async function processDebateChallenges(
   }
 
   // 3. Active candidacies grouped by election.
-  const candidacies = await electionCandidatesCollection(db)
-    .find({ status: "active" })
-    .toArray();
+  const candidacies = await electionCandidatesCollection(db).find({ status: "active" }).toArray();
   const byElection = new Map<string, ElectionCandidate[]>();
   for (const c of candidacies) {
     const key = c.electionId.toString();

@@ -62,8 +62,7 @@ export async function payContestPrize(
   const anchorAmount = placePrizeAnchor(round.kind, input.place, preset);
   const currencyCode = getHomeCurrency(character, preset);
   const rateDoc = forexEnabled
-    ? await exchangeRatesCollection(db)
-        .findOne({ _id: getCountryIdForCurrency(currencyCode) })
+    ? await exchangeRatesCollection(db).findOne({ _id: getCountryIdForCurrency(currencyCode) })
     : null;
   const localAmount = onboardingRewardLocalAmount(
     anchorAmount,

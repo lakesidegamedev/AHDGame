@@ -365,11 +365,13 @@ export async function mergeRegion(db: Db, args: MergeRegionArgs): Promise<MergeR
   // half of the city it started with while holding the population, the sectors
   // and the seats of both. Unsetting it hands the next revenue pass the merged
   // region, which is the figure it should have been reading all along.
-  await stateBudgetsCollection<Record<string, unknown>>(db)
-    .updateOne({ _id: toRegionId } as Record<string, unknown>, {
+  await stateBudgetsCollection<Record<string, unknown>>(db).updateOne(
+    { _id: toRegionId } as Record<string, unknown>,
+    {
       $unset: { taxBases: "" },
       $set: { updatedAt: now },
-    });
+    }
+  );
 
   // FORCE THE SURVIVOR'S DERIVED-AGAINST-THE-OLD-SHAPE FIELDS TO BE RE-DERIVED,
   // for exactly the reason the tax base above is.

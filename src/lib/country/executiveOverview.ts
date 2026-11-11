@@ -231,14 +231,13 @@ async function handleParliamentary(countryId: CountryId) {
     gameStateCollection<{ _id: string; preset?: string }>(db).findOne({ _id: "current" }),
     countryHasFeature("ruLib", countryId)
       ? countryGameStatesCollection<{
-            _id: string;
-            ruSovietSuccessionSinceTurn?: number;
-            ruProvisionalCongressSeats?: number;
-            ruPresidencySinceTurn?: number;
-            ruCongressDissolvedSinceTurn?: number;
-            ruFederalAssemblySinceTurn?: number;
-          }>(db)
-          .findOne({ _id: "RU" })
+          _id: string;
+          ruSovietSuccessionSinceTurn?: number;
+          ruProvisionalCongressSeats?: number;
+          ruPresidencySinceTurn?: number;
+          ruCongressDissolvedSinceTurn?: number;
+          ruFederalAssemblySinceTurn?: number;
+        }>(db).findOne({ _id: "RU" })
       : Promise.resolve(null),
   ]);
   const config = getCountryConfigForRuntime(countryId, world?.preset, countryState);

@@ -60,8 +60,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
     // Scope the president check to the bill's own country so the route works
     // for any presidential country (legacy US bills may lack countryId).
-    const bill = await billsCollection(db)
-      .findOne({ _id: billOid }, { projection: { countryId: 1 } });
+    const bill = await billsCollection(db).findOne(
+      { _id: billOid },
+      { projection: { countryId: 1 } }
+    );
     if (!bill) {
       return errorResponse(404, "Bill not found");
     }

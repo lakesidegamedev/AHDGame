@@ -224,11 +224,10 @@ export async function cascadeCharacterDeletion(
     .project<{ _id: ObjectId; electionId: ObjectId }>({ _id: 1, electionId: 1 })
     .toArray();
 
-  const candidacyRes = await electionCandidatesCollection(db)
-    .updateMany(
-      { characterId, status: "active" },
-      { $set: { status: "withdrawn", withdrawnAt: now } }
-    );
+  const candidacyRes = await electionCandidatesCollection(db).updateMany(
+    { characterId, status: "active" },
+    { $set: { status: "withdrawn", withdrawnAt: now } }
+  );
 
   // Archive the deleted character's campaigns so they stop appearing on
   // Campaign Operations alongside candidates still in the race.

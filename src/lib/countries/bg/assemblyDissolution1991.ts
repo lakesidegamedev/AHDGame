@@ -74,8 +74,7 @@ export async function loadBg1991AssemblyDissolutionDecision(db: Db, turn: number
     .collection<Bg1991ConstitutionalProposal>(BG_1991_PROPOSALS_COLLECTION)
     .findOne({ _id: BG_CONTINUED_ASSEMBLY_DISSOLUTION_ID });
   const bill = proposal
-    ? await billsCollection(db)
-        .findOne({ _id: proposal.billId }, { projection: { status: 1 } })
+    ? await billsCollection(db).findOne({ _id: proposal.billId }, { projection: { status: 1 } })
     : null;
   return {
     ...allowed,
@@ -236,8 +235,10 @@ export async function processBg1991AssemblyDissolution(
   );
   if (
     !pending ||
-    !(await billsCollection(db)
-      .findOne({ _id: pending.billId, status: "signed" }, { projection: { _id: 1 } }))
+    !(await billsCollection(db).findOne(
+      { _id: pending.billId, status: "signed" },
+      { projection: { _id: 1 } }
+    ))
   )
     return false;
   return runRequiredTransaction(
@@ -275,12 +276,11 @@ export async function processBg1991AssemblyDissolution(
       )
         throw new Bg1991ConstitutionalConflict("Dissolution lacks a frozen quorate majority vote");
       await rebindBg1991PrimaryCohort(db, game, turn, now, session);
-      const changed = await countryGameStatesCollection(db)
-        .updateOne(
-          { _id: "BG", bgGrandAssemblyDissolutionSinceTurn: { $exists: false } },
-          { $set: { bgGrandAssemblyDissolutionSinceTurn: turn } },
-          { session }
-        );
+      const changed = await countryGameStatesCollection(db).updateOne(
+        { _id: "BG", bgGrandAssemblyDissolutionSinceTurn: { $exists: false } },
+        { $set: { bgGrandAssemblyDissolutionSinceTurn: turn } },
+        { session }
+      );
       if (changed.modifiedCount !== 1)
         throw new Bg1991ConstitutionalConflict("Continued chamber authority changed concurrently");
       const marked = await journal.updateOne(

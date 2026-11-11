@@ -91,8 +91,10 @@ export async function materializeHu1991CampaignBinding(input: {
       throw new Error("Hungarian frozen campaign cohort is incomplete or changed");
     return false;
   }
-  const country = await countryGameStatesCollection(db)
-    .findOne({ _id: "HU" }, { session, projection: { huElectoralLaw1994SinceTurn: 1 } });
+  const country = await countryGameStatesCollection(db).findOne(
+    { _id: "HU" },
+    { session, projection: { huElectoralLaw1994SinceTurn: 1 } }
+  );
   const electoralLaw =
     country?.huElectoralLaw1994SinceTurn != null
       ? ("mixed-1994-v1" as const)

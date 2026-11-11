@@ -177,8 +177,10 @@ export async function materializeHu1991PlayerFiling(input: {
       Math.max(turn, game.currentTurn) >= job.termEndTurn
     )
       return reject("invalid-ballot");
-    const chamberLock = await governmentFormationsCollection<{ _id: string; hu1991MandateGeneration?: number }>(db)
-      .updateOne({ _id: "HU" }, { $inc: { hu1991MandateGeneration: 1 } }, { session });
+    const chamberLock = await governmentFormationsCollection<{
+      _id: string;
+      hu1991MandateGeneration?: number;
+    }>(db).updateOne({ _id: "HU" }, { $inc: { hu1991MandateGeneration: 1 } }, { session });
     if (chamberLock.matchedCount !== 1)
       throw new Error("Hungarian filing lost its chamber authority");
     districts = job.constituencies;
@@ -231,11 +233,10 @@ export async function materializeHu1991PlayerFiling(input: {
       (requestedDistrictId && requestedDistrictId !== saved.constituencyId)
     )
       return reject("party-changed");
-    const prior = await electionCandidatesCollection(db)
-      .findOne(
-        { _id: saved.candidateId, characterId: candidate.characterId, electionId },
-        { session }
-      );
+    const prior = await electionCandidatesCollection(db).findOne(
+      { _id: saved.candidateId, characterId: candidate.characterId, electionId },
+      { session }
+    );
     if (!prior) throw new Error("Hungarian filing reservation has lost its original candidate");
     if (prior.status === "active") return reject("already-filed");
     await electionCandidatesCollection(db).updateOne(

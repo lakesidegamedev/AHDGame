@@ -57,11 +57,7 @@ export async function GET() {
         .find(enabledCountries ? { countryId: { $in: enabledCountries } } : {})
         .project({ _id: 1, name: 1, color: 1, countryId: 1 })
         .toArray() as Promise<Pick<PoliticalParty, "_id" | "name" | "color" | "countryId">[]>,
-      crisesCollection(db)
-        .find({ status: "active" })
-        .sort({ createdAt: -1 })
-        .limit(5)
-        .toArray(),
+      crisesCollection(db).find({ status: "active" }).sort({ createdAt: -1 }).limit(5).toArray(),
       // Active election counts per country
       Promise.all(
         countriesToShow.map((cId) =>

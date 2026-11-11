@@ -105,8 +105,10 @@ export async function setUnionWageDemand(
   const { union } = resolved;
 
   const clamped = demandedWageLevel === null ? null : clampWageLevel(demandedWageLevel);
-  await unionsCollection(db)
-    .updateOne({ _id: union._id }, { $set: { demandedWageLevel: clamped, updatedAt: new Date() } });
+  await unionsCollection(db).updateOne(
+    { _id: union._id },
+    { $set: { demandedWageLevel: clamped, updatedAt: new Date() } }
+  );
 
   return { ok: true, status: 200, demandedWageLevel: clamped };
 }
@@ -172,11 +174,10 @@ export async function setUnionDues(
   const clamped = Math.min(Math.max(0, duesPerWorkerAnnual), maxDues);
   const members = unionMembers(sectors);
 
-  await unionsCollection(db)
-    .updateOne(
-      { _id: union._id },
-      { $set: { duesPerWorkerAnnual: clamped, updatedAt: new Date() } }
-    );
+  await unionsCollection(db).updateOne(
+    { _id: union._id },
+    { $set: { duesPerWorkerAnnual: clamped, updatedAt: new Date() } }
+  );
 
   return {
     ok: true,
@@ -212,8 +213,10 @@ export async function setUnionServices(
   const annualWage = averageAnnualWage(sectors);
   const members = unionMembers(sectors);
 
-  await unionsCollection(db)
-    .updateOne({ _id: union._id }, { $set: { activeServices: normalized, updatedAt: new Date() } });
+  await unionsCollection(db).updateOne(
+    { _id: union._id },
+    { $set: { activeServices: normalized, updatedAt: new Date() } }
+  );
 
   return {
     ok: true,
@@ -263,11 +266,10 @@ export async function setUnionPoliticalContributions(
   const servicesCost = servicesCostPerTurn(members, annualWage, activeServices);
   const freeCashFlow = freeCashFlowPerTurn(duesIncome, servicesCost);
 
-  await unionsCollection(db)
-    .updateOne(
-      { _id: union._id },
-      { $set: { politicalContributionPct: clamped, updatedAt: new Date() } }
-    );
+  await unionsCollection(db).updateOne(
+    { _id: union._id },
+    { $set: { politicalContributionPct: clamped, updatedAt: new Date() } }
+  );
 
   return {
     ok: true,

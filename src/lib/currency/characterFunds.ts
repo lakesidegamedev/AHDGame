@@ -348,8 +348,10 @@ export async function loadCharacterFxRate(
   db: Db,
   homeCurrency: CurrencyCode
 ): Promise<{ rate: number; ok: boolean }> {
-  const rateDoc = await exchangeRatesCollection(db)
-    .findOne({ currencyCode: homeCurrency }, { projection: { rate: 1 } });
+  const rateDoc = await exchangeRatesCollection(db).findOne(
+    { currencyCode: homeCurrency },
+    { projection: { rate: 1 } }
+  );
   if (!rateDoc || !Number.isFinite(rateDoc.rate) || rateDoc.rate <= 0) {
     return { rate: 1.0, ok: false };
   }

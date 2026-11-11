@@ -94,11 +94,10 @@ async function withdrawNppActiveCandidacies(
 
   if (toWithdraw.length === 0) return { withdrawnGeneralElections: 0 };
 
-  await electionCandidatesCollection<Document>(db)
-    .updateMany(
-      { _id: { $in: toWithdraw.map((candidate) => candidate._id) } },
-      { $set: { status: "withdrawn", withdrawnAt: now } }
-    );
+  await electionCandidatesCollection<Document>(db).updateMany(
+    { _id: { $in: toWithdraw.map((candidate) => candidate._id) } },
+    { $set: { status: "withdrawn", withdrawnAt: now } }
+  );
 
   for (const candidate of toWithdraw) {
     await removeWithdrawnCandidateFromTally(db, candidate.electionId, candidate._id.toString());
@@ -144,8 +143,7 @@ async function clearOldRegionStateLeadership(
   }
   if (positions.length === 0) return [];
 
-  await statePartyOrgCollection(db)
-    .updateOne({ _id: oldStateOrg._id }, { $set: updates });
+  await statePartyOrgCollection(db).updateOne({ _id: oldStateOrg._id }, { $set: updates });
   return positions;
 }
 

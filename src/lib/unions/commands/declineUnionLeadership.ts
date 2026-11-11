@@ -30,11 +30,10 @@ export async function declineUnionLeadership(
     return { ok: false, status: 403, error: UNIONS_BANNED_MESSAGE };
   }
 
-  await unionsCollection(db)
-    .updateOne(
-      { _id: union._id, pendingLeaderCharacterId: character._id },
-      { $unset: { pendingLeaderCharacterId: "" }, $set: { updatedAt: new Date() } }
-    );
+  await unionsCollection(db).updateOne(
+    { _id: union._id, pendingLeaderCharacterId: character._id },
+    { $unset: { pendingLeaderCharacterId: "" }, $set: { updatedAt: new Date() } }
+  );
 
   return { ok: true, status: 200 };
 }

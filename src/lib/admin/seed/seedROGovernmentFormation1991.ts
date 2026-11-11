@@ -36,11 +36,10 @@ export async function seedROGovernmentFormation1991(
     formedTurn: null,
     collapsedAt: null,
   };
-  await governmentFormationsCollection(db)
-    .updateOne(
-      { _id: "RO" },
-      { $set: { ...formation, updatedAt: now }, $setOnInsert: { createdAt: now } },
-      { upsert: true }
-    );
+  await governmentFormationsCollection(db).updateOne(
+    { _id: "RO" },
+    { $set: { ...formation, updatedAt: now }, $setOnInsert: { createdAt: now } },
+    { upsert: true }
+  );
   log("Seeded RO 1991 government formation document (pending)");
 }

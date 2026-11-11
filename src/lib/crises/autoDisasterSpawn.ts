@@ -158,8 +158,7 @@ export async function processAutoDisasterSpawn(
 
   const pressure = Math.max(0, Math.min(1, opts.climatePressure ?? 0));
 
-  const cgs = await countryGameStatesCollection(db)
-    .findOne({ _id: countryId });
+  const cgs = await countryGameStatesCollection(db).findOne({ _id: countryId });
 
   const baselineDue = shouldSpawn(
     cgs?.lastDisasterTurn as number | undefined,
@@ -195,12 +194,11 @@ export async function processAutoDisasterSpawn(
     }
     // An interrupted first attempt may have inserted the crisis but failed
     // before stamping cadence. Reconcile both writes from the stored event.
-    await countryGameStatesCollection(db)
-      .updateOne(
-        { _id: countryId },
-        { $max: { lastDisasterTurn: existing.startTurn } },
-        { upsert: true }
-      );
+    await countryGameStatesCollection(db).updateOne(
+      { _id: countryId },
+      { $max: { lastDisasterTurn: existing.startTurn } },
+      { upsert: true }
+    );
     return;
   }
 
@@ -341,6 +339,9 @@ export async function processAutoDisasterSpawn(
   await crisesCollection(db).insertOne(crisis);
   await chargeDisasterFiscalLoss(db, crisis);
   await stampCooldown(db, cooldowns, key, countryId, currentTurn);
-  await countryGameStatesCollection(db)
-    .updateOne({ _id: countryId }, { $set: { lastDisasterTurn: currentTurn } }, { upsert: true });
+  await countryGameStatesCollection(db).updateOne(
+    { _id: countryId },
+    { $set: { lastDisasterTurn: currentTurn } },
+    { upsert: true }
+  );
 }

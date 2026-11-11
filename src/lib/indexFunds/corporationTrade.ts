@@ -217,11 +217,10 @@ export async function tradeCorporationFund(
             if (!credited.matchedCount)
               throw badRequest("Fund quote changed; reload before trading");
             undo.push(() =>
-              indexFundsCollection<Document>(db)
-                .updateOne(
-                  { _id: fund._id },
-                  { $inc: { unitSupply: -order.units, cashAnchor: -amountAnchor } }
-                )
+              indexFundsCollection<Document>(db).updateOne(
+                { _id: fund._id },
+                { $inc: { unitSupply: -order.units, cashAnchor: -amountAnchor } }
+              )
             );
             response = {
               success: true,
@@ -231,8 +230,7 @@ export async function tradeCorporationFund(
               balanceAfter,
             };
           } else {
-            const currentFund = await indexFundsCollection(db)
-              .findOne({ _id: fund._id }, options);
+            const currentFund = await indexFundsCollection(db).findOne({ _id: fund._id }, options);
             if (!currentFund) throw badRequest("Fund no longer exists");
             if (!(await canRedeemSponsorUnits(db, currentFund, corporationId, options)))
               throw badRequest(
@@ -267,11 +265,10 @@ export async function tradeCorporationFund(
                 "Fund cash is unavailable or the quote changed. Units remain invested; retry after the fund cycle."
               );
             undo.push(() =>
-              indexFundsCollection<Document>(db)
-                .updateOne(
-                  { _id: fund._id },
-                  { $inc: { unitSupply: order.units, cashAnchor: amountAnchor } }
-                )
+              indexFundsCollection<Document>(db).updateOne(
+                { _id: fund._id },
+                { $inc: { unitSupply: order.units, cashAnchor: amountAnchor } }
+              )
             );
             const debit = await debitFundPosition(
               db,

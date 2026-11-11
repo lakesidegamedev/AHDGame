@@ -23,9 +23,7 @@ export const migration: Migration = {
   idempotent: true,
   async execute(db, { dryRun }) {
     const [formations, presidents, runtimes, game, parties] = await Promise.all([
-      governmentFormationsCollection(db)
-        .find({ status: "formed" })
-        .toArray(),
+      governmentFormationsCollection(db).find({ status: "formed" }).toArray(),
       electedOfficialsCollection(db)
         .find(
           { officeType: "president" },
@@ -111,8 +109,10 @@ export const migration: Migration = {
       if (Object.keys(repair).length) {
         repaired++;
         if (!dryRun)
-          await governmentFormationsCollection(db)
-            .updateOne({ _id: gov._id, status: "formed" }, { $set: repair });
+          await governmentFormationsCollection(db).updateOne(
+            { _id: gov._id, status: "formed" },
+            { $set: repair }
+          );
       }
       if (gov.pmNppId && runtime?.hasLeaderConfidenceModel) {
         const reference = { kind: "npp" as const, id: gov.pmNppId };

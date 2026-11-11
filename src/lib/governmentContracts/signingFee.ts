@@ -45,8 +45,10 @@ export async function settleTenderSigningFee(
     if (!contract.signingFeeAttemptKey)
       throw new Error("Tender signing fee is missing its frozen settlement identity.");
     const key = "extraction-signing-fee:" + contract.signingFeeAttemptKey;
-    const prior = await bankMoneyMovesCollection<{ _id: string }>(db)
-      .findOne({ _id: key }, { projection: { _id: 1 } });
+    const prior = await bankMoneyMovesCollection<{ _id: string }>(db).findOne(
+      { _id: key },
+      { projection: { _id: 1 } }
+    );
     let result;
     if (prior) result = await resumeSettlement(db, key);
     else {
@@ -58,11 +60,10 @@ export async function settleTenderSigningFee(
       const sourceLocal = anchorToCorpLiquidCapital(amount, corp, sourceRate);
       const stateBudget =
         contract.grantedByLevel === "state"
-          ? await stateBudgetsCollection(db)
-              .findOne(
-                { _id: contract.stateId, countryId: contract.countryId },
-                { projection: { _id: 1 } }
-              )
+          ? await stateBudgetsCollection(db).findOne(
+              { _id: contract.stateId, countryId: contract.countryId },
+              { projection: { _id: 1 } }
+            )
           : null;
       const national = contract.grantedByLevel === "national" || !stateBudget;
       const nationalBudget = await federalBudgetCollection(db).findOne(

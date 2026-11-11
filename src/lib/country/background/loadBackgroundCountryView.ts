@@ -132,11 +132,10 @@ export async function loadBackgroundCountryView(
           },
         }
       ),
-      exchangeRatesCollection<ExchangeRateDoc>(db)
-        .findOne(
-          { _id: countryId },
-          { projection: { currencyCode: 1, rate: 1, baseRate: 1, rateHistory: 1 } }
-        ),
+      exchangeRatesCollection<ExchangeRateDoc>(db).findOne(
+        { _id: countryId },
+        { projection: { currencyCode: 1, rate: 1, baseRate: 1, rateHistory: 1 } }
+      ),
       db
         .collection<TradeSnapshotDoc>("tradeFlowSnapshots")
         .findOne({}, { sort: { turn: -1 }, projection: tradeProjection(countryId, TRADE_PARTNER) }),
@@ -161,11 +160,10 @@ export async function loadBackgroundCountryView(
           }
         )
         .toArray(),
-      indexFundsCollection<IndexFundDoc>(db)
-        .findOne(
-          { "nationalIndex.entityId": countryId },
-          { projection: { slug: 1, name: 1, countryId: 1, nationalIndex: 1 } }
-        ),
+      indexFundsCollection<IndexFundDoc>(db).findOne(
+        { "nationalIndex.entityId": countryId },
+        { projection: { slug: 1, name: 1, countryId: 1, nationalIndex: 1 } }
+      ),
       db
         .collection<MembershipDoc>("organizationMemberships")
         .find({ countryId }, { projection: { organizationId: 1, countryId: 1 } })

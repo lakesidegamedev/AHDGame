@@ -108,13 +108,12 @@ export async function deliverPending(
         }
       : null;
   try {
-    await crisesCollection(db)
-      .updateOne(
-        { _id: target.crisisId },
-        remaining
-          ? { $set: { "v2.pendingDelivery": remaining } }
-          : { $unset: { "v2.pendingDelivery": "" } }
-      );
+    await crisesCollection(db).updateOne(
+      { _id: target.crisisId },
+      remaining
+        ? { $set: { "v2.pendingDelivery": remaining } }
+        : { $unset: { "v2.pendingDelivery": "" } }
+    );
   } catch (error) {
     logger.error(COMPONENT, "could not record delivery progress", error, {
       crisisId: target.crisisId.toString(),

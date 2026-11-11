@@ -102,8 +102,10 @@ export async function materializeLegacyFederationServiceTurn(input: {
   if (!application || application.appliedOnTurn > turn)
     throw new Error("Legacy service needs an applied federation settlement");
   const sourceCountryId = application.sourceEntityId as CountryId;
-  const country = await countryGameStatesCollection(db)
-    .findOne({ _id: sourceCountryId }, { session });
+  const country = await countryGameStatesCollection(db).findOne(
+    { _id: sourceCountryId },
+    { session }
+  );
   const intent = await db
     .collection<FederationSettlementIntentRecord>("federationSettlementIntents")
     .findOne({ _id: applicationId }, { session });

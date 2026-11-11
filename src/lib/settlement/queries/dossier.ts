@@ -281,8 +281,10 @@ function escalateGateFor(seatId: string): string {
  * will move it again, so this counts rather than quoting either number.
  */
 async function bundestagSubtitle(db: Db): Promise<string> {
-  const formation = await governmentFormationsCollection(db)
-    .findOne({ _id: "DE" }, { projection: { seatsByParty: 1 } });
+  const formation = await governmentFormationsCollection(db).findOne(
+    { _id: "DE" },
+    { projection: { seatsByParty: 1 } }
+  );
 
   const seatsByParty = formation?.seatsByParty ?? {};
   const entries = Object.entries(seatsByParty).sort((a, b) => b[1] - a[1]);

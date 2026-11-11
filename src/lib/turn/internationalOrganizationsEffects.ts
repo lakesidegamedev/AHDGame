@@ -57,8 +57,10 @@ async function getPolicyHeadSponsor(
   const playerHead = await getHeadOfGovernmentCharacter(db, countryId);
   if (playerHead) return { ...playerHead, isNpp: false };
 
-  const formation = await governmentFormationsCollection(db)
-    .findOne({ _id: countryId, status: "formed" });
+  const formation = await governmentFormationsCollection(db).findOne({
+    _id: countryId,
+    status: "formed",
+  });
   const headNppId = formation?.presidentNppId ?? formation?.pmNppId ?? null;
   if (!headNppId) return null;
   const npp = await (

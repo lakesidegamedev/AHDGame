@@ -60,8 +60,10 @@ export async function updatePartyPresence(db: Db, stateId: string, partyId: stri
   const hasPresence = await checkPartyPresence(db, stateId, partyId);
 
   // Update presence flag
-  await statePartyOrgCollection(db)
-    .updateOne({ _id: key }, { $set: { hasPresence, updatedAt: new Date() } });
+  await statePartyOrgCollection(db).updateOne(
+    { _id: key },
+    { $set: { hasPresence, updatedAt: new Date() } }
+  );
 
   // If presence lost, reset org building budget to 0
   if (!hasPresence) {

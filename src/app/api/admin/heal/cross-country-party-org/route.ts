@@ -151,8 +151,7 @@ export async function POST() {
     }
 
     // Delete the mismatched records
-    const result = await statePartyOrgCollection(db)
-      .deleteMany({ _id: { $in: idsToDelete } });
+    const result = await statePartyOrgCollection(db).deleteMany({ _id: { $in: idsToDelete } });
 
     return NextResponse.json({
       success: true,

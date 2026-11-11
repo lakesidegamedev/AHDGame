@@ -125,7 +125,6 @@ export async function registerRussianDumaNpcSlates(input: {
     };
   });
   if (documents.length)
-    await electionCandidatesCollection(db)
-      .insertMany(documents, { session, ordered: true });
+    await electionCandidatesCollection(db).insertMany(documents, { session, ordered: true });
   return { created: documents.length, unrepresentedParties: plan.unrepresentedParties };
 }

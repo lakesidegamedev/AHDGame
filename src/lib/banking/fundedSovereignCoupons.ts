@@ -1387,8 +1387,10 @@ export async function settleFundedSovereignCoupons(
       return prepared ? { completed: false, batchClose } : { completed: false };
     if (settlementLanded(result)) {
       // A replay keeps the membership the receipt was first written with.
-      const saved = await bankMoneyMovesCollection<CouponBatchRecord>(db)
-        .findOne({ _id: transition.key }, { projection: BATCH_PROJECTION });
+      const saved = await bankMoneyMovesCollection<CouponBatchRecord>(db).findOne(
+        { _id: transition.key },
+        { projection: BATCH_PROJECTION }
+      );
       if (saved && batchSettled(saved)) {
         if (prepared) batchClose.push(...couponBatchCloseOps(budgetId, [saved], grouped));
         else await markBatchMembersSettled(db, budgetId, [saved], grouped);

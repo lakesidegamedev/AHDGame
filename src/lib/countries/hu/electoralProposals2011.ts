@@ -40,8 +40,10 @@ async function availability(db: Db, game: Calendar, turn: number, session?: Clie
   const runtime = await db
     .collection<CountryState>("countryState")
     .findOne({ _id: "HU" }, { session, projection: { governmentType: 1 } });
-  const country = await countryGameStatesCollection(db)
-    .findOne({ _id: "HU" }, { session, projection: { huElectoralSystem2011SinceTurn: 1 } });
+  const country = await countryGameStatesCollection(db).findOne(
+    { _id: "HU" },
+    { session, projection: { huElectoralSystem2011SinceTurn: 1 } }
+  );
   return hu2011DecisionAvailability({
     preset: current?.preset,
     calendarTurn: calendarTurn(turn, {
@@ -80,11 +82,10 @@ export async function materializeHu2011ElectoralProposal(input: {
   if (prior) {
     if (!Number.isSafeInteger(prior.revision) || prior.revision < 1)
       throw new Hu2011ElectoralConflict("Invalid electoral proposal revision");
-    const bill = await billsCollection(db)
-      .findOne(
-        { _id: prior.billId },
-        { session, projection: { countryId: 1, status: 1, hungarianElectoralMandate: 1 } }
-      );
+    const bill = await billsCollection(db).findOne(
+      { _id: prior.billId },
+      { session, projection: { countryId: 1, status: 1, hungarianElectoralMandate: 1 } }
+    );
     if (
       !bill ||
       bill.countryId !== "HU" ||
@@ -194,12 +195,11 @@ async function authorizeHu2011ElectoralProposal(
     throw new Hu2011ElectoralConflict(
       "Enacted amendment lacks a quorate frozen parliamentary result"
     );
-  await countryGameStatesCollection(db)
-    .updateOne(
-      { _id: "HU", huElectoralSystem2011SinceTurn: { $exists: false } },
-      { $set: { huElectoralSystem2011SinceTurn: turn } },
-      { session, upsert: true }
-    );
+  await countryGameStatesCollection(db).updateOne(
+    { _id: "HU", huElectoralSystem2011SinceTurn: { $exists: false } },
+    { $set: { huElectoralSystem2011SinceTurn: turn } },
+    { session, upsert: true }
+  );
   const updated = await proposals.updateOne(
     { _id: ID, status: "open", revision: proposal.revision },
     { $set: { status: "authorized", authorizedOnTurn: turn } },
@@ -217,8 +217,7 @@ export async function loadHu2011ElectoralDecision(db: Db, game: Calendar, turn: 
     .collection<Hu2011ElectoralProposal>(HU_2011_PROPOSALS_COLLECTION)
     .findOne({ _id: ID });
   const bill = proposal
-    ? await billsCollection(db)
-        .findOne({ _id: proposal.billId }, { projection: { status: 1 } })
+    ? await billsCollection(db).findOne({ _id: proposal.billId }, { projection: { status: 1 } })
     : null;
   return {
     kind: "system2011" as const,
@@ -248,8 +247,10 @@ export async function processHu2011ElectoralMandate(
     .findOne({ _id: ID, status: "open" }, { projection: { billId: 1 } });
   if (
     !proposal ||
-    !(await billsCollection(db)
-      .findOne({ _id: proposal.billId, status: "signed" }, { projection: { _id: 1 } }))
+    !(await billsCollection(db).findOne(
+      { _id: proposal.billId, status: "signed" },
+      { projection: { _id: 1 } }
+    ))
   )
     return false;
   return runRequiredTransaction(

@@ -22,8 +22,11 @@ export async function checkGovernmentFormation(
   db: Db,
   options: { createdOnFirstTurn?: boolean } = {}
 ): Promise<ReadinessCheck> {
-  const gov = await governmentFormationsCollection<{ _id: string; status?: string; cycle?: number }>(db)
-    .findOne({ _id: countryId });
+  const gov = await governmentFormationsCollection<{
+    _id: string;
+    status?: string;
+    cycle?: number;
+  }>(db).findOne({ _id: countryId });
   if (gov) {
     return {
       name: "GovernmentFormation",

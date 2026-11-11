@@ -26,8 +26,7 @@ export async function POST(
     const db = await getDb();
 
     // Check state party exists
-    const stateParty = await statePartyOrgCollection(db)
-      .findOne({ _id: statePartyId });
+    const stateParty = await statePartyOrgCollection(db).findOne({ _id: statePartyId });
 
     if (!stateParty) {
       return errorResponse(404, "State party not found");

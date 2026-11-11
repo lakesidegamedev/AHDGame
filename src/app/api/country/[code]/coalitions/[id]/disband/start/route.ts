@@ -46,8 +46,7 @@ export async function POST(
     const db = await getDb();
     const gameTime = await getGameTime();
 
-    const coalition = await coalitionsCollection(db)
-      .findOne({ sequentialId, countryId });
+    const coalition = await coalitionsCollection(db).findOne({ sequentialId, countryId });
     if (!coalition) {
       throw notFound("Coalition not found.");
     }
@@ -78,8 +77,10 @@ export async function POST(
       votes: [],
     };
 
-    await coalitionsCollection(db)
-      .updateOne({ _id: coalition._id }, { $set: { disbandVote, updatedAt: now } });
+    await coalitionsCollection(db).updateOne(
+      { _id: coalition._id },
+      { $set: { disbandVote, updatedAt: now } }
+    );
 
     // Notify all member party chairs
     const memberPartyIds = coalition.members.map((m) => m.partyId);

@@ -475,8 +475,7 @@ export async function resolveDELandtagElection(
   const landId = election.state;
 
   // Vote tallies for this election (per-candidate vote totals)
-  const tally = await electionVoteTalliesCollection(db)
-    .findOne({ electionId: election._id });
+  const tally = await electionVoteTalliesCollection(db).findOne({ electionId: election._id });
   if (!tally) {
     await electedOfficialsCollection(db).deleteMany({ officeType: "landtag", state: landId });
     await sweepStaleLandtagOffice(db, landId, now, currentTurn);
@@ -668,11 +667,10 @@ export async function resolveDELandtagElection(
       })
   );
 
-  await electionCandidatesCollection<Document>(db)
-    .updateMany(
-      { electionId: election._id, status: "active" },
-      { $set: { status: "withdrawn", withdrawnAt: now } }
-    );
+  await electionCandidatesCollection<Document>(db).updateMany(
+    { electionId: election._id, status: "active" },
+    { $set: { status: "withdrawn", withdrawnAt: now } }
+  );
 
   return {
     winnersAllocated: officialsToInsert.length,

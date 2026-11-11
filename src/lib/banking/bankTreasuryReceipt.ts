@@ -782,10 +782,13 @@ export async function runReceipt(
     charter.charteredTurn === receipt.charteredTurn &&
     charter.depositorsResolvedTurn == null;
   if (!exactActive && (receipt.side === "buy" || !sameOpenEstate || !receipt.resolutionSale)) {
-    const reserveRecord = await bankMoneyMovesCollection<{ _id: string; status?: string }>(db)
-      .findOne({ _id: `bank-treasury:${receipt._id}:reserve` }, { projection: { status: 1 } });
-    const cashRecord = await bankMoneyMovesCollection<{ _id: string; status?: string }>(db)
-      .findOne({ _id: `bank-treasury:${receipt._id}:cash` }, { projection: { status: 1 } });
+    const reserveRecord = await bankMoneyMovesCollection<{ _id: string; status?: string }>(
+      db
+    ).findOne({ _id: `bank-treasury:${receipt._id}:reserve` }, { projection: { status: 1 } });
+    const cashRecord = await bankMoneyMovesCollection<{ _id: string; status?: string }>(db).findOne(
+      { _id: `bank-treasury:${receipt._id}:cash` },
+      { projection: { status: 1 } }
+    );
     if (reserveRecord && !cashRecord) {
       // A reservation may have landed before its journal acknowledgement.
       // Finish that original outcome before returning its unfunded inventory.

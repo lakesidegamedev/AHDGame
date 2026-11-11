@@ -37,8 +37,9 @@ export async function GET(
       return errorResponse(404, "Party not found");
     }
 
-    const stateParty = await statePartyOrgCollection(db)
-      .findOne({ _id: getStatePartyOrgDocumentId(id, party) });
+    const stateParty = await statePartyOrgCollection(db).findOne({
+      _id: getStatePartyOrgDocumentId(id, party),
+    });
     if (!stateParty) {
       return errorResponse(404, "State party not found");
     }

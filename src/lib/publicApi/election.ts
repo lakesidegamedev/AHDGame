@@ -397,9 +397,7 @@ export async function queryElectionDetail(db: Db, electionId: string) {
   const electionOid = election._id;
 
   const [allCandidateRows, tally, snapshots] = await Promise.all([
-    electionCandidatesCollection(db)
-      .find({ electionId: electionOid })
-      .toArray(),
+    electionCandidatesCollection(db).find({ electionId: electionOid }).toArray(),
     electionVoteTalliesCollection(db).findOne({ electionId: electionOid }),
     db
       .collection<PrimarySnapshot>("primarySnapshots")

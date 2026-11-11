@@ -106,8 +106,10 @@ export async function fetchImperialPossessive(
   const config = COUNTRY_CONFIGS[countryId];
   const resolvedCountryId = config?.imperialSharedWith ?? countryId;
 
-  const imperial = await imperialCharactersCollection<Document>(db)
-    .findOne({ countryId: resolvedCountryId }, { projection: { gender: 1 } });
+  const imperial = await imperialCharactersCollection<Document>(db).findOne(
+    { countryId: resolvedCountryId },
+    { projection: { gender: 1 } }
+  );
 
   if (!imperial?.gender) return fallback;
 

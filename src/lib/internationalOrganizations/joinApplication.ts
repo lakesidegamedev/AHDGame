@@ -200,8 +200,10 @@ export async function resolveJoinApplication(
   // Read the linked Join bill's live status (poll).
   let billStatus: string | undefined;
   if (proposal.domesticBillId) {
-    const bill = await billsCollection(db)
-      .findOne({ _id: proposal.domesticBillId }, { projection: { status: 1 } });
+    const bill = await billsCollection(db).findOne(
+      { _id: proposal.domesticBillId },
+      { projection: { status: 1 } }
+    );
     billStatus = bill?.status;
   }
 
@@ -230,11 +232,10 @@ export async function resolveJoinApplication(
     );
     // Cancel the linked bill only if it's still in progress (i.e. the org side failed).
     if (proposal.domesticBillId && !domesticFailed) {
-      await billsCollection(db)
-        .updateOne(
-          { _id: proposal.domesticBillId, status: { $nin: BILL_FAILED_STATUS_LIST } },
-          { $set: { status: "failed", updatedAt: new Date() } }
-        );
+      await billsCollection(db).updateOne(
+        { _id: proposal.domesticBillId, status: { $nin: BILL_FAILED_STATUS_LIST } },
+        { $set: { status: "failed", updatedAt: new Date() } }
+      );
     }
     await recordOrgHistoryEvent(
       db,

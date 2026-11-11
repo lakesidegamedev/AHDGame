@@ -152,28 +152,25 @@ export async function vacatePartyLeadershipForBannedUser(
     }
 
     if (touched) {
-      await statePartyOrgCollection(db)
-        .updateOne({ _id: org._id }, { $set: setOps });
+      await statePartyOrgCollection(db).updateOne({ _id: org._id }, { $set: setOps });
     }
   }
 
   // Coalitions where the banned character is the named chair.
-  const coalitionDirect = await coalitionsCollection<Document>(db)
-    .updateMany(
-      { chairCharacterId: { $in: characterIds } },
-      { $set: { chairCharacterId: null, updatedAt: now } }
-    );
+  const coalitionDirect = await coalitionsCollection<Document>(db).updateMany(
+    { chairCharacterId: { $in: characterIds } },
+    { $set: { chairCharacterId: null, updatedAt: now } }
+  );
   result.coalitionChairsCleared += coalitionDirect.modifiedCount;
 
   // Coalitions led by a party whose chair we just cleared — null the cached
   // chairCharacterId so the coalition doesn't keep pointing at a banned
   // account through the chairPartyId chain.
   if (partiesLosingChair.length > 0) {
-    const coalitionCascade = await coalitionsCollection<Document>(db)
-      .updateMany(
-        { chairPartyId: { $in: partiesLosingChair } },
-        { $set: { chairCharacterId: null, updatedAt: now } }
-      );
+    const coalitionCascade = await coalitionsCollection<Document>(db).updateMany(
+      { chairPartyId: { $in: partiesLosingChair } },
+      { $set: { chairCharacterId: null, updatedAt: now } }
+    );
     result.coalitionChairsCleared += coalitionCascade.modifiedCount;
   }
 

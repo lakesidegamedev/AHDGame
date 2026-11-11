@@ -64,9 +64,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
         .limit(1)
         .toArray()
     )[0];
-    const bill = proposal
-      ? await billsCollection(db).findOne({ _id: proposal.billId })
-      : null;
+    const bill = proposal ? await billsCollection(db).findOne({ _id: proposal.billId }) : null;
     const consents = proposal
       ? await db
           .collection("federationRatifications")

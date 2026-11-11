@@ -73,11 +73,10 @@ export async function publishDefenceSettlement(
       ...policy,
       updatedAt: now,
     };
-    const write = await exchangeRatesCollection(db)
-      .updateOne(
-        { _id: receipt.countryId, rate: fx.rate, updatedAt: fx.updatedAt },
-        { $set: fields }
-      );
+    const write = await exchangeRatesCollection(db).updateOne(
+      { _id: receipt.countryId, rate: fx.rate, updatedAt: fx.updatedAt },
+      { $set: fields }
+    );
     if (write.matchedCount !== 1)
       throw new Error("FX publication changed; paid settlement remains pending");
     next = { ...fx, ...fields };

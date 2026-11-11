@@ -435,10 +435,9 @@ export async function refundImperialCash(
 ): Promise<void> {
   if (!Number.isFinite(amount) || amount <= 0) return;
   const balanceField = forexEnabled ? `currencyBalances.personal.${currency}` : "cashOnHand";
-  await imperialCharactersCollection<Document>(db)
-    .updateOne(
-      { _id: imperialId },
-      { $inc: { [balanceField]: amount }, $set: { updatedAt: new Date() } },
-      mongoOptions(options)
-    );
+  await imperialCharactersCollection<Document>(db).updateOne(
+    { _id: imperialId },
+    { $inc: { [balanceField]: amount }, $set: { updatedAt: new Date() } },
+    mongoOptions(options)
+  );
 }

@@ -50,8 +50,10 @@ export async function reconcileUnionLeaderCache(
   character: Pick<Character, "_id" | "unionLeaderOf">
 ): Promise<ObjectId | null> {
   if (!character.unionLeaderOf) return null;
-  const union = await unionsCollection(db)
-    .findOne({ _id: character.unionLeaderOf }, { projection: { ownerId: 1 } });
+  const union = await unionsCollection(db).findOne(
+    { _id: character.unionLeaderOf },
+    { projection: { ownerId: 1 } }
+  );
   const matches = union?.ownerId && union.ownerId.toString() === character._id.toString();
   if (matches) return character.unionLeaderOf;
   await charactersCollection(db).updateOne(

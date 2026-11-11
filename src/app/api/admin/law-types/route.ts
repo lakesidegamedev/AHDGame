@@ -20,9 +20,7 @@ export async function GET() {
     const db = await getDb();
 
     // Get admin-created from DB
-    const adminTypes = await legislationTypesCollection(db)
-      .find({ source: "admin" })
-      .toArray();
+    const adminTypes = await legislationTypesCollection(db).find({ source: "admin" }).toArray();
 
     // Mark seed types with source
     const seedTypesWithSource = seedLegislationTypes.map((t) => ({

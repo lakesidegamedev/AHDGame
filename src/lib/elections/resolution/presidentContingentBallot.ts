@@ -54,6 +54,8 @@ export async function markContingentResolutionPending(
   electionId: ObjectId,
   now: Date
 ): Promise<void> {
-  await electionVoteTalliesCollection(db)
-    .updateOne({ electionId }, { $set: { contingentResolutionPending: true, updatedAt: now } });
+  await electionVoteTalliesCollection(db).updateOne(
+    { electionId },
+    { $set: { contingentResolutionPending: true, updatedAt: now } }
+  );
 }

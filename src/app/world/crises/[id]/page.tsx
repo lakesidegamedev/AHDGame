@@ -162,11 +162,10 @@ export async function generateMetadata({
   if (!ObjectId.isValid(id)) return {};
 
   const db = await getDb();
-  const crisis = await crisesCollection(db)
-    .findOne(
-      { _id: new ObjectId(id) },
-      { projection: { name: 1, description: 1, scope: 1, countryIds: 1 } }
-    );
+  const crisis = await crisesCollection(db).findOne(
+    { _id: new ObjectId(id) },
+    { projection: { name: 1, description: 1, scope: 1, countryIds: 1 } }
+  );
   if (!crisis) return {};
 
   const scopeLabel =

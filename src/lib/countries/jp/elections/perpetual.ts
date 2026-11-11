@@ -30,8 +30,10 @@ import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameSt
  */
 export async function ensureJPElections(now: Date, inFlightTurn?: number): Promise<void> {
   const db = await getDb();
-  const jpCountryState = await countryGameStatesCollection(db)
-    .findOne({ _id: "JP" }, { projection: { jpShugiinElectoralMandate: 1 } });
+  const jpCountryState = await countryGameStatesCollection(db).findOne(
+    { _id: "JP" },
+    { projection: { jpShugiinElectoralMandate: 1 } }
+  );
   await ensureChamberElections(JP_SHUGIIN_SPEC, now, inFlightTurn, {
     extra: jpCountryState?.jpShugiinElectoralMandate,
   });

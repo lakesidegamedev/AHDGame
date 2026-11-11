@@ -48,11 +48,10 @@ export async function generateMetadata({
   if (!ObjectId.isValid(id)) return {};
 
   const db = await getDb();
-  const campaign = await campaignsCollection(db)
-    .findOne(
-      { _id: new ObjectId(id) },
-      { projection: { electionId: 1, candidateId: 1, candidateIsNPP: 1 } }
-    );
+  const campaign = await campaignsCollection(db).findOne(
+    { _id: new ObjectId(id) },
+    { projection: { electionId: 1, candidateId: 1, candidateIsNPP: 1 } }
+  );
   if (!campaign) return {};
 
   const [election, candidate, npp] = await Promise.all([

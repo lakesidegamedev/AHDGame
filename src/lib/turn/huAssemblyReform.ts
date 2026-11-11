@@ -43,8 +43,10 @@ export async function runHuAssemblyReform(
     { projection: { preset: 1, huAssemblyReformedAtYear: 1 } }
   );
   if (game?.preset !== "1991-default" || game.huAssemblyReformedAtYear != null) return false;
-  const country = await countryGameStatesCollection(db)
-    .findOne({ _id: "HU" }, { projection: { huElectoralSystem2011SinceTurn: 1 } });
+  const country = await countryGameStatesCollection(db).findOne(
+    { _id: "HU" },
+    { projection: { huElectoralSystem2011SinceTurn: 1 } }
+  );
   if (country?.huElectoralSystem2011SinceTurn == null) return false;
   return runRequiredTransaction(
     async (session) => {
@@ -139,12 +141,11 @@ export async function runHuAssemblyReform(
         })),
         { session }
       );
-      await governmentFormationsCollection(db)
-        .updateOne(
-          { _id: "HU" },
-          { $set: { totalSeats: HU_REFORM_SEATS, majorityThreshold: 100, updatedAt: now } },
-          { session }
-        );
+      await governmentFormationsCollection(db).updateOne(
+        { _id: "HU" },
+        { $set: { totalSeats: HU_REFORM_SEATS, majorityThreshold: 100, updatedAt: now } },
+        { session }
+      );
       const changed = await gameStateCollection(db).updateOne(
         { _id: "current", huAssemblyReformedAtYear: { $exists: false } },
         { $set: { huAssemblyReformedAtYear: currentYear, updatedAt: now } },

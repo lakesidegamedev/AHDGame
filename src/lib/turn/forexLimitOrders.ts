@@ -127,11 +127,10 @@ export async function processTriggeredLimitOrders(
     // ── Atomic claim: open/partial → processing ───────────────────────────
     // This is the idempotency guard. If the process crashes after this point
     // the order stays in "processing", not "open", and will not be replayed.
-    const claimResult = await currencyOrdersCollection(db)
-      .updateOne(
-        { _id: order._id, status: { $in: ["open", "partial"] } },
-        { $set: { status: "processing" as const, updatedAt: now } }
-      );
+    const claimResult = await currencyOrdersCollection(db).updateOne(
+      { _id: order._id, status: { $in: ["open", "partial"] } },
+      { $set: { status: "processing" as const, updatedAt: now } }
+    );
     if (claimResult.modifiedCount === 0) {
       // Another process already claimed it (or it was cancelled/expired concurrently).
       continue;
@@ -239,8 +238,10 @@ export async function processTriggeredLimitOrders(
         source: "limit_order",
       } as TradeHistoryEntry);
 
-      await currencyOrdersCollection(db)
-        .updateOne({ _id: order._id }, { $set: { status: "expired" as const, updatedAt: now } });
+      await currencyOrdersCollection(db).updateOne(
+        { _id: order._id },
+        { $set: { status: "expired" as const, updatedAt: now } }
+      );
       continue;
     }
 

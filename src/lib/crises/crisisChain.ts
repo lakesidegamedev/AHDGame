@@ -54,8 +54,7 @@ export function chainTemplateKeyForLevel(family: string, level: number): string 
 
 /** True when a crisis of this family is already live (or already spawned this turn). */
 async function familyIsActive(db: Db, family: string): Promise<boolean> {
-  const live = await crisesCollection(db)
-    .findOne({ "chain.family": family, status: "active" });
+  const live = await crisesCollection(db).findOne({ "chain.family": family, status: "active" });
   return live !== null;
 }
 

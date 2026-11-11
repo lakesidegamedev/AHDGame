@@ -125,11 +125,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
       }
 
       if (duplicateIds.length > 0) {
-        await electionCandidatesCollection<Document>(db)
-          .updateMany(
-            { _id: { $in: duplicateIds.map((id) => new ObjectId(id)) } },
-            { $set: { status: "withdrawn", withdrawnAt: now } }
-          );
+        await electionCandidatesCollection<Document>(db).updateMany(
+          { _id: { $in: duplicateIds.map((id) => new ObjectId(id)) } },
+          { $set: { status: "withdrawn", withdrawnAt: now } }
+        );
         totalEliminated += duplicateIds.length;
         // Withdrawn candidates' campaigns must leave active surfaces (ticket #1313).
         await archiveCampaignsForCandidates({
@@ -284,11 +283,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
 
       if (loserIds.length > 0) {
         const { ObjectId } = await import("mongodb");
-        await electionCandidatesCollection<Document>(db)
-          .updateMany(
-            { _id: { $in: loserIds.map((id) => new ObjectId(id)) } },
-            { $set: { status: "withdrawn", withdrawnAt: now } }
-          );
+        await electionCandidatesCollection<Document>(db).updateMany(
+          { _id: { $in: loserIds.map((id) => new ObjectId(id)) } },
+          { $set: { status: "withdrawn", withdrawnAt: now } }
+        );
         totalEliminated += loserIds.length;
         // Primary-cut losers leave the race: their campaigns must leave active
         // surfaces too (ticket #1313). Re-entry reactivates the campaign.

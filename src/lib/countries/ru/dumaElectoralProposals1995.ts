@@ -85,8 +85,10 @@ export async function materializeRussianDuma1995Proposal(input: {
   validClock(turn, now);
   if (!session.inTransaction()) throw new Error("Duma law needs a required transaction");
   const game = await canonicalGame(db, session);
-  const country = await countryGameStatesCollection(db)
-    .findOne({ _id: "RU" }, { session, projection });
+  const country = await countryGameStatesCollection(db).findOne(
+    { _id: "RU" },
+    { session, projection }
+  );
   if (!game || input.game.preset !== game.preset)
     throw new RussianConstitutionalDecisionConflict("other-era");
   const allowed = availability(game, turn, country);
@@ -109,11 +111,10 @@ export async function materializeRussianDuma1995Proposal(input: {
   const proposals = db.collection<RussianDuma1995Proposal>(RUSSIAN_DUMA_LAW_PROPOSALS_COLLECTION);
   const prior = await proposals.findOne({ _id: ID }, { session });
   if (prior) {
-    const bill = await billsCollection(db)
-      .findOne(
-        { _id: prior.billId },
-        { session, projection: { countryId: 1, status: 1, russianDumaElectoralMandate: 1 } }
-      );
+    const bill = await billsCollection(db).findOne(
+      { _id: prior.billId },
+      { session, projection: { countryId: 1, status: 1, russianDumaElectoralMandate: 1 } }
+    );
     if (
       !Number.isSafeInteger(prior.revision) ||
       prior.revision < 1 ||
@@ -299,8 +300,10 @@ export async function processRussianDuma1995Mandate(
     .findOne({ _id: ID, status: "open" }, { projection: { billId: 1 } });
   if (
     !proposal ||
-    !(await billsCollection(db)
-      .findOne({ _id: proposal.billId, status: "signed" }, { projection: { _id: 1 } }))
+    !(await billsCollection(db).findOne(
+      { _id: proposal.billId, status: "signed" },
+      { projection: { _id: 1 } }
+    ))
   )
     return false;
   return runRequiredTransaction(
@@ -358,16 +361,14 @@ export async function loadRussianDuma1995Decisions(
   turn: number
 ) {
   if (game.preset !== "1991-default") return [];
-  const country = await countryGameStatesCollection(db)
-    .findOne({ _id: "RU" }, { projection });
+  const country = await countryGameStatesCollection(db).findOne({ _id: "RU" }, { projection });
   const allowed = availability(game, turn, country);
   if (allowed.reason === "before-date" || allowed.reason === "no-legislature") return [];
   const proposal = await db
     .collection<RussianDuma1995Proposal>(RUSSIAN_DUMA_LAW_PROPOSALS_COLLECTION)
     .findOne({ _id: ID }, { projection: { billId: 1, revision: 1, status: 1 } });
   const bill = proposal
-    ? await billsCollection(db)
-        .findOne({ _id: proposal.billId }, { projection: { status: 1 } })
+    ? await billsCollection(db).findOne({ _id: proposal.billId }, { projection: { status: 1 } })
     : null;
   return [
     {

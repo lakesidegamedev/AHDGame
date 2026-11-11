@@ -62,8 +62,10 @@ export async function PATCH(
 
     const db = await getDb();
 
-    const coalition = await coalitionsCollection(db)
-      .findOne({ sequentialId: parseInt(id, 10), countryId });
+    const coalition = await coalitionsCollection(db).findOne({
+      sequentialId: parseInt(id, 10),
+      countryId,
+    });
     if (!coalition) {
       throw notFound("Coalition not found.");
     }
@@ -96,11 +98,10 @@ export async function PATCH(
       updates.discordInviteUrl = normalizedDiscordInviteUrl;
     }
 
-    const result = await coalitionsCollection(db)
-      .updateOne(
-        { _id: coalition._id, countryId, chairCharacterId: character._id },
-        { $set: updates }
-      );
+    const result = await coalitionsCollection(db).updateOne(
+      { _id: coalition._id, countryId, chairCharacterId: character._id },
+      { $set: updates }
+    );
     if (result.matchedCount === 0)
       throw forbidden("Coalition chair changed. Refresh and try again.");
 

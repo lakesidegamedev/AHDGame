@@ -191,11 +191,10 @@ export async function resolveNGPresidentElection(
       `[Turn] NG president election ${election._id}: executive seating failed — will retry next turn`,
       err
     );
-    await electionVoteTalliesCollection(db)
-      .updateOne(
-        { electionId: election._id },
-        { $set: { executiveSeatingPending: true, updatedAt: now } }
-      );
+    await electionVoteTalliesCollection(db).updateOne(
+      { electionId: election._id },
+      { $set: { executiveSeatingPending: true, updatedAt: now } }
+    );
     return false;
   }
 
@@ -212,11 +211,10 @@ export async function resolveNGPresidentElection(
   );
 
   // Post-finalize cleanup: withdraw remaining candidates and clear campaigns.
-  await electionCandidatesCollection<Document>(db)
-    .updateMany(
-      { electionId: election._id, status: "active" },
-      { $set: { status: "withdrawn", withdrawnAt: now } }
-    );
+  await electionCandidatesCollection<Document>(db).updateMany(
+    { electionId: election._id, status: "active" },
+    { $set: { status: "withdrawn", withdrawnAt: now } }
+  );
   await campaignsCollection(db).deleteMany({ electionId: election._id });
 
   await captureElectionResultSnapshot(db, election, now);

@@ -209,8 +209,7 @@ export async function ratifyCharter(
     // Use ordered:false so existing partial provisioning (e.g. from a
     // crashed earlier ratify attempt) doesn't fail the whole insert.
     try {
-      await statePartyOrgCollection(db)
-        .insertMany(orgRecords, { ordered: false });
+      await statePartyOrgCollection(db).insertMany(orgRecords, { ordered: false });
     } catch {
       // Duplicate-key exceptions on retry are expected; partyOrg rows are
       // idempotent by `_id = `${stateId}_${partyId}`. Other errors bubble

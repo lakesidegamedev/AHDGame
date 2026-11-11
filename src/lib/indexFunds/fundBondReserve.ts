@@ -136,7 +136,11 @@ export async function loadBondFundCandidates(
   }
   if (universe.homeOnly) return rankSovereignIssuesForBreadth(eligible);
 
-  const currencyRows = await exchangeRatesCollection<{ currencyCode?: string; rate?: number; capitalControls?: boolean }>(db)
+  const currencyRows = await exchangeRatesCollection<{
+    currencyCode?: string;
+    rate?: number;
+    capitalControls?: boolean;
+  }>(db)
     .find({})
     .project({ currencyCode: 1, rate: 1, capitalControls: 1 })
     .toArray();
@@ -266,7 +270,11 @@ async function deployBondReserve(
           .toArray();
 
   if (globalDemandEnabled && !bondUniverse && !candidateSource) {
-    const currencyRows = await exchangeRatesCollection<{ currencyCode?: string; rate?: number; capitalControls?: boolean }>(db)
+    const currencyRows = await exchangeRatesCollection<{
+      currencyCode?: string;
+      rate?: number;
+      capitalControls?: boolean;
+    }>(db)
       .find({})
       .project({ currencyCode: 1, rate: 1, capitalControls: 1 })
       .toArray();

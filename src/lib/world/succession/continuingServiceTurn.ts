@@ -89,8 +89,10 @@ export async function materializeContinuingFederationServiceTurn(input: {
   if (!application || application.appliedOnTurn > turn)
     throw new Error("Continuing service needs an applied federation settlement");
   const sourceCountryId = application.sourceEntityId as CountryId;
-  const country = await countryGameStatesCollection(db)
-    .findOne({ _id: sourceCountryId }, { session, projection: { dissolvedTurn: 1 } });
+  const country = await countryGameStatesCollection(db).findOne(
+    { _id: sourceCountryId },
+    { session, projection: { dissolvedTurn: 1 } }
+  );
   const intent = await db
     .collection<FederationSettlementIntentRecord>("federationSettlementIntents")
     .findOne({ _id: applicationId }, { session });

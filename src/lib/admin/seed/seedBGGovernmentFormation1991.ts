@@ -34,11 +34,10 @@ export async function seedBGGovernmentFormation1991(
     formedTurn: null,
     collapsedAt: null,
   };
-  await governmentFormationsCollection(db)
-    .updateOne(
-      { _id: "BG" },
-      { $set: { ...formation, updatedAt: now }, $setOnInsert: { createdAt: now } },
-      { upsert: true }
-    );
+  await governmentFormationsCollection(db).updateOne(
+    { _id: "BG" },
+    { $set: { ...formation, updatedAt: now }, $setOnInsert: { createdAt: now } },
+    { upsert: true }
+  );
   log("Seeded BG 1991 government formation document (pending, 400 seats)");
 }

@@ -23,16 +23,15 @@ async function bgLegislaturePresentation(): Promise<{ name: string; seats: numbe
   const [preset, country, seats] = await Promise.all([
     getGameStatePreset(db),
     countryGameStatesCollection<{
-        _id: string;
-        bgOrdinaryAssemblySinceTurn?: number;
-        bgGrandAssemblyContinuationSinceTurn?: number;
-        bgConstitution1991SinceTurn?: number;
-        bgGrandAssemblyDissolutionSinceTurn?: number;
-      }>(db)
-      .findOne(
-        { _id: "BG" },
-        { projection: { bgOrdinaryAssemblySinceTurn: 1, bgGrandAssemblyContinuationSinceTurn: 1 } }
-      ),
+      _id: string;
+      bgOrdinaryAssemblySinceTurn?: number;
+      bgGrandAssemblyContinuationSinceTurn?: number;
+      bgConstitution1991SinceTurn?: number;
+      bgGrandAssemblyDissolutionSinceTurn?: number;
+    }>(db).findOne(
+      { _id: "BG" },
+      { projection: { bgOrdinaryAssemblySinceTurn: 1, bgGrandAssemblyContinuationSinceTurn: 1 } }
+    ),
     getLiveLowerChamberSeats(db, "BG"),
   ]);
   return {
@@ -50,14 +49,13 @@ async function ruLegislaturePresentation(): Promise<{
   const [preset, country] = await Promise.all([
     getGameStatePreset(db),
     countryGameStatesCollection<{
-        _id: string;
-        ruSovietSuccessionSinceTurn?: number;
-        ruProvisionalCongressSeats?: number;
-        ruPresidencySinceTurn?: number;
-        ruCongressDissolvedSinceTurn?: number;
-        ruFederalAssemblySinceTurn?: number;
-      }>(db)
-      .findOne({ _id: "RU" }),
+      _id: string;
+      ruSovietSuccessionSinceTurn?: number;
+      ruProvisionalCongressSeats?: number;
+      ruPresidencySinceTurn?: number;
+      ruCongressDissolvedSinceTurn?: number;
+      ruFederalAssemblySinceTurn?: number;
+    }>(db).findOne({ _id: "RU" }),
   ]);
   const config = getCountryConfigForRuntime("RU", preset, country);
   const generic = preset === "1991-default";

@@ -140,8 +140,9 @@ export async function validateInfluenceAttempt(
   }
 
   if (actionConfig.nppMustBeCandidate && context.electionId) {
-    const nppCandidate = await electionCandidatesCollection(db)
-      .findOne(activeNppElectionCandidacyFilter(new ObjectId(context.electionId), npp._id));
+    const nppCandidate = await electionCandidatesCollection(db).findOne(
+      activeNppElectionCandidacyFilter(new ObjectId(context.electionId), npp._id)
+    );
     if (!nppCandidate) {
       return { valid: false, error: "This NPP is not a candidate in the selected election." };
     }
@@ -374,8 +375,10 @@ async function applyInfluenceEffects(
       if (candidate) {
         const [election, candidateCountAtDecision] = await Promise.all([
           electionsCollection(db).findOne({ _id: candidate.electionId }),
-          electionCandidatesCollection(db)
-            .countDocuments({ electionId: candidate.electionId, status: "active" }),
+          electionCandidatesCollection(db).countDocuments({
+            electionId: candidate.electionId,
+            status: "active",
+          }),
         ]);
         if (
           election &&
@@ -408,8 +411,7 @@ async function applyInfluenceEffects(
 
       const electionObjId = new ObjectId(input.context.electionId);
       const filter = activeNppElectionCandidacyFilter(electionObjId, npp._id);
-      const withdrawCandidate = await electionCandidatesCollection(db)
-        .findOne(filter);
+      const withdrawCandidate = await electionCandidatesCollection(db).findOne(filter);
       if (!withdrawCandidate) break;
 
       const updateResult = await electionCandidatesCollection(db).updateOne(

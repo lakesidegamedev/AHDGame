@@ -58,11 +58,10 @@ export async function withdrawInactiveCandidates(
   }
   if (toWithdraw.length === 0) return { withdrawn: 0 };
 
-  const result = await electionCandidatesCollection(db)
-    .updateMany(
-      { _id: { $in: toWithdraw.map((c) => c._id) } },
-      { $set: { status: "withdrawn", withdrawnAt: now } }
-    );
+  const result = await electionCandidatesCollection(db).updateMany(
+    { _id: { $in: toWithdraw.map((c) => c._id) } },
+    { $set: { status: "withdrawn", withdrawnAt: now } }
+  );
 
   // Archive withdrawn campaigns so they stop appearing in Campaign Operations.
   // Skip rows missing electionId rather than throw: a throw would abort the

@@ -45,11 +45,10 @@ export async function loadMyRace(
 ): Promise<MyRaceWidgetData | null> {
   const character = await loadViewerCharacter(db, viewer);
   if (!character) return null;
-  const candidacy = await electionCandidatesCollection(db)
-    .findOne(
-      { characterId: character._id, status: "active" },
-      { sort: { enteredAt: -1 }, projection: { electionId: 1 } }
-    );
+  const candidacy = await electionCandidatesCollection(db).findOne(
+    { characterId: character._id, status: "active" },
+    { sort: { enteredAt: -1 }, projection: { electionId: 1 } }
+  );
   if (!candidacy) return null;
 
   const [election, tally, campaign, gameState] = await Promise.all([
@@ -67,16 +66,14 @@ export async function loadMyRace(
         },
       }
     ),
-    electionVoteTalliesCollection(db)
-      .findOne(
-        { electionId: candidacy.electionId },
-        { projection: { totalVotes: 1, seatsEstimate: 1 } }
-      ),
-    campaignsCollection(db)
-      .findOne(
-        { candidateId: character._id, electionId: candidacy.electionId },
-        { projection: { _id: 1 } }
-      ),
+    electionVoteTalliesCollection(db).findOne(
+      { electionId: candidacy.electionId },
+      { projection: { totalVotes: 1, seatsEstimate: 1 } }
+    ),
+    campaignsCollection(db).findOne(
+      { candidateId: character._id, electionId: candidacy.electionId },
+      { projection: { _id: 1 } }
+    ),
     loadWidgetGameState(db, viewer),
   ]);
   if (!election || (election.status !== "upcoming" && election.status !== "active")) return null;
@@ -100,8 +97,10 @@ export async function loadMyRace(
     const leaderDoc =
       isMe || !ObjectId.isValid(leaderKey)
         ? null
-        : await electionCandidatesCollection(db)
-            .findOne({ _id: new ObjectId(leaderKey) }, { projection: { characterName: 1 } });
+        : await electionCandidatesCollection(db).findOne(
+            { _id: new ObjectId(leaderKey) },
+            { projection: { characterName: 1 } }
+          );
     leader = {
       name: isMe ? "" : (leaderDoc?.characterName ?? ""),
       pct: (leaderVotes / cast) * 100,

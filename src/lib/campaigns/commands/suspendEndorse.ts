@@ -182,16 +182,20 @@ export async function suspendCampaignAndEndorse(params: {
   if (ownCampaignDoc && (ownCampaignDoc.campaignStrength ?? 0) > 0) {
     const cs = ownCampaignDoc.campaignStrength ?? 0;
     const transfer = Math.floor(cs * transferFraction);
-    await campaignsCollection(db)
-      .updateOne({ _id: ownCampaignDoc._id }, { $inc: { campaignStrength: -transfer } });
+    await campaignsCollection(db).updateOne(
+      { _id: ownCampaignDoc._id },
+      { $inc: { campaignStrength: -transfer } }
+    );
     // Find the endorsed candidate's campaign by candidateId
     const endorsedCampaign = await campaignsCollection(db).findOne({
       electionId: campaign.electionId,
       candidateId: new ObjectId(endorsedLookupKey),
     });
     if (endorsedCampaign) {
-      await campaignsCollection(db)
-        .updateOne({ _id: endorsedCampaign._id }, { $inc: { campaignStrength: transfer } });
+      await campaignsCollection(db).updateOne(
+        { _id: endorsedCampaign._id },
+        { $inc: { campaignStrength: transfer } }
+      );
     }
   }
 

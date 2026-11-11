@@ -94,26 +94,25 @@ export async function materializeBgGrandPartialPlayerFiling(
   )
     return reject("filing-closed");
   const country = await countryGameStatesCollection<{
-      _id: string;
-      bgOrdinaryAssemblySinceTurn?: number;
-      dissolvedTurn?: number;
-      bgGrandAssemblyDissolutionSinceTurn?: number;
-      bgConstitution1991SinceTurn?: number;
-      bgGrandAssemblyContinuationSinceTurn?: number;
-    }>(db)
-    .findOne(
-      { _id: "BG" },
-      {
-        session,
-        projection: {
-          bgOrdinaryAssemblySinceTurn: 1,
-          dissolvedTurn: 1,
-          bgGrandAssemblyDissolutionSinceTurn: 1,
-          bgConstitution1991SinceTurn: 1,
-          bgGrandAssemblyContinuationSinceTurn: 1,
-        },
-      }
-    );
+    _id: string;
+    bgOrdinaryAssemblySinceTurn?: number;
+    dissolvedTurn?: number;
+    bgGrandAssemblyDissolutionSinceTurn?: number;
+    bgConstitution1991SinceTurn?: number;
+    bgGrandAssemblyContinuationSinceTurn?: number;
+  }>(db).findOne(
+    { _id: "BG" },
+    {
+      session,
+      projection: {
+        bgOrdinaryAssemblySinceTurn: 1,
+        dissolvedTurn: 1,
+        bgGrandAssemblyDissolutionSinceTurn: 1,
+        bgConstitution1991SinceTurn: 1,
+        bgGrandAssemblyContinuationSinceTurn: 1,
+      },
+    }
+  );
   if (!bgGrandAssemblyAllowsPartialElection(country)) return reject("invalid-ballot");
   const character = await charactersCollection(db).findOne(
     { _id: candidate.characterId },
@@ -198,12 +197,16 @@ export async function materializeBgGrandPartialPlayerFiling(
   if (ownerLock && ownerLock.party !== candidate.party) return reject("party-changed");
   if (partyLock && partyLock.ownerId !== character._id.toHexString())
     return reject("party-slot-full");
-  const countryLock = await countryGameStatesCollection<{ _id: string; bgGrandByElectionGeneration?: number }>(db)
-    .updateOne({ _id: "BG" }, { $inc: { bgGrandByElectionGeneration: 1 } }, { session });
+  const countryLock = await countryGameStatesCollection<{
+    _id: string;
+    bgGrandByElectionGeneration?: number;
+  }>(db).updateOne({ _id: "BG" }, { $inc: { bgGrandByElectionGeneration: 1 } }, { session });
   if (countryLock.matchedCount !== 1)
     throw new Error("Bulgarian partial filing lost its country authority");
-  const chamber = await governmentFormationsCollection<{ _id: string; bg1991MandateGeneration?: number }>(db)
-    .updateOne({ _id: "BG" }, { $inc: { bg1991MandateGeneration: 1 } }, { session });
+  const chamber = await governmentFormationsCollection<{
+    _id: string;
+    bg1991MandateGeneration?: number;
+  }>(db).updateOne({ _id: "BG" }, { $inc: { bg1991MandateGeneration: 1 } }, { session });
   const receipt = await db
     .collection<BgGrandByElectionRecord & { filingGeneration?: number }>(
       BG_GRAND_BY_ELECTIONS_COLLECTION
@@ -216,8 +219,7 @@ export async function materializeBgGrandPartialPlayerFiling(
   if (chamber.matchedCount !== 1 || receipt.matchedCount !== 1)
     throw new Error("Bulgarian partial filing authority changed");
   const lockedCandidate = ownerLock
-    ? await electionCandidatesCollection(db)
-        .findOne({ _id: ownerLock.candidateId }, { session })
+    ? await electionCandidatesCollection(db).findOne({ _id: ownerLock.candidateId }, { session })
     : null;
   if (ownerLock && !lockedCandidate)
     throw new Error("Bulgarian partial filing has lost its original person");
@@ -225,12 +227,11 @@ export async function materializeBgGrandPartialPlayerFiling(
   const id = prior?._id ?? candidateId;
   if (prior && prior.party !== candidate.party) return reject("party-changed");
   if (prior)
-    await electionCandidatesCollection(db)
-      .updateOne(
-        { _id: id },
-        { $set: { status: "active" }, $unset: { withdrawnAt: "" } },
-        { session }
-      );
+    await electionCandidatesCollection(db).updateOne(
+      { _id: id },
+      { $set: { status: "active" }, $unset: { withdrawnAt: "" } },
+      { session }
+    );
   else
     await electionCandidatesCollection(db).insertOne(
       {
@@ -261,12 +262,11 @@ export async function materializeBgGrandPartialPlayerFiling(
   if (candidate.party !== "independent") {
     await locks.replaceOne({ _id: partyKey }, reservation, { session, upsert: true });
     // The filing window precedes the actual ballot. The party has one nominee.
-    await electionCandidatesCollection(db)
-      .updateMany(
-        { electionId, party: candidate.party, isNPP: true, status: "active" },
-        { $set: { status: "withdrawn", withdrawnAt: now } },
-        { session }
-      );
+    await electionCandidatesCollection(db).updateMany(
+      { electionId, party: candidate.party, isNPP: true, status: "active" },
+      { $set: { status: "withdrawn", withdrawnAt: now } },
+      { session }
+    );
   }
   return { allowed: true, insertedId: id };
 }

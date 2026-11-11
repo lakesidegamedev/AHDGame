@@ -27,10 +27,9 @@ export async function rescopeLegislationCatalogue(
   if (fromCountryId === toCountryId) return { typesRescoped: 0 };
   // `countryScope` is lower-case throughout the collection ("dd", "de", "us"),
   // unlike CountryId.
-  const res = await legislationTypesCollection<Document>(db)
-    .updateMany(
-      { countryScope: fromCountryId.toLowerCase() },
-      { $set: { countryScope: toCountryId.toLowerCase(), updatedAt: new Date() } }
-    );
+  const res = await legislationTypesCollection<Document>(db).updateMany(
+    { countryScope: fromCountryId.toLowerCase() },
+    { $set: { countryScope: toCountryId.toLowerCase(), updatedAt: new Date() } }
+  );
   return { typesRescoped: res?.modifiedCount ?? 0 };
 }

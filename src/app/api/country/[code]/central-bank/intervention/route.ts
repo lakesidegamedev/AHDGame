@@ -199,11 +199,10 @@ export async function POST(request: Request, context: RouteContext) {
       lastAdjustedAtTurn: currentTurn,
       recentInterventions: [],
     };
-    await exchangeRatesCollection(guard.db)
-      .updateOne(
-        { _id: guard.fxCountryId },
-        { $set: { interventionPolicy: policy, updatedAt: new Date() } }
-      );
+    await exchangeRatesCollection(guard.db).updateOne(
+      { _id: guard.fxCountryId },
+      { $set: { interventionPolicy: policy, updatedAt: new Date() } }
+    );
 
     return NextResponse.json({ success: true, interventionPolicy: policy });
   } catch (error) {
@@ -268,11 +267,10 @@ export async function PATCH(request: Request, context: RouteContext) {
       lastAdjustedAtTurn: isWiden ? existing.lastAdjustedAtTurn : currentTurn,
     };
     if (parsed.data.maxSpendPerTurn === undefined) delete next.maxSpendPerTurn;
-    await exchangeRatesCollection(guard.db)
-      .updateOne(
-        { _id: guard.fxCountryId },
-        { $set: { interventionPolicy: next, updatedAt: new Date() } }
-      );
+    await exchangeRatesCollection(guard.db).updateOne(
+      { _id: guard.fxCountryId },
+      { $set: { interventionPolicy: next, updatedAt: new Date() } }
+    );
 
     return NextResponse.json({
       success: true,
@@ -306,11 +304,10 @@ export async function DELETE(_request: Request, context: RouteContext) {
       }
     }
 
-    await exchangeRatesCollection(guard.db)
-      .updateOne(
-        { _id: guard.fxCountryId },
-        { $set: { interventionPolicy: null, updatedAt: new Date() } }
-      );
+    await exchangeRatesCollection(guard.db).updateOne(
+      { _id: guard.fxCountryId },
+      { $set: { interventionPolicy: null, updatedAt: new Date() } }
+    );
 
     return NextResponse.json({ success: true });
   } catch (error) {

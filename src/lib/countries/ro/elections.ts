@@ -17,11 +17,10 @@ export async function ensureROElections(now: Date, inFlightTurn?: number): Promi
   const db = await getDb();
   const { ctx } = await getCurrentTurnAndCtx(db);
   if (ctx.preset === "1991-default") {
-    const country = await countryGameStatesCollection(db)
-      .findOne(
-        { _id: "RO" },
-        { projection: { roElectoralLaw1992SinceTurn: 1, roParliament1992SinceTurn: 1 } }
-      );
+    const country = await countryGameStatesCollection(db).findOne(
+      { _id: "RO" },
+      { projection: { roElectoralLaw1992SinceTurn: 1, roParliament1992SinceTurn: 1 } }
+    );
     const authorized =
       country?.roElectoralLaw1992SinceTurn != null || country?.roParliament1992SinceTurn != null;
     for (const [electionType, field, label, chamber] of [

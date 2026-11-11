@@ -236,8 +236,10 @@ export async function relocateHeadquarters(request: Request, { params }: RoutePa
 
     const isImperialCeo = corporation.ceoType === "imperial";
     const ceoChar = isImperialCeo
-      ? await imperialCharactersCollection(db)
-          .findOne({ _id: corporation.ceoId }, { projection: { userId: 1, homeState: 1 } })
+      ? await imperialCharactersCollection(db).findOne(
+          { _id: corporation.ceoId },
+          { projection: { userId: 1, homeState: 1 } }
+        )
       : await charactersCollection(db).findOne(
           { _id: corporation.ceoId },
           { projection: { userId: 1, homeState: 1 } }

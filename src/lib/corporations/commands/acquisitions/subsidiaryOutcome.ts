@@ -170,8 +170,11 @@ export async function transferTargetEquityToAcquirer(
   // Index funds keep no position in a corporation nobody else can own. Paid
   // holdings were pulled with their payout leg; this only sweeps dust holdings
   // whose payout rounded to nothing, so no fund is left holding phantom shares.
-  await indexFundsCollection<Document>(db).updateMany({ "holdings.corporationId": input.targetId }, {
-    $pull: { holdings: { corporationId: input.targetId } },
-  } as never);
+  await indexFundsCollection<Document>(db).updateMany(
+    { "holdings.corporationId": input.targetId },
+    {
+      $pull: { holdings: { corporationId: input.targetId } },
+    } as never
+  );
   return true;
 }

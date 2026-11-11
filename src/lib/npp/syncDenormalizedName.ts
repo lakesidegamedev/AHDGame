@@ -14,7 +14,10 @@ export async function syncDenormalizedNppName(
   newName: string
 ): Promise<{ candidaciesUpdated: number; officialsUpdated: number }> {
   const [candidacies, officials] = await Promise.all([
-    electionCandidatesCollection<Document>(db).updateMany({ nppId }, { $set: { characterName: newName } }),
+    electionCandidatesCollection<Document>(db).updateMany(
+      { nppId },
+      { $set: { characterName: newName } }
+    ),
     electedOfficialsCollection<Document>(db).updateMany(
       { nppId },
       { $set: { characterName: newName } }

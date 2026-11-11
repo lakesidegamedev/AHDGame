@@ -193,11 +193,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     // double-counted a pool action.)
     const poolAvailable = recovering
       ? null
-      : await campaignsCollection(db)
-          .findOne(
-            { _id: campaign._id, runningMateSurrogateActionsRemaining: { $gte: 1 } },
-            { projection: { _id: 1 } }
-          );
+      : await campaignsCollection(db).findOne(
+          { _id: campaign._id, runningMateSurrogateActionsRemaining: { $gte: 1 } },
+          { projection: { _id: 1 } }
+        );
     if (!recovering && !poolAvailable) {
       return errorResponse(409, "No running-mate surrogate actions remaining today.");
     }

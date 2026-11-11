@@ -129,8 +129,10 @@ export async function POST(
       // resources gate this — letting national chairs back-fill states that are
       // led by an inactive or recently-installed local chair, or where players
       // are already present, was the original missing capability.
-      const statePartyOrg = await statePartyOrgCollection(db)
-        .findOne({ stateId, partyId: partyIdStr });
+      const statePartyOrg = await statePartyOrgCollection(db).findOne({
+        stateId,
+        partyId: partyIdStr,
+      });
 
       // Calculate slots and cost
       const stateOrg = statePartyOrg?.organization ?? 0;

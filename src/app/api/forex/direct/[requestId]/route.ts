@@ -60,8 +60,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const db = await getDb();
     const character = auth.user.character;
 
-    const order = await currencyOrdersCollection(db)
-      .findOne({ _id: new ObjectId(requestId) });
+    const order = await currencyOrdersCollection(db).findOne({ _id: new ObjectId(requestId) });
 
     if (!order) throw notFound("Trade request not found");
     if (order.type !== "direct") throw badRequest("Not a direct trade request");
@@ -82,12 +81,11 @@ export async function POST(request: Request, { params }: RouteParams) {
 
       await runWithOptionalTransaction(
         async (session) => {
-          const claimedOrder = await currencyOrdersCollection(db)
-            .findOneAndUpdate(
-              { _id: order._id, status: "open" },
-              { $set: { status: "processing", updatedAt: now } },
-              { returnDocument: "before", session }
-            );
+          const claimedOrder = await currencyOrdersCollection(db).findOneAndUpdate(
+            { _id: order._id, status: "open" },
+            { $set: { status: "processing", updatedAt: now } },
+            { returnDocument: "before", session }
+          );
           if (!claimedOrder) throw badRequest("Trade request is no longer open");
 
           await charactersCollection(db).updateOne(
@@ -95,23 +93,21 @@ export async function POST(request: Request, { params }: RouteParams) {
             { $inc: refundInc },
             { session }
           );
-          const cancelResult = await currencyOrdersCollection(db)
-            .updateOne(
-              { _id: order._id, status: "processing" },
-              { $set: { status: "cancelled", updatedAt: now } },
-              { session }
-            );
+          const cancelResult = await currencyOrdersCollection(db).updateOne(
+            { _id: order._id, status: "processing" },
+            { $set: { status: "cancelled", updatedAt: now } },
+            { session }
+          );
           if (cancelResult.matchedCount === 0) {
             throw badRequest("Trade request is no longer open");
           }
         },
         async () => {
-          const claimedOrder = await currencyOrdersCollection(db)
-            .findOneAndUpdate(
-              { _id: order._id, status: "open" },
-              { $set: { status: "processing", updatedAt: now } },
-              { returnDocument: "before" }
-            );
+          const claimedOrder = await currencyOrdersCollection(db).findOneAndUpdate(
+            { _id: order._id, status: "open" },
+            { $set: { status: "processing", updatedAt: now } },
+            { returnDocument: "before" }
+          );
           if (!claimedOrder) throw badRequest("Trade request is no longer open");
 
           // The refund carries a settled-key stamp on the character doc so a
@@ -136,11 +132,10 @@ export async function POST(request: Request, { params }: RouteParams) {
               throw new Error("Escrow refund did not apply");
             }
 
-            const cancelResult = await currencyOrdersCollection(db)
-              .updateOne(
-                { _id: order._id, status: "processing" },
-                { $set: { status: "cancelled", updatedAt: now } }
-              );
+            const cancelResult = await currencyOrdersCollection(db).updateOne(
+              { _id: order._id, status: "processing" },
+              { $set: { status: "cancelled", updatedAt: now } }
+            );
             if (cancelResult.matchedCount === 0) {
               throw badRequest("Trade request is no longer open");
             }
@@ -330,11 +325,10 @@ export async function POST(request: Request, { params }: RouteParams) {
       );
       if (filledResult.matchedCount > 0) return;
 
-      const processingResult = await currencyOrdersCollection(db)
-        .updateOne(
-          { _id: order._id, status: "processing" },
-          { $set: { status: "open", updatedAt: new Date() } }
-        );
+      const processingResult = await currencyOrdersCollection(db).updateOne(
+        { _id: order._id, status: "processing" },
+        { $set: { status: "open", updatedAt: new Date() } }
+      );
       if (processingResult.matchedCount === 0) {
         throw new Error("Direct forex request status could not be restored after a failed trade");
       }
@@ -342,12 +336,11 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     await runWithOptionalTransaction(
       async (session) => {
-        const claimedOrder = await currencyOrdersCollection(db)
-          .findOneAndUpdate(
-            { _id: order._id, status: "open" },
-            { $set: { status: "processing", updatedAt: now } },
-            { returnDocument: "before", session }
-          );
+        const claimedOrder = await currencyOrdersCollection(db).findOneAndUpdate(
+          { _id: order._id, status: "open" },
+          { $set: { status: "processing", updatedAt: now } },
+          { returnDocument: "before", session }
+        );
         if (!claimedOrder) throw badRequest("Trade request is no longer open");
 
         const targetUpdate = await charactersCollection(db).updateOne(
@@ -393,12 +386,11 @@ export async function POST(request: Request, { params }: RouteParams) {
         });
       },
       async () => {
-        const claimedOrder = await currencyOrdersCollection(db)
-          .findOneAndUpdate(
-            { _id: order._id, status: "open" },
-            { $set: { status: "processing", updatedAt: now } },
-            { returnDocument: "before" }
-          );
+        const claimedOrder = await currencyOrdersCollection(db).findOneAndUpdate(
+          { _id: order._id, status: "open" },
+          { $set: { status: "processing", updatedAt: now } },
+          { returnDocument: "before" }
+        );
         if (!claimedOrder) throw badRequest("Trade request is no longer open");
 
         let targetDebited = false;
@@ -414,11 +406,10 @@ export async function POST(request: Request, { params }: RouteParams) {
             { $inc: targetDebitAndCreditInc }
           );
           if (targetUpdate.modifiedCount === 0) {
-            await currencyOrdersCollection(db)
-              .updateOne(
-                { _id: order._id, status: "processing" },
-                { $set: { status: "open", updatedAt: new Date() } }
-              );
+            await currencyOrdersCollection(db).updateOne(
+              { _id: order._id, status: "processing" },
+              { $set: { status: "open", updatedAt: new Date() } }
+            );
             throw badRequest(
               `Insufficient ${order.toCurrency}. Need ~${Math.ceil(targetCost).toLocaleString()}, have ${Math.floor(targetBalance).toLocaleString()}.`
             );

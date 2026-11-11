@@ -355,8 +355,10 @@ export async function settleFundedSovereignBondMaturity(
     throw new Error("Frozen sovereign maturity quote disappeared");
   quote = currentQuote;
   if (quote.paid) {
-    const completedPayout = await bankMoneyMovesCollection<{ _id: string }>(db)
-      .findOne({ _id: `${claimId}:payout` }, { projection: { _id: 1 } });
+    const completedPayout = await bankMoneyMovesCollection<{ _id: string }>(db).findOne(
+      { _id: `${claimId}:payout` },
+      { projection: { _id: 1 } }
+    );
     if (!completedPayout) return null;
     return {
       ...(await resumeSettlement(db, completedPayout._id)),

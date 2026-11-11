@@ -35,8 +35,7 @@ export async function getLastElectionPartyShares(
   });
   if (!prev) return null;
 
-  const tally = await electionVoteTalliesCollection(db)
-    .findOne({ electionId: prev._id });
+  const tally = await electionVoteTalliesCollection(db).findOne({ electionId: prev._id });
   if (!tally?.totalVotes || Object.keys(tally.totalVotes).length === 0) return null;
 
   const prevCandidates = await electionCandidatesCollection(db)

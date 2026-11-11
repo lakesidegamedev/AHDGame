@@ -21,8 +21,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     }
 
     const db = await getDb();
-    const imperial = await imperialCharactersCollection(db)
-      .findOne({ sequentialId });
+    const imperial = await imperialCharactersCollection(db).findOne({ sequentialId });
 
     if (!imperial) {
       return errorResponse(404, "Imperial character not found");

@@ -146,8 +146,10 @@ export async function cancelBankFundSubscription(
       return errorResponse(409, "Your investment has settled. You can withdraw on the fund page.");
     if (order.subscription.status === "refunded")
       return statusResponse(200, { success: true, refunded: true });
-    const fund = await indexFundsCollection(tx)
-      .findOne({ _id: order.subscription.fundId }, { projection: { floatSettlementPlan: 0 } });
+    const fund = await indexFundsCollection(tx).findOne(
+      { _id: order.subscription.fundId },
+      { projection: { floatSettlementPlan: 0 } }
+    );
     if (!fund) throw new Error("Subscription fund is unavailable");
     await refundSubscription(tx, fund, order, await getCurrentTurn(tx));
     return statusResponse(200, { success: true, refunded: true });
@@ -168,8 +170,10 @@ export async function refundQueuedSubscriptionsForFund(
   turn: number
 ): Promise<number> {
   return withSessionDb(db, async (tx) => {
-    const fund = await indexFundsCollection(tx)
-      .findOne({ _id: fundId }, { projection: { floatSettlementPlan: 0 } });
+    const fund = await indexFundsCollection(tx).findOne(
+      { _id: fundId },
+      { projection: { floatSettlementPlan: 0 } }
+    );
     if (!fund) return 0;
     const orders = await tx
       .collection<BankSubscription>("indexFundCommands")
@@ -201,8 +205,10 @@ export async function settleBankFundSubscriptions(
     let moreDue = true;
     while (moreDue) {
       moreDue = await withSessionDb(db, async (tx) => {
-        const fund = await indexFundsCollection(tx)
-          .findOne({ _id: new ObjectId(id) }, { projection: { floatSettlementPlan: 0 } });
+        const fund = await indexFundsCollection(tx).findOne(
+          { _id: new ObjectId(id) },
+          { projection: { floatSettlementPlan: 0 } }
+        );
         if (!fund) throw new Error("Subscription fund is unavailable");
         const accepting = await bankFundAcceptsSubscriptions(tx, fund);
         if (accepting && !markedFundIds.some((f) => String(f) === id)) return false;

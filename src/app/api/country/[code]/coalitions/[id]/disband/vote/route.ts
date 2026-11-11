@@ -54,8 +54,7 @@ export async function POST(
     const db = await getDb();
     const gameTime = await getGameTime();
 
-    const coalition = await coalitionsCollection(db)
-      .findOne({ sequentialId, countryId });
+    const coalition = await coalitionsCollection(db).findOne({ sequentialId, countryId });
     if (!coalition) {
       throw notFound("Coalition not found.");
     }

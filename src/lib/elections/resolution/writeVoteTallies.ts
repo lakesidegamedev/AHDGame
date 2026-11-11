@@ -14,8 +14,7 @@ export async function writeVoteTallies(
 ): Promise<void> {
   if (writes.length === 0) return;
   try {
-    const result = await electionVoteTalliesCollection(db)
-      .bulkWrite(writes, { ordered: false });
+    const result = await electionVoteTalliesCollection(db).bulkWrite(writes, { ordered: false });
     if (hasPrStv && result.matchedCount !== writes.length)
       throw new Error("PR-STV ballot batch lost a tally revision; retry the turn");
   } catch (err) {

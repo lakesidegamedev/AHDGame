@@ -70,8 +70,11 @@ export async function resolveOfficeAccess(
   const seq = Number(officeParty);
   if (!Number.isFinite(seq)) return base;
 
-  const stateOrg = await statePartyOrgCollection(db)
-    .findOne({ countryId, stateId, partyId: String(seq) });
+  const stateOrg = await statePartyOrgCollection(db).findOne({
+    countryId,
+    stateId,
+    partyId: String(seq),
+  });
 
   if (idEquals(stateOrg?.chairId ?? null, characterId)) {
     return { ...base, canManage: true, actingRole: "stateChair" };

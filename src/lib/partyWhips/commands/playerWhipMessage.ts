@@ -28,8 +28,7 @@ export async function buildPlayerWhipMessage(
         notificationTitle,
       };
     }
-    const bill = await billsCollection(db)
-      .findOne({ _id: targetId }, { projection: { title: 1 } });
+    const bill = await billsCollection(db).findOne({ _id: targetId }, { projection: { title: 1 } });
     const title = bill?.title ?? "a bill";
     return {
       subject: isSoft

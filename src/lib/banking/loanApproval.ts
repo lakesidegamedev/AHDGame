@@ -151,8 +151,7 @@ async function acceptLoanInner(
     }
     const result = await approveConstructionFinance(db, bankCorporationId, loanId, true);
     if (!result.ok) return result;
-    const delivered = await bankLoansCollection(db)
-      .findOne({ _id: loanId, bankCorporationId });
+    const delivered = await bankLoansCollection(db).findOne({ _id: loanId, bankCorporationId });
     return delivered
       ? { ok: true, loan: delivered }
       : { ok: false, error: "Construction loan disappeared" };
@@ -318,8 +317,7 @@ async function rejectLoanInner(
   if (loan.constructionCollateral) {
     const result = await rejectConstructionFinance(db, bankCorporationId, loanId, true, reason);
     if (!result.ok) return result;
-    const declined = await bankLoansCollection(db)
-      .findOne({ _id: loanId, bankCorporationId });
+    const declined = await bankLoansCollection(db).findOne({ _id: loanId, bankCorporationId });
     return declined
       ? { ok: true, loan: declined }
       : { ok: false, error: "Construction loan disappeared" };

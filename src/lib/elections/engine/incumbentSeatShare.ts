@@ -142,8 +142,7 @@ export async function getIncumbentSeatShareByParty(
   const prior = priorElections.find((p) => getElectionSeatKey(p) === seatKey);
   if (!prior) return new Map();
 
-  const tally = await electionVoteTalliesCollection(db)
-    .findOne({ electionId: prior._id });
+  const tally = await electionVoteTalliesCollection(db).findOne({ electionId: prior._id });
   if (!tally || !tally.finalized) return new Map();
 
   return incumbentShareFromFinalizedTally(tally);

@@ -170,11 +170,10 @@ export async function POST(request: Request, { params }: RouteParams) {
       }
 
       if (loserIds.length > 0) {
-        await electionCandidatesCollection<Document>(db)
-          .updateMany(
-            { _id: { $in: loserIds.map((id) => new ObjectId(id)) } },
-            { $set: { status: "withdrawn", withdrawnAt: now } }
-          );
+        await electionCandidatesCollection<Document>(db).updateMany(
+          { _id: { $in: loserIds.map((id) => new ObjectId(id)) } },
+          { $set: { status: "withdrawn", withdrawnAt: now } }
+        );
         eliminated = loserIds.length;
 
         // Archive (not delete) campaign documents for eliminated primary
@@ -207,8 +206,9 @@ export async function POST(request: Request, { params }: RouteParams) {
       .find({ electionId: electionObjectId, status: "active" })
       .toArray();
 
-    const existingTally = await electionVoteTalliesCollection<Document>(db)
-      .findOne({ electionId: electionObjectId });
+    const existingTally = await electionVoteTalliesCollection<Document>(db).findOne({
+      electionId: electionObjectId,
+    });
 
     if (!existingTally && generalCandidates.length > 0) {
       await initPresidentVoteTally(electionObjectId, generalCandidates);

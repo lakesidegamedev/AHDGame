@@ -17,8 +17,7 @@ import { legislationTypesCollection } from "@/lib/db/repositories/legislationTyp
  */
 export async function seedUkLegislation(db: Db, log: (msg: string) => void) {
   // Remove existing UK legislation types
-  const deleteResult = await legislationTypesCollection(db)
-    .deleteMany({ countryScope: "uk" });
+  const deleteResult = await legislationTypesCollection(db).deleteMany({ countryScope: "uk" });
   const deletedCount = deleteResult.deletedCount || 0;
 
   const ukTypes = legislationTypes.filter((lt) => lt.countryScope === "uk");

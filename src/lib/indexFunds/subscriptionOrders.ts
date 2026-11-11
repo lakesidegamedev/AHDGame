@@ -59,8 +59,10 @@ export async function queueBankFundSubscription(
     return await withSessionDb(db, async (tx) => {
       const prior = await replay(tx);
       if (prior) return prior;
-      const fund = await indexFundsCollection(tx)
-        .findOne({ _id: input.fund._id }, { projection: { floatSettlementPlan: 0 } });
+      const fund = await indexFundsCollection(tx).findOne(
+        { _id: input.fund._id },
+        { projection: { floatSettlementPlan: 0 } }
+      );
       if (
         !fund ||
         fund.mandate?.mode !== "picked_stocks" ||
@@ -113,8 +115,10 @@ export async function queueBankFundSubscription(
         : await atomicallyDebitCharacterCash(tx, input.characterId, currency, amountNative, forex);
       if (!debit.ok) throw badRequest(debit.error);
       // Touch the fund so enqueue conflicts with concurrent closure and redemption.
-      const reserved = await indexFundsCollection<Document>(tx)
-        .updateOne({ _id: fund._id, status: "active" }, { $set: { updatedAt: new Date() } });
+      const reserved = await indexFundsCollection<Document>(tx).updateOne(
+        { _id: fund._id, status: "active" },
+        { $set: { updatedAt: new Date() } }
+      );
       if (!reserved.matchedCount) throw badRequest("The fund is no longer accepting investments.");
       const body = {
         success: true,

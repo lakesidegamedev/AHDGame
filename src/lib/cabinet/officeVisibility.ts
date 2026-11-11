@@ -161,11 +161,12 @@ export async function resolveCabinetOfficeVisibility(
     // A country may borrow another's crown, in which case the imperial character
     // is filed under the source country.
     const crownCountryId = config.imperialSharedWith ?? countryId;
-    const monarch = await imperialCharactersCollection<{ userId: ObjectId; countryId: CountryId }>(db)
-      .findOne(
-        { countryId: crownCountryId, userId: new ObjectId(viewerUserId) },
-        { projection: { _id: 1 } }
-      );
+    const monarch = await imperialCharactersCollection<{ userId: ObjectId; countryId: CountryId }>(
+      db
+    ).findOne(
+      { countryId: crownCountryId, userId: new ObjectId(viewerUserId) },
+      { projection: { _id: 1 } }
+    );
     if (monarch) return { canView: true, canAct: false, viewerRole: "headOfState" };
   }
 

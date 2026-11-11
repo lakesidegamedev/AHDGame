@@ -104,9 +104,7 @@ export async function processNppStanceDrift(
     .toArray();
   const partyByKey = new Map(parties.map((p) => [`${p.countryId}:${p.sequentialId}`, p]));
 
-  const legislationTypes = await legislationTypesCollection(db)
-    .find({})
-    .toArray();
+  const legislationTypes = await legislationTypesCollection(db).find({}).toArray();
 
   const now = new Date();
   const ops: AnyBulkWriteOperation<NPP>[] = [];

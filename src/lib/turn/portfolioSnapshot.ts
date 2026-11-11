@@ -62,10 +62,7 @@ export async function snapshotPortfolioValues(
   // Fetch exchange rates for accurate cross-currency wealth conversion
   const exchangeRates = forexEnabled
     ? (Object.fromEntries(
-        (await exchangeRatesCollection(db).find({}).toArray()).map((r) => [
-          r.currencyCode,
-          r.rate,
-        ])
+        (await exchangeRatesCollection(db).find({}).toArray()).map((r) => [r.currencyCode, r.rate])
       ) as Partial<Record<CurrencyCode, number>>)
     : undefined;
 

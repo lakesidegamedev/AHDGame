@@ -131,8 +131,10 @@ export async function handleRedeemFundShares(
       const quotedNavGuard = fund.nationalIndex ? { quotedNav: fund.quotedNav } : {};
       const navMoved = async (s?: { session?: import("mongodb").ClientSession }) => {
         if (!fund.nationalIndex) return false;
-        const current = await indexFundsCollection(db)
-          .findOne({ _id: fund._id }, { projection: { quotedNav: 1 }, ...s });
+        const current = await indexFundsCollection(db).findOne(
+          { _id: fund._id },
+          { projection: { quotedNav: 1 }, ...s }
+        );
         return !!current && current.quotedNav !== fund.quotedNav;
       };
 
@@ -287,11 +289,10 @@ export async function handleRedeemFundShares(
           }
           if (compensate) {
             undo.push(async () => {
-              await indexFundsCollection<Document>(db)
-                .updateOne(
-                  { _id: fund._id },
-                  { $inc: { unitSupply: units }, $set: { updatedAt: new Date() } }
-                );
+              await indexFundsCollection<Document>(db).updateOne(
+                { _id: fund._id },
+                { $inc: { unitSupply: units }, $set: { updatedAt: new Date() } }
+              );
             });
           }
 

@@ -589,8 +589,9 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
               )
             );
           } else if (sh.imperialCharacterId) {
-            const ich = await imperialCharactersCollection(db)
-              .findOne({ _id: sh.imperialCharacterId });
+            const ich = await imperialCharactersCollection(db).findOne({
+              _id: sh.imperialCharacterId,
+            });
             if (!ich) continue;
             const home =
               (withholdingContexts.get("imperialCharacters:" + sh.imperialCharacterId.toHexString())
@@ -709,11 +710,10 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
           if (fundPayout <= 0) continue;
 
           // Credit fund's cashAnchor with the takeover payout
-          await indexFundsCollection<Document>(db)
-            .updateOne(
-              { _id: fundId },
-              { $inc: { cashAnchor: fundPayout }, $set: { updatedAt: now } }
-            );
+          await indexFundsCollection<Document>(db).updateOne(
+            { _id: fundId },
+            { $inc: { cashAnchor: fundPayout }, $set: { updatedAt: now } }
+          );
 
           // Debit the fund's shares from the target's cap table
           await debitSharesFromFund(db, target._id, fundId, fundShares, {
@@ -721,8 +721,9 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
           });
 
           // Remove the target corp from the fund's holdings ledger
-          await indexFundsCollection<Document>(db)
-            .updateOne({ _id: fundId, "holdings.corporationId": target._id }, [
+          await indexFundsCollection<Document>(db).updateOne(
+            { _id: fundId, "holdings.corporationId": target._id },
+            [
               {
                 $set: {
                   holdings: {
@@ -735,14 +736,14 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
                   updatedAt: now,
                 },
               },
-            ]);
+            ]
+          );
         }
 
-        await shareOrdersCollection(db)
-          .updateMany(
-            { corporationId: target._id, status: "open" },
-            { $set: { status: "cancelled", updatedAt: now } }
-          );
+        await shareOrdersCollection(db).updateMany(
+          { corporationId: target._id, status: "open" },
+          { $set: { status: "cancelled", updatedAt: now } }
+        );
 
         await db
           .collection<ShareListing>("shareListings")

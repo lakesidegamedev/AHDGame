@@ -198,8 +198,10 @@ export async function materializeBg1991ConstitutionalProposal(input: {
       );
     sponsorParty = typeof deputy.party === "string" ? deputy.party : undefined;
   } else if (input.reason === "npc_government_constituent_mandate") {
-    const government = await governmentFormationsCollection(db)
-      .findOne({ _id: "BG" }, { session, projection: { status: 1, pmCharacterId: 1, pmNppId: 1 } });
+    const government = await governmentFormationsCollection(db).findOne(
+      { _id: "BG" },
+      { session, projection: { status: 1, pmCharacterId: 1, pmNppId: 1 } }
+    );
     if (
       input.sponsor ||
       government?.status !== "formed" ||
@@ -314,11 +316,10 @@ export async function endorseBg1991ConstitutionalInitiative(
           { session, projection: { revision: 1, billId: 1, status: 1, openedOnTurn: 1 } }
         );
       if (prior) {
-        const bill = await billsCollection(input.db)
-          .findOne(
-            { _id: prior.billId },
-            { session, projection: { status: 1, "voteSnapshot.resolvedAtTurn": 1 } }
-          );
+        const bill = await billsCollection(input.db).findOne(
+          { _id: prior.billId },
+          { session, projection: { status: 1, "voteSnapshot.resolvedAtTurn": 1 } }
+        );
         if (!bill || !["failed", "vetoed", "override_failed"].includes(bill.status))
           throw new Bg1991ConstitutionalConflict(
             "The current draft must resolve before another initiative"
@@ -429,8 +430,7 @@ export async function loadBg1991ConstitutionalDecision(db: Db, game: Calendar, t
     .collection<Bg1991ConstitutionalProposal>(BG_1991_PROPOSALS_COLLECTION)
     .findOne({ _id: ID });
   const bill = proposal
-    ? await billsCollection(db)
-        .findOne({ _id: proposal.billId }, { projection: { status: 1 } })
+    ? await billsCollection(db).findOne({ _id: proposal.billId }, { projection: { status: 1 } })
     : null;
   const initiatives = await loadBg1991Initiatives(
     db,
@@ -472,8 +472,10 @@ export async function processBg1991ConstitutionalMandate(
     .findOne({ _id: ID, status: "open" }, { projection: { billId: 1 } });
   if (
     !proposal ||
-    !(await billsCollection(db)
-      .findOne({ _id: proposal.billId, status: "signed" }, { projection: { _id: 1 } }))
+    !(await billsCollection(db).findOne(
+      { _id: proposal.billId, status: "signed" },
+      { projection: { _id: 1 } }
+    ))
   )
     return false;
   return runRequiredTransaction(
@@ -633,11 +635,10 @@ export async function rebindBg1991PrimaryCohort(
   });
   if (updates.length) {
     await electionsCollection(db).bulkWrite(updates, { session });
-    await electionVoteTalliesCollection(db)
-      .updateMany(
-        { electionId: { $in: reboundIds } },
-        { $unset: { bulgarianFoundingBallot: "" } },
-        { session }
-      );
+    await electionVoteTalliesCollection(db).updateMany(
+      { electionId: { $in: reboundIds } },
+      { $unset: { bulgarianFoundingBallot: "" } },
+      { session }
+    );
   }
 }

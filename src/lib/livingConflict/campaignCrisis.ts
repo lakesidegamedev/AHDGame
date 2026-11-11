@@ -142,8 +142,7 @@ export async function syncCampaignCrises(
     }
   }
   try {
-    if (inserts.length > 0)
-      await crisesCollection(db).insertMany(inserts, { ordered: false });
+    if (inserts.length > 0) await crisesCollection(db).insertMany(inserts, { ordered: false });
     if (closeIds.length > 0) {
       await crisesCollection(db).updateMany(
         { _id: { $in: closeIds }, status: "active" },

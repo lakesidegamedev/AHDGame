@@ -60,11 +60,10 @@ export const migration: Migration = {
       return { documentsScanned: campaigns.length, documentsUpdated: 0, notes };
     }
 
-    const res = await campaignsCollection(db)
-      .updateMany(
-        { _id: { $in: targets }, status: { $ne: "archived" } },
-        { $set: { status: "archived", archivedAt: new Date(), archivedReason: "ineligible" } }
-      );
+    const res = await campaignsCollection(db).updateMany(
+      { _id: { $in: targets }, status: { $ne: "archived" } },
+      { $set: { status: "archived", archivedAt: new Date(), archivedReason: "ineligible" } }
+    );
     return { documentsScanned: campaigns.length, documentsUpdated: res.modifiedCount, notes };
   },
 };

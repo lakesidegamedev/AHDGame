@@ -126,8 +126,9 @@ export async function autoAssignTentativeRunningMates(
     }
   }
   if (runningMateWrites.length > 0) {
-    const result = await electionCandidatesCollection(db)
-      .bulkWrite(runningMateWrites, { ordered: false });
+    const result = await electionCandidatesCollection(db).bulkWrite(runningMateWrites, {
+      ordered: false,
+    });
     let confirmedNotifications = notificationAssignments;
     if (result.matchedCount !== runningMateWrites.length && notificationAssignments.length > 0) {
       const confirmed = await electionCandidatesCollection(db)

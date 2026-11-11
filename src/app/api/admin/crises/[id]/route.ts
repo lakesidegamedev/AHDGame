@@ -42,11 +42,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     });
     const currentTurn: number = (gameState as { currentTurn?: number } | null)?.currentTurn ?? 0;
 
-    await crisesCollection(db)
-      .updateOne(
-        { _id: new ObjectId(id) },
-        { $set: { status: "resolved", endTurn: currentTurn, resolvedAt: new Date() } }
-      );
+    await crisesCollection(db).updateOne(
+      { _id: new ObjectId(id) },
+      { $set: { status: "resolved", endTurn: currentTurn, resolvedAt: new Date() } }
+    );
 
     if (crisis.wireMessageOnEnd) {
       await logWireEvent("crisis_end", crisis.wireMessageOnEnd, {

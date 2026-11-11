@@ -125,8 +125,10 @@ export async function applyPartyInfluenceEffects(
       if (candidate) {
         const [election, candidateCountAtDecision] = await Promise.all([
           electionsCollection(db).findOne({ _id: candidate.electionId }),
-          electionCandidatesCollection(db)
-            .countDocuments({ electionId: candidate.electionId, status: "active" }),
+          electionCandidatesCollection(db).countDocuments({
+            electionId: candidate.electionId,
+            status: "active",
+          }),
         ]);
         if (
           election &&
@@ -160,8 +162,7 @@ export async function applyPartyInfluenceEffects(
 
       const electionObjId = new ObjectId(input.context.electionId);
       const filter = activeNppElectionCandidacyFilter(electionObjId, npp._id);
-      const withdrawCandidate = await electionCandidatesCollection(db)
-        .findOne(filter);
+      const withdrawCandidate = await electionCandidatesCollection(db).findOne(filter);
 
       if (!withdrawCandidate) return { withdrawApplied: false };
 

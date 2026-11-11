@@ -33,22 +33,20 @@ async function atomicallyDebitFundCashAnchor(
   amountAnchor: number
 ): Promise<boolean> {
   if (!Number.isFinite(amountAnchor) || amountAnchor <= 0) return false;
-  const res = await indexFundsCollection(db)
-    .updateOne(
-      { _id: fundId, cashAnchor: { $gte: amountAnchor } },
-      { $inc: { cashAnchor: -amountAnchor }, $set: { updatedAt: new Date() } }
-    );
+  const res = await indexFundsCollection(db).updateOne(
+    { _id: fundId, cashAnchor: { $gte: amountAnchor } },
+    { $inc: { cashAnchor: -amountAnchor }, $set: { updatedAt: new Date() } }
+  );
   return res.matchedCount > 0;
 }
 
 /** Refund `amountAnchor` back to a fund's `cashAnchor`. */
 async function refundFundCashAnchor(db: Db, fundId: ObjectId, amountAnchor: number): Promise<void> {
   if (!Number.isFinite(amountAnchor) || amountAnchor <= 0) return;
-  await indexFundsCollection(db)
-    .updateOne(
-      { _id: fundId },
-      { $inc: { cashAnchor: amountAnchor }, $set: { updatedAt: new Date() } }
-    );
+  await indexFundsCollection(db).updateOne(
+    { _id: fundId },
+    { $inc: { cashAnchor: amountAnchor }, $set: { updatedAt: new Date() } }
+  );
 }
 
 export interface PlaceFundShareBuyOrderInput {
@@ -99,8 +97,10 @@ export async function placeFundShareBuyOrder(
 ): Promise<PlaceFundShareBuyOrderResult> {
   const { fund, corp, shares, limitPriceLocal, fxRate } = input;
   if (!input.verifiedNotPickedStocks) {
-    const current = await indexFundsCollection(db)
-      .findOne({ _id: fund._id }, { projection: { mandate: 1 } });
+    const current = await indexFundsCollection(db).findOne(
+      { _id: fund._id },
+      { projection: { mandate: 1 } }
+    );
     if (current?.mandate?.mode === "picked_stocks")
       return { ok: false, reason: "This fund buys available shares during rebalancing." };
   }
@@ -237,8 +237,10 @@ export async function placeFundQuotesBatch(
   escrowTxs: Omit<IndexFundTransaction, "_id">[];
   ledgerEntries: TxInput[];
 } | null> {
-  const current = await indexFundsCollection(db)
-    .findOne({ _id: fund._id }, { projection: { cashAnchor: 1, mandate: 1 } });
+  const current = await indexFundsCollection(db).findOne(
+    { _id: fund._id },
+    { projection: { cashAnchor: 1, mandate: 1 } }
+  );
   if (!current || current.mandate?.mode === "picked_stocks") return null;
   let cash = current.cashAnchor;
   let totalEscrow = 0;
@@ -291,11 +293,10 @@ export async function placeFundQuotesBatch(
     results.push(result);
   }
   if (totalEscrow > 0) {
-    const debited = await indexFundsCollection(db)
-      .updateOne(
-        { _id: fund._id, cashAnchor: current.cashAnchor },
-        { $inc: { cashAnchor: -totalEscrow }, $set: { updatedAt: now } }
-      );
+    const debited = await indexFundsCollection(db).updateOne(
+      { _id: fund._id, cashAnchor: current.cashAnchor },
+      { $inc: { cashAnchor: -totalEscrow }, $set: { updatedAt: now } }
+    );
     if (!debited.matchedCount) return null;
   }
   if (orders.length) {
@@ -359,8 +360,7 @@ export async function placeFundShareSellOrder(
   if (!decision.ok) return decision;
 
   const orderId = new ObjectId();
-  await shareOrdersCollection(db)
-    .insertOne(fundSellOrderDoc(input, orderId, new Date()));
+  await shareOrdersCollection(db).insertOne(fundSellOrderDoc(input, orderId, new Date()));
   return { ok: true, orderId };
 }
 
@@ -440,18 +440,19 @@ export async function cancelFundShareOrder(
   }
 ): Promise<void> {
   // Atomically claim the order so a concurrent fill/cancel can't double-refund.
-  const claimed = await shareOrdersCollection(db)
-    .findOneAndUpdate(
-      { _id: orderId, status: "open", activeShareFillKey: { $exists: false } },
-      { $set: { status: "cancelled", updatedAt: new Date() } },
-      { returnDocument: "before" }
-    );
+  const claimed = await shareOrdersCollection(db).findOneAndUpdate(
+    { _id: orderId, status: "open", activeShareFillKey: { $exists: false } },
+    { $set: { status: "cancelled", updatedAt: new Date() } },
+    { returnDocument: "before" }
+  );
 
   if (!claimed) return;
   if (!claimed.placerFundId) {
     // Not a fund order - restore status; this helper only handles fund orders.
-    await shareOrdersCollection(db)
-      .updateOne({ _id: orderId, status: "cancelled" }, { $set: { status: "open" } });
+    await shareOrdersCollection(db).updateOne(
+      { _id: orderId, status: "cancelled" },
+      { $set: { status: "open" } }
+    );
     return;
   }
 
@@ -467,11 +468,10 @@ export async function cancelFundShareOrder(
       const fund =
         options?.fund?._id.toString() === claimed.placerFundId.toString()
           ? options.fund
-          : await indexFundsCollection(db)
-              .findOne(
-                { _id: claimed.placerFundId },
-                { projection: { name: 1, anchorCurrencyCode: 1 } }
-              );
+          : await indexFundsCollection(db).findOne(
+              { _id: claimed.placerFundId },
+              { projection: { name: 1, anchorCurrencyCode: 1 } }
+            );
       if (fund) {
         const now = new Date();
         const ledgerEntry: TxInput = {

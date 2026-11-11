@@ -42,9 +42,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
       .toArray();
 
     // Fetch existing party org records for this state
-    const existingPartyOrg = await statePartyOrgCollection(db)
-      .find({ stateId })
-      .toArray();
+    const existingPartyOrg = await statePartyOrgCollection(db).find({ stateId }).toArray();
 
     // Create a map for quick lookup of existing org records
     const orgMap = new Map(existingPartyOrg.map((po) => [po.partyId, po]));

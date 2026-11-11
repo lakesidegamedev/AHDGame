@@ -113,11 +113,10 @@ export async function attachPoliticalLegislationEstimates(
   const regionKey = regionId?.trim() ? regionId.trim().toUpperCase() : null;
   const stateBudget =
     regionKey && hasStateSlider
-      ? await stateBudgetsCollection(db)
-          .findOne(
-            { _id: regionKey, countryId: countryId as StateBudget["countryId"] },
-            { projection: { taxRates: 1, taxBases: 1, incomeTaxShares: 1 } }
-          )
+      ? await stateBudgetsCollection(db).findOne(
+          { _id: regionKey, countryId: countryId as StateBudget["countryId"] },
+          { projection: { taxRates: 1, taxBases: 1, incomeTaxShares: 1 } }
+        )
       : null;
 
   return docs.map((doc) => {

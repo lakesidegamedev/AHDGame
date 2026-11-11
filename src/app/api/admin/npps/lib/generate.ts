@@ -103,8 +103,9 @@ export async function handleGenerateNPPs(
   // single-digit org). States with no org data at all keep the legacy default
   // so unseeded/test worlds still work.
   const statesWithOrgData = new Set<string>(
-    await statePartyOrgCollection(db)
-      .distinct("stateId", { stateId: { $in: [...electionsByState.keys()] } })
+    await statePartyOrgCollection(db).distinct("stateId", {
+      stateId: { $in: [...electionsByState.keys()] },
+    })
   );
 
   // Pre-batch: which (electionId, partyId) pairs already have an active candidate

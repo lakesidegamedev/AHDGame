@@ -51,8 +51,7 @@ export async function settleFundedWholeCorpShareholderPool(
 ): Promise<void> {
   const context = input.ledger.context;
   const settlementKey = `treasury-nationalization-buyout:${input.key}`;
-  const prior = await bankMoneyMovesCollection<{ _id: string }>(db)
-    .findOne({ _id: settlementKey });
+  const prior = await bankMoneyMovesCollection<{ _id: string }>(db).findOne({ _id: settlementKey });
   if (prior) {
     const resumed = await resumeSettlement(db, settlementKey);
     if (resumed.status !== "applied" && !(resumed.status === "replayed" && !resumed.error))

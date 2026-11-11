@@ -35,11 +35,10 @@ export async function processRussianDumaConvocationCampaigns(input: {
   if (input.game.preset !== "1991-default") return result;
   const opened = await openRussianDumaConvocation(input);
   if (opened?.created) result.opened++;
-  const country = await countryGameStatesCollection(db)
-    .findOne(
-      { _id: "RU" },
-      { projection: { ...RUSSIAN_DUMA_AUTHORITY_PROJECTION, ruDumaNpcAdmissionCohortId: 1 } }
-    );
+  const country = await countryGameStatesCollection(db).findOne(
+    { _id: "RU" },
+    { projection: { ...RUSSIAN_DUMA_AUTHORITY_PROJECTION, ruDumaNpcAdmissionCohortId: 1 } }
+  );
   const root = country?.ruDumaConvocationCohortId;
   if (!country || !root) return result;
   result.active = true;

@@ -68,8 +68,11 @@ export async function POST(
       }
       const [partyDoc, stateParty] = await Promise.all([
         politicalPartiesCollection(db).findOne({ countryId, sequentialId: Number(partyId) }),
-        statePartyOrgCollection(db)
-          .findOne({ countryId, stateId: ref.regionId, partyId: String(partyId) }),
+        statePartyOrgCollection(db).findOne({
+          countryId,
+          stateId: ref.regionId,
+          partyId: String(partyId),
+        }),
       ]);
       if (!partyDoc || !canSpendOnStateParty(partyDoc, stateParty, auth.user)) {
         return errorResponse(403, "Only a party officer may run an official ground game.");

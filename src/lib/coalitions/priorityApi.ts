@@ -58,8 +58,7 @@ export async function loadCoalitionPriorityContext(
   countryId: CountryId,
   sequentialId: number
 ): Promise<CoalitionPriorityContext | null> {
-  const coalition = await coalitionsCollection(db)
-    .findOne({ countryId, sequentialId });
+  const coalition = await coalitionsCollection(db).findOne({ countryId, sequentialId });
   if (!coalition) return null;
 
   const memberPartyObjectIds = coalition.members.map((member) => member.partyId);

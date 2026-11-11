@@ -61,8 +61,10 @@ export async function notifyUnionOfBustingAttempt(
   input: UnionBustingNoticeInput
 ): Promise<number> {
   try {
-    const union = await unionsCollection(db)
-      .findOne({ countryId: input.countryId, sectorType: input.sectorType as CorporationType });
+    const union = await unionsCollection(db).findOne({
+      countryId: input.countryId,
+      sectorType: input.sectorType as CorporationType,
+    });
     if (!union) return 0;
 
     // NPP-led unions have no player to tell, but their organizers still might.

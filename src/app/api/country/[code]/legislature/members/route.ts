@@ -41,14 +41,13 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
       getGameStatePreset(db),
       countryHasFeature("ruApi", countryId)
         ? countryGameStatesCollection<{
-              _id: string;
-              ruSovietSuccessionSinceTurn?: number;
-              ruProvisionalCongressSeats?: number;
-              ruPresidencySinceTurn?: number;
-              ruCongressDissolvedSinceTurn?: number;
-              ruFederalAssemblySinceTurn?: number;
-            }>(db)
-            .findOne({ _id: "RU" })
+            _id: string;
+            ruSovietSuccessionSinceTurn?: number;
+            ruProvisionalCongressSeats?: number;
+            ruPresidencySinceTurn?: number;
+            ruCongressDissolvedSinceTurn?: number;
+            ruFederalAssemblySinceTurn?: number;
+          }>(db).findOne({ _id: "RU" })
         : Promise.resolve(null),
     ]);
     const config = getCountryConfigForRuntime(countryId, preset, countryState);

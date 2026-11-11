@@ -135,8 +135,10 @@ export async function materializeRussianCouncilFormationProposal(input: {
   const { db, session, game, turn, now, mode } = input;
   if (!session.inTransaction() || !Number.isFinite(now.getTime()))
     throw new Error("Council formation needs a transaction and time");
-  const country = await countryGameStatesCollection(db)
-    .findOne({ _id: "RU" }, { session, projection });
+  const country = await countryGameStatesCollection(db).findOne(
+    { _id: "RU" },
+    { session, projection }
+  );
   const available = availability(game, turn, mode, country);
   if (!available.available) throw new RussianConstitutionalDecisionConflict(available.reason);
   const proposals = db.collection<RussianCouncilFormationProposal>(
@@ -145,11 +147,10 @@ export async function materializeRussianCouncilFormationProposal(input: {
   const id = `1991-default:ru-council:${mode}`;
   const old = await proposals.findOne({ _id: id }, { session });
   if (old) {
-    const bill = await billsCollection(db)
-      .findOne(
-        { _id: old.billId },
-        { session, projection: { countryId: 1, status: 1, russianCouncilFormationMandate: 1 } }
-      );
+    const bill = await billsCollection(db).findOne(
+      { _id: old.billId },
+      { session, projection: { countryId: 1, status: 1, russianCouncilFormationMandate: 1 } }
+    );
     if (
       !bill ||
       bill.countryId !== "RU" ||
@@ -307,8 +308,7 @@ export async function loadRussianCouncilFormationDecisions(
   turn: number
 ) {
   if (game.preset !== "1991-default" || clock(game, turn) < 237) return [];
-  const country = await countryGameStatesCollection(db)
-    .findOne({ _id: "RU" }, { projection });
+  const country = await countryGameStatesCollection(db).findOne({ _id: "RU" }, { projection });
   if (country?.ruFederalAssemblySinceTurn == null) return [];
   const modes: RussianCouncilCompositionMode[] = ["regionalHeads", "regionalDelegates"];
   const proposals = await db

@@ -83,8 +83,10 @@ export async function resolveExpiredDisbandVotes(referenceNow = new Date()): Pro
       disbanded++;
     } else {
       // Vote failed — clear the disbandVote
-      await coalitionsCollection(db)
-        .updateOne({ _id: coalition._id }, { $set: { disbandVote: null, updatedAt: now } });
+      await coalitionsCollection(db).updateOne(
+        { _id: coalition._id },
+        { $set: { disbandVote: null, updatedAt: now } }
+      );
     }
   }
 

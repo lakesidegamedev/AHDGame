@@ -13,8 +13,7 @@ export async function getOrCreateVoteTally(
   inPrimary: boolean,
   isEnded: boolean
 ): Promise<ElectionVoteTally | null> {
-  let voteTally = await electionVoteTalliesCollection(db)
-    .findOne({ electionId });
+  let voteTally = await electionVoteTalliesCollection(db).findOne({ electionId });
 
   // If the primary has ended but there's no vote tally yet, create one on-the-fly
   // so the vote engine has a document to write to on the next turn.
@@ -31,8 +30,7 @@ export async function getOrCreateVoteTally(
         await initElectionVoteTally(electionId, tallyCandidates, election.state as string);
       }
 
-      voteTally = await electionVoteTalliesCollection(db)
-        .findOne({ electionId });
+      voteTally = await electionVoteTalliesCollection(db).findOne({ electionId });
     } catch (err) {
       console.error("Failed to auto-init vote tally:", err);
     }

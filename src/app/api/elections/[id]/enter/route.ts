@@ -468,11 +468,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     if (existingCandidate) {
       // If they have an active candidacy under a different party, withdraw it first
       if (existingCandidate.party !== character.party && !councilFiling) {
-        await electionCandidatesCollection<Document>(db)
-          .updateOne(
-            { _id: existingCandidate._id },
-            { $set: { status: "withdrawn", withdrawnAt: new Date() } }
-          );
+        await electionCandidatesCollection<Document>(db).updateOne(
+          { _id: existingCandidate._id },
+          { $set: { status: "withdrawn", withdrawnAt: new Date() } }
+        );
         await removeWithdrawnCandidateFromTally(
           db,
           existingCandidate.electionId,
@@ -602,14 +601,13 @@ export async function POST(request: Request, { params }: RouteParams) {
           );
         result = { insertedId: filed.insertedId };
       } else if (hu2014) {
-        const existingNominee = await electionCandidatesCollection(db)
-          .findOne({
-            electionId: electionObjectId,
-            countryId: "HU",
-            party: character.party,
-            constituencyId: huDistrictId,
-            status: "active",
-          });
+        const existingNominee = await electionCandidatesCollection(db).findOne({
+          electionId: electionObjectId,
+          countryId: "HU",
+          party: character.party,
+          constituencyId: huDistrictId,
+          status: "active",
+        });
         if (existingNominee) {
           logRequest("POST", path, 409, Date.now() - start);
           return errorResponse(409, "Your party already has a candidate in this constituency.");
@@ -627,8 +625,10 @@ export async function POST(request: Request, { params }: RouteParams) {
         );
       }
       if (isActiveElectionCandidateDuplicateKey(error)) {
-        const activeCandidate = await electionCandidatesCollection(db)
-          .findOne({ characterId: character._id, status: "active" });
+        const activeCandidate = await electionCandidatesCollection(db).findOne({
+          characterId: character._id,
+          status: "active",
+        });
 
         if (activeCandidate?.electionId.equals(electionObjectId)) {
           logRequest("POST", path, 400, Date.now() - start);

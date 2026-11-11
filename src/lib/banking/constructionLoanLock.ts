@@ -52,11 +52,10 @@ export async function releaseConstructionLoanLock(
   key: string
 ): Promise<void> {
   if (!loan.constructionCollateral) return;
-  await bankLoansCollection(db)
-    .updateOne(
-      { _id: loan._id, constructionSettlementOwner: key },
-      { $unset: { constructionSettlementOwner: "" } }
-    );
+  await bankLoansCollection(db).updateOne(
+    { _id: loan._id, constructionSettlementOwner: key },
+    { $unset: { constructionSettlementOwner: "" } }
+  );
 }
 
 /** A different service receipt can be recovered, but an unfinished build stays owned. */
@@ -123,8 +122,10 @@ export async function acquireConstructionLoanLock(
     return acquire();
   }
   if (!previous.startsWith(`loan-service:${loan._id}:`)) return null;
-  const record = await bankMoneyMovesCollection<{ _id: string }>(db)
-    .findOne({ _id: previous }, { projection: { _id: 1 } });
+  const record = await bankMoneyMovesCollection<{ _id: string }>(db).findOne(
+    { _id: previous },
+    { projection: { _id: 1 } }
+  );
   if (!record) return null;
   const recovered = await resumeSettlement(db, previous);
   const complete = !recovered.error && ["applied", "replayed"].includes(recovered.status);

@@ -491,8 +491,10 @@ export async function recoverConstructionFunding(
   for (const sector of unfinished) {
     const claim = sector.constructionFinancing;
     if (!claim || !ObjectId.isValid(claim.loanId) || !ObjectId.isValid(claim.bankId)) continue;
-    const loan = await bankLoansCollection(db)
-      .findOne({ _id: new ObjectId(claim.loanId) }, { projection: { constructionDecision: 1 } });
+    const loan = await bankLoansCollection(db).findOne(
+      { _id: new ObjectId(claim.loanId) },
+      { projection: { constructionDecision: 1 } }
+    );
     // A pending lender decision is not authority to disburse.
     if (loan?.constructionDecision !== "approve") continue;
     const result = await approveConstructionFinance(

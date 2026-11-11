@@ -32,11 +32,10 @@ async function migrateIndexFundsToRealBonds(
       0
     );
     if (syntheticPrincipal <= 0) {
-      await indexFundsCollection<Document>(db)
-        .updateOne(
-          { _id: fund._id },
-          { $unset: { bondAllocations: "" }, $set: { updatedAt: new Date() } }
-        );
+      await indexFundsCollection<Document>(db).updateOne(
+        { _id: fund._id },
+        { $unset: { bondAllocations: "" }, $set: { updatedAt: new Date() } }
+      );
       updated++;
       continue;
     }

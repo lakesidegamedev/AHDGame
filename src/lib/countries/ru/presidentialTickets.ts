@@ -105,8 +105,7 @@ export async function materializeRussianPresidentialTickets(input: {
       },
     });
   }
-  const saved = await electionCandidatesCollection(db)
-    .bulkWrite(writes, { session });
+  const saved = await electionCandidatesCollection(db).bulkWrite(writes, { session });
   if (saved.matchedCount !== writes.length)
     throw new Error("Russian presidential ticket changed during registration");
 }

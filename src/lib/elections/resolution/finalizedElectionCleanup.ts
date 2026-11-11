@@ -23,11 +23,10 @@ export async function finishFinalizedElectionCleanup(
     .toArray();
   const seats = tally.seatsEstimate ?? {};
   const winners = candidates.filter((c) => (seats[c._id.toString()] ?? 0) > 0);
-  await electionCandidatesCollection(db)
-    .updateMany(
-      { electionId: election._id, status: "active" },
-      { $set: { status: "withdrawn", withdrawnAt: now } }
-    );
+  await electionCandidatesCollection(db).updateMany(
+    { electionId: election._id, status: "active" },
+    { $set: { status: "withdrawn", withdrawnAt: now } }
+  );
   const characterIds = winners.flatMap((c) => (!c.isNPP && c.characterId ? [c.characterId] : []));
   const nppIds = winners.flatMap((c) => (c.isNPP && c.nppId ? [c.nppId] : []));
   if (characterIds.length || nppIds.length)

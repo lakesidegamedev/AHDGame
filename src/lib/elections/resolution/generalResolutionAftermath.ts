@@ -230,11 +230,10 @@ export async function applyGeneralElectionAftermath({
 
   const winnerCandidateIds = new Set(winners.map(([id]) => id));
   const loserCandidateIds = new Set(losers);
-  await electionCandidatesCollection<Document>(db)
-    .updateMany(
-      { _id: { $in: candidateIds.map((id) => new ObjectId(id)) } },
-      { $set: { status: "withdrawn", withdrawnAt: now } }
-    );
+  await electionCandidatesCollection<Document>(db).updateMany(
+    { _id: { $in: candidateIds.map((id) => new ObjectId(id)) } },
+    { $set: { status: "withdrawn", withdrawnAt: now } }
+  );
 
   // Root-cause guard: a character/NPP who just won a seat must not remain an
   // active candidate in any OTHER concurrent race. A lingering candidacy
@@ -256,11 +255,10 @@ export async function applyGeneralElectionAftermath({
   if (seatedCharIds.length > 0) seatedIdentityOr.push({ characterId: { $in: seatedCharIds } });
   if (seatedNppIds.length > 0) seatedIdentityOr.push({ nppId: { $in: seatedNppIds } });
   if (seatedIdentityOr.length > 0) {
-    await electionCandidatesCollection(db)
-      .updateMany(
-        { electionId: { $ne: election._id }, status: "active", $or: seatedIdentityOr },
-        { $set: { status: "withdrawn", withdrawnAt: now } }
-      );
+    await electionCandidatesCollection(db).updateMany(
+      { electionId: { $ne: election._id }, status: "active", $or: seatedIdentityOr },
+      { $set: { status: "withdrawn", withdrawnAt: now } }
+    );
   }
 
   // Clean up campaigns (primarily relevant for presidential; no-op for other types)

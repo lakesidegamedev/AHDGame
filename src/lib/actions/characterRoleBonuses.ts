@@ -67,8 +67,7 @@ export async function loadCharacterRoleBonuses(
         { projection: { officeType: 1 } }
       )
       .toArray(),
-    statePartyOrgCollection(db)
-      .findOne({ chairId: character._id }, { projection: { _id: 1 } }),
+    statePartyOrgCollection(db).findOne({ chairId: character._id }, { projection: { _id: 1 } }),
     loadOrganizationHeads(db, { characterId: character._id }).catch(() => []),
     resolveOppositionLeaderForCountry(db, countryId).catch(() => null),
   ]);

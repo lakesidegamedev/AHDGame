@@ -796,7 +796,9 @@ export async function processIndexFundDividendsBatch(
   /* eslint-disable @typescript-eslint/no-explicit-any */
   await Promise.all([
     corporateOps.length ? corporationsCollection(db).bulkWrite(corporateOps) : Promise.resolve(),
-    fundOps.length ? indexFundsCollection<Document>(db).bulkWrite(fundOps as any[]) : Promise.resolve(),
+    fundOps.length
+      ? indexFundsCollection<Document>(db).bulkWrite(fundOps as any[])
+      : Promise.resolve(),
     nppOps.length ? nppsCollection<Document>(db).bulkWrite(nppOps as any[]) : Promise.resolve(),
   ]);
   /* eslint-enable @typescript-eslint/no-explicit-any */

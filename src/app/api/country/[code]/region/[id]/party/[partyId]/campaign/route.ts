@@ -52,8 +52,11 @@ export async function POST(
     const party = await findPartyBySequentialId(db, partyId, countryId as CountryId);
     if (!party) return errorResponse(404, "Party not found");
 
-    const spo = await statePartyOrgCollection(db)
-      .findOne({ countryId: countryId as CountryId, stateId, partyId: String(party.sequentialId) });
+    const spo = await statePartyOrgCollection(db).findOne({
+      countryId: countryId as CountryId,
+      stateId,
+      partyId: String(party.sequentialId),
+    });
     if (!canSpendOnStateParty(party, spo, auth.user)) {
       return errorResponse(
         403,
@@ -81,8 +84,11 @@ export async function POST(
     }
 
     // Efficiency: is the actor an active candidate in this race?
-    const isCandidate = await electionCandidatesCollection(db)
-      .findOne({ electionId: election._id, characterId: character._id, status: "active" });
+    const isCandidate = await electionCandidatesCollection(db).findOne({
+      electionId: election._id,
+      characterId: character._id,
+      status: "active",
+    });
     const efficiency = isCandidate ? CAMPAIGN_SELF_EFFICIENCY : CAMPAIGN_ALLY_EFFICIENCY;
 
     const gs = await getGameState(db);

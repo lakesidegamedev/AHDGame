@@ -147,8 +147,7 @@ async function materializeHu1991RunoffOpening(input: {
   if (updated.modifiedCount !== 1) throw new Error("Hungarian runoff opening changed concurrently");
   await electionsCollection(db).insertMany(polls, { session });
   if (renewedCandidates.length) {
-    await electionCandidatesCollection(db)
-      .insertMany(renewedCandidates, { session });
+    await electionCandidatesCollection(db).insertMany(renewedCandidates, { session });
     await electionCandidatesCollection(db).updateMany(
       { _id: { $in: candidates.map((row) => row._id) }, status: "active" },
       {

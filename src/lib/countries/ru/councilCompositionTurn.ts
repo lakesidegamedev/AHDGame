@@ -47,8 +47,10 @@ export async function processRussianCouncilComposition(input: {
       )
     )
       result.authorized++;
-  const country = await countryGameStatesCollection(db)
-    .findOne({ _id: "RU" }, { projection: { ruCouncilFormationMandate: 1 } });
+  const country = await countryGameStatesCollection(db).findOne(
+    { _id: "RU" },
+    { projection: { ruCouncilFormationMandate: 1 } }
+  );
   if (!country?.ruCouncilFormationMandate) return result;
   const settlement = await runRequiredTransaction(
     async (session) => {

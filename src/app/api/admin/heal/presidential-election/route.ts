@@ -139,11 +139,10 @@ export async function POST() {
     const healedRows = await electionCandidatesCollection<Document>(db)
       .find({ electionId: liveElection._id, status: "active" })
       .toArray();
-    const withdrawn = await electionCandidatesCollection<Document>(db)
-      .updateMany(
-        { electionId: liveElection._id, status: "active" },
-        { $set: { status: "withdrawn", withdrawnAt: now } }
-      );
+    const withdrawn = await electionCandidatesCollection<Document>(db).updateMany(
+      { electionId: liveElection._id, status: "active" },
+      { $set: { status: "withdrawn", withdrawnAt: now } }
+    );
     // Withdrawn candidates' campaigns must leave active surfaces (ticket #1313).
     await archiveCampaignsForCandidates({
       db,

@@ -190,33 +190,31 @@ export async function POST(
 
         // If the chair left, clear coalitionChairCharacterId for any coalition this party leads
         if (isChair) {
-          await coalitionsCollection<Document>(db)
-            .updateMany(
-              { chairPartyId: party._id },
-              { $set: { chairCharacterId: null, updatedAt: now } }
-            );
+          await coalitionsCollection<Document>(db).updateMany(
+            { chairPartyId: party._id },
+            { $set: { chairCharacterId: null, updatedAt: now } }
+          );
         }
 
         // Clear any state-level party leadership seats this character held. Leaving the
         // party invalidates a state chair/vice chair/treasurer seat; a stale id would
         // permanently block new appointments ("not vacant").
-        await statePartyOrgCollection<Document>(db)
-          .updateMany({ chairId: characterId }, { $set: { chairId: null, updatedAt: now } });
-        await statePartyOrgCollection<Document>(db)
-          .updateMany(
-            { viceChairId: characterId },
-            { $set: { viceChairId: null, updatedAt: now } }
-          );
-        await statePartyOrgCollection<Document>(db)
-          .updateMany(
-            { treasurerId: characterId },
-            { $set: { treasurerId: null, updatedAt: now } }
-          );
-        await statePartyOrgCollection<Document>(db)
-          .updateMany(
-            { campaignerId: characterId },
-            { $set: { campaignerId: null, updatedAt: now } }
-          );
+        await statePartyOrgCollection<Document>(db).updateMany(
+          { chairId: characterId },
+          { $set: { chairId: null, updatedAt: now } }
+        );
+        await statePartyOrgCollection<Document>(db).updateMany(
+          { viceChairId: characterId },
+          { $set: { viceChairId: null, updatedAt: now } }
+        );
+        await statePartyOrgCollection<Document>(db).updateMany(
+          { treasurerId: characterId },
+          { $set: { treasurerId: null, updatedAt: now } }
+        );
+        await statePartyOrgCollection<Document>(db).updateMany(
+          { campaignerId: characterId },
+          { $set: { campaignerId: null, updatedAt: now } }
+        );
 
         // Update presence for the party the character left
         await updatePartyPresence(db, auth.character.homeState, id);

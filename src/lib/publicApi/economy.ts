@@ -235,23 +235,22 @@ export async function queryLegislature(db: Db, country: string) {
     ? await Promise.all([
         getGameStatePreset(db),
         countryGameStatesCollection<{
-            _id: string;
-            bgOrdinaryAssemblySinceTurn?: number;
-            bgGrandAssemblyContinuationSinceTurn?: number;
-            bgConstitution1991SinceTurn?: number;
-            bgGrandAssemblyDissolutionSinceTurn?: number;
-          }>(db)
-          .findOne(
-            { _id: "BG" },
-            {
-              projection: {
-                bgOrdinaryAssemblySinceTurn: 1,
-                bgGrandAssemblyContinuationSinceTurn: 1,
-                bgConstitution1991SinceTurn: 1,
-                bgGrandAssemblyDissolutionSinceTurn: 1,
-              },
-            }
-          ),
+          _id: string;
+          bgOrdinaryAssemblySinceTurn?: number;
+          bgGrandAssemblyContinuationSinceTurn?: number;
+          bgConstitution1991SinceTurn?: number;
+          bgGrandAssemblyDissolutionSinceTurn?: number;
+        }>(db).findOne(
+          { _id: "BG" },
+          {
+            projection: {
+              bgOrdinaryAssemblySinceTurn: 1,
+              bgGrandAssemblyContinuationSinceTurn: 1,
+              bgConstitution1991SinceTurn: 1,
+              bgGrandAssemblyDissolutionSinceTurn: 1,
+            },
+          }
+        ),
       ])
     : null;
 

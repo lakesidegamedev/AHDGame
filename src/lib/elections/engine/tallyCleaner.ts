@@ -102,8 +102,10 @@ export async function removeWithdrawnCandidateFromTally(
   }
 
   if (Object.keys(unsetPaths).length)
-    await electionVoteTalliesCollection(db)
-      .updateOne({ electionId }, { $unset: unsetPaths, $set: { updatedAt: new Date() } });
+    await electionVoteTalliesCollection(db).updateOne(
+      { electionId },
+      { $unset: unsetPaths, $set: { updatedAt: new Date() } }
+    );
 
   if (ObjectId.isValid(candidateId)) {
     await invalidateSuspendEndorsementsForWithdrawnCandidate(

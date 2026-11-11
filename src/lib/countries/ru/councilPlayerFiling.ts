@@ -279,8 +279,10 @@ export async function materializeRussianCouncilPlayerFiling(input: {
     session,
   });
   if (!decision.allowed) return decision;
-  const tally = await electionVoteTalliesCollection(db)
-    .findOne({ electionId }, { session, projection: { totalVotes: 1 } });
+  const tally = await electionVoteTalliesCollection(db).findOne(
+    { electionId },
+    { session, projection: { totalVotes: 1 } }
+  );
   if (Object.values(tally?.totalVotes ?? {}).some((votes) => votes !== 0))
     return { allowed: false as const, reason: "filing-closed" as const };
   const binding = election.russianCouncilRound!;
@@ -313,20 +315,21 @@ export async function materializeRussianCouncilPlayerFiling(input: {
         )
       )
     );
-    await electionVoteTalliesCollection(db)
-      .updateOne({ electionId }, { $unset: unset, $set: { updatedAt: now } }, { session });
+    await electionVoteTalliesCollection(db).updateOne(
+      { electionId },
+      { $unset: unset, $set: { updatedAt: now } },
+      { session }
+    );
   }
-  await electionCandidatesCollection(db)
-    .insertOne(
-      { ...candidate, _id: candidateId, russianCouncilNomination: decision.nomination },
-      { session }
-    );
-  await campaignsCollection(db)
-    .updateOne(
-      { electionId, candidateId: candidate.characterId, status: { $ne: "archived" } },
-      { $set: { party: candidate.party, updatedAt: now } },
-      { session }
-    );
+  await electionCandidatesCollection(db).insertOne(
+    { ...candidate, _id: candidateId, russianCouncilNomination: decision.nomination },
+    { session }
+  );
+  await campaignsCollection(db).updateOne(
+    { electionId, candidateId: candidate.characterId, status: { $ne: "archived" } },
+    { $set: { party: candidate.party, updatedAt: now } },
+    { session }
+  );
   const receipt = await db
     .collection<RussianCouncilOpeningRecord>(RUSSIAN_COUNCIL_OPENINGS_COLLECTION)
     .updateOne(

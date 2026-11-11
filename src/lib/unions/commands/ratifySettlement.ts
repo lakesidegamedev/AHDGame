@@ -188,8 +188,10 @@ export async function castRatificationBallot(
   if (!campaign || !campaign.unionId.equals(new ObjectId(unionRouteId))) {
     return { ok: false, status: 404, error: "Bargaining campaign not found for this union." };
   }
-  const union = await unionsCollection(db)
-    .findOne({ _id: campaign.unionId }, { projection: { name: 1, countryId: 1 } });
+  const union = await unionsCollection(db).findOne(
+    { _id: campaign.unionId },
+    { projection: { name: 1, countryId: 1 } }
+  );
   if (!union) return { ok: false, status: 404, error: "Union not found" };
   // Same country gate the leadership ballot applies, and the same ban freeze.
   if (!isSameCountry(character, { countryId: union.countryId })) {
@@ -409,8 +411,10 @@ async function notifyRatificationClosed(
   outcome: RatificationOutcome | "void",
   currentTurn: number
 ): Promise<void> {
-  const union = await unionsCollection(db)
-    .findOne({ _id: campaign.unionId }, { projection: { name: 1, ownerId: 1, ownerType: 1 } });
+  const union = await unionsCollection(db).findOne(
+    { _id: campaign.unionId },
+    { projection: { name: 1, ownerId: 1, ownerType: 1 } }
+  );
   // An NPP-led union has no User behind its leader, and a vacant presidency has
   // nobody to tell. The vote still closed on schedule either way.
   if (!union?.ownerId || union.ownerType === "npp") return;

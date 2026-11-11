@@ -63,9 +63,7 @@ export async function splitParties(
   const officials = await electedOfficialsCollection(db)
     .find({ countryId: fromCountryId })
     .toArray();
-  const orgs = await statePartyOrgCollection(db)
-    .find({ countryId: fromCountryId })
-    .toArray();
+  const orgs = await statePartyOrgCollection(db).find({ countryId: fromCountryId }).toArray();
 
   const regionSeqIds = new Set<number>();
   for (const o of officials)

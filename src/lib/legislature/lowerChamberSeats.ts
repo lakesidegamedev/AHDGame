@@ -65,8 +65,10 @@ export async function getLiveLowerChamberSeats(db: Db, countryId: CountryId): Pr
     }
   }
   if (countryHasFeature("bgLib", countryId) && preset === "1991-default") {
-    const countryState = await countryGameStatesCollection(db)
-      .findOne({ _id: "BG" }, { projection: { bgOrdinaryAssemblySinceTurn: 1 } });
+    const countryState = await countryGameStatesCollection(db).findOne(
+      { _id: "BG" },
+      { projection: { bgOrdinaryAssemblySinceTurn: 1 } }
+    );
     if (countryState?.bgOrdinaryAssemblySinceTurn != null) {
       return BG_ORDINARY_ASSEMBLY_TOTAL_SEATS;
     }
@@ -86,8 +88,10 @@ export async function getLiveLowerChamberSeats(db: Db, countryId: CountryId): Pr
     }
   }
   if (countryHasFeature("roLib", countryId) && preset === "1991-default") {
-    const countryState = await countryGameStatesCollection(db)
-      .findOne({ _id: "RO" }, { projection: { roParliament1992SinceTurn: 1 } });
+    const countryState = await countryGameStatesCollection(db).findOne(
+      { _id: "RO" },
+      { projection: { roParliament1992SinceTurn: 1 } }
+    );
     if (countryState?.roParliament1992SinceTurn != null) {
       const regions = await statesCollection(db)
         .find({ countryId })
@@ -191,8 +195,10 @@ function isUpperChamberRegionApportioned(countryId: CountryId, preset?: string):
 export async function getLiveUpperChamberSeats(db: Db, countryId: CountryId): Promise<number> {
   const preset = await readActivePreset(db);
   if (countryHasFeature("roLib", countryId) && preset === "1991-default") {
-    const countryState = await countryGameStatesCollection(db)
-      .findOne({ _id: "RO" }, { projection: { roParliament1992SinceTurn: 1 } });
+    const countryState = await countryGameStatesCollection(db).findOne(
+      { _id: "RO" },
+      { projection: { roParliament1992SinceTurn: 1 } }
+    );
     if (countryState?.roParliament1992SinceTurn != null) {
       const regions = await statesCollection(db)
         .find({ countryId })
@@ -203,8 +209,10 @@ export async function getLiveUpperChamberSeats(db: Db, countryId: CountryId): Pr
     }
   }
   if (countryHasFeature("ruLib", countryId) && preset === "1991-default") {
-    const countryState = await countryGameStatesCollection(db)
-      .findOne({ _id: "RU" }, { projection: { ruFederalAssemblySinceTurn: 1 } });
+    const countryState = await countryGameStatesCollection(db).findOne(
+      { _id: "RU" },
+      { projection: { ruFederalAssemblySinceTurn: 1 } }
+    );
     return countryState?.ruFederalAssemblySinceTurn != null ? 178 : 0;
   }
   const config = getCountryConfig(countryId, preset);
