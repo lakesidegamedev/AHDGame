@@ -42,6 +42,7 @@ import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 import type { Document } from "mongodb";
+import { slateCandidatesCollection } from "@/lib/db/repositories/slateCandidates";
 
 interface SlateResponseSummary {
   rowsConsidered: number;
@@ -101,8 +102,7 @@ export async function syncPersistentSlateAssignments(ctx: NPPContext): Promise<n
   const slateIdsWithRows = new Set<string>();
   if (existingSlates.length > 0) {
     const slateObjectIds = existingSlates.map((s) => s._id);
-    const counts = await db
-      .collection<SlateCandidate>("slateCandidates")
+    const counts = await slateCandidatesCollection(db)
       .aggregate<{ _id: ObjectId; count: number }>([
         { $match: { slateId: { $in: slateObjectIds } } },
         { $group: { _id: "$slateId", count: { $sum: 1 } } },
@@ -190,8 +190,7 @@ export async function syncPersistentSlateAssignments(ctx: NPPContext): Promise<n
 export async function processSlateResponses(ctx: NPPContext): Promise<SlateResponseSummary> {
   const { db, now, nppMap } = ctx;
 
-  const invitedRows = await db
-    .collection<SlateCandidate>("slateCandidates")
+  const invitedRows = await slateCandidatesCollection(db)
     .find({ status: { $in: ["invited", "considering"] }, candidateType: "npp" })
     .toArray();
   if (invitedRows.length === 0) {
@@ -276,7 +275,7 @@ export async function processSlateResponses(ctx: NPPContext): Promise<SlateRespo
   }
 
   if (bulkOps.length > 0) {
-    await db.collection<SlateCandidate>("slateCandidates").bulkWrite(bulkOps);
+    await slateCandidatesCollection(db).bulkWrite(bulkOps);
   }
 
   return {
@@ -396,8 +395,7 @@ export async function trimOverCapSlates(ctx: NPPContext): Promise<SlateTrimSumma
   if (elections.length === 0) return summary;
   const tallyCache = new Map<string, ElectionVoteTally | null>();
 
-  const rows = await db
-    .collection<SlateCandidate>("slateCandidates")
+  const rows = await slateCandidatesCollection(db)
     .find({ electionId: { $in: elections.map((election) => election._id) } })
     .toArray();
   const liveRowsByRace = new Map<string, SlateCandidate[]>();
@@ -441,7 +439,7 @@ export async function trimOverCapSlates(ctx: NPPContext): Promise<SlateTrimSumma
         }
         const tombstones = liveRows.filter((row) => row.candidateId.toString() === holderId);
         if (tombstones.length > 0) {
-          await db.collection<SlateCandidate>("slateCandidates").bulkWrite(
+          await slateCandidatesCollection(db).bulkWrite(
             tombstones.map((row) => ({
               updateOne: {
                 filter: { _id: row._id },
@@ -498,8 +496,7 @@ export async function fileAcceptedSlateRows(ctx: NPPContext): Promise<SlateFilin
   const { db, now, nppMap, candidatesByElection } = ctx;
 
   const accepted = (
-    await db
-      .collection<SlateCandidate>("slateCandidates")
+    await slateCandidatesCollection(db)
       .find({ status: "accepted", candidateType: "npp", filedAt: null })
       .toArray()
   ).sort(
@@ -545,8 +542,7 @@ export async function fileAcceptedSlateRows(ctx: NPPContext): Promise<SlateFilin
   // Every slate row on the races this pass touches, serving two questions:
   // which candidates hold a chair-issued row (as opposed to turn-loop
   // carry-forward), and what each party already holds against the cap.
-  const slateRowsForElections = await db
-    .collection<SlateCandidate>("slateCandidates")
+  const slateRowsForElections = await slateCandidatesCollection(db)
     .find({ electionId: { $in: electionIds } })
     .toArray();
 
@@ -691,9 +687,10 @@ export async function fileAcceptedSlateRows(ctx: NPPContext): Promise<SlateFilin
         candidacies[0] ??
         null;
       if (activeCandidacy && activeCandidacy.electionId.toString() === election._id.toString()) {
-        await db
-          .collection<SlateCandidate>("slateCandidates")
-          .updateOne({ _id: row._id }, { $set: { status: "filed", filedAt: now, updatedAt: now } });
+        await slateCandidatesCollection(db).updateOne(
+          { _id: row._id },
+          { $set: { status: "filed", filedAt: now, updatedAt: now } }
+        );
         filed += 1;
         continue;
       }
@@ -799,9 +796,10 @@ export async function fileAcceptedSlateRows(ctx: NPPContext): Promise<SlateFilin
         }
       }
 
-      await db
-        .collection<SlateCandidate>("slateCandidates")
-        .updateOne({ _id: row._id }, { $set: { status: "filed", filedAt: now, updatedAt: now } });
+      await slateCandidatesCollection(db).updateOne(
+        { _id: row._id },
+        { $set: { status: "filed", filedAt: now, updatedAt: now } }
+      );
       filed += 1;
     } catch (error) {
       // Never let one bad row abort the whole filing pass — leave it accepted
@@ -815,7 +813,7 @@ export async function fileAcceptedSlateRows(ctx: NPPContext): Promise<SlateFilin
   }
 
   if (skippedRows.length > 0) {
-    await db.collection<SlateCandidate>("slateCandidates").bulkWrite(
+    await slateCandidatesCollection(db).bulkWrite(
       skippedRows.map(({ rowId, reason }) => ({
         updateOne: {
           filter: { _id: rowId },

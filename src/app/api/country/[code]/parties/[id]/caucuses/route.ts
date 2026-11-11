@@ -17,6 +17,7 @@ import { buildPartyCaucusHealthSnapshot } from "@/lib/caucus/caucusHealth";
 import { cleanupCaucusParticipationForCharacters } from "@/lib/caucus/cleanupCaucusParticipationForCharacters";
 import type { Caucus, CaucusMembership } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { caucusesCollection } from "@/lib/db/repositories/caucuses";
 
 // GET /api/country/[code]/parties/[id]/caucuses — List caucuses for a party with member counts
 // Auth: requireAuth
@@ -166,7 +167,7 @@ export async function POST(
 
     // Founder can't already chair another active caucus in this party (one
     // caucus per chair, mirroring one caucus per member).
-    const existingChair = await db.collection<Caucus>("caucuses").findOne({
+    const existingChair = await caucusesCollection(db).findOne({
       countryId,
       partyId,
       chairId: auth.user.character._id,
@@ -187,7 +188,7 @@ export async function POST(
     // pointed-at caucus is not an active caucus of *this* party, drop the
     // leftover membership and continue.
     if (auth.user.character.factionId) {
-      const pointedCaucus = await db.collection<Caucus>("caucuses").findOne({
+      const pointedCaucus = await caucusesCollection(db).findOne({
         _id: auth.user.character.factionId,
         disbandedAt: null,
       });
@@ -222,7 +223,7 @@ export async function POST(
     }
 
     // Active-slug collision check.
-    const slugCollision = await db.collection<Caucus>("caucuses").findOne({
+    const slugCollision = await caucusesCollection(db).findOne({
       countryId,
       partyId,
       slug,
@@ -261,7 +262,7 @@ export async function POST(
       updatedAt: now,
     };
 
-    await db.collection<Caucus>("caucuses").insertOne(caucus);
+    await caucusesCollection(db).insertOne(caucus);
 
     // Reclaim the slug from any prior caucus's previousSlugs in this party so
     // the resolver routes the new owner correctly.

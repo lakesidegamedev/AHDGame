@@ -8,6 +8,7 @@ import type { Defect, DetectResult, HealPlan, HealResult, VerifyResult } from ".
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
+import { marketCapHistoryCollection } from "@/lib/db/repositories/marketCapHistory";
 
 type HistoryRow = MarketCapHistory & { _id: ObjectId };
 
@@ -98,8 +99,7 @@ export function removeUnlistedCaps(
 
 async function survey(db: Db): Promise<Survey> {
   const [rows, corporations, rates] = await Promise.all([
-    db
-      .collection<HistoryRow>("marketCapHistory")
+    marketCapHistoryCollection<HistoryRow>(db)
       .find({ listingUniverse: { $ne: "public-only" } })
       .sort({ turn: 1 })
       .toArray(),
@@ -190,7 +190,7 @@ async function plan(db: Db): Promise<HealPlan> {
 async function apply(db: Db, healPlan: HealPlan): Promise<HealResult> {
   const result = healPlan.payload as Survey;
   if (result.rows.length === 0) return { documentsScanned: 0, documentsUpdated: 0 };
-  const write = await db.collection<HistoryRow>("marketCapHistory").bulkWrite(
+  const write = await marketCapHistoryCollection<HistoryRow>(db).bulkWrite(
     result.rows.map((row) => ({
       updateOne: {
         filter: { _id: new ObjectId(row.id), listingUniverse: { $ne: "public-only" } },
@@ -212,9 +212,9 @@ async function apply(db: Db, healPlan: HealPlan): Promise<HealResult> {
 }
 
 async function verify(db: Db): Promise<VerifyResult> {
-  const remaining = await db
-    .collection<MarketCapHistory>("marketCapHistory")
-    .countDocuments({ listingUniverse: { $ne: "public-only" } });
+  const remaining = await marketCapHistoryCollection(db).countDocuments({
+    listingUniverse: { $ne: "public-only" },
+  });
   return {
     ok: remaining === 0,
     remaining,

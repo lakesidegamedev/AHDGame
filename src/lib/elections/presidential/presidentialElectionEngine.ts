@@ -127,6 +127,10 @@ import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
 import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
+import { playerEndorsementsCollection } from "@/lib/db/repositories/playerEndorsements";
+import { demographicDefaultsCollection } from "@/lib/db/repositories/demographicDefaults";
+import { governorEndorsementsCollection } from "@/lib/db/repositories/governorEndorsements";
+import { stateRegistrationPoolCollection } from "@/lib/db/repositories/stateRegistrationPool";
 
 /** Vote multiplier applied in a state when its sitting governor has endorsed
  *  the candidate. Half of the VP-home-state effect — a real in-state lift
@@ -423,8 +427,7 @@ export async function accumulatePresidentVoteTurn(
       stateDemographicTurnoutCollection(db)
         .find({ _id: { $in: uniqueStateIds } })
         .toArray(),
-      db
-        .collection<StateRegistrationPool>("stateRegistrationPool")
+      stateRegistrationPoolCollection(db)
         .find({ stateId: { $in: uniqueStateIds } })
         .toArray(),
       getAllStateApprovalsForElection(),
@@ -433,8 +436,7 @@ export async function accumulatePresidentVoteTurn(
   // Seeded snapshots for the granular substrate's legislation lean-drift fold.
   const demographicDefaultsByState = new Map(
     (
-      await db
-        .collection<StateDemographics>("demographicDefaults")
+      await demographicDefaultsCollection(db)
         .find({ _id: { $in: uniqueStateIds } })
         .toArray()
     ).map((d) => [d._id as string, d])
@@ -570,8 +572,7 @@ export async function accumulatePresidentVoteTurn(
   // Cross-state bleed is prevented at campaignTurn (the national action boost
   // is suppressed there for presidential); this is the in-state half of the
   // contract.
-  const governorEndorsements = await db
-    .collection<GovernorEndorsement>("governorEndorsements")
+  const governorEndorsements = await governorEndorsementsCollection(db)
     .find({ electionId, isActive: true })
     .toArray();
   const governorEndorsedCandidatesByState = new Map<string, Set<string>>();
@@ -645,8 +646,7 @@ export async function accumulatePresidentVoteTurn(
         characterIdToCandidateId.set(c.characterId.toString(), c._id.toString());
       }
     }
-    const activeEndorsements = await db
-      .collection<PlayerEndorsement>("playerEndorsements")
+    const activeEndorsements = await playerEndorsementsCollection(db)
       .find({ electionId, isActive: true })
       .toArray();
     const orgLinks: EndorsementOrgLink[] = [];

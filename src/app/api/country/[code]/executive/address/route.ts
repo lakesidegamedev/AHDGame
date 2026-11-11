@@ -20,6 +20,8 @@ import {
 import type { GameState, GovernorAddress, GovernorOfficeState } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { governorAddressesCollection } from "@/lib/db/repositories/governorAddresses";
+import { governorOfficeStateCollection } from "@/lib/db/repositories/governorOfficeState";
 
 /**
  * National (head-of-government) addresses — country leader's equivalent of
@@ -115,9 +117,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     const viewerIsLeader = characterId ? await isSittingLeader(db, countryId, characterId) : false;
 
     const [office, recentArr, gameStateDoc, charDoc] = await Promise.all([
-      db.collection<GovernorOfficeState>("governorOfficeState").findOne({ countryId, stateId }),
-      db
-        .collection<GovernorAddress>("governorAddresses")
+      governorOfficeStateCollection(db).findOne({ countryId, stateId }),
+      governorAddressesCollection(db)
         .find({ countryId, stateId })
         .sort({ deliveredAtTurn: -1 })
         .limit(1)

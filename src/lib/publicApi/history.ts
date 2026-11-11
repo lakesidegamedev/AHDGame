@@ -2,6 +2,8 @@ import type { Db } from "mongodb";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { COMMODITY_LABELS, type CommodityType } from "@/lib/constants/commodities";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { tradeFlowSnapshotsCollection } from "@/lib/db/repositories/tradeFlowSnapshots";
+import { federalBudgetSnapshotsCollection } from "@/lib/db/repositories/federalBudgetSnapshots";
 
 export const PUBLIC_HISTORY_DEFAULT_POINTS = 48;
 export const PUBLIC_HISTORY_MAX_POINTS = 240;
@@ -194,8 +196,7 @@ export async function queryCountryEconomyHistory(
         },
       }
     ),
-    db
-      .collection<PublicBudgetSnapshotRow>("federalBudgetSnapshots")
+    federalBudgetSnapshotsCollection<PublicBudgetSnapshotRow>(db)
       .find(fiscalFilter, {
         projection: {
           countryId: 1,
@@ -274,8 +275,7 @@ export async function queryTradeFlowHistory(
   filters: PublicTradeFlowFilters = {}
 ): Promise<PublicTradeFlowHistory> {
   const normalized = normalizedRange(filters);
-  const snapshotsDescending = await db
-    .collection<PublicTradeFlowSnapshotRow>("tradeFlowSnapshots")
+  const snapshotsDescending = await tradeFlowSnapshotsCollection<PublicTradeFlowSnapshotRow>(db)
     .find(turnFilter(normalized), {
       projection: {
         turn: 1,

@@ -9,6 +9,8 @@ import {
 } from "@/lib/unions/unionProsecutionBar";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { unionsCollection } from "@/lib/db/repositories/unions";
+import { unionLeaderVotesCollection } from "@/lib/db/repositories/unionLeaderVotes";
+import type { Document } from "mongodb";
 
 export type ResignUnionLeadershipResult =
   { ok: true; status: 200 } | { ok: false; status: number; error: string };
@@ -62,7 +64,10 @@ export async function resignUnionLeadership(
         { $set: { unionLeaderOf: null, updatedAt: now } },
         { session }
       );
-      await db.collection("unionLeaderVotes").deleteMany({ unionId: unionObjectId }, { session });
+      await unionLeaderVotesCollection<Document>(db).deleteMany(
+        { unionId: unionObjectId },
+        { session }
+      );
     },
     async () => {
       await unionsCollection(db).updateOne(
@@ -76,7 +81,7 @@ export async function resignUnionLeadership(
         { _id: character._id },
         { $set: { unionLeaderOf: null, updatedAt: now } }
       );
-      await db.collection("unionLeaderVotes").deleteMany({ unionId: unionObjectId });
+      await unionLeaderVotesCollection<Document>(db).deleteMany({ unionId: unionObjectId });
     }
   );
 

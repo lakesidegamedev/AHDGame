@@ -5,6 +5,7 @@ import { handleRouteError } from "@/lib/api/errors";
 import type { ShareListing, ShareOrder } from "@/lib/db/types";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
+import { shareListingsCollection } from "@/lib/db/repositories/shareListings";
 
 /**
  * POST /api/admin/heal/corporation-shares
@@ -36,10 +37,7 @@ export async function POST() {
       const key = order.corporationId.toString();
       reservedByCorp.set(key, (reservedByCorp.get(key) ?? 0) + order.sharesRemaining);
     }
-    const openListings = await db
-      .collection<ShareListing>("shareListings")
-      .find({ status: "open" })
-      .toArray();
+    const openListings = await shareListingsCollection(db).find({ status: "open" }).toArray();
     for (const listing of openListings) {
       const key = listing.corporationId.toString();
       reservedByCorp.set(key, (reservedByCorp.get(key) ?? 0) + listing.sharesRemaining);

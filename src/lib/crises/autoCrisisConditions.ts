@@ -11,6 +11,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
+import { macroMetricsHistoryCollection } from "@/lib/db/repositories/macroMetricsHistory";
 
 interface MetricPoint {
   turn: number;
@@ -67,9 +68,9 @@ export async function loadNationalSnapshot(
     // `stateMetricHistory` half of this read contributed nothing even before it
     // stopped being written.
     nationalDocId
-      ? db
-          .collection<HistoryDoc & { _id: string }>("macroMetricsHistory")
-          .findOne({ _id: nationalDocId })
+      ? macroMetricsHistoryCollection<HistoryDoc & { _id: string }>(db).findOne({
+          _id: nationalDocId,
+        })
       : null,
     federalBudgetCollection<{
       countryId: CountryId;

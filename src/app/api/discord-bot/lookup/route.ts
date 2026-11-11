@@ -26,6 +26,7 @@ import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParti
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { usersCollection } from "@/lib/db/repositories/users";
+import { investorRankingSnapshotsCollection } from "@/lib/db/repositories/investorRankingSnapshots";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -180,9 +181,9 @@ export async function GET(request: Request) {
 
     // Get portfolio values and investor rankings from pre-computed snapshot
     // This is generated once per turn and avoids scanning all corporations
-    const investorSnapshot = await db
-      .collection<InvestorRankingSnapshot>("investorRankingSnapshots")
-      .findOne({ _id: "global" });
+    const investorSnapshot = await investorRankingSnapshotsCollection(db).findOne({
+      _id: "global",
+    });
 
     const portfolioValues = new Map<string, number>();
     const investorRankMap = new Map<string, number>();

@@ -79,6 +79,8 @@ import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { billsCollection } from "@/lib/db/repositories/bills";
+import { referendumsCollection } from "@/lib/db/repositories/referendums";
+import { governorAddressesCollection } from "@/lib/db/repositories/governorAddresses";
 
 export async function processBillVoting(ctx: NPPContext): Promise<number> {
   const {
@@ -107,8 +109,7 @@ export async function processBillVoting(ctx: NPPContext): Promise<number> {
     )
     .map((b) => b._id);
   const legacyRefs = legacyConsentIds.length
-    ? await db
-        .collection<Referendum>("referendums")
+    ? await referendumsCollection(db)
         .find(
           {
             $or: [
@@ -180,8 +181,7 @@ export async function processBillVoting(ctx: NPPContext): Promise<number> {
   const nationalStateIds = Object.values(NATIONAL_POLICY_STATE_IDS);
   const addressesByCountry = new Map<CountryId, { partyId: string; categories: Set<string> }[]>();
   if (activeBills.length > 0) {
-    const activeNationalAddresses = await db
-      .collection<GovernorAddress>("governorAddresses")
+    const activeNationalAddresses = await governorAddressesCollection(db)
       .find({
         stateId: { $in: nationalStateIds },
         "agendaEffect.expiresAtTurn": { $gt: currentTurn },

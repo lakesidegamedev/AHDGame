@@ -35,6 +35,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import type { Document } from "mongodb";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
+import { demographicDefaultsCollection } from "@/lib/db/repositories/demographicDefaults";
 
 const VALID_ERAS = SEED_ERA_IDS;
 
@@ -99,9 +100,11 @@ export async function POST(request: Request) {
           { $set: storedDemographics },
           { upsert: true }
         );
-        await db
-          .collection<StateDemographics>("demographicDefaults")
-          .updateOne({ _id: sd._id }, { $set: storedDemographics }, { upsert: true });
+        await demographicDefaultsCollection(db).updateOne(
+          { _id: sd._id },
+          { $set: storedDemographics },
+          { upsert: true }
+        );
         const calculatedLean = calculateStateLeanForCache(sd, [], {
           countryId,
           stateId: sd._id,
@@ -181,9 +184,11 @@ export async function POST(request: Request) {
         { $set: cachedDemographics },
         { upsert: true }
       );
-      await db
-        .collection<StateDemographics>("demographicDefaults")
-        .updateOne({ _id: sd._id }, { $set: cachedDemographics }, { upsert: true });
+      await demographicDefaultsCollection(db).updateOne(
+        { _id: sd._id },
+        { $set: cachedDemographics },
+        { upsert: true }
+      );
 
       // Refresh cached leans on states
       await statesCollection(db).updateOne(

@@ -19,6 +19,7 @@ import {
 } from "@/lib/market/producerMarket/stageTimings";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { producerEconomyAccountsCollection } from "@/lib/db/repositories/producerEconomyAccounts";
 
 /** Stop on convergence, with a bounded fallback for difficult live markets. */
 export const LIVE_PLANNING_PASSES = 64;
@@ -63,7 +64,7 @@ export async function createProducerWallets(
   const entries = [...unique];
   if (entries.length === 0) return;
   // One unordered bulk write; the driver splits it into server-sized batches.
-  await db.collection<ProducerEconomyAccount>("producerEconomyAccounts").bulkWrite(
+  await producerEconomyAccountsCollection(db).bulkWrite(
     entries.map(([_id, scope]) => ({
       updateOne: {
         filter: {
@@ -148,8 +149,7 @@ export async function runCorporationProducerMarket(
         { projection: { liquidCapital: 1, liquidCurrencyCode: 1, producerPayables: 1 } }
       )
       .toArray(),
-    db
-      .collection<ProducerEconomyAccount>("producerEconomyAccounts")
+    producerEconomyAccountsCollection(db)
       .find(
         { worldEpoch: input.worldEpoch },
         { projection: { cash: 1, currency: 1, producerPayables: 1 } }

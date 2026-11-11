@@ -15,6 +15,8 @@ import { partiesMatchInCountry } from "@/lib/parties/partyMatch";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { governorOfficeStateCollection } from "@/lib/db/repositories/governorOfficeState";
+import { executiveEndorsementsCollection } from "@/lib/db/repositories/executiveEndorsements";
 
 export interface CreateExecutiveEndorsementInput {
   countryId: CountryId;
@@ -78,7 +80,7 @@ export async function createExecutiveEndorsement(
   }
 
   // One active endorsement per (leader, race).
-  const existing = await db.collection<ExecutiveEndorsement>("executiveEndorsements").findOne({
+  const existing = await executiveEndorsementsCollection(db).findOne({
     countryId,
     endorsedByCharacterId: character._id,
     electionId,
@@ -93,7 +95,7 @@ export async function createExecutiveEndorsement(
 
   // Office AP spend on the national pseudo-stateId row.
   const nationalStateId = getNationalStateId(countryId);
-  const spend = await db.collection<GovernorOfficeState>("governorOfficeState").updateOne(
+  const spend = await governorOfficeStateCollection(db).updateOne(
     {
       countryId,
       stateId: nationalStateId,
@@ -125,7 +127,7 @@ export async function createExecutiveEndorsement(
     createdAtTurn: currentTurn,
     createdAt: new Date(),
   };
-  await db.collection<ExecutiveEndorsement>("executiveEndorsements").insertOne(doc);
+  await executiveEndorsementsCollection(db).insertOne(doc);
 
   // B3 — endorsement landing bumps the endorsed candidate's Support.
   // Use candidate.characterId rather than the param `candidateId`

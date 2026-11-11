@@ -35,6 +35,10 @@ import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
+import { stateResourceCapacityCollection } from "@/lib/db/repositories/stateResourceCapacity";
+import { organizationMembershipsCollection } from "@/lib/db/repositories/organizationMemberships";
+import { tariffsCollection } from "@/lib/db/repositories/tariffs";
+import { tradeFlowSnapshotsCollection } from "@/lib/db/repositories/tradeFlowSnapshots";
 
 /** Issues the parallel reads the lookups are built from. */
 export async function loadCorporationLookupInputs({
@@ -251,7 +255,7 @@ export async function loadCorporationLookupInputs({
         }
       )
       .toArray(),
-    db.collection<Tariff>("tariffs").find({}).toArray(),
+    tariffsCollection(db).find({}).toArray(),
     getActiveSubsidies(db),
     statesCollection(db)
       .find(
@@ -273,23 +277,20 @@ export async function loadCorporationLookupInputs({
     exchangeRatesCollection(db)
       .find({}, { projection: { currencyCode: 1, rate: 1 } })
       .toArray() as Promise<ExchangeRate[]>,
-    db
-      .collection<StateResourceCapacity>("stateResourceCapacity")
+    stateResourceCapacityCollection(db)
       .find({}, { projection: { stateId: 1, resources: 1 } })
       .toArray(),
     loadActiveFtaPairs(db),
     unownedSectorsCollection(db).find({}).toArray(),
     // Latest trade-flow snapshot (prev turn) → per-country export intensity for
     // the export-reward margin premium. One small doc.
-    db
-      .collection<TradeFlowSnapshot>("tradeFlowSnapshots")
+    tradeFlowSnapshotsCollection(db)
       .find({}, { sort: { turn: -1 }, limit: 1 })
       .toArray(),
     // Trade-graph inputs for the market partition (era worlds): shared org
     // blocs and ALL active embargoes (the suppression query above keeps only
     // comprehensive ones; the affinity graph needs every block/cap lane).
-    db
-      .collection<OrganizationMembership>("organizationMemberships")
+    organizationMembershipsCollection(db)
       .find({}, { projection: { countryId: 1, organizationId: 1 } })
       .toArray(),
     db

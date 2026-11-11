@@ -3,6 +3,7 @@ import type { ContestRecordKind } from "@/lib/db/types/contestRound";
 import { getContestRoundsCollection } from "./collection";
 import type { ContestsViewer } from "./queries";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { retiredCharactersCollection } from "@/lib/db/repositories/retiredCharacters";
 
 export const HISTORY_PAGE_SIZE = 20;
 export interface ContestHistoryEntry {
@@ -133,8 +134,7 @@ export async function loadContestHistory(
     charactersCollection(db)
       .find({ userId: new ObjectId(userId) }, { projection: { _id: 1 } })
       .toArray(),
-    db
-      .collection("retiredCharacters")
+    retiredCharactersCollection<Document>(db)
       .find({ userId: new ObjectId(userId) }, { projection: { characterId: 1 } })
       .toArray(),
   ]);

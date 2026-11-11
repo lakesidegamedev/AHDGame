@@ -20,6 +20,8 @@ import type { ScotusNomination, SupremeCourtSeat } from "@/lib/db/types/scotus";
 import type { ElectedOfficial } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { supremeCourtSeatsCollection } from "@/lib/db/repositories/supremeCourtSeats";
+import { scotusNominationsCollection } from "@/lib/db/repositories/scotusNominations";
 
 // GET /api/whitehouse/scotus: 9-seat composition, active nominations, and caller's president/senator/justice status. Country-scoped via ?country= (default US); SCOTUS is US-only, other countries return an empty shell.
 // Auth: public
@@ -46,12 +48,10 @@ export async function GET(request: Request) {
 
     const [seats, rawSeats, nominations, presidentOfficial, myCharacter] = await Promise.all([
       getScotusComposition(db, countryId),
-      db
-        .collection<SupremeCourtSeat>("supremeCourtSeats")
+      supremeCourtSeatsCollection(db)
         .find({ countryId }, { projection: { seatNumber: 1, justiceCharacterId: 1 } })
         .toArray(),
-      db
-        .collection<ScotusNomination>("scotusNominations")
+      scotusNominationsCollection(db)
         .find({ countryId, status: "active" })
         .sort({ proposedAt: -1 })
         .toArray(),

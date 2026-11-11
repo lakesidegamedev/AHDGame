@@ -11,6 +11,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { usersCollection } from "@/lib/db/repositories/users";
 import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
 import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
+import { commodityPriceHistoryCollection } from "@/lib/db/repositories/commodityPriceHistory";
 
 export interface WatchlistRow {
   kind: WatchKind;
@@ -92,8 +93,7 @@ export async function loadWatchlist(db: Db, userId: string): Promise<WatchlistWi
           .toArray()
       : [],
     prices.length && previousTurn > 0
-      ? db
-          .collection<CommodityPriceHistory>("commodityPriceHistory")
+      ? commodityPriceHistoryCollection(db)
           .find(
             { commodity: { $in: prices.map((p) => p.commodity) }, turn: previousTurn },
             { projection: { commodity: 1, globalPrice: 1 } }

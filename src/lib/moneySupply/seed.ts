@@ -12,6 +12,8 @@ import { getGdpAnchorRate } from "@/lib/currency/gdpAnchorRate";
 import { seedExternalBroadMoney } from "./rules/seed";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { moneySupplySnapshotsCollection } from "@/lib/db/repositories/moneySupplySnapshots";
+import type { Document } from "mongodb";
 
 export async function seedMoneySupplyBaselines(db: Db, preset: string): Promise<void> {
   const banks = await centralBanksCollection(db)
@@ -50,7 +52,8 @@ export async function seedMoneySupplyBaselines(db: Db, preset: string): Promise<
       }))
     );
   }
-  await db
-    .collection("moneySupplySnapshots")
-    .createIndex({ currencyCode: 1, turn: -1 }, { background: true });
+  await moneySupplySnapshotsCollection<Document>(db).createIndex(
+    { currencyCode: 1, turn: -1 },
+    { background: true }
+  );
 }

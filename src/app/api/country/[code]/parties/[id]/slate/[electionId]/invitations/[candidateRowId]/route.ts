@@ -13,6 +13,7 @@ import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 import type { Document } from "mongodb";
+import { slateCandidatesCollection } from "@/lib/db/repositories/slateCandidates";
 
 interface RouteParams {
   params: Promise<{
@@ -63,9 +64,10 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
       );
     }
 
-    const row = await db
-      .collection<SlateCandidate>("slateCandidates")
-      .findOne({ _id: new ObjectId(candidateRowId), slateId: slate._id });
+    const row = await slateCandidatesCollection(db).findOne({
+      _id: new ObjectId(candidateRowId),
+      slateId: slate._id,
+    });
     if (!row) {
       return errorResponse(404, "Invitation not found on this slate");
     }
@@ -123,12 +125,10 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
     // A `withdrawn` tombstone keeps the slate non-empty (blocking re-hydration)
     // and is excluded from the file/override passes and template carry-forward —
     // matching how the POST reassign route already tombstones vacated rows (#906).
-    await db
-      .collection<SlateCandidate>("slateCandidates")
-      .updateOne(
-        { _id: row._id },
-        { $set: { status: "withdrawn", refusalReason: null, respondedAt: now, updatedAt: now } }
-      );
+    await slateCandidatesCollection(db).updateOne(
+      { _id: row._id },
+      { $set: { status: "withdrawn", refusalReason: null, respondedAt: now, updatedAt: now } }
+    );
     return NextResponse.json({ success: true });
   } catch (error) {
     return handleRouteError(error);

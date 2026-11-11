@@ -15,6 +15,7 @@ import {
 } from "./materializePublicCorporations";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { militaryUnitsCollection } from "@/lib/db/repositories/militaryUnits";
 
 const FEDERATION_CUSTODY_RECORDS_COLLECTION = "federationCustodyRecords";
 
@@ -68,7 +69,7 @@ export async function materializeFederationCustody(input: {
       if (assignment.kind !== "conventional-force" && assignment.kind !== "strategic-force")
         throw new Error("Federation custody force has an invalid kind");
       const unitId = objectIdFromAsset(assignment.assetId, "force:");
-      const units = db.collection<MilitaryUnit>("militaryUnits");
+      const units = militaryUnitsCollection(db);
       const unit = await units.findOne({ _id: unitId, countryId: sourceCountryId }, { session });
       if (!unit) throw new Error("Federation custody force is missing");
       const transfer = unit.station ? transferByState.get(unit.station) : undefined;

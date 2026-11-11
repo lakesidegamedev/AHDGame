@@ -82,6 +82,7 @@ import { usersCollection } from "@/lib/db/repositories/users";
 import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
 import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
 import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
+import { playerEndorsementsCollection } from "@/lib/db/repositories/playerEndorsements";
 
 type PlayerCharacter = Pick<
   Character,
@@ -424,8 +425,7 @@ async function loadKingmakerCalls(
   if (elections.length === 0) return new Map();
 
   const electionIds = elections.map((e) => e._id);
-  const endorsements = await db
-    .collection<PlayerEndorsement>("playerEndorsements")
+  const endorsements = await playerEndorsementsCollection(db)
     .find(
       { electionId: { $in: electionIds }, characterId: { $in: playerObjectIds(world) } },
       {

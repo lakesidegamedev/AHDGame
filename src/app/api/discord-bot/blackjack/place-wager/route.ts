@@ -14,6 +14,8 @@ import {
 } from "@/lib/casino/house";
 import { casinoFailure, guardCasinoPlayer, guardCasinoRequest } from "@/lib/casino/routeSupport";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { blackjackPendingWagersCollection } from "@/lib/db/repositories/blackjackPendingWagers";
+import type { Document } from "mongodb";
 
 const placeWagerSchema = z.object({
   discordId: z.string().min(1, "discordId is required"),
@@ -50,7 +52,7 @@ export async function POST(request: Request) {
 
     // If the pending row cannot be written the hand cannot settle, so return the stake.
     try {
-      await db.collection("blackjackPendingWagers").insertOne({
+      await blackjackPendingWagersCollection<Document>(db).insertOne({
         gameId,
         discordId,
         characterId: player.characterId,

@@ -7,6 +7,8 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { closeCeoTenure } from "@/lib/corporations/ceoHistory";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporationCeoVotesCollection } from "@/lib/db/repositories/corporationCeoVotes";
+import type { Document } from "mongodb";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -57,7 +59,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
     );
 
     // Clear all CEO votes so the election starts fresh
-    await db.collection("corporationCeoVotes").deleteMany({
+    await corporationCeoVotesCollection<Document>(db).deleteMany({
       corporationId: corporation._id,
     });
 

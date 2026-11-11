@@ -3,6 +3,7 @@ import type { Corporation } from "@/lib/db/types";
 import type { SourcingNetworkDoc } from "@/lib/logistics/sourcingLedger";
 import { ownRouteIdentity, resolveSupplyPolicies } from "@/lib/market/internalSupply/rules";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { sourcingNetworkLoadCollection } from "@/lib/db/repositories/sourcingNetworkLoad";
 
 type CoveredByState = NonNullable<SourcingNetworkDoc["ownFreightCoveredTeuByState"]>;
 
@@ -34,9 +35,10 @@ export async function loadOwnTruckTeuByState(
   db: Db,
   corporation: Pick<Corporation, "_id">
 ): Promise<Record<string, number>> {
-  const doc = await db
-    .collection<SourcingNetworkDoc>("sourcingNetworkLoad")
-    .findOne({}, { sort: { turn: -1 }, projection: { ownFreightCoveredTeuByState: 1 } });
+  const doc = await sourcingNetworkLoadCollection<SourcingNetworkDoc>(db).findOne(
+    {},
+    { sort: { turn: -1 }, projection: { ownFreightCoveredTeuByState: 1 } }
+  );
   const covered = doc?.ownFreightCoveredTeuByState;
   if (!covered) return {};
   const id = corporation._id.toString();

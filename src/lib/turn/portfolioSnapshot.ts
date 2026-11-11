@@ -44,6 +44,9 @@ import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { indexFundPositionsCollection } from "@/lib/db/repositories/indexFundPositions";
+import { portfolioHistoryCollection } from "@/lib/db/repositories/portfolioHistory";
+import type { Document } from "mongodb";
 
 /**
  * Snapshot portfolio values for all characters who hold shares and/or bonds.
@@ -261,10 +264,12 @@ export async function snapshotPortfolioValues(
   // Index-fund positions. `quotedNav` and every other fund leg are ₳, so
   // units x NAV needs no conversion. Omitting funds meant a player who held
   // nothing else showed a flat portfolio line while their wealth moved.
-  const fundPositions = await db
-    .collection<{ fundId: ObjectId; holderKind: string; characterId?: ObjectId; units?: number }>(
-      "indexFundPositions"
-    )
+  const fundPositions = await indexFundPositionsCollection<{
+    fundId: ObjectId;
+    holderKind: string;
+    characterId?: ObjectId;
+    units?: number;
+  }>(db)
     .find(
       { holderKind: "character", characterId: { $exists: true }, units: { $gt: 0 } },
       { projection: { fundId: 1, characterId: 1, units: 1 } }
@@ -352,7 +357,7 @@ export async function snapshotPortfolioValues(
     })
   );
 
-  await db.collection("portfolioHistory").insertMany(docs as PortfolioHistory[]);
+  await portfolioHistoryCollection<Document>(db).insertMany(docs as PortfolioHistory[]);
   return docs.length;
 }
 
@@ -407,8 +412,7 @@ export async function snapshotCorporationPortfolioValues(turn: number): Promise<
       .toArray(),
     loadValuationFxRates(db),
     loadReservedCorporatePositionsByTarget(db),
-    db
-      .collection<IndexFundPosition>("indexFundPositions")
+    indexFundPositionsCollection(db)
       .find(
         { holderKind: "corporation", units: { $gt: 0 } },
         { projection: { corporationId: 1, fundId: 1, units: 1 } }

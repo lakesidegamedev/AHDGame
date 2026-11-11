@@ -18,6 +18,8 @@ import {
 } from "@/lib/constants/governorOffice";
 import type { GameState } from "@/lib/db/types";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { governorAddressesCollection } from "@/lib/db/repositories/governorAddresses";
+import type { Document } from "mongodb";
 
 // POST /api/country/[code]/region/[id]/office/address — Deliver a State of the State address.
 // Auth: requireHumanSessionWithCharacter; must be the office-holder.
@@ -109,8 +111,7 @@ export async function GET(
 
     const stateId = id.toUpperCase();
     const db = await getDb();
-    const recent = await db
-      .collection("governorAddresses")
+    const recent = await governorAddressesCollection<Document>(db)
       .find({ countryId, stateId })
       .sort({ deliveredAtTurn: -1 })
       .limit(1)

@@ -34,6 +34,7 @@ import { nppsCollection } from "@/lib/db/repositories/npps";
 import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 import { usersCollection } from "@/lib/db/repositories/users";
+import { bondHistoryCollection } from "@/lib/db/repositories/bondHistory";
 
 interface RouteParams {
   params: Promise<{ bondId: string }>;
@@ -412,8 +413,7 @@ export const GET = withNoStore(async function GET(_request: Request, { params }:
     validHolders.sort((a, b) => b.units - a.units);
 
     // Get price history
-    const priceHistory = await db
-      .collection<BondHistory>("bondHistory")
+    const priceHistory = await bondHistoryCollection(db)
       .find({ bondId: bond._id })
       .sort({ turn: 1 })
       .project({ _id: 0, turn: 1, marketPrice: 1, totalInterestPaid: 1 })

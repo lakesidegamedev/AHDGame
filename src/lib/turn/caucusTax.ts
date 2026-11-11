@@ -31,6 +31,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { caucusesCollection } from "@/lib/db/repositories/caucuses";
 
 interface CaucusTaxResult {
   caucusesProcessed: number;
@@ -75,8 +76,7 @@ export async function processCaucusTax(
       .toArray()
   );
 
-  const taxedCaucuses = await db
-    .collection<Caucus>("caucuses")
+  const taxedCaucuses = await caucusesCollection(db)
     .find({ disbandedAt: null, taxRate: { $gt: 0 } })
     .toArray();
   if (taxedCaucuses.length === 0) {
@@ -273,7 +273,7 @@ export async function processCaucusTax(
       }
 
       if (caucusInflow > 0) {
-        await db.collection<Caucus>("caucuses").updateOne(
+        await caucusesCollection(db).updateOne(
           { _id: caucus._id },
           {
             $inc: { treasury: caucusInflow },

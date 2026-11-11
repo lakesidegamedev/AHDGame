@@ -25,6 +25,8 @@ import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { partyChartersCollection } from "@/lib/db/repositories/partyCharters";
+import type { Document } from "mongodb";
 
 export interface CascadeResult {
   sharesReleased: number;
@@ -54,8 +56,7 @@ export async function cascadeCharacterDeletion(
   // bound to this character and transition affected charters to
   // founder-replacement so surviving founders can nominate a replacement.
   const activeCharterStatuses = ["draft", "pending-signatures", "founder-replacement"];
-  const affectedCharters = await db
-    .collection("partyCharters")
+  const affectedCharters = await partyChartersCollection<Document>(db)
     .find({
       foundersCharacterIds: characterId,
       status: { $in: activeCharterStatuses },
@@ -70,7 +71,7 @@ export async function cascadeCharacterDeletion(
     const charterTurn = await getCurrentTurn(db);
     const replacementDeadlineTurn = computeCharterDeadlineTurn(charterTurn);
     for (const charter of affectedCharters) {
-      await db.collection("partyCharters").updateOne(
+      await partyChartersCollection<Document>(db).updateOne(
         {
           _id: charter._id,
           "signatures.characterId": characterId,

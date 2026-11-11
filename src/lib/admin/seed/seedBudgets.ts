@@ -10,6 +10,7 @@ import type { Document } from "mongodb";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
+import { formulaGrantsCollection } from "@/lib/db/repositories/formulaGrants";
 
 /**
  * Seeds US-only budget data: federal budget, US enacted laws, US state budgets,
@@ -45,8 +46,7 @@ export async function seedBudgets(
     // `countryFiscalBase`, and on the standalone path only US budgets exist,
     // mispricing UK/RU/DD.
     // Formula grants are US-only, safe to drop
-    await db
-      .collection("formulaGrants")
+    await formulaGrantsCollection<Document>(db)
       .drop()
       .catch(() => {
         /* collection may not exist */
@@ -127,13 +127,15 @@ export async function seedBudgets(
   // Seed formula grants
   const validGrantIds = formulaGrants.map((g) => g.programId);
   for (const grant of formulaGrants) {
-    await db
-      .collection<FormulaGrant>("formulaGrants")
-      .updateOne({ programId: grant.programId }, { $set: grant }, { upsert: true });
+    await formulaGrantsCollection(db).updateOne(
+      { programId: grant.programId },
+      { $set: grant },
+      { upsert: true }
+    );
   }
 
   // Remove stale formula grants that no longer exist
-  const grantDeleteResult = await db.collection("formulaGrants").deleteMany({
+  const grantDeleteResult = await formulaGrantsCollection<Document>(db).deleteMany({
     programId: { $nin: validGrantIds },
   });
   const staleGrantsRemoved = grantDeleteResult.deletedCount || 0;

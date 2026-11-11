@@ -62,6 +62,11 @@ import type { Document } from "mongodb";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
 import { notificationsCollection } from "@/lib/db/repositories/notifications";
+import { partyChartersCollection } from "@/lib/db/repositories/partyCharters";
+import { retiredCharactersCollection } from "@/lib/db/repositories/retiredCharacters";
+import { playerMailCollection } from "@/lib/db/repositories/playerMail";
+import { supremeCourtSeatsCollection } from "@/lib/db/repositories/supremeCourtSeats";
+import { settlementCrisesCollection } from "@/lib/db/repositories/settlementCrises";
 
 /**
  * Whether to show the "Campaign Manager" navbar link. Returns true for: admins,
@@ -146,9 +151,10 @@ export async function GET() {
      * live board. One indexed lookup over a handful of rows.
      */
     const isSettlementCrisisLive = async () =>
-      (await db
-        .collection("settlementCrises")
-        .findOne({ status: { $in: ["open", "frozen"] } }, { projection: { _id: 1 } })) != null;
+      (await settlementCrisesCollection<Document>(db).findOne(
+        { status: { $in: ["open", "frozen"] } },
+        { projection: { _id: 1 } }
+      )) != null;
 
     const gameStatePromise = getGameStateCollection(db).then((col) =>
       col.findOne(
@@ -375,7 +381,7 @@ export async function GET() {
           ...notificationTypeFilter(user?.notificationPreferences, new Date()),
           read: false,
         }),
-        db.collection("playerMail").countDocuments({
+        playerMailCollection<Document>(db).countDocuments({
           toUserId: userOid,
           read: false,
           deletedByRecipient: false,
@@ -391,12 +397,10 @@ export async function GET() {
           { characterId: character._id },
           { projection: { positionId: 1, countryId: 1 } }
         ),
-        db
-          .collection<{ countryId: string; seatNumber: number }>("supremeCourtSeats")
-          .findOne(
-            { justiceCharacterId: character._id },
-            { projection: { countryId: 1, seatNumber: 1 } }
-          ),
+        supremeCourtSeatsCollection<{ countryId: string; seatNumber: number }>(db).findOne(
+          { justiceCharacterId: character._id },
+          { projection: { countryId: 1, seatNumber: 1 } }
+        ),
         !isImperialMode
           ? corporationsCollection<{
               sequentialId?: number;
@@ -694,7 +698,7 @@ export async function GET() {
       .project<{ _id: ObjectId }>({ _id: 1 })
       .toArray();
     if (ownedCharacters.length > 0) {
-      pendingCharterCount = await db.collection("partyCharters").countDocuments({
+      pendingCharterCount = await partyChartersCollection<Document>(db).countDocuments({
         foundersCharacterIds: { $in: ownedCharacters.map((c) => c._id) },
         status: { $in: ["pending-signatures", "founder-replacement"] },
       });
@@ -707,12 +711,10 @@ export async function GET() {
     // Re-viewing older recaps happens in character history, not here.
     let pendingSeasonRecapId: string | null = null;
     if (!character) {
-      const pendingRecap = await db
-        .collection<RetiredCharacter>("retiredCharacters")
-        .findOne(
-          { userId: userOid, recap: { $exists: true }, recapViewedAt: { $exists: false } },
-          { sort: { retiredAt: -1 }, projection: { _id: 1 } }
-        );
+      const pendingRecap = await retiredCharactersCollection(db).findOne(
+        { userId: userOid, recap: { $exists: true }, recapViewedAt: { $exists: false } },
+        { sort: { retiredAt: -1 }, projection: { _id: 1 } }
+      );
       pendingSeasonRecapId = pendingRecap?._id.toString() ?? null;
     }
 

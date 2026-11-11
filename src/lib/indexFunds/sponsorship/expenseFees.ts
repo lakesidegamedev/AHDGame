@@ -17,6 +17,7 @@ import { computeHoldingsValueAnchor } from "../fundAllocation";
 import { feeDecision, markedFundBacking } from "./rules/accounting";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { indexFundTransactionsCollection } from "@/lib/db/repositories/indexFundTransactions";
 export { feeDecision } from "./rules/accounting";
 
 export interface ExpenseFeeOutcome {
@@ -172,7 +173,7 @@ export async function chargeSponsorExpenseFees(
     if (debits.matchedCount !== receipts.length) throw new Error("Fund fee debit failed");
     const credits = await corporationsCollection(tx).bulkWrite(sponsorUpdates);
     if (credits.matchedCount !== receipts.length) throw new Error("Sponsor fee credit failed");
-    await tx.collection<IndexFundTransaction>("indexFundTransactions").insertMany(receipts);
+    await indexFundTransactionsCollection(tx).insertMany(receipts);
     // One thresholds and one turn-cadence read for every fee row: the
     // single-row emitter repeated both once per sponsored fund. Loaded only
     // once a fee is actually charged, so a pass that charges nothing reads

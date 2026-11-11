@@ -14,6 +14,7 @@ import { validateRedistrictMap } from "@/lib/redistricting/legality";
 import type { CongressionalDistrict, DistrictSquares, RedistrictLedgerEntry } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
+import { congressionalDistrictsCollection } from "@/lib/db/repositories/congressionalDistricts";
 
 const BodySchema = z.object({
   districts: z
@@ -77,8 +78,7 @@ export async function POST(
     }
 
     // Load the live map.
-    const docs = (await db
-      .collection<CongressionalDistrict>("congressionalDistricts")
+    const docs = (await congressionalDistrictsCollection(db)
       .find({ countryId, stateId } as Partial<CongressionalDistrict>)
       .sort({ index: 1 })
       .toArray()) as CongressionalDistrict[];
@@ -120,7 +120,7 @@ export async function POST(
     const before = docs.map((d) => d.squares);
     for (let i = 0; i < docs.length; i++) {
       const sq = proposed[i];
-      await db.collection<CongressionalDistrict>("congressionalDistricts").updateOne(
+      await congressionalDistrictsCollection(db).updateOne(
         { _id: docs[i]._id },
         {
           $set: {
@@ -179,8 +179,7 @@ export async function GET(
     const db = await getDb();
     const gs = await getGameState();
 
-    const docs = (await db
-      .collection<CongressionalDistrict>("congressionalDistricts")
+    const docs = (await congressionalDistrictsCollection(db)
       .find({ countryId, stateId } as Partial<CongressionalDistrict>)
       .sort({ index: 1 })
       .toArray()) as CongressionalDistrict[];

@@ -21,6 +21,7 @@ import { withPublicNewsVisibility } from "@/lib/news/publicModeration";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { newsPostsCollection } from "@/lib/db/repositories/newsPosts";
 
 // Re-export for any consumer that still imports types from the route file.
 // New consumers should import from "@/lib/news/types".
@@ -55,8 +56,7 @@ export async function GET() {
         .limit(50)
         .toArray(),
 
-      db
-        .collection<NewsPost>("newsPosts")
+      newsPostsCollection(db)
         .find(withPublicNewsVisibility({ isSystem: true, createdAt: { $gte: since } }))
         .sort({ createdAt: -1 })
         .limit(20)

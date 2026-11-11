@@ -17,6 +17,7 @@ import {
 } from "./ratificationStore";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { billsCollection } from "@/lib/db/repositories/bills";
+import { macroCountriesCollection } from "@/lib/db/repositories/macroCountries";
 
 /** Record consent after the source legislature enacts the exact mandate. An
  * interrupted run resumes without revising any participant's first decision. */
@@ -92,8 +93,7 @@ export async function recordFederationRatifications(input: {
     proposal.terms.debtBasis === "population"
       ? allocateSuccessionAmount(10_000, populations)
       : proposal.terms.debtWeights;
-  const macros = await db
-    .collection<MacroCountryState>("macroCountries")
+  const macros = await macroCountriesCollection<MacroCountryState>(db)
     .find({
       entityId: { $in: participants.filter((id) => id !== sourceCountryId) },
       presetId: "1991-default",

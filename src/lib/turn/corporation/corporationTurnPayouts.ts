@@ -50,6 +50,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import type { Document } from "mongodb";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { stateResourceCapacityCollection } from "@/lib/db/repositories/stateResourceCapacity";
 
 // Optional sim-run salt, same convention as nppActionProcessing.ts's RNG.
 export const CORP_TURN_RNG_SALT = workerConfig.simRngSalt() ? `:${workerConfig.simRngSalt()}` : "";
@@ -245,7 +246,7 @@ export async function settleCorporationTurnPayouts({
     }
     if (capacityBoostOps.length > 0) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await db.collection("stateResourceCapacity").bulkWrite(capacityBoostOps as any[]);
+      await stateResourceCapacityCollection<Document>(db).bulkWrite(capacityBoostOps as any[]);
     }
     if (innovationsTriggered > 0) {
       console.log(

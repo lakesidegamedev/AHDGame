@@ -32,6 +32,8 @@ import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficia
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { billsCollection } from "@/lib/db/repositories/bills";
 import { cabinetNominationsCollection } from "@/lib/db/repositories/cabinetNominations";
+import { billWhipsCollection } from "@/lib/db/repositories/billWhips";
+import { scotusNominationsCollection } from "@/lib/db/repositories/scotusNominations";
 
 export interface WhipDefianceScope {
   countryId: CountryId;
@@ -487,8 +489,7 @@ async function buildWhipDefianceSnapshotsForScopes(
           .toArray()
       : Promise.resolve([] as CabinetNomination[]),
     scotusIds.length
-      ? db
-          .collection<ScotusNomination>("scotusNominations")
+      ? scotusNominationsCollection(db)
           .find({ _id: { $in: scotusIds }, status: "active" })
           .toArray()
       : Promise.resolve([] as ScotusNomination[]),
@@ -744,8 +745,7 @@ export async function buildWhipDefianceSnapshot(
           (!scope.stateId || whip.stateId === scope.stateId) &&
           (!scope.caucusId || whip.caucusId?.toString() === scope.caucusId.toString())
       )
-    : await db
-        .collection<BillWhip>("billWhips")
+    : await billWhipsCollection(db)
         .find({
           issuedBy: scope.issuedBy,
           countryId: scope.countryId,

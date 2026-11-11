@@ -3,6 +3,7 @@ import { getDb } from "@/lib/mongodb";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import type { StockExchangeSnapshot } from "@/lib/db/types";
 import { EXCHANGE_API_KEYS, getExchangeLabel } from "@/lib/constants/exchangeRegistry";
+import { stockExchangeSnapshotsCollection } from "@/lib/db/repositories/stockExchangeSnapshots";
 
 /**
  * GET /api/stock-exchange?exchange=nyse|ftse|nikkei|tsx|dax|global
@@ -24,9 +25,7 @@ export async function GET(request: Request) {
     const db = await getDb();
 
     // Read from pre-computed snapshot (single document read)
-    const snapshot = await db
-      .collection<StockExchangeSnapshot>("stockExchangeSnapshots")
-      .findOne({ _id: exchange });
+    const snapshot = await stockExchangeSnapshotsCollection(db).findOne({ _id: exchange });
 
     if (!snapshot) {
       // Fallback: return empty listings if snapshot doesn't exist yet

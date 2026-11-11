@@ -9,6 +9,7 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import type { UserSubscription } from "@/lib/db/types";
 import { getCharacterByUserId } from "@/lib/db/characterLookup";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { userSubscriptionsCollection } from "@/lib/db/repositories/userSubscriptions";
 
 // GET /api/characters/[id]/subscribe — Returns the authenticated user's subscription status and subscriber count for a character
 // Auth: public
@@ -31,15 +32,15 @@ async function handleGET(_request: Request, { params }: { params: Promise<{ id: 
 
     if (!myCharacter) return NextResponse.json({ subscribed: false });
 
-    const existing = await db.collection<UserSubscription>("userSubscriptions").findOne({
+    const existing = await userSubscriptionsCollection(db).findOne({
       subscriberCharacterId: myCharacter._id,
       subscribedToCharacterId: targetCharacterId,
     });
 
     // Get subscriber count for the target
-    const subscriberCount = await db
-      .collection<UserSubscription>("userSubscriptions")
-      .countDocuments({ subscribedToCharacterId: targetCharacterId });
+    const subscriberCount = await userSubscriptionsCollection(db).countDocuments({
+      subscribedToCharacterId: targetCharacterId,
+    });
 
     return NextResponse.json({ subscribed: !!existing, subscriberCount });
   } catch (err) {
@@ -89,7 +90,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     }
 
     // Upsert subscription
-    await db.collection<Omit<UserSubscription, "_id">>("userSubscriptions").updateOne(
+    await userSubscriptionsCollection<Omit<UserSubscription, "_id">>(db).updateOne(
       {
         subscriberCharacterId: myCharacter._id,
         subscribedToCharacterId: targetCharacterId,
@@ -105,9 +106,9 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
       { upsert: true }
     );
 
-    const subscriberCount = await db
-      .collection<UserSubscription>("userSubscriptions")
-      .countDocuments({ subscribedToCharacterId: targetCharacterId });
+    const subscriberCount = await userSubscriptionsCollection(db).countDocuments({
+      subscribedToCharacterId: targetCharacterId,
+    });
 
     try {
       const { awardAchievement, resolveUserIdFromCharacter } = await import("@/lib/achievements");
@@ -154,14 +155,14 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
       return errorResponse(403, "Character required");
     }
 
-    await db.collection<UserSubscription>("userSubscriptions").deleteOne({
+    await userSubscriptionsCollection(db).deleteOne({
       subscriberCharacterId: myCharacter._id,
       subscribedToCharacterId: targetCharacterId,
     });
 
-    const subscriberCount = await db
-      .collection<UserSubscription>("userSubscriptions")
-      .countDocuments({ subscribedToCharacterId: targetCharacterId });
+    const subscriberCount = await userSubscriptionsCollection(db).countDocuments({
+      subscribedToCharacterId: targetCharacterId,
+    });
 
     return NextResponse.json({ subscribed: false, subscriberCount });
   } catch (err) {

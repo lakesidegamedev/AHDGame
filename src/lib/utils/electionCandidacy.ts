@@ -31,6 +31,11 @@ import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
 import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
 import { nationalPartyElectionsCollection } from "@/lib/db/repositories/nationalPartyElections";
+import { statePartyCandidatesCollection } from "@/lib/db/repositories/statePartyCandidates";
+import { nationalPartyCandidatesCollection } from "@/lib/db/repositories/nationalPartyCandidates";
+import { nationalCommitteeCandidatesCollection } from "@/lib/db/repositories/nationalCommitteeCandidates";
+import { statePartyElectionsCollection } from "@/lib/db/repositories/statePartyElections";
+import { nationalCommitteeElectionsCollection } from "@/lib/db/repositories/nationalCommitteeElections";
 
 /**
  * Move an Independent player's live governmental candidacies onto the party
@@ -437,15 +442,14 @@ export async function cleanupPartyPositionsOnSwitch(
   }
 
   // 3. Withdraw from active state party election candidacies for old party
-  const activeStateElections = await db
-    .collection<StatePartyElection>("statePartyElections")
+  const activeStateElections = await statePartyElectionsCollection(db)
     .find({ partyId: oldParty, status: "voting" })
     .toArray();
 
   let withdrawnStateElections = 0;
   if (activeStateElections.length > 0) {
     const stateElectionIds = activeStateElections.map((e) => e._id);
-    const result = await db.collection<StatePartyCandidate>("statePartyCandidates").updateMany(
+    const result = await statePartyCandidatesCollection(db).updateMany(
       {
         electionId: { $in: stateElectionIds },
         characterId,
@@ -467,24 +471,21 @@ export async function cleanupPartyPositionsOnSwitch(
   // Filter by countryId to avoid cross-country sequential ID collisions
   const committeeElectionQuery: Record<string, unknown> = { partyId: oldParty, status: "voting" };
   if (countryId) committeeElectionQuery.countryId = countryId;
-  const activeCommitteeElections = await db
-    .collection<NationalCommitteeElection>("nationalCommitteeElections")
+  const activeCommitteeElections = await nationalCommitteeElectionsCollection(db)
     .find(committeeElectionQuery)
     .toArray();
 
   let withdrawnCommitteeElections = 0;
   if (activeCommitteeElections.length > 0) {
     const committeeElectionIds = activeCommitteeElections.map((e) => e._id);
-    const result = await db
-      .collection<NationalCommitteeCandidate>("nationalCommitteeCandidates")
-      .updateMany(
-        {
-          electionId: { $in: committeeElectionIds },
-          characterId,
-          status: "active",
-        },
-        { $set: { status: "withdrawn", withdrawnAt: now } }
-      );
+    const result = await nationalCommitteeCandidatesCollection(db).updateMany(
+      {
+        electionId: { $in: committeeElectionIds },
+        characterId,
+        status: "active",
+      },
+      { $set: { status: "withdrawn", withdrawnAt: now } }
+    );
     withdrawnCommitteeElections = result.modifiedCount;
   }
 
@@ -749,8 +750,7 @@ export async function withdrawAllActiveCandidacies(characterId: ObjectId): Promi
   }
 
   // 2. State-party election candidacies (voting)
-  const activeStateElections = await db
-    .collection<StatePartyElection>("statePartyElections")
+  const activeStateElections = await statePartyElectionsCollection(db)
     .find({ status: "voting" })
     .project({ _id: 1 })
     .toArray();
@@ -758,7 +758,7 @@ export async function withdrawAllActiveCandidacies(characterId: ObjectId): Promi
   let withdrawnStatePartyElections = 0;
   if (activeStateElections.length > 0) {
     const stateElectionIds = activeStateElections.map((e) => e._id);
-    const result = await db.collection<StatePartyCandidate>("statePartyCandidates").updateMany(
+    const result = await statePartyCandidatesCollection(db).updateMany(
       {
         electionId: { $in: stateElectionIds },
         characterId,
@@ -778,22 +778,19 @@ export async function withdrawAllActiveCandidacies(characterId: ObjectId): Promi
   let withdrawnNationalPartyElections = 0;
   if (activeNationalElections.length > 0) {
     const nationalElectionIds = activeNationalElections.map((e) => e._id);
-    const result = await db
-      .collection<NationalPartyCandidate>("nationalPartyCandidates")
-      .updateMany(
-        {
-          electionId: { $in: nationalElectionIds },
-          characterId,
-          status: "active",
-        },
-        { $set: { status: "withdrawn", withdrawnAt: now } }
-      );
+    const result = await nationalPartyCandidatesCollection(db).updateMany(
+      {
+        electionId: { $in: nationalElectionIds },
+        characterId,
+        status: "active",
+      },
+      { $set: { status: "withdrawn", withdrawnAt: now } }
+    );
     withdrawnNationalPartyElections = result.modifiedCount;
   }
 
   // 4. National-committee election candidacies (voting)
-  const activeCommitteeElections = await db
-    .collection<NationalCommitteeElection>("nationalCommitteeElections")
+  const activeCommitteeElections = await nationalCommitteeElectionsCollection(db)
     .find({ status: "voting" })
     .project({ _id: 1 })
     .toArray();
@@ -801,16 +798,14 @@ export async function withdrawAllActiveCandidacies(characterId: ObjectId): Promi
   let withdrawnCommitteeElections = 0;
   if (activeCommitteeElections.length > 0) {
     const committeeElectionIds = activeCommitteeElections.map((e) => e._id);
-    const result = await db
-      .collection<NationalCommitteeCandidate>("nationalCommitteeCandidates")
-      .updateMany(
-        {
-          electionId: { $in: committeeElectionIds },
-          characterId,
-          status: "active",
-        },
-        { $set: { status: "withdrawn", withdrawnAt: now } }
-      );
+    const result = await nationalCommitteeCandidatesCollection(db).updateMany(
+      {
+        electionId: { $in: committeeElectionIds },
+        characterId,
+        status: "active",
+      },
+      { $set: { status: "withdrawn", withdrawnAt: now } }
+    );
     withdrawnCommitteeElections = result.modifiedCount;
   }
 

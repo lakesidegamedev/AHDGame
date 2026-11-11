@@ -21,6 +21,8 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import type { Document } from "mongodb";
 import { nationalPartyElectionsCollection } from "@/lib/db/repositories/nationalPartyElections";
+import { statePartyElectionsCollection } from "@/lib/db/repositories/statePartyElections";
+import { nationalCommitteeElectionsCollection } from "@/lib/db/repositories/nationalCommitteeElections";
 
 /**
  * GET /api/admin/heal/party-elections
@@ -34,8 +36,7 @@ export async function GET() {
     const db = await getDb();
 
     // Find state elections missing fields
-    const stateElectionsWithIssues = (await db
-      .collection("statePartyElections")
+    const stateElectionsWithIssues = (await statePartyElectionsCollection<Document>(db)
       .find({
         $or: [
           { startTurn: { $exists: false } },
@@ -90,8 +91,7 @@ export async function GET() {
     }));
 
     // Find committee elections missing fields (including countryId)
-    const committeeElectionsWithIssues = (await db
-      .collection("nationalCommitteeElections")
+    const committeeElectionsWithIssues = (await nationalCommitteeElectionsCollection<Document>(db)
       .find({
         $or: [
           { startTurn: { $exists: false } },
@@ -158,8 +158,7 @@ export async function POST() {
     let nationalFixed = 0;
 
     // Fix state elections
-    const stateElectionsToFix = (await db
-      .collection("statePartyElections")
+    const stateElectionsToFix = (await statePartyElectionsCollection<Document>(db)
       .find({
         $or: [
           { startTurn: { $exists: false } },
@@ -178,7 +177,7 @@ export async function POST() {
       let durationTurns: number = defaultDuration;
 
       // Try to find a sibling election with valid turn fields
-      const siblingElection = (await db.collection("statePartyElections").findOne({
+      const siblingElection = (await statePartyElectionsCollection<Document>(db).findOne({
         stateId: election.stateId,
         partyId: election.partyId,
         position: { $ne: election.position },
@@ -200,7 +199,7 @@ export async function POST() {
         }
       }
 
-      await db.collection<StatePartyElection>("statePartyElections").updateOne(
+      await statePartyElectionsCollection(db).updateOne(
         { _id: election._id },
         {
           $set: {
@@ -308,8 +307,7 @@ export async function POST() {
     }
 
     // Fix committee elections
-    const committeeElectionsToFix = (await db
-      .collection("nationalCommitteeElections")
+    const committeeElectionsToFix = (await nationalCommitteeElectionsCollection<Document>(db)
       .find({
         $or: [
           { startTurn: { $exists: false } },
@@ -366,7 +364,7 @@ export async function POST() {
         }
       }
 
-      await db.collection<NationalCommitteeElection>("nationalCommitteeElections").updateOne(
+      await nationalCommitteeElectionsCollection(db).updateOne(
         { _id: election._id },
         {
           $set: {

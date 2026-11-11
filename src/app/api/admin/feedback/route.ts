@@ -6,6 +6,7 @@ import { handleRouteError } from "@/lib/api/errors";
 import { parseBoundedIntParam } from "@/lib/api/validate";
 import type { Feedback, User } from "@/lib/db/types";
 import { usersCollection } from "@/lib/db/repositories/users";
+import { feedbackCollection } from "@/lib/db/repositories/feedback";
 
 const STATUS_OPTIONS = ["open", "in_progress", "resolved", "wont_fix"] as const;
 
@@ -36,14 +37,13 @@ export const GET = withAdminAuth(async (_auth, request: Request) => {
     }
 
     const [items, total] = await Promise.all([
-      db
-        .collection<Feedback>("feedback")
+      feedbackCollection(db)
         .find(filter)
         .sort({ issueNumber: -1 })
         .skip(offset)
         .limit(limit)
         .toArray(),
-      db.collection<Feedback>("feedback").countDocuments(filter),
+      feedbackCollection(db).countDocuments(filter),
     ]);
 
     // Fetch usernames for reporters

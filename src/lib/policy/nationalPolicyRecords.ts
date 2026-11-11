@@ -59,6 +59,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { CA_ECONOMY } from "@/lib/countries/ca/economy";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
+import { governorExecutiveOrdersCollection } from "@/lib/db/repositories/governorExecutiveOrders";
 
 /**
  * Shared national policy-record assembly — extracted verbatim from
@@ -464,8 +465,7 @@ export async function assembleNationalPolicyRecords(
   });
 
   // Surface active presidential executive orders for the federal scope.
-  const activeOrders = await db
-    .collection<GovernorExecutiveOrder>("governorExecutiveOrders")
+  const activeOrders = await governorExecutiveOrdersCollection(db)
     .find({ countryId, stateId: nationalStateId, status: "active" })
     .toArray();
   const activeOrderById = new Map(activeOrders.map((o) => [o._id!.toString(), o]));

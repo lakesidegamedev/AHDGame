@@ -33,6 +33,9 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { usersCollection } from "@/lib/db/repositories/users";
 import type { Document } from "mongodb";
+import { statePartyCandidatesCollection } from "@/lib/db/repositories/statePartyCandidates";
+import { statePartyElectionsCollection } from "@/lib/db/repositories/statePartyElections";
+import { statePartyVotesCollection } from "@/lib/db/repositories/statePartyVotes";
 
 /** Get position labels appropriate for the country (UK uses "Regional Chair") */
 function getPositionLabels(countryId: CountryId): Record<StatePartyElectionPosition, string> {
@@ -141,8 +144,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     };
 
     // Batch 1: all active (voting) elections for this state party across all positions
-    const activeElections = await db
-      .collection<StatePartyElection>("statePartyElections")
+    const activeElections = await statePartyElectionsCollection(db)
       .find({ stateId, partyId: partyKey, position: { $in: ALL_POSITIONS }, status: "voting" })
       .toArray();
 
@@ -206,8 +208,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     // Batch 2: most-recent completed/cancelled election per missing position
     let completedElections: StatePartyElection[] = [];
     if (missingPositions.length > 0) {
-      completedElections = await db
-        .collection<StatePartyElection>("statePartyElections")
+      completedElections = await statePartyElectionsCollection(db)
         .aggregate<StatePartyElection>([
           {
             $match: {
@@ -265,16 +266,14 @@ export async function GET(_request: Request, { params }: RouteParams) {
 
     // Batch 3: all candidates, Batch 4: vote counts, Batch 5: user votes — all in parallel
     const [allCandidatesRaw, allVoteCounts, allUserVotes] = await Promise.all([
-      db
-        .collection<StatePartyCandidate>("statePartyCandidates")
+      statePartyCandidatesCollection(db)
         // electionIds spans active (voting) AND most-recent completed elections
         // for missing positions. Resolved elections terminalize candidacies to
         // "completed", so include those (and "active") while excluding player
         // withdrawals — otherwise concluded-race results render with no candidates.
         .find({ electionId: { $in: electionIds }, status: { $ne: "withdrawn" } })
         .toArray(),
-      db
-        .collection<StatePartyVote>("statePartyVotes")
+      statePartyVotesCollection(db)
         .aggregate<{ electionId: ObjectId; candidateId: ObjectId; count: number }>([
           { $match: voteMatch },
           {
@@ -294,8 +293,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
         ])
         .toArray(),
       authUser?.character && activeElectionIds.length > 0
-        ? db
-            .collection<StatePartyVote>("statePartyVotes")
+        ? statePartyVotesCollection(db)
             .find({ electionId: { $in: activeElectionIds }, voterId: authUser.character._id })
             .toArray()
         : Promise.resolve([] as StatePartyVote[]),

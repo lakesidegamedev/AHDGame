@@ -18,6 +18,7 @@ import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
+import { shareListingsCollection } from "@/lib/db/repositories/shareListings";
 
 export interface ShareMarketCleanupResult {
   ordersCancelled: number;
@@ -173,8 +174,7 @@ async function cancelOpenListings(
   now: Date,
   forexEnabled: boolean
 ): Promise<number> {
-  const openListings = await db
-    .collection<ShareListing>("shareListings")
+  const openListings = await shareListingsCollection(db)
     .find({ status: "open", ...filter })
     .toArray();
 

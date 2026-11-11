@@ -16,6 +16,7 @@ import { STATE_POPULATION_FIELDS } from "@/lib/db/collections/states";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { stateRegistrationPoolCollection } from "@/lib/db/repositories/stateRegistrationPool";
 
 export async function materializeRussianPresidentialElectionOpening(input: {
   db: Db;
@@ -83,8 +84,7 @@ export async function materializeRussianPresidentialElectionOpening(input: {
   const regions = await statesCollection(db)
     .find({ countryId: "RU" }, { session, projection: STATE_POPULATION_FIELDS })
     .toArray();
-  const pools = await db
-    .collection<StateRegistrationPool>("stateRegistrationPool")
+  const pools = await stateRegistrationPoolCollection(db)
     .find({ countryId: "RU" }, { session, projection: { stateId: 1, unregistered: 1 } })
     .toArray();
   const registeredVoters = russianPresidentialRegisteredVoters(

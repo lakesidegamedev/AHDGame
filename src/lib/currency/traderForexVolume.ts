@@ -11,6 +11,7 @@ import type { Db, ObjectId } from "mongodb";
 import { VOLUME_LOOKBACK_TURNS } from "@/lib/constants/currencies";
 import type { ExchangeRate, TradeHistoryEntry, TradeSource } from "@/lib/db/types";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { tradeHistoryCollection } from "@/lib/db/repositories/tradeHistory";
 
 const PLAYER_TRADE_SOURCES: ReadonlySet<TradeSource> = new Set<TradeSource>([
   "manual",
@@ -29,8 +30,7 @@ export async function loadTraderRecentForexAnchor(
   currentTurn: number
 ): Promise<number> {
   const since = Math.max(1, currentTurn - VOLUME_LOOKBACK_TURNS);
-  const rows = await db
-    .collection<TradeHistoryEntry>("tradeHistory")
+  const rows = await tradeHistoryCollection(db)
     .find(
       {
         buyerCharacterId: characterId,

@@ -48,6 +48,7 @@ import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSecto
 import type { Document } from "mongodb";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
+import { stateResourceCapacityCollection } from "@/lib/db/repositories/stateResourceCapacity";
 
 export const DEFECT_ID = "AHD-1271-merged-state-extraction";
 
@@ -132,8 +133,7 @@ async function survey(db: Db): Promise<Survey> {
 
   const stateIds = commandStates.map((s) => s._id as string);
   const [capacities, ownedStateIds, unownedStateIds] = await Promise.all([
-    db
-      .collection<{ stateId: string; resources?: Record<string, number> }>("stateResourceCapacity")
+    stateResourceCapacityCollection<{ stateId: string; resources?: Record<string, number> }>(db)
       .find({ stateId: { $in: stateIds } }, { projection: { stateId: 1, resources: 1 } })
       .toArray(),
     corporateSectorsCollection<Document>(db).distinct("stateId", {

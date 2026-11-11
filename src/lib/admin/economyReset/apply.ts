@@ -70,6 +70,11 @@ import { usersCollection } from "@/lib/db/repositories/users";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 import { adminLogsCollection } from "@/lib/db/repositories/adminLogs";
+import { stateResourceCapacityCollection } from "@/lib/db/repositories/stateResourceCapacity";
+import { bondHistoryCollection } from "@/lib/db/repositories/bondHistory";
+import { playerIncomeTaxAssessmentsCollection } from "@/lib/db/repositories/playerIncomeTaxAssessments";
+import { moneySupplySnapshotsCollection } from "@/lib/db/repositories/moneySupplySnapshots";
+import { pensionSchemesCollection } from "@/lib/db/repositories/pensionSchemes";
 
 type Log = (message: string) => void;
 
@@ -218,7 +223,7 @@ async function phaseBonds(db: Db, plan: EconomyResetPlan): Promise<void> {
     }))
   );
   for (const ids of chunks(plan.corporateBondIds.map(oid), 5000)) {
-    await db.collection("bondHistory").deleteMany({ bondId: { $in: ids } });
+    await bondHistoryCollection<Document>(db).deleteMany({ bondId: { $in: ids } });
     await bondsCollection<Document>(db).deleteMany({ _id: { $in: ids }, ...CORPORATE_BOND_FILTER });
   }
 
@@ -371,7 +376,7 @@ async function phaseTreasury(db: Db, plan: EconomyResetPlan, digest: string): Pr
   // The fiscal scale measured the economy the reset deletes; it restarts from
   // the rebuilt economy's first funded turn.
   await federalBudgetCollection(db).updateMany({}, { $unset: { fiscalScale: "" } });
-  await db.collection("playerIncomeTaxAssessments").deleteMany(VOIDED_INCOME_TAX_FILTER);
+  await playerIncomeTaxAssessmentsCollection<Document>(db).deleteMany(VOIDED_INCOME_TAX_FILTER);
 }
 
 /** Stuck partial moves that owe nothing to a kept account are closed as rejected. */
@@ -424,12 +429,13 @@ async function phaseUnset(db: Db, plan: EconomyResetPlan): Promise<void> {
   // Pension schemes survive but their unions are wiped; holders phase already
   // converted fund units to cash, so leaving an empty scheme pointing at a
   // deleted union keeps cutting benefits and accruing unpaid claims.
-  await db.collection("pensionSchemes").deleteMany({ assetsAnchor: { $lte: 0 } });
+  await pensionSchemesCollection<Document>(db).deleteMany({ assetsAnchor: { $lte: 0 } });
   // Cumulative extraction by the old economy's mines. Kept, it shortens every
   // reserve's life for plants that never extracted from it.
-  await db
-    .collection("stateResourceCapacity")
-    .updateMany({ extractedUnits: { $exists: true } }, { $unset: { extractedUnits: "" } });
+  await stateResourceCapacityCollection<Document>(db).updateMany(
+    { extractedUnits: { $exists: true } },
+    { $unset: { extractedUnits: "" } }
+  );
   // Unions are wiped and reseeded vacant, so clear stale cached leadership:
   // a non-null unionLeaderOf blocks foundUnion with a 409.
   await charactersCollection(db).updateMany(
@@ -526,7 +532,9 @@ async function phaseReseedPrices(db: Db, plan: EconomyResetPlan, log: Log): Prom
     );
   // seedForex writes a turn-0 money supply row; the cleared economy was
   // measured at the current turn by the moneySupply phase, so only that stays.
-  await db.collection("moneySupplySnapshots").deleteMany({ turn: { $lt: plan.currentTurn } });
+  await moneySupplySnapshotsCollection<Document>(db).deleteMany({
+    turn: { $lt: plan.currentTurn },
+  });
 }
 
 async function phaseWitness(

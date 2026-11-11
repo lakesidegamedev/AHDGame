@@ -18,6 +18,8 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { savingsAccountsCollection } from "@/lib/db/repositories/savingsAccounts";
+import { governorOfficeStateCollection } from "@/lib/db/repositories/governorOfficeState";
+import { stateRegistrationPoolCollection } from "@/lib/db/repositories/stateRegistrationPool";
 
 export type StartingPartiesMode = "default" | "none";
 
@@ -256,17 +258,16 @@ export async function clearStartingPolitics(db: Db, preset: string): Promise<voi
     { $set: { rulingPartyId: null } }
   );
   for (const countryId of countries ?? COUNTRY_ORDER) invalidateCachedCountryState(db, countryId);
-  await db.collection("governorOfficeState").updateMany(countryFilter, {
+  await governorOfficeStateCollection<Document>(db).updateMany(countryFilter, {
     $set: { characterId: null, characterName: "Vacant" },
   });
   // Party registrants become unattached voters; engagement is not changed.
-  const pools = await db
-    .collection<StateRegistrationPool>("stateRegistrationPool")
+  const pools = await stateRegistrationPoolCollection(db)
     .find(countryFilter)
     .project<Pick<StateRegistrationPool, "_id" | "unregistered">>({ unregistered: 1 })
     .toArray();
   if (pools.length > 0) {
-    await db.collection<StateRegistrationPool>("stateRegistrationPool").bulkWrite(
+    await stateRegistrationPoolCollection(db).bulkWrite(
       pools.map((pool) => ({
         updateOne: {
           filter: { _id: pool._id },

@@ -21,6 +21,7 @@ import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { notificationsCollection } from "@/lib/db/repositories/notifications";
+import { shareListingsCollection } from "@/lib/db/repositories/shareListings";
 
 /**
  * Expire share listings whose expiresAt has passed:
@@ -39,8 +40,7 @@ export async function expireShareListings(db: Db, now: Date, currentTurn: number
       { expiresAtTurn: { $exists: false }, expiresAt: { $lte: now } },
     ],
   };
-  const candidates = await db
-    .collection<ShareListing>("shareListings")
+  const candidates = await shareListingsCollection(db)
     .find({
       status: "open",
       activeShareFillKey: { $exists: false },
@@ -73,8 +73,7 @@ export async function expireShareListings(db: Db, now: Date, currentTurn: number
         update: { $set: { holdingTerms: matureHoldingTerms(listing.holdingTerms!, currentTurn) } },
       },
     }));
-  if (maturationOps.length)
-    await db.collection<ShareListing>("shareListings").bulkWrite(maturationOps);
+  if (maturationOps.length) await shareListingsCollection(db).bulkWrite(maturationOps);
 
   if (expiredListings.length === 0) return;
 
@@ -83,13 +82,11 @@ export async function expireShareListings(db: Db, now: Date, currentTurn: number
   // so only one lifecycle path can own the escrow and reserved shares.
   const claimedListings: ShareListing[] = [];
   for (const listing of expiredListings) {
-    const claimed = await db
-      .collection<ShareListing>("shareListings")
-      .findOneAndUpdate(
-        { _id: listing._id, ...expiryFilter },
-        { $set: { status: "cancelled" } },
-        { returnDocument: "before" }
-      );
+    const claimed = await shareListingsCollection(db).findOneAndUpdate(
+      { _id: listing._id, ...expiryFilter },
+      { $set: { status: "cancelled" } },
+      { returnDocument: "before" }
+    );
     if (claimed) claimedListings.push(claimed);
   }
 

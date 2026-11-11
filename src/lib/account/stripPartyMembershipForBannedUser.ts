@@ -21,6 +21,7 @@ import type { Document } from "mongodb";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
 import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
+import { partyChartersCollection } from "@/lib/db/repositories/partyCharters";
 
 export interface StripPartyMembershipResult {
   charactersUpdated: number;
@@ -166,7 +167,7 @@ export async function stripPartyMembershipForBannedUser(
       .computeCharterDeadline;
     const replacementDeadline = computeCharterDeadline(now);
     for (const characterId of bannedCharacterIds) {
-      await db.collection<PartyCharter>("partyCharters").updateMany(
+      await partyChartersCollection(db).updateMany(
         {
           status: "pending-signatures",
           "signatures.characterId": characterId,

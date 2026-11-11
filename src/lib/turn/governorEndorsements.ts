@@ -5,6 +5,7 @@ import { getRegionalExecutiveOfficeKey } from "@/lib/constants/countries";
 import { withdrawEndorsement } from "@/lib/governorOffice/endorsements/withdrawEndorsement";
 import { preloadEndorsementTargets } from "./endorsements/preloadEndorsementTargets";
 import { getElectedOfficialsCollection } from "@/lib/db/collections/electedOfficials";
+import { governorEndorsementsCollection } from "@/lib/db/repositories/governorEndorsements";
 
 /**
  * Turn phase: auto-withdraw governor endorsements whose conditions no longer hold.
@@ -18,10 +19,7 @@ import { getElectedOfficialsCollection } from "@/lib/db/collections/electedOffic
 export async function processGovernorEndorsements(
   db: Db
 ): Promise<{ withdrawn: number; byReason: Record<string, number> }> {
-  const active = await db
-    .collection<GovernorEndorsement>("governorEndorsements")
-    .find({ isActive: true })
-    .toArray();
+  const active = await governorEndorsementsCollection(db).find({ isActive: true }).toArray();
   let withdrawn = 0;
   const byReason: Record<string, number> = {};
   function tally(reason: NonNullable<GovernorEndorsement["withdrawnReason"]>) {

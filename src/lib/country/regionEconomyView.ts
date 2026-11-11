@@ -76,6 +76,8 @@ import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import type { Document } from "mongodb";
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
+import { stateResourceCapacityCollection } from "@/lib/db/repositories/stateResourceCapacity";
+import { tariffsCollection } from "@/lib/db/repositories/tariffs";
 
 type AuthedViewer = Awaited<ReturnType<typeof getAuthUser>>;
 
@@ -175,10 +177,11 @@ export async function buildRegionEconomyResponse({
       const value = m.get(stateId);
       return value == null ? null : ({ education: { workforceSkill: { value } } } as StateMetrics);
     }),
-    db.collection<Tariff>("tariffs").find({ countryId }).toArray(),
-    db
-      .collection("stateResourceCapacity")
-      .findOne({ stateId }, { projection: { stateId: 1, resources: 1 } }),
+    tariffsCollection(db).find({ countryId }).toArray(),
+    stateResourceCapacityCollection<Document>(db).findOne(
+      { stateId },
+      { projection: { stateId: 1, resources: 1 } }
+    ),
     loadActiveFtaPairs(db),
   ]);
   if (!state) {

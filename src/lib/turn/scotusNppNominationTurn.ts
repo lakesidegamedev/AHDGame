@@ -18,6 +18,8 @@ import {
   isRenominationCoolingDown,
   type ScotusPresidencySnapshot,
 } from "@/lib/scotus/rules/nppNomination";
+import { supremeCourtSeatsCollection } from "@/lib/db/repositories/supremeCourtSeats";
+import { scotusNominationsCollection } from "@/lib/db/repositories/scotusNominations";
 
 export interface ScotusNppNominationResult {
   nominated: number;
@@ -32,8 +34,7 @@ export async function processScotusNppNominations(
 ): Promise<ScotusNppNominationResult> {
   const database = db ?? (await getDb());
 
-  const vacantSeats = await database
-    .collection<SupremeCourtSeat>("supremeCourtSeats")
+  const vacantSeats = await supremeCourtSeatsCollection(database)
     .find({
       countryId: "US",
       justiceCharacterId: null,
@@ -67,8 +68,7 @@ export async function processScotusNppNominations(
   const party = chooseNppNominatingParty(presidency, senate);
   if (!party) return { nominated: 0, skipped: "no-party" };
 
-  const recent = await database
-    .collection<ScotusNomination>("scotusNominations")
+  const recent = await scotusNominationsCollection(database)
     .find(
       { countryId: "US", seatNumber: { $in: vacantSeats.map((s) => s.seatNumber) } },
       { projection: { seatNumber: 1, votingEndsOnTurn: 1, status: 1 } }

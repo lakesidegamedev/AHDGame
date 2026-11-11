@@ -17,6 +17,7 @@ import {
   type GovernmentType,
 } from "@/lib/constants/countries";
 import { getCountryState, primeCountryStates } from "@/lib/countryState";
+import { countryStateCollection } from "@/lib/db/repositories/countryState";
 
 /** Everything a header, card or listing needs to name a country correctly. */
 export interface CountryIdentity {
@@ -109,12 +110,11 @@ export async function loadCountryPresentationOverrides(
   db: Db
 ): Promise<Partial<Record<CountryId, CountryPresentationOverride>>> {
   try {
-    const rows = await db
-      .collection<{
-        _id: CountryId;
-        displayNameOverride?: string | null;
-        flagEmojiOverride?: string | null;
-      }>("countryState")
+    const rows = await countryStateCollection<{
+      _id: CountryId;
+      displayNameOverride?: string | null;
+      flagEmojiOverride?: string | null;
+    }>(db)
       .find(
         {
           $or: [
@@ -159,8 +159,10 @@ export async function loadCountryNameOverrides(
   // empty map is a country shown under its compiled name. A 500 from a cosmetic
   // lookup would be worse, and MockDbs in page tests rely on this guard.
   try {
-    const rows = await db
-      .collection<{ _id: CountryId; displayNameOverride?: string | null }>("countryState")
+    const rows = await countryStateCollection<{
+      _id: CountryId;
+      displayNameOverride?: string | null;
+    }>(db)
       .find(
         { displayNameOverride: { $type: "string", $ne: "" } },
         { projection: { displayNameOverride: 1 } }

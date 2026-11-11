@@ -66,6 +66,7 @@ import {
   type ByCorpScope,
 } from "./settleSupplyAgreementsAllocation";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { supplyAgreementsCollection } from "@/lib/db/repositories/supplyAgreements";
 export {
   addCorpToCorpSettlement,
   allocateDeliveriesToBuyers,
@@ -757,7 +758,7 @@ export async function settleSupplyAgreements(args: {
     }
     // One op per live agreement (~27k on a mature world), each keyed by its
     // own `_id`, so the batches can be applied side by side.
-    await partitionedBulkWrite(db.collection<SupplyAgreement>("supplyAgreements"), deliveryOps);
+    await partitionedBulkWrite(supplyAgreementsCollection(db), deliveryOps);
   }
   step.mark("settle.deliveryWrites");
   if (txEntries.length > 0) await emitTxBulk(db, txEntries, args.thresholds);
@@ -857,12 +858,10 @@ async function notifySupplyAgreementDamages(args: {
   const stampIds = notifiedAgreementIds.filter((id) => ObjectId.isValid(id));
   if (stampIds.length === 0) return;
   try {
-    await args.db
-      .collection<SupplyAgreement>("supplyAgreements")
-      .updateMany(
-        { _id: { $in: stampIds.map((id) => new ObjectId(id)) } },
-        { $set: { lastDamagesNoticeTurn: args.turn } }
-      );
+    await supplyAgreementsCollection(args.db).updateMany(
+      { _id: { $in: stampIds.map((id) => new ObjectId(id)) } },
+      { $set: { lastDamagesNoticeTurn: args.turn } }
+    );
   } catch (err) {
     console.error("[settleSupplyAgreements] damage notice cooldown stamp failed:", err);
   }

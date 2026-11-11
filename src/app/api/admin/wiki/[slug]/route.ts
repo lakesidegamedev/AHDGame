@@ -7,6 +7,7 @@ import { handleRouteError, notFound, errorResponse } from "@/lib/api/errors";
 import { updateWikiPageSchema } from "@/lib/api/schemas/wiki";
 import type { WikiPage } from "@/lib/db/types";
 import { ObjectId } from "mongodb";
+import { wikiPagesCollection } from "@/lib/db/repositories/wikiPages";
 
 interface RouteContext {
   params: Promise<{ slug: string }>;
@@ -28,7 +29,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     }
 
     const db = await getDb();
-    const wikiPages = db.collection<WikiPage>("wikiPages");
+    const wikiPages = wikiPagesCollection(db);
 
     const existing = await wikiPages.findOne({ slug });
     if (!existing) {
@@ -67,7 +68,7 @@ export async function DELETE(request: Request, context: RouteContext) {
     const { slug } = await context.params;
 
     const db = await getDb();
-    const wikiPages = db.collection<WikiPage>("wikiPages");
+    const wikiPages = wikiPagesCollection(db);
 
     const existing = await wikiPages.findOne({ slug });
     if (!existing) {

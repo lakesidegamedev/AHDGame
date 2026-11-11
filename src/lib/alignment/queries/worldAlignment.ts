@@ -27,6 +27,7 @@ import {
 } from "./nationStanding";
 import { loadAlignmentTopology } from "../topology";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { organizationMembershipsCollection } from "@/lib/db/repositories/organizationMemberships";
 
 export type { LedgerPole };
 
@@ -107,8 +108,7 @@ export async function loadWorldAlignment(db: Db): Promise<WorldAlignmentView> {
   const col = await getCountryAlignmentsCollection(db);
   const [docs, memberships] = await Promise.all([
     col.find({}).toArray(),
-    db
-      .collection<OrganizationMembership>("organizationMemberships")
+    organizationMembershipsCollection(db)
       .find({})
       .project<{ organizationId: string; countryId: CountryId }>({
         organizationId: 1,

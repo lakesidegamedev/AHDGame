@@ -22,6 +22,9 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { crisesCollection } from "@/lib/db/repositories/crises";
 import type { Document } from "mongodb";
+import { nationalDoctrineCollection } from "@/lib/db/repositories/nationalDoctrine";
+import { livingConflictsCollection } from "@/lib/db/repositories/livingConflicts";
+import { macroCountriesCollection } from "@/lib/db/repositories/macroCountries";
 
 const NUCLEAR_DELIVERY_DOCTRINE_KEY = keyOf("strat", 5);
 
@@ -81,8 +84,7 @@ export async function seedColdWarFoundations(
   });
 
   const conflictDefs = allLivingConflictDefs();
-  const existingConflicts = await db
-    .collection<LivingConflictState>("livingConflicts")
+  const existingConflicts = await livingConflictsCollection<LivingConflictState>(db)
     .find(
       { defKey: { $in: conflictDefs.map((definition) => definition.key) } },
       { projection: { defKey: 1, phaseLevel: 1, campaign: 1 } }
@@ -96,8 +98,7 @@ export async function seedColdWarFoundations(
     (await db
       .collection<TensionSeedDocument>("coldWarTension")
       .findOne({ _id: "current" }, { projection: { _id: 1 } })) != null;
-  const existingDoctrines = await db
-    .collection("nationalDoctrine")
+  const existingDoctrines = await nationalDoctrineCollection<Document>(db)
     .find({ countryId: { $in: programIds } }, { projection: { countryId: 1, adopted: 1 } })
     .toArray();
   const doctrineByCountry = new Map(
@@ -129,18 +130,16 @@ export async function seedColdWarFoundations(
   for (const countryId of programIds) {
     const doctrine = doctrineByCountry.get(countryId);
     if (!doctrine) {
-      await db.collection("nationalDoctrine").insertOne({
+      await nationalDoctrineCollection<Document>(db).insertOne({
         countryId,
         adopted: { ...DEFAULT_ADOPTED, [NUCLEAR_DELIVERY_DOCTRINE_KEY]: turn },
         points: DEFAULT_POINTS,
       });
     } else if (doctrine.adopted?.[NUCLEAR_DELIVERY_DOCTRINE_KEY] == null) {
-      await db
-        .collection("nationalDoctrine")
-        .updateOne(
-          { countryId, [`adopted.${NUCLEAR_DELIVERY_DOCTRINE_KEY}`]: { $exists: false } },
-          { $set: { [`adopted.${NUCLEAR_DELIVERY_DOCTRINE_KEY}`]: turn } }
-        );
+      await nationalDoctrineCollection<Document>(db).updateOne(
+        { countryId, [`adopted.${NUCLEAR_DELIVERY_DOCTRINE_KEY}`]: { $exists: false } },
+        { $set: { [`adopted.${NUCLEAR_DELIVERY_DOCTRINE_KEY}`]: turn } }
+      );
     }
   }
 
@@ -152,8 +151,7 @@ export async function seedColdWarFoundations(
         statesCollection<{ countryId: string; population?: number }>(db)
           .find({}, { projection: { countryId: 1, population: 1 } })
           .toArray(),
-        db
-          .collection<{ entityId: string; population?: number }>("macroCountries")
+        macroCountriesCollection<{ entityId: string; population?: number }>(db)
           .find({ retiredAt: null }, { projection: { entityId: 1, population: 1 } })
           .toArray(),
       ]);
@@ -171,7 +169,7 @@ export async function seedColdWarFoundations(
       // aggregate rather than counting the same residents twice.
       Object.assign(populations, playablePopulations);
     }
-    await db.collection<LivingConflictState>("livingConflicts").bulkWrite(
+    await livingConflictsCollection<LivingConflictState>(db).bulkWrite(
       missingConflicts.map((definition) => ({
         updateOne: {
           filter: { defKey: definition.key },
@@ -190,7 +188,7 @@ export async function seedColdWarFoundations(
   }
   const legacyConflicts = existingConflicts.filter((conflict) => conflict.campaign == null);
   if (legacyConflicts.length > 0) {
-    await db.collection<LivingConflictState>("livingConflicts").bulkWrite(
+    await livingConflictsCollection<LivingConflictState>(db).bulkWrite(
       legacyConflicts.map((conflict) => ({
         updateOne: {
           filter: { defKey: conflict.defKey, campaign: { $exists: false } },

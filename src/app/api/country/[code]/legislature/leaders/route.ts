@@ -16,6 +16,7 @@ import {
 } from "@/lib/turn/parliamentaryGovernment";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { parliamentaryGovernmentsCollection } from "@/lib/db/repositories/parliamentaryGovernments";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ code: string }> }) {
   try {
@@ -37,9 +38,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     // while governmentFormations still has the correct PM/seatsByParty.
     const [govFormation, govDoc] = await Promise.all([
       getGovernmentFormationsCollection(db).findOne({ _id: countryId }),
-      db
-        .collection<ParliamentaryGovernment>("parliamentaryGovernments")
-        .findOne({ _id: countryId }),
+      parliamentaryGovernmentsCollection(db).findOne({ _id: countryId }),
     ]);
 
     // governmentFormations is authoritative for parliamentary head-of-government

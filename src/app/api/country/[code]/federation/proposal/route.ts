@@ -26,6 +26,7 @@ import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import type { Document } from "mongodb";
 import { billsCollection } from "@/lib/db/repositories/bills";
+import { federationRatificationsCollection } from "@/lib/db/repositories/federationRatifications";
 
 const bodySchema = z.object({
   negotiatedCustodians: z.record(z.string(), z.string()).default({}),
@@ -66,8 +67,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     )[0];
     const bill = proposal ? await billsCollection(db).findOne({ _id: proposal.billId }) : null;
     const consents = proposal
-      ? await db
-          .collection("federationRatifications")
+      ? await federationRatificationsCollection<Document>(db)
           .find(
             {
               presetId: "1991-default",

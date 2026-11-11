@@ -134,6 +134,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { livingConflictsCollection } from "@/lib/db/repositories/livingConflicts";
 
 /** Default unemployment when a state has no prior reading (matches gdpGrowth.ts `?? 4.5`). */
 const DEFAULT_UNEMPLOYMENT = 4.5;
@@ -299,8 +300,7 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
     }
   );
   const eraYear = eraGameState ? resolveGameYear(eraGameState) : null;
-  const armedConflicts = await db
-    .collection<LivingConflictState>("livingConflicts")
+  const armedConflicts = await livingConflictsCollection<LivingConflictState>(db)
     .find(
       {
         defKey: { $in: ["yugoslav_dissolution", "russia_ukraine_security", "arab_uprisings"] },

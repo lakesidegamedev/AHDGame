@@ -29,6 +29,8 @@ import { buildNationalAddressEmbed } from "@/lib/governorOffice/address/addressW
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
+import { governorAddressesCollection } from "@/lib/db/repositories/governorAddresses";
+import { governorOfficeStateCollection } from "@/lib/db/repositories/governorOfficeState";
 
 export interface DeliverAddressInput {
   countryId: CountryId;
@@ -110,8 +112,7 @@ export async function deliverAddress(
   // Cooldown attaches to the office. Admin override bypasses cooldown to
   // allow correcting state.
   if (!adminOverride) {
-    const recent = await db
-      .collection<GovernorAddress>("governorAddresses")
+    const recent = await governorAddressesCollection(db)
       .find({ countryId, stateId })
       .sort({ deliveredAtTurn: -1 })
       .limit(1)
@@ -130,7 +131,7 @@ export async function deliverAddress(
     // Two writes so we can target separate documents — if the NPI debit fails
     // after the office spend succeeds, refund the office AP so the office state
     // stays consistent.
-    const officeSpend = await db.collection<GovernorOfficeState>("governorOfficeState").updateOne(
+    const officeSpend = await governorOfficeStateCollection(db).updateOne(
       {
         countryId,
         stateId,
@@ -156,7 +157,7 @@ export async function deliverAddress(
     );
     if (npiSpend.modifiedCount === 0) {
       // Refund office AP so the office stays consistent.
-      await db.collection<GovernorOfficeState>("governorOfficeState").updateOne(
+      await governorOfficeStateCollection(db).updateOne(
         { countryId, stateId },
         {
           $inc: { gubernatorialActions: ADDRESS_ACTION_COST },
@@ -275,7 +276,7 @@ export async function deliverAddress(
     ...(adminOverride ? { adminProposed: true } : {}),
     createdAt: now,
   };
-  await db.collection<GovernorAddress>("governorAddresses").insertOne(addr);
+  await governorAddressesCollection(db).insertOne(addr);
 
   // Per-party demographic favorability — when the address targets a voter
   // group AND the leader belongs to a party, that party gets a per-group

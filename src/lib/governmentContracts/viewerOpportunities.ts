@@ -23,6 +23,8 @@ import type { GovernmentTender } from "./types";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { defenceProcurementAllocationsCollection } from "@/lib/db/repositories/defenceProcurementAllocations";
+import { defenceContractsCollection } from "@/lib/db/repositories/defenceContracts";
 export async function viewerTenderIds(
   db: Db,
   countryId: CountryId,
@@ -80,10 +82,10 @@ export async function viewerTenderIds(
           }
         ),
         loadDefencePriceRatios(db),
-        db
-          .collection<{ _id: string; supplierAmounts?: Record<string, number> }>(
-            "defenceProcurementAllocations"
-          )
+        defenceProcurementAllocationsCollection<{
+          _id: string;
+          supplierAmounts?: Record<string, number>;
+        }>(db)
           .find(
             {
               _id: {
@@ -97,8 +99,7 @@ export async function viewerTenderIds(
             { projection: { supplierAmounts: 1 } }
           )
           .toArray(),
-        db
-          .collection<DefenceContract>("defenceContracts")
+        defenceContractsCollection(db)
           .find(
             {
               sectorId: { $in: sectors.map((s) => s._id) },

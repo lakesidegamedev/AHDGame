@@ -21,6 +21,7 @@ import type { Document } from "mongodb";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { partyChartersCollection } from "@/lib/db/repositories/partyCharters";
 
 /**
  * Internal helper called by `signCharter` once the 3-of-3 threshold is hit.
@@ -57,7 +58,7 @@ export async function ratifyCharter(
   db: Db,
   now: Date = new Date()
 ): Promise<RatifyCharterResult> {
-  const charter = await db.collection<PartyCharter>("partyCharters").findOne({ _id: charterId });
+  const charter = await partyChartersCollection(db).findOne({ _id: charterId });
   if (!charter) {
     throw new Error(`Charter ${charterId.toString()} not found`);
   }
@@ -141,7 +142,7 @@ export async function ratifyCharter(
   // Atomic claim: only one concurrent caller wins this transition. The
   // status guard `pending-signatures` ensures double-ratification by
   // racing 3rd-signers cannot double-spawn parties.
-  const claim = await db.collection<PartyCharter>("partyCharters").findOneAndUpdate(
+  const claim = await partyChartersCollection(db).findOneAndUpdate(
     { _id: charterId, status: "pending-signatures" },
     {
       $set: {
@@ -164,7 +165,7 @@ export async function ratifyCharter(
     // party row we just inserted (the winner's row is the canonical one)
     // and return the winning ratification's partyId.
     await politicalPartiesCollection(db).deleteOne({ _id: newParty._id });
-    const winner = await db.collection<PartyCharter>("partyCharters").findOne({ _id: charterId });
+    const winner = await partyChartersCollection(db).findOne({ _id: charterId });
     if (winner?.status === "ratified" && winner.partyId) {
       const winningParty = await politicalPartiesCollection(db).findOne({
         sequentialId: Number(winner.partyId),

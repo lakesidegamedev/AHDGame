@@ -14,6 +14,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { ledgerEntriesCollection } from "@/lib/db/repositories/ledgerEntries";
 import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
+import { producerEconomyAccountsCollection } from "@/lib/db/repositories/producerEconomyAccounts";
 const idFor = (value: string) =>
   new ObjectId(createHash("sha256").update(value).digest("hex").slice(0, 24));
 
@@ -277,9 +278,10 @@ async function settleCorporateTaxPriorityBatch(
             update: { $inc: { cash: target.amount } },
           },
         }));
-        const updated = await db
-          .collection("producerEconomyAccounts")
-          .bulkWrite(operations, { session });
+        const updated = await producerEconomyAccountsCollection<Document>(db).bulkWrite(
+          operations,
+          { session }
+        );
         if (updated.matchedCount !== operations.length)
           throw new Error("Corporate distribution recipient unavailable");
       }

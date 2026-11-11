@@ -32,6 +32,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { currencyOrdersCollection } from "@/lib/db/repositories/currencyOrders";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { tradeHistoryCollection } from "@/lib/db/repositories/tradeHistory";
 
 interface RouteParams {
   params: Promise<{ orderId: string }>;
@@ -312,7 +313,7 @@ export async function POST(request: Request, { params }: RouteParams) {
           throw badRequest("Order was already filled by another trader");
         }
 
-        await db.collection<TradeHistoryEntry>("tradeHistory").insertOne(tradeHistoryEntry, {
+        await tradeHistoryCollection(db).insertOne(tradeHistoryEntry, {
           session,
         });
       },

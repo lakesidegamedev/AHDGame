@@ -13,6 +13,7 @@ import type { TradeHistoryEntry } from "@/lib/db/types/tradeHistory";
 import type { CountryId } from "@/lib/constants/countries";
 import { getBankId } from "@/lib/centralBank/helpers";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { tradeHistoryCollection } from "@/lib/db/repositories/tradeHistory";
 
 /** Flat fallback reserves when the country has insufficient trade/LOC history to derive an estimate.
  *  Values are in home-currency face units — same unit as reserveBalance. */
@@ -51,8 +52,7 @@ export async function POST() {
       // Seed = 6 × avg_turn_spread + 12 × projected_LOC_interest (recent 48 turns).
       // Fallback to FALLBACK_RESERVE_SEED when trade history is sparse.
       const currencyCode = COUNTRY_CURRENCY_MAP[countryId];
-      const recentTrades = await db
-        .collection<TradeHistoryEntry>("tradeHistory")
+      const recentTrades = await tradeHistoryCollection(db)
         .find({
           $or: [{ fromCurrency: currencyCode }, { toCurrency: currencyCode }],
         })

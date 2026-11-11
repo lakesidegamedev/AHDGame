@@ -25,6 +25,9 @@ import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 import { crisesCollection } from "@/lib/db/repositories/crises";
+import { organizationMembershipsCollection } from "@/lib/db/repositories/organizationMemberships";
+import { tariffsCollection } from "@/lib/db/repositories/tariffs";
+import { tradeFlowSnapshotsCollection } from "@/lib/db/repositories/tradeFlowSnapshots";
 
 /** Trade partner the page reports against: the player country. */
 const TRADE_PARTNER = COUNTRY_CONFIGS.US.id;
@@ -136,11 +139,11 @@ export async function loadBackgroundCountryView(
         { _id: countryId },
         { projection: { currencyCode: 1, rate: 1, baseRate: 1, rateHistory: 1 } }
       ),
-      db
-        .collection<TradeSnapshotDoc>("tradeFlowSnapshots")
-        .findOne({}, { sort: { turn: -1 }, projection: tradeProjection(countryId, TRADE_PARTNER) }),
-      db
-        .collection<TariffDoc>("tariffs")
+      tradeFlowSnapshotsCollection<TradeSnapshotDoc>(db).findOne(
+        {},
+        { sort: { turn: -1 }, projection: tradeProjection(countryId, TRADE_PARTNER) }
+      ),
+      tariffsCollection<TariffDoc>(db)
         .find(
           {
             countryId: { $in: [countryId, TRADE_PARTNER] },
@@ -164,8 +167,7 @@ export async function loadBackgroundCountryView(
         { "nationalIndex.entityId": countryId },
         { projection: { slug: 1, name: 1, countryId: 1, nationalIndex: 1 } }
       ),
-      db
-        .collection<MembershipDoc>("organizationMemberships")
+      organizationMembershipsCollection<MembershipDoc>(db)
         .find({ countryId }, { projection: { organizationId: 1, countryId: 1 } })
         .toArray(),
       crisesCollection<CrisisDoc & { status?: string; countryIds?: string[] }>(db)

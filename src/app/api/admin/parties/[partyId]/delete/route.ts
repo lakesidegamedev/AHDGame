@@ -31,6 +31,8 @@ import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { nationalPartyElectionsCollection } from "@/lib/db/repositories/nationalPartyElections";
+import { statePartyElectionsCollection } from "@/lib/db/repositories/statePartyElections";
+import { partyBudgetCollection } from "@/lib/db/repositories/partyBudget";
 
 export async function POST(request: Request, { params }: { params: Promise<{ partyId: string }> }) {
   try {
@@ -139,9 +141,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ par
     });
 
     // Delete all party budgets (must match both partyId AND countryId)
-    const budgetResult = await db
-      .collection<PartyBudget>("partyBudget")
-      .deleteMany({ partyId: partySeqIdStr, countryId: partyCountryId });
+    const budgetResult = await partyBudgetCollection(db).deleteMany({
+      partyId: partySeqIdStr,
+      countryId: partyCountryId,
+    });
 
     // Delete all party leadership elections (both national and state)
     // National elections have countryId
@@ -156,9 +159,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ par
       .project({ _id: 1 })
       .toArray();
     const countryStateIds = countryStates.map((s) => s._id as string);
-    const stateElectionResult = await db
-      .collection<StatePartyElection>("statePartyElections")
-      .deleteMany({ partyId: partySeqIdStr, stateId: { $in: countryStateIds } });
+    const stateElectionResult = await statePartyElectionsCollection(db).deleteMany({
+      partyId: partySeqIdStr,
+      stateId: { $in: countryStateIds },
+    });
 
     // Delete the national party by its ObjectId _id — the canonical primary key.
     await politicalPartiesCollection(db).deleteOne({ _id: party._id });

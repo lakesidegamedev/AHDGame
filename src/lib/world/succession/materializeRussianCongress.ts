@@ -28,6 +28,9 @@ import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameSt
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
 import type { Document } from "mongodb";
+import { ukCabinetCooldownsCollection } from "@/lib/db/repositories/ukCabinetCooldowns";
+import { pmAppointmentVotesCollection } from "@/lib/db/repositories/pmAppointmentVotes";
+import { countryStateCollection } from "@/lib/db/repositories/countryState";
 
 export const FEDERATION_ARCHIVED_POLITICAL_ROWS_COLLECTION = "federationArchivedPoliticalRows";
 const UNION_OFFICES = ["unionCongressDeputy", "chairmanOfCabinet", "sovietPresident"];
@@ -81,9 +84,10 @@ export async function materializeProvisionalRussianCongress(input: {
     country.ruPresidencySinceTurn != null ||
     country.ruCongressDissolvedSinceTurn != null ||
     country.ruFederalAssemblySinceTurn != null;
-  const runtime = await db
-    .collection<CountryState>("countryState")
-    .findOne({ _id: "RU" }, { session, projection: { _id: 1 } });
+  const runtime = await countryStateCollection(db).findOne(
+    { _id: "RU" },
+    { session, projection: { _id: 1 } }
+  );
   if (!runtime) throw new Error("Russian succession requires its existing runtime country state");
   const states = await statesCollection(db)
     .find(
@@ -236,7 +240,7 @@ export async function materializeProvisionalRussianCongress(input: {
         { session }
       );
   await cabinetMembersCollection<Document>(db).deleteMany({ countryId: "RU" }, { session });
-  await db.collection("ukCabinetCooldowns").deleteMany({ countryId: "RU" }, { session });
+  await ukCabinetCooldownsCollection<Document>(db).deleteMany({ countryId: "RU" }, { session });
   await governmentFormationsCollection(db).updateOne(
     { _id: "RU" },
     {
@@ -276,7 +280,7 @@ export async function materializeProvisionalRussianCongress(input: {
     },
     { session, upsert: true }
   );
-  const runtimeChanged = await db.collection<CountryState>("countryState").updateOne(
+  const runtimeChanged = await countryStateCollection(db).updateOne(
     { _id: "RU" },
     {
       $set: {
@@ -444,7 +448,7 @@ async function preserveEstablishedRussianConstitution(input: {
         );
     }
     await cabinetMembersCollection<Document>(db).deleteMany({ countryId: "RU" }, { session });
-    await db.collection("ukCabinetCooldowns").deleteMany({ countryId: "RU" }, { session });
+    await ukCabinetCooldownsCollection<Document>(db).deleteMany({ countryId: "RU" }, { session });
     for (const collection of ["characters", "npps"]) {
       await db
         .collection(collection)
@@ -456,13 +460,11 @@ async function preserveEstablishedRussianConstitution(input: {
     }
   }
   // A direct presidency or an absent legislature cannot retain a Union head-of-state ballot.
-  await db
-    .collection("pmAppointmentVotes")
-    .updateMany(
-      { countryId: "RU", status: "active", office: "headOfState" },
-      { $set: { status: "cancelled", closedAt: now, updatedAt: now } },
-      { session }
-    );
+  await pmAppointmentVotesCollection<Document>(db).updateMany(
+    { countryId: "RU", status: "active", office: "headOfState" },
+    { $set: { status: "cancelled", closedAt: now, updatedAt: now } },
+    { session }
+  );
   if (government && lostHolder(government.hosCharacterId, government.hosNppId)) {
     Object.assign(changes, { hosCharacterId: null, hosNppId: null, hosName: null });
   }
@@ -475,13 +477,11 @@ async function preserveEstablishedRussianConstitution(input: {
       { $set: { ...changes, updatedAt: now } },
       { session }
     );
-  await db
-    .collection<CountryState>("countryState")
-    .updateOne(
-      { _id: "RU" },
-      { $set: { displayNameOverride: "Russia", flagEmojiOverride: "🇷🇺", updatedAt: now } },
-      { session }
-    );
+  await countryStateCollection(db).updateOne(
+    { _id: "RU" },
+    { $set: { displayNameOverride: "Russia", flagEmojiOverride: "🇷🇺", updatedAt: now } },
+    { session }
+  );
   const stamped = await countryGameStatesCollection(db).updateOne(
     {
       _id: "RU",

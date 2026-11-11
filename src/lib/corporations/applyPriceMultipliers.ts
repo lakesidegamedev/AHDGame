@@ -15,6 +15,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 import type { Document } from "mongodb";
+import { sentimentPulsesCollection } from "@/lib/db/repositories/sentimentPulses";
 
 export interface ApplyPriceMultipliersResult {
   updated: number;
@@ -32,9 +33,10 @@ export interface ApplyPriceMultipliersResult {
 let sentimentTtlEnsured = false;
 async function ensureSentimentPulseTtlIndex(database: Db): Promise<void> {
   if (sentimentTtlEnsured) return;
-  await database
-    .collection("sentimentPulses")
-    .createIndex({ createdAt: 1 }, { expireAfterSeconds: 86400, name: "ttl_createdAt" });
+  await sentimentPulsesCollection<Document>(database).createIndex(
+    { createdAt: 1 },
+    { expireAfterSeconds: 86400, name: "ttl_createdAt" }
+  );
   sentimentTtlEnsured = true;
 }
 
@@ -44,7 +46,7 @@ export async function applyPriceMultipliers(db?: Db): Promise<ApplyPriceMultipli
 
   await ensureSentimentPulseTtlIndex(database);
 
-  const pulses = await database.collection<SentimentPulse>("sentimentPulses").find({}).toArray();
+  const pulses = await sentimentPulsesCollection(database).find({}).toArray();
 
   // Per-state investor confidence (0–100) → HQ-state share-price sentiment. One
   // batched projection; corps join on `headquartersState`.

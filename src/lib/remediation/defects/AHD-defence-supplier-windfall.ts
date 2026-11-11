@@ -14,6 +14,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { defenceContractsCollection } from "@/lib/db/repositories/defenceContracts";
 
 export const DEFECT_ID = "AHD-defence-supplier-windfall";
 
@@ -154,8 +155,7 @@ async function survey(db: Db): Promise<Survey> {
   const [corporation, budget, contracts, gameState] = await Promise.all([
     corporationsCollection<CorporationEvidence>(db).findOne({ _id: corporationId }),
     federalBudgetCollection<BudgetEvidence>(db).findOne({ countryId: COUNTRY_ID }),
-    db
-      .collection<ContractEvidence>("defenceContracts")
+    defenceContractsCollection<ContractEvidence>(db)
       .find({ _id: { $in: SOURCE_CONTRACT_IDS.map((id) => new ObjectId(id)) } })
       .toArray(),
     gameStateCollection<{ currentTurn?: number }>(db).findOne({}),
@@ -311,7 +311,7 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
 
   let contractsMarked = 0;
   for (const contractId of SOURCE_CONTRACT_IDS) {
-    const result = await db.collection<ContractEvidence>("defenceContracts").updateOne(
+    const result = await defenceContractsCollection<ContractEvidence>(db).updateOne(
       { _id: new ObjectId(contractId), [`${MARKER_PATH}.runId`]: { $ne: ctx.runId ?? null } },
       {
         $set: {

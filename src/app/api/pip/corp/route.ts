@@ -28,6 +28,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
+import { commodityPriceHistoryCollection } from "@/lib/db/repositories/commodityPriceHistory";
 
 // The six commodity types shown in the PiP Corp view
 const PIP_COMMODITIES: CommodityType[] = [
@@ -62,8 +63,7 @@ export async function GET() {
       commodityPricesCollection(db)
         .find({ commodity: { $in: PIP_COMMODITIES } })
         .toArray(),
-      db
-        .collection<CommodityPriceHistory>("commodityPriceHistory")
+      commodityPriceHistoryCollection(db)
         .find({ commodity: { $in: PIP_COMMODITIES }, turn: currentTurn - 1 })
         .project({ commodity: 1, globalPrice: 1 })
         .toArray() as Promise<{ commodity: CommodityType; globalPrice: number }[]>,

@@ -32,6 +32,8 @@ import { getPoliticalPartiesCollection } from "@/lib/db/collections/politicalPar
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { supremeCourtSeatsCollection } from "@/lib/db/repositories/supremeCourtSeats";
+import { scotusNominationsCollection } from "@/lib/db/repositories/scotusNominations";
 
 export interface ScotusNominationLifecycleResult {
   nominationsProcessed: number;
@@ -85,7 +87,7 @@ async function castNPPScotusVotes(
     setFields[`votes.${k}`] = v;
   }
 
-  await db.collection<ScotusNomination>("scotusNominations").updateOne(
+  await scotusNominationsCollection(db).updateOne(
     { _id: nomination._id },
     {
       $set: setFields,
@@ -120,7 +122,7 @@ async function seatConfirmedJustice(
     }
   }
 
-  await db.collection<SupremeCourtSeat>("supremeCourtSeats").updateOne(
+  await supremeCourtSeatsCollection(db).updateOne(
     { countryId: nomination.countryId, seatNumber: nomination.seatNumber },
     {
       $set: {
@@ -175,8 +177,7 @@ export async function processScotusNominationLifecycle(
   const nppMap = new Map(npps.map((n) => [n._id.toString(), n]));
   const preload: NppPreload = { nppOfficials, nppMap, presidentParty: president?.party };
 
-  const activeNominations = await database
-    .collection<ScotusNomination>("scotusNominations")
+  const activeNominations = await scotusNominationsCollection(database)
     .find({
       status: "active",
       $or: [
@@ -190,8 +191,7 @@ export async function processScotusNominationLifecycle(
     await castNPPScotusVotes(database, nom, preload);
   }
 
-  const expired = await database
-    .collection<ScotusNomination>("scotusNominations")
+  const expired = await scotusNominationsCollection(database)
     .find({
       status: "active",
       $or: [
@@ -275,7 +275,7 @@ export async function processScotusNominationLifecycle(
 
     if (passed) {
       await seatConfirmedJustice(database, nom, now, currentTurn);
-      const claim = await database.collection<ScotusNomination>("scotusNominations").updateOne(
+      const claim = await scotusNominationsCollection(database).updateOne(
         { _id: nom._id, status: "active" },
         {
           $set: {
@@ -348,7 +348,7 @@ export async function processScotusNominationLifecycle(
         }
       }
     } else {
-      const claim = await database.collection<ScotusNomination>("scotusNominations").updateOne(
+      const claim = await scotusNominationsCollection(database).updateOne(
         { _id: nom._id, status: "active" },
         {
           $set: {

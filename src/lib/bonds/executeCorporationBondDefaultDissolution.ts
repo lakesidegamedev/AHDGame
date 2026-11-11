@@ -70,6 +70,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 import type { Document } from "mongodb";
+import { bondHistoryCollection } from "@/lib/db/repositories/bondHistory";
 
 export interface CorporationDissolutionResult {
   bondRecoveryPool: number;
@@ -737,7 +738,7 @@ export async function executeCorporationBondDefaultDissolution(
 
   const bondIds = bonds.map((b) => b._id);
   if (bondIds.length > 0) {
-    await db.collection("bondHistory").deleteMany({ bondId: { $in: bondIds } });
+    await bondHistoryCollection<Document>(db).deleteMany({ bondId: { $in: bondIds } });
   }
 
   // NPP successors take the sectors over so their plants keep producing; only

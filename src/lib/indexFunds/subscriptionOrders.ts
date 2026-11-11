@@ -22,6 +22,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 import type { Document } from "mongodb";
+import { indexFundCommandsCollection } from "@/lib/db/repositories/indexFundCommands";
 
 export async function queueBankFundSubscription(
   db: Db,
@@ -44,7 +45,7 @@ export async function queueBankFundSubscription(
     ...(input.corporationId ? { corporationId: input.corporationId } : {}),
   };
   const replay = async (tx: Db): Promise<Response | null> => {
-    const prior = await tx.collection<BankSubscription>("indexFundCommands").findOne({ _id: key });
+    const prior = await indexFundCommandsCollection<BankSubscription>(tx).findOne({ _id: key });
     if (!prior) return null;
     if (JSON.stringify(prior.request) !== JSON.stringify(request))
       return errorResponse(409, "This order ID belongs to a different fund order.");
@@ -147,7 +148,7 @@ export async function queueBankFundSubscription(
           status: "queued",
         },
       };
-      await tx.collection<BankSubscription>("indexFundCommands").insertOne(order);
+      await indexFundCommandsCollection<BankSubscription>(tx).insertOne(order);
       await witnessSubscription(tx, fund, order, "reserve", turn);
       return statusResponse(200, body);
     });

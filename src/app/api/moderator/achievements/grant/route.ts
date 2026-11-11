@@ -8,6 +8,8 @@ import { createModAuditLog } from "@/lib/modAuditLog";
 import { z } from "zod";
 import { awardAchievement } from "@/lib/achievements";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { achievementsCollection } from "@/lib/db/repositories/achievements";
+import type { Document } from "mongodb";
 
 const grantSchema = z.object({
   characterId: z.string().refine((s) => ObjectId.isValid(s), "Invalid character ID"),
@@ -36,7 +38,9 @@ export async function POST(request: Request) {
       return errorResponse(404, "Character not found");
     }
 
-    const achievement = await db.collection("achievements").findOne({ slug: achievementSlug });
+    const achievement = await achievementsCollection<Document>(db).findOne({
+      slug: achievementSlug,
+    });
     if (!achievement) {
       return errorResponse(404, "Achievement not found");
     }

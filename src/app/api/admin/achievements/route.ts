@@ -8,6 +8,7 @@ import { z } from "zod";
 import type { Achievement } from "@/lib/db/types";
 import { listAchievementsWithEarnedCounts } from "@/lib/achievements/earnedCounts";
 import { invalidateDefinitionsCache } from "@/lib/achievements/cache";
+import { achievementsCollection } from "@/lib/db/repositories/achievements";
 
 const createSchema = z.object({
   slug: z
@@ -47,7 +48,7 @@ export const POST = withAdminAuth(async (_auth, request: Request) => {
     const { slug, name, description, icon, category, order } = parsed.data;
     const db = await getDb();
 
-    const existing = await db.collection<Achievement>("achievements").findOne({ slug });
+    const existing = await achievementsCollection(db).findOne({ slug });
     if (existing) {
       return errorResponse(409, "Achievement with this slug already exists");
     }
@@ -66,7 +67,7 @@ export const POST = withAdminAuth(async (_auth, request: Request) => {
       updatedAt: now,
     };
 
-    const result = await db.collection<Achievement>("achievements").insertOne({
+    const result = await achievementsCollection(db).insertOne({
       ...achievement,
       _id: new ObjectId(),
     } as Achievement);

@@ -14,6 +14,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 import type { Document } from "mongodb";
 import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { bondHistoryCollection } from "@/lib/db/repositories/bondHistory";
 
 // Tx log entry accumulators (resolved to names + emitted after all phases).
 // `charId` carries the holder id in string form for batched name lookup;
@@ -42,7 +43,7 @@ export async function loadPriorBondInterest(
   db: Db,
   bondIds: ObjectId[]
 ): Promise<Array<{ _id: ObjectId; maxInterest: number }>> {
-  const collection = db.collection("bondHistory");
+  const collection = bondHistoryCollection<Document>(db);
   const match = { $match: { bondId: { $in: bondIds } } };
   try {
     return await collection
@@ -121,7 +122,7 @@ export async function snapshotBondHistory(args: {
     });
     // Unordered: a duplicate on a retried turn must not stop the other live
     // bond snapshots from landing.
-    await db.collection("bondHistory").insertMany(historyDocs, { ordered: false });
+    await bondHistoryCollection<Document>(db).insertMany(historyDocs, { ordered: false });
   }
 
   return updatedBonds.length;

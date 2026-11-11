@@ -19,6 +19,9 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
 import { cabinetNominationsCollection } from "@/lib/db/repositories/cabinetNominations";
+import { cabinetSettingsCollection } from "@/lib/db/repositories/cabinetSettings";
+import type { Document } from "mongodb";
+import { ministerialOrdersCollection } from "@/lib/db/repositories/ministerialOrders";
 
 /**
  * For the cleared cabinet holders, (1) restore each holder's `currentOffice` so
@@ -168,10 +171,11 @@ export async function clearCabinetOnTransition(db: Db, countryId: CountryId): Pr
       { $set: { status: "withdrawn", updatedAt: new Date() } }
     );
 
-    await db.collection("cabinetSettings").deleteMany({ countryId });
-    await db
-      .collection("ministerialOrders")
-      .updateMany({ countryId, active: true }, { $set: { active: false } });
+    await cabinetSettingsCollection<Document>(db).deleteMany({ countryId });
+    await ministerialOrdersCollection<Document>(db).updateMany(
+      { countryId, active: true },
+      { $set: { active: false } }
+    );
 
     // Restore office state and notify the player holders. NPP-held seats carry a
     // null characterId — they have no player to notify and no office to restore.

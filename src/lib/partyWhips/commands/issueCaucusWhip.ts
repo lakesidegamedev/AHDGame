@@ -56,6 +56,10 @@ import { legislationTypesCollection } from "@/lib/db/repositories/legislationTyp
 import { usersCollection } from "@/lib/db/repositories/users";
 import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
 import { cabinetNominationsCollection } from "@/lib/db/repositories/cabinetNominations";
+import { billWhipsCollection } from "@/lib/db/repositories/billWhips";
+import { speakerElectionsCollection } from "@/lib/db/repositories/speakerElections";
+import type { Document } from "mongodb";
+import { leadershipElectionsCollection } from "@/lib/db/repositories/leadershipElections";
 
 export const caucusWhipSchema = z
   .object({
@@ -302,15 +306,18 @@ export async function issueCaucusWhip({
   } else if (targetType === "speakerElection") {
     const speakerElection = isUSCongressLeadershipTarget
       ? normalizedTargetId === "current"
-        ? await db
-            .collection<{ _id: string; status: string; startedAt?: Date }>("speakerElections")
-            .findOne({
-              _id: "current",
-              status: "voting",
-            })
+        ? await speakerElectionsCollection<{ _id: string; status: string; startedAt?: Date }>(
+            db
+          ).findOne({
+            _id: "current",
+            status: "voting",
+          })
         : null
       : targetOid
-        ? await db.collection("speakerElections").findOne({ _id: targetOid, status: "active" })
+        ? await speakerElectionsCollection<Document>(db).findOne({
+            _id: targetOid,
+            status: "active",
+          })
         : null;
     if (!speakerElection) {
       return NextResponse.json(notFound("Speaker election not found or not active").toJson(), {
@@ -335,7 +342,10 @@ export async function issueCaucusWhip({
           }>(chamber === "senate" ? "senateLeadershipElections" : "houseLeadershipElections")
           .findOne({ _id: normalizedTargetId, status: "voting" })
       : targetOid
-        ? await db.collection("leadershipElections").findOne({ _id: targetOid, status: "active" })
+        ? await leadershipElectionsCollection<Document>(db).findOne({
+            _id: targetOid,
+            status: "active",
+          })
         : null;
     if (!leadershipElection) {
       return NextResponse.json(notFound("Leadership election not found or not active").toJson(), {
@@ -477,8 +487,7 @@ export async function issueCaucusWhip({
     }
   }
 
-  const existingWhips = await db
-    .collection<BillWhip>("billWhips")
+  const existingWhips = await billWhipsCollection(db)
     .find({
       targetType,
       targetId: storedTargetId,
@@ -501,8 +510,7 @@ export async function issueCaucusWhip({
   }
 
   if (audience === "character") {
-    const existingCharacterWhips = await db
-      .collection<BillWhip>("billWhips")
+    const existingCharacterWhips = await billWhipsCollection(db)
       .find({
         targetType,
         targetId: storedTargetId,
@@ -553,7 +561,7 @@ export async function issueCaucusWhip({
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    const insert = await db.collection<BillWhip>("billWhips").insertOne(playerWhipDoc as BillWhip);
+    const insert = await billWhipsCollection(db).insertOne(playerWhipDoc as BillWhip);
 
     const { subject, notificationTitle } = await buildCaucusPlayerWhipMessage(
       db,
@@ -636,7 +644,7 @@ export async function issueCaucusWhip({
     createdAt: new Date(),
     updatedAt: new Date(),
   };
-  const insert = await db.collection<BillWhip>("billWhips").insertOne(whipDoc as BillWhip);
+  const insert = await billWhipsCollection(db).insertOne(whipDoc as BillWhip);
 
   const nppOfficials = await electedOfficialsCollection(db)
     .find({

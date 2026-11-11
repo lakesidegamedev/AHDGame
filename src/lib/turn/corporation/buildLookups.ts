@@ -70,6 +70,7 @@ import { presetUsesSocietyPressures } from "@/lib/societyPressures/preset";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { sourcingNetworkLoadCollection } from "@/lib/db/repositories/sourcingNetworkLoad";
 
 export async function buildCorporationLookups(
   db: Db,
@@ -887,8 +888,7 @@ export async function buildCorporationLookups(
     options?.canonicalFreightBillingEnabled ||
     options?.freightSettlementActive
   ) {
-    const networkDoc = await db
-      .collection<SourcingNetworkDoc>("sourcingNetworkLoad")
+    const networkDoc = await sourcingNetworkLoadCollection<SourcingNetworkDoc>(db)
       .find({ turn: { $lte: embargoTurn } })
       .sort({ turn: -1 })
       .limit(1)

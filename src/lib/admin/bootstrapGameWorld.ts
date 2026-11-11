@@ -234,6 +234,8 @@ import { electionsCollection } from "@/lib/db/repositories/elections";
 import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
+import { seatsCollection } from "@/lib/db/repositories/seats";
+import { partyBudgetCollection } from "@/lib/db/repositories/partyBudget";
 
 async function seedInitialBudgetSnapshots(db: Db, log: (msg: string) => void): Promise<void> {
   const budgets = await federalBudgetCollection(db).find({}).toArray();
@@ -1431,10 +1433,10 @@ export async function bootstrapGameWorld(options: BootstrapOptions) {
     unownedSectorCount,
   ] = await Promise.all([
     statesCollection<Document>(db).countDocuments(),
-    db.collection("seats").countDocuments(),
+    seatsCollection<Document>(db).countDocuments(),
     electionsCollection<Document>(db).countDocuments(),
     electedOfficialsCollection<Document>(db).countDocuments(),
-    db.collection("partyBudget").countDocuments(),
+    partyBudgetCollection<Document>(db).countDocuments(),
     unownedSectorsCollection<Document>(db).countDocuments(),
   ]);
 

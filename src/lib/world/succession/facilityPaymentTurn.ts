@@ -25,6 +25,7 @@ import {
 } from "./runtimeEntities";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { macroCountriesCollection } from "@/lib/db/repositories/macroCountries";
 
 const FEDERATION_FACILITY_PAYMENT_TURNS_COLLECTION = "federationFacilityPaymentTurns";
 interface PaymentFirm {
@@ -121,8 +122,7 @@ export async function materializeFacilityPaymentTurn(input: {
       { session }
     )
     .toArray();
-  const macros = await db
-    .collection<SuccessorCash>("macroCountries")
+  const macros = await macroCountriesCollection<SuccessorCash>(db)
     .find(
       {
         _id: { $in: debtorIds },
@@ -286,7 +286,7 @@ export async function materializeFacilityPaymentTurn(input: {
   }));
   if (
     macroWrites.length &&
-    (await db.collection<SuccessorCash>("macroCountries").bulkWrite(macroWrites, { session }))
+    (await macroCountriesCollection<SuccessorCash>(db).bulkWrite(macroWrites, { session }))
       .matchedCount !== macroWrites.length
   )
     throw new Error("Successor cash changed during compensation");

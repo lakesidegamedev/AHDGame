@@ -11,6 +11,7 @@ import { houseLimits, loadHouse, settleHouseBet } from "@/lib/casino/house";
 import { casinoFailure, guardCasinoPlayer, guardCasinoRequest } from "@/lib/casino/routeSupport";
 import { runtimeConfig } from "@/lib/config/runtime";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { blackjackPendingWagersCollection } from "@/lib/db/repositories/blackjackPendingWagers";
 
 const resolveSchema = z.object({
   discordId: z.string().min(1, "discordId is required"),
@@ -53,9 +54,11 @@ export async function POST(request: Request) {
     if (limited) return limited;
 
     const db = await getDb();
-    const pending = await db
-      .collection<PendingWager>("blackjackPendingWagers")
-      .findOneAndDelete({ discordId, gameId, status: "pending" });
+    const pending = await blackjackPendingWagersCollection<PendingWager>(db).findOneAndDelete({
+      discordId,
+      gameId,
+      status: "pending",
+    });
     if (!pending) {
       return errorResponse(404, "Pending wager not found", {
         extra: {

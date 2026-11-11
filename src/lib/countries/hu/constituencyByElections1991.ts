@@ -45,6 +45,7 @@ import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 import type { Document } from "mongodb";
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 import { notificationsCollection } from "@/lib/db/repositories/notifications";
+import { stateRegistrationPoolCollection } from "@/lib/db/repositories/stateRegistrationPool";
 export const HU_1991_BY_ELECTIONS_COLLECTION = "hu1991ConstituencyByElections";
 export interface Hu1991ByElectionRecord {
   _id: string;
@@ -218,8 +219,7 @@ async function materializeHu1991ByElectionOpening(input: {
       { session, projection: { population: 1, votingEligiblePopulation: 1 } }
     )
     .toArray();
-  const pools = await db
-    .collection<StateRegistrationPool>("stateRegistrationPool")
+  const pools = await stateRegistrationPoolCollection(db)
     .find({ countryId: "HU" }, { session, projection: { stateId: 1, unregistered: 1 } })
     .toArray();
   const regionalRegister = Object.fromEntries(

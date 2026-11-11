@@ -25,6 +25,7 @@ import { officePoolTopUpStatus } from "@/lib/actions/officePoolTopUpRules";
 import { divergentDeathChance } from "@/lib/scotus/tenure";
 import { getScotusUpcomingCases } from "@/lib/scotus/queries";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { supremeCourtSeatsCollection } from "@/lib/db/repositories/supremeCourtSeats";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ code: string }> }) {
   try {
@@ -57,7 +58,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
 
     const [seat, gameState, upcomingCases] = await Promise.all([
       myCharacter
-        ? db.collection<SupremeCourtSeat>("supremeCourtSeats").findOne({
+        ? supremeCourtSeatsCollection(db).findOne({
             countryId,
             justiceCharacterId: myCharacter._id,
           })

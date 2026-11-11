@@ -60,6 +60,7 @@ import { savingsLedgerCollection } from "@/lib/db/repositories/savingsLedger";
 import type { Document } from "mongodb";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { moneySupplySnapshotsCollection } from "@/lib/db/repositories/moneySupplySnapshots";
 
 export interface InflationRecalcOptions {
   /**
@@ -233,8 +234,7 @@ export async function runInflationRecalc(
   // Exchange rates used are previous turn's settled values (inflationRecalc runs before forexTurn).
   const [exchangeRateDocs, moneyRows, savingsFlowAgg, tariffExposureSnapshot] = await Promise.all([
     exchangeRatesCollection(db).find({}).toArray(),
-    db
-      .collection("moneySupplySnapshots")
+    moneySupplySnapshotsCollection<Document>(db)
       .aggregate<{ _id: string; accountingVersion?: number; annualizedM2GrowthPct: number | null }>(
         [
           { $match: { turn: { $lt: turn } } },

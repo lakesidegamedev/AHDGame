@@ -10,6 +10,7 @@ import type {
 } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { usersCollection } from "@/lib/db/repositories/users";
+import { playerMailCollection } from "@/lib/db/repositories/playerMail";
 
 /**
  * Player-to-player safety: reporting objectionable content and blocking
@@ -167,12 +168,10 @@ async function setMailHiddenFrom(
     .map((c) => c._id)
     .toArray();
   if (senderCharacterIds.length === 0) return;
-  await db
-    .collection<PlayerMail>("playerMail")
-    .updateMany(
-      { toUserId: recipient, fromCharacterId: { $in: senderCharacterIds } },
-      hidden ? { $set: { blockedByRecipient: true } } : { $unset: { blockedByRecipient: "" } }
-    );
+  await playerMailCollection(db).updateMany(
+    { toUserId: recipient, fromCharacterId: { $in: senderCharacterIds } },
+    hidden ? { $set: { blockedByRecipient: true } } : { $unset: { blockedByRecipient: "" } }
+  );
 }
 
 export async function hasBlocked(

@@ -41,6 +41,7 @@ import {
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { locLedgerCollection } from "@/lib/db/repositories/locLedger";
 
 const DEFAULT_PRIME = 2.5;
 
@@ -278,8 +279,7 @@ export async function buildLocSnapshot(
   // to it. Without this gate, historical ledger rows kept driving the banner
   // for paid-off loans (bug #0547).
   const recentGarnishments = loc?.drawFrozen
-    ? await db
-        .collection<LocLedgerEntry>("locLedger")
+    ? await locLedgerCollection(db)
         .find({ characterId: character._id, type: "garnishment" }, { projection: { meta: 1 } })
         .sort({ createdAt: -1 })
         .limit(5)

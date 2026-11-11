@@ -10,6 +10,7 @@ import type { CrisisEffect } from "@/lib/db/types/crisis";
 import { billsCollection } from "@/lib/db/repositories/bills";
 import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
 import type { Document } from "mongodb";
+import { crisisAidCommitmentsCollection } from "@/lib/db/repositories/crisisAidCommitments";
 
 /**
  * Classify a bill status as a resolved aid outcome, or null if still in flight.
@@ -49,12 +50,10 @@ async function finalizeCrisisAid(
 ): Promise<void> {
   const now = new Date();
   if (passed) {
-    await db
-      .collection<CrisisAidCommitment>("crisisAidCommitments")
-      .updateOne(
-        { _id: commitment._id, status: "pending" },
-        { $set: { status: "passed", resolvedAt: now, updatedAt: now } }
-      );
+    await crisisAidCommitmentsCollection(db).updateOne(
+      { _id: commitment._id, status: "pending" },
+      { $set: { status: "passed", resolvedAt: now, updatedAt: now } }
+    );
     await logWireEvent(
       "crisis_aid_passed",
       `Emergency aid from ${commitment.senderCountryId} was approved.`,
@@ -66,7 +65,7 @@ async function finalizeCrisisAid(
   }
 
   // Claim the clawback first, so a failure below cannot repeat the reversal next turn.
-  const claimed = await db.collection<CrisisAidCommitment>("crisisAidCommitments").updateOne(
+  const claimed = await crisisAidCommitmentsCollection(db).updateOne(
     { _id: commitment._id, status: "pending" },
     {
       $set: {
@@ -103,10 +102,7 @@ export async function processCrisisAidResolutions(
   db: Db,
   currentTurn: number
 ): Promise<{ passed: number; failed: number }> {
-  const pending = await db
-    .collection<CrisisAidCommitment>("crisisAidCommitments")
-    .find({ status: "pending" })
-    .toArray();
+  const pending = await crisisAidCommitmentsCollection(db).find({ status: "pending" }).toArray();
   let passed = 0;
   let failed = 0;
   for (const c of pending) {
@@ -123,8 +119,7 @@ export async function processCrisisAidResolutions(
 
 /** Reverse expired failed-vote approval penalties exactly once. */
 export async function reverseCrisisAidPenalties(db: Db, currentTurn: number): Promise<number> {
-  const due = await db
-    .collection<CrisisAidCommitment>("crisisAidCommitments")
+  const due = await crisisAidCommitmentsCollection(db)
     .find({
       status: "failed",
       penaltyReversed: { $ne: true },
@@ -133,12 +128,10 @@ export async function reverseCrisisAidPenalties(db: Db, currentTurn: number): Pr
     .toArray();
   for (const c of due) {
     await incApproval(db, c.senderCountryId, AID_FAILED_PENALTY);
-    await db
-      .collection<CrisisAidCommitment>("crisisAidCommitments")
-      .updateOne(
-        { _id: c._id, penaltyReversed: { $ne: true } },
-        { $set: { penaltyReversed: true, updatedAt: new Date() } }
-      );
+    await crisisAidCommitmentsCollection(db).updateOne(
+      { _id: c._id, penaltyReversed: { $ne: true } },
+      { $set: { penaltyReversed: true, updatedAt: new Date() } }
+    );
   }
   return due.length;
 }

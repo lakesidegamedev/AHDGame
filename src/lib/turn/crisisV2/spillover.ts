@@ -41,6 +41,8 @@ import { logger } from "@/lib/observability/logger";
 import { getCrisisDefinition } from "./registry";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { crisesCollection } from "@/lib/db/repositories/crises";
+import { organizationMembershipsCollection } from "@/lib/db/repositories/organizationMemberships";
+import { tradeFlowSnapshotsCollection } from "@/lib/db/repositories/tradeFlowSnapshots";
 
 const COMPONENT = "crisisV2Spillover";
 
@@ -63,11 +65,9 @@ export interface SpilloverCrisisDoc {
 async function loadTradeWeights(db: Db): Promise<ChannelWeights> {
   const projection: Record<string, 1> = { turn: 1 };
   for (const commodity of COMMODITY_TYPES) projection[`commodities.${commodity}.flow`] = 1;
-  const snapshot = await db
-    .collection<{
-      commodities?: Record<string, { flow?: Record<string, Record<string, number>> }>;
-    }>("tradeFlowSnapshots")
-    .findOne({}, { sort: { turn: -1 }, projection });
+  const snapshot = await tradeFlowSnapshotsCollection<{
+    commodities?: Record<string, { flow?: Record<string, Record<string, number>> }>;
+  }>(db).findOne({}, { sort: { turn: -1 }, projection });
   const flow = new Map<string, Map<string, number>>();
   for (const commodity of Object.values(snapshot?.commodities ?? {})) {
     for (const [exporter, byImporter] of Object.entries(commodity.flow ?? {})) {
@@ -82,8 +82,7 @@ async function loadTradeWeights(db: Db): Promise<ChannelWeights> {
 }
 
 async function loadAllianceWeights(db: Db): Promise<ChannelWeights> {
-  const rows = await db
-    .collection<OrganizationMembership>("organizationMemberships")
+  const rows = await organizationMembershipsCollection(db)
     .find({}, { projection: { organizationId: 1, countryId: 1 } })
     .toArray();
   const memberships = new Map<string, Set<string>>();

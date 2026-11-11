@@ -53,6 +53,9 @@ import type { Document } from "mongodb";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { playerEndorsementsCollection } from "@/lib/db/repositories/playerEndorsements";
+import { nppEndorsementsCollection } from "@/lib/db/repositories/nppEndorsements";
+import { primarySnapshotCollection } from "@/lib/db/repositories/primarySnapshot";
 
 // Sync-date bootstrap anchors are now derived from the active preset's
 // `getCycleAnchors(ctx)` inside the POST handler (see ctx-build below).
@@ -795,9 +798,11 @@ export const POST = withAdminRoute(async (_auth) => {
       // Clear election-linked data that persists beyond the elections collection:
       // primary snapshots captured at primary close, and NPP/player endorsements tied
       // to specific races — all become orphaned when elections are deleted.
-      db.collection("primarySnapshot").deleteMany({ electionId: { $in: oldElectionIds } }),
-      db.collection("nppEndorsements").deleteMany({ electionId: { $in: oldElectionIds } }),
-      db.collection("playerEndorsements").deleteMany({ electionId: { $in: oldElectionIds } }),
+      primarySnapshotCollection<Document>(db).deleteMany({ electionId: { $in: oldElectionIds } }),
+      nppEndorsementsCollection<Document>(db).deleteMany({ electionId: { $in: oldElectionIds } }),
+      playerEndorsementsCollection<Document>(db).deleteMany({
+        electionId: { $in: oldElectionIds },
+      }),
     ]);
     const deleteResult = await electionsCollection<Document>(db).deleteMany({
       _id: { $in: oldElectionIds },

@@ -73,6 +73,7 @@ import {
 import { loadAlignmentTopology } from "@/lib/alignment/topology";
 import { loadBackgroundStancePulls } from "@/lib/alignment/backgroundStancePulls";
 import { getGameStateCollection } from "@/lib/db/collections/gameState";
+import { organizationMembershipsCollection } from "@/lib/db/repositories/organizationMemberships";
 
 // Membership pull lives in `drift.ts` as `membershipPullForTurn`, alongside the
 // ceiling it is bounded by.
@@ -158,8 +159,7 @@ async function processEnabledAlignmentTurn(
   const col = await getCountryAlignmentsCollection(db);
   const [allDocs, memberships, dissolved, stancePulls] = await Promise.all([
     col.find({}).toArray(),
-    db
-      .collection<OrganizationMembership>("organizationMemberships")
+    organizationMembershipsCollection(db)
       .find({})
       .project<{
         organizationId: string;

@@ -18,6 +18,8 @@ import { partiesMatchInCountry } from "@/lib/parties/partyMatch";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { governorOfficeStateCollection } from "@/lib/db/repositories/governorOfficeState";
+import { governorEndorsementsCollection } from "@/lib/db/repositories/governorEndorsements";
 
 export interface CreateEndorsementInput {
   countryId: CountryId;
@@ -92,7 +94,7 @@ export async function createEndorsement(
   }
 
   // One active endorsement per (governor, race).
-  const existing = await db.collection<GovernorEndorsement>("governorEndorsements").findOne({
+  const existing = await governorEndorsementsCollection(db).findOne({
     countryId,
     stateId,
     endorsedByCharacterId: character._id,
@@ -108,7 +110,7 @@ export async function createEndorsement(
 
   // Office AP spend (matches Address, Orders, Queue Bill). Atomic guard
   // against insufficient balance via $gte filter.
-  const spend = await db.collection<GovernorOfficeState>("governorOfficeState").updateOne(
+  const spend = await governorOfficeStateCollection(db).updateOne(
     {
       countryId,
       stateId,
@@ -140,7 +142,7 @@ export async function createEndorsement(
     createdAtTurn: currentTurn,
     createdAt: new Date(),
   };
-  await db.collection<GovernorEndorsement>("governorEndorsements").insertOne(doc);
+  await governorEndorsementsCollection(db).insertOne(doc);
 
   // B3 — endorsement landing bumps the endorsed candidate's Support.
   if (candidate.characterId && !candidate.isNPP) {

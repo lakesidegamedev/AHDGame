@@ -50,6 +50,7 @@ import { settleListingOffer } from "./acceptShareOffer";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { notificationsCollection } from "@/lib/db/repositories/notifications";
+import { shareListingsCollection } from "@/lib/db/repositories/shareListings";
 
 interface RouteParams {
   params: Promise<{ id: string; listingId: string }>;
@@ -94,9 +95,7 @@ export async function submitShareOffer(request: Request, { params }: RouteParams
       return errorResponse(400, "Invalid listing ID");
     }
 
-    const listing = await db
-      .collection<ShareListing>("shareListings")
-      .findOne({ _id: new ObjectId(listingId) });
+    const listing = await shareListingsCollection(db).findOne({ _id: new ObjectId(listingId) });
 
     if (!listing) return errorResponse(404, "Listing not found");
     if (!listing.corporationId.equals(corporation._id)) {

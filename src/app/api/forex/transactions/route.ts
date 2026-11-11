@@ -6,6 +6,7 @@ import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
 import { handleRouteError } from "@/lib/api/errors";
 import type { TradeHistoryEntry, TradeSource } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { tradeHistoryCollection } from "@/lib/db/repositories/tradeHistory";
 
 /**
  * GET /api/forex/transactions
@@ -51,8 +52,7 @@ async function handleGET(request: Request) {
 
     // Resolve which turn numbers to include. Look back enough turns to cover
     // `offset + turnsRequested` distinct turns that actually have activity.
-    const recentTurns = await db
-      .collection<TradeHistoryEntry>("tradeHistory")
+    const recentTurns = await tradeHistoryCollection(db)
       .aggregate([
         { $group: { _id: "$turn" } },
         { $sort: { _id: -1 } },
@@ -109,15 +109,13 @@ async function handleGET(request: Request) {
 
     const [individualRows, autoSummaryRows] = await Promise.all([
       wantIndividuals
-        ? db
-            .collection<TradeHistoryEntry>("tradeHistory")
+        ? tradeHistoryCollection(db)
             .find(individualMatch)
             .sort({ turn: -1, createdAt: -1 })
             .toArray()
         : Promise.resolve([] as TradeHistoryEntry[]),
       wantAutoSummary
-        ? db
-            .collection<TradeHistoryEntry>("tradeHistory")
+        ? tradeHistoryCollection(db)
             .aggregate([
               { $match: { ...baseMatch, source: { $in: AUTO_INCOME_SOURCES } } },
               {

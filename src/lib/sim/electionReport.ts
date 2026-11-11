@@ -17,6 +17,7 @@ import type { GameState } from "@/lib/db/types/gameState";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { simRunsCollection } from "@/lib/db/repositories/simRuns";
 
 export interface ElectionTrajectoryPoint {
   turn: number;
@@ -122,12 +123,10 @@ export async function collectElectionReport(
   const turn = gameState?.currentTurn ?? 0;
 
   // Prefer the scope recorded on the run doc; fall back to the caller's opt.
-  const runDoc = await db
-    .collection<{
-      electionScope?: string[] | null;
-      emptyCandidateSupplyCountries?: string[];
-    }>("simRuns")
-    .findOne({}, { projection: { electionScope: 1, emptyCandidateSupplyCountries: 1 } });
+  const runDoc = await simRunsCollection<{
+    electionScope?: string[] | null;
+    emptyCandidateSupplyCountries?: string[];
+  }>(db).findOne({}, { projection: { electionScope: 1, emptyCandidateSupplyCountries: 1 } });
   const scope = runDoc?.electionScope ?? opts.scope ?? null;
   const scopeSet = scope ? new Set(scope) : null;
   const emptyCandidateSupplyCountries = runDoc?.emptyCandidateSupplyCountries ?? [];

@@ -73,6 +73,7 @@ import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
 import type { Document } from "mongodb";
 import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
+import { stockExchangeSnapshotsCollection } from "@/lib/db/repositories/stockExchangeSnapshots";
 
 // GET /api/client-status — Returns status bar enrichment data (funds, corp, election stats, income).
 // Auth: requireBasicAuth
@@ -332,12 +333,10 @@ export async function handleClientStatus(request: Request) {
                   ...(includeWidgetExtras ? { marketCap: 1 } : {}),
                 })
                 .toArray(),
-              db
-                .collection<StockExchangeSnapshot>("stockExchangeSnapshots")
-                .findOne(
-                  { _id: exchangeKey, "listings._id": ceoCorp._id },
-                  { projection: { "listings.$": 1 } }
-                ),
+              stockExchangeSnapshotsCollection(db).findOne(
+                { _id: exchangeKey, "listings._id": ceoCorp._id },
+                { projection: { "listings.$": 1 } }
+              ),
             ])
           : [[], null];
         historyDocs.reverse();
@@ -758,12 +757,10 @@ export async function handleClientStatus(request: Request) {
                 ...(includeWidgetExtras ? { marketCap: 1 } : {}),
               })
               .toArray(),
-            db
-              .collection<StockExchangeSnapshot>("stockExchangeSnapshots")
-              .findOne(
-                { _id: exchangeKey, "listings._id": ceoCorp._id },
-                { projection: { "listings.$": 1 } }
-              ),
+            stockExchangeSnapshotsCollection(db).findOne(
+              { _id: exchangeKey, "listings._id": ceoCorp._id },
+              { projection: { "listings.$": 1 } }
+            ),
           ])
         : [[], null];
       historyDocs.reverse();

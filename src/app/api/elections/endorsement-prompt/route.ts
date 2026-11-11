@@ -9,6 +9,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import type { Election, ElectionCandidate, PlayerEndorsement } from "@/lib/db/types";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { playerEndorsementsCollection } from "@/lib/db/repositories/playerEndorsements";
 
 export interface EndorsementPromptCandidate {
   /** electionCandidates row id: what POST /endorse expects as `candidateId`. */
@@ -84,7 +85,7 @@ export async function GET(request: Request) {
     );
     if (!election) return noStore(EMPTY);
 
-    const existing = await db.collection<PlayerEndorsement>("playerEndorsements").findOne({
+    const existing = await playerEndorsementsCollection(db).findOne({
       characterId: character._id,
       electionId: election._id,
       isActive: true,

@@ -28,6 +28,7 @@ import type { CurrencyOrder, GameConfig, PlayerMail } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { currencyOrdersCollection } from "@/lib/db/repositories/currencyOrders";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { playerMailCollection } from "@/lib/db/repositories/playerMail";
 
 const directTradeSchema = z
   .object({
@@ -202,7 +203,7 @@ export async function POST(request: Request) {
     };
     let notifiedTarget = true;
     try {
-      await db.collection<PlayerMail>("playerMail").insertOne(mail as PlayerMail);
+      await playerMailCollection(db).insertOne(mail as PlayerMail);
     } catch {
       notifiedTarget = false;
     }

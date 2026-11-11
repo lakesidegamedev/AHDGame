@@ -36,6 +36,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
+import { governorOfficeStateCollection } from "@/lib/db/repositories/governorOfficeState";
 
 // Pure surface (driver types + snapshot compute) lives in the domain layer;
 // re-exported here so existing importers keep working.
@@ -137,8 +138,7 @@ async function loadCountrySnapshots(
     governmentApprovalsCollection(db).findOne({ _id: countryId }),
     federalBudgetCollection(db).findOne({ _id: getNationalBudgetId(countryId) }),
     // Regional and national policies together, without another round trip.
-    db
-      .collection<GovernorOfficeState>("governorOfficeState")
+    governorOfficeStateCollection(db)
       .find({ countryId, stateId: { $in: [...regionIds, nationalStateId] } })
       .project<Pick<GovernorOfficeState, "stateId" | "devolutionPolicy" | "westminsterStances">>({
         _id: 0,

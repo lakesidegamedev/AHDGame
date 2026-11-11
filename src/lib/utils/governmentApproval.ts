@@ -75,6 +75,9 @@ import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficia
 import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
 import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
 import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
+import { demographicDefaultsCollection } from "@/lib/db/repositories/demographicDefaults";
+import { governorAddressesCollection } from "@/lib/db/repositories/governorAddresses";
+import type { Document } from "mongodb";
 
 /**
  * The cabinet's own drag on national approval, as modifiers.
@@ -319,7 +322,7 @@ export async function loadElectorateGroups(
   };
   const [docs, defaultDocs, gameState, tiers] = await Promise.all([
     stateDemographicsCollection(db).find(filter, { projection }).toArray(),
-    db.collection<StateDemographics>("demographicDefaults").find(filter, { projection }).toArray(),
+    demographicDefaultsCollection(db).find(filter, { projection }).toArray(),
     getGameStateCollection(db).then((col) =>
       col.findOne(
         { _id: "current" },
@@ -579,8 +582,7 @@ async function getActiveAddressModifiersByState(
   countryId: CountryId,
   currentTurn: number
 ): Promise<Map<string, ActiveModifier[]>> {
-  const active = await db
-    .collection("governorAddresses")
+  const active = await governorAddressesCollection<Document>(db)
     .find({ countryId, "approvalEffect.expiresAtTurn": { $gt: currentTurn } })
     .toArray();
   const map = new Map<string, ActiveModifier[]>();

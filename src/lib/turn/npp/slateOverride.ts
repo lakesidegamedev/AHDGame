@@ -13,6 +13,7 @@ import { removeWithdrawnCandidateFromTally } from "@/lib/elections/engine/tallyC
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 import type { Document } from "mongodb";
+import { slateCandidatesCollection } from "@/lib/db/repositories/slateCandidates";
 
 export interface SlateOverrideMaps {
   /** `${partyId}:${electionId}` for every race a chair is actively slating. */
@@ -58,8 +59,7 @@ export async function buildSlateOverrideMaps(
   // An NPP "has the chair's blessing" for a race when they hold a slate row that
   // is accepted (will file this turn) or already filed. invited/considering/
   // declined/withdrawn rows do NOT count — the chair hasn't committed them.
-  const rows = await db
-    .collection<SlateCandidate>("slateCandidates")
+  const rows = await slateCandidatesCollection(db)
     .find(
       {
         electionId: { $in: slateElectionIds },

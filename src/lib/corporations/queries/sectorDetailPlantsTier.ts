@@ -84,6 +84,7 @@ import type { StateMetricMarginContribution } from "@/lib/corporations/stateMetr
 import type { OwnershipMarginTerms } from "@/lib/nationalization/ownershipMarginTerms";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
+import { sourcingNetworkLoadCollection } from "@/lib/db/repositories/sourcingNetworkLoad";
 
 /** Builds the plants-tier view: capacity, own supply and freight. Null below plants. */
 export async function buildSectorDetailPlantsTier({
@@ -423,8 +424,7 @@ export async function buildSectorDetailPlantsTier({
   let freightState: { observedLoad: number; capacity: number; turn: number | null } | undefined;
   const ownSupplyByCommodity = new Map<string, OwnSupplyRow>();
   if (plantsEnabled && !shouldRedact && !publicFinancialFog) {
-    const [latestSourcingNetwork] = await db
-      .collection<SourcingNetworkDoc>("sourcingNetworkLoad")
+    const [latestSourcingNetwork] = await sourcingNetworkLoadCollection<SourcingNetworkDoc>(db)
       .find({})
       .sort({ turn: -1 })
       .limit(1)

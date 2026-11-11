@@ -25,6 +25,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
+import { cabinetSettingsCollection } from "@/lib/db/repositories/cabinetSettings";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -235,9 +236,9 @@ export async function processJPRegionalBudgets(
   // Cabinet settings are keyed as `${countryId}_${positionId}`. JP regional
   // transfers are administered through Internal Affairs, so the turn phase must
   // read that exact position key or the UI sliders never affect live budgets.
-  const ministerSetting = await db
-    .collection<CabinetSetting>("cabinetSettings")
-    .findOne({ _id: "JP_internal_affairs_minister" });
+  const ministerSetting = await cabinetSettingsCollection(db).findOne({
+    _id: "JP_internal_affairs_minister",
+  });
   const allocationPercents = ministerSetting?.allocationPercents ?? null;
 
   let regionsProcessed = 0;

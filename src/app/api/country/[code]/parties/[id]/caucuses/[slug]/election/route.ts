@@ -24,6 +24,8 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { usersCollection } from "@/lib/db/repositories/users";
 import type { Document } from "mongodb";
 import { nationalPartyElectionsCollection } from "@/lib/db/repositories/nationalPartyElections";
+import { caucusesCollection } from "@/lib/db/repositories/caucuses";
+import { caucusChairVotesCollection } from "@/lib/db/repositories/caucusChairVotes";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; slug: string }>;
@@ -119,12 +121,10 @@ export async function GET(_request: Request, { params }: RouteParams) {
       };
       await Promise.all([
         db.collection<CaucusChairElection>("caucusChairElections").insertOne(inserted),
-        db
-          .collection("caucuses")
-          .updateOne(
-            { _id: caucus._id },
-            { $set: { nextElectionTurn: endTurn, updatedAt: new Date() } }
-          ),
+        caucusesCollection<Document>(db).updateOne(
+          { _id: caucus._id },
+          { $set: { nextElectionTurn: endTurn, updatedAt: new Date() } }
+        ),
       ]);
       activeElection = inserted;
     }
@@ -180,8 +180,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
         .collection<CaucusChairCandidate>("caucusChairCandidates")
         .find({ electionId: election._id, status: "active" })
         .toArray(),
-      db
-        .collection<CaucusChairVote>("caucusChairVotes")
+      caucusChairVotesCollection(db)
         .aggregate<{ candidateId: ObjectId; count: number }>([
           { $match: voteMatch },
           { $group: { _id: "$candidateId", count: { $sum: 1 } } },
@@ -189,7 +188,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
         ])
         .toArray(),
       authUser.character && election.status === "voting"
-        ? db.collection<CaucusChairVote>("caucusChairVotes").findOne({
+        ? caucusChairVotesCollection(db).findOne({
             electionId: election._id,
             voterId: authUser.character._id,
           })

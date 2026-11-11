@@ -48,6 +48,9 @@ import { claimFundRedemptionLock } from "@/lib/indexFunds/redemptionLock";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 import type { Document } from "mongodb";
+import { indexFundPositionsCollection } from "@/lib/db/repositories/indexFundPositions";
+import { indexFundTransactionsCollection } from "@/lib/db/repositories/indexFundTransactions";
+import { indexFundRedemptionQueueCollection } from "@/lib/db/repositories/indexFundRedemptionQueue";
 
 class FundQuoteMovedError extends Error {}
 
@@ -231,7 +234,7 @@ export async function handleRedeemFundShares(
           // exact pre-debit position is restored if a later leg throws.
           if (compensate) {
             undo.push(async () => {
-              await db.collection("indexFundPositions").updateOne(
+              await indexFundPositionsCollection<Document>(db).updateOne(
                 { _id: position!._id },
                 {
                   $set: {
@@ -409,7 +412,9 @@ export async function handleRedeemFundShares(
             );
             if (compensate) {
               undo.push(async () => {
-                await db.collection("indexFundTransactions").deleteOne({ _id: redemptionTxId });
+                await indexFundTransactionsCollection<Document>(db).deleteOne({
+                  _id: redemptionTxId,
+                });
               });
             }
 
@@ -493,7 +498,9 @@ export async function handleRedeemFundShares(
             );
             if (compensate) {
               undo.push(async () => {
-                await db.collection("indexFundRedemptionQueue").deleteOne({ _id: queueEntryId });
+                await indexFundRedemptionQueueCollection<Document>(db).deleteOne({
+                  _id: queueEntryId,
+                });
               });
             }
 
@@ -514,7 +521,7 @@ export async function handleRedeemFundShares(
             );
             if (compensate) {
               undo.push(async () => {
-                await db.collection("indexFundTransactions").deleteOne({ _id: queuedTxId });
+                await indexFundTransactionsCollection<Document>(db).deleteOne({ _id: queuedTxId });
               });
             }
           }

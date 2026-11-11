@@ -73,6 +73,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
+import { stateResourceCapacityCollection } from "@/lib/db/repositories/stateResourceCapacity";
 
 const STRATEGY_LOCK_MESSAGE: Record<
   "era" | "tech" | "research" | "prerequisite" | "sunset" | "diffusion",
@@ -278,9 +279,10 @@ export async function setSectorStrategy(request: Request, { params }: RouteParam
     }
 
     if (sectorType === "extraction") {
-      const capDoc = await db
-        .collection<StateResourceCapacity>("stateResourceCapacity")
-        .findOne({ stateId: sector.stateId }, { projection: { resources: 1 } });
+      const capDoc = await stateResourceCapacityCollection(db).findOne(
+        { stateId: sector.stateId },
+        { projection: { resources: 1 } }
+      );
       const stateResources = capDoc ? (capDoc.resources ?? null) : undefined;
 
       if (isExtractionStrategyZeroYield(targetStrategy, stateResources)) {

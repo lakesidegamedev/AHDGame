@@ -31,6 +31,8 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
+import { seatsCollection } from "@/lib/db/repositories/seats";
+import type { Document } from "mongodb";
 
 export interface MapRegionLean {
   regionId: string;
@@ -194,7 +196,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
       const [partyOrgDocs, seatDocs] = await Promise.all([
         statePartyOrgCollection(db).find({ countryId }).toArray(),
         lowerChamberOfficeType
-          ? db.collection("seats").find({ countryId, officeType: lowerChamberOfficeType }).toArray()
+          ? seatsCollection<Document>(db)
+              .find({ countryId, officeType: lowerChamberOfficeType })
+              .toArray()
           : Promise.resolve([]),
       ]);
 

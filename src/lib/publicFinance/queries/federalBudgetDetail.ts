@@ -42,6 +42,7 @@ import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
+import { federalBudgetSnapshotsCollection } from "@/lib/db/repositories/federalBudgetSnapshots";
 
 /** One point on the fiscal-year trend series (stat strip compare + debt sparkline). */
 export interface FyHistoryPoint {
@@ -236,8 +237,7 @@ export async function loadFederalBudgetDetail(params: {
           ? "Macro-Region"
           : COUNTRY_CONFIGS[budgetCountryId].regionLabel;
 
-  const snapshotDocs = await db
-    .collection<FederalBudgetSnapshot>("federalBudgetSnapshots")
+  const snapshotDocs = await federalBudgetSnapshotsCollection(db)
     .find(
       { countryId },
       {
@@ -260,9 +260,9 @@ export async function loadFederalBudgetDetail(params: {
   const requestedFY = rawFiscalYear ? parseInt(rawFiscalYear, 10) : null;
 
   if (requestedFY && !Number.isNaN(requestedFY)) {
-    const snapshot = await db
-      .collection<FederalBudgetSnapshot>("federalBudgetSnapshots")
-      .findOne({ _id: `${countryId}:FY${requestedFY}` });
+    const snapshot = await federalBudgetSnapshotsCollection(db).findOne({
+      _id: `${countryId}:FY${requestedFY}`,
+    });
     if (!snapshot) return { ok: false as const, status: 404, error: "Snapshot not found" };
 
     const [snapshotGameState, snapshotGameConfig] = await Promise.all([

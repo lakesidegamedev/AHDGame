@@ -29,6 +29,8 @@ import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
+import { organizationMembershipsCollection } from "@/lib/db/repositories/organizationMemberships";
+import { conflictsCollection } from "@/lib/db/repositories/conflicts";
 
 export interface SectorRevenueTax {
   /** Per-state owned-sector revenue (FX-normalized to ₳) + growth rate. */
@@ -433,8 +435,7 @@ export async function fiscalTradeInputsProvider(db: Db): Promise<Map<string, Fis
       })
       .toArray(),
     loadActiveFtaPairs(db), // enacted org `free_trade_agreement` legislation (SSOT)
-    db
-      .collection<OrganizationMembership>("organizationMemberships")
+    organizationMembershipsCollection(db)
       .find({})
       .project<Pick<OrganizationMembership, "_id" | "countryId" | "organizationId">>({
         countryId: 1,
@@ -488,8 +489,7 @@ export async function fiscalTradeInputsProvider(db: Db): Promise<Map<string, Fis
  * are simply absent from the map and the consuming nodes fall through to zero.
  */
 export async function warDamageProvider(db: Db): Promise<Map<string, WarDamage>> {
-  const conflicts = await db
-    .collection<ConflictDoc>("conflicts")
+  const conflicts = await conflictsCollection(db)
     .find({ status: { $ne: "resolved" } })
     .project<
       Pick<ConflictDoc, "status" | "hostCountry" | "hostEntities" | "control" | "controlStart">

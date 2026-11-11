@@ -13,6 +13,7 @@ import type {
 } from "./types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { caucusesCollection } from "@/lib/db/repositories/caucuses";
 
 const LOW_LOYALTY_THRESHOLD = 40;
 const WHIP_BREAKER_STUBBORNNESS = 70;
@@ -118,8 +119,7 @@ export async function buildPartyDisciplineAnalytics(
 
   const riskItems = npps.map((npp) => toRiskItem(countryId, npp, partyId, stateId));
 
-  const caucuses = await db
-    .collection<Caucus>("caucuses")
+  const caucuses = await caucusesCollection(db)
     .find({ countryId, partyId, disbandedAt: null })
     .toArray();
   const activeChairIds = caucuses

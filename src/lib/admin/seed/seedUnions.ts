@@ -16,6 +16,9 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { unionsCollection } from "@/lib/db/repositories/unions";
 import type { Document } from "mongodb";
+import { unionLeaderVotesCollection } from "@/lib/db/repositories/unionLeaderVotes";
+import { unionOrganizersCollection } from "@/lib/db/repositories/unionOrganizers";
+import { unionEndorsementsCollection } from "@/lib/db/repositories/unionEndorsements";
 
 /**
  * Starting annual dues charged per member on a freshly seeded union. 0, not a
@@ -55,9 +58,9 @@ export async function seedUnions(
   if (reset) {
     await Promise.all([
       unionsCollection<Document>(db).deleteMany({}),
-      db.collection("unionEndorsements").deleteMany({}),
-      db.collection("unionLeaderVotes").deleteMany({}),
-      db.collection("unionOrganizers").deleteMany({}),
+      unionEndorsementsCollection<Document>(db).deleteMany({}),
+      unionLeaderVotesCollection<Document>(db).deleteMany({}),
+      unionOrganizersCollection<Document>(db).deleteMany({}),
     ]);
   }
 

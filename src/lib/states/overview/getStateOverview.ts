@@ -42,6 +42,7 @@ import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { stateRegistrationPoolCollection } from "@/lib/db/repositories/stateRegistrationPool";
 
 const NEUTRAL_PARTY_COLOR = "#6b6b7a";
 
@@ -110,7 +111,7 @@ export async function getStateOverview(
         status: { $in: ["active", "upcoming"] },
       })
       .toArray(),
-    db.collection<StateRegistrationPool>("stateRegistrationPool").findOne({ countryId, stateId }),
+    stateRegistrationPoolCollection(db).findOne({ countryId, stateId }),
     // SP5: merged two-store view.
     findMergedRegionMetrics(db, { _id: stateId, countryId }),
     gameStateCollection<{ _id: string; currentTurn?: number }>(db).findOne({ _id: "current" }),

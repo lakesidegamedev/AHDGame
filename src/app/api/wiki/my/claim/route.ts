@@ -33,6 +33,7 @@ import {
 } from "@/lib/wiki/playerPages";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { wikiPagesCollection } from "@/lib/db/repositories/wikiPages";
 
 const claimSchema = z.object({
   target: z.enum(["player", "corporation", "party"]),
@@ -57,7 +58,7 @@ export async function POST(request: Request) {
     }
 
     const db = await getDb();
-    const wikiPages = db.collection<WikiPage>("wikiPages");
+    const wikiPages = wikiPagesCollection(db);
     const userObjectId = new ObjectId(user.userId);
     const now = new Date();
 

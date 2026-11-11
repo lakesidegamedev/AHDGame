@@ -9,6 +9,8 @@ import { durableRateLimit } from "@/lib/api/rateLimit.mongo";
 import { parseJsonBody, schemas } from "@/lib/api/validate";
 import { generateUserApiToken, type UserApiScope } from "@/lib/api/userApiAuth";
 import { getDb } from "@/lib/mongodb";
+import { userApiKeysCollection } from "@/lib/db/repositories/userApiKeys";
+import type { Document } from "mongodb";
 
 const createUserApiKeySchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(80, "Name must be at most 80 characters"),
@@ -26,8 +28,7 @@ async function handleGET() {
     if (!auth.ok) return auth.response;
 
     const db = await getDb();
-    const keys = await db
-      .collection("userApiKeys")
+    const keys = await userApiKeysCollection<Document>(db)
       .find({ userId: new ObjectId(auth.user.userId), revokedAt: null })
       .project({ tokenHash: 0 })
       .sort({ createdAt: -1 })
@@ -65,7 +66,7 @@ export async function POST(request: Request) {
     const db = await getDb();
 
     // Limit to 3 active keys per user per scope
-    const activeCount = await db.collection("userApiKeys").countDocuments({
+    const activeCount = await userApiKeysCollection<Document>(db).countDocuments({
       userId: new ObjectId(auth.user.userId),
       scope,
       revokedAt: null,
@@ -74,7 +75,7 @@ export async function POST(request: Request) {
       return errorResponse(400, `You can have at most 3 active ${scope} keys. Revoke one first.`);
     }
 
-    await db.collection("userApiKeys").insertOne({
+    await userApiKeysCollection<Document>(db).insertOne({
       userId: new ObjectId(auth.user.userId),
       name: parsed.data.name,
       scope,
@@ -108,7 +109,7 @@ export async function DELETE(request: Request) {
     }
 
     const db = await getDb();
-    await db.collection("userApiKeys").updateOne(
+    await userApiKeysCollection<Document>(db).updateOne(
       {
         _id: new ObjectId(parsed.data.keyId),
         userId: new ObjectId(auth.user.userId),

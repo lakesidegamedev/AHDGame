@@ -6,6 +6,7 @@ import { getPoliticalPartiesCollection } from "@/lib/db/collections/politicalPar
 import { getCharactersCollection } from "@/lib/db/collections/characters";
 import { getNppsCollection } from "@/lib/db/collections/npps";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { partyHistoryCollection } from "@/lib/db/repositories/partyHistory";
 
 const HISTORY_CAP = 48;
 
@@ -81,7 +82,7 @@ export async function snapshotPartyHistory(db: Db, turn: number): Promise<number
     nppRows.map((row) => [`${row._id.countryId}:${row._id.party}`, row.count])
   );
 
-  const snapshotCol = db.collection<PartyHistorySnapshot>("partyHistory");
+  const snapshotCol = partyHistoryCollection(db);
   const now = new Date();
 
   const snapshots = parties.map((party) => {

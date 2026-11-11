@@ -39,6 +39,7 @@ import type { ExchangeRate } from "@/lib/db/types/exchangeRate";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { portfolioHistoryCollection } from "@/lib/db/repositories/portfolioHistory";
 
 type PortfolioHistoryReading = Pick<
   PortfolioHistory,
@@ -311,8 +312,7 @@ export async function loadPortfolioForCharacter(
   const [historyDescending, earliestSnapshot] = summaryOnly
     ? [[] as PortfolioHistoryReading[], null as PortfolioHistoryReading | null]
     : await Promise.all([
-        db
-          .collection<PortfolioHistory>("portfolioHistory")
+        portfolioHistoryCollection(db)
           .find({ characterId: charId })
           .sort({ turn: -1 })
           .limit(500)
@@ -336,8 +336,7 @@ export async function loadPortfolioForCharacter(
           .toArray(),
         options.profile
           ? Promise.resolve(null)
-          : db
-              .collection<PortfolioHistory>("portfolioHistory")
+          : portfolioHistoryCollection(db)
               .find({ characterId: charId })
               .sort({ turn: 1 })
               .limit(1)

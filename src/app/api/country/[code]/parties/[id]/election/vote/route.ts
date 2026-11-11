@@ -26,6 +26,8 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { usersCollection } from "@/lib/db/repositories/users";
 import type { Document } from "mongodb";
 import { nationalPartyElectionsCollection } from "@/lib/db/repositories/nationalPartyElections";
+import { nationalPartyCandidatesCollection } from "@/lib/db/repositories/nationalPartyCandidates";
+import { nationalPartyVotesCollection } from "@/lib/db/repositories/nationalPartyVotes";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -163,9 +165,11 @@ export async function POST(request: Request, { params }: RouteParams) {
       }
     }
 
-    const candidate = await db
-      .collection<NationalPartyCandidate>("nationalPartyCandidates")
-      .findOne({ electionId: election._id, characterId: candidateObjectId, status: "active" });
+    const candidate = await nationalPartyCandidatesCollection(db).findOne({
+      electionId: election._id,
+      characterId: candidateObjectId,
+      status: "active",
+    });
 
     if (!candidate) {
       logRequest("POST", path, 400, Date.now() - start);
@@ -188,7 +192,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     if (voterPartyInfluence !== undefined) voteSet.voterPartyInfluence = voterPartyInfluence;
 
     try {
-      await db.collection<NationalPartyVote>("nationalPartyVotes").updateOne(
+      await nationalPartyVotesCollection(db).updateOne(
         { electionId: election._id, voterId: authUser.character._id },
         {
           $set: voteSet,
@@ -199,12 +203,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     } catch (error) {
       if (!isNationalPartyVoteDuplicateKey(error)) throw error;
 
-      await db
-        .collection<NationalPartyVote>("nationalPartyVotes")
-        .updateOne(
-          { electionId: election._id, voterId: authUser.character._id },
-          { $set: voteSet }
-        );
+      await nationalPartyVotesCollection(db).updateOne(
+        { electionId: election._id, voterId: authUser.character._id },
+        { $set: voteSet }
+      );
     }
 
     logRequest("POST", path, 200, Date.now() - start);

@@ -16,6 +16,7 @@ import { computeCabinetNominationTally } from "@/lib/congress/governmentVoteBrea
 import { loadNominationPeople } from "@/lib/congress/nominationPeople";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { scotusNominationsCollection } from "@/lib/db/repositories/scotusNominations";
 
 // GET /api/congress/scotus-nominations — Returns all active SCOTUS nominations with the current user's vote status.
 // Auth: public
@@ -25,8 +26,7 @@ export const GET = withNoStore(async function GET() {
     const db = await getDb();
     const authUser = await getAuthUser();
 
-    const activeNominations = await db
-      .collection<ScotusNomination>("scotusNominations")
+    const activeNominations = await scotusNominationsCollection(db)
       .find({ status: "active", countryId: "US" })
       .sort({ proposedAt: -1 })
       .toArray();

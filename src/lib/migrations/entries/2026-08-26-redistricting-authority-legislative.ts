@@ -5,6 +5,7 @@ import type { CongressionalDistrict } from "@/lib/db/types";
 import { REDISTRICT_AUTHORITY_LAW } from "@/lib/redistricting/caps";
 import { legislativeAuthorityPolicy } from "@/lib/redistricting/seedRedistrictingAuthority";
 import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
+import { congressionalDistrictsCollection } from "@/lib/db/repositories/congressionalDistricts";
 
 /**
  * Backfill the redistricting-authority law to "Legislature-drawn" for every US
@@ -21,9 +22,7 @@ import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
 async function backfillRedistrictingAuthority(db: Db, dryRun: boolean): Promise<MigrationResult> {
   const notes: string[] = [];
 
-  const stateIds = (await db
-    .collection<CongressionalDistrict>("congressionalDistricts")
-    .distinct("stateId")) as string[];
+  const stateIds = (await congressionalDistrictsCollection(db).distinct("stateId")) as string[];
   notes.push(`${stateIds.length} state(s) with congressional districts`);
 
   if (stateIds.length === 0) {

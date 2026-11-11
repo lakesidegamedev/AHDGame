@@ -49,6 +49,7 @@ import { recordAudit } from "@/lib/audit/recordAudit";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 import type { Document } from "mongodb";
+import { indexFundPositionsCollection } from "@/lib/db/repositories/indexFundPositions";
 
 class FundQuoteMovedError extends Error {}
 
@@ -296,7 +297,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
           }
           if (positionCredited) {
             await compensate(async () => {
-              const positions = db.collection("indexFundPositions");
+              const positions = indexFundPositionsCollection<Document>(db);
               if (!priorPosition) {
                 await positions.deleteOne({
                   fundId: fund._id,

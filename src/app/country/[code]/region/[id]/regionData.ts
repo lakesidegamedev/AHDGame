@@ -31,6 +31,7 @@ import { nppsCollection } from "@/lib/db/repositories/npps";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { usersCollection } from "@/lib/db/repositories/users";
 import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
+import { partyBudgetCollection } from "@/lib/db/repositories/partyBudget";
 
 /**
  * Coerce a Mongo timestamp field to an ISO string for client serialization.
@@ -158,8 +159,7 @@ export async function getStatePartyBudgets(
   // Mutation lives canonically on the State Party page; the Politics
   // tab only displays + deep-links.
   try {
-    const rows = await db
-      .collection<PartyBudget>("partyBudget")
+    const rows = await partyBudgetCollection(db)
       .find({ countryId, scope: "state", stateId })
       .toArray();
     const out: Record<

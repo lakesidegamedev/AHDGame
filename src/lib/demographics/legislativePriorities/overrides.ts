@@ -23,6 +23,7 @@ import {
 import type { PriorityTarget } from "./schema";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { demographicDefaultsCollection } from "@/lib/db/repositories/demographicDefaults";
 
 export function priorityOverrideId({ countryId, regionId, bucketId }: PriorityTarget): string {
   return `${countryId}:${regionId}:${bucketId}`;
@@ -91,12 +92,10 @@ export async function loadPriorityDefaults(db: Db, target: PriorityTarget) {
       { _id: "current" },
       { projection: { preset: 1, currentYear: 1, startingYear: 1 } }
     ),
-    db
-      .collection<StateDemographics>("demographicDefaults")
-      .findOne(
-        { _id: target.regionId },
-        { projection: { layer1PositionOverrides: 1, layer1TurnoutOverrides: 1 } }
-      ),
+    demographicDefaultsCollection(db).findOne(
+      { _id: target.regionId },
+      { projection: { layer1PositionOverrides: 1, layer1TurnoutOverrides: 1 } }
+    ),
   ]);
   const context = priorityWorldContext(world);
   const profile = getBucketProfileForRegion(

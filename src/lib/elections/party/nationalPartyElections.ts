@@ -53,6 +53,8 @@ import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
 import type { Document } from "mongodb";
 import { usersCollection } from "@/lib/db/repositories/users";
 import { nationalPartyElectionsCollection } from "@/lib/db/repositories/nationalPartyElections";
+import { nationalPartyCandidatesCollection } from "@/lib/db/repositories/nationalPartyCandidates";
+import { nationalPartyVotesCollection } from "@/lib/db/repositories/nationalPartyVotes";
 
 export {
   NATIONAL_ELECTION_DURATION_TURNS,
@@ -446,12 +448,10 @@ export async function processCompletedNationalElections(
   }
 
   const [allCandidatesRaw, voteCountsByElection, parties] = await Promise.all([
-    db
-      .collection<NationalPartyCandidate>("nationalPartyCandidates")
+    nationalPartyCandidatesCollection(db)
       .find({ electionId: { $in: electionIds }, status: "active" })
       .toArray(),
-    db
-      .collection<NationalPartyVote>("nationalPartyVotes")
+    nationalPartyVotesCollection(db)
       .aggregate<{
         electionId: ObjectId;
         candidateId: ObjectId;
@@ -795,12 +795,10 @@ export async function processCompletedNationalElections(
   // Without it they linger as "active" and trip the per-party unique index,
   // blocking the character from declaring in the next cycle's election
   // ("already running… withdraw first") with no UI path to clear them.
-  await db
-    .collection<NationalPartyCandidate>("nationalPartyCandidates")
-    .updateMany(
-      { electionId: { $in: electionIds }, status: "active" },
-      { $set: { status: "completed", resolvedAt: now } }
-    );
+  await nationalPartyCandidatesCollection(db).updateMany(
+    { electionId: { $in: electionIds }, status: "active" },
+    { $set: { status: "completed", resolvedAt: now } }
+  );
 
   if (partyOps.length > 0) {
     await politicalPartiesCollection(db).bulkWrite(partyOps);

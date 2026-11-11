@@ -20,6 +20,8 @@ import { ladderBounds } from "@/lib/legislature/policyLadder";
 import { regionalDefaultLevel } from "@/lib/politicalLegislation/regionalDefaults";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
+import { governorExecutiveOrdersCollection } from "@/lib/db/repositories/governorExecutiveOrders";
+import { governorOfficeStateCollection } from "@/lib/db/repositories/governorOfficeState";
 
 export interface IssueOrderInput {
   countryId: CountryId;
@@ -75,16 +77,13 @@ export async function issueOrder(db: Db, input: IssueOrderInput): Promise<IssueO
   const apCost = adminOverride ? 0 : steps * EXEC_ORDER_AP_COST_PER_STEP;
 
   if (!adminOverride) {
-    const officeState = await db
-      .collection<GovernorOfficeState>("governorOfficeState")
-      .findOne({ countryId, stateId });
+    const officeState = await governorOfficeStateCollection(db).findOne({ countryId, stateId });
     if (!officeState || officeState.gubernatorialActions < apCost) {
       return { status: 400, body: { error: "Insufficient office action points." } };
     }
   }
 
-  const activeOrders = await db
-    .collection<GovernorExecutiveOrder>("governorExecutiveOrders")
+  const activeOrders = await governorExecutiveOrdersCollection(db)
     .find({ countryId, stateId, status: "active" })
     .toArray();
   if (activeOrders.length >= EXEC_ORDER_SLOT_CAP) {
@@ -167,7 +166,7 @@ export async function issueOrder(db: Db, input: IssueOrderInput): Promise<IssueO
     createdAt: now,
     updatedAt: now,
   };
-  await db.collection<GovernorExecutiveOrder>("governorExecutiveOrders").insertOne(order);
+  await governorExecutiveOrdersCollection(db).insertOne(order);
 
   // Write the new option's axis values so consumers that match by
   // (economic, social) — like the State Policy page — display the correct
@@ -195,12 +194,10 @@ export async function issueOrder(db: Db, input: IssueOrderInput): Promise<IssueO
   );
 
   if (!adminOverride) {
-    await db
-      .collection<GovernorOfficeState>("governorOfficeState")
-      .updateOne(
-        { countryId, stateId },
-        { $inc: { gubernatorialActions: -apCost }, $set: { updatedAt: now } }
-      );
+    await governorOfficeStateCollection(db).updateOne(
+      { countryId, stateId },
+      { $inc: { gubernatorialActions: -apCost }, $set: { updatedAt: now } }
+    );
   }
 
   // Post to the news wire. Best-effort — never abort the issuance over a news

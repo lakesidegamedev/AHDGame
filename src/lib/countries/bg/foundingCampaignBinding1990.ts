@@ -15,6 +15,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 import type { Document } from "mongodb";
+import { stateRegistrationPoolCollection } from "@/lib/db/repositories/stateRegistrationPool";
 
 async function materializeBgFoundingCampaignBinding(input: {
   db: Db;
@@ -89,8 +90,7 @@ async function materializeBgFoundingCampaignBinding(input: {
       }
     )
     .toArray();
-  const pools = await db
-    .collection<StateRegistrationPool>("stateRegistrationPool")
+  const pools = await stateRegistrationPoolCollection(db)
     .find(
       { countryId: "BG" },
       {

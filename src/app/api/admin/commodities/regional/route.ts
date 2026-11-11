@@ -14,6 +14,7 @@ import { computeCommodityPressureRatio } from "@/lib/constants/commodities";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
+import { commodityPriceHistoryCollection } from "@/lib/db/repositories/commodityPriceHistory";
 
 const querySchema = z.object({
   countryId: countryIdSchema,
@@ -43,8 +44,7 @@ export const GET = withAdminAuth(async (_auth, request: Request) => {
       240
     );
 
-    const historyDocs = await db
-      .collection<CommodityPriceHistory>("commodityPriceHistory")
+    const historyDocs = await commodityPriceHistoryCollection(db)
       .find({ turn: { $gte: currentTurn - historyTurns, $lte: currentTurn } })
       .sort({ turn: 1 })
       .toArray();

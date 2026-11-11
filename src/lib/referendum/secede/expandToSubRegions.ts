@@ -30,6 +30,8 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import type { Document } from "mongodb";
+import { conflictCapacityObligationsCollection } from "@/lib/db/repositories/conflictCapacityObligations";
+import { countiesCollection } from "@/lib/db/repositories/counties";
 
 export interface ExpandToSubRegionsResult {
   inserted: number;
@@ -73,13 +75,10 @@ export async function expandToSubRegions(
   }
 
   // Repair obligations and their applied amounts must retain the same identity.
-  const obligations = await db
-    .collection<ConflictCapacityObligation>("conflictCapacityObligations")
-    .find({ regionId })
-    .toArray();
+  const obligations = await conflictCapacityObligationsCollection(db).find({ regionId }).toArray();
   if (obligations.length) {
     const weights = buildFanoutContext(countryId, seeds).gdpWeights;
-    await db.collection<ConflictCapacityObligation>("conflictCapacityObligations").insertMany(
+    await conflictCapacityObligationsCollection(db).insertMany(
       obligations.flatMap((obligation) =>
         liveRegions.map((region) => ({
           ...obligation,
@@ -91,9 +90,7 @@ export async function expandToSubRegions(
         }))
       )
     );
-    await db
-      .collection<ConflictCapacityObligation>("conflictCapacityObligations")
-      .deleteMany({ regionId });
+    await conflictCapacityObligationsCollection(db).deleteMany({ regionId });
   }
   await nppsCollection<Document>(db).updateMany(
     { homeState: regionId },
@@ -107,7 +104,10 @@ export async function expandToSubRegions(
   // The parent's constituency layer ends with the aggregate geography. Its
   // residents are conserved by the cohort fan-out above; independent regions
   // have their own map tier, not duplicated stocks attached to the retired parent.
-  await db.collection("counties").deleteMany({ countryId: fromCountryId, stateId: regionId });
+  await countiesCollection<Document>(db).deleteMany({
+    countryId: fromCountryId,
+    stateId: regionId,
+  });
 
   // Drop the single-region aggregate once its sub-regions exist.
   await statesCollection(db).deleteOne({ _id: regionId });

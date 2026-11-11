@@ -4,6 +4,8 @@ import type { CorporationPrivatizationVote } from "@/lib/db/types/corporationPri
 import { corporationPathIdFromDoc } from "@/lib/api/corporations/resolveQuery";
 import type { DueSoonContext, DueSoonItem } from "./types";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporationVotesCollection } from "@/lib/db/repositories/corporationVotes";
+import { corporationPrivatizationVotesCollection } from "@/lib/db/repositories/corporationPrivatizationVotes";
 
 const HOLDING_LIMIT = 50;
 
@@ -32,12 +34,10 @@ export async function corporateVotes(ctx: DueSoonContext): Promise<DueSoonItem[]
   const corporationId = { $in: voting.map((corp) => corp._id) };
   const projection = { corporationId: 1, deadlineAtTurn: 1, "votes.characterId": 1 };
   const [shareholderVotes, privatizationVotes] = await Promise.all([
-    ctx.db
-      .collection<CorporationVote>("corporationVotes")
+    corporationVotesCollection(ctx.db)
       .find({ corporationId, status: "open" }, { projection })
       .toArray(),
-    ctx.db
-      .collection<CorporationPrivatizationVote>("corporationPrivatizationVotes")
+    corporationPrivatizationVotesCollection(ctx.db)
       .find({ corporationId, status: "open" }, { projection })
       .toArray(),
   ]);

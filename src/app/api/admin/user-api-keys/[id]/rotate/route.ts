@@ -4,6 +4,8 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { withAdminAuth } from "@/lib/api/withAdminAuth";
 import { generateUserApiToken, type UserApiScope } from "@/lib/api/userApiAuth";
 import { getDb } from "@/lib/mongodb";
+import { userApiKeysCollection } from "@/lib/db/repositories/userApiKeys";
+import type { Document } from "mongodb";
 
 /** Old key stays valid for this long after rotation, so the integration can swap over. */
 const ROTATION_GRACE_MS = 24 * 60 * 60 * 1000;
@@ -24,7 +26,7 @@ export const POST = withAdminAuth(
       const db = await getDb();
       const now = new Date();
 
-      const existing = await db.collection("userApiKeys").findOne({
+      const existing = await userApiKeysCollection<Document>(db).findOne({
         _id: new ObjectId(id),
         revokedAt: null,
         revokeAt: { $not: { $lte: now } },
@@ -37,7 +39,7 @@ export const POST = withAdminAuth(
       const { token, tokenHash, prefix } = generateUserApiToken(scope);
       const revokeAt = new Date(now.getTime() + ROTATION_GRACE_MS);
 
-      const inserted = await db.collection("userApiKeys").insertOne({
+      const inserted = await userApiKeysCollection<Document>(db).insertOne({
         userId: existing.userId, // ownership is preserved
         name: existing.name,
         scope,
@@ -53,7 +55,7 @@ export const POST = withAdminAuth(
         updatedAt: now,
       });
 
-      await db.collection("userApiKeys").updateOne(
+      await userApiKeysCollection<Document>(db).updateOne(
         { _id: existing._id },
         {
           $set: {

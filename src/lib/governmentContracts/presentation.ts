@@ -12,6 +12,7 @@ import type { GovernmentTender } from "./types";
 import { extractionCapacityQuote, type ContractCurrencyQuote } from "./rules/presentation";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { stateResourceCapacityCollection } from "@/lib/db/repositories/stateResourceCapacity";
 
 export async function contractCurrencyQuotes(db: Db, countryId: CountryId, preset?: string) {
   const [rates, budget] = await Promise.all([
@@ -40,8 +41,7 @@ export async function contractCapacityQuotes(
     ...new Set(rows.flatMap((r) => (r.terms.type === "extraction" ? [r.terms.stateId] : []))),
   ];
   const docs = stateIds.length
-    ? await db
-        .collection<StateResourceCapacity>("stateResourceCapacity")
+    ? await stateResourceCapacityCollection(db)
         .find(
           { countryId: countryId as CountryId, stateId: { $in: stateIds } },
           { projection: { stateId: 1, resources: 1 } }

@@ -26,6 +26,8 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
 import type { Document } from "mongodb";
 import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
+import { ukCabinetCooldownsCollection } from "@/lib/db/repositories/ukCabinetCooldowns";
+import { speakerElectionsCollection } from "@/lib/db/repositories/speakerElections";
 
 const ELECTION_TYPES = [
   "speaker",
@@ -70,9 +72,7 @@ function getCongressLeaderRole(type: string, role?: string): CongressLeader["rol
 // ---------------------------------------------------------------------------
 
 async function getSpeakerElections(db: Awaited<ReturnType<typeof getDb>>) {
-  const election = await db
-    .collection<SpeakerElection>("speakerElections")
-    .findOne({ _id: "current" });
+  const election = await speakerElectionsCollection(db).findOne({ _id: "current" });
   if (!election) return { elections: [] };
 
   const nominations = await db
@@ -536,7 +536,7 @@ async function handleUKAction(
     // Clear cabinet
     await Promise.all([
       cabinetMembersCollection<Document>(db).deleteMany({ countryId: "UK" }),
-      db.collection("ukCabinetCooldowns").deleteMany({ countryId: "UK" }),
+      ukCabinetCooldownsCollection<Document>(db).deleteMany({ countryId: "UK" }),
     ]);
     // Clear PM office from UK characters only — other countries have their own PM
     await charactersCollection(db).updateMany(

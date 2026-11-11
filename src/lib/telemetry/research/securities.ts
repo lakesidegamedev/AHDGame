@@ -33,6 +33,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
+import { shareTradeHistoryCollection } from "@/lib/db/repositories/shareTradeHistory";
 
 /** Trade kinds that are price-forming executions between two parties. */
 const EXECUTION_KINDS = ["market_buy", "market_sell", "limit_fill", "peer_fill", "listing_fill"];
@@ -76,8 +77,7 @@ export async function buildSecurityTelemetryRowForTurn(
         }
       )
       .toArray(),
-    db
-      .collection<ShareTradeHistory>("shareTradeHistory")
+    shareTradeHistoryCollection(db)
       .find(
         { turn, kind: { $in: EXECUTION_KINDS as ShareTradeHistory["kind"][] } },
         { projection: { corporationId: 1, shares: 1, totalAnchor: 1 } }

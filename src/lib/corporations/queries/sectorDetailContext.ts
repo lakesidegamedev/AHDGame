@@ -54,6 +54,8 @@ import { usersCollection } from "@/lib/db/repositories/users";
 import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
 import { politicalMetricsCollection } from "@/lib/db/repositories/politicalMetrics";
+import { tariffsCollection } from "@/lib/db/repositories/tariffs";
+import { subsidiesCollection } from "@/lib/db/repositories/subsidies";
 
 /** Reads the state, country, tariff, sibling and market context for one sector. */
 export async function loadSectorDetailContext({
@@ -364,8 +366,8 @@ export async function loadSectorDetailContext({
   // Load tariff policy and market context together; these reads are independent.
   const [allTariffs, activeSubsidies, activeFtaPairs, allSectorsRaw, siblingsSectors] =
     await Promise.all([
-      db.collection<Tariff>("tariffs").find({}).toArray(),
-      db.collection<Subsidy>("subsidies").find({ active: true }).toArray(),
+      tariffsCollection(db).find({}).toArray(),
+      subsidiesCollection(db).find({ active: true }).toArray(),
       loadActiveFtaPairs(db),
       corporateSectorsCollection(db)
         .find(

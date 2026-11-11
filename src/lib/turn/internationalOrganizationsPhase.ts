@@ -77,6 +77,8 @@ import {
   captureDiplomaticExpiry,
 } from "./internationalOrganizationsEffects";
 import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { organizationMembershipsCollection } from "@/lib/db/repositories/organizationMemberships";
+import type { Document } from "mongodb";
 
 /*
  * Voting roster for one ballot. Shadow/off preserve the player-only baseline.
@@ -225,7 +227,9 @@ export async function foundDueOrganizations(db: Db, currentTurn: number): Promis
     (await ensureEuropeanIntegrationState(
       db,
       preset,
-      (await db.collection("organizationMemberships").countDocuments({ organizationId: "EU" })) > 0
+      (await organizationMembershipsCollection<Document>(db).countDocuments({
+        organizationId: "EU",
+      })) > 0
     ));
 
   let founded = 0;

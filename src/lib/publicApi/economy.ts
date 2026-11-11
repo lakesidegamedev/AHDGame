@@ -24,6 +24,7 @@ import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficia
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { billsCollection } from "@/lib/db/repositories/bills";
 import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { stockExchangeSnapshotsCollection } from "@/lib/db/repositories/stockExchangeSnapshots";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 const HISTORY_CAP = 12;
@@ -114,9 +115,9 @@ export async function queryCountryEconomy(db: Db, country: string) {
   const [centralBank, snapshot, budget, states] = await Promise.all([
     centralBanksCollection(db).findOne({ countryId: country } as Filter<CentralBank>),
     exchangeApiKey
-      ? db
-          .collection<StockExchangeSnapshot>("stockExchangeSnapshots")
-          .findOne({ _id: exchangeApiKey as unknown as StockExchangeSnapshot["_id"] })
+      ? stockExchangeSnapshotsCollection(db).findOne({
+          _id: exchangeApiKey as unknown as StockExchangeSnapshot["_id"],
+        })
       : Promise.resolve(null),
     federalBudgetCollection(db).findOne(
       { _id: getNationalBudgetId(country as CountryId) },

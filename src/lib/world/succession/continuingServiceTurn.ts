@@ -37,6 +37,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { macroCountriesCollection } from "@/lib/db/repositories/macroCountries";
 
 const FEDERATION_CONTINUING_SERVICE_TURNS_COLLECTION = "federationContinuingServiceTurns";
 export interface FederationContinuingServiceTurn {
@@ -186,8 +187,7 @@ export async function materializeContinuingFederationServiceTurn(input: {
     turn,
     ratesLocalPerAnchor: rates,
   });
-  const macros = await db
-    .collection<MacroCountryState>("macroCountries")
+  const macros = await macroCountriesCollection<MacroCountryState>(db)
     .find(
       { _id: { $in: ids }, presetId: "1991-default", simulationTier: "background-macro" },
       { session }
@@ -253,9 +253,10 @@ export async function materializeContinuingFederationServiceTurn(input: {
       },
     };
   });
-  const macroUpdated = await db
-    .collection<MacroCountryState>("macroCountries")
-    .bulkWrite(macroWrites, { session });
+  const macroUpdated = await macroCountriesCollection<MacroCountryState>(db).bulkWrite(
+    macroWrites,
+    { session }
+  );
   if (macroUpdated.matchedCount !== ids.length)
     throw new Error("Continuing successor budget changed during service");
   const accountWrites = accounts.map((account) => ({

@@ -129,6 +129,7 @@ import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { usersCollection } from "@/lib/db/repositories/users";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
+import { supremeCourtSeatsCollection } from "@/lib/db/repositories/supremeCourtSeats";
 
 const MIN_BASE_ACTIONS_PER_TURN = 4;
 
@@ -550,9 +551,10 @@ export default async function ProfilePage() {
     congressLeadersCollection(apDb)
       .find({ characterId: character._id }, { projection: { role: 1 } })
       .toArray(),
-    apDb
-      .collection<SupremeCourtSeat>("supremeCourtSeats")
-      .findOne({ justiceCharacterId: character._id }, { projection: { _id: 1 } }),
+    supremeCourtSeatsCollection(apDb).findOne(
+      { justiceCharacterId: character._id },
+      { projection: { _id: 1 } }
+    ),
   ]);
   const cabinetSeat = cabinetSeats[0] ?? null;
   const electedSeat =

@@ -2,6 +2,7 @@ import type { Collection, Db, Filter } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { PartyBudget } from "@/lib/db/types";
 import type { TreasuryPresetId } from "@/lib/treasury/partyTreasuryPresets";
+import { partyBudgetCollection } from "@/lib/db/repositories/partyBudget";
 
 export interface PartyBudgetScopeRef {
   countryId: CountryId;
@@ -222,7 +223,7 @@ export async function resetPartyBudgetSpending(
   ref: PartyBudgetScopeRef,
   now: Date = new Date()
 ): Promise<void> {
-  const collection = db.collection<StoredPartyBudget>("partyBudget");
+  const collection = partyBudgetCollection<StoredPartyBudget>(db);
 
   if (ref.scope === "state") {
     await collection.updateMany(buildCompatiblePartyBudgetFilter(ref), {

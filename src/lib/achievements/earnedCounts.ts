@@ -1,14 +1,15 @@
 import type { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { getAllAchievements } from "@/lib/achievements";
+import { characterAchievementsCollection } from "@/lib/db/repositories/characterAchievements";
+import type { Document } from "mongodb";
 
 /** Every achievement definition with how many characters have earned it, for the staff panels. */
 export async function listAchievementsWithEarnedCounts() {
   const achievements = await getAllAchievements();
   const db = await getDb();
 
-  const counts = await db
-    .collection("characterAchievements")
+  const counts = await characterAchievementsCollection<Document>(db)
     .aggregate<{ _id: ObjectId; count: number }>([
       { $group: { _id: "$achievementId", count: { $sum: 1 } } },
     ])

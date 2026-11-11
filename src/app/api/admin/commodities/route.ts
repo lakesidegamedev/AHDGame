@@ -11,6 +11,7 @@ import type { CommodityPrice, CommodityPriceHistory, GameState } from "@/lib/db/
 import { computeCommodityPressureRatio } from "@/lib/constants/commodities";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
+import { commodityPriceHistoryCollection } from "@/lib/db/repositories/commodityPriceHistory";
 
 export const GET = withAdminAuth(async (_auth, request: Request) => {
   try {
@@ -30,8 +31,7 @@ export const GET = withAdminAuth(async (_auth, request: Request) => {
     const minTurn = currentTurn - historyTurns;
 
     // Fetch price history for sparklines
-    const historyDocs = await db
-      .collection<CommodityPriceHistory>("commodityPriceHistory")
+    const historyDocs = await commodityPriceHistoryCollection(db)
       .find({ turn: { $gte: minTurn, $lte: currentTurn } })
       .sort({ turn: 1 })
       .toArray();

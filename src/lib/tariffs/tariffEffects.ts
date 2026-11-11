@@ -26,6 +26,7 @@ import { getCurrentTurn } from "@/lib/currentTurn";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { billsCollection } from "@/lib/db/repositories/bills";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { tariffsCollection } from "@/lib/db/repositories/tariffs";
 
 function finiteRate(value: unknown): number {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
@@ -429,10 +430,10 @@ export async function applyTariffProvision(
   // enacts that both see "no existing" double-fire pulses — acceptable given
   // the 24h pulse TTL and negligible policy-enactment frequency vs. the
   // read-path replay rate.
-  const existing = await db.collection<Tariff>("tariffs").findOne(filter);
+  const existing = await tariffsCollection(db).findOne(filter);
   const rateChanged = !existing || finiteRate(existing.rate) !== finiteRate(provision.rate);
 
-  await db.collection<Tariff>("tariffs").updateOne(
+  await tariffsCollection(db).updateOne(
     filter,
     {
       $set: { rate: provision.rate, sourceBillId, updatedAt: now },

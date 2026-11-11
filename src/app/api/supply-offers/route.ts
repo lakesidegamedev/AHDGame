@@ -12,6 +12,7 @@ import { loadOpenOffers, openOffersFilter } from "@/lib/corporations/supplyExcha
 import { OFFER_SORT_DIRS, OFFER_SORTS } from "@/lib/corporations/supplyExchange/offerOrdering";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { supplyListingsCollection } from "@/lib/db/repositories/supplyListings";
 
 const MAX_OFFERS = 60;
 const privateHeaders = { "Cache-Control": "private, no-store" };
@@ -89,7 +90,7 @@ export async function GET(request: Request) {
             .toArray()
         : Promise.resolve([]),
     ]);
-    const listings = db.collection<SupplyListing>("supplyListings");
+    const listings = supplyListingsCollection(db);
     const [{ offers, hasMore }, total, totalAll] = await Promise.all([
       loadOpenOffers(db, {
         commodities: query.data.commodity,

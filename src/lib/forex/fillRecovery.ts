@@ -42,6 +42,7 @@ import type {
 import { recordAudit } from "@/lib/audit/recordAudit";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { currencyOrdersCollection } from "@/lib/db/repositories/currencyOrders";
+import { tradeHistoryCollection } from "@/lib/db/repositories/tradeHistory";
 
 /** A claim older than this with no live owner may be finished or undone. */
 export const FILL_CLAIM_STALE_MS = 5 * 60 * 1000;
@@ -332,7 +333,7 @@ export async function applyFillLegs(
 
   // History: keyed by the stable claim key, so a replay insert is a no-op.
   try {
-    await db.collection<{ _id: string } & Document>("tradeHistory").insertOne({
+    await tradeHistoryCollection<{ _id: string } & Document>(db).insertOne({
       _id: intent.key,
       buyerCharacterId: new ObjectId(intent.trade.buyerCharacterId),
       sellerCharacterId: new ObjectId(intent.trade.sellerCharacterId),
@@ -415,9 +416,10 @@ async function verifyFillLegs(db: Db, intent: ProcessingFillIntent): Promise<Fil
     spread.push(revenueLanded && reserveLanded);
   }
   const history =
-    (await db
-      .collection<{ _id: string } & Document>("tradeHistory")
-      .findOne({ _id: intent.key }, { projection: { _id: 1 } })) !== null;
+    (await tradeHistoryCollection<{ _id: string } & Document>(db).findOne(
+      { _id: intent.key },
+      { projection: { _id: 1 } }
+    )) !== null;
   return { filler, poster, spread, history };
 }
 
@@ -688,7 +690,7 @@ export async function reverseLandedFillLegs(
     }
   }
   try {
-    await db.collection<{ _id: string } & Document>("tradeHistory").deleteOne({ _id: intent.key });
+    await tradeHistoryCollection<{ _id: string } & Document>(db).deleteOne({ _id: intent.key });
   } catch (error) {
     errors.push(error);
   }

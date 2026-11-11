@@ -62,6 +62,9 @@ import { electionsCollection } from "@/lib/db/repositories/elections";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
 import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
+import { seatsCollection } from "@/lib/db/repositories/seats";
+import { partyBudgetCollection } from "@/lib/db/repositories/partyBudget";
+import { policiesCollection } from "@/lib/db/repositories/policies";
 
 export async function GET() {
   try {
@@ -86,15 +89,15 @@ export async function GET() {
     ] = await Promise.all([
       statesCollection<Document>(db).countDocuments({ countryId: "US" }),
       statesCollection<Document>(db).countDocuments({ countryId: "UK" }),
-      db.collection("policies").countDocuments(),
+      policiesCollection<Document>(db).countDocuments(),
       gameConfigCollection<{ _id: string }>(db).findOne({ _id: "default" }),
       gameStateCollection(db).findOne({ _id: "current" }),
       electedOfficialsCollection<Document>(db).countDocuments(),
       electionsCollection<Document>(db).countDocuments(),
       politicalPartiesCollection<Document>(db).countDocuments(),
       stateDemographicsCollection<Document>(db).countDocuments(),
-      db.collection("seats").countDocuments(),
-      db.collection("partyBudget").countDocuments(),
+      seatsCollection<Document>(db).countDocuments(),
+      partyBudgetCollection<Document>(db).countDocuments(),
       unownedSectorsCollection<Document>(db).countDocuments(),
     ]);
 

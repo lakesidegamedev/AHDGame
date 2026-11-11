@@ -39,6 +39,8 @@ import { electionsCollection } from "@/lib/db/repositories/elections";
 import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
+import { russianCouncilElectionResultsCollection } from "@/lib/db/repositories/russianCouncilElectionResults";
+import type { Document } from "mongodb";
 
 export async function materializeRussianDumaConvocationSeating(input: {
   db: Db;
@@ -191,7 +193,7 @@ export async function materializeRussianDumaConvocationSeating(input: {
     )
       throw new Error("Ordinary Duma receipt disagrees with its resolved ballots");
   }
-  const retainedCouncil = await db.collection("russianCouncilElectionResults").findOne(
+  const retainedCouncil = await russianCouncilElectionResultsCollection<Document>(db).findOne(
     {
       countryId: "RU",
       preset: "1991-default",

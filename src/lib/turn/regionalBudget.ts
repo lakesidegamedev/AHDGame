@@ -40,6 +40,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
+import { cabinetSettingsCollection } from "@/lib/db/repositories/cabinetSettings";
 
 // ── Pure calculation types ───────────────────────────────────────────────────
 
@@ -373,9 +374,9 @@ export async function processRegionalBudgets(
   const budgetMap = new Map(existingBudgets.map((b) => [b._id, b]));
 
   // Read Chancellor allocation percentages from cabinet settings
-  const chancellorSetting = await db
-    .collection<CabinetSetting>("cabinetSettings")
-    .findOne({ _id: `${countryId}_chancellor` });
+  const chancellorSetting = await cabinetSettingsCollection(db).findOne({
+    _id: `${countryId}_chancellor`,
+  });
   const allocationPercents = chancellorSetting?.allocationPercents ?? null;
 
   let regionsProcessed = 0;

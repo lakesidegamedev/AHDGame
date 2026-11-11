@@ -71,6 +71,7 @@ import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParti
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { countersCollection } from "@/lib/db/repositories/counters";
 
 export interface SeedNppPriorsPopulationResult {
   nppsCreated: number;
@@ -175,13 +176,11 @@ type OrgRow = {
  */
 async function reserveNppSequentialIdBlock(db: Db, count: number): Promise<number> {
   if (count <= 0) return 0;
-  const counter = await db
-    .collection<Counter>("counters")
-    .findOneAndUpdate(
-      { _id: "npp" },
-      { $inc: { seq: count } },
-      { upsert: true, returnDocument: "after" }
-    );
+  const counter = await countersCollection(db).findOneAndUpdate(
+    { _id: "npp" },
+    { $inc: { seq: count } },
+    { upsert: true, returnDocument: "after" }
+  );
   if (!counter?.seq) {
     throw new Error("Failed to reserve npp sequential id block");
   }

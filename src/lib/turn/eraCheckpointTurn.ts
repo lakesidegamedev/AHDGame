@@ -46,6 +46,8 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
+import { demographicDefaultsCollection } from "@/lib/db/repositories/demographicDefaults";
+import { docketCasesCollection } from "@/lib/db/repositories/docketCases";
 
 export interface EraCheckpointTurnResult {
   checkpointsActive: number;
@@ -72,8 +74,7 @@ async function resolveActiveCheckpoints(
   ] as string[];
   const docketByKey = new Map<string, DocketCaseLookupEntry>();
   if (caseKeys.length > 0) {
-    const cases = await db
-      .collection<DocketCase>("docketCases")
+    const cases = await docketCasesCollection(db)
       .find({ countryId, caseKey: { $in: caseKeys } })
       .toArray();
     for (const c of cases) {
@@ -158,8 +159,7 @@ export async function processEraCheckpointsTurn(
     stateDemographicsCollection(db)
       .find({ _id: { $in: [...stateIds] } })
       .toArray(),
-    db
-      .collection<StateDemographics>("demographicDefaults")
+    demographicDefaultsCollection(db)
       .find({ _id: { $in: [...stateIds] } })
       .toArray(),
     gateMetrics.length === 0
@@ -266,7 +266,7 @@ export async function processEraCheckpointsTurn(
     await stateDemographicsCollection(db).bulkWrite(liveOps);
   }
   if (defaultOps.length > 0) {
-    await db.collection<StateDemographics>("demographicDefaults").bulkWrite(defaultOps);
+    await demographicDefaultsCollection(db).bulkWrite(defaultOps);
   }
 
   return { checkpointsActive: active.length, statesUpdated };

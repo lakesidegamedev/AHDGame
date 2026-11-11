@@ -10,6 +10,8 @@ import type { WireEvent } from "@/lib/wireEvent";
 import { EXCHANGE_API_KEYS, getCountryForExchange } from "@/lib/constants/exchangeRegistry";
 import { conditionalJson } from "@/lib/api/conditionalJson";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { shareTradeHistoryCollection } from "@/lib/db/repositories/shareTradeHistory";
+import { marketCapHistoryCollection } from "@/lib/db/repositories/marketCapHistory";
 
 const SPLIT_KINDS: ShareTradeKind[] = ["stock_split", "reverse_split"];
 const WIRE_TYPES: WireEvent["type"][] = [
@@ -83,8 +85,7 @@ export async function GET(request: Request) {
       corpNames = new Map(corps.map((c) => [c._id.toString(), c.name]));
     }
 
-    const splitRows = await db
-      .collection<ShareTradeHistory>("shareTradeHistory")
+    const splitRows = await shareTradeHistoryCollection(db)
       .find({ turn: { $gte: fromTurn, $lte: toTurn }, kind: { $in: SPLIT_KINDS } })
       .sort({ turn: 1 })
       .limit(MARKER_LIMIT)
@@ -108,8 +109,7 @@ export async function GET(request: Request) {
     // existing timestamp index serves it). Global view only.
     let wire: { timestamp: string; type: string; headline: string; href: string | null }[] = [];
     if (!venueCountry) {
-      const bounds = await db
-        .collection<MarketCapHistory>("marketCapHistory")
+      const bounds = await marketCapHistoryCollection(db)
         .find({ turn: { $gte: fromTurn, $lte: toTurn } })
         .sort({ turn: 1 })
         .limit(MAX_SPAN)

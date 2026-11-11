@@ -19,6 +19,7 @@ import type {
 } from "@/lib/db/types";
 import { usersCollection } from "@/lib/db/repositories/users";
 import type { Document } from "mongodb";
+import { caucusChairVotesCollection } from "@/lib/db/repositories/caucusChairVotes";
 
 const bodySchema = z
   .object({
@@ -128,7 +129,7 @@ export async function POST(
 
     const now = new Date();
     if (parsed.data.withdraw) {
-      await db.collection<CaucusChairVote>("caucusChairVotes").deleteOne({
+      await caucusChairVotesCollection(db).deleteOne({
         electionId: election._id,
         voterId: auth.user.character._id,
       });
@@ -149,7 +150,7 @@ export async function POST(
       return errorResponse(404, "Candidate not found or no longer active.");
     }
 
-    await db.collection<CaucusChairVote>("caucusChairVotes").updateOne(
+    await caucusChairVotesCollection(db).updateOne(
       { electionId: election._id, voterId: auth.user.character._id },
       {
         $set: {

@@ -24,6 +24,7 @@ import type {
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { parliamentaryGovernmentsCollection } from "@/lib/db/repositories/parliamentaryGovernments";
 
 export interface CabinetEligibleCharacter {
   _id: string;
@@ -96,9 +97,9 @@ export async function requireCurrentPrimeMinister(
   const govFormation = await getGovernmentFormationsCollection(db).findOne({ _id: countryId });
   let pmCharId: ObjectId | null = govFormation ? (govFormation.pmCharacterId ?? null) : null;
   if (!govFormation) {
-    const legacy = await db
-      .collection<ParliamentaryGovernment>("parliamentaryGovernments")
-      .findOne({ _id: countryId as string });
+    const legacy = await parliamentaryGovernmentsCollection(db).findOne({
+      _id: countryId as string,
+    });
     pmCharId = legacy?.pmCharacterId ?? null;
   }
 

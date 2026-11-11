@@ -19,6 +19,11 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { crisesCollection } from "@/lib/db/repositories/crises";
 import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
 import { adminLogsCollection } from "@/lib/db/repositories/adminLogs";
+import { tradeHistoryCollection } from "@/lib/db/repositories/tradeHistory";
+import { shareTradeHistoryCollection } from "@/lib/db/repositories/shareTradeHistory";
+import { partyHistoryCollection } from "@/lib/db/repositories/partyHistory";
+import { battleReportsCollection } from "@/lib/db/repositories/battleReports";
+import { marketCapHistoryCollection } from "@/lib/db/repositories/marketCapHistory";
 
 type Properties = Record<string, string | number | boolean>;
 const finite = (value: number | undefined) => (Number.isFinite(value) ? value! : 0);
@@ -90,8 +95,7 @@ export async function captureWorldDepthPosthog(input: {
       leadership,
       withdrawals,
     ] = await Promise.all([
-      db
-        .collection<PartyHistorySnapshot>("partyHistory")
+      partyHistoryCollection(db)
         .find(
           { turn },
           {
@@ -139,8 +143,7 @@ export async function captureWorldDepthPosthog(input: {
           }
         )
         .toArray(),
-      db
-        .collection<MarketCapHistory>("marketCapHistory")
+      marketCapHistoryCollection(db)
         .find(
           { turn },
           {
@@ -154,8 +157,7 @@ export async function captureWorldDepthPosthog(input: {
           }
         )
         .toArray(),
-      db
-        .collection<TradeHistoryEntry>("tradeHistory")
+      tradeHistoryCollection(db)
         .find(
           { turn: Math.max(0, turn - 1) },
           {
@@ -170,8 +172,7 @@ export async function captureWorldDepthPosthog(input: {
           }
         )
         .toArray(),
-      db
-        .collection<BattleReportDoc>("battleReports")
+      battleReportsCollection(db)
         .find(
           { turn },
           {
@@ -233,8 +234,7 @@ export async function captureWorldDepthPosthog(input: {
           }
         )
         .toArray(),
-      db
-        .collection<ShareTradeHistory>("shareTradeHistory")
+      shareTradeHistoryCollection(db)
         .find(
           { turn: actionWindow, kind: { $ne: "correction" } },
           { projection: { corporationId: 1, turn: 1, kind: 1, shares: 1, totalAnchor: 1 } }

@@ -45,6 +45,8 @@ import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 import type { Document } from "mongodb";
+import { indexFundPositionsCollection } from "@/lib/db/repositories/indexFundPositions";
+import { indexFundTransactionsCollection } from "@/lib/db/repositories/indexFundTransactions";
 
 export async function tradeCorporationFund(
   db: Db,
@@ -197,14 +199,12 @@ export async function tradeCorporationFund(
               );
               if (!restored.ok) throw new Error("Corporate fund position compensation failed");
               if (priorPosition)
-                await db
-                  .collection("indexFundPositions")
-                  .updateOne(
-                    { _id: priorPosition._id },
-                    priorPosition.avgNavAnchor == null
-                      ? { $unset: { avgNavAnchor: "" } }
-                      : { $set: { avgNavAnchor: priorPosition.avgNavAnchor } }
-                  );
+                await indexFundPositionsCollection<Document>(db).updateOne(
+                  { _id: priorPosition._id },
+                  priorPosition.avgNavAnchor == null
+                    ? { $unset: { avgNavAnchor: "" } }
+                    : { $set: { avgNavAnchor: priorPosition.avgNavAnchor } }
+                );
             });
             const credited = await indexFundsCollection<Document>(db).updateOne(
               { _id: fund._id, status: "active", quotedNav: fund.quotedNav },
@@ -326,7 +326,9 @@ export async function tradeCorporationFund(
             },
             options
           );
-          undo.push(() => db.collection("indexFundTransactions").deleteOne({ _id: transactionId }));
+          undo.push(() =>
+            indexFundTransactionsCollection<Document>(db).deleteOne({ _id: transactionId })
+          );
           completionStarted = true;
           await completeFundCommand(db, command.key, response, 200, session, {
             fundId: fund._id,

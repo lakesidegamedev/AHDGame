@@ -11,6 +11,8 @@ import { regionPartyUrl } from "@/lib/urls";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { adminLogsCollection } from "@/lib/db/repositories/adminLogs";
+import { partyBudgetCollection } from "@/lib/db/repositories/partyBudget";
+import { treasuryTransactionsCollection } from "@/lib/db/repositories/treasuryTransactions";
 
 export interface TreasuryStateFundingMetric {
   stateId: string;
@@ -81,13 +83,9 @@ export async function buildNationalTreasuryInsights(
 ): Promise<NationalTreasuryInsights> {
   const [statePartyOrgs, budgets, states, transferRows, overrideLogs] = await Promise.all([
     statePartyOrgCollection(db).find({ countryId, partyId }).toArray(),
-    db
-      .collection<PartyBudget>("partyBudget")
-      .find({ countryId, partyId, scope: "state" })
-      .toArray(),
+    partyBudgetCollection(db).find({ countryId, partyId, scope: "state" }).toArray(),
     statesCollection(db).find({ countryId }).toArray(),
-    db
-      .collection<TreasuryTransaction>("treasuryTransactions")
+    treasuryTransactionsCollection(db)
       .find({
         countryId,
         partyId,

@@ -23,6 +23,7 @@ import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { governorOfficeStateCollection } from "@/lib/db/repositories/governorOfficeState";
 
 /** Election types where the hook is applied. */
 const HOOKED_ELECTION_TYPES = new Set([
@@ -85,8 +86,7 @@ export async function loadFirstMinisterBonusContexts(
         { projection: { state: 1, party: 1 } }
       )
       .toArray(),
-    db
-      .collection<GovernorOfficeState>("governorOfficeState")
+    governorOfficeStateCollection(db)
       .find(
         { countryId: { $in: countries }, stateId: { $in: normalizedRegions } },
         { projection: { stateId: 1, devolutionPolicy: 1 } }

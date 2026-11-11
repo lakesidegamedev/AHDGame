@@ -12,6 +12,8 @@ import { projectArabRegion, migrateLegacyArabOrigin } from "./rules/arabProjecti
 import { statesCollection } from "@/lib/db/repositories/states";
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
+import { livingConflictsCollection } from "@/lib/db/repositories/livingConflicts";
+import { macroCountriesCollection } from "@/lib/db/repositories/macroCountries";
 
 /** Four bounded, projected batch reads, only at initialization or quarterly
  * pressure ticks. Background stability is explicitly an estimate of legitimacy;
@@ -27,8 +29,7 @@ export async function advanceArabRegionalTurn(
     return projectArabRegion(state);
   const ids = [...ARAB_ORIGINS, ...ARAB_HOSTS];
   const [background, regions, approvals, metrics] = await Promise.all([
-    db
-      .collection<MacroCountryState>("macroCountries")
+    macroCountriesCollection<MacroCountryState>(db)
       .find(
         { entityId: { $in: ids }, retiredAt: null },
         {
@@ -123,12 +124,10 @@ export async function reconcileArabTerrorismSpillover(
 ): Promise<LivingConflictState> {
   if (state.defKey !== "transnational_terrorism" || !state.hasOpened || turn % 12 !== 0)
     return state;
-  const conflict = await db
-    .collection<LivingConflictState>("livingConflicts")
-    .findOne(
-      { defKey: ARAB_UPRISINGS_KEY },
-      { projection: { hasOpened: 1, status: 1, arabRegional: 1 } }
-    );
+  const conflict = await livingConflictsCollection<LivingConflictState>(db).findOne(
+    { defKey: ARAB_UPRISINGS_KEY },
+    { projection: { hasOpened: 1, status: 1, arabRegional: 1 } }
+  );
   const target = arabExtremistSpillover(conflict);
   const prior = state.tracks?.arabRegionalSpillover ?? 0;
   if (target === prior) return state;

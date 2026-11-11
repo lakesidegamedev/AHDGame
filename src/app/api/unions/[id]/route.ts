@@ -85,6 +85,8 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { billsCollection } from "@/lib/db/repositories/bills";
 import { unionsCollection } from "@/lib/db/repositories/unions";
+import { unionOrganizersCollection } from "@/lib/db/repositories/unionOrganizers";
+import { unionEndorsementsCollection } from "@/lib/db/repositories/unionEndorsements";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -138,8 +140,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
           }
         )
         .toArray(),
-      db
-        .collection<UnionEndorsement>("unionEndorsements")
+      unionEndorsementsCollection(db)
         .find({ unionId: union._id })
         .sort({ createdAt: -1 })
         .toArray(),
@@ -244,7 +245,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const canOrganizeUnderground = viewer?.character?.countryId === union.countryId;
     const viewerIsOrganizer =
       canOrganizeUnderground && viewerCharacterId
-        ? await db.collection<UnionOrganizer>("unionOrganizers").findOne({
+        ? await unionOrganizersCollection(db).findOne({
             unionId: union._id,
             characterId: viewerCharacterId,
             undergroundStrength: { $gt: 0 },

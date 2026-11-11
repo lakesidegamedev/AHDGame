@@ -11,6 +11,7 @@ import { getCachedMaintenanceStatus } from "@/lib/maintenanceStatus";
 import { publicPageMetadata } from "@/lib/siteMetadata";
 import { MaintenanceCountdown } from "./MaintenanceCountdown";
 import { MaintenanceRecapLauncher } from "./MaintenanceRecapLauncher";
+import { retiredCharactersCollection } from "@/lib/db/repositories/retiredCharacters";
 
 export const dynamic = "force-dynamic";
 
@@ -50,15 +51,14 @@ export default async function MaintenancePage() {
   try {
     if (authUser) {
       const [retired, anyRetired] = await Promise.all([
-        db
-          .collection<RetiredCharacter>("retiredCharacters")
-          .findOne(
-            { userId: new ObjectId(authUser.userId), recap: { $exists: true } },
-            { sort: { retiredAt: -1 }, projection: { recap: 1 } }
-          ),
-        db
-          .collection<RetiredCharacter>("retiredCharacters")
-          .countDocuments({ userId: new ObjectId(authUser.userId) }, { limit: 1 }),
+        retiredCharactersCollection(db).findOne(
+          { userId: new ObjectId(authUser.userId), recap: { $exists: true } },
+          { sort: { retiredAt: -1 }, projection: { recap: 1 } }
+        ),
+        retiredCharactersCollection(db).countDocuments(
+          { userId: new ObjectId(authUser.userId) },
+          { limit: 1 }
+        ),
       ]);
       if (retired?.recap) recap = retired.recap;
       newAccount = anyRetired === 0 && !authUser.isAdmin;

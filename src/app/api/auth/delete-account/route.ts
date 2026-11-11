@@ -25,6 +25,9 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import type { Document } from "mongodb";
 import { usersCollection } from "@/lib/db/repositories/users";
+import { actionLogsCollection } from "@/lib/db/repositories/actionLogs";
+import { characterAchievementsCollection } from "@/lib/db/repositories/characterAchievements";
+import { retiredCharactersCollection } from "@/lib/db/repositories/retiredCharacters";
 
 // DELETE /api/auth/delete-account — Permanently deletes the authenticated user's account, character, and clears offices held.
 // Auth: requireBasicAuth
@@ -42,7 +45,7 @@ export const DELETE = withNoStore(async () => {
     const db = await getDb();
     const usersCollectionHandle = usersCollection(db);
     const charactersHandle = charactersCollection(db);
-    const actionLogsCollection = db.collection("actionLogs");
+    const actionLogsHandle = actionLogsCollection<Document>(db);
     const officialsCollection = electedOfficialsCollection<Document>(db);
 
     // Verify user exists
@@ -122,7 +125,7 @@ export const DELETE = withNoStore(async () => {
 
       // Retain action logs for forensics: stamp them deleted + denormalize
       // identity from the still-present docs so they stay readable afterward.
-      await actionLogsCollection.updateMany(
+      await actionLogsHandle.updateMany(
         { characterId: character._id },
         {
           $set: {
@@ -182,8 +185,8 @@ export const DELETE = withNoStore(async () => {
     }
 
     // Delete retired characters and achievements for this user
-    await db.collection("retiredCharacters").deleteMany({ userId: objectId });
-    await db.collection("characterAchievements").deleteMany({ userId: objectId });
+    await retiredCharactersCollection<Document>(db).deleteMany({ userId: objectId });
+    await characterAchievementsCollection<Document>(db).deleteMany({ userId: objectId });
 
     // Identity history lives in its own collection, so deleting the user row
     // does NOT take it with it. Purged here so account deletion actually

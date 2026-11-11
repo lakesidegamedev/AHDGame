@@ -44,6 +44,9 @@ import {
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { crisesCollection } from "@/lib/db/repositories/crises";
 import { crisisInteractionsCollection } from "@/lib/db/repositories/crisisInteractions";
+import { organizationMembershipsCollection } from "@/lib/db/repositories/organizationMemberships";
+import { tariffsCollection } from "@/lib/db/repositories/tariffs";
+import { conflictsCollection } from "@/lib/db/repositories/conflicts";
 
 export type { MacroForeignPolicyState } from "./rules/foreignPolicy";
 
@@ -126,12 +129,10 @@ export async function loadBackgroundForeignContext(
         .collection<CountryAlignment>("countryAlignments")
         .find({}, { projection: { entityId: 1, shares: 1, nonAligned: 1 } })
         .toArray(),
-      db
-        .collection<{ countryId: string; organizationId: string }>("organizationMemberships")
+      organizationMembershipsCollection<{ countryId: string; organizationId: string }>(db)
         .find({}, { projection: { countryId: 1, organizationId: 1 } })
         .toArray(),
-      db
-        .collection<ConflictRow>("conflicts")
+      conflictsCollection<ConflictRow>(db)
         .find({ status: { $ne: "resolved" } } as never, {
           projection: {
             name: 1,
@@ -158,8 +159,7 @@ export async function loadBackgroundForeignContext(
           },
         })
         .toArray(),
-      db
-        .collection<Tariff>("tariffs")
+      tariffsCollection(db)
         .find(
           { sourceBillId: { $in: ids.map(backgroundTariffSourceId) } },
           { projection: { countryId: 1, scopeType: 1, targetOriginCountryId: 1, rate: 1 } }
@@ -616,9 +616,7 @@ export async function applyBackgroundForeignPolicy(
     }
   }
   await Promise.all([
-    tariffOps.length > 0
-      ? db.collection<Tariff>("tariffs").bulkWrite(tariffOps, { ordered: false })
-      : null,
+    tariffOps.length > 0 ? tariffsCollection(db).bulkWrite(tariffOps, { ordered: false }) : null,
     embargoOps.length > 0
       ? db.collection<TradeEmbargo>("tradeEmbargoes").bulkWrite(embargoOps, { ordered: false })
       : null,

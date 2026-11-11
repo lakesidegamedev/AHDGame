@@ -48,6 +48,7 @@ import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
 import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
+import { billWhipsCollection } from "@/lib/db/repositories/billWhips";
 
 // ─── Context Types ─────────────────────────────────────────────────────────────
 
@@ -559,8 +560,7 @@ export async function loadNPPContext(now: Date, options?: NPPContextOptions): Pr
       .project<{ nppId: import("mongodb").ObjectId }>({ nppId: 1 })
       .toArray(),
     billIds.length > 0
-      ? db
-          .collection<BillWhip>("billWhips")
+      ? billWhipsCollection(db)
           .find({
             targetType: "bill",
             targetId: { $in: billIds },
@@ -570,8 +570,7 @@ export async function loadNPPContext(now: Date, options?: NPPContextOptions): Pr
           .toArray()
       : Promise.resolve([]),
     stateBillIds.length > 0
-      ? db
-          .collection<BillWhip>("billWhips")
+      ? billWhipsCollection(db)
           .find({
             targetType: "bill",
             targetId: { $in: stateBillIds },

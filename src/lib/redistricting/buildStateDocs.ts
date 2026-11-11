@@ -19,6 +19,7 @@ import { loadCookPvi } from "./loadCookPvi";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { stateRegistrationPoolCollection } from "@/lib/db/repositories/stateRegistrationPool";
 
 /**
  * Build CongressionalDistrict docs for every state of `countryId` (or just
@@ -42,8 +43,7 @@ export async function buildDistrictDocsForStates(
   const orgRows = (await statePartyOrgCollection(db)
     .find({ countryId } as Partial<StatePartyOrg>)
     .toArray()) as StatePartyOrg[];
-  const poolDocs = (await db
-    .collection<StateRegistrationPool>("stateRegistrationPool")
+  const poolDocs = (await stateRegistrationPoolCollection(db)
     .find({ countryId } as Partial<StateRegistrationPool>)
     .toArray()) as StateRegistrationPool[];
 

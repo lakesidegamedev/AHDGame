@@ -9,6 +9,7 @@ import { splitProducerWallets, remapProducerPayables } from "./rules/producerWal
 import { secessionSource, type SecedingCountryId } from "./subRegions";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { producerEconomyAccountsCollection } from "@/lib/db/repositories/producerEconomyAccounts";
 
 /** Called inside the enclosing independence transaction, before the old region is removed. */
 export async function migrateProducerWallets(
@@ -18,7 +19,7 @@ export async function migrateProducerWallets(
   turn: number
 ): Promise<void> {
   const { fromCountryId, regionId } = secessionSource(countryId);
-  const accounts = db.collection<ProducerEconomyAccount>("producerEconomyAccounts");
+  const accounts = producerEconomyAccountsCollection(db);
   const source = await accounts.find({ countryId: fromCountryId, stateId: regionId }).toArray();
   if (!source.length) return;
   const { map, wallets } = splitProducerWallets(source, countryId, regions);

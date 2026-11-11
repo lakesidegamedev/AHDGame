@@ -76,6 +76,10 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
+import { stateResourceCapacityCollection } from "@/lib/db/repositories/stateResourceCapacity";
+import { commodityFlowsCollection } from "@/lib/db/repositories/commodityFlows";
+import { commodityPriceHistoryCollection } from "@/lib/db/repositories/commodityPriceHistory";
+import { sourcingNetworkLoadCollection } from "@/lib/db/repositories/sourcingNetworkLoad";
 
 /** Sector-type flow rows for the Production Flow panel: base tables plus strategies that add commodities not present in the base map. */
 function buildSectorFlowRows(
@@ -187,18 +191,19 @@ export async function getCommodityDetailData(
       latestSourcingNetwork,
     ] = await Promise.all([
       commodityPricesCollection(db).findOne({ commodity }),
-      db
-        .collection<CommodityPriceHistory>("commodityPriceHistory")
+      commodityPriceHistoryCollection(db)
         .find({ commodity, turn: { $lte: currentTurn } })
         .sort({ turn: -1 })
         .limit(200)
         .toArray(),
-      db
-        .collection<CommodityPriceHistory>("commodityPriceHistory")
-        .findOne({ commodity, turn: { $lte: targetTurn } }, { sort: { turn: -1 } }),
-      db
-        .collection<CommodityPriceHistory>("commodityPriceHistory")
-        .findOne({ commodity, turn: { $lte: currentTurn } }, { sort: { turn: 1 } }),
+      commodityPriceHistoryCollection(db).findOne(
+        { commodity, turn: { $lte: targetTurn } },
+        { sort: { turn: -1 } }
+      ),
+      commodityPriceHistoryCollection(db).findOne(
+        { commodity, turn: { $lte: currentTurn } },
+        { sort: { turn: 1 } }
+      ),
       includeHeavy && commodity === "freight"
         ? commodityPricesCollection(db)
             .find({ commodity: { $in: [...SHIPPED_COMMODITIES] } })
@@ -211,8 +216,7 @@ export async function getCommodityDetailData(
             [] as { commodity: CommodityType; stateSupply?: Record<string, number> }[]
           ),
       includeHeavy && commodity === "freight"
-        ? db
-            .collection<SourcingNetworkDoc>("sourcingNetworkLoad")
+        ? sourcingNetworkLoadCollection<SourcingNetworkDoc>(db)
             .find({})
             .sort({ turn: -1 })
             .limit(1)
@@ -837,8 +841,7 @@ export async function getCommodityDetailData(
     let totalCapacity: number | undefined;
     if (includeHeavy && (EXTRACTABLE_RESOURCES as readonly string[]).includes(commodity)) {
       const resource = commodity as ExtractableResource;
-      const capDocs = await db
-        .collection<StateResourceCapacity>("stateResourceCapacity")
+      const capDocs = await stateResourceCapacityCollection(db)
         .find({}, { projection: { stateId: 1, resources: 1 } })
         .toArray();
       capacityByState = {};
@@ -901,8 +904,7 @@ export async function getCommodityDetailData(
         }
       | undefined;
     if (marketAtLeast(await getMarketSystemMode(), "ledger")) {
-      const flowDoc = await db
-        .collection<CommodityFlowDoc>("commodityFlows")
+      const flowDoc = await commodityFlowsCollection<CommodityFlowDoc>(db)
         .find({ commodity })
         .sort({ turn: -1 })
         .limit(1)

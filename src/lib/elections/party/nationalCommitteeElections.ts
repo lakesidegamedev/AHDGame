@@ -18,6 +18,9 @@ import { createTurnBackedWindow } from "@/lib/time/turnBackedWindow";
 import { insertManyIgnoringDuplicateKey } from "@/lib/elections/duplicateKey";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nationalCommitteeCandidatesCollection } from "@/lib/db/repositories/nationalCommitteeCandidates";
+import { nationalCommitteeVotesCollection } from "@/lib/db/repositories/nationalCommitteeVotes";
+import { nationalCommitteeElectionsCollection } from "@/lib/db/repositories/nationalCommitteeElections";
 
 export const COMMITTEE_ELECTION_DURATION_TURNS = 168; // 168 turns = 1 week
 export const COMMITTEE_SIZE = 6; // Maximum committee members
@@ -74,10 +77,7 @@ export async function createMissingCommitteeElections(
 
   const [parties, activeElections] = await Promise.all([
     politicalPartiesCollection(db).find(scopedPartiesQuery).toArray(),
-    db
-      .collection<NationalCommitteeElection>("nationalCommitteeElections")
-      .find(scopedActiveElectionQuery)
-      .toArray(),
+    nationalCommitteeElectionsCollection(db).find(scopedActiveElectionQuery).toArray(),
   ]);
 
   // Use countryId:partyId as the key to distinguish parties across countries
@@ -128,7 +128,7 @@ export async function createMissingCommitteeElections(
   );
 
   const inserted = await insertManyIgnoringDuplicateKey(
-    db.collection<NationalCommitteeElection>("nationalCommitteeElections"),
+    nationalCommitteeElectionsCollection(db),
     elections as NationalCommitteeElection[]
   );
   if (inserted === 0) return 0;
@@ -163,8 +163,7 @@ export async function processCompletedCommitteeElections(
     },
     countryId
   );
-  const endedElections = await db
-    .collection<NationalCommitteeElection>("nationalCommitteeElections")
+  const endedElections = await nationalCommitteeElectionsCollection(db)
     .find(scopedEndedElectionQuery)
     .toArray();
 
@@ -188,12 +187,10 @@ export async function processCompletedCommitteeElections(
   const bannedCharacterIds = await getBannedCharacterIds(db);
 
   const [allCandidatesRaw, allVotesRaw, parties] = await Promise.all([
-    db
-      .collection<NationalCommitteeCandidate>("nationalCommitteeCandidates")
+    nationalCommitteeCandidatesCollection(db)
       .find({ electionId: { $in: electionIds }, status: "active" })
       .toArray(),
-    db
-      .collection<NationalCommitteeVote>("nationalCommitteeVotes")
+    nationalCommitteeVotesCollection(db)
       .find({ electionId: { $in: electionIds } })
       .toArray(),
     partyQueries.length > 0
@@ -336,21 +333,17 @@ export async function processCompletedCommitteeElections(
     );
   }
 
-  await db
-    .collection<NationalCommitteeElection>("nationalCommitteeElections")
-    .bulkWrite(electionOps);
+  await nationalCommitteeElectionsCollection(db).bulkWrite(electionOps);
 
   // Terminalize the resolved elections' candidacies. The candidate docs are
   // read for the tally above (status:"active"), so this must run afterward.
   // Without it they linger as "active" and trip the per-party unique index,
   // blocking the character from declaring in the next cycle's committee election
   // ("already running… withdraw first") with no UI path to clear them.
-  await db
-    .collection<NationalCommitteeCandidate>("nationalCommitteeCandidates")
-    .updateMany(
-      { electionId: { $in: electionIds }, status: "active" },
-      { $set: { status: "completed", resolvedAt: now } }
-    );
+  await nationalCommitteeCandidatesCollection(db).updateMany(
+    { electionId: { $in: electionIds }, status: "active" },
+    { $set: { status: "completed", resolvedAt: now } }
+  );
 
   await politicalPartiesCollection(db).bulkWrite(partyOps);
   await Promise.all(notifications);

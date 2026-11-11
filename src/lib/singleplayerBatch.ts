@@ -15,6 +15,7 @@ import type { Document } from "mongodb";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { notificationsCollection } from "@/lib/db/repositories/notifications";
+import { countryHistoryCollection } from "@/lib/db/repositories/countryHistory";
 
 /**
  * Multi-turn advance for a normal singleplayer world.
@@ -569,8 +570,7 @@ export function createDbBatchPorts(db: Db): BatchPorts {
     },
 
     async historyBetween(countryId, afterTurn, throughTurn) {
-      const docs = await db
-        .collection("countryHistory")
+      const docs = await countryHistoryCollection<Document>(db)
         .find({ countryId, turn: { $gt: afterTurn, $lte: throughTurn } })
         .sort({ turn: 1 })
         .limit(WORLD_EVENT_LIMIT)

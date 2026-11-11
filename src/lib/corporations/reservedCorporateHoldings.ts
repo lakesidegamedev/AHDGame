@@ -4,6 +4,7 @@ import { getControllingCorporateParent } from "@/lib/corporations/corporateOwner
 import { shouldRedactCorporation } from "@/lib/corporations/redaction";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
+import { shareListingsCollection } from "@/lib/db/repositories/shareListings";
 
 export interface ReservedCorporatePosition {
   corporationId: ObjectId;
@@ -85,8 +86,7 @@ export async function loadReservedCorporatePositions(
         placerCorporationId: { $exists: true },
       })
       .toArray(),
-    db
-      .collection<ShareListing>("shareListings")
+    shareListingsCollection(db)
       .find({
         corporationId: targetCorpId,
         status: "open",
@@ -120,8 +120,7 @@ export async function loadReservedCorporatePositionsByTarget(
         sharesRemaining: 1,
       })
       .toArray(),
-    db
-      .collection<ShareListing>("shareListings")
+    shareListingsCollection(db)
       .find({
         ...targetFilter,
         status: "open",
@@ -175,8 +174,7 @@ export async function loadReservedPositionsPlacedBy(
         status: "open",
       })
       .toArray(),
-    db
-      .collection<ShareListing>("shareListings")
+    shareListingsCollection(db)
       .find({
         sellerCorporationId: placerCorpId,
         status: "open",

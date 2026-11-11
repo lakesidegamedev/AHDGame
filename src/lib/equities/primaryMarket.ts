@@ -31,6 +31,7 @@ import {
   type LoadedPrimaryPlacementLimits,
 } from "./cashoutLimits";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporationPrivatizationVotesCollection } from "@/lib/db/repositories/corporationPrivatizationVotes";
 
 /** Maximum share of the pool's equity-liquidity allocation committed to one issue. */
 const EQUITY_PRIMARY_COMMIT_SHARE = 0.2;
@@ -288,8 +289,7 @@ export async function placePendingShareIssuances(
   // CEO's buyout reserve but would be paid out at resolve.
   const openVoteCorpIds = new Set(
     (
-      await db
-        .collection<CorporationPrivatizationVote>("corporationPrivatizationVotes")
+      await corporationPrivatizationVotesCollection(db)
         .find({ status: "open" }, { projection: { corporationId: 1 } })
         .toArray()
     ).map((v) => v.corporationId.toHexString())

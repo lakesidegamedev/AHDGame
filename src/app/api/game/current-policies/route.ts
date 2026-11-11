@@ -11,6 +11,7 @@ import {
 import { ObjectId } from "mongodb";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
+import { governorExecutiveOrdersCollection } from "@/lib/db/repositories/governorExecutiveOrders";
 
 // GET /api/game/current-policies — Returns current policy option indices for a given state or federal level.
 // Auth: public
@@ -40,8 +41,7 @@ export async function GET(request: Request) {
     const orderById = orderIds.length
       ? new Map(
           (
-            await db
-              .collection<GovernorExecutiveOrder>("governorExecutiveOrders")
+            await governorExecutiveOrdersCollection(db)
               .find({ _id: { $in: orderIds } })
               .toArray()
           ).map((o) => [o._id!.toString(), o])

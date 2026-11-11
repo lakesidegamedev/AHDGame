@@ -1,6 +1,7 @@
 import type { Db } from "mongodb";
 import type { AlignmentPoleId } from "@/lib/constants/alignmentEras";
 import type { MacroCountryState } from "@/lib/world/macro/types";
+import { macroCountriesCollection } from "@/lib/db/repositories/macroCountries";
 
 /**
  * Per-turn alignment pull each 2027 background country's government applies
@@ -15,8 +16,7 @@ export async function loadBackgroundStancePulls(
 ): Promise<Map<string, Partial<Record<AlignmentPoleId, number>>>> {
   const out = new Map<string, Partial<Record<AlignmentPoleId, number>>>();
   if (!poles.includes("WASHINGTON")) return out;
-  const docs = await db
-    .collection<MacroCountryState>("macroCountries")
+  const docs = await macroCountriesCollection<MacroCountryState>(db)
     .find(
       {
         simulationTier: "background-macro",

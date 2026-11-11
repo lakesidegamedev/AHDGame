@@ -3,6 +3,7 @@ import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError } from "@/lib/api/errors";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporationCeoVotesCollection } from "@/lib/db/repositories/corporationCeoVotes";
 
 interface CeoVote {
   corporationId: unknown;
@@ -30,9 +31,9 @@ export async function GET() {
     // Count votes for each vacant corporation
     const diagnostics = await Promise.all(
       vacantCorps.map(async (corp) => {
-        const voteCount = await db
-          .collection<CeoVote>("corporationCeoVotes")
-          .countDocuments({ corporationId: corp._id });
+        const voteCount = await corporationCeoVotesCollection<CeoVote>(db).countDocuments({
+          corporationId: corp._id,
+        });
 
         return {
           id: corp._id.toString(),
@@ -86,9 +87,9 @@ export async function POST() {
     const corpIds = vacantCorps.map((c) => c._id);
 
     // Delete all CEO votes for these corporations
-    const deleteResult = await db
-      .collection<CeoVote>("corporationCeoVotes")
-      .deleteMany({ corporationId: { $in: corpIds } });
+    const deleteResult = await corporationCeoVotesCollection<CeoVote>(db).deleteMany({
+      corporationId: { $in: corpIds },
+    });
 
     // Clear pendingCeoCharacterId for these corporations
     const updateResult = await corporationsCollection(db).updateMany(

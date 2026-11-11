@@ -11,6 +11,7 @@ import { getPoliticalPartiesCollection } from "@/lib/db/collections/politicalPar
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { caucusesCollection } from "@/lib/db/repositories/caucuses";
 
 /*
  * Reference infamy level at which the infamy penalty reaches its configured
@@ -186,8 +187,7 @@ export async function processPartyInfluenceTurn(
   // Caucus leadership — chairs / vice chairs of ACTIVE caucuses (disbandedAt: null)
   // accumulate partyInfluence the same way state-org leaders do. Same magnitude as
   // the state-org roles (chair +2, vice +1). Build sets keyed by character id.
-  const caucuses = await db
-    .collection<Caucus>("caucuses")
+  const caucuses = await caucusesCollection(db)
     .find(
       {
         disbandedAt: null,

@@ -20,6 +20,7 @@ import { normalizeDiscordInviteUrl } from "@/lib/discord/invite";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import type { Document } from "mongodb";
+import { caucusesCollection } from "@/lib/db/repositories/caucuses";
 
 // GET /api/country/[code]/parties/[id]/caucuses/[slug] — Detail view of a single caucus including policy positions
 // Auth: requireAuth
@@ -208,7 +209,7 @@ export async function PATCH(
       }
       if (newSlug !== caucus.slug) {
         // Active-slug collision check.
-        const collision = await db.collection<Caucus>("caucuses").findOne({
+        const collision = await caucusesCollection(db).findOne({
           countryId,
           partyId,
           slug: newSlug,
@@ -222,7 +223,7 @@ export async function PATCH(
           );
         }
         // Push the old slug onto previousSlugs and adopt the new one.
-        await db.collection<Caucus>("caucuses").updateOne(
+        await caucusesCollection(db).updateOne(
           { _id: caucus._id },
           {
             $addToSet: { previousSlugs: caucus.slug },
@@ -234,12 +235,10 @@ export async function PATCH(
       }
     }
 
-    await db
-      .collection<Caucus>("caucuses")
-      .updateOne(
-        { _id: caucus._id },
-        { $set: { ...updates, ...renameOps } as Record<string, unknown> }
-      );
+    await caucusesCollection(db).updateOne(
+      { _id: caucus._id },
+      { $set: { ...updates, ...renameOps } as Record<string, unknown> }
+    );
 
     return NextResponse.json({
       success: true,
@@ -287,9 +286,10 @@ export async function DELETE(
     const now = new Date();
     // Soft-delete the caucus. The slug becomes immediately reclaimable —
     // findCaucusBySlug only matches docs where disbandedAt is null.
-    await db
-      .collection<Caucus>("caucuses")
-      .updateOne({ _id: caucus._id }, { $set: { disbandedAt: now, updatedAt: now } });
+    await caucusesCollection(db).updateOne(
+      { _id: caucus._id },
+      { $set: { disbandedAt: now, updatedAt: now } }
+    );
 
     // Mark all active memberships as removed and clear factionId on player members.
     const activeMemberships = await db

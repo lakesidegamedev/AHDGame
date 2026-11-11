@@ -21,6 +21,8 @@ import {
 import { getGameState } from "@/lib/gameState";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { crisesCollection } from "@/lib/db/repositories/crises";
+import { crisisAidCommitmentsCollection } from "@/lib/db/repositories/crisisAidCommitments";
+import type { Document } from "mongodb";
 
 /**
  * GET /api/crises/[id]/interaction
@@ -126,9 +128,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       const budget = await federalBudgetCollection(db).findOne({ countryId: character.countryId });
       const senderGdp =
         budget?.gdpSmoothed && budget.gdpSmoothed > 0 ? budget.gdpSmoothed : (budget?.gdp ?? 0);
-      const pledged = await db
-        .collection("crisisAidCommitments")
-        .findOne({ crisisId: new ObjectId(id), senderCountryId: character.countryId });
+      const pledged = await crisisAidCommitmentsCollection<Document>(db).findOne({
+        crisisId: new ObjectId(id),
+        senderCountryId: character.countryId,
+      });
       aidContext = {
         senderGdp,
         senderTreasuryBalance: budget?.treasuryBalance ?? 0,

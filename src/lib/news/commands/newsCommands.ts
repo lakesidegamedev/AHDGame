@@ -22,6 +22,10 @@ import { serializeNewsPost, serializeNewsReply } from "@/lib/news/dto/newsView";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { usersCollection } from "@/lib/db/repositories/users";
+import { newsPostsCollection } from "@/lib/db/repositories/newsPosts";
+import type { Document } from "mongodb";
+import { newsReactionsCollection } from "@/lib/db/repositories/newsReactions";
+import { userSubscriptionsCollection } from "@/lib/db/repositories/userSubscriptions";
 
 interface CreateNewsPostInput {
   userId: string;
@@ -88,7 +92,7 @@ export async function createNewsPost(
     }
   }
 
-  const lastSameKind = await db.collection<NewsPost>("newsPosts").findOne(
+  const lastSameKind = await newsPostsCollection(db).findOne(
     {
       authorId: character._id,
       parentId: { $exists: false },
@@ -159,7 +163,7 @@ export async function createNewsPost(
     }
 
     try {
-      const result = await db.collection("newsPosts").insertOne(post);
+      const result = await newsPostsCollection<Document>(db).insertOne(post);
       return finishNewsPost(db, userId, character, post, result.insertedId, now);
     } catch (error) {
       await charactersCollection(db).updateOne(
@@ -176,7 +180,7 @@ export async function createNewsPost(
     }
   }
 
-  const result = await db.collection("newsPosts").insertOne(post);
+  const result = await newsPostsCollection<Document>(db).insertOne(post);
   return finishNewsPost(db, userId, character, post, result.insertedId, now);
 }
 
@@ -194,7 +198,7 @@ export async function editNewsPost(
   }
 
   const postOid = new ObjectId(postId);
-  const post = await db.collection<NewsPost>("newsPosts").findOne({ _id: postOid });
+  const post = await newsPostsCollection(db).findOne({ _id: postOid });
   if (!post) {
     throw notFound("Post not found");
   }
@@ -238,7 +242,7 @@ export async function editNewsPost(
   if (Object.keys(unset).length > 0) {
     update.$unset = unset;
   }
-  await db.collection<NewsPost>("newsPosts").updateOne({ _id: postOid }, update);
+  await newsPostsCollection(db).updateOne({ _id: postOid }, update);
 
   // Rebuild the view the same way finishNewsPost does — reuse the border fetch.
   const updatedPost: NewsPost = { ...post, content, editedAt: now, updatedAt: now };
@@ -283,7 +287,7 @@ export async function createNewsReply(
   }
 
   const postOid = new ObjectId(postId);
-  const parentPost = await db.collection<NewsPost>("newsPosts").findOne({ _id: postOid });
+  const parentPost = await newsPostsCollection(db).findOne({ _id: postOid });
   if (!parentPost) {
     throw notFound("Post not found");
   }
@@ -308,8 +312,8 @@ export async function createNewsReply(
     updatedAt: now,
   };
 
-  const result = await db.collection("newsPosts").insertOne(reply);
-  await db.collection("newsPosts").updateOne({ _id: postOid }, { $inc: { replyCount: 1 } });
+  const result = await newsPostsCollection<Document>(db).insertOne(reply);
+  await newsPostsCollection<Document>(db).updateOne({ _id: postOid }, { $inc: { replyCount: 1 } });
 
   try {
     const { checkNewsReplyAchievements } = await import("@/lib/achievements/triggers");
@@ -340,14 +344,12 @@ export async function reactToNewsPost(
 
   const postOid = new ObjectId(postId);
   const userOid = new ObjectId(userId);
-  const post = await db.collection<NewsPost>("newsPosts").findOne({ _id: postOid });
+  const post = await newsPostsCollection(db).findOne({ _id: postOid });
   if (!post) {
     throw notFound("Post not found");
   }
 
-  const existing = await db
-    .collection<NewsReaction>("newsReactions")
-    .findOne({ postId: postOid, userId: userOid });
+  const existing = await newsReactionsCollection(db).findOne({ postId: postOid, userId: userOid });
 
   let agreeChange = 0;
   let disagreeChange = 0;
@@ -355,7 +357,7 @@ export async function reactToNewsPost(
 
   if (existing) {
     if (existing.reaction === reaction) {
-      await db.collection("newsReactions").deleteOne({ _id: existing._id });
+      await newsReactionsCollection<Document>(db).deleteOne({ _id: existing._id });
       if (reaction === "agree") {
         agreeChange = -1;
       } else {
@@ -363,7 +365,10 @@ export async function reactToNewsPost(
       }
       userReaction = null;
     } else {
-      await db.collection("newsReactions").updateOne({ _id: existing._id }, { $set: { reaction } });
+      await newsReactionsCollection<Document>(db).updateOne(
+        { _id: existing._id },
+        { $set: { reaction } }
+      );
       if (reaction === "agree") {
         agreeChange = 1;
         disagreeChange = -1;
@@ -380,7 +385,7 @@ export async function reactToNewsPost(
       reaction,
       createdAt: new Date(),
     };
-    await db.collection("newsReactions").insertOne(newReaction);
+    await newsReactionsCollection<Document>(db).insertOne(newReaction);
     if (reaction === "agree") {
       agreeChange = 1;
     } else {
@@ -396,9 +401,9 @@ export async function reactToNewsPost(
   if (disagreeChange !== 0) {
     update["reactions.disagree"] = disagreeChange;
   }
-  await db.collection("newsPosts").updateOne({ _id: postOid }, { $inc: update });
+  await newsPostsCollection<Document>(db).updateOne({ _id: postOid }, { $inc: update });
 
-  const updatedPost = await db.collection<NewsPost>("newsPosts").findOne({ _id: postOid });
+  const updatedPost = await newsPostsCollection(db).findOne({ _id: postOid });
   return {
     reactions: updatedPost?.reactions ?? { agree: 0, disagree: 0 },
     userReaction,
@@ -458,22 +463,21 @@ async function autoReactFromDiscordLinkedUser(
     }
 
     const reactingUserId = new ObjectId(userId);
-    const alreadyReacted = await db
-      .collection<NewsReaction>("newsReactions")
-      .findOne({ postId, userId: reactingUserId });
+    const alreadyReacted = await newsReactionsCollection(db).findOne({
+      postId,
+      userId: reactingUserId,
+    });
     if (alreadyReacted) {
       return;
     }
 
-    await db.collection<NewsReaction>("newsReactions").insertOne({
+    await newsReactionsCollection(db).insertOne({
       postId,
       userId: reactingUserId,
       reaction: "agree",
       createdAt: now,
     } as NewsReaction);
-    await db
-      .collection<NewsPost>("newsPosts")
-      .updateOne({ _id: postId }, { $inc: { "reactions.agree": 1 } });
+    await newsPostsCollection(db).updateOne({ _id: postId }, { $inc: { "reactions.agree": 1 } });
   } catch {
     // non-fatal
   }
@@ -542,9 +546,10 @@ async function sendNewsDiscordWebhook(
 
     const discordMsgId = await sendNewsEvent(embed);
     if (discordMsgId) {
-      await db
-        .collection("newsPosts")
-        .updateOne({ _id: resultId }, { $set: { discordMessageId: discordMsgId } });
+      await newsPostsCollection<Document>(db).updateOne(
+        { _id: resultId },
+        { $set: { discordMessageId: discordMsgId } }
+      );
     }
   } catch {
     // non-fatal
@@ -558,8 +563,7 @@ async function notifySubscribers(
   postId: ObjectId
 ): Promise<void> {
   try {
-    const subscriptions = await db
-      .collection<UserSubscription>("userSubscriptions")
+    const subscriptions = await userSubscriptionsCollection(db)
       .find({ subscribedToCharacterId: character._id })
       .toArray();
     if (subscriptions.length === 0) {

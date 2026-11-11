@@ -44,6 +44,7 @@ import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import type { Document } from "mongodb";
 import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { seatsCollection } from "@/lib/db/repositories/seats";
 
 /**
  * NG elections run once Nigeria is off "coming-soon". Gated on the RUNTIME
@@ -634,7 +635,7 @@ export async function ensurePerpetualElections(now: Date, currentTurn?: number):
     const territorySeats = territorialGovernorStateIds.map((stateId) =>
       buildUsTerritorialGovernorSeat(stateId, now)
     );
-    await db.collection<Seat>("seats").bulkWrite(
+    await seatsCollection(db).bulkWrite(
       territorySeats.map((seat) => {
         const { _id, ...body } = seat;
         return {

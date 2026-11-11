@@ -173,6 +173,8 @@ import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
 import type { Document } from "mongodb";
+import { organizationMembershipsCollection } from "@/lib/db/repositories/organizationMemberships";
+import { tariffsCollection } from "@/lib/db/repositories/tariffs";
 
 export interface CommodityPriceTurnResult {
   commoditiesUpdated: number;
@@ -927,11 +929,10 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
   await reconcileSignedEmbargoBills(db, turn);
   const [ftaPairs, orgMembershipDocs, tariffDocs, embargoDocs, treatyTermDocs] = await Promise.all([
     loadActiveFtaPairs(db),
-    db
-      .collection<OrganizationMembership>("organizationMemberships")
+    organizationMembershipsCollection(db)
       .find({}, { projection: { countryId: 1, organizationId: 1 } })
       .toArray(),
-    db.collection<Tariff>("tariffs").find({}).toArray(),
+    tariffsCollection(db).find({}).toArray(),
     db
       .collection<TradeEmbargo>("tradeEmbargoes")
       .find({ $or: [{ expiresTurn: { $exists: false } }, { expiresTurn: { $gte: turn } }] })

@@ -5,6 +5,7 @@ import type { CharacterAchievement, User } from "@/lib/db/types";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { usersCollection } from "@/lib/db/repositories/users";
+import { characterAchievementsCollection } from "@/lib/db/repositories/characterAchievements";
 
 interface RouteParams {
   params: Promise<{ achievementId: string }>;
@@ -17,8 +18,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
       return errorResponse(400, "Invalid achievement ID");
     }
     const db = await getDb();
-    const awards = await db
-      .collection<CharacterAchievement>("characterAchievements")
+    const awards = await characterAchievementsCollection(db)
       .find({ achievementId: new ObjectId(achievementId) })
       .sort({ earnedAt: -1 })
       .limit(5)

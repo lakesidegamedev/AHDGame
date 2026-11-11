@@ -4,6 +4,8 @@ import { runFinancialSuspectScan } from "@/lib/financialTxLog/suspectScan";
 import { runAuditAnomalyScan } from "@/lib/audit/anomalyScan";
 import { processSuspiciousDetection } from "@/lib/turn/suspiciousDetection";
 import { resolveAnomalyScanCadence } from "@/simulation/phases/anomalyScanCadence";
+import { turnLogsCollection } from "@/lib/db/repositories/turnLogs";
+import type { Document } from "mongodb";
 
 /**
  * Anti-abuse scans run after the turn commits, not inside it.
@@ -79,7 +81,7 @@ export async function runPostTurnIntegrityScans(
 ): Promise<Record<PostTurnScanName, ScanRecord> | null> {
   if (!isPostTurnScanTurn(turn, options.everyTurns)) return null;
   const now = options.now ?? (() => new Date());
-  const logs = db.collection("turnLogs");
+  const logs = turnLogsCollection<Document>(db);
   if (globalThis._ahdPostTurnScansRunning) {
     await logs
       .updateOne(

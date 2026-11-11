@@ -33,6 +33,7 @@ import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
 import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
 import { stateBaselinesCollection } from "@/lib/db/repositories/stateBaselines";
+import { demographicDefaultsCollection } from "@/lib/db/repositories/demographicDefaults";
 
 export async function seedUKRegions(
   db: Db,
@@ -169,7 +170,7 @@ export async function seedUKDemographics(
 ) {
   if (reset) {
     await stateDemographicsCollection<Document>(db).deleteMany({ countryId: "UK" });
-    await db.collection("demographicDefaults").deleteMany({ countryId: "UK" });
+    await demographicDefaultsCollection<Document>(db).deleteMany({ countryId: "UK" });
     await stateDemographicTurnoutCollection<Document>(db).deleteMany({ countryId: "UK" });
   }
   const { default: ukRegionDemographicsStatic } =
@@ -207,9 +208,7 @@ export async function seedUKDemographics(
   for (const sd of ukRegionDemographics) {
     const { _id, groups: _groups, ...sdData } = sd;
     await stateDemographicsCollection(db).updateOne({ _id }, { $set: sdData }, { upsert: true });
-    await db
-      .collection<StateDemographics>("demographicDefaults")
-      .updateOne({ _id }, { $set: sdData }, { upsert: true });
+    await demographicDefaultsCollection(db).updateOne({ _id }, { $set: sdData }, { upsert: true });
     const lean = calculateStateLeanForCache(sd, [], {
       countryId: "UK",
       stateId: sd._id,

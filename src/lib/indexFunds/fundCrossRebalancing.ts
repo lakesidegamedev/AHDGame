@@ -25,6 +25,8 @@ import { runWithOptionalTransaction } from "@/lib/db/runWithOptionalTransaction"
 import { emitTx } from "@/lib/financialTxLog/emit";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { indexFundTransactionsCollection } from "@/lib/db/repositories/indexFundTransactions";
+import type { Document } from "mongodb";
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -368,17 +370,17 @@ async function executeSingleTransfer(
 
       if (completed.buyerTransactionId) {
         await attempt("delete buyer transaction", async () => {
-          const deleted = await db
-            .collection("indexFundTransactions")
-            .deleteOne({ _id: completed.buyerTransactionId });
+          const deleted = await indexFundTransactionsCollection<Document>(db).deleteOne({
+            _id: completed.buyerTransactionId,
+          });
           return deleted.deletedCount === 1;
         });
       }
       if (completed.sellerTransactionId) {
         await attempt("delete seller transaction", async () => {
-          const deleted = await db
-            .collection("indexFundTransactions")
-            .deleteOne({ _id: completed.sellerTransactionId });
+          const deleted = await indexFundTransactionsCollection<Document>(db).deleteOne({
+            _id: completed.sellerTransactionId,
+          });
           return deleted.deletedCount === 1;
         });
       }

@@ -13,6 +13,10 @@ import type { PlantsUnits } from "./ledgerTypes";
 import type { CountryLedger, GlobalLedger } from "./ledgerTypes";
 import { buildPriceHistoryDocs } from "./pricing";
 import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
+import { commodityFlowsCollection } from "@/lib/db/repositories/commodityFlows";
+import type { Document } from "mongodb";
+import { commodityPriceHistoryCollection } from "@/lib/db/repositories/commodityPriceHistory";
+import { tradeFlowSnapshotsCollection } from "@/lib/db/repositories/tradeFlowSnapshots";
 
 export interface TurnPersistenceInputs {
   marketSystemMode: Parameters<typeof marketAtLeast>[0];
@@ -127,7 +131,7 @@ export async function persistTurnOutputs(
   });
   // Upsert by {commodity, turn} so cron retries overwrite rather than append.
   if (historyDocs.length > 0) {
-    await db.collection("commodityPriceHistory").bulkWrite(
+    await commodityPriceHistoryCollection<Document>(db).bulkWrite(
       historyDocs.map((doc) => ({
         replaceOne: {
           filter: { commodity: doc.commodity, turn: doc.turn },
@@ -141,7 +145,7 @@ export async function persistTurnOutputs(
   // Prune history older than 5 game years (240 turns) to cap storage
   const pruneCutoff = turn - 240;
   if (pruneCutoff > 0) {
-    await db.collection("commodityPriceHistory").deleteMany({ turn: { $lt: pruneCutoff } });
+    await commodityPriceHistoryCollection<Document>(db).deleteMany({ turn: { $lt: pruneCutoff } });
   }
 
   // ── Commodity flow ledger (marketSystemMode >= "ledger", audit t806 Fix 3/D0) ──
@@ -151,8 +155,7 @@ export async function persistTurnOutputs(
   // (inventory, throughput coupling) build on these rows.
   if (marketAtLeast(marketSystemMode, "ledger")) {
     // Prior turn's stock rows seed this turn's inventory accumulation.
-    const prevFlows = await db
-      .collection("commodityFlows")
+    const prevFlows = await commodityFlowsCollection<Document>(db)
       .find({ turn: turn - 1 }, { projection: { commodity: 1, stockUnits: 1 } })
       .toArray();
     const prevStockByCommodity = new Map<CommodityType, number>(
@@ -175,12 +178,11 @@ export async function persistTurnOutputs(
     if (flowDocs.length > 0) {
       // Lazy index for the {commodity} + latest-turn read path (commodity page)
       // and the upsert filter below. Fire-and-forget, same as wireEvent.
-      void db
-        .collection("commodityFlows")
+      void commodityFlowsCollection<Document>(db)
         .createIndex({ commodity: 1, turn: -1 })
         .catch(() => {});
       // Upsert by {commodity, turn} so cron retries overwrite rather than append.
-      await db.collection("commodityFlows").bulkWrite(
+      await commodityFlowsCollection<Document>(db).bulkWrite(
         flowDocs.map((doc) => ({
           replaceOne: {
             filter: { commodity: doc.commodity, turn: doc.turn },
@@ -192,7 +194,7 @@ export async function persistTurnOutputs(
     }
     const flowPruneCutoff = turn - COMMODITY_FLOW_RETENTION_TURNS;
     if (flowPruneCutoff > 0) {
-      await db.collection("commodityFlows").deleteMany({ turn: { $lt: flowPruneCutoff } });
+      await commodityFlowsCollection<Document>(db).deleteMany({ turn: { $lt: flowPruneCutoff } });
     }
   }
 
@@ -209,11 +211,10 @@ export async function persistTurnOutputs(
   // Read path for the reachable books is "latest turn that has them", so the
   // descending-turn index is what keeps it O(1) as the snapshot history grows.
   // Fire-and-forget, mirroring commodityFlows/commoditySourcingFlows above.
-  void db
-    .collection("tradeFlowSnapshots")
+  void tradeFlowSnapshotsCollection<Document>(db)
     .createIndex({ turn: -1 })
     .catch(() => {});
-  await db.collection("tradeFlowSnapshots").updateOne(
+  await tradeFlowSnapshotsCollection<Document>(db).updateOne(
     { turn },
     {
       $set: {

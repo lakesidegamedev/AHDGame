@@ -30,6 +30,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { supplyListingsCollection } from "@/lib/db/repositories/supplyListings";
 
 type Context = { params: Promise<{ id: string }> };
 const privateHeaders = { "Cache-Control": "private, no-store" };
@@ -65,7 +66,7 @@ export async function GET(request: Request, context: Context) {
     });
     if (!query.success) return errorResponse(400, "Invalid listing filter");
     const turn = await getCurrentTurn(a.db);
-    const collection = a.db.collection<SupplyListing>("supplyListings");
+    const collection = supplyListingsCollection(a.db);
     const [rows, own, viewerSectors] = await Promise.all([
       collection
         .find({
@@ -138,7 +139,7 @@ export async function POST(request: Request, context: Context) {
     if (!parsed.success) return errorResponse(parsed.status, parsed.error);
     const body = parsed.data;
     const id = `${a.corp._id}:${body.slot}`;
-    const collection = a.db.collection<SupplyListing>("supplyListings");
+    const collection = supplyListingsCollection(a.db);
     if (body.action === "withdraw") {
       await collection.deleteOne({ _id: id, corporationId: a.corp._id });
       return NextResponse.json({ success: true }, { headers: privateHeaders });

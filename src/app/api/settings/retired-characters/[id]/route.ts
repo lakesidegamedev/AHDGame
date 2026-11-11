@@ -11,6 +11,7 @@ import type { RetiredCharacter } from "@/lib/db/types/retiredCharacter";
 import type { GameState } from "@/lib/db/types";
 import { gameDateAnchorFromState } from "@/lib/utils/gameDate";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { retiredCharactersCollection } from "@/lib/db/repositories/retiredCharacters";
 
 async function handleGET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -25,7 +26,7 @@ async function handleGET(_request: Request, { params }: { params: Promise<{ id: 
 
     const db = await getDb();
     const [retired, gameState] = await Promise.all([
-      db.collection<RetiredCharacter>("retiredCharacters").findOne({ _id: new ObjectId(id) }),
+      retiredCharactersCollection(db).findOne({ _id: new ObjectId(id) }),
       gameStateCollection(db).findOne({ _id: "current" }),
     ]);
 

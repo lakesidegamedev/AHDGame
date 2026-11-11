@@ -4,6 +4,7 @@ import type { MacroCountryState } from "@/lib/world/macro/types";
 import type { SuccessionAccountingSnapshot } from "./normalizeLiveFinances";
 import type { SuccessionFiscalShare } from "./rules/fiscalShares";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { macroCountriesCollection } from "@/lib/db/repositories/macroCountries";
 
 export const FEDERATION_FISCAL_ACCOUNTS_COLLECTION = "federationFiscalAccounts";
 
@@ -93,7 +94,7 @@ export async function materializeFederationFiscalAccounts(input: {
   }));
   for (const account of accounts) {
     if (account.kind !== "background-successor") continue;
-    const updated = await db.collection<MacroCountryState>("macroCountries").updateOne(
+    const updated = await macroCountriesCollection<MacroCountryState>(db).updateOne(
       {
         _id: account.entityId,
         presetId: "1991-default",

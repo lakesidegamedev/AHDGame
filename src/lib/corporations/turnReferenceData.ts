@@ -14,6 +14,8 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
+import { tariffsCollection } from "@/lib/db/repositories/tariffs";
+import { subsidiesCollection } from "@/lib/db/repositories/subsidies";
 
 export type TurnStateProjection = Pick<
   State,
@@ -76,8 +78,8 @@ async function loadTurnReferenceData(db: Db): Promise<TurnReferenceData> {
     statesCollection(db)
       .find({}, { projection: { _id: 1, name: 1, countryId: 1, sectorSpecializations: 1, gdp: 1 } })
       .toArray() as Promise<TurnStateProjection[]>,
-    db.collection<Tariff>("tariffs").find({}).toArray(),
-    db.collection<Subsidy>("subsidies").find({ active: true }).toArray(),
+    tariffsCollection(db).find({}).toArray(),
+    subsidiesCollection(db).find({ active: true }).toArray(),
     exchangeRatesCollection(db).find({}).toArray(),
     stateBudgetsCollection(db)
       .find(

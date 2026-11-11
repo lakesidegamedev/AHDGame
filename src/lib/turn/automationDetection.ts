@@ -2,6 +2,8 @@ import { ObjectId, type Db } from "mongodb";
 import type { SuspiciousFlag } from "@/lib/db/types/activityLog";
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { actionLogsCollection } from "@/lib/db/repositories/actionLogs";
+import type { Document } from "mongodb";
 
 export const AUTOMATION_FLAG_TYPE = "automation_timing";
 
@@ -217,8 +219,7 @@ export async function detectAutomationTiming(
   const userIds = [...new Set(chars.map((c) => c.userId.toString()))].map((id) => new ObjectId(id));
   const since = new Date(now.getTime() - AUTOMATION_LOOKBACK_MS);
 
-  const logs = await db
-    .collection("actionLogs")
+  const logs = await actionLogsCollection<Document>(db)
     .find<{ userId: ObjectId; actionType: string; createdAt: Date; username?: string }>(
       { userId: { $in: userIds }, createdAt: { $gte: since } },
       { projection: { userId: 1, actionType: 1, createdAt: 1, username: 1 } }

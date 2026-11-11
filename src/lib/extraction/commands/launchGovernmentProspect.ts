@@ -25,6 +25,7 @@ import {
 } from "@/lib/constants/prospecting";
 import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { governorOfficeStateCollection } from "@/lib/db/repositories/governorOfficeState";
 
 export interface GovernmentProspectCosts {
   costAnchor: number;
@@ -385,12 +386,10 @@ export async function launchGovernmentProspect(
     await spendFromTreasury(db, countryId, costLocal);
   } else {
     // Spend 1 gubernatorial action point atomically.
-    const apSpend = await db
-      .collection<GovernorOfficeState>("governorOfficeState")
-      .updateOne(
-        { countryId, stateId, gubernatorialActions: { $gte: 1 } },
-        { $inc: { gubernatorialActions: -1 }, $set: { updatedAt: now } }
-      );
+    const apSpend = await governorOfficeStateCollection(db).updateOne(
+      { countryId, stateId, gubernatorialActions: { $gte: 1 } },
+      { $inc: { gubernatorialActions: -1 }, $set: { updatedAt: now } }
+    );
     if (apSpend.modifiedCount === 0) {
       return { ok: false, status: 402, error: "Insufficient office action points." };
     }

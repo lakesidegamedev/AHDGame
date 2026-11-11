@@ -23,6 +23,7 @@ import { demographicFlowBatchId, type DemographicFlowReceiptStatus } from "./rul
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { countiesCollection } from "@/lib/db/repositories/counties";
 
 export const DEMOGRAPHIC_FLOW_RECEIPTS = "demographicFlowReceipts";
 export const DEMOGRAPHIC_FLOW_PROJECTIONS = "demographicFlowProjections";
@@ -314,8 +315,7 @@ async function materializeReceipt(
     (p.countyPopulationsAfter ?? []).map((c) => ({ ...c, stateId: p.regionId }))
   );
   const countyTargets = countyPlans.length
-    ? await db
-        .collection<County>("counties")
+    ? await countiesCollection(db)
         .find(
           { _id: { $in: countyPlans.map((c) => c.id) } },
           { projection: { _id: 1, countryId: 1, stateId: 1, populationFlowStamp: 1 } }
@@ -372,11 +372,9 @@ async function materializeReceipt(
         update: { $set: { population: c.population, [STAMP_FIELD]: stamp } },
       },
     }));
-  if (countyOps.length)
-    await db.collection<County>("counties").bulkWrite(countyOps, { ordered: true });
+  if (countyOps.length) await countiesCollection(db).bulkWrite(countyOps, { ordered: true });
   if (countyPlans.length) {
-    const confirmed = await db
-      .collection<County>("counties")
+    const confirmed = await countiesCollection(db)
       .find(
         { _id: { $in: countyPlans.map((c) => c.id) } },
         { projection: { _id: 1, countryId: 1, stateId: 1, population: 1, populationFlowStamp: 1 } }

@@ -17,6 +17,7 @@ import {
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
+import { shareListingsCollection } from "@/lib/db/repositories/shareListings";
 
 export type ConvertCorpCurrencyResult = ConvertCorpCurrencySuccess | ConvertCorpCurrencyError;
 
@@ -202,8 +203,7 @@ export async function convertCorpCurrency(
 
   // 2. Cancel open share listings (and refund pending-offer escrows) — same
   //    ordering rationale as orders. Also abort-on-failure.
-  const openListings = await db
-    .collection<ShareListing>("shareListings")
+  const openListings = await shareListingsCollection(db)
     .find({ corporationId: corp._id, status: "open" })
     .toArray();
   let listingsCancelled = 0;

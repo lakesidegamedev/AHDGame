@@ -22,6 +22,8 @@ import {
 } from "./officePoolTopUpRules";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { supremeCourtSeatsCollection } from "@/lib/db/repositories/supremeCourtSeats";
+import { governorOfficeStateCollection } from "@/lib/db/repositories/governorOfficeState";
 
 export { OFFICE_POOL_TOP_UP_AP_COST } from "./officePoolTopUpRules";
 export type { OfficePoolKind } from "./officePoolTopUpRules";
@@ -154,9 +156,7 @@ async function resolveJusticePool(
   countryId: CountryId,
   seatNumber: number
 ): Promise<Resolution> {
-  const seat = await db
-    .collection<SupremeCourtSeat>("supremeCourtSeats")
-    .findOne({ countryId, seatNumber });
+  const seat = await supremeCourtSeatsCollection(db).findOne({ countryId, seatNumber });
   if (!seat) return { ok: false, status: 404, error: "Court seat not found" };
   if (!sameId(seat.justiceCharacterId, characterId)) {
     return {
@@ -166,9 +166,10 @@ async function resolveJusticePool(
     };
   }
   if (seat.justiceActionsRemaining == null) {
-    await db
-      .collection<SupremeCourtSeat>("supremeCourtSeats")
-      .updateOne({ _id: seat._id }, { $set: initialJusticeActionFields() });
+    await supremeCourtSeatsCollection(db).updateOne(
+      { _id: seat._id },
+      { $set: initialJusticeActionFields() }
+    );
   }
   return {
     ok: true,
@@ -199,9 +200,7 @@ async function resolveGubernatorialPool(
   if (!isHolder) {
     return { ok: false, status: 403, error: "Only the sitting office-holder can buy actions" };
   }
-  const office = await db
-    .collection<GovernorOfficeState>("governorOfficeState")
-    .findOne({ countryId, stateId });
+  const office = await governorOfficeStateCollection(db).findOne({ countryId, stateId });
   if (!office?._id) return { ok: false, status: 404, error: "Office not found" };
   return {
     ok: true,

@@ -9,6 +9,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { parliamentaryGovernmentsCollection } from "@/lib/db/repositories/parliamentaryGovernments";
 
 export interface PolicyHeadSponsor {
   _id: ObjectId;
@@ -42,8 +43,7 @@ export async function loadPolicyHeadSponsors(
         characterId: { $ne: null },
       })
       .toArray(),
-    db
-      .collection<ParliamentaryGovernment>("parliamentaryGovernments")
+    parliamentaryGovernmentsCollection(db)
       .find({ _id: { $in: countryIds.filter((countryId) => !presidential.has(countryId)) } })
       .toArray(),
   ]);

@@ -117,6 +117,7 @@ import type { Document } from "mongodb";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
+import { governorExecutiveOrdersCollection } from "@/lib/db/repositories/governorExecutiveOrders";
 
 type EnactableBill = Pick<
   Bill | StateBill,
@@ -1021,7 +1022,7 @@ async function processProvisionEnactment(
     legislationTypeId: provision.legislationTypeId,
   });
   if (priorPolicy?.enactedBy?.kind === "order") {
-    await db.collection("governorExecutiveOrders").updateOne(
+    await governorExecutiveOrdersCollection<Document>(db).updateOne(
       { _id: priorPolicy.enactedBy.id, status: "active" },
       {
         $set: {

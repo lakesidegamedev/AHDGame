@@ -5,6 +5,7 @@ import { AUTOMATION_FLAG_TYPE } from "@/lib/turn/automationDetection";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { usersCollection } from "@/lib/db/repositories/users";
 import type { Document } from "mongodb";
+import { suspiciousCharactersCollection } from "@/lib/db/repositories/suspiciousCharacters";
 
 export type RawSuspicious = SuspiciousCharacter;
 export type SuspiciousEntryOut = SuspiciousCharacter & { accountDeleted: boolean };
@@ -154,8 +155,7 @@ export async function fetchSuspiciousList(
   if (!params.showDismissed) baseFilter.dismissed = false;
   baseFilter.pool = params.showResolved ? "resolved" : { $ne: "resolved" };
 
-  const entries = (await db
-    .collection<SuspiciousCharacter>("suspiciousCharacters")
+  const entries = (await suspiciousCharactersCollection(db)
     .find(baseFilter)
     .toArray()) as RawSuspicious[];
 

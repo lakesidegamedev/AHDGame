@@ -77,6 +77,9 @@ import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { usersCollection } from "@/lib/db/repositories/users";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { crisisInteractionsCollection } from "@/lib/db/repositories/crisisInteractions";
+import { statePartyCandidatesCollection } from "@/lib/db/repositories/statePartyCandidates";
+import { statePartyElectionsCollection } from "@/lib/db/repositories/statePartyElections";
+import { wealthListHistoryCollection } from "@/lib/db/repositories/wealthListHistory";
 
 /** Database-name prefix every sandbox sim world uses (`ahd_sim_<seed>`). */
 export const SIM_SANDBOX_DB_PREFIX = "ahd_sim_";
@@ -416,7 +419,7 @@ export async function materializeSyntheticActors(
   if (targetOrg) {
     const orgCountryId = (targetOrg.countryId ?? "US") as CountryId;
     for (const position of ["chair"] as const) {
-      const existing = await db.collection("statePartyElections").findOne({
+      const existing = await statePartyElectionsCollection<Document>(db).findOne({
         stateId: targetOrg.stateId,
         partyId: targetOrg.partyId,
         countryId: orgCountryId,
@@ -751,11 +754,11 @@ export async function readActorPopulation(
   const syntheticIdSet = syntheticIds.map((d) => d._id);
   const [statePartyCandidates, crisisDecidedInteractions, wealthListRows, playerFoundedCorps] =
     await Promise.all([
-      db.collection("statePartyCandidates").countDocuments({}),
+      statePartyCandidatesCollection<Document>(db).countDocuments({}),
       crisisInteractionsCollection<Document>(db).countDocuments({
         resolutionPath: { $exists: true, $ne: [] },
       }),
-      db.collection("wealthListHistory").countDocuments({}),
+      wealthListHistoryCollection<Document>(db).countDocuments({}),
       syntheticIdSet.length > 0
         ? corporationsCollection(db).countDocuments({
             ceoType: "character",

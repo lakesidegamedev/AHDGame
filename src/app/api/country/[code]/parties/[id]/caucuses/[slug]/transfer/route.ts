@@ -19,6 +19,7 @@ import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParti
 import { adminLogsCollection } from "@/lib/db/repositories/adminLogs";
 import type { Document } from "mongodb";
 import { activityLogCollection } from "@/lib/db/repositories/activityLog";
+import { caucusesCollection } from "@/lib/db/repositories/caucuses";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; slug: string }>;
@@ -98,9 +99,11 @@ export async function POST(request: Request, { params }: RouteParams) {
     };
 
     const applyTransferInTransaction = async (session: ClientSession) => {
-      const debitResult = await db
-        .collection<Caucus>("caucuses")
-        .updateOne({ _id: caucus._id, treasury: { $gte: amount } }, caucusDebit, { session });
+      const debitResult = await caucusesCollection(db).updateOne(
+        { _id: caucus._id, treasury: { $gte: amount } },
+        caucusDebit,
+        { session }
+      );
 
       if (debitResult.matchedCount === 0) {
         throw badRequest(`Insufficient caucus funds. Available: $${treasury.toLocaleString()}`);
@@ -110,9 +113,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     };
 
     const applyTransferWithoutTransaction = async () => {
-      const debitResult = await db
-        .collection<Caucus>("caucuses")
-        .updateOne({ _id: caucus._id, treasury: { $gte: amount } }, caucusDebit);
+      const debitResult = await caucusesCollection(db).updateOne(
+        { _id: caucus._id, treasury: { $gte: amount } },
+        caucusDebit
+      );
 
       if (debitResult.matchedCount === 0) {
         return errorResponse(
@@ -124,7 +128,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       try {
         await politicalPartiesCollection(db).updateOne({ _id: party._id }, partyCredit);
       } catch (error) {
-        await db.collection<Caucus>("caucuses").updateOne(
+        await caucusesCollection(db).updateOne(
           { _id: caucus._id },
           {
             $inc: { treasury: amount },

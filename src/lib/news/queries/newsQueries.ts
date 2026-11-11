@@ -12,6 +12,8 @@ import {
   type NewsReplyView,
 } from "@/lib/news/dto/newsView";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { newsPostsCollection } from "@/lib/db/repositories/newsPosts";
+import { newsReactionsCollection } from "@/lib/db/repositories/newsReactions";
 
 export interface GetNewsFeedInput {
   limit: number;
@@ -41,8 +43,7 @@ export async function getNewsFeed(
     query.authorId = new ObjectId(authorId);
   }
 
-  const posts = await db
-    .collection<NewsPost>("newsPosts")
+  const posts = await newsPostsCollection(db)
     .find(withPublicNewsVisibility(query))
     .sort({ createdAt: -1 })
     .skip(offset)
@@ -82,8 +83,7 @@ export async function getNewsReplies(
   }
 
   const postOid = new ObjectId(postId);
-  const replies = await db
-    .collection<NewsPost>("newsPosts")
+  const replies = await newsPostsCollection(db)
     .find({ parentId: postOid })
     .sort({ createdAt: 1 })
     .limit(50)
@@ -109,8 +109,7 @@ async function getUserReactionMap(
     return new Map();
   }
 
-  const reactions = await db
-    .collection<NewsReaction>("newsReactions")
+  const reactions = await newsReactionsCollection(db)
     .find({ postId: { $in: posts.map((post) => post._id) }, userId })
     .toArray();
 

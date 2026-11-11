@@ -25,6 +25,8 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { nppEndorsementsCollection } from "@/lib/db/repositories/nppEndorsements";
+import type { Document } from "mongodb";
 
 // ─── Fetch & enrich candidate stats ──────────────────────────────────────────
 
@@ -131,8 +133,7 @@ export async function loadCandidateEnrichmentPreload(
             .toArray()
         : Promise.resolve([] as Pick<StatePartyOrg, "chairId" | "stateId">[]),
     electionIds.length && candidateTargetIds.length
-      ? db
-          .collection<NPPEndorsement>("nppEndorsements")
+      ? nppEndorsementsCollection(db)
           .find(
             buildActiveVisibleNppEndorsementFilter({
               electionId: { $in: electionIds },
@@ -302,7 +303,7 @@ export async function fetchEnrichedCandidates(
   const candidateTargetIds = [
     ...new Set(candidates.map((candidate) => candidate.characterId.toString())),
   ].map((id) => new ObjectId(id));
-  const endorsementCollection = db.collection("nppEndorsements") as {
+  const endorsementCollection = nppEndorsementsCollection<Document>(db) as {
     find?: (filter: Record<string, unknown>) => { toArray: () => Promise<NPPEndorsement[]> };
   };
   const endorsementCounts = options?.preload

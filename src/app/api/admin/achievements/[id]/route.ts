@@ -7,6 +7,7 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { z } from "zod";
 import type { Achievement } from "@/lib/db/types";
 import { invalidateDefinitionsCache } from "@/lib/achievements/cache";
+import { achievementsCollection } from "@/lib/db/repositories/achievements";
 
 const patchSchema = z.object({
   name: z.string().min(1).max(100).optional(),
@@ -40,9 +41,10 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     const db = await getDb();
     const update: Record<string, unknown> = { updatedAt: new Date(), ...parsed.data };
 
-    const result = await db
-      .collection<Achievement>("achievements")
-      .updateOne({ _id: new ObjectId(id) }, { $set: update });
+    const result = await achievementsCollection(db).updateOne(
+      { _id: new ObjectId(id) },
+      { $set: update }
+    );
 
     if (result.matchedCount === 0) {
       return errorResponse(404, "Achievement not found");

@@ -14,6 +14,7 @@ import { handleRouteError, badRequest, forbidden } from "@/lib/api/errors";
 import type { ShareTradeHistory } from "@/lib/db/types";
 import { computeRealizedPnlByCorporation, type LedgerViewer } from "@/lib/corporations/tradeLedger";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { shareTradeHistoryCollection } from "@/lib/db/repositories/shareTradeHistory";
 
 const querySchema = z.object({
   /** Read a corporation's book instead of the character's. Must be its CEO. */
@@ -76,8 +77,7 @@ async function handleGET(request: Request) {
       };
     }
 
-    const ownRows = await db
-      .collection<ShareTradeHistory>("shareTradeHistory")
+    const ownRows = await shareTradeHistoryCollection(db)
       .find(match)
       .sort({ turn: 1, createdAt: 1 })
       .limit(limit)
@@ -91,8 +91,7 @@ async function handleGET(request: Request) {
       (id) => new ObjectId(id)
     );
     const splitRows = corpIds.length
-      ? await db
-          .collection<ShareTradeHistory>("shareTradeHistory")
+      ? await shareTradeHistoryCollection(db)
           .find({
             corporationId: { $in: corpIds },
             kind: { $in: ["stock_split", "reverse_split"] },

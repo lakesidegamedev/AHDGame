@@ -32,6 +32,7 @@ import {
 } from "@/lib/partyWhips/playerWhipSummary";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { cabinetNominationsCollection } from "@/lib/db/repositories/cabinetNominations";
+import { billWhipsCollection } from "@/lib/db/repositories/billWhips";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; slug: string }>;
@@ -166,8 +167,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const result: Record<string, LeadershipElectionItem[]> = {};
     for (const chamberKey of chamberKeys) result[chamberKey] = [];
 
-    const existingWhips = await db
-      .collection<BillWhip>("billWhips")
+    const existingWhips = await billWhipsCollection(db)
       .find({
         targetType: {
           $in: [

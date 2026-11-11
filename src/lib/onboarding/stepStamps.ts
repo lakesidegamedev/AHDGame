@@ -11,6 +11,7 @@ import {
   type OnboardingStepId,
 } from "./checklist";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { actionLogsCollection } from "@/lib/db/repositories/actionLogs";
 
 /**
  * Persist when each onboarding step was first completed.
@@ -62,8 +63,7 @@ export function newlyCompletedSteps(
 }
 
 async function firstCampaignAt(db: Db, character: StampableCharacter): Promise<Date | null> {
-  const first = await db
-    .collection<{ createdAt?: Date }>("actionLogs")
+  const first = await actionLogsCollection<{ createdAt?: Date }>(db)
     .find({ characterId: character._id, actionType: "campaign" }, { projection: { createdAt: 1 } })
     .sort({ createdAt: 1 })
     .limit(1)

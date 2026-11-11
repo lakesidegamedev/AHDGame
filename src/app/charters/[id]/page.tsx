@@ -13,6 +13,7 @@ import type { PartyCharter, PartyCharterStatus, PoliticalParty } from "@/lib/db/
 import { resolveCountryIdentity } from "@/lib/country/countryIdentity";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { partyChartersCollection } from "@/lib/db/repositories/partyCharters";
 
 const STATUS_VARIANT: Record<PartyCharterStatus, "default" | "warning" | "success" | "error"> = {
   draft: "default",
@@ -39,9 +40,7 @@ export default async function CharterDetailPage({ params }: PageParams) {
   if (!user) redirect(`/login?returnUrl=/charters/${id}`);
 
   const db = await getDb();
-  const charter = await db
-    .collection<PartyCharter>("partyCharters")
-    .findOne({ _id: new ObjectId(id) });
+  const charter = await partyChartersCollection(db).findOne({ _id: new ObjectId(id) });
   if (!charter) notFound();
 
   const clock = await getGameClock();

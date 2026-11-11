@@ -20,6 +20,7 @@ import { loadQueuedRedemptionUnitsByFundId } from "@/lib/indexFunds/fundValuatio
 import { emitTxBulk, loadTxThresholds, type TxInput } from "@/lib/financialTxLog/emit";
 import { markNationalIndexFund, nationalIndexFundIdentity } from "./rules/nationalIndex";
 import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { indexFundTransactionsCollection } from "@/lib/db/repositories/indexFundTransactions";
 
 const MARK_ATTEMPTS = 3;
 const FUND_PROJECTION = {
@@ -213,7 +214,7 @@ export async function markNationalIndexFunds(
   };
   await markAttempt(0);
   if (transactions.length > 0) {
-    await db.collection<IndexFundTransaction>("indexFundTransactions").insertMany(transactions);
+    await indexFundTransactionsCollection(db).insertMany(transactions);
   }
   if (legs.length > 0) await emitTxBulk(db, legs, await loadTxThresholds(db));
   return { created: missing.length, marked };

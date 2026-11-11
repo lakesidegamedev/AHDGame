@@ -45,6 +45,7 @@ import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import { unplacedIpoShares } from "@/lib/corporations/rules/dividendShares";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
+import { shareListingsCollection } from "@/lib/db/repositories/shareListings";
 
 export async function loadCorporationDetailView(args: {
   db: Db;
@@ -72,10 +73,7 @@ export async function loadCorporationDetailView(args: {
       : Promise.resolve(null);
 
   const [openListingsForInvariant, openSellOrdersForInvariant] = await Promise.all([
-    db
-      .collection<ShareListing>("shareListings")
-      .find({ corporationId: corporation._id, status: "open" })
-      .toArray(),
+    shareListingsCollection(db).find({ corporationId: corporation._id, status: "open" }).toArray(),
     shareOrdersCollection(db)
       .find({
         corporationId: corporation._id,

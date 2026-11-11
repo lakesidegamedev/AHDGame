@@ -24,6 +24,7 @@ import type { GovernmentTender } from "./types";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { notificationsCollection } from "@/lib/db/repositories/notifications";
+import { defenceProcurementAllocationsCollection } from "@/lib/db/repositories/defenceProcurementAllocations";
 
 /** One projected read per dataset, then one idempotent bulk write per published tender. */
 export async function notifyTenderBidders(
@@ -82,14 +83,13 @@ export async function notifyTenderBidders(
     const [game, prices, allocation] = await Promise.all([
       getGameState(db),
       loadDefencePriceRatios(db),
-      db
-        .collection<{ _id: string; supplierAmounts?: Record<string, number> }>(
-          "defenceProcurementAllocations"
-        )
-        .findOne(
-          { _id: defenceContractWindow(tender.countryId, tender.publishedTurn).id },
-          { projection: { supplierAmounts: 1 } }
-        ),
+      defenceProcurementAllocationsCollection<{
+        _id: string;
+        supplierAmounts?: Record<string, number>;
+      }>(db).findOne(
+        { _id: defenceContractWindow(tender.countryId, tender.publishedTurn).id },
+        { projection: { supplierAmounts: 1 } }
+      ),
     ]);
     const preset = game?.preset ?? DEFAULT_SEED_PRESET;
     const budget = await ensureFederalBudget(db, tender.countryId, preset);

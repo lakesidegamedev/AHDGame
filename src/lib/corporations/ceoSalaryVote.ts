@@ -22,6 +22,7 @@ import {
 } from "@/lib/corporations/rules/ceoSalaryVote";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { corporationVotesCollection } from "@/lib/db/repositories/corporationVotes";
 
 export async function evaluateCeoSalaryVote(
   db: Db,
@@ -75,9 +76,9 @@ export async function openCeoSalaryVote(opts: {
     payload: { newCeoSalary: newSalary },
   });
   if (!result.ok) return { ok: false, error: result.error };
-  const inserted = await db
-    .collection<CorporationVote>("corporationVotes")
-    .findOne({ _id: new ObjectId(result.voteId) });
+  const inserted = await corporationVotesCollection(db).findOne({
+    _id: new ObjectId(result.voteId),
+  });
   if (inserted) {
     await notifyVoteEvent({
       db,

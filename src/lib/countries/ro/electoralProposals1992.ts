@@ -29,6 +29,7 @@ import { electionsCollection } from "@/lib/db/repositories/elections";
 import { billsCollection } from "@/lib/db/repositories/bills";
 import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { countryStateCollection } from "@/lib/db/repositories/countryState";
 
 export const RO_1992_PROPOSALS_COLLECTION = "ro1992ElectoralProposals";
 const ID = "1991-default:ro-electoral:parliament1992";
@@ -51,9 +52,10 @@ async function availability(db: Db, game: Calendar, turn: number, session?: Clie
     { _id: "current" },
     { session, projection: { preset: 1 } }
   );
-  const runtime = await db
-    .collection<CountryState>("countryState")
-    .findOne({ _id: "RO" }, { session, projection: { governmentType: 1 } });
+  const runtime = await countryStateCollection(db).findOne(
+    { _id: "RO" },
+    { session, projection: { governmentType: 1 } }
+  );
   const country = await countryGameStatesCollection(db).findOne(
     { _id: "RO" },
     { session, projection: { roElectoralLaw1992SinceTurn: 1, roParliament1992SinceTurn: 1 } }

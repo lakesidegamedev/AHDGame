@@ -21,6 +21,7 @@ import { electionsCollection } from "@/lib/db/repositories/elections";
 import { billsCollection } from "@/lib/db/repositories/bills";
 import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { countryStateCollection } from "@/lib/db/repositories/countryState";
 
 export const HU_1994_PROPOSALS_COLLECTION = "hu1994ElectoralProposals";
 const ID = "1991-default:hu-electoral:threshold1994";
@@ -45,9 +46,10 @@ async function availability(db: Db, game: Calendar, turn: number, session?: Clie
     { _id: "current" },
     { session, projection: { preset: 1, huAssemblyReformedAtYear: 1 } }
   );
-  const runtime = await db
-    .collection<CountryState>("countryState")
-    .findOne({ _id: "HU" }, { session, projection: { governmentType: 1 } });
+  const runtime = await countryStateCollection(db).findOne(
+    { _id: "HU" },
+    { session, projection: { governmentType: 1 } }
+  );
   const country = await countryGameStatesCollection(db).findOne(
     { _id: "HU" },
     { session, projection: { huElectoralLaw1994SinceTurn: 1 } }

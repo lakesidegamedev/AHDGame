@@ -6,6 +6,8 @@ import {
 } from "@/lib/currency/corporationCapital";
 import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporationCountryHistoryCollection } from "@/lib/db/repositories/corporationCountryHistory";
+import type { Document } from "mongodb";
 
 const HISTORY_CAP = 96;
 
@@ -97,12 +99,12 @@ export async function snapshotCorporationsByCountry(db: Db, turn: number): Promi
     };
   });
 
-  await db
-    .collection<CorporationCountrySnapshot>("corporationCountryHistory")
-    .bulkWrite(ops, { ordered: false });
+  await corporationCountryHistoryCollection<CorporationCountrySnapshot>(db).bulkWrite(ops, {
+    ordered: false,
+  });
 
   const minTurn = Math.max(1, turn - HISTORY_CAP + 1);
-  await db.collection("corporationCountryHistory").deleteMany({ turn: { $lt: minTurn } });
+  await corporationCountryHistoryCollection<Document>(db).deleteMany({ turn: { $lt: minTurn } });
 
   return ops.length;
 }

@@ -44,6 +44,7 @@ import type { Document } from "mongodb";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { countiesCollection } from "@/lib/db/repositories/counties";
 
 export interface TransferRegionArgs {
   regionId: string;
@@ -193,7 +194,7 @@ async function transferRegionInTransaction(
   // Departing UK regions no longer use the Westminster constituency layer.
   // Population remains on the transferred state and cohort documents.
   if (countryHasFeature("ukLib", fromCountryId) && !countryHasFeature("ukLib", toCountryId))
-    await db.collection("counties").deleteMany({ countryId: "UK", stateId: regionId });
+    await countiesCollection<Document>(db).deleteMany({ countryId: "UK", stateId: regionId });
   if (countryHasFeature("ukLib", fromCountryId) && countryHasFeature("ieLib", toCountryId)) {
     await transferResetV2RegionToIreland(db, regionId, currencyScale);
   }

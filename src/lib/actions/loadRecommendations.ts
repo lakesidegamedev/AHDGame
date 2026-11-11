@@ -25,6 +25,7 @@ import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSecto
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
+import { partyBudgetCollection } from "@/lib/db/repositories/partyBudget";
 
 interface StateEconomySector {
   type: string;
@@ -415,7 +416,7 @@ export async function loadRecommendationsForUser(
   // Fetch party budget if member
   let partyBudget: PartyBudget | null = null;
   if (party) {
-    partyBudget = await findPartyBudgetForScope(db.collection<PartyBudget>("partyBudget"), {
+    partyBudget = await findPartyBudgetForScope(partyBudgetCollection(db), {
       partyId: String(party.sequentialId),
       countryId: party.countryId,
       scope: "national",

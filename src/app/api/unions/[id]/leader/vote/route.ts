@@ -38,6 +38,8 @@ import type { CountryId } from "@/lib/constants/countries";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { unionsCollection } from "@/lib/db/repositories/unions";
+import { unionLeaderVotesCollection } from "@/lib/db/repositories/unionLeaderVotes";
+import { unionOrganizersCollection } from "@/lib/db/repositories/unionOrganizers";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -66,12 +68,11 @@ async function handleGET(_request: Request, { params }: RouteParams) {
     }
 
     const [votesRaw, organizerDocs, user, weights, leader] = await Promise.all([
-      db.collection<UnionLeaderVote>("unionLeaderVotes").find({ unionId: unionObjectId }).toArray(),
+      unionLeaderVotesCollection(db).find({ unionId: unionObjectId }).toArray(),
       // The full roster, not just a count. Legacy organizers carry no `strength`
       // field and are dropped from the weight map, but they still belong on the
       // membership list, so read the documents rather than reusing the map.
-      db
-        .collection<UnionOrganizer>("unionOrganizers")
+      unionOrganizersCollection(db)
         .find(
           { unionId: unionObjectId },
           { projection: { characterId: 1, strength: 1, organizeCount: 1 } }

@@ -7,6 +7,7 @@ import type { ParliamentaryGovernment } from "@/lib/db/types/parliamentaryGovern
 import type { ElectedOfficial } from "@/lib/db/types/officials";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { parliamentaryGovernmentsCollection } from "@/lib/db/repositories/parliamentaryGovernments";
 export {
   governmentApprovalFavorabilityDrain,
   MAX_GOVERNMENT_APPROVAL_FAVORABILITY_DRAIN,
@@ -22,8 +23,7 @@ export async function loadRulingExecutiveParties(db: Db): Promise<Map<CountryId,
       )
       .toArray(),
     governmentFormationsCollection(db).find({}).toArray(),
-    db
-      .collection<ParliamentaryGovernment>("parliamentaryGovernments")
+    parliamentaryGovernmentsCollection(db)
       .find({ _id: { $not: /_/ } })
       .toArray(),
   ]);

@@ -17,6 +17,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import type { Document } from "mongodb";
 import { usersCollection } from "@/lib/db/repositories/users";
+import { actionLogsCollection } from "@/lib/db/repositories/actionLogs";
 
 // POST /api/admin/users/delete — Permanently delete a user account and their character.
 // Auth: requireAdmin
@@ -42,7 +43,7 @@ export const POST = withNoStore(async (request: Request) => {
     const db = await getDb();
     const usersCollectionHandle = usersCollection<Document>(db);
     const charactersHandle = charactersCollection(db);
-    const actionLogsCollection = db.collection("actionLogs");
+    const actionLogsHandle = actionLogsCollection<Document>(db);
     const officialsCollection = electedOfficialsCollection<Document>(db);
 
     // Check if user exists
@@ -107,7 +108,7 @@ export const POST = withNoStore(async (request: Request) => {
 
       // Retain action logs for forensics: stamp them deleted + denormalize
       // identity from the still-present docs so they stay readable afterward.
-      await actionLogsCollection.updateMany(
+      await actionLogsHandle.updateMany(
         { characterId: character._id },
         {
           $set: {

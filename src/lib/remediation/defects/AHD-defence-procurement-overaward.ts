@@ -10,6 +10,7 @@ import { applyMoneyMove } from "@/lib/banking/moneyMove";
 import type { Defect, DetectResult, HealPlan, HealResult, VerifyResult } from "../types";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { defenceContractsCollection } from "@/lib/db/repositories/defenceContracts";
 
 interface Clawback {
   contractId: string;
@@ -103,8 +104,7 @@ export function findProcurementClawbacks(
 
 async function survey(db: Db): Promise<Survey> {
   const [contracts, budgets] = await Promise.all([
-    db
-      .collection<DefenceContract>("defenceContracts")
+    defenceContractsCollection(db)
       .find({ lotsDelivered: { $gt: 0 } })
       .toArray(),
     federalBudgetCollection(db).find({}).toArray(),
@@ -263,7 +263,7 @@ async function apply(
   }
 
   for (const row of result.clawbacks) {
-    const update = await db.collection<DefenceContract>("defenceContracts").updateOne(
+    const update = await defenceContractsCollection(db).updateOne(
       // Same run stamps a contract once. The money above already replays under its key, and
       // the stamp has to replay with it or a retry would double the recorded lots.
       { _id: new ObjectId(row.contractId), administrativeClawbackRunId: { $ne: runId } },
@@ -281,9 +281,10 @@ async function apply(
       }
     );
     if (update.modifiedCount !== 1) {
-      const already = await db
-        .collection<DefenceContract>("defenceContracts")
-        .findOne({ _id: new ObjectId(row.contractId), administrativeClawbackRunId: runId });
+      const already = await defenceContractsCollection(db).findOne({
+        _id: new ObjectId(row.contractId),
+        administrativeClawbackRunId: runId,
+      });
       if (!already) {
         throw new Error(`contract ${row.contractId} could not be marked as clawed back`);
       }

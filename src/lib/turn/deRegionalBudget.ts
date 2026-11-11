@@ -29,6 +29,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
+import { cabinetSettingsCollection } from "@/lib/db/repositories/cabinetSettings";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -349,8 +350,7 @@ export async function processLaenderRegionalBudgets(
   const metricsMap = new Map(stateMetrics.map((m) => [m._id, m]));
 
   // Read Finance Minister allocation (controls federal equalization distribution)
-  const ministerSetting = await db
-    .collection<CabinetSetting>("cabinetSettings")
+  const ministerSetting = await cabinetSettingsCollection(db)
     // Must use the country's OWN finance-minister cabinet id, not DE's. The
     // suffix differs per country (DE `finance_minister`, DD `minister_of_finance`),
     // so a hardcoded DE key silently drops that country's allocation.

@@ -3,13 +3,13 @@ import type { Election, NPPEndorsement, NPP } from "@/lib/db/types";
 import { buildActiveVisibleNppEndorsementFilter } from "@/lib/nppEndorsements";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { nppEndorsementsCollection } from "@/lib/db/repositories/nppEndorsements";
 
 export async function getNppEndorsements(db: Db, nppId: ObjectId) {
   const npp = await nppsCollection(db).findOne({ _id: nppId });
   if (!npp) return null;
 
-  const endorsements = await db
-    .collection<NPPEndorsement>("nppEndorsements")
+  const endorsements = await nppEndorsementsCollection(db)
     .find(buildActiveVisibleNppEndorsementFilter({ nppId }))
     .sort({ createdAt: -1 })
     .toArray();

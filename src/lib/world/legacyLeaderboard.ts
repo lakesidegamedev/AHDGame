@@ -34,6 +34,10 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 import { usersCollection } from "@/lib/db/repositories/users";
+import { characterAchievementsCollection } from "@/lib/db/repositories/characterAchievements";
+import type { Document } from "mongodb";
+import { indexFundPositionsCollection } from "@/lib/db/repositories/indexFundPositions";
+import { retiredCharactersCollection } from "@/lib/db/repositories/retiredCharacters";
 
 function sameIteration(a: GameIteration | null, b: GameIteration | null): boolean {
   if (!a || !b) return false;
@@ -154,8 +158,7 @@ export async function getLegacyLeaderboardData(
         }
       )
       .toArray(),
-    db
-      .collection<RetiredCharacter>("retiredCharacters")
+    retiredCharactersCollection(db)
       .find(
         { "snapshot.isSynthetic": { $ne: true } },
         {
@@ -176,8 +179,7 @@ export async function getLegacyLeaderboardData(
         }
       )
       .toArray(),
-    db
-      .collection("characterAchievements")
+    characterAchievementsCollection<Document>(db)
       .aggregate<{ _id: unknown; count: number }>([
         {
           $lookup: {
@@ -213,8 +215,7 @@ export async function getLegacyLeaderboardData(
         { projection: { _id: 1, holders: 1, marketPrice: 1, currencyCode: 1 } }
       )
       .toArray(),
-    db
-      .collection<IndexFundPosition>("indexFundPositions")
+    indexFundPositionsCollection(db)
       .find({ holderKind: "character" }, { projection: { fundId: 1, characterId: 1, units: 1 } })
       .toArray(),
     loadCareerLegislation(db),

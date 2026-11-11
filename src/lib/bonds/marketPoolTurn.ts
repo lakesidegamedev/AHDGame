@@ -31,6 +31,7 @@ import {
 } from "./marketPoolLedger";
 import { SOVEREIGN_ISSUANCE_INTERVAL_TURNS } from "@/lib/bonds/sovereign";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { moneySupplySnapshotsCollection } from "@/lib/db/repositories/moneySupplySnapshots";
 
 /** Cash above this multiple of target triggers a sweep... */
 export const BOND_POOL_SWEEP_TRIGGER_MULTIPLE = 2;
@@ -126,13 +127,12 @@ export async function latestMoneySupplyByCurrency(
   currencies: readonly CurrencyCode[]
 ): Promise<Map<string, { m2?: number; turn: number; accountingVersion?: number }>> {
   if (currencies.length === 0) return new Map();
-  const rows = await db
-    .collection<{
-      currencyCode: string;
-      m2?: number;
-      turn: number;
-      accountingVersion?: number;
-    }>("moneySupplySnapshots")
+  const rows = await moneySupplySnapshotsCollection<{
+    currencyCode: string;
+    m2?: number;
+    turn: number;
+    accountingVersion?: number;
+  }>(db)
     .aggregate<{ _id: string; m2?: number; turn: number; accountingVersion?: number }>([
       { $match: { currencyCode: { $in: [...new Set(currencies)] } } },
       { $sort: { currencyCode: 1, turn: -1 } },

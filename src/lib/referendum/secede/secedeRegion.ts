@@ -40,6 +40,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import type { Document } from "mongodb";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { organizationMembershipsCollection } from "@/lib/db/repositories/organizationMemberships";
 
 export interface SecedeRegionArgs {
   regionId: string;
@@ -116,7 +117,7 @@ async function secedeRegionInTransaction(
 
   await updateParliamentaryGovernmentSeats(db, fromCountryId);
   await standupElections(db, toCountryId, currentTurn, new Date());
-  await db.collection("organizationMemberships").updateOne(
+  await organizationMembershipsCollection<Document>(db).updateOne(
     { organizationId: "UN", countryId: toCountryId },
     {
       $setOnInsert: {

@@ -3,6 +3,7 @@ import type { PartyCharter } from "@/lib/db/types";
 import { computeCharterDeadline, computeCharterDeadlineTurn } from "./charterDeadlines";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { partyChartersCollection } from "@/lib/db/repositories/partyCharters";
 
 /**
  * Records a founder's rejection on a charter and transitions it to
@@ -34,7 +35,7 @@ export async function rejectCharter(
   db: Db,
   now: Date = new Date()
 ): Promise<RejectCharterResult> {
-  const charter = await db.collection<PartyCharter>("partyCharters").findOne({ _id: charterId });
+  const charter = await partyChartersCollection(db).findOne({ _id: charterId });
   if (!charter) return { ok: false, reason: "charter-not-found" };
   if (charter.status !== "pending-signatures") {
     return { ok: false, reason: "not-rejectable" };
@@ -83,7 +84,7 @@ export async function rejectCharter(
   // concurrent `expireCharters` sweep that flipped the charter to
   // `expired` cannot be silently un-expired by writing
   // status=founder-replacement here.
-  const result = await db.collection<PartyCharter>("partyCharters").updateOne(
+  const result = await partyChartersCollection(db).updateOne(
     {
       _id: charterId,
       status: "pending-signatures",

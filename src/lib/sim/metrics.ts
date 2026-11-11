@@ -35,6 +35,12 @@ import { crisesCollection } from "@/lib/db/repositories/crises";
 import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
 import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
 import { crisisInteractionsCollection } from "@/lib/db/repositories/crisisInteractions";
+import { indexFundPositionsCollection } from "@/lib/db/repositories/indexFundPositions";
+import { gameHealthSnapshotsCollection } from "@/lib/db/repositories/gameHealthSnapshots";
+import { militaryUnitsCollection } from "@/lib/db/repositories/militaryUnits";
+import { livingConflictsCollection } from "@/lib/db/repositories/livingConflicts";
+import { economicVitalSignsCollection } from "@/lib/db/repositories/economicVitalSigns";
+import { battleReportsCollection } from "@/lib/db/repositories/battleReports";
 
 /**
  * Read-only balance-metric aggregations over a (sandbox) world DB, for the
@@ -505,8 +511,7 @@ export async function computeNppWealthAnchorMap(
   }
 
   const indexHoldingsByNpp = new Map<string, number>();
-  const positions = await db
-    .collection<IndexFundPosition>("indexFundPositions")
+  const positions = await indexFundPositionsCollection(db)
     .find({ holderKind: "npp", nppId: { $in: nppIds } })
     .toArray();
   if (positions.length > 0) {
@@ -724,7 +729,7 @@ export async function collectCrisisMetrics(db: Db): Promise<CrisisMetrics> {
         }
       )
       .toArray(),
-    db.collection<LivingConflictState>("livingConflicts").find({}).toArray(),
+    livingConflictsCollection<LivingConflictState>(db).find({}).toArray(),
   ]);
   const livingCrisisIds = crises
     .filter((crisis) => crisis.livingConflictEventId || crisis.globalResponse?.conflictKey)
@@ -909,9 +914,7 @@ export async function collectBalanceMetrics(db: Db): Promise<BalanceReport> {
     collectCrisisMetrics(db),
     collectEconomyMetrics(db),
     collectCapacityMetrics(db),
-    db
-      .collection<EconomicVitalSigns>("economicVitalSigns")
-      .findOne({ turn }, { sort: { turn: -1 } }),
+    economicVitalSignsCollection(db).findOne({ turn }, { sort: { turn: -1 } }),
     collectBankingGateMetrics(db),
     collectFiscalMetrics(db),
     collectInflationMetrics(db),
@@ -958,7 +961,10 @@ async function collectFiscalMetrics(db: Db): Promise<FiscalCountryMetrics[]> {
 }
 
 async function collectInflationMetrics(db: Db): Promise<InflationCountryMetrics[]> {
-  const snapshot = await db.collection("gameHealthSnapshots").findOne({}, { sort: { turn: -1 } });
+  const snapshot = await gameHealthSnapshotsCollection<Document>(db).findOne(
+    {},
+    { sort: { turn: -1 } }
+  );
   const rows = (snapshot?.economy?.byCountry ?? {}) as Record<string, Record<string, unknown>>;
   return Object.entries(rows)
     .map(([countryId, row]) => ({
@@ -1012,7 +1018,7 @@ async function collectCorporateCashFlowMetrics(
 }
 
 async function collectMilitaryMetrics(db: Db): Promise<MilitaryMetrics> {
-  const units = await db.collection("militaryUnits").find({}).toArray();
+  const units = await militaryUnitsCollection<Document>(db).find({}).toArray();
   const acc = new Map<string, { units: number; personnel: number; readiness: number }>();
   for (const unit of units) {
     const countryId = String(unit.countryId ?? "unknown");
@@ -1033,8 +1039,8 @@ async function collectMilitaryMetrics(db: Db): Promise<MilitaryMetrics> {
     ])
   );
   const [activeConflicts, battleReports] = await Promise.all([
-    db.collection("livingConflicts").countDocuments({ hasOpened: true }),
-    db.collection("battleReports").countDocuments({}),
+    livingConflictsCollection<Document>(db).countDocuments({ hasOpened: true }),
+    battleReportsCollection<Document>(db).countDocuments({}),
   ]);
   return {
     unitCount: units.length,

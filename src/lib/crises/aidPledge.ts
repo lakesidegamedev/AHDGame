@@ -15,6 +15,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { crisesCollection } from "@/lib/db/repositories/crises";
 import type { Document } from "mongodb";
 import { crisisInteractionsCollection } from "@/lib/db/repositories/crisisInteractions";
+import { crisisAidCommitmentsCollection } from "@/lib/db/repositories/crisisAidCommitments";
 
 export interface SubmitCrisisAidPledgeInput {
   interactionId: ObjectId;
@@ -52,9 +53,10 @@ export async function submitCrisisAidPledge(
     throw forbidden("Only a head of state can pledge aid");
   }
 
-  const already = await db
-    .collection<CrisisAidCommitment>("crisisAidCommitments")
-    .findOne({ crisisId: interaction.crisisId, senderCountryId: input.senderCountryId });
+  const already = await crisisAidCommitmentsCollection(db).findOne({
+    crisisId: interaction.crisisId,
+    senderCountryId: input.senderCountryId,
+  });
   if (already) throw conflict("Your country has already pledged aid to this crisis");
 
   const maxPct = node.aidMaxPctGdp ?? AID_MAX_PCT_GDP;
@@ -78,7 +80,7 @@ export async function submitCrisisAidPledge(
   // 1. Claim the pledge slot. The unique (crisis, sender) index makes this the
   // single arbiter between concurrent requests, so nothing below can run twice.
   const now = new Date();
-  const commitments = db.collection<CrisisAidCommitment>("crisisAidCommitments");
+  const commitments = crisisAidCommitmentsCollection(db);
   try {
     await commitments.insertOne({
       _id: commitmentId,

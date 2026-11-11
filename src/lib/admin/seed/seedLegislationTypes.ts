@@ -6,6 +6,7 @@ import { getProjectedPoliticalLegislationTypes } from "./seedPoliticalLegislatio
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
 import type { Document } from "mongodb";
+import { committeeAssignmentsCollection } from "@/lib/db/repositories/committeeAssignments";
 
 export async function seedLegislationTypes(
   db: Db,
@@ -14,8 +15,7 @@ export async function seedLegislationTypes(
   _preset: string
 ) {
   if (reset) {
-    await db
-      .collection("committeeAssignments")
+    await committeeAssignmentsCollection<Document>(db)
       .drop()
       .catch((error) => {
         logWarning("Collection drop failed (may not exist)", {

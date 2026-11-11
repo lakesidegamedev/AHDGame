@@ -45,6 +45,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { unionsCollection } from "@/lib/db/repositories/unions";
 import { usersCollection } from "@/lib/db/repositories/users";
+import { unionOrganizersCollection } from "@/lib/db/repositories/unionOrganizers";
 
 export interface UnionsTurnResult {
   unionsProcessed: number;
@@ -195,12 +196,10 @@ export async function processUnionsTurn(db: Db, turn?: number): Promise<UnionsTu
       { _id: { $nin: suspendedUnionIds }, strength: { $gt: 0 } },
       { $mul: { strength: strengthDecayMultiplier }, $set: { updatedAt: decayStamp } }
     ),
-    db
-      .collection<UnionOrganizer>("unionOrganizers")
-      .updateMany(
-        { unionId: { $nin: suspendedUnionIds }, strength: { $gt: 0 } },
-        { $mul: { strength: strengthDecayMultiplier }, $set: { updatedAt: decayStamp } }
-      ),
+    unionOrganizersCollection(db).updateMany(
+      { unionId: { $nin: suspendedUnionIds }, strength: { $gt: 0 } },
+      { $mul: { strength: strengthDecayMultiplier }, $set: { updatedAt: decayStamp } }
+    ),
   ]);
 
   // Illicit unions under ban: heat decay, detection rolls, and exposure
@@ -334,8 +333,7 @@ export async function processUnionsTurn(db: Db, turn?: number): Promise<UnionsTu
       else sectorsByUnionId.set(key, [sector]);
     }
 
-    const organizers = await db
-      .collection<UnionOrganizer>("unionOrganizers")
+    const organizers = await unionOrganizersCollection(db)
       .find(
         { unionId: { $in: stillOwnedIds }, strength: { $gt: 0 } },
         { projection: { unionId: 1, characterId: 1, strength: 1 } }

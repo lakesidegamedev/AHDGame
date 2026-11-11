@@ -15,6 +15,7 @@ import { getChamberLeaderRole } from "@/lib/partyWhips/constraints";
 import { resolveWhipIssuerRole } from "@/lib/partyWhips/issuerRole";
 import { getBillWhipWindowStart } from "@/lib/congress/billWhipPhase";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { billWhipsCollection } from "@/lib/db/repositories/billWhips";
 
 export { resolveWhipIssuerRole };
 
@@ -158,8 +159,7 @@ export async function buildBillWhipPanelData(
   if (chambersWithPartyMembers.size === 0) return null;
 
   const whipWindowStart = getBillWhipWindowStart(bill);
-  const whips = await db
-    .collection<BillWhip>("billWhips")
+  const whips = await billWhipsCollection(db)
     .find({
       targetType: "bill",
       targetId: bill._id,

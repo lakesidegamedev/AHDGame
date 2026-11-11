@@ -9,6 +9,8 @@
  */
 import type { Db } from "mongodb";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { producerEconomyTurnsCollection } from "@/lib/db/repositories/producerEconomyTurns";
+import type { Document } from "mongodb";
 
 export type ProducerPath = "legacy" | "funded";
 
@@ -63,9 +65,10 @@ export async function loadProducerPath(
       { projection: { producerOpening: 1 } }
     ),
     input.worldEpoch
-      ? db
-          .collection("producerEconomyTurns")
-          .findOne({ worldEpoch: input.worldEpoch }, { projection: { _id: 1 } })
+      ? producerEconomyTurnsCollection<Document>(db).findOne(
+          { worldEpoch: input.worldEpoch },
+          { projection: { _id: 1 } }
+        )
       : null,
   ]);
   return resolveProducerPath({

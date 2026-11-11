@@ -15,6 +15,7 @@ import { getSlateAcceptanceStatBonus } from "@/lib/slateAuthority";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { slateCandidatesCollection } from "@/lib/db/repositories/slateCandidates";
 
 /**
  * List all slates owned by a (countryId, partyId). Active by default; pass
@@ -95,11 +96,7 @@ export async function ensureSlate(
  * ones.
  */
 export async function listSlateCandidates(db: Db, slateId: ObjectId): Promise<SlateCandidate[]> {
-  return db
-    .collection<SlateCandidate>("slateCandidates")
-    .find({ slateId })
-    .sort({ invitedAt: 1 })
-    .toArray();
+  return slateCandidatesCollection(db).find({ slateId }).sort({ invitedAt: 1 }).toArray();
 }
 
 /**
@@ -122,8 +119,7 @@ export async function listSlateCandidatesByIds(
   slateIds: ObjectId[]
 ): Promise<SlateCandidate[]> {
   if (slateIds.length === 0) return [];
-  return db
-    .collection<SlateCandidate>("slateCandidates")
+  return slateCandidatesCollection(db)
     .find({ slateId: { $in: slateIds } })
     .toArray();
 }
@@ -174,8 +170,7 @@ export async function listStateAssignedCandidateIds(
   if (sameStateSlates.length === 0) return [];
 
   const candidateIds = (
-    await db
-      .collection<SlateCandidate>("slateCandidates")
+    await slateCandidatesCollection(db)
       .find({
         slateId: { $in: sameStateSlates.map((slate) => slate._id) },
         status: { $ne: "withdrawn" },
@@ -310,8 +305,7 @@ export async function prefetchSlateTemplates(
   const rows =
     templateIds.length === 0
       ? []
-      : await db
-          .collection<SlateCandidate>("slateCandidates")
+      : await slateCandidatesCollection(db)
           .find({ slateId: { $in: templateIds } })
           .sort({ invitedAt: 1 })
           .toArray();
@@ -374,9 +368,7 @@ export async function materializeSlateAssignmentsFromTemplate({
     ? (knownEmptySlate ?? null)
     : (knownEmptySlate ?? (await findSlateForElection(db, countryId, partyId, election._id)));
   if (existing && !knownEmptySlate) {
-    const rowCount = await db
-      .collection<SlateCandidate>("slateCandidates")
-      .countDocuments({ slateId: existing._id });
+    const rowCount = await slateCandidatesCollection(db).countDocuments({ slateId: existing._id });
     if (rowCount > 0) return existing;
   }
 
@@ -501,7 +493,7 @@ export async function materializeSlateAssignmentsFromTemplate({
   if (!existing) {
     await db.collection<RecruitmentSlate>("recruitmentSlates").insertOne(slate);
   }
-  await db.collection<SlateCandidate>("slateCandidates").insertMany(
+  await slateCandidatesCollection(db).insertMany(
     carriedRows.map((row) => ({
       ...row,
       slateId: slate._id,

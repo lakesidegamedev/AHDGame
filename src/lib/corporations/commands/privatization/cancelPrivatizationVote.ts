@@ -1,6 +1,7 @@
 import type { Db } from "mongodb";
 import type { CorporationPrivatizationVote } from "@/lib/db/types";
 import { refundCharacterCash } from "@/lib/financialTxLog/atomicCashGuard";
+import { corporationPrivatizationVotesCollection } from "@/lib/db/repositories/corporationPrivatizationVotes";
 
 export interface CancelInput {
   db: Db;
@@ -21,12 +22,10 @@ export async function cancelPrivatizationVote(input: CancelInput): Promise<Cance
     return { ok: false, error: "Vote is no longer open", status: 400 };
   }
   const now = new Date();
-  const claim = await db
-    .collection<CorporationPrivatizationVote>("corporationPrivatizationVotes")
-    .updateOne(
-      { _id: vote._id, status: "open" },
-      { $set: { status: "cancelled", resolvedAt: now, updatedAt: now } }
-    );
+  const claim = await corporationPrivatizationVotesCollection(db).updateOne(
+    { _id: vote._id, status: "open" },
+    { $set: { status: "cancelled", resolvedAt: now, updatedAt: now } }
+  );
   if (claim.matchedCount === 0) {
     return { ok: false, error: "Vote state changed; retry", status: 409 };
   }
@@ -39,12 +38,10 @@ export async function cancelPrivatizationVote(input: CancelInput): Promise<Cance
       forexEnabled
     );
   } catch (error) {
-    await db
-      .collection<CorporationPrivatizationVote>("corporationPrivatizationVotes")
-      .updateOne(
-        { _id: vote._id, status: "cancelled" },
-        { $set: { status: "open", updatedAt: new Date() }, $unset: { resolvedAt: "" } }
-      );
+    await corporationPrivatizationVotesCollection(db).updateOne(
+      { _id: vote._id, status: "cancelled" },
+      { $set: { status: "open", updatedAt: new Date() }, $unset: { resolvedAt: "" } }
+    );
     throw error;
   }
   return { ok: true };

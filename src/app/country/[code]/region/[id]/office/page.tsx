@@ -62,6 +62,9 @@ import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
+import { governorExecutiveOrdersCollection } from "@/lib/db/repositories/governorExecutiveOrders";
+import { governorAddressesCollection } from "@/lib/db/repositories/governorAddresses";
+import { governorEndorsementsCollection } from "@/lib/db/repositories/governorEndorsements";
 
 interface Props {
   params: Promise<{ code: string; id: string }>;
@@ -184,13 +187,11 @@ export default async function GovernorOfficePage({ params }: Props) {
       )
       .sort({ passedAt: 1 })
       .toArray(),
-    db
-      .collection<GovernorExecutiveOrder>("governorExecutiveOrders")
+    governorExecutiveOrdersCollection(db)
       .find({ countryId, stateId, status: "active" })
       .sort({ issuedAtTurn: -1 })
       .toArray(),
-    db
-      .collection<GovernorExecutiveOrder>("governorExecutiveOrders")
+    governorExecutiveOrdersCollection(db)
       .find({
         countryId,
         stateId,
@@ -213,8 +214,7 @@ export default async function GovernorOfficePage({ params }: Props) {
         "policyOptions.name": 1,
       })
       .toArray(),
-    db
-      .collection<GovernorAddress>("governorAddresses")
+    governorAddressesCollection(db)
       .find({ countryId, stateId })
       .sort({ deliveredAtTurn: -1 })
       .limit(1)
@@ -242,8 +242,7 @@ export default async function GovernorOfficePage({ params }: Props) {
       })
       .toArray(),
     electionsCollection(db).findOne({ electionType: "president", countryId, status: "active" }),
-    db
-      .collection<GovernorEndorsement>("governorEndorsements")
+    governorEndorsementsCollection(db)
       .find({
         countryId,
         stateId,

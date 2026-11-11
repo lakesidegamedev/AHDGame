@@ -6,6 +6,7 @@ import { EQUITY_POOL_M2_SHARE } from "@/lib/equities/marketPool";
 import type { Migration, MigrationContext, MigrationResult } from "../types";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { moneySupplySnapshotsCollection } from "@/lib/db/repositories/moneySupplySnapshots";
 
 /** Seed the real cash counterpart to existing corporation public-float inventory. */
 async function seedEquityMarketPools(db: Db, ctx: MigrationContext): Promise<MigrationResult> {
@@ -19,8 +20,7 @@ async function seedEquityMarketPools(db: Db, ctx: MigrationContext): Promise<Mig
         { $group: { _id: "$liquidCurrencyCode" } },
       ])
       .toArray(),
-    db
-      .collection<{ turn: number }>("moneySupplySnapshots")
+    moneySupplySnapshotsCollection<{ turn: number }>(db)
       .find({}, { projection: { turn: 1 }, sort: { turn: -1 }, limit: 1 })
       .toArray(),
   ]);
@@ -31,8 +31,7 @@ async function seedEquityMarketPools(db: Db, ctx: MigrationContext): Promise<Mig
   const m2ByCurrency = new Map<string, number>();
   const snapshotTurn = latestSnapshot[0]?.turn;
   if (snapshotTurn != null) {
-    const rows = await db
-      .collection<{ currencyCode: string; m2?: number }>("moneySupplySnapshots")
+    const rows = await moneySupplySnapshotsCollection<{ currencyCode: string; m2?: number }>(db)
       .find({ turn: snapshotTurn }, { projection: { currencyCode: 1, m2: 1 } })
       .toArray();
     for (const row of rows) {

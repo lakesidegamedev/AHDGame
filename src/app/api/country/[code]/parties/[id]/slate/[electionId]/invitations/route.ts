@@ -22,6 +22,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { slateCandidatesCollection } from "@/lib/db/repositories/slateCandidates";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; electionId: string }>;
@@ -117,8 +118,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     // The turn's filing pass enforces the same cap and refuses overflow,
     // marking it `slate_full`, so the ballot never exceeds the cap.
     const [slateRowsForRace, activeCandidaciesForRace] = await Promise.all([
-      db
-        .collection<SlateCandidate>("slateCandidates")
+      slateCandidatesCollection(db)
         .find({ electionId: electionObjId, partyId }, { projection: { candidateId: 1, status: 1 } })
         .toArray(),
       electionCandidatesCollection(db)
@@ -174,7 +174,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(409, "Slate has been archived for this race.");
     }
 
-    const existingRow = await db.collection<SlateCandidate>("slateCandidates").findOne({
+    const existingRow = await slateCandidatesCollection(db).findOne({
       slateId: slate._id,
       candidateId: candidateObjId,
     });
@@ -228,7 +228,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     ).map((stateElection) => stateElection._id);
 
     if (existingRow) {
-      await db.collection<SlateCandidate>("slateCandidates").updateOne(
+      await slateCandidatesCollection(db).updateOne(
         { _id: existingRow._id },
         {
           $set: {
@@ -256,7 +256,7 @@ export async function POST(request: Request, { params }: RouteParams) {
         // the NPP back onto it from the prior-cycle template and the move reverts.
         // A withdrawn tombstone keeps the slate non-empty (blocking re-hydration)
         // and is skipped by the template carry-forward and file/override passes.
-        await db.collection<SlateCandidate>("slateCandidates").updateMany(
+        await slateCandidatesCollection(db).updateMany(
           {
             candidateId: candidateObjId,
             countryId,
@@ -279,12 +279,12 @@ export async function POST(request: Request, { params }: RouteParams) {
       return NextResponse.json({ success: true, id: existingRow._id.toString(), reassigned: true });
     }
 
-    await db.collection<SlateCandidate>("slateCandidates").insertOne(candidate.row);
+    await slateCandidatesCollection(db).insertOne(candidate.row);
     if (sameStateSlateIds.length > 0) {
       // Tombstone (not delete) the NPP's other same-state slate rows so the
       // old race's slate stays non-empty and syncPersistentSlateAssignments
       // does not re-hydrate the NPP back onto it.
-      await db.collection<SlateCandidate>("slateCandidates").updateMany(
+      await slateCandidatesCollection(db).updateMany(
         {
           candidateId: candidateObjId,
           countryId,

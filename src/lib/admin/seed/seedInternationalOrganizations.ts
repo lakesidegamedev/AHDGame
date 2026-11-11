@@ -18,6 +18,7 @@ import {
   isOrganizationFounded,
   resolveSeedRoster,
 } from "@/lib/internationalOrganizations/founding";
+import { organizationMembershipsCollection } from "@/lib/db/repositories/organizationMemberships";
 
 /**
  * Composite key for the membership existence set. NUL-separated because neither
@@ -40,7 +41,7 @@ export async function seedInternationalOrganizations(
   log: (msg: string) => void = console.log,
   preset: string
 ): Promise<{ membershipsInserted: number; leadershipInserted: number }> {
-  const membershipsCol = db.collection<OrganizationMembership>("organizationMemberships");
+  const membershipsCol = organizationMembershipsCollection(db);
   const leadershipCol = db.collection<OrganizationLeadership>("organizationLeadership");
   const now = new Date();
 

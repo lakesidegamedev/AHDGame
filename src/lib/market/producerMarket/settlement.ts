@@ -21,6 +21,7 @@ import { producerCashTransition, type ProducerCashBinding } from "./cashSettleme
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { producerEconomyTurnsCollection } from "@/lib/db/repositories/producerEconomyTurns";
 
 type EconomyInput = Parameters<typeof advanceProducerEconomy>[0];
 export type EconomyResult = ReturnType<typeof advanceProducerEconomy>;
@@ -554,7 +555,7 @@ export async function settleProducerTurn(
   const turn = input.production.turn;
   const key = JSON.stringify([input.worldEpoch, turn]);
   await assertProducerTurnFence(db, input.worldEpoch, turn);
-  const turns = db.collection<ProducerTurnRecord>("producerEconomyTurns");
+  const turns = producerEconomyTurnsCollection<ProducerTurnRecord>(db);
   let record = await turns.findOne({ _id: key });
   clock.lap("fenceAndLookupMs");
   let claimedPayload: FrozenProducerTurn | undefined;
@@ -797,7 +798,7 @@ export async function settleProducerTurn(
 /** Recover before preparing a new turn from sectors that may already have advanced. */
 export async function resumeProducerTurn(db: Db, input: { worldEpoch: string; turn: number }) {
   await assertProducerTurnFence(db, input.worldEpoch, input.turn);
-  const record = await db.collection<ProducerTurnRecord>("producerEconomyTurns").findOne({
+  const record = await producerEconomyTurnsCollection<ProducerTurnRecord>(db).findOne({
     _id: JSON.stringify([input.worldEpoch, input.turn]),
   });
   if (!record) return null;

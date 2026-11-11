@@ -2,6 +2,7 @@ import type { Db, ObjectId } from "mongodb";
 import type { ElectionCandidate, GovernorEndorsement } from "@/lib/db/types";
 import { applyEndorsementSupportBump } from "@/lib/elections/campaigns/supportEvents";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { governorEndorsementsCollection } from "@/lib/db/repositories/governorEndorsements";
 
 export type WithdrawReason = NonNullable<GovernorEndorsement["withdrawnReason"]>;
 
@@ -12,11 +13,12 @@ export async function withdrawEndorsement(
 ): Promise<{ status: number; body: { success?: boolean; error?: string } }> {
   // B3 — read the endorsement before marking inactive so we can reverse
   // the Support bump on the endorsed candidate.
-  const endorsement = await db
-    .collection<GovernorEndorsement>("governorEndorsements")
-    .findOne({ _id: endorsementId, isActive: true });
+  const endorsement = await governorEndorsementsCollection(db).findOne({
+    _id: endorsementId,
+    isActive: true,
+  });
 
-  const res = await db.collection<GovernorEndorsement>("governorEndorsements").updateOne(
+  const res = await governorEndorsementsCollection(db).updateOne(
     { _id: endorsementId, isActive: true },
     {
       $set: {

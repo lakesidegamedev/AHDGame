@@ -9,6 +9,7 @@ import { createModAuditLog } from "@/lib/modAuditLog";
 import type { User, WikiPage } from "@/lib/db/types";
 import { ObjectId } from "mongodb";
 import { usersCollection } from "@/lib/db/repositories/users";
+import { wikiPagesCollection } from "@/lib/db/repositories/wikiPages";
 
 interface RouteContext {
   params: Promise<{ slug: string }>;
@@ -30,7 +31,7 @@ export async function POST(request: Request, context: RouteContext) {
     }
 
     const db = await getDb();
-    const wikiPages = db.collection<WikiPage>("wikiPages");
+    const wikiPages = wikiPagesCollection(db);
 
     const existing = await wikiPages.findOne({ slug });
     if (!existing) {

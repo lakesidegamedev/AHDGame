@@ -47,6 +47,7 @@ import { electionCandidatesCollection } from "@/lib/db/repositories/electionCand
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
+import { seatsCollection } from "@/lib/db/repositories/seats";
 
 /**
  * Region-scoped party collections.
@@ -271,9 +272,10 @@ export async function evacuateRegionPolitics(
       state: regionId,
     });
     officialsDissolved = officials?.deletedCount ?? 0;
-    const seats = await db
-      .collection("seats")
-      .deleteMany({ countryId: fromCountryId, state: regionId });
+    const seats = await seatsCollection<Document>(db).deleteMany({
+      countryId: fromCountryId,
+      state: regionId,
+    });
     seatsDissolved = seats?.deletedCount ?? 0;
   }
 

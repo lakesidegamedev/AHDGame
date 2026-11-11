@@ -35,6 +35,11 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { usersCollection } from "@/lib/db/repositories/users";
 import type { Document } from "mongodb";
 import { nationalPartyElectionsCollection } from "@/lib/db/repositories/nationalPartyElections";
+import { nationalPartyCandidatesCollection } from "@/lib/db/repositories/nationalPartyCandidates";
+import { nationalCommitteeCandidatesCollection } from "@/lib/db/repositories/nationalCommitteeCandidates";
+import { nationalPartyVotesCollection } from "@/lib/db/repositories/nationalPartyVotes";
+import { nationalCommitteeVotesCollection } from "@/lib/db/repositories/nationalCommitteeVotes";
+import { nationalCommitteeElectionsCollection } from "@/lib/db/repositories/nationalCommitteeElections";
 
 async function getOptionalViewer(): Promise<AuthUserWithCharacter | null> {
   try {
@@ -188,16 +193,14 @@ export async function getNationalPartyElectionState(
   }
 
   const [allCandidatesRaw, allVoteCounts, allUserVotes] = await Promise.all([
-    db
-      .collection<NationalPartyCandidate>("nationalPartyCandidates")
+    nationalPartyCandidatesCollection(db)
       // electionIds spans active (voting) AND most-recent completed elections for
       // missing positions. Resolved elections terminalize candidacies to
       // "completed", so include those (and "active") while excluding player
       // withdrawals — otherwise concluded-race results render with no candidates.
       .find({ electionId: { $in: electionIds }, status: { $ne: "withdrawn" } })
       .toArray(),
-    db
-      .collection<NationalPartyVote>("nationalPartyVotes")
+    nationalPartyVotesCollection(db)
       .aggregate<{
         electionId: ObjectId;
         candidateId: ObjectId;
@@ -224,8 +227,7 @@ export async function getNationalPartyElectionState(
       ])
       .toArray(),
     authUser?.character && activeElectionIds.length > 0
-      ? db
-          .collection<NationalPartyVote>("nationalPartyVotes")
+      ? nationalPartyVotesCollection(db)
           .find({ electionId: { $in: activeElectionIds }, voterId: authUser.character._id })
           .toArray()
       : Promise.resolve([] as NationalPartyVote[]),
@@ -420,26 +422,21 @@ export async function getNationalCommitteeState(
           }));
 
   const election =
-    (await db
-      .collection<NationalCommitteeElection>("nationalCommitteeElections")
-      .findOne(
-        { partyId, countryId: partyCountryId, status: "voting" },
-        { sort: CANONICAL_VOTING_ELECTION_SORT }
-      )) ??
-    (await db
-      .collection<NationalCommitteeElection>("nationalCommitteeElections")
-      .findOne(
-        { partyId, countryId: partyCountryId, status: { $in: ["completed", "cancelled"] } },
-        { sort: { endTime: -1 } }
-      ));
+    (await nationalCommitteeElectionsCollection(db).findOne(
+      { partyId, countryId: partyCountryId, status: "voting" },
+      { sort: CANONICAL_VOTING_ELECTION_SORT }
+    )) ??
+    (await nationalCommitteeElectionsCollection(db).findOne(
+      { partyId, countryId: partyCountryId, status: { $in: ["completed", "cancelled"] } },
+      { sort: { endTime: -1 } }
+    ));
 
   let electionDisplay: CommitteeElection | null = null;
   let userVotes: string[] = [];
   let isCandidate = false;
 
   if (election) {
-    const candidatesRaw = await db
-      .collection<NationalCommitteeCandidate>("nationalCommitteeCandidates")
+    const candidatesRaw = await nationalCommitteeCandidatesCollection(db)
       // `election` may be the most-recent completed/cancelled one (display
       // fallback). Resolved elections terminalize candidacies to "completed",
       // so include those (and "active") while excluding player withdrawals.
@@ -462,8 +459,7 @@ export async function getNationalCommitteeState(
       candidateCharacters.map((character) => [character._id.toString(), character.sequentialId])
     );
 
-    const votesRaw = await db
-      .collection<NationalCommitteeVote>("nationalCommitteeVotes")
+    const votesRaw = await nationalCommitteeVotesCollection(db)
       .find({ electionId: election._id })
       .toArray();
     const votes = votesRaw.filter((vote) => !bannedCharacterIds.has(vote.voterId.toString()));
@@ -504,9 +500,10 @@ export async function getNationalCommitteeState(
     };
 
     if (authUser?.character && election.status === "voting") {
-      const userVote = await db
-        .collection<NationalCommitteeVote>("nationalCommitteeVotes")
-        .findOne({ electionId: election._id, voterId: authUser.character._id });
+      const userVote = await nationalCommitteeVotesCollection(db).findOne({
+        electionId: election._id,
+        voterId: authUser.character._id,
+      });
       if (userVote) {
         userVotes = userVote.candidateIds
           .map((candidateId) => candidateId.toString())

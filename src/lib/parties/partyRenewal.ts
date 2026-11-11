@@ -70,6 +70,7 @@ import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
+import { countryStateCollection } from "@/lib/db/repositories/countryState";
 
 /** Renewal looks for newly resolved cycles this often. */
 export const PARTY_RENEWAL_CHECK_INTERVAL_TURNS = 6;
@@ -143,8 +144,7 @@ export async function processPartyRenewal(
   if (nppCountries.length === 0) return summary;
 
   const [runtimes, stateRows] = await Promise.all([
-    db
-      .collection<{ _id: CountryId; governmentType?: string }>("countryState")
+    countryStateCollection<{ _id: CountryId; governmentType?: string }>(db)
       .find({ _id: { $in: nppCountries } }, { projection: { governmentType: 1 } })
       .toArray(),
     getPartyRenewalStatesCollection(db)

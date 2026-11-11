@@ -26,6 +26,9 @@ import { electionCandidatesCollection } from "@/lib/db/repositories/electionCand
 import { billsCollection } from "@/lib/db/repositories/bills";
 import { crisesCollection } from "@/lib/db/repositories/crises";
 import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
+import { actionLogsCollection } from "@/lib/db/repositories/actionLogs";
+import { portfolioHistoryCollection } from "@/lib/db/repositories/portfolioHistory";
+import { conflictsCollection } from "@/lib/db/repositories/conflicts";
 
 /**
  * I/O for the v2 Wrapped sections. Reads the runtime collections the reset is
@@ -179,8 +182,7 @@ export async function loadStoryData(
     )
   );
   const turnTimeline = await section("timeline", warn, [] as Array<[number, number]>, async () => {
-    const rows = await db
-      .collection("actionLogs")
+    const rows = await actionLogsCollection<Document>(db)
       .aggregate<{ _id: number; t: Date }>([
         { $match: { turn: { $type: "number" } } },
         { $group: { _id: "$turn", t: { $min: "$createdAt" } } },
@@ -209,8 +211,7 @@ export async function loadStoryData(
 
   // ── Activity ─────────────────────────────────────────────────────────────
   await section("activity", warn, undefined, async () => {
-    const rows = await db
-      .collection("actionLogs")
+    const rows = await actionLogsCollection<Document>(db)
       .aggregate<{ _id: { c: ObjectId; t: number }; n: number }>([
         { $match: { characterId: { $in: ids } } },
         { $group: { _id: { c: "$characterId", t: "$turn" }, n: { $sum: 1 } } },
@@ -418,8 +419,7 @@ export async function loadStoryData(
 
   // ── Wealth ───────────────────────────────────────────────────────────────
   await section("wealth", warn, undefined, async () => {
-    const rows = await db
-      .collection("portfolioHistory")
+    const rows = await portfolioHistoryCollection<Document>(db)
       .aggregate<{ _id: { c: ObjectId; b: number }; v: number; t: number }>([
         { $match: { characterId: { $in: ids } } },
         {
@@ -503,7 +503,7 @@ export async function loadStoryData(
     world = await section("world", warn, null, async () => {
       const [electionsHeld, conflicts, crises] = await Promise.all([
         electionsCollection<Document>(db).countDocuments({ status: { $in: FINISHED_ELECTION } }),
-        db.collection("conflicts").countDocuments({}),
+        conflictsCollection<Document>(db).countDocuments({}),
         crisesCollection<Document>(db).countDocuments({}),
       ]);
       let closestRace: RecapWorld["closestRace"] = null;

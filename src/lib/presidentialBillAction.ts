@@ -19,6 +19,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { billsCollection } from "@/lib/db/repositories/bills";
+import { billWhipsCollection } from "@/lib/db/repositories/billWhips";
 
 const OVERRIDE_WINDOW_HOURS = 24;
 const OVERRIDE_WINDOW_MS = OVERRIDE_WINDOW_HOURS * 60 * 60 * 1000;
@@ -204,7 +205,7 @@ export async function executePresidentialBillAction(
     // starts a distinct vote in both chambers, so every party and caucus gets
     // a clean whip slate just as every member gets a blank override ballot.
     try {
-      await db.collection<BillWhip>("billWhips").deleteMany({
+      await billWhipsCollection(db).deleteMany({
         targetType: "bill",
         targetId: billId,
         // Do not race-delete a new override whip issued immediately after the

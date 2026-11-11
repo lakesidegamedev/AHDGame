@@ -8,6 +8,7 @@ import {
 } from "@/lib/nppEndorsements";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { nppEndorsementsCollection } from "@/lib/db/repositories/nppEndorsements";
 
 interface EndorsementSummary {
   created: number;
@@ -17,8 +18,7 @@ interface EndorsementSummary {
 }
 
 export async function processNppEndorsements(ctx: NPPContext): Promise<EndorsementSummary> {
-  const activeEndorsements = await ctx.db
-    .collection<NPPEndorsement>("nppEndorsements")
+  const activeEndorsements = await nppEndorsementsCollection(ctx.db)
     .find({ isActive: true })
     .toArray();
 

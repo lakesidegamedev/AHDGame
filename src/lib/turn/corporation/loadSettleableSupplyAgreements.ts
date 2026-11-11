@@ -21,6 +21,8 @@ import {
 import { migrateStateScopedSupplyAgreements } from "./migrateStateScopedSupplyAgreements";
 import type { SettleableSupplyAgreement } from "./settleSupplyAgreements";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { supplyAgreementsCollection } from "@/lib/db/repositories/supplyAgreements";
+import type { Document } from "mongodb";
 
 /**
  * Keys a located sector's output is credited under for contract settlement:
@@ -114,13 +116,12 @@ export async function loadSettleableSupplyAgreements(args: {
     status: { $in: ["active", "cancelling"] as SupplyAgreement["status"][] },
     expiresAtTurn: { $lte: turn },
   };
-  const expiring = await db
-    .collection<SupplyAgreement>("supplyAgreements")
+  const expiring = await supplyAgreementsCollection(db)
     .find(expiringFilter, {
       projection: { supplierCorpId: 1, buyerCorpId: 1, commodity: 1, status: 1 },
     })
     .toArray();
-  await db.collection<SupplyAgreement>("supplyAgreements").updateMany(expiringFilter, {
+  await supplyAgreementsCollection(db).updateMany(expiringFilter, {
     $set: { status: "cancelled", updatedAt: now },
     $unset: { cancelEffectiveTurn: "" },
   });
@@ -131,7 +132,7 @@ export async function loadSettleableSupplyAgreements(args: {
   // everything still live. Ordering matters, a contract that expires this
   // turn must not settle again.
   const agreementMigration = await migrateStateScopedSupplyAgreements({
-    agreements: db.collection<SupplyAgreement>("supplyAgreements"),
+    agreements: supplyAgreementsCollection(db),
     turn,
     now,
   });
@@ -142,8 +143,7 @@ export async function loadSettleableSupplyAgreements(args: {
         `${agreementMigration.pendingCancelled} pending withdrawn`
     );
   }
-  const docs = await db
-    .collection("supplyAgreements")
+  const docs = await supplyAgreementsCollection<Document>(db)
     .find<LiveAgreementDoc>(
       { status: { $in: ["active", "cancelling"] } },
       {
@@ -199,7 +199,7 @@ export async function loadSettleableSupplyAgreements(args: {
       departedIds.has(agreement.buyerCorpId.toString())
   );
   if (obsolete.length > 0) {
-    await db.collection<SupplyAgreement>("supplyAgreements").updateMany(
+    await supplyAgreementsCollection(db).updateMany(
       {
         _id: { $in: obsolete.map((agreement) => agreement._id) },
         status: { $in: ["active", "cancelling"] },

@@ -38,6 +38,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 import type { Document } from "mongodb";
+import { indexFundPositionsCollection } from "@/lib/db/repositories/indexFundPositions";
 
 const FUND_TX = "indexFundTransactions";
 
@@ -307,7 +308,7 @@ async function commitCharter(
     createdAt: now,
     updatedAt: now,
   } as Omit<IndexFund, "_id">);
-  await db.collection("indexFundPositions").insertOne({
+  await indexFundPositionsCollection<Document>(db).insertOne({
     _id: new ObjectId(),
     fundId,
     holderKind: "corporation",

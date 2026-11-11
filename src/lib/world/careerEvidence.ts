@@ -4,6 +4,7 @@ import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
 import { billsCollection } from "@/lib/db/repositories/bills";
 import type { Document } from "mongodb";
 import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
+import { retiredCharactersCollection } from "@/lib/db/repositories/retiredCharacters";
 
 /** Durable enacted laws only. Drafts, failed bills and staff overrides earn no credit. */
 export async function loadCareerLegislation(
@@ -77,8 +78,7 @@ export async function archiveRetiredCareerLegislation(
 ): Promise<void> {
   const ids = [...counts.keys()].filter((id) => ObjectId.isValid(id)).map((id) => new ObjectId(id));
   if (ids.length === 0) return;
-  const retired = await db
-    .collection("retiredCharacters")
+  const retired = await retiredCharactersCollection<Document>(db)
     .find(
       { characterId: { $in: ids } },
       { projection: { characterId: 1, "snapshot.stats.enactedBills": 1 } }
@@ -97,7 +97,7 @@ export async function archiveRetiredCareerLegislation(
         ]
       : [];
   });
-  if (updates.length) await db.collection("retiredCharacters").bulkWrite(updates);
+  if (updates.length) await retiredCharactersCollection<Document>(db).bulkWrite(updates);
 }
 
 export async function loadCareerLoans(db: Db, characterIds?: readonly ObjectId[]) {

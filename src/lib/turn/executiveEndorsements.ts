@@ -3,6 +3,7 @@ import type { ExecutiveEndorsement } from "@/lib/db/types";
 import { isSittingLeader } from "@/lib/governorOffice/isSittingLeader";
 import { withdrawExecutiveEndorsement } from "@/lib/governorOffice/endorsements/withdrawExecutiveEndorsement";
 import { preloadEndorsementTargets } from "./endorsements/preloadEndorsementTargets";
+import { executiveEndorsementsCollection } from "@/lib/db/repositories/executiveEndorsements";
 
 /**
  * Turn phase: auto-withdraw executive endorsements whose conditions no longer hold.
@@ -16,10 +17,7 @@ import { preloadEndorsementTargets } from "./endorsements/preloadEndorsementTarg
 export async function processExecutiveEndorsements(
   db: Db
 ): Promise<{ withdrawn: number; byReason: Record<string, number> }> {
-  const active = await db
-    .collection<ExecutiveEndorsement>("executiveEndorsements")
-    .find({ isActive: true })
-    .toArray();
+  const active = await executiveEndorsementsCollection(db).find({ isActive: true }).toArray();
   let withdrawn = 0;
   const byReason: Record<string, number> = {};
   function tally(reason: NonNullable<ExecutiveEndorsement["withdrawnReason"]>) {

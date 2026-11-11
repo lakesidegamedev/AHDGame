@@ -14,6 +14,8 @@ import type {
   NationalCommitteeElection,
 } from "@/lib/db/types";
 import { nationalPartyElectionsCollection } from "@/lib/db/repositories/nationalPartyElections";
+import { statePartyElectionsCollection } from "@/lib/db/repositories/statePartyElections";
+import { nationalCommitteeElectionsCollection } from "@/lib/db/repositories/nationalCommitteeElections";
 
 interface RouteParams {
   params: Promise<{ electionId: string }>;
@@ -37,17 +39,16 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
     const now = new Date();
 
     // Try to find and cancel in state elections
-    const stateElection = await db
-      .collection<StatePartyElection>("statePartyElections")
-      .findOne({ _id: oid });
+    const stateElection = await statePartyElectionsCollection(db).findOne({ _id: oid });
 
     if (stateElection) {
       if (stateElection.status !== "voting") {
         return errorResponse(400, "Only active (voting) elections can be cancelled");
       }
-      await db
-        .collection<StatePartyElection>("statePartyElections")
-        .updateOne({ _id: oid }, { $set: { status: "cancelled", updatedAt: now } });
+      await statePartyElectionsCollection(db).updateOne(
+        { _id: oid },
+        { $set: { status: "cancelled", updatedAt: now } }
+      );
       return NextResponse.json({
         success: true,
         message: `State election cancelled (${stateElection.stateId} ${stateElection.partyId} ${stateElection.position})`,
@@ -72,17 +73,16 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
     }
 
     // Try committee elections
-    const committeeElection = await db
-      .collection<NationalCommitteeElection>("nationalCommitteeElections")
-      .findOne({ _id: oid });
+    const committeeElection = await nationalCommitteeElectionsCollection(db).findOne({ _id: oid });
 
     if (committeeElection) {
       if (committeeElection.status !== "voting") {
         return errorResponse(400, "Only active (voting) elections can be cancelled");
       }
-      await db
-        .collection<NationalCommitteeElection>("nationalCommitteeElections")
-        .updateOne({ _id: oid }, { $set: { status: "cancelled", updatedAt: now } });
+      await nationalCommitteeElectionsCollection(db).updateOne(
+        { _id: oid },
+        { $set: { status: "cancelled", updatedAt: now } }
+      );
       return NextResponse.json({
         success: true,
         message: `Committee election cancelled (${committeeElection.countryId ?? "US"} ${committeeElection.partyId})`,

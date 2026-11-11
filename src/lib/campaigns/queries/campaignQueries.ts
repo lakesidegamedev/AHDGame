@@ -71,6 +71,10 @@ import { electionCandidatesCollection } from "@/lib/db/repositories/electionCand
 import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { playerEndorsementsCollection } from "@/lib/db/repositories/playerEndorsements";
+import { nppEndorsementsCollection } from "@/lib/db/repositories/nppEndorsements";
+import { governorEndorsementsCollection } from "@/lib/db/repositories/governorEndorsements";
+import { executiveEndorsementsCollection } from "@/lib/db/repositories/executiveEndorsements";
 
 export interface CampaignListItem {
   id: string;
@@ -359,8 +363,7 @@ export async function getCampaignDetail(
   // endorsements tab lists the same rows the action panel counts, so one read
   // serves both and the list cannot disagree with the number beside it.
   const [nppEndorsementRows, playerEndorsementRows] = await Promise.all([
-    db
-      .collection<NPPEndorsement>("nppEndorsements")
+    nppEndorsementsCollection(db)
       .find(
         buildActiveVisibleNppEndorsementFilter({
           electionId: campaign.electionId,
@@ -370,8 +373,7 @@ export async function getCampaignDetail(
       )
       .toArray(),
     activeCandidateRow
-      ? db
-          .collection<PlayerEndorsement>("playerEndorsements")
+      ? playerEndorsementsCollection(db)
           .find(
             {
               electionId: campaign.electionId,
@@ -410,12 +412,12 @@ export async function getCampaignDetail(
         { _id: "default" },
         { projection: { baseActionsPerTurn: 1 } }
       ),
-      db.collection("governorEndorsements").countDocuments({
+      governorEndorsementsCollection<Document>(db).countDocuments({
         electionId: campaign.electionId,
         candidateId: campaign.candidateId,
         isActive: true,
       }),
-      db.collection("executiveEndorsements").countDocuments({
+      executiveEndorsementsCollection<Document>(db).countDocuments({
         electionId: campaign.electionId,
         candidateId: campaign.candidateId,
         isActive: true,

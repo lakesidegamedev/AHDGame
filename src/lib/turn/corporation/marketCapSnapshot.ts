@@ -16,6 +16,7 @@ import { runLaunchGuard } from "@/lib/market/launchGuard";
 import { computeMarketIndex } from "./marketIndex";
 import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
 import type { Document } from "mongodb";
+import { marketCapHistoryCollection } from "@/lib/db/repositories/marketCapHistory";
 
 /**
  * Currency to DENOMINATE a corp's history rows in. Returns a `code` ONLY when
@@ -212,7 +213,7 @@ export async function snapshotMarketCap(
   // without a query per corporation.
   const indexCorpIds = corporations.map((corp) => corp._id);
   const [previousMarketCapRow, previousSurvivorRows] = await Promise.all([
-    db.collection<MarketCapHistory>("marketCapHistory").findOne(
+    marketCapHistoryCollection(db).findOne(
       { turn: { $lt: turn } },
       {
         projection: {
@@ -405,7 +406,7 @@ export async function snapshotMarketCap(
 
   // Upsert by turn so that if the turn runs more than once (e.g. cron retry),
   // the snapshot is replaced rather than appended, preventing duplicate points in charts.
-  await db.collection("marketCapHistory").replaceOne({ turn }, snapshot, { upsert: true });
+  await marketCapHistoryCollection<Document>(db).replaceOne({ turn }, snapshot, { upsert: true });
 
   // Per-corporation history snapshots
   if (corpSnapshots.length > 0) {

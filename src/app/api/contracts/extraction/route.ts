@@ -20,6 +20,8 @@ import { isContractIssuanceEnabled } from "@/lib/extraction/featureFlag";
 import type { GameState } from "@/lib/db/types/gameState";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { extractionContractsCollection } from "@/lib/db/repositories/extractionContracts";
+import type { Document } from "mongodb";
 
 const grantSchema = z.object({
   stateId: z.string().min(1),
@@ -67,10 +69,7 @@ export async function GET(request: Request) {
     if (resource) query.resource = resource;
     if (countryId) query.countryId = countryId;
 
-    const loadedContracts = await db
-      .collection<ExtractionContract>("extractionContracts")
-      .find(query)
-      .toArray();
+    const loadedContracts = await extractionContractsCollection(db).find(query).toArray();
 
     const contracts = loadedContracts.filter((c) => !(c.tenderId && c.status === "offered"));
     const corpIds = [...new Set(contracts.map((c) => c.corporationId as ObjectId))];
@@ -131,8 +130,7 @@ export async function POST(request: Request) {
 
     const db = await getDb();
 
-    const existing = await db
-      .collection<ExtractionContract>("extractionContracts")
+    const existing = await extractionContractsCollection(db)
       .find({ stateId, resource, revokedTurn: { $exists: false } })
       .toArray();
     const currentTotal = existing.reduce((sum, c) => sum + (c.share ?? 0), 0);
@@ -146,7 +144,7 @@ export async function POST(request: Request) {
     const gameState = await gameStateCollection(db).findOne({ _id: "current" });
     const currentTurn = gameState?.currentTurn ?? 0;
 
-    const result = await db.collection("extractionContracts").insertOne({
+    const result = await extractionContractsCollection<Document>(db).insertOne({
       stateId,
       countryId,
       corporationId: new ObjectId(corporationId),

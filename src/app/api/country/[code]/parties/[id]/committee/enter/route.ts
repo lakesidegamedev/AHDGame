@@ -26,6 +26,9 @@ import { CANONICAL_VOTING_ELECTION_SORT } from "@/lib/elections/canonicalVotingE
 import { usersCollection } from "@/lib/db/repositories/users";
 import type { Document } from "mongodb";
 import { nationalPartyElectionsCollection } from "@/lib/db/repositories/nationalPartyElections";
+import { nationalPartyCandidatesCollection } from "@/lib/db/repositories/nationalPartyCandidates";
+import { nationalCommitteeCandidatesCollection } from "@/lib/db/repositories/nationalCommitteeCandidates";
+import { nationalCommitteeElectionsCollection } from "@/lib/db/repositories/nationalCommitteeElections";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -95,12 +98,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     const { withdraw } = parsed.data;
 
     // Find active election for this party in this country
-    const election = await db
-      .collection<NationalCommitteeElection>("nationalCommitteeElections")
-      .findOne(
-        { partyId, countryId: partyCountryId, status: "voting" },
-        { sort: CANONICAL_VOTING_ELECTION_SORT }
-      );
+    const election = await nationalCommitteeElectionsCollection(db).findOne(
+      { partyId, countryId: partyCountryId, status: "voting" },
+      { sort: CANONICAL_VOTING_ELECTION_SORT }
+    );
 
     if (!election) {
       return errorResponse(400, "No active committee election");
@@ -120,21 +121,20 @@ export async function POST(request: Request, { params }: RouteParams) {
     const characterName = authUser.character.name;
 
     // Check existing candidacy
-    const existingCandidacy = await db
-      .collection<NationalCommitteeCandidate>("nationalCommitteeCandidates")
-      .findOne({ electionId: election._id, characterId });
+    const existingCandidacy = await nationalCommitteeCandidatesCollection(db).findOne({
+      electionId: election._id,
+      characterId,
+    });
 
     if (withdraw) {
       if (!existingCandidacy || existingCandidacy.status === "withdrawn") {
         return errorResponse(400, "You are not a candidate in this election");
       }
 
-      await db
-        .collection<NationalCommitteeCandidate>("nationalCommitteeCandidates")
-        .updateOne(
-          { _id: existingCandidacy._id },
-          { $set: { status: "withdrawn", withdrawnAt: now } }
-        );
+      await nationalCommitteeCandidatesCollection(db).updateOne(
+        { _id: existingCandidacy._id },
+        { $set: { status: "withdrawn", withdrawnAt: now } }
+      );
 
       return NextResponse.json({
         success: true,
@@ -150,15 +150,13 @@ export async function POST(request: Request, { params }: RouteParams) {
         !hasTurnBackedWindowClosed(leadershipElection, gameTime.currentTurn, gameTime.effectiveNow)
     );
     if (activeLeadershipElections.length > 0) {
-      const leadershipCandidate = await db
-        .collection<NationalPartyCandidate>("nationalPartyCandidates")
-        .findOne({
-          electionId: {
-            $in: activeLeadershipElections.map((leadershipElection) => leadershipElection._id),
-          },
-          characterId,
-          status: "active",
-        });
+      const leadershipCandidate = await nationalPartyCandidatesCollection(db).findOne({
+        electionId: {
+          $in: activeLeadershipElections.map((leadershipElection) => leadershipElection._id),
+        },
+        characterId,
+        status: "active",
+      });
 
       if (leadershipCandidate) {
         const blockingElection = activeLeadershipElections.find((leadershipElection) =>
@@ -180,12 +178,10 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     if (existingCandidacy && existingCandidacy.status === "withdrawn") {
       // Re-enter
-      await db
-        .collection<NationalCommitteeCandidate>("nationalCommitteeCandidates")
-        .updateOne(
-          { _id: existingCandidacy._id },
-          { $set: { status: "active", enteredAt: now }, $unset: { withdrawnAt: "" } }
-        );
+      await nationalCommitteeCandidatesCollection(db).updateOne(
+        { _id: existingCandidacy._id },
+        { $set: { status: "active", enteredAt: now }, $unset: { withdrawnAt: "" } }
+      );
     } else {
       // New candidacy
       const candidacy: Omit<NationalCommitteeCandidate, "_id"> = {
@@ -199,12 +195,14 @@ export async function POST(request: Request, { params }: RouteParams) {
       };
 
       try {
-        await db.collection("nationalCommitteeCandidates").insertOne(candidacy);
+        await nationalCommitteeCandidatesCollection<Document>(db).insertOne(candidacy);
       } catch (error) {
         if (isActiveNationalCommitteeCandidateDuplicateKey(error)) {
-          const activeCandidate = await db
-            .collection<NationalCommitteeCandidate>("nationalCommitteeCandidates")
-            .findOne({ partyId, characterId, status: "active" });
+          const activeCandidate = await nationalCommitteeCandidatesCollection(db).findOne({
+            partyId,
+            characterId,
+            status: "active",
+          });
 
           if (activeCandidate) {
             return errorResponse(400, "You are already a candidate in this election");

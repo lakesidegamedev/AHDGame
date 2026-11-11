@@ -11,6 +11,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
 import { usersCollection } from "@/lib/db/repositories/users";
 import { activityLogCollection } from "@/lib/db/repositories/activityLog";
+import { actionLogsCollection } from "@/lib/db/repositories/actionLogs";
 
 export interface ActivityLoggingResult {
   summariesInserted: number;
@@ -30,7 +31,7 @@ export async function processActivityLogging(
   // which is newTurn - 1 (the turn before the one being processed now).
   const actionTurn = newTurn - 1;
 
-  const logs = await db.collection<ActionLog>("actionLogs").find({ turn: actionTurn }).toArray();
+  const logs = await actionLogsCollection(db).find({ turn: actionTurn }).toArray();
 
   if (logs.length === 0) return { summariesInserted: 0 };
 

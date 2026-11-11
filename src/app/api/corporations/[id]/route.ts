@@ -38,6 +38,8 @@ import { marketAtLeast, getMarketSystemMode } from "@/lib/market/featureFlag";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
+import { wikiPagesCollection } from "@/lib/db/repositories/wikiPages";
+import { corporationPrivatizationVotesCollection } from "@/lib/db/repositories/corporationPrivatizationVotes";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -146,9 +148,10 @@ export const GET = withNoStore(async function GET(request: Request, { params }: 
     // Surface any open privatization vote so the corp page can mount the panel.
     // Must be nested inside `corporation` — the page sets state from data.corporation,
     // so a top-level openPrivatizationVoteId would be silently ignored.
-    const openVote = await db
-      .collection<CorporationPrivatizationVote>("corporationPrivatizationVotes")
-      .findOne({ corporationId: corporation._id, status: "open" }, { projection: { _id: 1 } });
+    const openVote = await corporationPrivatizationVotesCollection(db).findOne(
+      { corporationId: corporation._id, status: "open" },
+      { projection: { _id: 1 } }
+    );
 
     const openPrivatizationVoteId = openVote?._id?.toString() ?? null;
     (detail.corporation as Record<string, unknown>).openPrivatizationVoteId =
@@ -160,12 +163,10 @@ export const GET = withNoStore(async function GET(request: Request, { params }: 
     const wikiSlug =
       corporation.sequentialId != null ? corporationWikiSlug(corporation.sequentialId) : null;
     const wikiPagePublished = wikiSlug
-      ? (await db
-          .collection<WikiPage>("wikiPages")
-          .findOne(
-            { slug: wikiSlug, status: "published", private: { $ne: true } },
-            { projection: { _id: 1 } }
-          )) != null
+      ? (await wikiPagesCollection(db).findOne(
+          { slug: wikiSlug, status: "published", private: { $ne: true } },
+          { projection: { _id: 1 } }
+        )) != null
       : false;
     (detail.corporation as Record<string, unknown>).wikiPagePublished = wikiPagePublished;
 

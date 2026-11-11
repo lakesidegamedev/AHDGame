@@ -10,6 +10,9 @@
  * `scanApiAbuse` is the thin DB wrapper that feeds it from Mongo.
  */
 import type { Db } from "mongodb";
+import { apiAbuseScansCollection } from "@/lib/db/repositories/apiAbuseScans";
+import type { Document } from "mongodb";
+import { apiAccessLogCollection } from "@/lib/db/repositories/apiAccessLog";
 
 export interface AccessRow {
   path: string;
@@ -193,8 +196,7 @@ export async function scanApiAbuse(
   const windowMs = opts.windowMs ?? ABUSE_THRESHOLDS.windowMs;
   const since = new Date(Date.now() - windowMs);
 
-  const docs = await db
-    .collection("apiAccessLog")
+  const docs = await apiAccessLogCollection<Document>(db)
     .find({ timestamp: { $gte: since } })
     .project({ path: 1, method: 1, ip: 1, userId: 1, keyId: 1, timestamp: 1 })
     .toArray();
@@ -229,14 +231,13 @@ export async function persistApiAbuseScan(db: Db, opts: DetectOptions = {}): Pro
     flaggedActors: result.findings.length,
     findings: result.findings,
   };
-  await db.collection("apiAbuseScans").insertOne(scan);
+  await apiAbuseScansCollection<Document>(db).insertOne(scan);
   return scan;
 }
 
 /** Most recent persisted scan, or null if none has run yet. */
 export async function getLatestApiAbuseScan(db: Db): Promise<ApiAbuseScan | null> {
-  const doc = await db
-    .collection("apiAbuseScans")
+  const doc = await apiAbuseScansCollection<Document>(db)
     .find({})
     .sort({ detectedAt: -1 })
     .limit(1)

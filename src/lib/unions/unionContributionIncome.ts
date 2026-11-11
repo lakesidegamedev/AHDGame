@@ -28,13 +28,13 @@ import {
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { unionsCollection } from "@/lib/db/repositories/unions";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { unionOrganizersCollection } from "@/lib/db/repositories/unionOrganizers";
 
 export async function unionContributionIncomePerTurn(
   db: Db,
   characterId: ObjectId
 ): Promise<number> {
-  const mine = await db
-    .collection<UnionOrganizer>("unionOrganizers")
+  const mine = await unionOrganizersCollection(db)
     .find({ characterId, strength: { $gt: 0 } }, { projection: { unionId: 1, strength: 1 } })
     .toArray();
   if (mine.length === 0) return 0;
@@ -68,8 +68,7 @@ export async function unionContributionIncomePerTurn(
 
   const payingUnionIds = unions.map((u) => u._id);
   const [organizers, sectors] = await Promise.all([
-    db
-      .collection<UnionOrganizer>("unionOrganizers")
+    unionOrganizersCollection(db)
       .find(
         { unionId: { $in: payingUnionIds }, strength: { $gt: 0 } },
         { projection: { unionId: 1, characterId: 1, strength: 1 } }

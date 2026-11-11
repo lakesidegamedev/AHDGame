@@ -29,6 +29,8 @@ import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
+import { bondHistoryCollection } from "@/lib/db/repositories/bondHistory";
+import type { Document } from "mongodb";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -367,7 +369,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
       const bondIds = bonds.map((b) => b._id);
       if (bondIds.length > 0) {
-        await db.collection("bondHistory").deleteMany({ bondId: { $in: bondIds } });
+        await bondHistoryCollection<Document>(db).deleteMany({ bondId: { $in: bondIds } });
       }
       await bondsCollection(db).deleteMany({ corporationId: corp._id });
     }

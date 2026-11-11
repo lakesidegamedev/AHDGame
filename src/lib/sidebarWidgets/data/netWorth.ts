@@ -4,6 +4,7 @@ import type { PortfolioHistory } from "@/lib/db/types/portfolioHistory";
 import { COUNTRY_CURRENCY_MAP, type CurrencyCode } from "@/lib/constants/currencyCodes";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { usersCollection } from "@/lib/db/repositories/users";
+import { portfolioHistoryCollection } from "@/lib/db/repositories/portfolioHistory";
 
 export interface NetWorthPoint {
   turn: number;
@@ -37,8 +38,7 @@ export async function loadNetWorth(db: Db, userId: string): Promise<NetWorthWidg
       { _id: user.activeCharacterId },
       { projection: { countryId: 1 } }
     ),
-    db
-      .collection<PortfolioHistory>("portfolioHistory")
+    portfolioHistoryCollection(db)
       .find({ characterId: user.activeCharacterId })
       .sort({ turn: -1 })
       .limit(NET_WORTH_TURNS)

@@ -24,6 +24,8 @@ import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParti
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { usersCollection } from "@/lib/db/repositories/users";
 import { notificationsCollection } from "@/lib/db/repositories/notifications";
+import { playerMailCollection } from "@/lib/db/repositories/playerMail";
+import type { Document } from "mongodb";
 
 export async function GET() {
   try {
@@ -75,9 +77,11 @@ export async function GET() {
         .limit(3)
         .toArray(),
       notificationsCollection(db).countDocuments({ userId, ...visibility, read: false }),
-      db
-        .collection("playerMail")
-        .countDocuments({ toUserId: userId, read: false, deletedByRecipient: false }),
+      playerMailCollection<Document>(db).countDocuments({
+        toUserId: userId,
+        read: false,
+        deletedByRecipient: false,
+      }),
       unionContributionIncomePerTurn(db, character._id),
     ]);
 

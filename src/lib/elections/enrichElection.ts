@@ -148,6 +148,11 @@ import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVot
 import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
+import { playerEndorsementsCollection } from "@/lib/db/repositories/playerEndorsements";
+import { nppEndorsementsCollection } from "@/lib/db/repositories/nppEndorsements";
+import { demographicDefaultsCollection } from "@/lib/db/repositories/demographicDefaults";
+import { stateRegistrationPoolCollection } from "@/lib/db/repositories/stateRegistrationPool";
+import { congressionalDistrictsCollection } from "@/lib/db/repositories/congressionalDistricts";
 
 export async function _enrichElection(
   election: Election,
@@ -517,8 +522,7 @@ export async function _enrichElection(
     }
     const districts = deps.preloadedDistricts
       ? deps.preloadedDistricts.filter((d) => d.stateId === election.state)
-      : await db
-          .collection<CongressionalDistrict>("congressionalDistricts")
+      : await congressionalDistrictsCollection(db)
           .find({ countryId: "US", stateId: election.state as string })
           .toArray();
     districtsForState = districts;
@@ -553,8 +557,7 @@ export async function _enrichElection(
   // races skip the projection above; a one-document check settles those without
   // loading the whole state's districts.
   if (redistrictedHouseRace && districtsForState === null && isFull) {
-    districtsForState = await db
-      .collection<CongressionalDistrict>("congressionalDistricts")
+    districtsForState = await congressionalDistrictsCollection(db)
       .find({ countryId: "US", stateId: election.state as string })
       .limit(1)
       .toArray();
@@ -1025,8 +1028,7 @@ export async function _enrichElection(
             .toArray()
         : Promise.resolve([] as StateDemographics[]),
       demographicsQueryStateIds.length > 0
-        ? db
-            .collection<StateDemographics>("demographicDefaults")
+        ? demographicDefaultsCollection(db)
             .find({ _id: { $in: demographicsQueryStateIds }, countryId: countryId as CountryId })
             .toArray()
         : Promise.resolve([] as StateDemographics[]),
@@ -1197,10 +1199,7 @@ export async function _enrichElection(
   // (`!inPrimary && !isUpcoming`), and registration is a phase-agnostic
   // baseline, so populate it wherever the card is shown rather than only mid-race.
   if (isFull && isPresident && (inGeneral || isEnded)) {
-    const pools = await db
-      .collection<StateRegistrationPool>("stateRegistrationPool")
-      .find({ countryId })
-      .toArray();
+    const pools = await stateRegistrationPoolCollection(db).find({ countryId }).toArray();
     // The presidential deps load every country's statePartyOrg rows
     // (`fetchDepsForElection` uses `find({})`); scope to this election's
     // country so foreign states never leak into the US breakdown. Legacy
@@ -1448,16 +1447,12 @@ export async function fetchDepsForElection(
       : Promise.resolve([] as NPP[]),
     politicalPartiesCollection(db).find({ countryId }).toArray(),
     isFull
-      ? db
-          .collection<NPPEndorsement>("nppEndorsements")
+      ? nppEndorsementsCollection(db)
           .find(buildActiveVisibleNppEndorsementFilter({ electionId: electionOid }))
           .toArray()
       : Promise.resolve([] as NPPEndorsement[]),
     isFull
-      ? db
-          .collection<PlayerEndorsement>("playerEndorsements")
-          .find({ electionId: electionOid, isActive: true })
-          .toArray()
+      ? playerEndorsementsCollection(db).find({ electionId: electionOid, isActive: true }).toArray()
       : Promise.resolve([] as PlayerEndorsement[]),
     isFull
       ? db

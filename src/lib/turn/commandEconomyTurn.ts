@@ -66,6 +66,7 @@ import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParti
 import type { Document } from "mongodb";
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { commodityFlowsCollection } from "@/lib/db/repositories/commodityFlows";
 
 /**
  * Command-economy macro turn phase. Advances shortage-economy state on
@@ -170,8 +171,7 @@ export async function processCommandEconomyTurn(
   const plantsEnabled = marketAtLeast(marketSystemMode, "plants");
   const physicalGapByCountry = new Map<string, number>();
   if (marketAtLeast(marketSystemMode, "ledger") && _turn > 0) {
-    const flowDocs = await db
-      .collection<CommodityFlow>("commodityFlows")
+    const flowDocs = await commodityFlowsCollection(db)
       .find({ turn: _turn - 1 }, { projection: { byCountry: 1 } })
       .toArray();
     const rowsByCountry = new Map<string, CommodityFlow["byCountry"][string][]>();

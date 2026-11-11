@@ -17,15 +17,14 @@ import type {
 } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
+import { speakerElectionsCollection } from "@/lib/db/repositories/speakerElections";
 
 export async function resolveSpeakerElection(
   db: Db,
   _partyMap: Map<string, PoliticalParty>,
   force = false
 ): Promise<boolean> {
-  const election = await db
-    .collection<SpeakerElection>("speakerElections")
-    .findOne({ _id: "current" });
+  const election = await speakerElectionsCollection(db).findOne({ _id: "current" });
   if (!election || election.status !== "voting") return false;
   if (!force) {
     const gameTime = await getGameTime();
@@ -42,9 +41,10 @@ export async function resolveSpeakerElection(
 
   if (candidacies.length === 0) {
     await vacateCongressLeadershipRole(db, "speaker_of_the_house", now);
-    await db
-      .collection<SpeakerElection>("speakerElections")
-      .updateOne({ _id: "current" }, { $set: { status: "closed", updatedAt: now } });
+    await speakerElectionsCollection(db).updateOne(
+      { _id: "current" },
+      { $set: { status: "closed", updatedAt: now } }
+    );
     return true;
   }
 

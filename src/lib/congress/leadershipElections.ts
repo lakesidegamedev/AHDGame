@@ -38,6 +38,7 @@ import type {
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
+import { speakerElectionsCollection } from "@/lib/db/repositories/speakerElections";
 
 const LEADERSHIP_ELECTION_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -501,7 +502,7 @@ export async function triggerLeadershipElectionsAfterChamberVote(
       house.majorityParty
     );
     const speakerExisting = speakerControlChanged
-      ? await db.collection<SpeakerElection>("speakerElections").findOne({ _id: "current" })
+      ? await speakerElectionsCollection(db).findOne({ _id: "current" })
       : null;
     if (
       speakerControlChanged &&
@@ -516,7 +517,7 @@ export async function triggerLeadershipElectionsAfterChamberVote(
           { status: { $in: ["open", "voting"] } },
           { $set: { status: "failed", updatedAt: now } }
         );
-      await db.collection<SpeakerElection>("speakerElections").updateOne(
+      await speakerElectionsCollection(db).updateOne(
         { _id: "current" },
         {
           $set: {
@@ -666,9 +667,7 @@ export async function resolveExpiredLeadershipElections(db: Db): Promise<void> {
   }
 
   // Speaker (US House)
-  const speakerEl = await db
-    .collection<SpeakerElection>("speakerElections")
-    .findOne({ _id: "current" });
+  const speakerEl = await speakerElectionsCollection(db).findOne({ _id: "current" });
   if (speakerEl?.status === "voting" && isLeadershipElectionClosed(speakerEl, currentTurn, now)) {
     const { resolveSpeakerElection } =
       await import("@/lib/congress/speaker/resolveSpeakerElection");

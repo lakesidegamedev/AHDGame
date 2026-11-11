@@ -2,6 +2,7 @@ import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { CongressionalDistrict } from "@/lib/db/types";
 import { buildDistrictDocsForStates } from "./buildStateDocs";
+import { congressionalDistrictsCollection } from "@/lib/db/repositories/congressionalDistricts";
 
 /**
  * Rebuild the district maps of the given states neutrally (from current
@@ -15,7 +16,7 @@ export async function regenerateCongressionalDistricts(
 ): Promise<{ regenerated: number }> {
   if (opts.stateIds.length === 0) return { regenerated: 0 };
 
-  const coll = db.collection<CongressionalDistrict>("congressionalDistricts");
+  const coll = congressionalDistrictsCollection(db);
   await coll.deleteMany({
     countryId: opts.countryId,
     stateId: { $in: opts.stateIds },

@@ -3,6 +3,7 @@ import type { Filter } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import type { WikiPage } from "@/lib/db/types";
 import { playerWikiStarter, partyWikiStarter, corporationWikiStarter } from "./playerPages";
+import { wikiPagesCollection } from "@/lib/db/repositories/wikiPages";
 
 /**
  * Player, party and corporation wiki pages are created pre-filled with a starter
@@ -80,8 +81,7 @@ async function loadLowValueWikiSlugs(): Promise<string[]> {
       },
     ],
   };
-  const candidates = await db
-    .collection<WikiPage>("wikiPages")
+  const candidates = await wikiPagesCollection(db)
     .find(candidateFilter, { projection: { slug: 1, content: 1 } })
     .toArray();
 

@@ -51,6 +51,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { stockExchangeSnapshotsCollection } from "@/lib/db/repositories/stockExchangeSnapshots";
 
 interface HistoryPoint {
   turn: number;
@@ -174,9 +175,7 @@ export async function buildCountryEconomyOutlook(
       getGameState(db),
       exchangeRatesCollection(db).findOne({ _id: countryId }),
       exchangeApiKey
-        ? db
-            .collection<StockExchangeSnapshot>("stockExchangeSnapshots")
-            .findOne({ _id: exchangeApiKey })
+        ? stockExchangeSnapshotsCollection(db).findOne({ _id: exchangeApiKey })
         : Promise.resolve(null),
       aggregateCountrySectorMix(db, countryId),
       gameConfigCollection(db).findOne(

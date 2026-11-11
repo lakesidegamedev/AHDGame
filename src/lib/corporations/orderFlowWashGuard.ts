@@ -1,5 +1,6 @@
 import type { Db, ObjectId } from "mongodb";
 import type { ShareTradeHistory, ShareTradeParty } from "@/lib/db/types/shareTradeHistory";
+import { shareTradeHistoryCollection } from "@/lib/db/repositories/shareTradeHistory";
 
 /**
  * Wash-trade guard for the order-flow price signal.
@@ -83,8 +84,7 @@ export async function isOrderFlowWashRoundTrip(
   now: Date = new Date()
 ): Promise<boolean> {
   try {
-    const recent = await db
-      .collection<ShareTradeHistory>("shareTradeHistory")
+    const recent = await shareTradeHistoryCollection(db)
       .find(
         {
           corporationId,

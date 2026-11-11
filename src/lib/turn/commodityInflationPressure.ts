@@ -9,6 +9,7 @@ import type { CommodityPrice } from "@/lib/db/types/commodityPrice";
 import type { CommodityPriceHistory } from "@/lib/db/types/commodityPriceHistory";
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
+import { commodityPriceHistoryCollection } from "@/lib/db/repositories/commodityPriceHistory";
 
 /**
  * Lookback for the commodity cost-push signal: half a game year, annualized.
@@ -101,8 +102,7 @@ export async function loadCommodityPressureSnapshots(
   priceTurn: number
 ): Promise<CommodityPressureSnapshot[]> {
   const historyAt = (turn: number): Promise<CommodityPriceHistory[]> =>
-    db
-      .collection<CommodityPriceHistory>("commodityPriceHistory")
+    commodityPriceHistoryCollection(db)
       .find({ turn }, { projection: { commodity: 1, nationalPrices: 1 } })
       .toArray();
   const [commodityPriceDocs, commodityPriceHistoryDocs, priorYearDocs, priorQuarterDocs] =

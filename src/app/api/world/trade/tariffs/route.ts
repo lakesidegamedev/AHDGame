@@ -4,6 +4,7 @@ import { getDb } from "@/lib/mongodb";
 import { handleRouteError } from "@/lib/api/errors";
 import type { Tariff } from "@/lib/db/types";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { tariffsCollection } from "@/lib/db/repositories/tariffs";
 
 // GET /api/world/trade/tariffs - List every active tariff (rate > 0) across all
 // nations, shaped for the World Trade "Trade Restrictions" view. Read-only: the
@@ -15,8 +16,7 @@ export async function GET() {
   try {
     const db = await getDb();
 
-    const tariffs = await db
-      .collection<Tariff>("tariffs")
+    const tariffs = await tariffsCollection(db)
       .find({ rate: { $gt: 0 } })
       .sort({ countryId: 1, scopeType: 1, createdAt: 1 })
       .toArray();

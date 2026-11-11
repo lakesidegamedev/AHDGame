@@ -29,6 +29,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 import type { Document } from "mongodb";
+import { infraProjectsCollection } from "@/lib/db/repositories/infraProjects";
 
 async function cancelSecuredBuild(
   db: Db,
@@ -295,5 +296,5 @@ export async function refundConversionConstruction(
   if (logs.length) await emitBuildCapexTxBulk(db, logs);
   // Infrastructure construction reserves a budget envelope, not prepaid cash.
   // Cancelling releases that commitment; there is no cash debit to refund.
-  await db.collection("infraProjects").deleteMany({ regionId, status: "construction" });
+  await infraProjectsCollection<Document>(db).deleteMany({ regionId, status: "construction" });
 }

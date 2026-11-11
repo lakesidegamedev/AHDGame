@@ -58,6 +58,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { demographicDefaultsCollection } from "@/lib/db/repositories/demographicDefaults";
 
 interface Props {
   params: Promise<{ code: string; id: string }>;
@@ -127,12 +128,10 @@ async function renderUKRegion(regionCode: string) {
       { _id: "current" },
       { projection: { preset: 1, currentYear: 1, startingYear: 1 } }
     ),
-    db
-      .collection<StateDemographics>("demographicDefaults")
-      .findOne(
-        { _id: stateId },
-        { projection: { layer1PositionOverrides: 1, layer1TurnoutOverrides: 1 } }
-      ),
+    demographicDefaultsCollection(db).findOne(
+      { _id: stateId },
+      { projection: { layer1PositionOverrides: 1, layer1TurnoutOverrides: 1 } }
+    ),
   ]);
 
   const { demographics } = demographicsData;
@@ -358,12 +357,10 @@ async function renderGenericRegion(countryId: CountryId, regionCode: string) {
       { _id: "default" },
       { projection: { regionalConditionsOverviewEnabled: 1 } }
     ),
-    db
-      .collection<StateDemographics>("demographicDefaults")
-      .findOne(
-        { _id: stateId },
-        { projection: { layer1PositionOverrides: 1, layer1TurnoutOverrides: 1 } }
-      ),
+    demographicDefaultsCollection(db).findOne(
+      { _id: stateId },
+      { projection: { layer1PositionOverrides: 1, layer1TurnoutOverrides: 1 } }
+    ),
   ]);
 
   const activePreset = gameStateDoc?.preset ?? DEFAULT_SEED_PRESET;

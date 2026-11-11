@@ -2,6 +2,7 @@ import type { Db, ObjectId } from "mongodb";
 import type { PlayerMail, PlayerMailReport, User } from "@/lib/db/types";
 import { normalizeMailSubject } from "@/lib/inbox/mailThreads";
 import { usersCollection } from "@/lib/db/repositories/users";
+import { playerMailCollection } from "@/lib/db/repositories/playerMail";
 
 export type MailReportMessageView = {
   id: string;
@@ -64,7 +65,7 @@ export async function getMailReportDetail(
     { projection: { username: 1 } }
   );
 
-  const anchorMail = await db.collection<PlayerMail>("playerMail").findOne({ _id: report.mailId });
+  const anchorMail = await playerMailCollection(db).findOne({ _id: report.mailId });
 
   let messages: PlayerMail[] = [];
   if (anchorMail?.fromCharacterId) {
@@ -72,8 +73,7 @@ export async function getMailReportDetail(
     const charB = anchorMail.toCharacterId;
     const subjectKey = normalizeMailSubject(anchorMail.subject);
 
-    const candidates = await db
-      .collection<PlayerMail>("playerMail")
+    const candidates = await playerMailCollection(db)
       .find({
         $or: [
           { fromCharacterId: charA, toCharacterId: charB },

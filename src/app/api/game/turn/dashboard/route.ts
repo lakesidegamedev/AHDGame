@@ -48,6 +48,7 @@ import { electionCandidatesCollection } from "@/lib/db/repositories/electionCand
 import type { Document } from "mongodb";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { portfolioHistoryCollection } from "@/lib/db/repositories/portfolioHistory";
 
 const MIN_BASE_ACTIONS_PER_TURN = 4;
 
@@ -145,8 +146,7 @@ async function handleGET() {
         { projection: { _id: 1 } }
       ),
       // Two most recent snapshots — used to compute portfolioChangePercent
-      db
-        .collection<PortfolioHistory>("portfolioHistory")
+      portfolioHistoryCollection(db)
         .find({ characterId: character._id })
         .sort({ turn: -1 })
         .limit(2)

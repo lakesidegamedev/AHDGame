@@ -25,6 +25,8 @@ import {
 } from "@/lib/corporations/supplyExchange/guards";
 import { notifySupplyAgreementEvent } from "@/lib/corporations/supplyExchange/notifications";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { supplyAgreementsCollection } from "@/lib/db/repositories/supplyAgreements";
+import { supplyListingsCollection } from "@/lib/db/repositories/supplyListings";
 
 /** Below this the remainder of a listing is rounding dust and the take consumes it whole. */
 const LISTING_DUST_UNITS = 1e-6;
@@ -53,7 +55,7 @@ export async function takeSupplyListing(request: Request, takerCorpId: string) {
     const gate = await requireSupplyExchangeAccess(db, auth.user.userId);
     if (gate) return gate;
 
-    const listings = db.collection<SupplyListing>("supplyListings");
+    const listings = supplyListingsCollection(db);
     const turn = await getCurrentTurn(db);
     const transferRestriction = await controllerTransferBarrierError(db, taker, turn, new Date());
     if (transferRestriction) return errorResponse(403, transferRestriction);
@@ -183,7 +185,7 @@ export async function takeSupplyListing(request: Request, takerCorpId: string) {
       updatedAt: now,
     };
     try {
-      await db.collection<SupplyAgreement>("supplyAgreements").insertOne(agreement);
+      await supplyAgreementsCollection(db).insertOne(agreement);
     } catch (error) {
       // Give the units back so a failed write does not eat the publisher's offer.
       try {

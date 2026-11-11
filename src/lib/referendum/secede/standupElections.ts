@@ -6,6 +6,7 @@ import type { SecedingCountryId } from "./subRegions";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electionsCollection } from "@/lib/db/repositories/elections";
+import { seatsCollection } from "@/lib/db/repositories/seats";
 
 export async function standupElections(
   db: Db,
@@ -38,7 +39,7 @@ export async function standupElections(
       },
     }))
   );
-  await db.collection<Seat>("seats").bulkWrite(
+  await seatsCollection(db).bulkWrite(
     rows.map((row) => ({
       updateOne: {
         filter: { _id: row.seatId! },

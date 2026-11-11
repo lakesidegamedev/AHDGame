@@ -25,6 +25,7 @@ import { ContractError } from "./eligibility";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { extractionContractsCollection } from "@/lib/db/repositories/extractionContracts";
 const logId = (key: string) => oid(createHash("sha256").update(key).digest("hex").slice(0, 24));
 export async function settleTenderSigningFee(
   db: Db,
@@ -37,7 +38,7 @@ export async function settleTenderSigningFee(
 ): Promise<{ ok: boolean; error?: string }> {
   if (!contract.tenderId)
     throw new ContractError("Only a winning tender may use this signing fee command.", 400);
-  const col = db.collection<ExtractionContract>("extractionContracts");
+  const col = extractionContractsCollection(db);
   const amount = contract.signingFeeAnchor ?? 0;
   if (!allowNewSettlement && amount === 0 && !contract.signingFeeSettled)
     throw new ContractError("Extraction contract issuance is disabled.");

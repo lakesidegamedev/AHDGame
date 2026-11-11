@@ -6,6 +6,10 @@ import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 import type { Document } from "mongodb";
+import { indexFundPositionsCollection } from "@/lib/db/repositories/indexFundPositions";
+import { indexFundTransactionsCollection } from "@/lib/db/repositories/indexFundTransactions";
+import { indexFundRedemptionQueueCollection } from "@/lib/db/repositories/indexFundRedemptionQueue";
+import { indexFundSnapshotsCollection } from "@/lib/db/repositories/indexFundSnapshots";
 
 async function releaseFundHeldShares(db: Awaited<ReturnType<typeof getDb>>): Promise<{
   corporations: number;
@@ -92,10 +96,10 @@ export async function DELETE() {
 
     const [fundResult, posResult, txnResult, snapResult, redeemResult] = await Promise.all([
       indexFundsCollection<Document>(db).deleteMany({}),
-      db.collection("indexFundPositions").deleteMany({}),
-      db.collection("indexFundTransactions").deleteMany({}),
-      db.collection("indexFundSnapshots").deleteMany({}),
-      db.collection("indexFundRedemptionQueue").deleteMany({}),
+      indexFundPositionsCollection<Document>(db).deleteMany({}),
+      indexFundTransactionsCollection<Document>(db).deleteMany({}),
+      indexFundSnapshotsCollection<Document>(db).deleteMany({}),
+      indexFundRedemptionQueueCollection<Document>(db).deleteMany({}),
     ]);
 
     // Also remove the bootstrap migration markers so re-enabling re-seeds.

@@ -18,14 +18,13 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { livingConflictsCollection } from "@/lib/db/repositories/livingConflicts";
 
 export async function loadNorthernIrelandSignal(db: Db): Promise<NorthernIrelandSignal | null> {
-  return db
-    .collection<LivingConflictState>("livingConflicts")
-    .findOne(
-      { defKey: "northern_ireland" },
-      { projection: { hasOpened: 1, status: 1, phaseLevel: 1, tracks: 1 } }
-    );
+  return livingConflictsCollection<LivingConflictState>(db).findOne(
+    { defKey: "northern_ireland" },
+    { projection: { hasOpened: 1, status: 1, phaseLevel: 1, tracks: 1 } }
+  );
 }
 
 export async function reconcileNorthernIrelandGovernance(

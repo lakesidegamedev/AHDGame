@@ -23,6 +23,7 @@ import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { currencyOrdersCollection } from "@/lib/db/repositories/currencyOrders";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { tradeHistoryCollection } from "@/lib/db/repositories/tradeHistory";
 
 // ── Limit order processing ──────────────────────────────────────────────────
 
@@ -224,7 +225,7 @@ export async function processTriggeredLimitOrders(
     // so it doesn't retry every turn. Escrowed funds are unrecoverable.
     // Record the trade for audit trail since spread was already collected.
     if (creditResult.modifiedCount === 0) {
-      await db.collection<TradeHistoryEntry>("tradeHistory").insertOne({
+      await tradeHistoryCollection(db).insertOne({
         buyerCharacterId: order.characterId,
         sellerCharacterId: null,
         fromCurrency: order.fromCurrency,
@@ -247,7 +248,7 @@ export async function processTriggeredLimitOrders(
 
     // forexEnabled is always true here — this phase only runs inside the gameState.forexEnabled gate
     // Record trade history entry
-    await db.collection<TradeHistoryEntry>("tradeHistory").insertOne({
+    await tradeHistoryCollection(db).insertOne({
       buyerCharacterId: order.characterId,
       sellerCharacterId: null, // market maker
       fromCurrency: order.fromCurrency,

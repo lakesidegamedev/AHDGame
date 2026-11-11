@@ -10,6 +10,7 @@ import { liveNationalGdpUnits, resolveRatioGdp } from "@/lib/budget/gdpDenominat
 import { resolveCountryCurrencyCode } from "@/lib/currency/govBudgetFields";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { countryStateCollection } from "@/lib/db/repositories/countryState";
 
 function finiteOrNull(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
@@ -25,8 +26,7 @@ export async function queryCountries(db: Db) {
         { projection: { countryId: 1, population: 1, gdp: 1 } }
       )
       .toArray(),
-    db
-      .collection<CountryState>("countryState")
+    countryStateCollection(db)
       .find({ _id: { $in: countryIds } }, { projection: { _id: 1, governmentType: 1 } })
       .toArray(),
   ]);

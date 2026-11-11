@@ -13,6 +13,7 @@ import { notifyModeratorsOfWikiSubmission } from "@/lib/wiki/reviewNotifications
 import type { User, WikiPage } from "@/lib/db/types";
 import { ObjectId } from "mongodb";
 import { usersCollection } from "@/lib/db/repositories/users";
+import { wikiPagesCollection } from "@/lib/db/repositories/wikiPages";
 
 interface RouteContext {
   params: Promise<{ slug: string }>;
@@ -30,7 +31,7 @@ async function handleGET(request: Request, context: RouteContext) {
     const user = await getAuthUser();
 
     const db = await getDb();
-    const wikiPages = db.collection<WikiPage>("wikiPages");
+    const wikiPages = wikiPagesCollection(db);
 
     const page = await wikiPages.findOne({ slug });
     if (!page) {
@@ -96,7 +97,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     }
 
     const db = await getDb();
-    const wikiPages = db.collection<WikiPage>("wikiPages");
+    const wikiPages = wikiPagesCollection(db);
     const page = await wikiPages.findOne({ slug });
     if (!page) {
       return NextResponse.json(notFound().toJson(), { status: 404 });

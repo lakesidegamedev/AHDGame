@@ -18,6 +18,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import type { Defect, DetectResult, HealPlan, HealResult, VerifyResult } from "../types";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { stateRegistrationPoolCollection } from "@/lib/db/repositories/stateRegistrationPool";
 
 interface DefunctParty {
   countryId: CountryId;
@@ -133,10 +134,7 @@ async function survey(db: Db): Promise<Survey> {
         { projection: { countryId: 1, sequentialId: 1 } }
       )
       .toArray(),
-    db
-      .collection<StateRegistrationPool>("stateRegistrationPool")
-      .find({ $or: affectedStates })
-      .toArray(),
+    stateRegistrationPoolCollection(db).find({ $or: affectedStates }).toArray(),
   ]);
 
   const activePartyKeys = new Set(
@@ -311,7 +309,7 @@ async function apply(db: Db, healPlan: HealPlan, ctx: { now: Date }): Promise<He
 
   let poolsUpdated = 0;
   if (poolRepairs.length > 0) {
-    const poolWrite = await db.collection<StateRegistrationPool>("stateRegistrationPool").bulkWrite(
+    const poolWrite = await stateRegistrationPoolCollection(db).bulkWrite(
       poolRepairs.map((pool) => ({
         updateOne: {
           filter: { _id: pool.id, countryId: pool.countryId, stateId: pool.stateId },

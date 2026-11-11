@@ -26,6 +26,8 @@ import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParti
 import type { Document } from "mongodb";
 import { usersCollection } from "@/lib/db/repositories/users";
 import { activityLogCollection } from "@/lib/db/repositories/activityLog";
+import { actionLogsCollection } from "@/lib/db/repositories/actionLogs";
+import { suspiciousCharactersCollection } from "@/lib/db/repositories/suspiciousCharacters";
 
 export interface SuspiciousDetectionResult {
   flagged: number;
@@ -1222,8 +1224,7 @@ export async function processSuspiciousDetection(
   // (a) already flagged, (b) appeared in this turn's activity log,
   // (c) belong to a user who logged in during the suspicious-detection window.
   const [existingFlagged, currentTurnSummaries, recentLogins] = await Promise.all([
-    db
-      .collection("suspiciousCharacters")
+    suspiciousCharactersCollection<Document>(db)
       .find<SuspiciousCharacter>({}, { projection: { characterId: 1 } })
       .toArray(),
     activityLogCollection<Document>(db)
@@ -1263,7 +1264,7 @@ export async function processSuspiciousDetection(
 
   // Characters who took logged actions recently — catches automated actors that
   // never log in (headless scripts) and whose actions aren't in turn_summary.
-  const actionActiveUserIds = (await db.collection("actionLogs").distinct("userId", {
+  const actionActiveUserIds = (await actionLogsCollection<Document>(db).distinct("userId", {
     createdAt: { $gte: new Date(now.getTime() - FOURTEEN_DAYS_MS) },
   })) as ObjectId[];
   if (actionActiveUserIds.length > 0) {
@@ -1283,15 +1284,13 @@ export async function processSuspiciousDetection(
 
   // Look up existing SuspiciousCharacter docs for dismissal / suppression data.
   // Exclude resolved (banned) entries — they are permanently archived.
-  const existingDocs = await db
-    .collection("suspiciousCharacters")
+  const existingDocs = await suspiciousCharactersCollection<Document>(db)
     .find<SuspiciousCharacter>({ characterId: { $in: characterIds }, pool: { $ne: "resolved" } })
     .toArray();
   const existingMap = new Map(existingDocs.map((d) => [d.characterId.toString(), d]));
 
   // Also load resolved IDs so we can skip them in the candidate loop.
-  const resolvedDocs = await db
-    .collection("suspiciousCharacters")
+  const resolvedDocs = await suspiciousCharactersCollection<Document>(db)
     .find<{ characterId: ObjectId }>(
       { characterId: { $in: characterIds }, pool: "resolved" },
       { projection: { characterId: 1 } }
@@ -1404,7 +1403,7 @@ export async function processSuspiciousDetection(
     // Move to resolved pool if clean and no active suppressions (instead of deleting)
     if (newFlags.length === 0 && activeSuppressed.length === 0) {
       if (existing && existing.pool !== "resolved") {
-        await db.collection("suspiciousCharacters").updateOne(
+        await suspiciousCharactersCollection<Document>(db).updateOne(
           { characterId: char._id },
           {
             $set: {
@@ -1450,9 +1449,9 @@ export async function processSuspiciousDetection(
       suppressedFlags: activeSuppressed.length > 0 ? activeSuppressed : undefined,
     };
 
-    await db
-      .collection("suspiciousCharacters")
-      .replaceOne({ characterId: char._id }, doc, { upsert: true });
+    await suspiciousCharactersCollection<Document>(db).replaceOne({ characterId: char._id }, doc, {
+      upsert: true,
+    });
 
     if (newFlags.length > 0) flagged++;
     else cleared++;

@@ -32,6 +32,7 @@ import { resolvePrimaryUnderwritingOffer } from "@/lib/banking/underwritingOffer
 import { settlePrimaryUnderwritingFill } from "@/lib/banking/underwritingSettlement";
 import { equityPoolCurrency } from "@/lib/equities/marketPool";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporationVotesCollection } from "@/lib/db/repositories/corporationVotes";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -87,9 +88,10 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(400, "Cannot issue new shares while a privatization vote is open");
     }
 
-    const openShareholderVote = await db
-      .collection<CorporationVote>("corporationVotes")
-      .findOne({ corporationId: corporation._id, status: "open" }, { projection: { _id: 1 } });
+    const openShareholderVote = await corporationVotesCollection(db).findOne(
+      { corporationId: corporation._id, status: "open" },
+      { projection: { _id: 1 } }
+    );
     if (openShareholderVote) {
       return errorResponse(400, "Cannot issue shares while a shareholder vote is open");
     }

@@ -31,6 +31,9 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { usersCollection } from "@/lib/db/repositories/users";
+import { statePartyCandidatesCollection } from "@/lib/db/repositories/statePartyCandidates";
+import { statePartyElectionsCollection } from "@/lib/db/repositories/statePartyElections";
+import { statePartyVotesCollection } from "@/lib/db/repositories/statePartyVotes";
 
 export const ELECTION_DURATION_TURNS = 72; // 72 turns = 72 hours
 
@@ -182,10 +185,7 @@ export async function createMissingElections(
   const [parties, initialStatePartyOrgs, activeElections, usPolitics] = await Promise.all([
     politicalPartiesCollection(db).find({}).toArray(),
     statePartyOrgCollection(db).find(scopedStatePartyOrgQuery).toArray(),
-    db
-      .collection<StatePartyElection>("statePartyElections")
-      .find(scopedActiveElectionQuery)
-      .toArray(),
+    statePartyElectionsCollection(db).find(scopedActiveElectionQuery).toArray(),
     loadUsPoliticalStateIds(db),
   ]);
   const statePartyOrgs = await ensureResidentTerritorialPartyOrgs(
@@ -288,7 +288,7 @@ export async function createMissingElections(
   );
 
   const inserted = await insertManyIgnoringDuplicateKey(
-    db.collection<StatePartyElection>("statePartyElections"),
+    statePartyElectionsCollection(db),
     elections as StatePartyElection[]
   );
   if (inserted === 0) return 0;
@@ -357,8 +357,7 @@ export async function processCompletedElections(
     },
     countryId
   );
-  const endedElections = await db
-    .collection<StatePartyElection>("statePartyElections")
+  const endedElections = await statePartyElectionsCollection(db)
     .find(scopedEndedElectionQuery)
     .toArray();
 
@@ -378,12 +377,10 @@ export async function processCompletedElections(
   }
 
   const [allCandidatesRaw, voteCountsByElection, orgs] = await Promise.all([
-    db
-      .collection<StatePartyCandidate>("statePartyCandidates")
+    statePartyCandidatesCollection(db)
       .find({ electionId: { $in: electionIds }, status: "active" })
       .toArray(),
-    db
-      .collection<StatePartyVote>("statePartyVotes")
+    statePartyVotesCollection(db)
       .aggregate<{ electionId: ObjectId; candidateId: ObjectId; count: number }>([
         { $match: voteMatch },
         { $sort: { votedAt: -1, _id: -1 } },
@@ -613,19 +610,17 @@ export async function processCompletedElections(
     }
   }
 
-  await db.collection<StatePartyElection>("statePartyElections").bulkWrite(electionOps);
+  await statePartyElectionsCollection(db).bulkWrite(electionOps);
 
   // Terminalize the resolved elections' candidacies. The candidate docs are
   // read for the tally above (status:"active"), so this must run afterward.
   // Without it they linger as "active" and trip the per-(state,party) unique
   // index, blocking the character from declaring in the next cycle's election
   // ("already running… withdraw first") with no UI path to clear them.
-  await db
-    .collection<StatePartyCandidate>("statePartyCandidates")
-    .updateMany(
-      { electionId: { $in: electionIds }, status: "active" },
-      { $set: { status: "completed", resolvedAt: now } }
-    );
+  await statePartyCandidatesCollection(db).updateMany(
+    { electionId: { $in: electionIds }, status: "active" },
+    { $set: { status: "completed", resolvedAt: now } }
+  );
 
   if (orgOps.length > 0) {
     await statePartyOrgCollection(db).bulkWrite(orgOps);

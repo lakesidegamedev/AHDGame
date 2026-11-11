@@ -17,6 +17,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { crisesCollection } from "@/lib/db/repositories/crises";
 import { usersCollection } from "@/lib/db/repositories/users";
+import { conflictsCollection } from "@/lib/db/repositories/conflicts";
 
 type WorldEventType = "election" | "war" | "bill_passed" | "crisis" | "record_wealth";
 
@@ -74,7 +75,7 @@ export async function captureTurnPosthog(input: {
           { projection: { countryId: 1 } }
         )
         .toArray(),
-      db.collection<ConflictDoc>("conflicts").countDocuments({
+      conflictsCollection(db).countDocuments({
         startTurn: turn,
         type: { $ne: "cold_war" },
       }),

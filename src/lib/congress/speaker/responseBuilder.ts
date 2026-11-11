@@ -33,6 +33,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
+import { speakerElectionsCollection } from "@/lib/db/repositories/speakerElections";
 
 export interface BuildSpeakerResponseInput {
   db: Db;
@@ -65,9 +66,7 @@ export async function buildSpeakerResponse(
     }
   }
 
-  const election = await db
-    .collection<SpeakerElection>("speakerElections")
-    .findOne({ _id: "current" });
+  const election = await speakerElectionsCollection(db).findOne({ _id: "current" });
   const electionStatus = election?.status ?? "none";
   // Use the game clock so the voting-window flag matches turn-based resolution.
   const gameTime = await getGameTime();

@@ -22,6 +22,7 @@ import {
 import type { LivingConflictDef, LivingConflictState } from "./types";
 import { vietnamWorldPressure, type ActiveWarSnapshot } from "./worldPressure";
 import { crisesCollection } from "@/lib/db/repositories/crises";
+import { livingConflictsCollection } from "@/lib/db/repositories/livingConflicts";
 
 const COMPONENT = "livingConflictCampaign";
 
@@ -44,9 +45,10 @@ export function ensureCampaignCrisisContent(): void {
     registerCrisisInputProvider({
       input: campaignIntensityInput(def.key),
       async load(ctx) {
-        const state = await ctx.db
-          .collection<LivingConflictState>("livingConflicts")
-          .findOne({ defKey: def.key }, { projection: { intensity: 1, hasOpened: 1 } });
+        const state = await livingConflictsCollection<LivingConflictState>(ctx.db).findOne(
+          { defKey: def.key },
+          { projection: { intensity: 1, hasOpened: 1 } }
+        );
         const values = new Map<string, number>();
         if (!state?.hasOpened || typeof state.intensity !== "number") return values;
         for (const countryId of ctx.countryIds) values.set(countryId, state.intensity);

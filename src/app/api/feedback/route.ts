@@ -17,6 +17,7 @@ import type { Feedback, FeedbackType, BugCategory, SuggestionCategory } from "@/
 import type { User } from "@/lib/db/types";
 import { servicesConfig } from "@/lib/config/services";
 import { usersCollection } from "@/lib/db/repositories/users";
+import { feedbackCollection } from "@/lib/db/repositories/feedback";
 
 /**
  * POST /api/feedback
@@ -110,7 +111,7 @@ export async function POST(request: Request) {
     }
 
     const db = await getDb();
-    const result = await db.collection<Feedback>("feedback").insertOne(doc as Feedback);
+    const result = await feedbackCollection(db).insertOne(doc as Feedback);
 
     // Create GitHub issue if GIT_TOKEN and GITHUB_REPO are configured
     let githubIssueUrl: string | undefined;
@@ -136,12 +137,10 @@ export async function POST(request: Request) {
       });
       if (gh) {
         githubIssueUrl = gh.url;
-        await db
-          .collection<Feedback>("feedback")
-          .updateOne(
-            { _id: result.insertedId },
-            { $set: { githubIssueUrl: gh.url, githubIssueNumber: gh.number } }
-          );
+        await feedbackCollection(db).updateOne(
+          { _id: result.insertedId },
+          { $set: { githubIssueUrl: gh.url, githubIssueNumber: gh.number } }
+        );
       }
     }
 

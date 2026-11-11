@@ -48,6 +48,10 @@ import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { playerEndorsementsCollection } from "@/lib/db/repositories/playerEndorsements";
+import { nppEndorsementsCollection } from "@/lib/db/repositories/nppEndorsements";
+import { governorEndorsementsCollection } from "@/lib/db/repositories/governorEndorsements";
+import { executiveEndorsementsCollection } from "@/lib/db/repositories/executiveEndorsements";
 
 export interface CampaignTurnResults {
   campaignsProcessed: number;
@@ -348,8 +352,7 @@ export async function processCampaignTurn(turnNumber: number): Promise<CampaignT
           governorEndorsementCounts,
           executiveEndorsementCounts,
         ] = await Promise.all([
-          db
-            .collection("nppEndorsements")
+          nppEndorsementsCollection<Document>(db)
             .aggregate<{ _id: { electionId: ObjectId; candidateId: ObjectId }; count: number }>([
               {
                 // Active AND visible: the shared filter hides legacy
@@ -371,8 +374,7 @@ export async function processCampaignTurn(turnNumber: number): Promise<CampaignT
             ])
             .toArray(),
           candidateRowIds.length > 0
-            ? db
-                .collection("playerEndorsements")
+            ? playerEndorsementsCollection<Document>(db)
                 .aggregate<{
                   _id: { electionId: ObjectId; candidateId: ObjectId };
                   count: number;
@@ -393,8 +395,7 @@ export async function processCampaignTurn(turnNumber: number): Promise<CampaignT
                 ])
                 .toArray()
             : Promise.resolve([]),
-          db
-            .collection("governorEndorsements")
+          governorEndorsementsCollection<Document>(db)
             .aggregate<{ _id: { electionId: ObjectId; candidateId: ObjectId }; count: number }>([
               {
                 $match: {
@@ -411,8 +412,7 @@ export async function processCampaignTurn(turnNumber: number): Promise<CampaignT
               },
             ])
             .toArray(),
-          db
-            .collection("executiveEndorsements")
+          executiveEndorsementsCollection<Document>(db)
             .aggregate<{ _id: { electionId: ObjectId; candidateId: ObjectId }; count: number }>([
               {
                 $match: {

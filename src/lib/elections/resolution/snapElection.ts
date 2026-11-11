@@ -61,6 +61,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import type { Document } from "mongodb";
 import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { seatsCollection } from "@/lib/db/repositories/seats";
 
 export const SNAP_ELECTION_LIMIT = 2;
 export const SNAP_ELECTION_COOLDOWN_TURNS = 336;
@@ -338,8 +339,7 @@ export async function triggerSnapElection(
     preIterationTurns: ctx.preIterationTurns,
   });
 
-  const seats = await db
-    .collection<Seat>("seats")
+  const seats = await seatsCollection(db)
     .find({ countryId, electionType: lowerChamberKey })
     .toArray();
   const seatsByRegion = new Map(seats.map((s) => [s.state, s.totalSeats ?? 1]));

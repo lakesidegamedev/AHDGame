@@ -38,6 +38,7 @@ import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { producerEconomyAccountsCollection } from "@/lib/db/repositories/producerEconomyAccounts";
 
 export { PERSONS_PER_HOUSEHOLD, HOUSEHOLD_LIQUID_RATIO, HOUSEHOLD_SAVINGS_RATIO };
 
@@ -195,8 +196,7 @@ export async function snapshotMoneySupply(db: Db, turn: number): Promise<number>
       .collection<{ _id: string; cashLocal?: number }>("equityMarketPools")
       .find({}, { projection: { cashLocal: 1 } })
       .toArray(),
-    db
-      .collection<ProducerEconomyAccount>("producerEconomyAccounts")
+    producerEconomyAccountsCollection(db)
       .find(
         { worldEpoch: gameState?.worldEpochId ?? "" },
         { projection: { kind: 1, currency: 1, cash: 1 } }

@@ -109,6 +109,7 @@ import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 import type { Document } from "mongodb";
 import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
 import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { shareListingsCollection } from "@/lib/db/repositories/shareListings";
 
 type TakeoverTxInput = Omit<FinancialTxLogEntry, "_id" | "expiresAt" | "flagged">;
 
@@ -745,12 +746,10 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
           { $set: { status: "cancelled", updatedAt: now } }
         );
 
-        await db
-          .collection<ShareListing>("shareListings")
-          .updateMany(
-            { corporationId: target._id, status: "open" },
-            { $set: { status: "cancelled" } }
-          );
+        await shareListingsCollection(db).updateMany(
+          { corporationId: target._id, status: "open" },
+          { $set: { status: "cancelled" } }
+        );
 
         const parentShareRow = (target.shareholders ?? []).find((s) =>
           s.corporationId?.equals(parent._id)

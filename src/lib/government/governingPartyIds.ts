@@ -5,6 +5,7 @@ import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
 import type { ParliamentaryGovernment } from "@/lib/db/types/parliamentaryGovernment";
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
+import { parliamentaryGovernmentsCollection } from "@/lib/db/repositories/parliamentaryGovernments";
 
 /** Resolve every party participating in the current national government. */
 export async function resolveGoverningPartyIdsFromDocuments(
@@ -61,7 +62,7 @@ export async function resolveGoverningPartyIdsFromDocuments(
 export async function resolveGoverningPartyIds(db: Db, countryId: CountryId): Promise<Set<string>> {
   const [formation, parliamentary] = await Promise.all([
     governmentFormationsCollection(db).findOne({ _id: countryId }),
-    db.collection<ParliamentaryGovernment>("parliamentaryGovernments").findOne({
+    parliamentaryGovernmentsCollection(db).findOne({
       _id: countryId,
     }),
   ]);

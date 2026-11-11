@@ -7,6 +7,8 @@ import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import type { StatePartyOrg, PartyBudget, StatePartyElection } from "@/lib/db/types";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { statePartyElectionsCollection } from "@/lib/db/repositories/statePartyElections";
+import { partyBudgetCollection } from "@/lib/db/repositories/partyBudget";
 
 // POST /api/admin/state-party/[stateId]/[partyId]/delete — Deletes a state party organization along with its budget and election records.
 // Auth: requireAdmin
@@ -33,13 +35,13 @@ export async function POST(
     }
 
     // Delete state party budget
-    await db.collection<PartyBudget>("partyBudget").deleteMany({
+    await partyBudgetCollection(db).deleteMany({
       partyId,
       stateId: upperStateId,
     });
 
     // Delete state party leadership elections
-    await db.collection<StatePartyElection>("statePartyElections").deleteMany({
+    await statePartyElectionsCollection(db).deleteMany({
       partyId,
       stateId: upperStateId,
     });

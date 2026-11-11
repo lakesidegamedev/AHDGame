@@ -87,6 +87,7 @@ import { nppsCollection } from "@/lib/db/repositories/npps";
 import { billsCollection } from "@/lib/db/repositories/bills";
 import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
 import type { Document } from "mongodb";
+import { billWhipsCollection } from "@/lib/db/repositories/billWhips";
 
 const BILL_PAGE_LIMIT = 50;
 
@@ -1006,8 +1007,7 @@ export async function getNationalBillDetail(
     bill.status === "active_both" || bill.status === "veto_override"
       ? bill.originChamber
       : (bill.currentChamber ?? bill.originChamber);
-  const originWhips = await db
-    .collection<BillWhip>("billWhips")
+  const originWhips = await billWhipsCollection(db)
     .find({
       targetType: "bill",
       targetId: bill._id,

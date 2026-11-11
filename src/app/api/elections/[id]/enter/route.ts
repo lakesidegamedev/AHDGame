@@ -58,6 +58,7 @@ import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParti
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import type { Document } from "mongodb";
 import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { slateCandidatesCollection } from "@/lib/db/repositories/slateCandidates";
 
 const hu1991EntryBody = z
   .object({
@@ -656,14 +657,14 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     // Keep the slate board in sync for manually assigned player rows so the
     // party can see when a slated candidate has actually filed into the race.
-    const slateCandidatesCollection = db.collection("slateCandidates") as {
+    const slateCandidatesHandle = slateCandidatesCollection<Document>(db) as {
       updateOne?: (
         filter: Record<string, unknown>,
         update: Record<string, unknown>
       ) => Promise<unknown>;
     };
-    if (typeof slateCandidatesCollection.updateOne === "function") {
-      await slateCandidatesCollection.updateOne(
+    if (typeof slateCandidatesHandle.updateOne === "function") {
+      await slateCandidatesHandle.updateOne(
         {
           electionId: electionObjectId,
           candidateType: "character",

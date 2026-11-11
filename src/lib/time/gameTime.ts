@@ -3,6 +3,7 @@ import type { GameState, TurnLog } from "@/lib/db/types";
 import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { calendarTurn } from "@/lib/utils/gameDate";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { turnLogsCollection } from "@/lib/db/repositories/turnLogs";
 
 export interface GameTimeContext {
   currentTurn: number;
@@ -64,7 +65,7 @@ export async function reconcileGameStateClock(
   gameState: GameState
 ): Promise<Pick<GameTimeContext, "currentTurn" | "lastTurnProcessed"> & { currentYear: number }> {
   const db = await getDb();
-  const turnLogCollection = db.collection<TurnLog>("turnLogs") as {
+  const turnLogCollection = turnLogsCollection(db) as {
     find: (filter: Record<string, unknown>, options: Record<string, unknown>) => unknown;
   };
   const turnLogCursor = turnLogCollection.find(createTurnLogRepairFilter(gameState), {

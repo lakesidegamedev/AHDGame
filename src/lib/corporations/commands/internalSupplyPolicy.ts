@@ -28,6 +28,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { sourcingNetworkLoadCollection } from "@/lib/db/repositories/sourcingNetworkLoad";
 
 export const internalSupplyPolicySchema = z
   .object({
@@ -144,9 +145,10 @@ export async function internalSupplyPolicy(request: Request, { params }: Params)
           reserved[key] = (reserved[key] ?? 0) + (units ?? 0);
         discountCostAnchor += s.internalSupplyReceipt.discountCostAnchor ?? 0;
       }
-      const network = await db
-        .collection<SourcingNetworkDoc>("sourcingNetworkLoad")
-        .findOne({}, { sort: { turn: -1 }, projection: { turn: 1, ownRouteDelivered: 1 } });
+      const network = await sourcingNetworkLoadCollection<SourcingNetworkDoc>(db).findOne(
+        {},
+        { sort: { turn: -1 }, projection: { turn: 1, ownRouteDelivered: 1 } }
+      );
       const routeIdentity = ownRouteIdentity(corporation._id.toString(), effective);
       const ownHauls = (network?.ownRouteDelivered ?? [])
         .filter(

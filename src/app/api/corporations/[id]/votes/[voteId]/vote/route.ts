@@ -17,6 +17,7 @@ import { shareholderVotingPower, totalVotingPower } from "@/lib/corporations/sup
 import type { CorporationVote } from "@/lib/db/types/corporationVote";
 import type { Corporation } from "@/lib/db/types";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporationVotesCollection } from "@/lib/db/repositories/corporationVotes";
 
 const CastSchema = z.object({
   vote: z.enum(["yes", "no"]),
@@ -44,7 +45,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     if (!resolved.ok) return resolved.response;
     const { corporation } = resolved;
 
-    const vote = await db.collection<CorporationVote>("corporationVotes").findOne({
+    const vote = await corporationVotesCollection(db).findOne({
       _id: new ObjectId(voteId),
       corporationId: corporation._id,
     });
@@ -130,9 +131,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     // Without this, a decisive vote (e.g. 68% YES meeting a 50% threshold) would leave
     // the vote open until someone manually loads the vote detail page (GET), delaying
     // any share issuance or governance change by an arbitrary amount of time.
-    const updatedVote = await db
-      .collection<CorporationVote>("corporationVotes")
-      .findOne({ _id: vote._id });
+    const updatedVote = await corporationVotesCollection(db).findOne({ _id: vote._id });
     if (updatedVote && updatedVote.status === "open") {
       const gameState = await getGameState();
       const currentTurn = gameState?.currentTurn ?? 0;

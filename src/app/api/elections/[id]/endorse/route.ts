@@ -16,6 +16,7 @@ import { isActivePlayerEndorsementDuplicateKey } from "@/lib/elections/duplicate
 import { assertSameCountry } from "@/lib/api/sameCountry";
 import { applyEndorsementSupportBump } from "@/lib/elections/campaigns/supportEvents";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { playerEndorsementsCollection } from "@/lib/db/repositories/playerEndorsements";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -113,8 +114,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       // Reverse the Support bump of any endorsement being replaced; the bump is
       // non-idempotent, so re-POSTing would otherwise stack
       // +SUPPORT_ENDORSEMENT_BUMP with no reversal. Skip NPP candidates (never bumped).
-      const priorEndorsements = await db
-        .collection<PlayerEndorsement>("playerEndorsements")
+      const priorEndorsements = await playerEndorsementsCollection(db)
         .find({ characterId: character._id, electionId: electionObjectId, isActive: true })
         .toArray();
       for (const prior of priorEndorsements) {
@@ -127,7 +127,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       }
 
       // Withdraw any existing active endorsement for this election
-      await db.collection<PlayerEndorsement>("playerEndorsements").updateMany(
+      await playerEndorsementsCollection(db).updateMany(
         {
           characterId: character._id,
           electionId: electionObjectId,
@@ -152,16 +152,14 @@ export async function POST(request: Request, { params }: RouteParams) {
       };
 
       try {
-        await db.collection<PlayerEndorsement>("playerEndorsements").insertOne(endorsement);
+        await playerEndorsementsCollection(db).insertOne(endorsement);
       } catch (error) {
         if (isActivePlayerEndorsementDuplicateKey(error)) {
-          const activeEndorsement = await db
-            .collection<PlayerEndorsement>("playerEndorsements")
-            .findOne({
-              characterId: character._id,
-              electionId: electionObjectId,
-              isActive: true,
-            });
+          const activeEndorsement = await playerEndorsementsCollection(db).findOne({
+            characterId: character._id,
+            electionId: electionObjectId,
+            isActive: true,
+          });
 
           if (activeEndorsement) {
             return NextResponse.json({
@@ -266,8 +264,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
       // reverse their Support bump. Only player-character candidates need
       // the reverse. NPP endorsement candidates were skipped on the POST
       // path so their revocation is a no-op too.
-      const activeEndorsements = await db
-        .collection<PlayerEndorsement>("playerEndorsements")
+      const activeEndorsements = await playerEndorsementsCollection(db)
         .find({
           characterId: character._id,
           electionId: electionObjectId,
@@ -301,7 +298,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
         candidateRows.map((c) => [c._id.toString(), c.characterId])
       );
 
-      const result = await db.collection<PlayerEndorsement>("playerEndorsements").updateMany(
+      const result = await playerEndorsementsCollection(db).updateMany(
         {
           characterId: character._id,
           electionId: electionObjectId,

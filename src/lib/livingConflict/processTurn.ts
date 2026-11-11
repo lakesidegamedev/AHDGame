@@ -40,6 +40,7 @@ import { syncCampaignCrises, type CampaignTurnState } from "./campaignCrisis";
 import { mergeSevereLoads, severeLoadByCountry } from "@/lib/crises/rules/severeLoad";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { crisesCollection } from "@/lib/db/repositories/crises";
+import { referendumsCollection } from "@/lib/db/repositories/referendums";
 
 function roleMapForEvent(
   def: ReturnType<typeof allLivingConflictDefs>[number],
@@ -228,7 +229,7 @@ export async function processLivingConflictsTurn(
   const campaigns: CampaignTurnState[] = [];
   for (const def of defs) {
     if (def.key === "northern_ireland") {
-      const reunified = await db.collection<Referendum>("referendums").findOne(
+      const reunified = await referendumsCollection(db).findOne(
         {
           countryId: "UK",
           regionId: "NIR",

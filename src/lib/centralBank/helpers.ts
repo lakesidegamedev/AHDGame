@@ -9,6 +9,7 @@ import { INTERNATIONAL_ORGANIZATIONS } from "@/lib/constants/internationalOrgani
 import type { CentralBank } from "@/lib/db/types/centralBank";
 import type { OrganizationMembership } from "@/lib/db/types/internationalOrganization";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { organizationMembershipsCollection } from "@/lib/db/repositories/organizationMemberships";
 
 export function getBankId(countryId: CountryId): string {
   return COUNTRY_CLIENT_CONFIGS[countryId]?.centralBank.sharedBankId ?? countryId;
@@ -95,8 +96,7 @@ export { getRepresentativeCentralBankCountry } from "./intorgRepresentative";
 async function getIntorgMemberCountries(db: Db, intorgId: string): Promise<CountryId[]> {
   const builtIn = INTERNATIONAL_ORGANIZATIONS[intorgId as keyof typeof INTERNATIONAL_ORGANIZATIONS];
   const defaults = (builtIn?.foundingMembers ?? []) as CountryId[];
-  const docs = await db
-    .collection<OrganizationMembership>("organizationMemberships")
+  const docs = await organizationMembershipsCollection(db)
     .find({ organizationId: intorgId })
     .project<{ countryId: CountryId }>({ countryId: 1 })
     .toArray();

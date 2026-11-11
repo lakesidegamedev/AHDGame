@@ -35,6 +35,8 @@ import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { seatsCollection } from "@/lib/db/repositories/seats";
+import { stateRegistrationPoolCollection } from "@/lib/db/repositories/stateRegistrationPool";
 
 /**
  * Canonical US seed name for each seeded abbreviation, used as a fallback when
@@ -116,7 +118,7 @@ export async function seedAdmittedStatePolitics(
     const stateId = decision.stateId;
 
     const seats = buildUsStateSeats(stateId, INITIAL_HOUSE_SEATS_ON_ADMISSION, now);
-    await db.collection<Seat>("seats").bulkWrite(
+    await seatsCollection(db).bulkWrite(
       seats.map((seat) => {
         const { _id, ...body } = seat;
         return {
@@ -236,7 +238,7 @@ export async function seedAdmittedStatePolitics(
         }
       );
     }
-    await db.collection<StateRegistrationPool>("stateRegistrationPool").updateOne(
+    await stateRegistrationPoolCollection(db).updateOne(
       { _id: `US_${stateId}` },
       {
         $set: {

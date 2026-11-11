@@ -31,6 +31,8 @@ import {
 import type { CurrencyOrder, Character, TradeHistoryEntry, PlayerMail } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { currencyOrdersCollection } from "@/lib/db/repositories/currencyOrders";
+import { playerMailCollection } from "@/lib/db/repositories/playerMail";
+import { tradeHistoryCollection } from "@/lib/db/repositories/tradeHistory";
 
 interface RouteParams {
   params: Promise<{ requestId: string }>;
@@ -176,7 +178,7 @@ export async function POST(request: Request, { params }: RouteParams) {
           deletedBySender: false,
           createdAt: now,
         };
-        await db.collection<PlayerMail>("playerMail").insertOne(mail as PlayerMail);
+        await playerMailCollection(db).insertOne(mail as PlayerMail);
       }
 
       return NextResponse.json({ success: true, action: "declined" });
@@ -381,7 +383,7 @@ export async function POST(request: Request, { params }: RouteParams) {
         if (fillResult.matchedCount === 0) {
           throw badRequest("Trade request is no longer open");
         }
-        await db.collection<TradeHistoryEntry>("tradeHistory").insertOne(tradeHistoryEntry, {
+        await tradeHistoryCollection(db).insertOne(tradeHistoryEntry, {
           session,
         });
       },
@@ -439,7 +441,7 @@ export async function POST(request: Request, { params }: RouteParams) {
           if (fillResult.matchedCount === 0) {
             throw badRequest("Trade request is no longer open");
           }
-          await db.collection<TradeHistoryEntry>("tradeHistory").insertOne(tradeHistoryEntry);
+          await tradeHistoryCollection(db).insertOne(tradeHistoryEntry);
         } catch (error) {
           const compensationErrors = await reverseAppliedSpreadFees(spreadFeesApplied);
           if (senderCredited) {
@@ -495,7 +497,7 @@ export async function POST(request: Request, { params }: RouteParams) {
         deletedBySender: false,
         createdAt: now,
       };
-      await db.collection<PlayerMail>("playerMail").insertOne(mail as PlayerMail);
+      await playerMailCollection(db).insertOne(mail as PlayerMail);
     }
 
     return NextResponse.json({

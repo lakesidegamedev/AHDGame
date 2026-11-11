@@ -29,6 +29,7 @@ import { stateShortage } from "@/lib/market/rules/stateShortage";
 import { loadReachableBooks, reachableBooksFor } from "@/lib/trade/queries/loadReachableBooks";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
+import { commodityPriceHistoryCollection } from "@/lib/db/repositories/commodityPriceHistory";
 
 /**
  * GET /api/commodities?exchange=nyse|ftse
@@ -69,8 +70,7 @@ export async function GET(request: Request) {
 
     const [rawPrices, historyAtOrBeforeTarget, oldestHistory, history24h] = await Promise.all([
       commodityPricesCollection(db).find({}).toArray(),
-      db
-        .collection<CommodityPriceHistory>("commodityPriceHistory")
+      commodityPriceHistoryCollection(db)
         .aggregate<{ _id: string; turn: number; globalPrice: number }>([
           { $match: { turn: { $lte: targetTurn } } },
           { $sort: { commodity: 1, turn: -1 } },
@@ -83,8 +83,7 @@ export async function GET(request: Request) {
           },
         ])
         .toArray(),
-      db
-        .collection<CommodityPriceHistory>("commodityPriceHistory")
+      commodityPriceHistoryCollection(db)
         .aggregate<{ _id: string; turn: number; globalPrice: number }>([
           { $match: { turn: { $lte: currentTurn } } },
           { $sort: { commodity: 1, turn: 1 } },
@@ -97,8 +96,7 @@ export async function GET(request: Request) {
           },
         ])
         .toArray(),
-      db
-        .collection<CommodityPriceHistory>("commodityPriceHistory")
+      commodityPriceHistoryCollection(db)
         .aggregate<{ _id: string; turn: number; globalPrice: number }>([
           { $match: { turn: { $lte: target24hTurn } } },
           { $sort: { commodity: 1, turn: -1 } },

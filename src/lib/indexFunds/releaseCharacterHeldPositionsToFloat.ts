@@ -2,6 +2,7 @@ import type { Db, ObjectId } from "mongodb";
 import type { IndexFund, IndexFundPosition } from "@/lib/db/types/indexFund";
 import { creditFundPosition, debitFundPosition } from "./fundQueries";
 import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { indexFundPositionsCollection } from "@/lib/db/repositories/indexFundPositions";
 
 export interface ReleaseCharacterHeldPositionsResult {
   unitsReleased: number;
@@ -38,8 +39,7 @@ export async function releaseCharacterHeldIndexFundPositionsToFloat(
     return { unitsReleased: 0, positionsReleased: 0 };
   }
 
-  const positions = await db
-    .collection<IndexFundPosition>("indexFundPositions")
+  const positions = await indexFundPositionsCollection(db)
     .find(
       { holderKind: "character", characterId: { $in: characterIds } },
       { projection: { _id: 1, fundId: 1, characterId: 1, units: 1 } }

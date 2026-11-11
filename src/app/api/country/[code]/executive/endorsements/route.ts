@@ -31,6 +31,8 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { governorOfficeStateCollection } from "@/lib/db/repositories/governorOfficeState";
+import { executiveEndorsementsCollection } from "@/lib/db/repositories/executiveEndorsements";
 
 // Re-uses electionLabels via the constants/countries re-export.
 // Import resolved inline above to keep this file self-contained.
@@ -112,8 +114,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
 
     const [activeEndorsements, racesInSelectedState, states, officeState, myParty] =
       await Promise.all([
-        db
-          .collection<ExecutiveEndorsement>("executiveEndorsements")
+        executiveEndorsementsCollection(db)
           .find({ countryId, endorsedByCharacterId: characterId, isActive: true })
           .sort({ createdAt: -1 })
           .toArray(),
@@ -132,7 +133,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
           .project<{ _id: string; name: string }>({ _id: 1, name: 1 })
           .sort({ name: 1 })
           .toArray(),
-        db.collection<GovernorOfficeState>("governorOfficeState").findOne({ countryId, stateId }),
+        governorOfficeStateCollection(db).findOne({ countryId, stateId }),
         charactersCollection<{ _id: ObjectId; party?: string }>(db)
           .findOne({ _id: characterId }, { projection: { party: 1 } })
           .then((c) => c?.party ?? null),

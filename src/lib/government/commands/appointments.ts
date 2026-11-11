@@ -21,6 +21,7 @@ import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import type { Document } from "mongodb";
 import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
+import { ukCabinetCooldownsCollection } from "@/lib/db/repositories/ukCabinetCooldowns";
 
 export async function adminAppointPrimeMinister(
   db: Db,
@@ -147,7 +148,7 @@ export async function adminAppointPrimeMinister(
     );
     await Promise.all([
       cabinetMembersCollection<Document>(db).deleteMany({ countryId }),
-      db.collection("ukCabinetCooldowns").deleteMany({ countryId }),
+      ukCabinetCooldownsCollection<Document>(db).deleteMany({ countryId }),
     ]);
   }
 
