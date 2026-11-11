@@ -12,6 +12,8 @@ import {
 // but they ship at Poland's standing: seeded and visible on the world map, not
 // yet offered to players.
 const LATENT: CountryId[] = ["SCO", "WAL", "BLR", "UKR", "BAL"];
+// Configured ahead of the era roster that registers it (see `country/countryIds.ts`).
+const PRE_ROSTER: CountryId[] = ["CA"];
 
 describe("Latent countries (SCO/WAL/UKR/BLR/BAL) are invisible in SP1", () => {
   it("are both coming-soon", () => {
@@ -37,7 +39,7 @@ describe("Latent countries (SCO/WAL/UKR/BLR/BAL) are invisible in SP1", () => {
     // The runtime sites iterate COUNTRY_ORDER, never Object.keys(COUNTRY_CONFIGS); assert the
     // registered set is exactly the non-latent configs.
     const configuredNonLatent = (Object.keys(COUNTRY_CONFIGS) as CountryId[]).filter(
-      (id) => !LATENT.includes(id)
+      (id) => !LATENT.includes(id) && !PRE_ROSTER.includes(id)
     );
     expect([...COUNTRY_ORDER].sort()).toEqual(configuredNonLatent.sort());
   });

@@ -161,16 +161,8 @@ export const CA_CONFIG: CountryConfig = {
   executivePath: "/country/ca/executive",
   executiveLabel: "Office of the Prime Minister",
   centralGovernmentLabel: "Federal Funding",
-  imperialTitles: {
-    male: "King",
-    female: "Queen",
-    nonbinary: "Monarch",
-  },
-  imperialPossessives: {
-    male: "His Majesty's",
-    female: "Her Majesty's",
-    nonbinary: "The Monarch's",
-  },
+  // Canada shares the Crown with the United Kingdom: one monarch, one character.
+  imperialSharedWith: "UK",
 };
 
 export const CA_LEGISLATIVE_PROCESS: LegislativeProcess = {
