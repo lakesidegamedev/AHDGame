@@ -80,6 +80,11 @@ describe("cyberOperationRefusal", () => {
     expect(cyberOperationRefusal("US", "CN", none, 0.5, 10)).toBeNull();
   });
 
+  it("refuses a target that already has an active cyber crisis", () => {
+    expect(cyberOperationRefusal("US", "CN", none, 0.5, 10, true)).toBe("crisis_active");
+    expect(cyberOperationRefusal("US", "CN", none, 0.5, 10, false)).toBeNull();
+  });
+
   it("allows an operation again after the cooldown and the truce lapse", () => {
     const history = { lastOperationTurn: 5, truceUntilTurn: truceUntil(5) };
     expect(cyberOperationRefusal("US", "CN", history, 0.5, 5 + CYBER_COOLDOWN_TURNS)).toBe("truce");
@@ -144,6 +149,9 @@ describe("planScriptedCyberOperation", () => {
       planScriptedCyberOperation({ ...hawk, targetResilience: 0.9, decisionRoll: 0 }).kind
     ).toBe("none");
     expect(planScriptedCyberOperation({ ...hawk, tension: 10, decisionRoll: 0 }).kind).toBe("none");
+    expect(
+      planScriptedCyberOperation({ ...hawk, targetCrisisActive: true, decisionRoll: 0 }).kind
+    ).toBe("none");
   });
 
   it("a government that turns dovish stands down from an active pair", () => {

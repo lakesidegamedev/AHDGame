@@ -12,10 +12,11 @@ Computer-run governments launch operations too (see "How computer-run countries 
 
 Each operation is paid from your intelligence appropriation, the same pool the agency's other actions draw on. The price is a fixed share of your country's GDP, 0.0027% per operation, so a large economy pays more in cash but the same in proportion. If the appropriation cannot cover it, the operation is refused and nothing is charged. A stand-down is free.
 
-Two limits apply on top of the cost:
+Three limits apply on top of the cost:
 
 - **Cooldown.** Your country must wait 24 turns (half a game year) between operations against the same target.
 - **Truce.** If a stand-down truce between the two countries is in force, no operation can be launched in either direction.
+- **One attack at a time.** A country can have only one Cyber Attack crisis running. While the target is already dealing with one, from anyone, a new operation against it is refused before launch and nothing is charged. This applies to players and computer-run governments alike. Once the crisis ends, the target can be attacked again, subject to the normal cooldown.
 
 ## The odds
 
@@ -68,6 +69,7 @@ When the truce lapses, operations are possible again, subject to the normal cool
 
 - **Background countries** and **computer-run governments** only target the leader of the rival bloc. A non-aligned country has no target.
 - They only consider an operation when the government is hawkish (0.6 or higher on a 0 to 1 scale) and world tension is 25 or higher. Below that tension, or with a dovish government, nothing starts.
+- They skip a rival that is already dealing with a cyber attack crisis.
 - Even then they only try when the odds favour them (40% or better), and then only on some turns. The chance each turn rises with hawkishness and with tension.
 - A government that has turned dovish, or a world that has cooled below 25 tension, stands down from a country it has been attacking. That opens the same truce a player gets.
 - A computer-run government that governs a full country is limited to **2 launches per 72 turns**, with at least **12 turns** between launches, and pays from its intelligence appropriation, so an empty appropriation also stops it. Its hawkishness comes from the head of government's defence stance and ambition. Standing down is never capped.
@@ -83,5 +85,5 @@ You cannot block an attack in the moment. What you can do is raise your resilien
 
 Standing down yourself also buys 72 turns of quiet, because the truce binds both sides.
 
-Last checked 2026-11-10, version 1.20.0.
+Last checked 2026-11-11, version 1.20.0.
 `;

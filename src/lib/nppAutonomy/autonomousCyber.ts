@@ -22,6 +22,7 @@ import {
 import { loadCyberResilience } from "@/lib/cyber/resilience";
 import {
   launchCyberOperation,
+  loadCyberCrisisTargets,
   loadCyberLaunchTurns,
   loadCyberPairHistory,
   standDownCyber,
@@ -64,13 +65,14 @@ export async function processAutonomousCyber(
     head.personality.ambition
   );
   const history = await loadCyberPairHistory(db, countryId, targetId);
-  const [tension, resilience, launchTurns, agency] = await Promise.all([
+  const [tension, resilience, launchTurns, agency, crisisTargets] = await Promise.all([
     getColdWarTension(db),
     loadCyberResilience(db, [countryId, targetId]),
     loadCyberLaunchTurns(db, countryId, Math.max(0, turn - CYBER_AI_CAP_WINDOW_TURNS)),
     getIntelligenceAgenciesCollection(db).then((c) =>
       c.findOne({ countryId }, { projection: { tradecraft: 1 } })
     ),
+    loadCyberCrisisTargets(db, [targetId]),
   ]);
   const tradecraft = agency?.tradecraft ?? DEFAULT_TRADECRAFT;
   const own = resilience.find((r) => r.countryId === countryId)?.resilience ?? null;
@@ -87,6 +89,7 @@ export async function processAutonomousCyber(
     decisionRoll: scriptedRoll(countryId, turn),
     capability: attackerCapability(own ?? 0.4, tradecraft),
     recentLaunchTurns: launchTurns,
+    targetCrisisActive: crisisTargets.has(targetId),
   });
 
   if (decision.kind === "launch") {

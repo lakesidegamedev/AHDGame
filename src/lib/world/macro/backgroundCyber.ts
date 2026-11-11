@@ -12,6 +12,7 @@ import { CYBER_SCRIPTED_HAWKISHNESS, planScriptedCyberOperation } from "@/lib/cy
 import { loadCyberResilience } from "@/lib/cyber/resilience";
 import {
   launchCyberOperation,
+  loadCyberCrisisTargets,
   loadCyberPairHistory,
   standDownCyber,
 } from "@/lib/cyber/runCyberOperation";
@@ -32,6 +33,10 @@ export async function applyScriptedCyber(
   const candidates = plans.filter((p) => rivalLeaderOf(p.state.bloc, p.countryId) !== null);
   if (candidates.length === 0) return { launched: 0, standDowns: 0 };
   const tension = (await getColdWarTension(db)).value;
+  const crisisTargets = await loadCyberCrisisTargets(
+    db,
+    candidates.map((p) => rivalLeaderOf(p.state.bloc, p.countryId)!)
+  );
   let launched = 0;
   let standDowns = 0;
   for (const plan of candidates) {
@@ -50,6 +55,7 @@ export async function applyScriptedCyber(
       targetResilience: target?.resilience ?? null,
       turn,
       decisionRoll: scriptedRoll(plan.countryId, turn),
+      targetCrisisActive: crisisTargets.has(targetId),
     });
     if (decision.kind === "launch") {
       const result = await launchCyberOperation({

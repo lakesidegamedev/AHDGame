@@ -25,6 +25,7 @@ import {
   CYBER_STAND_DOWN_TYPE,
   foldCyberPairHistory,
   launchCyberOperation,
+  loadCyberCrisisTargets,
   standDownCyber,
 } from "@/lib/cyber/runCyberOperation";
 import {
@@ -107,7 +108,7 @@ export async function GET(_request: Request, { params }: IntelligenceRouteParams
       .sort();
 
     const log = await getIntelligenceOpLogCollection(db);
-    const [resilience, budget, rows] = await Promise.all([
+    const [resilience, budget, rows, crisisTargets] = await Promise.all([
       loadCyberResilience(db, [countryId, ...targetIds]),
       (await getFederalBudgetCollection(db)).findOne(
         { countryId },
@@ -120,6 +121,7 @@ export async function GET(_request: Request, { params }: IntelligenceRouteParams
         })
         .sort({ turn: -1 })
         .toArray(),
+      loadCyberCrisisTargets(db, targetIds),
     ]);
 
     const own = resilience.find((r) => r.countryId === countryId)?.resilience ?? 0.4;
@@ -132,7 +134,14 @@ export async function GET(_request: Request, { params }: IntelligenceRouteParams
       );
       const targetResilience = resilienceOf.get(targetId) ?? null;
       const history = foldCyberPairHistory(pairRows, countryId);
-      const refusal = cyberOperationRefusal(countryId, targetId, history, targetResilience, turn);
+      const refusal = cyberOperationRefusal(
+        countryId,
+        targetId,
+        history,
+        targetResilience,
+        turn,
+        crisisTargets.has(targetId)
+      );
       return {
         countryId: targetId,
         refusal,

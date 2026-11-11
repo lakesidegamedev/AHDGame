@@ -4,7 +4,8 @@
  * Success is attacker capability against the target's cyber resilience (`rules.ts`, which
  * already folds in the resilience mandate spending, technology and utilities). Attribution
  * is a separate roll, so a clean success, a loud success and a loud failure are all possible.
- * Every escalation has an off-ramp: a standing-down declaration opens a truce that refuses
+ * A country has at most one active cyber attack crisis, so a target already under attack is
+ * refused. Every escalation has an off-ramp: a standing-down declaration opens a truce that refuses
  * further operations between the pair and relieves tension.
  *
  * Pure: plain data in, plain data out. Randomness arrives as injected rolls in [0, 1).
@@ -132,7 +133,7 @@ export interface CyberPairHistory {
   truceUntilTurn: number | null;
 }
 
-export type CyberRefusal = "self" | "truce" | "cooldown" | "no_resilience_data";
+export type CyberRefusal = "self" | "truce" | "crisis_active" | "cooldown" | "no_resilience_data";
 
 /** Why an operation cannot be launched now, or null when it can. */
 export function cyberOperationRefusal(
@@ -140,11 +141,13 @@ export function cyberOperationRefusal(
   targetId: string,
   history: CyberPairHistory,
   targetResilience: number | null,
-  turn: number
+  turn: number,
+  targetCrisisActive = false
 ): CyberRefusal | null {
   if (attackerId === targetId) return "self";
   if (targetResilience === null) return "no_resilience_data";
   if (history.truceUntilTurn !== null && history.truceUntilTurn > turn) return "truce";
+  if (targetCrisisActive) return "crisis_active";
   if (history.lastOperationTurn !== null && turn - history.lastOperationTurn < CYBER_COOLDOWN_TURNS)
     return "cooldown";
   return null;
@@ -155,6 +158,8 @@ export const CYBER_REFUSAL_TEXT: Record<CyberRefusal, string> = {
   no_resilience_data: "That country has no network data to attack.",
   truce:
     "A cyber truce with that country is in force. No operation can be launched until it lapses.",
+  crisis_active:
+    "That country is already dealing with a cyber attack. Wait for it to end before launching another.",
   cooldown:
     "An operation against that country was run recently. Teams need time to rebuild access.",
 };
@@ -210,6 +215,8 @@ export interface ScriptedCyberInput {
   turn: number;
   /** [0, 1) deterministic per country and turn. */
   decisionRoll: number;
+  /** The rival already has an active cyber attack crisis, so no operation can open another. */
+  targetCrisisActive?: boolean;
   /** Capability the attacker brings; the scripted default when absent. */
   capability?: number;
 }
@@ -246,7 +253,8 @@ export function planScriptedCyberOperation(input: ScriptedCyberInput): ScriptedC
       target,
       input.history,
       input.targetResilience,
-      input.turn
+      input.turn,
+      input.targetCrisisActive
     )
   )
     return { kind: "none" };
