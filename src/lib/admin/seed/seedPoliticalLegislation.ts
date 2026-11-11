@@ -49,8 +49,11 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { statesCollection } from "@/lib/db/repositories/states";
 
-/** Player books refit per category to their authored 1991 composition. */
-const OPENING_COMPOSITION_REFIT_1991: ReadonlySet<string> = new Set(["US", "UK"]);
+/** Player books refit per category to their authored opening composition, by world year. */
+const OPENING_COMPOSITION_REFIT: Readonly<Partial<Record<number, readonly LawCountryId[]>>> = {
+  1991: ["US", "UK"],
+  2027: ["CA"],
+};
 
 /**
  * The projected docs seedLegislationTypes upserts: the whole catalog. A law's
@@ -263,8 +266,10 @@ export async function seedPoliticalLegislationBaseline(
     LAW_COUNTRY_IDS.map((cc) => getNationalBudgetId(cc as CountryId))
   );
 
+  const refitCountries = OPENING_COMPOSITION_REFIT[year];
+  if (refitCountries) await calibratePlayerOpeningPrograms(db, log, year, refitCountries);
+
   if (year === 1991) {
-    await calibratePlayerOpeningPrograms1991(db, log);
     const { SUCCESSOR_1991_GENERAL_GOVERNMENT_GDP_PERCENT } =
       await import("@/lib/seeds/reference/successorFiscal1991");
     const budget = await federalBudgetCollection(db).findOne({ _id: getNationalBudgetId("RU") });
@@ -300,23 +305,29 @@ export async function seedPoliticalLegislationBaseline(
 }
 
 /**
- * US/UK use the v2 book at every preset. Calibrate that authoritative book,
- * including every proposable level, after its real receipts and fixed regional
- * transfers are known. Expense fractions persist through fiscal refreshes;
- * revenue fractions, tax rates and political metric effects are preserved.
+ * Calibrate a player country's authoritative v2 book, including every
+ * proposable level, after its real receipts and fixed regional transfers are
+ * known. Expense fractions persist through fiscal refreshes; revenue fractions,
+ * tax rates and political metric effects are preserved. A country whose
+ * regions are not in this world has no budget to fit and is skipped.
  */
-async function calibratePlayerOpeningPrograms1991(
+async function calibratePlayerOpeningPrograms(
   db: Db,
-  log: (msg: string) => void
+  log: (msg: string) => void,
+  year: number,
+  countries: readonly LawCountryId[]
 ): Promise<void> {
-  for (const countryId of ["US", "UK"] as const) {
+  const { getAuthoredNationalSpending } = await import("@/lib/seeds/reference/budgets");
+  for (const countryId of countries) {
     const budgetId = getNationalBudgetId(countryId);
     const budget = await federalBudgetCollection(db).findOne({ _id: budgetId });
-    if (!budget) throw new Error(`Missing 1991 ${countryId} national budget after law sync`);
+    if (!budget) {
+      const regions = await db.collection("states").countDocuments({ countryId }, { limit: 1 });
+      if (regions === 0) continue;
+      throw new Error(`Missing ${year} ${countryId} national budget after law sync`);
+    }
     const { items } = await calculateFederalLawAnnualCosts(db, budget);
-    const authored = OPENING_COMPOSITION_REFIT_1991.has(countryId)
-      ? (await import("@/lib/seeds/reference/budgets")).getAuthoredNationalSpending1991(countryId)
-      : null;
+    const authored = getAuthoredNationalSpending(countryId, year);
     // The book-wide fit stays the regional (state) program scale and the
     // fallback for any national category the refit does not price.
     const bookProgramCost = items.reduce((sum, item) => sum + item.amount, 0);
@@ -335,9 +346,9 @@ async function calibratePlayerOpeningPrograms1991(
     let scaleSet: Partial<FederalBudget>;
     let scaleNote: string;
     if (authored) {
-      // The catalog prices this book on 1953 anchors: GDP-share defence and
-      // social programs on a 1953 income anchor. Refit each category to the
-      // authored 1991 composition instead of one book-wide factor.
+      // The catalog prices a book on its own anchors, which need not match the
+      // authored opening mix (the US and UK use 1953 anchors in 1991). Refit
+      // each category to the authored composition instead of one book-wide factor.
       const programCostByCategory: Record<string, number> = {};
       for (const { law, amount } of items) {
         if (!law.costModelV2) continue;
@@ -392,7 +403,7 @@ async function calibratePlayerOpeningPrograms1991(
     );
     if (costOps.length > 0) await db.collection<EnactedLaw>("enactedLaws").bulkWrite(costOps);
 
-    const typeOps: AnyBulkWriteOperation<LegislationType>[] = getCatalog(countryId, 1991)
+    const typeOps: AnyBulkWriteOperation<LegislationType>[] = getCatalog(countryId, year)
       .filter((law) => law.kind !== "tax")
       .map((law) => {
         const doc = projectLawToLegislationType(law);
@@ -416,7 +427,7 @@ async function calibratePlayerOpeningPrograms1991(
     if (typeOps.length > 0)
       await db.collection<LegislationType>("legislationTypes").bulkWrite(typeOps);
     await refreshNationalBudgetRevenue(db, [budgetId]);
-    log(`Calibrated 1991 ${countryId} program expense fractions by ${scaleNote}`);
+    log(`Calibrated ${year} ${countryId} program expense fractions by ${scaleNote}`);
   }
 }
 
