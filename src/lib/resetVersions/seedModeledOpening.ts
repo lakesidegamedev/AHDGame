@@ -22,6 +22,8 @@ import { buildModeledMetricOpening } from "./rules/modeledMetrics";
 import { buildModeledFiscalOpening } from "./rules/modeledFinance";
 import { modeledSeedMetrics, metricNumbers } from "./modeledSeedInputs";
 import { getNationalBudgetSeedProvenance } from "@/lib/seeds/reference/budgets";
+import { getLaw } from "@/lib/politicalLegislation/catalog";
+import { modeledLawFamily } from "./rules/modeledLawFamily";
 
 export async function loadModeledOpening(
   db: Db,
@@ -160,6 +162,10 @@ export async function loadModeledOpening(
           .filter((l) => l.countryId === country)
           .map((law) => ({
             id: law.legislationTypeId,
+            familyId: (() => {
+              const source = getLaw(law.legislationTypeId);
+              return source ? modeledLawFamily(source) : undefined;
+            })(),
             title: law.title,
             optionIndex: law.policyOptionIndex ?? -1,
             grant: law.isGrant === true,

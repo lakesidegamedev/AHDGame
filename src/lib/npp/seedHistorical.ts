@@ -874,5 +874,8 @@ export async function seedHistoricalOfficials(
   const { seedBRGovernmentFormation } = await import("@/lib/admin/seed/seedBR");
   await seedBRGovernmentFormation(db, () => {});
 
+  const { seedOpeningHouseHolders } = await import("@/lib/redistricting/seedOpeningHolders");
+  await seedOpeningHouseHolders(db);
+
   return result;
 }

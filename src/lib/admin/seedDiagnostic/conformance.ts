@@ -50,6 +50,7 @@ import {
   checkForex,
 } from "./conformanceMacro";
 import { checkEconomicOpening } from "./economicOpening";
+import { checkUS2027Opening } from "./us2027Opening";
 import { checkRegionDerivedCoverage } from "./regionDerivedCoverage";
 import { regionalMetricCoverage, seedTurnoutScopeFilter } from "./regionalCoverage";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
@@ -1122,6 +1123,7 @@ export async function runConformanceChecks(
     checkRegionDerivedCoverage(db, expect),
     checkScotusSeed(db, preset),
     checkEconomicOpening(db, preset),
+    checkUS2027Opening(db, preset),
   ]);
   const checks: SeedDiagnosticCheck[] = groups.flat();
 

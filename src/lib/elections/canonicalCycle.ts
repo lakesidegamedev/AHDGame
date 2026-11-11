@@ -13,6 +13,7 @@
  * `priorEndTurn` override replacing the bootstrap anchor.
  */
 import { brazilPresidentialRules } from "@/lib/countries/br/rules/presidential";
+import { usRegionalElectionYearForWorld } from "@/lib/countries/us/rules/regionalElectionCalendar";
 
 import {
   UK_COMMONS_CYCLE_PERIOD_HOURS,
@@ -197,6 +198,7 @@ export const FOUNDING_GENERAL_HOURS = 24;
 
 export interface CanonicalCycleParams {
   electionType: string;
+  state?: string;
   /** 1-indexed cycle number. */
   cycle: number;
   /** US Senate class. */
@@ -256,6 +258,18 @@ export function canonicalTurnsForCycle(params: CanonicalCycleParams): CanonicalC
   const dur = DEFAULT_DURATIONS[electionType];
   if (!dur) return null;
   const anchors = getCycleAnchors(ctx);
+  const regionalYear =
+    countryId && params.state
+      ? usRegionalElectionYearForWorld(params.state, electionType, cycle, countryId, ctx.preset)
+      : undefined;
+  if (regionalYear !== undefined) {
+    const endTurn = (regionalYear - ctx.startingYear + 1) * 48 + (ctx.preIterationTurns ?? 0);
+    return {
+      endTurn,
+      primaryEndTurn: endTurn - dur.generalDurationHours,
+      startTurn: cycle === 1 ? 1 : Math.max(1, endTurn - dur.durationHours),
+    };
+  }
   // The 1991 successor parliaments have their own post-1990 election dates.
   const successor = findSuccessorSchedule(countryId, electionType);
   if (successor) {
@@ -739,7 +753,15 @@ export function pickNextCanonicalCycle(
     const primaryHoursLeft = primaryEndTurn - effectivePrimaryStart;
     const generalHoursLeft = endTurn - Math.max(primaryEndTurn, currentTurn);
 
-    if (primaryHoursLeft >= minPrimaryHours && generalHoursLeft >= minGeneralHours) {
+    // A start-year US race has only 23 primary turns before its 24-turn general.
+    const primaryFloor =
+      params.countryId === "US" &&
+      params.ctx?.preset === "2027-default" &&
+      cycle === 1 &&
+      endTurn - (params.ctx.preIterationTurns ?? 0) === 48
+        ? Math.min(minPrimaryHours, 23)
+        : minPrimaryHours;
+    if (primaryHoursLeft >= primaryFloor && generalHoursLeft >= minGeneralHours) {
       return { cycle, startTurn, primaryEndTurn, endTurn };
     }
   }

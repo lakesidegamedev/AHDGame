@@ -21,6 +21,7 @@ import {
   getCoreCatalog,
   getRegionalCatalog,
   baselineLevelFor,
+  getLaw,
 } from "@/lib/politicalLegislation/catalog";
 import { computeLawCost } from "@/lib/politicalLegislation/costEngine";
 import { countryFiscalBase } from "@/lib/politicalLegislation/fiscalBase";
@@ -44,6 +45,7 @@ import {
   openingProgramCategoryScales,
   openingProgramCostScale,
   scaleProgramCostModel,
+  modeledOpeningDeficitShare,
 } from "@/lib/seeds/reference/rules/openingProgramCostScale";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
@@ -300,6 +302,7 @@ export async function seedPoliticalLegislationBaseline(
     await refreshNationalBudgetRevenue(db, [budget._id]);
     log(`Calibrated 1991 Russian non-law spending to ${targetSpending} SUR`);
   }
+  if (year === 2027) await calibrateUS2027ProgramBook(db, log);
 
   const residualCount = await seedPoliticalMetricsResiduals(db, year);
 
@@ -310,32 +313,68 @@ export async function seedPoliticalLegislationBaseline(
 }
 
 /**
- * Calibrate a player country's authoritative v2 book, including every
- * proposable level, after its real receipts and fixed regional transfers are
- * known. Expense fractions persist through fiscal refreshes; revenue fractions,
- * tax rates and political metric effects are preserved. A country whose
- * regions are not in this world has no budget to fit and is skipped.
+ * Fit the US 2027 program book, including every proposable level, to its
+ * modeled seed composition. Coupons remain owned by the debt ledger;
+ * receipts, tax rates and political metric effects are preserved.
  */
+export async function calibrateUS2027ProgramBook(
+  db: Db,
+  log: (message: string) => void
+): Promise<void> {
+  await calibratePlayerOpeningPrograms(db, log, 2027);
+}
+
 async function calibratePlayerOpeningPrograms(
   db: Db,
   log: (msg: string) => void,
-  year: number,
-  countries: readonly LawCountryId[]
+  year = 1991,
+  countries: readonly LawCountryId[] = year === 2027 ? ["US"] : ["US", "UK", "JP"]
 ): Promise<void> {
   const { getAuthoredNationalSpending } = await import("@/lib/seeds/reference/budgets");
   for (const countryId of countries) {
     const budgetId = getNationalBudgetId(countryId);
     const budget = await federalBudgetCollection(db).findOne({ _id: budgetId });
     if (!budget) {
-      const regions = await statesCollection<Document>(db).countDocuments(
-        { countryId },
-        { limit: 1 }
-      );
-      if (regions === 0) continue;
+      if ((await statesCollection<Document>(db).countDocuments({ countryId }, { limit: 1 })) === 0)
+        continue;
       throw new Error(`Missing ${year} ${countryId} national budget after law sync`);
     }
-    const { items } = await calculateFederalLawAnnualCosts(db, budget);
-    const authored = getAuthoredNationalSpending(countryId, year);
+    const { items: initialItems, activeLaws } = await calculateFederalLawAnnualCosts(db, budget);
+    let items = initialItems;
+    if (year === 2027 && countryId === "US") {
+      // Reconstruct catalog expense models before fitting. Replays must retain
+      // absolute scales for future bills, not overwrite them with a factor of 1.
+      const rawModels: AnyBulkWriteOperation<EnactedLaw>[] = activeLaws.flatMap((law) => {
+        const source = getLaw(law.legislationTypeId);
+        const model =
+          source &&
+          projectLawToLegislationType(source).policyOptions?.[law.policyOptionIndex ?? -1]
+            ?.costModelV2;
+        return model
+          ? [{ updateOne: { filter: { _id: law._id }, update: { $set: { costModelV2: model } } } }]
+          : [];
+      });
+      if (rawModels.length) await enactedLawsCollection(db).bulkWrite(rawModels);
+      ({ items } = await calculateFederalLawAnnualCosts(db, budget));
+    }
+    const modeledBudget =
+      year === 2027 && countryId === "US"
+        ? (await import("@/lib/seeds/reference/budgets"))
+            .getInitialNationalBudgetsForPreset("2027-default")
+            .find((b) => b.countryId === countryId)
+        : undefined;
+    const authored =
+      modeledBudget?.spending.byCategory ?? getAuthoredNationalSpending(countryId, year);
+    // Retain the authored operating envelope plus the actual coupon ledger.
+    const maximumDeficitGdpShare = modeledBudget
+      ? modeledOpeningDeficitShare(
+          modeledBudget.spending.total -
+            modeledBudget.spending.debtInterest +
+            budget.spending.debtInterest,
+          budget.revenue.total,
+          budget.gdp
+        )
+      : PLAYER_RESET_DEFICIT_GDP_SHARE_1991;
     // The book-wide fit stays the regional (state) program scale and the
     // fallback for any national category the refit does not price.
     const bookProgramCost = items.reduce((sum, item) => sum + item.amount, 0);
@@ -348,7 +387,7 @@ async function calibratePlayerOpeningPrograms(
         budget.spending.total - budget.spending.debtInterest - bookProgramCost
       ),
       programCost: bookProgramCost,
-      maximumDeficitGdpShare: PLAYER_RESET_DEFICIT_GDP_SHARE_1991,
+      maximumDeficitGdpShare,
     });
     let scaleFor: (category: string) => number;
     let scaleSet: Partial<FederalBudget>;
@@ -374,7 +413,7 @@ async function calibratePlayerOpeningPrograms(
         ),
         programCostByCategory,
         targetByCategory: authored,
-        maximumDeficitGdpShare: PLAYER_RESET_DEFICIT_GDP_SHARE_1991,
+        maximumDeficitGdpShare,
       });
       scaleFor = (category) => scales[category] ?? bookScale;
       scaleSet = {

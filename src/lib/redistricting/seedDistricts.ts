@@ -1,10 +1,11 @@
 import type { Db } from "mongodb";
-import type { CountryId } from "@/lib/constants/countries";
+import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import type { CongressionalDistrict } from "@/lib/db/types";
 import { buildDistrictDocsForStates } from "./buildStateDocs";
 import { seedRedistrictingAuthority } from "./seedRedistrictingAuthority";
 import { congressionalDistrictsCollection } from "@/lib/db/repositories/congressionalDistricts";
 import type { Document } from "mongodb";
+import { seedOpeningHouseHolders } from "./seedOpeningHolders";
 
 interface SeedOpts {
   countryId?: CountryId;
@@ -34,6 +35,7 @@ export async function seedCongressionalDistricts(
     );
   }
   const seeded = docs.length;
+  if (countryId === COUNTRY_CONFIGS.US.id) await seedOpeningHouseHolders(db);
 
   await congressionalDistrictsCollection<Document>(db)
     .createIndex({ countryId: 1, stateId: 1, index: 1 }, { unique: true })

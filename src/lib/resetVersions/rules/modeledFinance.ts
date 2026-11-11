@@ -17,6 +17,7 @@ export interface ModeledLawSource {
   optionIndex: number;
   annualCost: number;
   grant: boolean;
+  familyId?: string;
 }
 
 export function buildModeledFiscalOpening(input: {
@@ -53,7 +54,16 @@ export function buildModeledFiscalOpening(input: {
         currentLaw: `${input.preset} modeled ${r.familyId} opening`,
         legalNote:
           "Mapped from the selected game seed. Unmapped spending remains a continuity obligation.",
-        sourceComponents: r.sourceComponents.flatMap((s) => {
+        sourceComponents: [
+          ...r.sourceComponents,
+          ...country.sources
+            .filter((source) => source.familyId === r.familyId && r.scope === "national")
+            .map((source) => ({
+              sourceId: source.id,
+              fiscalRole: "single-booked-owner",
+              fiscalOwner: r.familyId,
+            })),
+        ].flatMap((s) => {
           const source = sourceById.get(s.sourceId);
           if (!source || r.scope !== "national") return [];
           const owner =
@@ -78,6 +88,12 @@ export function buildModeledFiscalOpening(input: {
       ];
       if (titles.length)
         reference.currentLaw = `${input.preset} modeled opening using ${titles.join(" + ")}`;
+      else {
+        reference.status = "modeled-unmapped";
+        reference.currentLaw = `${input.preset}: no mapped seed law for ${reference.familyId}`;
+        reference.legalNote =
+          "Unsupported opening detail: the selected seed has no mapped law for this family and scope. This is not a claim that no real law exists. Any unmapped spending remains in continuity.";
+      }
     }
     const funded = references.flatMap((r) => r.sourceComponents.filter((s) => s.annualBooked > 0));
     const requested = funded.reduce((sum, s) => sum + s.annualBooked, 0);

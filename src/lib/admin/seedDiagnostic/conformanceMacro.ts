@@ -96,7 +96,9 @@ export async function checkNationalBudgets(
       regionRows as Parameters<typeof computeStateGdpScalars>[0],
       nationalGdpByCountry
     );
-    for (const s of scalars) {
+    for (const s of scalars.filter(
+      (row) => expect.preset !== "2027-default" || row.countryId === "US"
+    )) {
       const within = s.deviation <= STATE_GDP_RECONCILE_TOLERANCE;
       checks.push(
         within

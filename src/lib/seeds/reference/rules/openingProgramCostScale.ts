@@ -1,4 +1,14 @@
 /** Fit actual enacted program costs after coupons and fixed fiscal expenses. */
+export function modeledOpeningDeficitShare(
+  annualSpending: number,
+  annualRevenue: number,
+  gdp: number
+): number {
+  if (!(gdp > 0) || !Number.isFinite(annualSpending) || !Number.isFinite(annualRevenue))
+    throw new Error("Invalid modeled fiscal envelope");
+  return (annualSpending - annualRevenue) / gdp;
+}
+
 export function openingProgramCostScale(input: {
   gdp: number;
   annualRevenue: number;

@@ -7,6 +7,7 @@ import { cohortAgeShares1991 } from "@/lib/seeds/rules/cohortAgeShares1991";
 import { getRegionCensusData } from "@/lib/seeds/regionCensusData";
 import { presetUsesDemographicPaths } from "@/lib/demographics/rules/demographicPaths";
 import { synthesizeAgeSexVector } from "@/lib/demographics/seedSynthesis";
+import { wholePopulation } from "@/lib/demographics/rules/wholePopulation";
 import { sexRatioFromVector, dependencyRatio } from "@/lib/demographics/cohortVector";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
@@ -153,11 +154,8 @@ export async function seedCohortVectors(
       survivalSeniorTail: presetUsesDemographicPaths(preset),
     });
 
-    // People are whole; round each cell. Deterministic → idempotent on a fresh world.
-    const ages = {
-      male: vector.male.map((c) => Math.round(c)),
-      female: vector.female.map((c) => Math.round(c)),
-    };
+    // Allocate rounding remainders once across the entire population stock.
+    const ages = wholePopulation(vector, population);
     const summed = ages.male.reduce((a, b) => a + b, 0) + ages.female.reduce((a, b) => a + b, 0);
 
     stats.covered++;

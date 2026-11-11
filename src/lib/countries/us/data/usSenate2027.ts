@@ -1,13 +1,12 @@
 import type { HistoricalSeat } from "@/lib/constants/historicalSeats";
+import snapshot from "./us2026ResultsSnapshot.json";
+import { provisionalSenateSeats } from "../rules/provisionalOpeningSeats";
 
-/**
- * Projected US Senate composition for the January 2027 seed.
- * Classes 1 and 3: 119th Congress holdovers, plus 2026 OH/FL Class 3 specials.
- * Class 2: Call the Map 2026-09-09 median projection.
- * Maine and Vermont Class 1 independents count toward Democratic-aligned 50.
- * Sources: callthemap.com/senate, senate.gov Class I page, congress.gov.
+/** Holdover classes retain the existing 119th Congress roster. The dated
+ * snapshot below replaces all 2026 regular and special-election seats.
+ * Source: https://www.senate.gov/senators/Class_I.htm
  */
-export const US_SENATE_2027: HistoricalSeat[] = [
+const US_SENATE_BASE_2027: HistoricalSeat[] = [
   { state: "AL", officeType: "senate", party: "republican", senateClass: 2 },
   { state: "AL", officeType: "senate", party: "republican", senateClass: 3 },
   { state: "AK", officeType: "senate", party: "republican", senateClass: 2 },
@@ -109,3 +108,6 @@ export const US_SENATE_2027: HistoricalSeat[] = [
   { state: "WY", officeType: "senate", party: "republican", senateClass: 1 },
   { state: "WY", officeType: "senate", party: "republican", senateClass: 2 },
 ];
+
+// 2026 regular Class 2 plus the Florida/Ohio Class 3 special elections.
+export const US_SENATE_2027 = provisionalSenateSeats(US_SENATE_BASE_2027, snapshot.senate);
