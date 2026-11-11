@@ -55,7 +55,7 @@ describe("successor reset v2 promotion rules", () => {
 
     expect(rows.map((row) => row._id)).toEqual(["SCO:national", "SCO:LOT", "SCO:HGL"]);
     expect(rows[0]).toMatchObject({ countryId: "SCO", scope: "national" });
-    expect(rows[0]!.regionId).toBeUndefined();
+    expect(rows[0]!).not.toHaveProperty("regionId");
     expect(rows[0].observations.inflation.value).toBe(4);
     expect(rows.slice(1).every((row) => row.observations.unemployment!.value === 8)).toBe(true);
   });

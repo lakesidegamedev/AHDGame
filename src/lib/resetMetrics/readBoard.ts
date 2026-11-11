@@ -51,7 +51,7 @@ export async function readResetMetricBoard(
   if (!board) return { status: "missing" };
   if (
     board.countryId !== countryId ||
-    board.regionId !== regionId ||
+    (board.regionId ?? undefined) !== regionId ||
     board.scope !== (regionId === undefined ? "national" : "regional") ||
     !Number.isSafeInteger(board.asOfTurn) ||
     board.asOfTurn < board.sourceTurn

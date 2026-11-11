@@ -69,11 +69,10 @@ export function buildSuccessorMetricRows(input: {
     );
   return [
     clearCountrySources({
-      ...national,
+      ...withoutRegionId(national),
       _id: `${countryId}:national`,
       countryId,
       scope: "national",
-      regionId: undefined,
       sourceTurn: turn,
       asOfTurn: turn,
       observations,
@@ -146,4 +145,10 @@ export function buildSuccessorRegionalRows(input: {
       references: regionalizeOpeningReferences(regionalReferences, allocatedClaims),
     };
   });
+}
+
+/** Drop the key entirely: an undefined regionId is stored as null, which strict readers reject. */
+function withoutRegionId(board: ResetMetricSnapshot): ResetMetricSnapshot {
+  const { regionId: _regionId, ...rest } = board;
+  return rest as ResetMetricSnapshot;
 }

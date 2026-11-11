@@ -92,7 +92,7 @@ export async function loadResetApprovalModifiers(
       !board ||
       board.worldId !== gameState!.resetWorldId ||
       board.countryId !== countryId ||
-      board.regionId !== regionId ||
+      (board.regionId ?? undefined) !== regionId ||
       board.scope !== (regionId === undefined ? "national" : "regional") ||
       !(
         lagging(board.asOfTurn) ||

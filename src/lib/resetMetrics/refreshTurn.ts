@@ -129,7 +129,7 @@ export async function refreshResetMetricSnapshotsTurn(input: {
       !idSet.has(board._id) ||
       board._id !==
         `${board.countryId}:${board.scope === "national" ? "national" : board.regionId}` ||
-      (board.scope === "national" && board.regionId !== undefined) ||
+      (board.scope === "national" && board.regionId != null) ||
       (board.scope === "regional" && !board.regionId) ||
       !countriesWithNationalBoards.has(board.countryId)
     ) {

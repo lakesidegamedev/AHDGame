@@ -36,6 +36,25 @@ describe("v2 metric board read", () => {
     expect(db.collectionMocks.resetMetricSnapshots).toBeUndefined();
   });
 
+  it("serves a national board stored with a null regionId", async () => {
+    const db = createMockDb();
+    const board = {
+      ...buildOpeningMetricSnapshots1991("world-test", 1)[0]!,
+      regionId: null,
+    };
+    db.collection("gameState").findOne.mockResolvedValue({
+      metricsSystemVersion: "v2",
+      currentTurn: 1,
+      resetWorldId: "world-test",
+      resetVersionSeeds: { metrics: seed },
+    });
+    db.collection("resetMetricSnapshots").findOne.mockResolvedValue(board);
+    expect(await readResetMetricBoard(db as unknown as Db, "US", undefined, ready)).toEqual({
+      status: "ready",
+      board,
+    });
+  });
+
   it("serves only a complete board for the same world and current turn", async () => {
     const db = createMockDb();
     const board = buildOpeningMetricSnapshots1991("world-test", 1)[0]!;
