@@ -125,6 +125,7 @@ const SUCCESSION_RULES: Readonly<Record<string, SuccessionRule>> = {
   }),
 
   "UK:parliamentaryMonarchy": pm(),
+  "CA:parliamentaryMonarchy": pm(),
   "JP:parliamentaryMonarchy": pm(),
   "ES:parliamentaryMonarchy": pm(),
   "SE:parliamentaryMonarchy": pm(),

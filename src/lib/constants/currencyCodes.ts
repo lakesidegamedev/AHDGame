@@ -140,6 +140,7 @@ export const CURRENCY_ANCHOR_COUNTRY: Record<CurrencyCode, CountryId> = {
 // from post-reunification central-bank seeding.
 export const FOREX_ACTIVE_COUNTRIES: CountryId[] = [
   "US",
+  "CA",
   "UK",
   "JP",
   "DE",
@@ -162,6 +163,7 @@ export const FOREX_ACTIVE_COUNTRIES: CountryId[] = [
 /** Only currencies that participate in forex */
 export const FOREX_ACTIVE_CURRENCIES: CurrencyCode[] = [
   "USD",
+  "CAD",
   "GBP",
   "JPY",
   "EUR",

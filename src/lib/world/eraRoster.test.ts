@@ -13,8 +13,8 @@ import {
 const ALL = Object.keys(COUNTRY_CONFIGS) as CountryId[];
 
 describe("S1 — era roster totality", () => {
-  it("runs the 2027 world as one player, four NPP-run and sixteen background countries", () => {
-    expect(countriesByTier("2027-default", "player")).toEqual(["US"]);
+  it("runs the 2027 world as two player, four NPP-run and sixteen background countries", () => {
+    expect(countriesByTier("2027-default", "player")).toEqual(["US", "CA"]);
     expect([...countriesByTier("2027-default", "npp")].sort()).toEqual(["CN", "DE", "JP", "UK"]);
     expect(countriesByTier("2027-default", "econ")).toEqual([]);
     expect([...countriesByTier("2027-default", "background")].sort()).toEqual(

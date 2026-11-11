@@ -1,6 +1,7 @@
 import type { CountryCommandFlavor } from "@/lib/military/theaters";
 import type { CabinetIdentity } from "@/lib/constants/cabinetIdentity";
 import type { EconomyIdentity } from "@/lib/constants/economyIdentity";
+import type { ExecutiveSeal } from "@/lib/constants/executiveSeals";
 import type { ExecutiveSurfaceConfig } from "@/lib/constants/executiveSurface";
 import type { IdentityText } from "@/lib/constants/institutionIdentity";
 import type { NationalIdentity } from "@/lib/constants/nationalIdentity";
@@ -220,6 +221,11 @@ const commandFlavor: CountryCommandFlavor = {
   acc: "#e5645c",
 };
 
+const executiveSeal: ExecutiveSeal = {
+  src: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9b/Royal_Coat_of_arms_of_Canada.svg/330px-Royal_Coat_of_arms_of_Canada.svg.png",
+  alt: "Royal Arms of Canada",
+};
+
 export const CA_IDENTITY: CountryIdentity = {
   commandFlavor,
   displayName: "Canada",
@@ -237,4 +243,5 @@ export const CA_IDENTITY: CountryIdentity = {
   historicalNames,
   modernNames,
   addressNames: { national: "Speech from the Throne", regional: "Speech from the Throne" },
+  executiveSeal,
 };

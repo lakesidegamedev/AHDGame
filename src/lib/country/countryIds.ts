@@ -6,8 +6,7 @@ import { COUNTRY_ORDER, type CountryId } from "@/lib/constants/countriesCore";
  * never has to import the full country client config just to validate an id.
  * `countryIds.test.ts` pins this list to the keys of `COUNTRY_CLIENT_CONFIGS`.
  */
-// CA is configured before the era roster registers it; drop it here once it joins COUNTRY_ORDER.
-const LATENT_COUNTRY_IDS = ["BLR", "UKR", "BAL", "SCO", "WAL", "CA"] as const;
+const LATENT_COUNTRY_IDS = ["BLR", "UKR", "BAL", "SCO", "WAL"] as const;
 
 export const COUNTRY_IDS: ReadonlySet<string> = new Set<string>([
   ...COUNTRY_ORDER,

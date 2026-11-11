@@ -81,6 +81,7 @@ export const COUNTRY_ORDER: CountryId[] = [
   "AT",
   "FI",
   "DD",
+  "CA",
 ];
 
 /**

@@ -105,6 +105,7 @@ export const ZOD_CURRENCY_ENUM: [CurrencyCode, CurrencyCode, ...CurrencyCode[]] 
 /** Zod-compatible tuple for ACTIVE currencies only (used in forex route schemas) */
 export const ZOD_ACTIVE_CURRENCY_ENUM: [CurrencyCode, CurrencyCode, ...CurrencyCode[]] = [
   "USD",
+  "CAD",
   "GBP",
   "JPY",
   "EUR",
@@ -331,6 +332,7 @@ export const INITIAL_RATES: Partial<Record<CountryId, number>> = {
 export const INITIAL_RATES_1991: Partial<Record<CountryId, number>> = {
   US: 1.0,
   UK: 0.57, // GBP/USD annual average 1991
+  CA: 1.1457, // CAD/USD annual average 1991, Bank of Canada
   JP: 134.5, // JPY/USD annual average 1991
   DE: 0.85, // DEM→EUR-equivalent (1.66 DEM/USD ÷ 1.95583 DEM/EUR)
   IE: 0.6212975, // WDI PA.NUS.FCRF 1991 annual average, IEP/USD
@@ -386,6 +388,7 @@ export const INITIAL_RATES_1991: Partial<Record<CountryId, number>> = {
 export const INITIAL_RATES_1953: Partial<Record<CountryId, number>> = {
   US: 1.0,
   UK: 0.357, // GBP: Bretton Woods par $2.80/£ → 0.357 £/USD
+  CA: 0.9837, // CAD/USD annual average 1953 (floating dollar), Bank of Canada
   JP: 360.0, // JPY: Dodge Line 360¥/USD (fixed 1949–71)
   DE: 4.2, // DEM: post-reform fixed rate 4.2 DEM/USD (Bretton Woods)
   // IEP: Currency Commission / CBI sterling link 1927–1979 — hard 1:1 with GBP
@@ -475,6 +478,7 @@ export const INITIAL_RATES_1953: Partial<Record<CountryId, number>> = {
 export const INITIAL_RATES_1979: Partial<Record<CountryId, number>> = {
   US: 1.0,
   UK: 0.47, // GBP/USD 1979 avg
+  CA: 1.1714, // CAD/USD annual average 1979, Bank of Canada
   JP: 219.0, // JPY/USD 1979 avg
   DE: 0.936, // 1.83 DEM/USD ÷ 1.95583 DEM/EUR (EUR-equiv)
   // IEP: Ireland joined EMS Mar 1979 and broke the 1:1 GBP peg; seed floats
