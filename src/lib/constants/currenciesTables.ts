@@ -54,6 +54,7 @@ export {
   getEraAwareCurrencySymbol,
 } from "./currencyCodes";
 import { CA_ECONOMY } from "@/lib/countries/ca/economy";
+import { QC_ECONOMY } from "@/lib/countries/qc/economy";
 
 /** Zod-compatible tuple for CurrencyCode validation */
 export const ZOD_CURRENCY_ENUM: [CurrencyCode, CurrencyCode, ...CurrencyCode[]] = [
@@ -309,6 +310,7 @@ export const INITIAL_RATES: Partial<Record<CountryId, number>> = {
   // CAD at the 2019 Bank of Canada annual average. Canada trades only where a
   // preset's roster includes it; this row values CAD everywhere else.
   CA: 1.3269,
+  QC: 1.3269, // CAD: shares Canada's rate (not forex-active)
 };
 
 /**
@@ -537,6 +539,7 @@ export const INITIAL_RATES_2027: Partial<Record<CountryId, number>> = {
   HU: 353.2,
   // WDI PA.NUS.FCRF 2024 average, matching the CAD figures in Canada's 2027 data.
   CA: 1.3698,
+  QC: 1.3698, // CAD: shares Canada's rate (not forex-active)
 };
 
 /**
@@ -658,6 +661,7 @@ export const MONETARY_BASELINES: Record<CountryId, MonetaryBaseline> = {
   SCO: SCO_ECONOMY.monetary.baseline, // mirrors UK (sterling zone)
   WAL: WAL_ECONOMY.monetary.baseline, // mirrors UK (sterling zone)
   CA: CA_ECONOMY.monetary.baseline,
+  QC: QC_ECONOMY.monetary.baseline, // mirrors Canada (Canadian-dollar zone)
 };
 
 // ── FX Intervention (chair standing policy) ─────────────────────────────────

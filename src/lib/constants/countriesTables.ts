@@ -98,6 +98,7 @@ import {
   CA_CONFIG,
   CA_REGIONAL_BILL_ASSENT_OFFICE_KEY,
 } from "@/lib/countries/ca/institutionsFacts";
+import { QC_CONFIG } from "@/lib/countries/qc/institutionsFacts";
 import { CA_IDENTITY } from "@/lib/countries/ca/identity";
 
 export interface ChamberConfig {
@@ -854,6 +855,8 @@ export const COUNTRY_CONFIGS: Record<CountryId, CountryConfig> = {
 
   // Canada: Westminster federation, 2027 world only.
   CA: CA_CONFIG,
+  // Latent successor: Quebec exists only after a sovereignty referendum carries.
+  QC: QC_CONFIG,
 };
 
 /**

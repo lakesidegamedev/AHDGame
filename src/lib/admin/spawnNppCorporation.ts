@@ -92,6 +92,7 @@ import { BLR_NPP_CAPITAL_STATE } from "@/lib/countries/blr/geographyFacts";
 import { UKR_NPP_CAPITAL_STATE } from "@/lib/countries/ukr/geographyFacts";
 import { BAL_NPP_CAPITAL_STATE } from "@/lib/countries/bal/geographyFacts";
 import { CA_NPP_CAPITAL_STATE } from "@/lib/countries/ca/geographyFacts";
+import { QC_NPP_CAPITAL_STATE } from "@/lib/countries/qc/geographyFacts";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
@@ -149,6 +150,7 @@ export const NPP_CAPITAL_STATES: Record<CountryId, string> = {
   SCO: SCO_NPP_CAPITAL_STATE, // Latent — sub-regions seeded at secession (cannot spawn pre-activation)
   WAL: WAL_NPP_CAPITAL_STATE, // Latent — sub-regions seeded at secession (cannot spawn pre-activation)
   CA: CA_NPP_CAPITAL_STATE,
+  QC: QC_NPP_CAPITAL_STATE, // latent: regions exist only after independence
 };
 
 export interface SpawnNppCorporationInput {

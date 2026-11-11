@@ -169,6 +169,7 @@ export type AlignmentCountryKey =
   | "PT"
   | "PY"
   | "QA"
+  | "QC"
   | "RO"
   | "RU"
   | "RUA"
@@ -1845,6 +1846,14 @@ export const ALIGNMENT_ROSTER: readonly AlignmentRosterEntry[] = [
     status1953: "dependent",
     iso: [],
     metro: "UK",
+  },
+  {
+    key: "QC",
+    name: "Quebec",
+    tier: "historical-presence",
+    status1953: "dependent",
+    iso: [],
+    metro: "CA",
   },
 ];
 

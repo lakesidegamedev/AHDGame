@@ -354,6 +354,7 @@ export const MILITARY_COUNTRY_SCALE: Record<CountryId, number> = {
   SCO: 1,
   WAL: 1,
   CA: 0.9,
+  QC: 1,
 };
 
 /** Defense cabinet position per country. */

@@ -31,6 +31,8 @@ import { WAL_CABINET_POSITIONS } from "./walCabinet";
 import { CABINET_POSITIONS } from "./cabinet";
 import { ECON_COUNTRY_CABINET_POSITIONS } from "./econCountryCabinet";
 import { CA_CABINET_POSITIONS } from "@/lib/countries/ca/cabinet/positions";
+import { QC_CABINET_SEATS } from "@/lib/countries/qc/data/qcCabinet";
+import { devolvedCabinetPositions } from "@/lib/cabinet/rules/devolvedSeats";
 
 /** One era display-name band; the last band with `from <= year` wins. */
 export interface CabinetNameBand {
@@ -116,6 +118,7 @@ const POSITIONS_BY_COUNTRY: Record<string, ReadonlyArray<CabinetPositionDef>> = 
   GR: ECON_COUNTRY_CABINET_POSITIONS,
   BR: ECON_COUNTRY_CABINET_POSITIONS,
   CA: CA_CABINET_POSITIONS,
+  QC: devolvedCabinetPositions(QC_CABINET_SEATS),
 };
 
 /** Get cabinet positions list for a country. */
