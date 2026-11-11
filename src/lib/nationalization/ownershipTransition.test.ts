@@ -43,6 +43,7 @@ vi.mock("./consequences/apply", () => ({
     legitimacyDelta: 0,
     approvalMetricNudges: [],
     foreignOwnerRecorded: null,
+    tensionDelta: 0,
   }),
 }));
 

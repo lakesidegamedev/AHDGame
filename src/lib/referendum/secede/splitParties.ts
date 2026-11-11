@@ -24,6 +24,7 @@ import type { State } from "@/lib/db/types/state";
 import { populationWeights } from "./apportion";
 import { SUB_REGION_SEEDS, CAPITAL_SUBREGION, type SecedingCountryId } from "./subRegions";
 import { planPartyRemap, type RegionParty } from "./partyRemap";
+import { remapRecruitmentSlates } from "./remapRecruitmentSlates";
 
 /** Region-party ledger collections dissolved on secession (the new country reseeds). */
 const REGION_PARTY_LEDGERS = [
@@ -328,9 +329,7 @@ export async function splitParties(
         },
       }))
     );
-  const remapRoster = async (
-    collection: "recruitmentSlates" | "statePartyCandidates" | "slateCandidates"
-  ) => {
+  const remapRoster = async (collection: "statePartyCandidates" | "slateCandidates") => {
     const rows = await db
       .collection(collection)
       .find(
@@ -375,9 +374,11 @@ export async function splitParties(
         }))
       );
   };
-  await remapRoster("recruitmentSlates");
   await remapRoster("statePartyCandidates");
   await remapRoster("slateCandidates");
+  // Do this last: its child rows take their final country/party from the
+  // consolidated slate, rather than being remapped a second time.
+  await remapRecruitmentSlates(db, fromCountryId, toCountryId, plan.idMap, now);
 
   // ── Dissolve the region's party-ledger history (the new country reseeds) ────
   for (const coll of REGION_PARTY_LEDGERS) {

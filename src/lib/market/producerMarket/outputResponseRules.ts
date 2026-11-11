@@ -238,6 +238,69 @@ export function nextRunShare(
   return Math.max(floor, Math.min(1, next));
 }
 
+/** Sell-through at or above which a plant at the floor may step up (the market is only a few percent oversupplied). */
+export const FLOOR_RECOVERY_SELL_THROUGH = 0.9;
+/** A plant whose run is below this share of capacity counts as at or near the floor. */
+export const FLOOR_RECOVERY_BAND = 0.05;
+/** Share of capacity a floor plant adds per turn: small, so many plants rising at once cannot swamp a market. */
+export const FLOOR_RECOVERY_STEP = 0.01;
+/** Turns of sales a floor plant may already carry in stock and still step up. */
+export const FLOOR_RECOVERY_STOCK_COVER = 1;
+
+/**
+ * Floor recovery. In a market oversupplied by a few percent every seller is
+ * rationed pro rata and nobody reads sold out, so a plant at the floor plans
+ * only expected sales (below the floor) and never grows. A plant at or near the
+ * floor that still sells most of what it offers steps up by a small fixed share
+ * of capacity a turn instead, capped at the band.
+ *
+ * Holds back when: the plant lost money per unit sold (marginal-loss brake), it
+ * sold out already (the sold-out growth owns that), sell-through is under
+ * FLOOR_RECOVERY_SELL_THROUGH, or it already carries more than
+ * FLOOR_RECOVERY_STOCK_COVER turns of sales in stock (stock still piling up).
+ * Returns `next` unchanged when it does not apply. Pure.
+ */
+export function floorRecoveryRunShare(
+  prior: PriorReceipt | null | undefined,
+  floor: number,
+  next: number
+): number {
+  if (!prior) return next;
+  const finite = (x: number) => (Number.isFinite(x) ? x : 0);
+  const active = finite(prior.activeUnits);
+  if (!(active > 0)) return next;
+  const base = planBaseRunShare(prior, floor);
+  if (base == null || !(base < FLOOR_RECOVERY_BAND)) return next;
+  const produced = finite(prior.producedUnits);
+  const offered = finite(prior.offeredUnits);
+  const sold = finite(prior.soldUnits);
+  if (!(sold > 0) || !(offered > 0)) return next;
+  const sellThrough = Math.min(1, sold / offered);
+  if (sellThrough < FLOOR_RECOVERY_SELL_THROUGH || sellThrough >= SOLD_OUT) return next;
+  const runningCost =
+    finite(prior.inputsConsumed) +
+    finite(prior.labourPaid ?? 0) +
+    finite(prior.labourArrears ?? 0) +
+    finite(prior.otherOperatingPaid ?? 0) +
+    finite(prior.otherOperatingArrears ?? 0);
+  const contributionPerUnit =
+    (finite(prior.revenue) - (runningCost * sold) / Math.max(produced, sold)) / sold;
+  if (
+    marginalLoss({
+      sold,
+      produced,
+      sellThrough,
+      revenue: finite(prior.revenue),
+      inputsConsumed: finite(prior.inputsConsumed),
+      contributionPerUnit,
+    })
+  )
+    return next;
+  const carriedStock = Math.max(0, offered - produced);
+  if (carriedStock > FLOOR_RECOVERY_STOCK_COVER * sold) return next;
+  return Math.max(next, Math.min(1, Math.min(FLOOR_RECOVERY_BAND, base + FLOOR_RECOVERY_STEP)));
+}
+
 /** Probe above last turn's sales, so a demand-planned plant keeps testing for more. */
 const DEMAND_PLAN_PROBE = 0.1;
 
@@ -333,7 +396,7 @@ export function demandPlanRunShare(
       ? plannedShare * active * sellThrough * (1 + DEMAND_PLAN_PROBE)
       : 0;
   const planned = Math.max(0, Math.max(expectedSales, cutSales) - heldStock);
-  return Math.max(floor, Math.min(1, planned / active));
+  return floorRecoveryRunShare(prior, floor, Math.max(floor, Math.min(1, planned / active)));
 }
 
 /**
@@ -525,7 +588,11 @@ export function planRecoveryRunShare(
     )
       return Math.max(options.floor ?? OUTPUT_RUN_FLOOR, base * (1 - OUTPUT_CUT_STEP));
   }
-  const next = planRecoveryRunShareCore(prior, options);
+  const next = floorRecoveryRunShare(
+    prior,
+    options.floor ?? OUTPUT_RUN_FLOOR,
+    planRecoveryRunShareCore(prior, options)
+  );
   if (!prior) return next;
   const finite = (x: number) => (Number.isFinite(x) ? x : 0);
   const active = finite(prior.activeUnits);

@@ -159,6 +159,34 @@ describe("processReferendumLifecycle", () => {
 
   const dualBills = { westminsterBillId: BILL_ID, dailBillId: BILL_ID2 };
 
+  it("keeps a failed conversion retryable and still attempts the other regions", async () => {
+    const refs = ["WAL", "SCO", "NIR"].map((regionId) =>
+      refDoc({
+        _id: new ObjectId(),
+        regionId,
+        status: "actuating",
+        westminsterBillId: BILL_ID,
+        kind: regionId === "NIR" ? "reunification" : "independence",
+      })
+    );
+    setup(db, refs);
+    db.collection("bills").findOne.mockResolvedValue({ status: "signed" });
+    vi.mocked(runReferendumActuation).mockRejectedValueOnce(new Error("slate conflict"));
+    const result = await processReferendumLifecycle(db as unknown as Db, 200);
+    expect(runReferendumActuation).toHaveBeenCalledTimes(3);
+    expect(result).toMatchObject({
+      processed: 2,
+      failures: [{ regionId: "WAL", error: "slate conflict" }],
+    });
+    expect(result?.transitions.map((transition) => transition.referendumId)).not.toContain(
+      String(refs[0]._id)
+    );
+    setup(db, [refs[0]]);
+    expect(await processReferendumLifecycle(db as unknown as Db, 201)).toMatchObject({
+      processed: 1,
+    });
+  });
+
   it("actuating → completed when BOTH consent bills pass", async () => {
     setup(db, [refDoc({ status: "actuating", kind: "reunification", ...dualBills })]);
     db.collection("bills").findOne.mockResolvedValue({ status: "signed" });

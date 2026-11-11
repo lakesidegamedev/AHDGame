@@ -301,6 +301,7 @@ function createPersistingFakeDb(fixtures: {
   stateDemographics: CensusGroupView[];
   demographicDefaults: CensusGroupView[];
   gameState: Record<string, unknown>;
+  resetLawPrograms?: Array<Record<string, unknown>>;
 }) {
   const stores = {
     states: new Map(fixtures.states.map((d) => [d._id, d as Record<string, unknown>])),
@@ -311,6 +312,9 @@ function createPersistingFakeDb(fixtures: {
     ),
     demographicDefaults: new Map(
       fixtures.demographicDefaults.map((d) => [d._id, d as unknown as Record<string, unknown>])
+    ),
+    resetLawPrograms: new Map(
+      (fixtures.resetLawPrograms ?? []).map((d, i) => [String(d._id ?? `r${i}`), d])
     ),
   };
   let gameStateDoc: Record<string, unknown> = { ...fixtures.gameState };
@@ -550,6 +554,8 @@ function world(opts: {
   docs?: CensusGroupView[];
   defaults?: CensusGroupView[];
   countryId?: string;
+  resetWorldId?: string;
+  programs?: Array<Record<string, unknown>>;
 }) {
   const stateIds = opts.stateIds ?? ["AL"];
   const countryId = opts.countryId ?? "US";
@@ -559,7 +565,12 @@ function world(opts: {
     legislationTypes: opts.laws ?? [],
     stateDemographics: opts.docs ?? stateIds.map((s) => stateDoc(s, countryId)),
     demographicDefaults: opts.defaults ?? stateIds.map((s) => stateDoc(s, countryId)),
-    gameState: { _id: "current", preset: "2019-default" },
+    gameState: {
+      _id: "current",
+      preset: "2019-default",
+      ...(opts.resetWorldId ? { resetWorldId: opts.resetWorldId } : {}),
+    },
+    resetLawPrograms: opts.programs,
   });
 }
 
@@ -732,6 +743,44 @@ describe("processAllStateDemographics", () => {
       await runTurns(db, 60);
       const base = overlay(stores.demographicDefaults.get("AL"), "lean", "race", "white") as number;
       expect(base).toBeLessThan(0);
+    });
+  });
+
+  describe("regional reset-law programs", () => {
+    const program = {
+      worldId: "w1",
+      scope: "regional",
+      regionId: "CHU",
+      familyId: "L06",
+      choice: "far_left",
+    };
+    const chu = (programs: Array<Record<string, unknown>>, resetWorldId?: string) =>
+      world({ stateIds: ["CHU"], countryId: "JP", programs, resetWorldId });
+
+    it("a far-left CHU jobs program pulls its income and education buckets left", async () => {
+      const { db, stores } = chu([program], "w1");
+      await processAllStateDemographics(db);
+      const doc = stores.stateDemographics.get("CHU");
+      expect(overlay(doc, "lean", "income", "middle")).toBeCloseTo(
+        -0.4 * LEAN_SHIFT_RATE_PER_TURN,
+        9
+      );
+      expect(overlay(doc, "lean", "income", "low")).toBeLessThan(0);
+      expect(overlay(doc, "lean", "education", "vocational")).toBeLessThan(0);
+    });
+
+    it("outside a reset world the programs are not read", async () => {
+      const withProgram = chu([program]);
+      const without = chu([]);
+      await processAllStateDemographics(withProgram.db);
+      await processAllStateDemographics(without.db);
+      const strip = (d: unknown) => {
+        const { lastUpdated: _lastUpdated, ...rest } = d as Record<string, unknown>;
+        return rest;
+      };
+      expect(strip(withProgram.stores.stateDemographics.get("CHU"))).toEqual(
+        strip(without.stores.stateDemographics.get("CHU"))
+      );
     });
   });
 });

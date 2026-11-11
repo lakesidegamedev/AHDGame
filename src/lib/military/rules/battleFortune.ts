@@ -28,3 +28,20 @@ export function battleEffectiveRatio(
   const outcomeRatio = ratio + (roll - 0.5) * 2 * spread;
   return 0.5 + Math.max(-severity, Math.min(severity, outcomeRatio - 0.5));
 }
+
+/**
+ * How much of a normal battle's bleeding a side takes, given the share of the
+ * front's combined fighting power its ENEMY holds.
+ *
+ * Casualties used to scale with a side's own deployed personnel almost regardless of
+ * the force gap, so a huge army facing a thin defence lost many times more men than the
+ * defender. Scaling by the enemy's engaged share fixes that: at parity (enemy share
+ * 0.5) the factor is 1 and the calibrated even-fight losses are untouched; the smaller
+ * the enemy's share, the smaller the factor, down to `floor` so a battle never costs
+ * nothing. Capped at 1: facing the stronger side never bleeds MORE than before.
+ */
+export function enemyEngagedExposure(enemyShare: number, floor: number): number {
+  const share = Number.isFinite(enemyShare) ? Math.max(0, Math.min(1, enemyShare)) : 0.5;
+  const lowest = Number.isFinite(floor) ? Math.max(0, Math.min(1, floor)) : 0;
+  return Math.max(lowest, Math.min(1, share / 0.5));
+}

@@ -7,6 +7,7 @@ import { TURNS_PER_DAY, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { annualWageFromDaily } from "@/lib/unions/unionServices";
 import {
   resolveSectorHeadcount,
+  fundedPayrollShare,
   resolveSectorLabourEconomics,
   resolveSectorLabourProductionEffects,
 } from "./sectorLabour";
@@ -262,7 +263,7 @@ describe("resolveSectorHeadcount on a funded turn", () => {
       labourDemandByState: demand,
       fundedHeadcount: { desiredWorkers: 40, workers: 30 },
     });
-    expect(out).toEqual({ desiredWorkers: 40, workers: 30 });
+    expect(out).toMatchObject({ desiredWorkers: 40, workers: 30 });
     expect(demand.get("s1")).toBe(40);
   });
 
@@ -273,7 +274,7 @@ describe("resolveSectorHeadcount on a funded turn", () => {
       labourDemandByState: demand,
       fundedHeadcount: { desiredWorkers: 0, workers: 0 },
     });
-    expect(out).toEqual({ desiredWorkers: 0, workers: 0 });
+    expect(out).toMatchObject({ desiredWorkers: 0, workers: 0 });
     expect(demand.get("s1") ?? 0).toBe(0);
   });
 });
@@ -319,5 +320,59 @@ describe("resolveSectorHeadcount with an automation crew factor", () => {
     });
     expect(out.desiredWorkers).toBe(plain.desiredWorkers);
     expect(displaced.get("s1") ?? 0).toBe(0);
+  });
+
+  it("compares a funded automated plant against its own method-adjusted crew", () => {
+    const out = resolveSectorHeadcount({
+      ...base,
+      labourDemandByState: makeLabourDemandByState(),
+      labourPerUnitFactor: 0.5,
+      fundedHeadcount: { desiredWorkers: 7, workers: 7 },
+    });
+    const automated = resolveSectorHeadcount({
+      ...base,
+      labourDemandByState: makeLabourDemandByState(),
+      labourPerUnitFactor: 0.5,
+    });
+    expect(out.referenceDesiredWorkers).toBe(automated.desiredWorkers);
+  });
+});
+
+describe("fundedPayrollShare", () => {
+  const base = {
+    revenue: 1_000_000 * 0.46,
+    stateId: "s1",
+    rawWorkforceSkillByState: new Map<string, number>(),
+    politicalBoard: undefined,
+    staffingFactor: 1,
+  };
+
+  it("prices a 1% funded run at about 1% of a 0.46 crew share payroll", () => {
+    const reference = resolveSectorHeadcount({
+      ...base,
+      labourDemandByState: makeLabourDemandByState(),
+    }).desiredWorkers;
+    const funded = Math.max(1, Math.round(reference * 0.01));
+    const out = resolveSectorHeadcount({
+      ...base,
+      labourDemandByState: makeLabourDemandByState(),
+      fundedHeadcount: { desiredWorkers: funded, workers: funded },
+    });
+    expect(out.referenceDesiredWorkers).toBe(reference);
+    const share = fundedPayrollShare({
+      fundedDesiredWorkers: out.desiredWorkers,
+      referenceDesiredWorkers: out.referenceDesiredWorkers,
+    });
+    expect(share).toBeCloseTo(funded / reference, 10);
+    expect(share).toBeLessThan(0.02);
+    // Basis per worker is unchanged by the funded run: payroll / workers agrees.
+    const basis = 0.46 * 1_000_000;
+    expect((basis * share) / funded).toBeCloseTo(basis / reference, 6);
+  });
+
+  it("never exceeds 1 and treats a missing reference as a full basis", () => {
+    expect(fundedPayrollShare({ fundedDesiredWorkers: 50, referenceDesiredWorkers: 10 })).toBe(1);
+    expect(fundedPayrollShare({ fundedDesiredWorkers: 5, referenceDesiredWorkers: 0 })).toBe(1);
+    expect(fundedPayrollShare({ fundedDesiredWorkers: 0, referenceDesiredWorkers: 10 })).toBe(0);
   });
 });

@@ -1,9 +1,13 @@
 import type { BankLoan } from "@/lib/db/types/bank";
 import type { CorporateSector, SectorBuildOrder } from "@/lib/db/types/corporation";
 import { unownedPoolCredit } from "@/lib/market/unownedPoolDraw";
-import { deliveredFraction, queueUndeliveredCost } from "@/lib/corporations/buildDelivery";
+import {
+  deliveredFraction,
+  queueUndeliveredCost,
+  resolveBuildSettledTurn,
+} from "@/lib/corporations/buildDelivery";
 import { CAPACITY_BUILD_CANCEL_REFUND } from "@/lib/constants/capacityEconomy";
-import { seedPlantLedger } from "@/lib/corporations/plantLedger";
+import { rollbackConstruction } from "@/lib/corporations/rules/constructionRollback";
 import { allocateConstructionCancellation } from "./constructionFinance";
 import { oid, type BankingTransition, type TransitionProjection } from "./boundary";
 import type { ConstructionBuildClaim } from "./constructionBuild";
@@ -28,6 +32,7 @@ export interface ConstructionCancellationQuote {
     capacityBookAnchor: number;
     plantCount: number;
     plantUnitRemainder: number;
+    plantWearUnits?: number;
     constructionInProgressAnchor: number;
   };
   completed?: boolean;
@@ -45,6 +50,7 @@ export function quoteConstructionCancellation(input: {
   now?: Date;
   fullRefund?: boolean;
   sector?: CorporateSector;
+  wholePlants?: boolean;
 }): ConstructionCancellationQuote | null {
   const { claim, loan, queue, turn } = input;
   const orderIndex = queue.findIndex(
@@ -89,23 +95,15 @@ export function quoteConstructionCancellation(input: {
       )
     : null;
   const sector = input.sector;
-  const processedTurn = Math.min(turn, sector?.operatingCapacityTurn ?? turn - 1);
-  const delivered =
-    input.fullRefund && sector ? deliveredFraction(queue[orderIndex], processedTurn) : 0;
-  const stock = Math.max(
-    0,
-    (sector?.capitalStock ?? 0) - queue[orderIndex].unitsOrdered * delivered
+  const processedTurn = resolveBuildSettledTurn(
+    turn,
+    sector?.buildDeliverySettledTurn,
+    sector?.operatingCapacityTurn
   );
   const rollback =
     input.fullRefund && sector
       ? {
-          capitalStock: stock,
-          operatingCapacityUnits: stock,
-          capacityBookAnchor: Math.max(
-            0,
-            (sector.capacityBookAnchor ?? 0) - queue[orderIndex].costPaidAnchor * delivered
-          ),
-          ...seedPlantLedger(sector, stock),
+          ...rollbackConstruction(sector, [queue[orderIndex]], turn, input.wholePlants),
           constructionInProgressAnchor: queueUndeliveredCost(
             queue.filter((_, index) => index !== orderIndex),
             processedTurn
@@ -287,6 +285,7 @@ export function quoteConversionCancellationSupplement(input: {
   sector: CorporateSector;
   turn: number;
   now: Date;
+  wholePlants?: boolean;
 }): ConstructionCancellationQuote | null {
   const { previous, claim, loan, sector, turn, now } = input;
   if (previous.rollback || previous.refundLocal >= claim.collateralCostLocal) return null;
@@ -311,11 +310,16 @@ export function quoteConversionCancellationSupplement(input: {
         sector.operatingCapacityTurn ?? previous.turn - 1,
         previous.turn
       ),
+      buildDeliverySettledTurn: Math.min(
+        sector.buildDeliverySettledTurn ?? sector.operatingCapacityTurn ?? previous.turn - 1,
+        previous.turn
+      ),
     },
     turn,
     now,
     destination: previous.destination,
     fullRefund: true,
+    wholePlants: input.wholePlants,
   });
   if (!full) return null;
   const refundLocal = claim.collateralCostLocal - previous.refundLocal;
@@ -340,7 +344,7 @@ export function quoteConversionCancellationSupplement(input: {
       ...full.rollback!,
       constructionInProgressAnchor: queueUndeliveredCost(
         sector.buildQueue ?? [],
-        sector.operatingCapacityTurn ?? turn - 1
+        resolveBuildSettledTurn(turn, sector.buildDeliverySettledTurn, sector.operatingCapacityTurn)
       ),
     },
   };

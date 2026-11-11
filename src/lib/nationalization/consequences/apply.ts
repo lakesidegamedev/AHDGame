@@ -25,8 +25,10 @@ import {
   computePrivatizationConfidenceBoost,
   computePrivatizationApprovalNudge,
   computePrivatizationLegitimacyDelta,
+  computeForeignExpropriationTension,
 } from "./compute";
 import { applyLegacyTrustDelta } from "@/lib/sovereignDefault/sideEffects/trustHit";
+import { applyTensionEvent } from "@/lib/coldwar/tension";
 import type {
   ConsequenceContext,
   ConsequenceResult,
@@ -92,16 +94,37 @@ export async function applyNationalizationConsequences(
     await applyLegitimacyDelta(db, ctx.countryId, legitimacyDelta, ctx.turn);
   }
 
-  // ── Foreign owner: record + wire only, no relations delta (spec §12.3). ────
+  const sectorLabel = ctx.sectorTypes.length > 0 ? ctx.sectorTypes.join("/") : "asset";
+  const foreignSuffix = ctx.foreignOwnerCountryId ? ` (${ctx.foreignOwnerCountryId}-owned)` : "";
+
+  // ── Foreign owner: world tension (spec §12.3) ─────────────────────────────
+  // There is no bilateral relations scalar in this repo, so the diplomatic
+  // consequence runs through the shared cold-war tension ledger: DEFCON,
+  // procurement demand and detente goodwill all read it, and every country sees
+  // the same incident. Scaled by the payment tier, because a compensated taking
+  // is a transaction and a seizure is an incident. A tension write failure must
+  // not fail a taking that already moved ownership, so it is logged and dropped.
   let foreignOwnerRecorded: ConsequenceResult["foreignOwnerRecorded"] = null;
+  let tensionDelta = 0;
   if (ctx.foreignOwnerCountryId && ctx.foreignOwnerCountryId !== ctx.countryId) {
     foreignOwnerRecorded = ctx.foreignOwnerCountryId;
-    // TODO(diplomacy): bilateral-relations delta + retaliation when a relations
-    // system exists. For now we only surface the event below.
+    tensionDelta = computeForeignExpropriationTension(ctx.tier);
+    if (tensionDelta > 0) {
+      try {
+        await applyTensionEvent(
+          db,
+          ctx.turn,
+          "crisis",
+          `${countryName(ctx.countryId)} seized ${sectorLabel} assets owned by ${countryName(
+            foreignOwnerRecorded
+          )}`,
+          tensionDelta
+        );
+      } catch (err) {
+        console.error("[nationalization] tension event for a foreign taking failed:", err);
+      }
+    }
   }
-
-  const sectorLabel = ctx.sectorTypes.length > 0 ? ctx.sectorTypes.join("/") : "asset";
-  const foreignSuffix = foreignOwnerRecorded ? ` (${foreignOwnerRecorded}-owned)` : "";
   await logWireEvent(
     "corporation_nationalized",
     `${ctx.countryId} nationalized a ${sectorLabel}${foreignSuffix}`
@@ -113,7 +136,13 @@ export async function applyNationalizationConsequences(
     legitimacyDelta,
     approvalMetricNudges,
     foreignOwnerRecorded,
+    tensionDelta,
   };
+}
+
+/** Display name for a tension label; falls back to the id for an unseeded country. */
+function countryName(countryId: CountryId): string {
+  return getCountryConfig(countryId)?.name ?? countryId;
 }
 
 /** Active regime's governing party id (most-recently-updated leader-state). */
@@ -162,6 +191,7 @@ export async function applyPrivatizationConsequences(
     legitimacyDelta,
     approvalMetricNudges,
     foreignOwnerRecorded: null,
+    tensionDelta: 0,
   };
 }
 

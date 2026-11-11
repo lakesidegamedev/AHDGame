@@ -110,12 +110,12 @@ describe("coalition casualty attribution", () => {
   });
 
   it("leaves single-nation battles exactly as they were", () => {
-    // 3137 is the loss produced by the severity-capped resolver at this seed.
+    // 2708 is the loss produced by the severity-capped resolver, with casualties scaled by the enemy engaged share, at this seed.
     // One contingent means the side denominator IS the contingent total, so the
     // fallback path must reproduce it man for man. If this drifts without an
     // intentional battle-formula change, the optional parameter stopped being optional.
     const res = resolvePvpBattle([side("US", "A", [120], T)], [side("CN", "B", [80], T)], T, 9);
-    expect(res.attacker.loss).toBe(3137);
+    expect(res.attacker.loss).toBe(2708);
   });
 
   it("keeps the retreat discount inside the per-contingent split", () => {

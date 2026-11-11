@@ -1,4 +1,3 @@
-import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { getAuthUser } from "@/lib/auth";
 import { getDb } from "@/lib/mongodb";
@@ -12,11 +11,13 @@ export const dynamic = "force-dynamic";
 
 // Auth: signed-in account. Resolve on arrival, never from a cached navbar id.
 export async function GET(request: Request) {
-  const redirect = (path: string) => {
-    const response = NextResponse.redirect(new URL(path, request.url), 307);
-    response.headers.set("Cache-Control", "private, no-store");
-    return response;
-  };
+  // Relative Location on purpose: behind the production proxy request.url is the
+  // internal origin, so an absolute URL built from it sends the browser to a dead host.
+  const redirect = (path: string) =>
+    new Response(null, {
+      status: 307,
+      headers: { Location: path, "Cache-Control": "private, no-store" },
+    });
   try {
     const auth = await getAuthUser();
     if (!auth) return redirect("/login");

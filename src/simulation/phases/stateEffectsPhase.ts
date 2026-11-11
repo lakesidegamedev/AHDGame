@@ -85,7 +85,7 @@ import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 export const stateEffectsAndNationalAggregationPhase: TurnPhaseAdapter = {
   key: "stateEffectsAndNationalAggregation",
   async execute(context, runtime) {
-    const { db, newTurn, currentYear, phaseResults, gameState, gameNow } = context;
+    const { db, newTurn, currentYear, phaseResults, gameState, gameNow, warnings } = context;
     // Both policy processors need the complete immutable legislation catalog
     // and run concurrently below. Share one decode rather than pulling the same
     // ~2.4 MB / 1,030-document collection into JS twice in the same turn.
@@ -680,7 +680,15 @@ export const stateEffectsAndNationalAggregationPhase: TurnPhaseAdapter = {
       processReferendumLifecycle(db, newTurn)
     );
     if (referendumResult) {
-      phaseResults.referendumLifecycle = { processed: referendumResult.processed };
+      phaseResults.referendumLifecycle = {
+        processed: referendumResult.processed,
+        ...(referendumResult.failures?.length ? { failures: referendumResult.failures } : {}),
+      };
+      for (const failure of referendumResult.failures ?? []) {
+        warnings.push(
+          `referendumLifecycle: ${failure.regionId} conversion remains pending: ${failure.error}`
+        );
+      }
     }
 
     // Reconcile the denormalized party memberCount cache against live

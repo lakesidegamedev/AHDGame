@@ -59,6 +59,7 @@ describe("runRequiredStartupMigrations", () => {
       "2026-10-09-campaign-field-office-indexes",
       "2026-10-09-market-cap-tick-indexes",
       "2026-10-10-supply-agreement-status-index",
+      "2026-11-10-navair-basing-index",
       "2026-10-09-corporate-fund-positions",
       "2026-10-09-subhour-wiki-cadence",
       "2026-10-15-live-world-npp-autonomy-v6",
@@ -80,6 +81,22 @@ describe("runRequiredStartupMigrations", () => {
     });
     expect(REQUIRED_STARTUP_INDEX_MIGRATIONS.every((migration) => migration.idempotent)).toBe(true);
     expect(runMigrationsMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("recreates the ledger turn-order index on every boot, past its marker", async () => {
+    await runRequiredStartupMigrations(db);
+
+    expect(REQUIRED_STARTUP_INDEX_MIGRATIONS.map((migration) => migration.id)).toContain(
+      "2026-11-10-financial-tx-log-turn-order-index"
+    );
+    expect(runMigrationsMock).toHaveBeenNthCalledWith(
+      2,
+      db,
+      expect.objectContaining({
+        only: expect.arrayContaining(["2026-11-10-financial-tx-log-turn-order-index"]),
+        force: true,
+      })
+    );
   });
 
   it("restores insert-only bond pools on a fresh 1991 world despite surviving markers", async () => {

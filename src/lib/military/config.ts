@@ -156,6 +156,13 @@ export const ATTRITION = {
   fortuneSpread: 0.5,
   /** Maximum distance from parity used by the casualty/readiness exchange. */
   battleSeveritySpread: 0.18,
+  /**
+   * Lowest fraction of normal casualties a side takes when its enemy holds almost none
+   * of the front's fighting power. Casualties scale with the enemy's engaged share
+   * (1.0 at parity), so an overwhelming force facing a thin defence no longer bleeds
+   * in proportion to its own size alone.
+   */
+  engagedForceFloor: 0.1,
   /** Casualty multiplier for the side that broke off. */
   retreatCasualtyMult: 0.6,
   /** Max fraction of establishment refilled per turn, by mode. */

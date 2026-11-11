@@ -55,6 +55,7 @@ import { sectorOutputUnmetShare, shortageBuildSpeedupOps } from "./sectorTurn/sh
 import { resolveSectorGrowthPolicy } from "./sectorGrowthPolicy";
 import {
   resolveSectorHeadcount,
+  fundedPayrollShare,
   resolveSectorLabourEconomics,
   resolveSectorLabourProductionEffects,
 } from "./sectorLabour";
@@ -802,7 +803,11 @@ export function processSector(
         }),
       })
     : 1;
-  const { desiredWorkers, workers: computedWorkers } = resolveSectorHeadcount({
+  const {
+    desiredWorkers,
+    workers: computedWorkers,
+    referenceDesiredWorkers,
+  } = resolveSectorHeadcount({
     revenue: plantsEnabled ? plantsNameplateRevenue * activeFraction * plantCrew : newRevenue,
     stateId: sector.stateId,
     rawWorkforceSkillByState: lookups.rawWorkforceSkillByState,
@@ -827,8 +832,21 @@ export function processSector(
 
   // Wanted staff the state could not supply are not paid (as in the producer path).
   const staffedShare = desiredWorkers > 0 ? computedWorkers / desiredWorkers : 0;
+  // On a funded turn the crew is the funded run's, not the crew share's, so the
+  // basis scales by the funded share to agree with what was actually paid.
+  const fundedShare = env.fundedHeadcountBySectorId
+    ? fundedPayrollShare({
+        fundedDesiredWorkers: desiredWorkers,
+        referenceDesiredWorkers,
+      })
+    : 1;
   const explicitPayrollBasis =
-    (plantsNameplateRevenue * activeFraction * plantCrew * bankingCommodityScale * staffedShare) /
+    (plantsNameplateRevenue *
+      activeFraction *
+      plantCrew *
+      bankingCommodityScale *
+      staffedShare *
+      fundedShare) /
     TURNS_PER_DAY;
 
   const payrollSpecializationMod = isStateOwned(corp)

@@ -24,8 +24,14 @@ import { resolvePresetIdFromGameState } from "@/lib/world/countryReadinessContra
 import { quoteConversionConstructionRefund } from "./rules/constructionRefund";
 import { cancelConversionUnderwriting } from "@/lib/banking/cancelConversionUnderwriting";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { loadWholePlantsOn } from "@/lib/corporations/wholePlants/stage";
 
-async function cancelSecuredBuild(db: Db, sector: CorporateSector, turn: number) {
+async function cancelSecuredBuild(
+  db: Db,
+  sector: CorporateSector,
+  turn: number,
+  wholePlants: boolean
+) {
   let claim = sector.constructionFinancing!;
   if (claim.status === "awaiting_approval") {
     const rejected = await rejectConstructionFinance(
@@ -75,6 +81,7 @@ async function cancelSecuredBuild(db: Db, sector: CorporateSector, turn: number)
     borrowerId: sector.corporationId,
     turn,
     fullRefund: true,
+    wholePlants,
   });
   if (!cancelled.ok) throw new Error(cancelled.error);
 }
@@ -82,11 +89,13 @@ async function cancelSecuredBuild(db: Db, sector: CorporateSector, turn: number)
 export async function refundConversionConstruction(
   db: Db,
   regionId: string,
-  turn: number
+  turn: number,
+  incomingCorporationIds: ObjectId[] = []
 ): Promise<void> {
   if (!boundSession(db)) throw new Error("Conversion refunds require a transaction");
+  const wholePlants = await loadWholePlantsOn(db);
   const corporations = await corporationsCollection(db)
-    .find({ headquartersState: regionId })
+    .find({ $or: [{ headquartersState: regionId }, { _id: { $in: incomingCorporationIds } }] })
     .toArray();
   const ids = corporations.map((corp) => corp._id);
   const sectors = await db
@@ -99,6 +108,7 @@ export async function refundConversionConstruction(
           stateId: 1,
           countryId: 1,
           sectorType: 1,
+          strategyId: 1,
           industryModel: 1,
           mediaDiscriminator: 1,
           buildQueue: 1,
@@ -107,6 +117,12 @@ export async function refundConversionConstruction(
           capitalStock: 1,
           capacityBookAnchor: 1,
           operatingCapacityTurn: 1,
+          buildDeliverySettledTurn: 1,
+          plantCount: 1,
+          plantUnitRemainder: 1,
+          plantWearUnits: 1,
+          activeCapacityPercent: 1,
+          mothballed: 1,
         },
       }
     )
@@ -160,7 +176,7 @@ export async function refundConversionConstruction(
       hasOrder ||
       (claim.cancellation && !claim.cancellation.cleanupCompleted)
     ) {
-      await cancelSecuredBuild(db, sector, turn);
+      await cancelSecuredBuild(db, sector, turn, wholePlants);
     } else if (claim.status === "building" && !claim.fundingCleanupCompleted) {
       // A fully delivered plant is existing collateral, not a pending order to refund.
       if (!(await releaseCompletedConstructionFunding(db, claim)))
@@ -178,6 +194,7 @@ export async function refundConversionConstruction(
           stateId: 1,
           countryId: 1,
           sectorType: 1,
+          strategyId: 1,
           industryModel: 1,
           mediaDiscriminator: 1,
           buildQueue: 1,
@@ -185,6 +202,12 @@ export async function refundConversionConstruction(
           capitalStock: 1,
           capacityBookAnchor: 1,
           operatingCapacityTurn: 1,
+          buildDeliverySettledTurn: 1,
+          plantCount: 1,
+          plantUnitRemainder: 1,
+          plantWearUnits: 1,
+          activeCapacityPercent: 1,
+          mothballed: 1,
         },
       }
     )
@@ -197,7 +220,7 @@ export async function refundConversionConstruction(
       throw new Error("Financed cancellation did not retire its order");
     const owner = byId.get(String(sector.corporationId));
     if (!owner) throw new Error("Construction owner is missing");
-    const quote = quoteConversionConstructionRefund(sector, turn);
+    const quote = quoteConversionConstructionRefund(sector, turn, wholePlants);
     const code = resolveCorpLiquidCurrencyCode(owner);
     const rate = code ? fx.get(code) : 1;
     if (!(rate && rate > 0))

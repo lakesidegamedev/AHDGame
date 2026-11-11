@@ -7,6 +7,7 @@ import { loadIndependenceDesireSnapshots } from "@/lib/governorOffice/devolution
 import { refundConversionConstruction } from "./refundConversionConstruction";
 import { secedeRegion } from "./secede/secedeRegion";
 import { transferRegion } from "./transfer/transferRegion";
+import { remapRecruitmentSlates } from "./secede/remapRecruitmentSlates";
 import { REQUEST_AP_COST } from "@/lib/constants/referendum";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
@@ -26,12 +27,24 @@ import { requestReferendum } from "./requestReferendum";
 import { spendGroundGame } from "./groundGame";
 import { applyReferendumOutcome } from "./outcome";
 import type { Referendum } from "@/lib/db/types/referendum";
+import { seedOpeningDepartmentBoards1991 } from "@/lib/resetFinance/seedOpeningDepartments1991";
+import {
+  buildOpeningMetricSnapshots1991,
+  seedOpeningMetrics1991,
+} from "@/lib/resetMetrics/seedOpening1991";
+import { buildOpeningLawBoards1991 } from "@/lib/resetLegislation/openingBoards1991";
+import { seedOpeningLawBoards1991 } from "@/lib/resetLegislation/seedOpening1991";
+import type { ResetDepartmentAccountSnapshot } from "@/lib/resetFinance/rules/liveDepartmentAccount";
+import type { ResetNationalTreasurySnapshot } from "@/lib/resetFinance/rules/treasurySnapshot";
 vi.mock("@/lib/governorOffice/devolution/queries", () => ({
   loadIndependenceDesireSnapshots: vi.fn(),
 }));
 vi.mock("./referendumWebhooks", () => ({
   announceReferendumRequested: vi.fn().mockResolvedValue(undefined),
   announceReferendumVoteResult: vi.fn().mockResolvedValue(undefined),
+  announceConsentBillResolved: vi.fn().mockResolvedValue(undefined),
+  announceReunificationComplete: vi.fn().mockResolvedValue(undefined),
+  announceSecessionComplete: vi.fn().mockResolvedValue(undefined),
 }));
 
 describe.runIf(REAL_MONGO_ENABLED)("atomic referendum lifecycle against owned MongoDB", () => {
@@ -50,6 +63,77 @@ describe.runIf(REAL_MONGO_ENABLED)("atomic referendum lifecycle against owned Mo
     await db
       .collection<{ _id: string; currentTurn: number }>("gameState")
       .insertOne({ _id: "current", currentTurn: 100 });
+  });
+  it("consolidates remapped slates under real unique indexes without losing candidates", async () => {
+    const slates = db.collection("recruitmentSlates");
+    const candidates = db.collection("slateCandidates");
+    await slates.createIndex({ countryId: 1, partyId: 1, electionId: 1 }, { unique: true });
+    await candidates.createIndex({ slateId: 1, candidateId: 1 }, { unique: true });
+    const electionId = new ObjectId();
+    const first = new ObjectId();
+    const second = new ObjectId();
+    const person = new ObjectId();
+    const other = new ObjectId();
+    await slates.insertMany([
+      {
+        _id: first,
+        countryId: "WAL",
+        partyId: "46",
+        electionId,
+        notes: "first history",
+        archivedAt: null,
+      },
+      {
+        _id: second,
+        countryId: "WAL",
+        partyId: "47",
+        electionId,
+        notes: "second history",
+        archivedAt: null,
+      },
+    ]);
+    await candidates.insertMany([
+      { slateId: first, candidateId: person, countryId: "WAL", partyId: "46", status: "invited" },
+      { slateId: second, candidateId: person, countryId: "WAL", partyId: "47", status: "filed" },
+      { slateId: second, candidateId: other, countryId: "WAL", partyId: "47", status: "accepted" },
+    ]);
+    await expect(
+      withSessionDb(db, async (tx) => {
+        await remapRecruitmentSlates(tx, "UK", "WAL", {}, new Date(0));
+        throw new Error("interrupted after consolidation");
+      })
+    ).rejects.toThrow("interrupted after consolidation");
+    expect(await slates.countDocuments()).toBe(2);
+    expect(await candidates.countDocuments()).toBe(3);
+    expect(await slates.countDocuments({ partyId: /^conversion:/ })).toBe(0);
+    await withSessionDb(db, (tx) => remapRecruitmentSlates(tx, "UK", "WAL", {}, new Date(0)));
+    expect(await slates.countDocuments()).toBe(1);
+    const merged = await slates.findOne({});
+    expect(merged?.partyId).toBe("independent");
+    expect(merged?.notes).toContain("first history");
+    expect(merged?.notes).toContain("second history");
+    expect(await candidates.countDocuments({ slateId: merged!._id, partyId: "independent" })).toBe(
+      2
+    );
+    expect(await candidates.findOne({ candidateId: person })).toMatchObject({ status: "filed" });
+    await withSessionDb(db, (tx) => remapRecruitmentSlates(tx, "UK", "WAL", {}, new Date(1)));
+    expect(await candidates.countDocuments()).toBe(2);
+  });
+  it("renumbers crossing slate keys atomically", async () => {
+    const slates = db.collection("recruitmentSlates");
+    await slates.createIndex({ countryId: 1, partyId: 1, electionId: 1 }, { unique: true });
+    const electionId = new ObjectId();
+    const a = new ObjectId();
+    const b = new ObjectId();
+    await slates.insertMany([
+      { _id: a, countryId: "SCO", partyId: "1", electionId },
+      { _id: b, countryId: "SCO", partyId: "2", electionId },
+    ]);
+    await withSessionDb(db, (tx) =>
+      remapRecruitmentSlates(tx, "UK", "SCO", { 1: 2, 2: 1 }, new Date(0))
+    );
+    expect(await slates.findOne({ _id: a })).toMatchObject({ partyId: "2" });
+    expect(await slates.findOne({ _id: b })).toMatchObject({ partyId: "1" });
   });
   afterAll(async () => {
     await stopIsolatedMongod(fixture);
@@ -464,6 +548,178 @@ describe.runIf(REAL_MONGO_ENABLED)("atomic referendum lifecycle against owned Mo
       }
     }
   );
+  it("automatically retries all three enacted referendums with separately settled UK departments", async () => {
+    const worldId = "referendum-finance-retry";
+    const game = db.collection<{ _id: string }>("gameState");
+    await game.updateOne(
+      { _id: "current" },
+      { $set: { resetWorldId: worldId, manuallyEnabledSeats: ["secretary_of_education"] } }
+    );
+    const cabinet = await seedOpeningDepartmentBoards1991(db, worldId, 100, ["UK"]);
+    const accounts = db.collection<ResetDepartmentAccountSnapshot>("resetDepartmentAccounts");
+    const treasuries = db.collection<ResetNationalTreasurySnapshot>("resetNationalTreasuries");
+    const separatelySettled = { countryId: "UK" as const, externallySettled: true };
+    const ordinary = { countryId: "UK" as const, externallySettled: false };
+    expect(await accounts.countDocuments(separatelySettled)).toBeGreaterThan(0);
+    expect(await accounts.countDocuments(ordinary)).toBeGreaterThan(0);
+    const regions = ["WAL", "SCO", "NIR"] as const;
+    const states = db.collection<{
+      _id: string;
+      countryId: string;
+      gdp: number;
+      population: number;
+    }>("states");
+    const openingRegions = buildOpeningMetricSnapshots1991(worldId, 100)
+      .filter((row) => (row.countryId === "UK" || row.countryId === "IE") && row.regionId)
+      .map((row) => ({
+        _id: row.regionId!,
+        countryId: row.countryId,
+        gdp: 100,
+        population: 1000000,
+      }));
+    await states.insertMany(openingRegions);
+    await db.collection("stateBudgets").insertMany(
+      buildOpeningLawBoards1991(worldId, 100)
+        .filter((row) => row.countryId === "UK" && row.ukTerritorialTax)
+        .map((row) => ({
+          countryId: "UK",
+          stateId: row.regionId,
+          revenue: {
+            propertyTax: row.ukTerritorialTax!.sourceOwnRevenueProxy,
+            domesticCorporateTax: 0,
+            foreignCorporateTax: 0,
+          },
+        }))
+    );
+    const metrics = await seedOpeningMetrics1991(db, worldId, 100, ["UK"]);
+    const legislation = await seedOpeningLawBoards1991(db, worldId, 100, ["UK"]);
+    await game.updateOne(
+      { _id: "current" },
+      {
+        $set: {
+          metricsSystemVersion: "v2",
+          legislationSystemVersion: "v2",
+          cabinetSystemVersion: "v2",
+          resetVersionSeeds: { metrics, legislation, cabinet },
+        },
+      }
+    );
+    await db.collection<{ _id: string; [key: string]: unknown }>("federalBudget").insertMany(
+      ["UK", "IE"].map((countryId) => ({
+        _id: countryId,
+        countryId,
+        treasuryBalance: 1000,
+        taxBases: { income: 1000 },
+        revenue: { total: 1000 },
+        spending: { total: 1000, debtInterest: 0, stateGrants: 0 },
+        debt: { principal: 0, interestRate: 3 },
+      }))
+    );
+    await db.collection("exchangeRates").insertMany([
+      { currencyCode: "GBP", rate: 2 },
+      { currencyCode: "IEP", rate: 3 },
+    ]);
+    // A Commons MP can carry a corporation headquartered outside NIR into IE.
+    // Its worldwide pending construction must settle before its currency/HQ move.
+    const incomingOwner = new ObjectId();
+    const incomingNpp = new ObjectId();
+    const incomingSector = new ObjectId();
+    await db
+      .collection("npps")
+      .insertOne({ _id: incomingNpp, countryId: "UK", homeState: "EMI", party: "independent" });
+    await db.collection("electedOfficials").insertOne({
+      countryId: "UK",
+      state: "NIR",
+      officeType: "commons",
+      nppId: incomingNpp,
+      party: "independent",
+      seatsHeld: 1,
+    });
+    await db.collection("corporations").insertOne({
+      _id: incomingOwner,
+      countryId: "UK",
+      headquartersState: "EMI",
+      ceoType: "npp",
+      ceoId: incomingNpp,
+      liquidCapital: 500,
+    });
+    await db.collection("corporateSectors").insertOne({
+      _id: incomingSector,
+      corporationId: incomingOwner,
+      stateId: "EMI",
+      countryId: "UK",
+      sectorType: "energy",
+      capitalStock: 250,
+      capacityBookAnchor: 1000,
+      buildDeliverySettledTurn: 100,
+      buildQueue: [{ unitsOrdered: 250, costPaidAnchor: 1000, startTurn: 100, onlineTurn: 120 }],
+    });
+    const bills = regions.map(() => ({ _id: new ObjectId(), status: "signed" }));
+    await db.collection("bills").insertMany(bills);
+    const refs = db.collection("referendums");
+    await refs.insertMany(
+      regions.map((regionId, index) => ({
+        _id: new ObjectId(),
+        countryId: "UK",
+        regionId,
+        kind: regionId === "NIR" ? "reunification" : "independence",
+        targetCountryId: regionId === "NIR" ? "IE" : null,
+        status: "actuating",
+        westminsterBillId: bills[index]._id,
+        dailBillId: null,
+      }))
+    );
+    const connection = vi.spyOn(mongoConnection, "getDb").mockResolvedValue(db);
+    try {
+      await treasuries.updateOne({ _id: "UK" }, { $set: { settledThroughTurn: 101 } });
+      expect(await processReferendumLifecycle(db, 101)).toMatchObject({
+        processed: 1,
+        failures: expect.arrayContaining([
+          expect.objectContaining({ error: "Source department and treasury turns disagree" }),
+        ]),
+      });
+      expect(await states.countDocuments({ countryId: "UK" })).toBe(
+        openingRegions.filter((row) => row.countryId === "UK").length - 1
+      );
+      expect(
+        await refs.countDocuments({ status: "actuating", conversionRevision: { $exists: false } })
+      ).toBe(2);
+      expect(await treasuries.countDocuments({ _id: { $in: ["SCO", "WAL"] } })).toBe(0);
+      expect(await db.collection("corporations").findOne({ _id: incomingOwner })).toMatchObject({
+        headquartersState: "NIR",
+        countryId: "IE",
+        liquidCapital: 3750,
+      });
+      expect(
+        await db.collection("corporateSectors").findOne({ _id: incomingSector })
+      ).toMatchObject({
+        capitalStock: 250,
+        buildQueue: [],
+      });
+
+      await game.updateOne({ _id: "current" }, { $set: { currentTurn: 102 } });
+      await treasuries.updateOne({ _id: "UK" }, { $set: { settledThroughTurn: 102 } });
+      await accounts.updateMany(ordinary, { $set: { accruedThroughTurn: 102 } });
+      expect(await processReferendumLifecycle(db, 102)).toMatchObject({ processed: 2 });
+      expect(await refs.countDocuments({ status: "completed", conversionRevision: 1 })).toBe(3);
+      expect(await states.countDocuments({ countryId: "SCO" })).toBeGreaterThan(0);
+      expect(await states.countDocuments({ countryId: "WAL" })).toBeGreaterThan(0);
+      expect(await states.findOne({ _id: "NIR" })).toMatchObject({ countryId: "IE" });
+      expect(
+        await treasuries.countDocuments({
+          _id: { $in: ["SCO", "WAL"] },
+          settledThroughTurn: 102,
+        })
+      ).toBe(2);
+      expect(await accounts.countDocuments({ ...separatelySettled, accruedThroughTurn: 102 })).toBe(
+        0
+      );
+      expect(await processReferendumLifecycle(db, 102)).toBeNull();
+    } finally {
+      connection.mockRestore();
+    }
+  }, 30_000);
+
   it("commits reunification with rescaled Dail mandates and one frozen public FX conversion", async () => {
     const mp = new ObjectId();
     await db.collection("exchangeRates").insertMany([

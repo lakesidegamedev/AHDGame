@@ -34,6 +34,7 @@ import {
   computeCharacterWealth,
   sumBondValueByCharacter,
   sumStockValueByCharacter,
+  withHeldStakeIssuers,
   loadFundValueByCharacter,
 } from "@/lib/wealth/computeCharacterWealth";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
@@ -269,6 +270,7 @@ export async function generateWealthListSnapshots(currentTurn: number, db?: Db):
           | "shareholders"
           | "liquidCurrencyCode"
           | "countryId"
+          | "totalShares"
         >
       >({
         _id: 1,
@@ -279,6 +281,7 @@ export async function generateWealthListSnapshots(currentTurn: number, db?: Db):
         shareholders: 1,
         liquidCurrencyCode: 1,
         countryId: 1,
+        totalShares: 1,
       })
       .toArray(),
     bondsCollection(database)
@@ -306,7 +309,11 @@ export async function generateWealthListSnapshots(currentTurn: number, db?: Db):
     }
   }
 
-  const stockValueByCharId = sumStockValueByCharacter(corporations, characterIdSet, fxByCurrency);
+  const stockValueByCharId = sumStockValueByCharacter(
+    await withHeldStakeIssuers(database, corporations),
+    characterIdSet,
+    fxByCurrency
+  );
   const bondValueByCharId = sumBondValueByCharacter(bonds, characterIdSet, fxByCurrency);
   const fundValueByCharId = await loadFundValueByCharacter(database, characterIds, characterIdSet);
 
