@@ -100,7 +100,7 @@ export const LEGACY_DYNAMIC_COLLECTION_SITES: readonly LegacyDynamicCollectionSi
     file: "src/lib/admin/resetContract/residueScan.ts",
     owner: "runResidueScan",
     argument: "collection",
-    scopeHash: "0cb9eb9034ebb289bc9b1c94111beea39877bfcaf3332c9c431226b238ff95d7",
+    scopeHash: "c3d91e74ac3bc23925d58dca6afcc54690d19b734e5d4f466dbe9f0733d8158e",
     count: 3,
     reason: "The residue scan reads the manifest categories and its own fixed turn-stamp list.",
   },
