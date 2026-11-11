@@ -1,5 +1,6 @@
 import { fundingResponse } from "../spendingChannel";
 import type { EngineNodeContext, RegistryNode } from "../types";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /**
  * Education outcome nodes, LIVE in `METRIC_REGISTRY` via generic phase wiring.
@@ -150,7 +151,7 @@ export const universityEnrollmentNode: RegistryNode = {
   // grain (; regressed by the merge which dropped the 2dp).
   decimals: 2,
   compute: (ctx) => {
-    if (ctx.countryId === "US") {
+    if (countryHasFeature("usLib", ctx.countryId)) {
       const gradRate = ctx.current["education.highSchoolGradRate"] ?? 88;
       // Anchor 55 (the former collegeEnrollment equilibrium) keeps the
       // downstream socialMobility center (55) at zero deviation.

@@ -5,6 +5,7 @@ import { CN_LEGISLATIVE_PROCESS } from "@/lib/countries/cn/institutionsFacts";
 import { IE_LEGISLATIVE_PROCESS } from "@/lib/countries/ie/institutionsFacts";
 import { US_LEGISLATIVE_PROCESS } from "@/lib/countries/us/institutionsFacts";
 import { UK_LEGISLATIVE_PROCESS } from "@/lib/countries/uk/institutionsFacts";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /** Chamber seating geometry used by the composition + vote-seating charts. */
 export type SeatingStyle = "hemicycle" | "benches" | "horseshoe";
@@ -113,6 +114,6 @@ export const LEGISLATIVE_PROCESS: Partial<Record<CountryId, LegislativeProcess>>
  * vs 1979+ unicameral); without it SE falls through to {@link DEFAULT_PROCESS}.
  */
 export function getLegislativeProcess(countryId: CountryId, preset?: string): LegislativeProcess {
-  if (countryId === "SE" && preset === "1953-default") return SE_1953;
+  if (countryHasFeature("seLib", countryId) && preset === "1953-default") return SE_1953;
   return LEGISLATIVE_PROCESS[countryId] ?? DEFAULT_PROCESS;
 }

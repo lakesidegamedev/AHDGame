@@ -7,6 +7,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import { COUNTRY_ORDER } from "@/lib/constants/countriesCore";
 import { FOREX_ACTIVE_COUNTRIES } from "@/lib/constants/currencies";
 import { isRegisteredTier, tierFor } from "@/lib/world/eraRoster";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export type MonetaryCoverageExclusionReason =
   "absent-in-era" | "fiscal-model-unauthored" | "shared-currency-bank";
@@ -73,7 +74,9 @@ export function getPresetMonetaryScope(preset: string): PresetMonetaryScope {
   const exclusions = COLD_WAR_FISCAL_PRESETS.has(preset)
     ? []
     : POST_COLD_WAR_EXCLUSIONS.filter(
-        (entry) => !["1991-default", "2019-default"].includes(preset) || entry.countryId !== "RU"
+        (entry) =>
+          !["1991-default", "2019-default"].includes(preset) ||
+          !countryHasFeature("ruLib", entry.countryId)
       );
   // The 2027 Bulgarian fiscal row is EUR. Its exchange-rate row remains
   // country-addressable, while DE's existing EUR bank represents the shared

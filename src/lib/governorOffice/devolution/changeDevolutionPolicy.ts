@@ -15,6 +15,7 @@ import {
   DEVOLUTION_POLICY_CHANGE_COOLDOWN_TURNS,
   isUKDevolutionRegion,
 } from "@/lib/constants/devolution";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export interface ChangeDevolutionPolicyInput {
   countryId: CountryId;
@@ -41,7 +42,7 @@ export async function changeDevolutionPolicy(
   const { countryId, stateId, policy } = input;
   const adminOverride = input.adminOverride === true;
 
-  if (countryId !== "UK") {
+  if (!countryHasFeature("ukLib", countryId)) {
     return { status: 400, body: { error: "Devolution Policy is UK-only." } };
   }
   if (!isUKDevolutionRegion(stateId)) {

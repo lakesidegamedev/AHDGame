@@ -24,6 +24,7 @@ import {
   INITIAL_RATES_BY_PRESET,
   RESERVE_CURRENCY_VOLATILITY_REDUCTIONS,
 } from "@/lib/constants/currenciesTables";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /**
  * The single country that "anchors" each currency — i.e. the one whose
@@ -160,7 +161,7 @@ export function getInitialRatesForYear(year: number): Partial<Record<CountryId, 
  * the same par). Live tracking of GBP if sterling later drifts is a follow-up.
  */
 export function getSeedHardPeg(countryId: CountryId, preset: string): number | undefined {
-  if (preset === "1953-default" && countryId === "IE") {
+  if (preset === "1953-default" && countryHasFeature("ieLib", countryId)) {
     return INITIAL_RATES_1953.IE;
   }
   return undefined;
@@ -177,10 +178,18 @@ export function getSeedHardPeg(countryId: CountryId, preset: string): number | u
 export function getSeedCurrencyCode(countryId: CountryId, preset: string): CurrencyCode {
   if (isEuroAdopted(countryId, preset)) return "EUR";
   if (isRubleAdopted(countryId, preset)) return "RUB";
-  if ((preset === "2019-default" || preset === "2027-default") && countryId === "PL") return "PLN";
-  if ((preset === "2019-default" || preset === "2027-default") && countryId === "RO") return "RON";
-  if (preset === "2027-default" && countryId === "TR") return "TRY";
-  if (preset === "2019-default" && countryId === "BG") return "BGN";
+  if (
+    (preset === "2019-default" || preset === "2027-default") &&
+    countryHasFeature("plLib", countryId)
+  )
+    return "PLN";
+  if (
+    (preset === "2019-default" || preset === "2027-default") &&
+    countryHasFeature("roLib", countryId)
+  )
+    return "RON";
+  if (preset === "2027-default" && countryHasFeature("trLib", countryId)) return "TRY";
+  if (preset === "2019-default" && countryHasFeature("bgLib", countryId)) return "BGN";
   return COUNTRY_CURRENCY_MAP[countryId];
 }
 

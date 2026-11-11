@@ -65,6 +65,7 @@ import {
   loadUsPoliticalStateIds,
   unplayableTerritoryHomeError,
 } from "@/lib/elections/usPoliticalHome";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 class RelocationUnderwritingLeaseConflict extends Error {}
 
@@ -118,7 +119,7 @@ export async function handleRelocateWithCorp(request: Request) {
         if (!targetState) {
           return errorResponse(400, "Invalid target state or region");
         }
-        if (resolvedTargetCountryId === "US") {
+        if (countryHasFeature("usLib", resolvedTargetCountryId)) {
           const { admittedIds, preset } = await loadUsPoliticalStateIds(db);
           if (!isUsResidentPoliticalRegion(normalizedTarget, preset, admittedIds)) {
             return errorResponse(400, unplayableTerritoryHomeError(targetState.name));

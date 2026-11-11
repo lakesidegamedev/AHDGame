@@ -72,6 +72,7 @@ import {
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 type ViewerCharacter = Character | null;
 
@@ -635,7 +636,7 @@ export async function loadCountryCentralBankDetail(params: {
   ]);
 
   const policyFx =
-    policyCurrency === "EUR" && countryId !== "DE"
+    policyCurrency === "EUR" && !countryHasFeature("deLib", countryId)
       ? await db.collection<ExchangeRate>("exchangeRates").findOne({ _id: "DE" })
       : fxDocForBreakdown;
 

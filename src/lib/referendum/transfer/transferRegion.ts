@@ -39,6 +39,7 @@ import { reseedJoinedRegionElections } from "./reseedJoinedRegionElections";
 import { rescaleRegionDelegations } from "@/lib/country/apportionChamber";
 import { transferResetV2RegionToIreland } from "./transferResetV2Region";
 import { ensureIrelandResetV2ForReunification } from "@/lib/countries/ie/resetV2/ensureForReunification";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export interface TransferRegionArgs {
   regionId: string;
@@ -88,7 +89,11 @@ export async function transferRegion(
   db: Db,
   args: TransferRegionArgs
 ): Promise<TransferRegionResult> {
-  if (args.fromCountryId !== "UK" || args.toCountryId !== "IE" || args.relocateToRegionId === null)
+  if (
+    !countryHasFeature("ukLib", args.fromCountryId) ||
+    !countryHasFeature("ieLib", args.toCountryId) ||
+    args.relocateToRegionId === null
+  )
     return transferRegionInTransaction(db, args, unboundDb(db));
   return withSessionDb(db, (transactionDb) =>
     transferRegionInTransaction(transactionDb, args, unboundDb(db))
@@ -116,19 +121,21 @@ async function transferRegionInTransaction(
   const region = await db.collection<State>("states").findOne({ _id: regionId });
   if (!region) return { ok: false, skipped: "region-not-found" };
   if (region.countryId === toCountryId) {
-    if (fromCountryId === "UK" && toCountryId === "IE") {
+    if (countryHasFeature("ukLib", fromCountryId) && countryHasFeature("ieLib", toCountryId)) {
       await ensureIrelandResetV2ForReunification(db);
       await transferResetV2RegionToIreland(db, regionId);
     }
     return { ok: true, skipped: "already-transferred" };
   }
 
-  if (fromCountryId === "UK" && toCountryId === "IE") {
+  if (countryHasFeature("ukLib", fromCountryId) && countryHasFeature("ieLib", toCountryId)) {
     await ensureIrelandResetV2ForReunification(db);
   }
 
   const reunifyingNorthernIreland =
-    regionId === "NIR" && fromCountryId === "UK" && toCountryId === "IE";
+    regionId === "NIR" &&
+    countryHasFeature("ukLib", fromCountryId) &&
+    countryHasFeature("ieLib", toCountryId);
   const carriedMPs = reunifyingNorthernIreland
     ? await db
         .collection<ElectedOfficial>("electedOfficials")
@@ -169,9 +176,9 @@ async function transferRegionInTransaction(
   await convertRegionDoc(db, { regionId, toCountryId, province, displayName, votingSystem });
   // Departing UK regions no longer use the Westminster constituency layer.
   // Population remains on the transferred state and cohort documents.
-  if (fromCountryId === "UK" && toCountryId !== "UK")
+  if (countryHasFeature("ukLib", fromCountryId) && !countryHasFeature("ukLib", toCountryId))
     await db.collection("counties").deleteMany({ countryId: "UK", stateId: regionId });
-  if (fromCountryId === "UK" && toCountryId === "IE") {
+  if (countryHasFeature("ukLib", fromCountryId) && countryHasFeature("ieLib", toCountryId)) {
     await transferResetV2RegionToIreland(db, regionId, currencyScale);
   }
 

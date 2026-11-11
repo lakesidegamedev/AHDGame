@@ -65,6 +65,7 @@ import { applyConflictOutcome } from "@/lib/livingConflict/engine";
 import type { MacroMetricsDoc } from "@/lib/db/types/macroMetrics";
 import type { PoliticalMetricsDoc } from "@/lib/db/types/politicalMetrics";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /** Crisis actions name an operating lane; rows store its identity. */
 function laneFilter(sectorType: string) {
@@ -223,7 +224,7 @@ async function spawnNationalizationChallenge(
   const { db } = ctx;
   // SCOTUS is US-only. A challenge in any other country has no
   // bench to hear it.
-  if (ctx.countryId !== "US") {
+  if (!countryHasFeature("usLib", ctx.countryId)) {
     console.warn(
       `[crisis] scotusChallenge skipped: SCOTUS docket is US-only (country ${ctx.countryId}).`
     );

@@ -75,6 +75,7 @@ import { buildResetRegionalProgramClaims } from "@/lib/resetLegislation/rules/re
 import { RESET_V2_READY } from "@/lib/resetVersions/availability";
 import { resetSystemVersionsForCountry } from "@/lib/resetVersions/rules";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 // The current turn engine still processes fiscal-year rollover as one shared phase.
 // Pulling the anchor from country-systems makes the rule source explicit now, while
@@ -163,7 +164,7 @@ export async function processFiscalYear(
 
   // Open the UK's annual authoring window only in worlds with a UK ledger. The
   // helper is idempotent, so a retried fiscal turn cannot replace a saved draft.
-  if (federalBudgets.some((budget) => resolveBudgetCountryId(budget) === "UK")) {
+  if (federalBudgets.some((budget) => countryHasFeature("ukLib", resolveBudgetCountryId(budget)))) {
     await ensureBudgetDraftForFiscalYear(db, newFiscalYear, new Date());
   }
 

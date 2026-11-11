@@ -39,7 +39,7 @@ export type CountryFeature = keyof typeof COUNTRY_FEATURES;
 /** Type predicate: a true result narrows `countryId` to the feature's listed countries. */
 export function countryHasFeature<F extends CountryFeature>(
   feature: F,
-  countryId: string | undefined
+  countryId: string | null | undefined
 ): countryId is (typeof COUNTRY_FEATURES)[F][number] {
   return (COUNTRY_FEATURES[feature] as readonly string[]).includes(countryId ?? "");
 }

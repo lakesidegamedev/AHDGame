@@ -18,6 +18,7 @@ import { isUKDevolutionRegion } from "@/lib/constants/devolution";
 import { REQUEST_AP_COST, referendumRequestEligibility } from "@/lib/constants/referendum";
 import { announceReferendumRequested } from "@/lib/referendum/referendumWebhooks";
 import { recordWireEvent } from "@/lib/referendum/wire";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /** Non-terminal statuses that count as "a referendum is in progress". */
 const ACTIVE_STATUSES: ReferendumStatus[] = [
@@ -58,7 +59,8 @@ async function requestReferendumInTransaction(
   const stateId = input.stateId.toUpperCase();
   const adminOverride = input.adminOverride === true;
 
-  if (countryId !== "UK") return { status: 400, body: { error: "Referendums are UK-only." } };
+  if (!countryHasFeature("ukLib", countryId))
+    return { status: 400, body: { error: "Referendums are UK-only." } };
   if (!isUKDevolutionRegion(stateId)) {
     return { status: 400, body: { error: "Region cannot hold an independence referendum." } };
   }

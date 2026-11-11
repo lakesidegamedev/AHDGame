@@ -29,6 +29,7 @@ import {
   RO_1992_SENATE_SEATS,
 } from "@/lib/countries/ro/rules/parliament1992";
 import { japanShugiinCurrentChamberCapacity } from "@/lib/countries/jp/rules/shugiinElectoralLaw";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /** Active world preset, when present — drives era-conditional chamber sizes. */
 async function readActivePreset(db: Db): Promise<string | undefined> {
@@ -48,7 +49,7 @@ export async function getLiveLowerChamberSeats(db: Db, countryId: CountryId): Pr
   // Hungary's 1991-world config is deliberately frozen at its 386-seat start.
   // Once the 2014 reform stamps the world, the re-apportioned region documents
   // carry the live 199-seat chamber and override that initial config size.
-  if (countryId === "HU") {
+  if (countryHasFeature("huLib", countryId)) {
     const reform = await db
       .collection<{ _id: string; huAssemblyReformedAtYear?: number }>("gameState")
       .findOne({ _id: "current" }, { projection: { huAssemblyReformedAtYear: 1 } });
@@ -61,7 +62,7 @@ export async function getLiveLowerChamberSeats(db: Db, countryId: CountryId): Pr
       if (seats > 0) return seats;
     }
   }
-  if (countryId === "BG" && preset === "1991-default") {
+  if (countryHasFeature("bgLib", countryId) && preset === "1991-default") {
     const countryState = await db
       .collection<CountryGameState>("countryGameStates")
       .findOne({ _id: "BG" }, { projection: { bgOrdinaryAssemblySinceTurn: 1 } });
@@ -83,7 +84,7 @@ export async function getLiveLowerChamberSeats(db: Db, countryId: CountryId): Pr
       return japanShugiinCurrentChamberCapacity(countryState.jpShugiinResolvedRegionalRules);
     }
   }
-  if (countryId === "RO" && preset === "1991-default") {
+  if (countryHasFeature("roLib", countryId) && preset === "1991-default") {
     const countryState = await db
       .collection<CountryGameState>("countryGameStates")
       .findOne({ _id: "RO" }, { projection: { roParliament1992SinceTurn: 1 } });
@@ -97,7 +98,7 @@ export async function getLiveLowerChamberSeats(db: Db, countryId: CountryId): Pr
       return seats > 0 ? seats : RO_1992_DEPUTY_SEATS;
     }
   }
-  if (countryId === "RU" && preset === "1991-default") {
+  if (countryHasFeature("ruLib", countryId) && preset === "1991-default") {
     const countryState = await db.collection<CountryGameState>("countryGameStates").findOne(
       { _id: "RU" },
       {
@@ -180,7 +181,7 @@ function isUpperChamberRegionApportioned(countryId: CountryId, preset?: string):
   // SE: only the bicameral-era First Chamber is region-apportioned. 1979+
   // regions still carry stateSenateSeats as county-council weight; summing
   // those must not inflate the abolished upperChamber metadata (151 seats).
-  if (countryId === "SE") return preset === "1953-default";
+  if (countryHasFeature("seLib", countryId)) return preset === "1953-default";
   return true;
 }
 
@@ -191,7 +192,7 @@ function isUpperChamberRegionApportioned(countryId: CountryId, preset?: string):
  */
 export async function getLiveUpperChamberSeats(db: Db, countryId: CountryId): Promise<number> {
   const preset = await readActivePreset(db);
-  if (countryId === "RO" && preset === "1991-default") {
+  if (countryHasFeature("roLib", countryId) && preset === "1991-default") {
     const countryState = await db
       .collection<CountryGameState>("countryGameStates")
       .findOne({ _id: "RO" }, { projection: { roParliament1992SinceTurn: 1 } });
@@ -205,7 +206,7 @@ export async function getLiveUpperChamberSeats(db: Db, countryId: CountryId): Pr
       return seats > 0 ? seats : RO_1992_SENATE_SEATS;
     }
   }
-  if (countryId === "RU" && preset === "1991-default") {
+  if (countryHasFeature("ruLib", countryId) && preset === "1991-default") {
     const countryState = await db
       .collection<CountryGameState>("countryGameStates")
       .findOne({ _id: "RU" }, { projection: { ruFederalAssemblySinceTurn: 1 } });

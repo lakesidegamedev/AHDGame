@@ -76,6 +76,7 @@ import {
   readApprovalForResignation,
   resignNppCaretakerMinister,
 } from "@/lib/countries/uk/cabinet/nppResignation";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /** Map a position metric to its agenda domain, or null if it has no mapping. */
 function domainForMetric(category: string, metricId: string): string | null {
@@ -895,7 +896,7 @@ export async function runCaretakerMinisters(
       // stands badly may quit of its own accord. The seat is left vacant for
       // the player head to re-appoint; the flat gauge hit lands in the shell.
       // eslint-disable-next-line local/no-country-literals -- the NPP resignation hook and confidence gauge are UK-specific structures
-      if (countryId === "UK") {
+      if (countryHasFeature("ukLib", countryId)) {
         if (resignationApproval === null) {
           resignationApproval = await readApprovalForResignation(db, countryId);
         }

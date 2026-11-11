@@ -13,6 +13,7 @@ import { isUKDevolutionRegion } from "@/lib/constants/devolution";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
 import type { SeedPresetId } from "@/lib/constants/turnTime";
 import { dataPresetFor } from "@/lib/seeds/presetSelector";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /**
  * Default Devolution Policy per (UK region, preset) for newly-seeded First
@@ -41,7 +42,7 @@ function resolveDevolutionPolicyDefault(
   stateId: string,
   preset: string
 ): DevolutionPolicy | undefined {
-  if (countryId !== "UK") return undefined;
+  if (!countryHasFeature("ukLib", countryId)) return undefined;
   if (!isUKDevolutionRegion(stateId)) return undefined;
   const presetMap = UK_DEVOLUTION_POLICY_DEFAULTS[dataPresetFor(preset) as SeedPresetId];
   // A running world on a preset outside the shipping set seeds no default.

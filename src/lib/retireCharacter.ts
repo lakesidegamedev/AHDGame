@@ -44,6 +44,7 @@ import type { CharacterRecap } from "@/lib/recap/types";
 import { heldBlocRowIds, releaseVacatedBlocSeats } from "@/lib/elections/vacatedBlocSeats";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /**
  * Core retirement function: snapshots a character, cleans up all gameplay
@@ -251,28 +252,27 @@ export async function retireCharacter(
   // them, so each vacated seat gets a durable vacancy the by-election watcher
   // can fill. `create` dedupes per official row, so concurrent hooks or retries
   // never double the seat.
-  const ukCommonsSeats =
-    character.countryId === "UK"
-      ? await db
-          .collection<{
-            _id: ObjectId;
-            state?: string;
-            countryId?: string;
-            seatsHeld?: number;
-          }>("electedOfficials")
-          .find({
-            characterId,
-            officeType: "commons",
-            $or: [{ countryId: "UK" }, { countryId: { $exists: false } }],
-          })
-          .project<{ _id: ObjectId; state?: string; countryId?: string; seatsHeld?: number }>({
-            _id: 1,
-            state: 1,
-            countryId: 1,
-            seatsHeld: 1,
-          })
-          .toArray()
-      : [];
+  const ukCommonsSeats = countryHasFeature("ukLib", character.countryId)
+    ? await db
+        .collection<{
+          _id: ObjectId;
+          state?: string;
+          countryId?: string;
+          seatsHeld?: number;
+        }>("electedOfficials")
+        .find({
+          characterId,
+          officeType: "commons",
+          $or: [{ countryId: "UK" }, { countryId: { $exists: false } }],
+        })
+        .project<{ _id: ObjectId; state?: string; countryId?: string; seatsHeld?: number }>({
+          _id: 1,
+          state: 1,
+          countryId: 1,
+          seatsHeld: 1,
+        })
+        .toArray()
+    : [];
 
   // Read only office facts before retirement removes the holder references.
   // Batch by collection; telemetry failures never affect the retirement.
@@ -561,14 +561,13 @@ export async function retireCharacter(
         partyId: official.party ?? character.party,
       })),
       ...cabinet.map((member) => ({
-        officeType:
-          member.countryId === "US"
-            ? "usCabinet"
-            : member.countryId === "UK"
-              ? "ukCabinet"
-              : member.countryId === "DE"
-                ? "deCabinet"
-                : "parliamentaryCabinet",
+        officeType: countryHasFeature("usLib", member.countryId)
+          ? "usCabinet"
+          : countryHasFeature("ukLib", member.countryId)
+            ? "ukCabinet"
+            : countryHasFeature("deLib", member.countryId)
+              ? "deCabinet"
+              : "parliamentaryCabinet",
         nationId: member.countryId,
         partyId: member.party ?? character.party,
       })),
