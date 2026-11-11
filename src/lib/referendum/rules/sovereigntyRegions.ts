@@ -13,6 +13,8 @@ export interface SovereigntyRegion {
   readonly kind: SovereigntyReferendumKind;
   /** The country a reunifying region joins; null for independence. */
   readonly targetCountryId: CountryId | null;
+  /** The latent country an independent region becomes; null until one is built. */
+  readonly successorCountryId: CountryId | null;
   /** Who asks for the referendum, as written in wire copy. */
   readonly executiveTitle: string;
   /** How copy names the national government the region would leave. */
@@ -39,6 +41,7 @@ export const SOVEREIGNTY_REGIONS: readonly SovereigntyRegion[] = [
     regionId: "SCO",
     kind: "independence",
     targetCountryId: null,
+    successorCountryId: "SCO",
     executiveTitle: "First Minister",
     nationalGovernmentName: "Westminster",
     electionParties: { separatist: ["uk_snp"], rivals: ["uk_conservative"] },
@@ -49,6 +52,7 @@ export const SOVEREIGNTY_REGIONS: readonly SovereigntyRegion[] = [
     regionId: "WAL",
     kind: "independence",
     targetCountryId: null,
+    successorCountryId: "WAL",
     executiveTitle: "First Minister",
     nationalGovernmentName: "Westminster",
     electionParties: { separatist: ["uk_plaid"], rivals: ["uk_conservative"] },
@@ -59,6 +63,7 @@ export const SOVEREIGNTY_REGIONS: readonly SovereigntyRegion[] = [
     regionId: "NIR",
     kind: "reunification",
     targetCountryId: "IE",
+    successorCountryId: null,
     executiveTitle: "First Minister",
     nationalGovernmentName: "Westminster",
     electionParties: { separatist: ["uk_sf"], rivals: ["uk_dup", "uk_uup"] },
@@ -69,6 +74,7 @@ export const SOVEREIGNTY_REGIONS: readonly SovereigntyRegion[] = [
     regionId: "CA_QC",
     kind: "independence",
     targetCountryId: null,
+    successorCountryId: null,
     executiveTitle: "Premier",
     nationalGovernmentName: "Ottawa",
     electionParties: {
@@ -123,4 +129,9 @@ export function getSovereigntyGovernmentNames(stateId: string): {
     regional: region?.executiveTitle ?? "First Minister",
     national: region?.nationalGovernmentName ?? "Westminster",
   };
+}
+
+/** The registry entry whose independence produces the given successor country. */
+export function sovereigntyRegionForSuccessor(successorId: string): SovereigntyRegion | null {
+  return SOVEREIGNTY_REGIONS.find((entry) => entry.successorCountryId === successorId) ?? null;
 }

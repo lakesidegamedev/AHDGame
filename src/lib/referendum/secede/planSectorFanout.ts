@@ -25,10 +25,10 @@ export async function planSectorFanout(db: Db, ctx: FanoutContext, turn: number)
   } as const;
   const [owned, unowned] = await Promise.all([
     corporateSectorsCollection<FanoutSector>(db)
-      .find({ stateId: ctx.countryId }, { projection })
+      .find({ stateId: ctx.regionId }, { projection })
       .toArray(),
     unownedSectorsCollection<FanoutSector>(db)
-      .find({ stateId: ctx.countryId }, { projection })
+      .find({ stateId: ctx.regionId }, { projection })
       .toArray(),
   ]);
   const assign = (rows: FanoutSector[]) =>

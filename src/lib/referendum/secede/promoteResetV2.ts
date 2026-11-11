@@ -40,11 +40,10 @@ import {
   resetSystemVersionsForCountry,
 } from "@/lib/resetVersions/rules";
 import { groupOpeningDepartmentClaims } from "@/lib/resetFinance/rules/departmentOpening";
-import type { SecedingCountryId } from "./subRegions";
+import { secessionSource, type SecedingCountryId } from "./subRegions";
 import { buildSuccessorMetricRows, buildSuccessorRegionalRows } from "./rules/resetV2Promotion";
 import { verifyDemographicsV2Opening } from "@/lib/demographics/v2/verifyOpening";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
-import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 
@@ -62,7 +61,7 @@ function rekeyReference(
   };
 }
 
-/** Promote the live UK aggregate's v2 state when Scotland or Wales becomes sovereign. */
+/** Promote the parent's live v2 aggregate when a registered region becomes sovereign. */
 export async function promoteResetV2ForIndependence(
   db: Db,
   countryId: SecedingCountryId,
@@ -83,7 +82,9 @@ export async function promoteResetV2ForIndependence(
     }
   );
   if (!gameState?.resetWorldId) return { promoted: false };
-  const versions = resetSystemVersionsForCountry(gameState, RESET_V2_READY, "UK");
+  const { fromCountryId, regionId } = secessionSource(countryId);
+  const sourceKey = `${fromCountryId}:${regionId}`;
+  const versions = resetSystemVersionsForCountry(gameState, RESET_V2_READY, fromCountryId);
   if (!Object.values(versions).some((version) => version === "v2")) {
     return { promoted: false };
   }
@@ -103,17 +104,17 @@ export async function promoteResetV2ForIndependence(
         ? [
             db
               .collection<ResetMetricSnapshot>("resetMetricSnapshots")
-              .deleteOne({ _id: `UK:${countryId}`, worldId }),
+              .deleteOne({ _id: sourceKey, worldId }),
           ]
         : []),
       ...(versions.legislation === "v2"
         ? [
             db
               .collection<ResetLawOpeningBoard>("resetLawOpeningBoards")
-              .deleteOne({ _id: `UK:${countryId}`, worldId }),
+              .deleteOne({ _id: sourceKey, worldId }),
             db
               .collection<ResetRegionalOpeningBoard>("resetRegionalOpeningBoards")
-              .deleteOne({ _id: `UK:${countryId}`, worldId }),
+              .deleteOne({ _id: sourceKey, worldId }),
           ]
         : []),
     ]);
@@ -126,14 +127,12 @@ export async function promoteResetV2ForIndependence(
 
   const metricCollection = db.collection<ResetMetricSnapshot>("resetMetricSnapshots");
   const aggregateMetric =
-    versions.metrics === "v2"
-      ? await metricCollection.findOne({ _id: `UK:${countryId}`, worldId })
-      : null;
+    versions.metrics === "v2" ? await metricCollection.findOne({ _id: sourceKey, worldId }) : null;
   if (versions.metrics === "v2" && !aggregateMetric) {
-    throw new Error(`${countryId} v2 promotion is missing its UK metric source`);
+    throw new Error(`${countryId} v2 promotion is missing its parent metric source`);
   }
   const sourceRegions = await statesCollection(db)
-    .find({ countryId: "UK" }, { projection: { gdp: 1 } })
+    .find({ countryId: fromCountryId }, { projection: { gdp: 1 } })
     .toArray();
   const successorGdp = states.reduce((sum, state) => sum + state.gdp, 0);
   const nationalWeight =
@@ -158,9 +157,9 @@ export async function promoteResetV2ForIndependence(
       countryId,
       aggregate: aggregateMetric!,
       national:
-        (await metricCollection.findOne({ _id: "UK:national", worldId })) ??
+        (await metricCollection.findOne({ _id: `${fromCountryId}:national`, worldId })) ??
         (() => {
-          throw new Error("Missing UK national metric source");
+          throw new Error(`Missing ${fromCountryId} national metric source`);
         })(),
       regions: regionSeeds,
       turn: conversionTurn ?? gameState.currentTurn ?? aggregateMetric!.asOfTurn,
@@ -184,22 +183,22 @@ export async function promoteResetV2ForIndependence(
     versions.legislation === "v2" || versions.cabinet === "v2"
       ? await db
           .collection<ResetDepartmentAccountSnapshot>("resetDepartmentAccounts")
-          .find({ countryId: "UK", worldId })
+          .find({ countryId: fromCountryId, worldId })
           .toArray()
       : [];
 
   let nationalReferences: OpeningLawReference[] = [];
   if (versions.legislation === "v2") {
     const lawCollection = db.collection<ResetLawOpeningBoard>("resetLawOpeningBoards");
-    const aggregateLaw = await lawCollection.findOne({ _id: `UK:${countryId}`, worldId });
+    const aggregateLaw = await lawCollection.findOne({ _id: sourceKey, worldId });
     const aggregateFiscal = await db
       .collection<ResetRegionalOpeningBoard>("resetRegionalOpeningBoards")
-      .findOne({ _id: `UK:${countryId}`, worldId });
+      .findOne({ _id: sourceKey, worldId });
     if (!aggregateLaw || !aggregateFiscal) {
-      throw new Error(`${countryId} v2 promotion is missing its UK law or fiscal source`);
+      throw new Error(`${countryId} v2 promotion is missing its parent law or fiscal source`);
     }
-    const nationalLaw = await lawCollection.findOne({ _id: "UK:national", worldId });
-    if (!nationalLaw) throw new Error("Missing UK national law source");
+    const nationalLaw = await lawCollection.findOne({ _id: `${fromCountryId}:national`, worldId });
+    if (!nationalLaw) throw new Error(`Missing ${fromCountryId} national law source`);
     nationalReferences = splitNationalLawReferences(
       Object.values(nationalLaw.references),
       nationalWeight,
@@ -208,8 +207,7 @@ export async function promoteResetV2ForIndependence(
     nationalReferences = completeSuccessorLawReferences({
       current: nationalReferences,
       fallback: openingLawReferences.filter(
-        (reference) =>
-          countryHasFeature("ukLib", reference.country) && reference.scope === "national"
+        (reference) => reference.country === fromCountryId && reference.scope === "national"
       ),
       countryId,
       scope: "national",
@@ -232,10 +230,9 @@ export async function promoteResetV2ForIndependence(
           false
         ),
         fallback: openingLawReferences.filter(
-          (reference) =>
-            countryHasFeature("ukLib", reference.country) && reference.scope === "national"
+          (reference) => reference.country === fromCountryId && reference.scope === "national"
         ),
-        countryId: "UK",
+        countryId: fromCountryId,
         scope: "national",
         inheritedAuthority: splitInheritedLawAuthority(sourceAccounts, nationalWeight, false),
       });
@@ -243,7 +240,7 @@ export async function promoteResetV2ForIndependence(
         { _id: nationalLaw._id, worldId },
         buildResetLawOpeningBoard({
           worldId,
-          countryId: "UK",
+          countryId: fromCountryId,
           sourceTurn: nationalLaw.sourceTurn,
           references: keptReferences,
         })
@@ -254,8 +251,7 @@ export async function promoteResetV2ForIndependence(
         rekeyReference(reference, countryId, "regional")
       ),
       fallback: openingLawReferences.filter(
-        (reference) =>
-          countryHasFeature("ukLib", reference.country) && reference.scope === "regional"
+        (reference) => reference.country === fromCountryId && reference.scope === "regional"
       ),
       countryId,
       scope: "regional",
@@ -300,8 +296,8 @@ export async function promoteResetV2ForIndependence(
     );
 
     sourcesToDelete.push(
-      lawCollection.deleteOne({ _id: `UK:${countryId}`, worldId }),
-      fiscalCollection.deleteOne({ _id: `UK:${countryId}`, worldId })
+      lawCollection.deleteOne({ _id: sourceKey, worldId }),
+      fiscalCollection.deleteOne({ _id: sourceKey, worldId })
     );
   }
 
@@ -361,11 +357,11 @@ export async function promoteResetV2ForIndependence(
     )[0]!;
     const sourceTreasury = await db
       .collection<ResetNationalTreasurySnapshot>("resetNationalTreasuries")
-      .findOne({ _id: "UK", worldId });
+      .findOne({ _id: fromCountryId, worldId });
     if (!sourceTreasury || !sourceAccounts.length)
-      throw new Error("Independence requires the live UK finance books");
+      throw new Error(`Independence requires the live ${fromCountryId} finance books`);
     const rump = await statesCollection(db)
-      .find({ countryId: "UK" }, { projection: { gdp: 1 } })
+      .find({ countryId: fromCountryId }, { projection: { gdp: 1 } })
       .toArray();
     const newGdp = states.reduce((sum, state) => sum + state.gdp, 0);
     const weight = newGdp / (newGdp + rump.reduce((sum, state) => sum + state.gdp, 0));
@@ -395,14 +391,15 @@ export async function promoteResetV2ForIndependence(
     Object.assign(treasury, splitTreasury.moved);
     const sourceContinuity = await db
       .collection<ResetDepartmentContinuitySnapshot>("resetDepartmentContinuity")
-      .findOne({ _id: "UK", worldId });
-    if (!sourceContinuity) throw new Error("Independence requires the live UK continuity book");
+      .findOne({ _id: fromCountryId, worldId });
+    if (!sourceContinuity)
+      throw new Error(`Independence requires the live ${fromCountryId} continuity book`);
     const continuitySplit = splitLiveContinuity(sourceContinuity, partition.continuity[0]!, weight);
     partition.continuity[0] = continuitySplit.moved;
     const keptContinuity = continuitySplit.kept;
     await db
       .collection<ResetDepartmentContinuitySnapshot>("resetDepartmentContinuity")
-      .replaceOne({ _id: "UK", worldId }, keptContinuity);
+      .replaceOne({ _id: fromCountryId, worldId }, keptContinuity);
 
     await db.collection<ResetDepartmentAccountSnapshot>("resetDepartmentAccounts").bulkWrite(
       splitAccounts.kept.map((row) => ({
@@ -411,7 +408,7 @@ export async function promoteResetV2ForIndependence(
     );
     await db
       .collection<ResetNationalTreasurySnapshot>("resetNationalTreasuries")
-      .replaceOne({ _id: "UK", worldId }, splitTreasury.kept);
+      .replaceOne({ _id: fromCountryId, worldId }, splitTreasury.kept);
 
     const actionState: ResetCabinetActionState = {
       _id: countryId,
@@ -483,7 +480,7 @@ export async function promoteResetV2ForIndependence(
     { $set: additions }
   );
   if (versions.metrics === "v2") {
-    sourcesToDelete.push(metricCollection.deleteOne({ _id: `UK:${countryId}`, worldId }));
+    sourcesToDelete.push(metricCollection.deleteOne({ _id: sourceKey, worldId }));
   }
   await Promise.all(sourcesToDelete);
   return { promoted: true };
