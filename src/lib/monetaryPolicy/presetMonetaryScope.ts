@@ -6,7 +6,7 @@
 import type { CountryId } from "@/lib/constants/countries";
 import { COUNTRY_ORDER } from "@/lib/constants/countriesCore";
 import { FOREX_ACTIVE_COUNTRIES } from "@/lib/constants/currencies";
-import { isRegisteredTier, tierFor } from "@/lib/world/eraRoster";
+import { isRegisteredTier, isShippingPreset, tierFor } from "@/lib/world/eraRoster";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export type MonetaryCoverageExclusionReason =
@@ -114,7 +114,7 @@ export function getPresetMonetaryScope(preset: string): PresetMonetaryScope {
   // but has no fiscal book, so it gets no central bank.
   for (const countryId of forexCountries) {
     if (exclusions.some((entry) => entry.countryId === countryId)) continue;
-    if (tierFor(preset, countryId) !== "absent") continue;
+    if (!isShippingPreset(preset) || tierFor(preset, countryId) !== "absent") continue;
     exclusions.push({
       countryId,
       reason: "fiscal-model-unauthored",
