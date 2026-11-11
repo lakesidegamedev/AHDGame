@@ -7,6 +7,7 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 import {
   computeCharacterWealth,
   sumBondValueByCharacter,
+  sumLookThroughStockValueByCharacter,
   sumStockValueByCharacter,
   type BondWealthSlice,
   type CorpWealthSlice,
@@ -167,6 +168,32 @@ describe("sumStockValueByCharacter look-through of corporate stakes", () => {
     const sub = corp({ shareholders: [stake(pId, 1000)] });
     const v = sumStockValueByCharacter([parent, sub], idSet, noFx);
     expect(v.size).toBe(0);
+  });
+});
+
+describe("sumLookThroughStockValueByCharacter", () => {
+  const key = charId.toString();
+  it("excludes direct holdings and returns only the look-through share", () => {
+    const pId = new ObjectId();
+    const parent = corp({
+      _id: pId,
+      totalShares: 100,
+      sharePrice: 50,
+      shareholders: [{ characterId: charId, shares: 40 }],
+    } as Partial<CorpWealthSlice>);
+    const sub = corp({
+      totalShares: 1000,
+      sharePrice: 10,
+      shareholders: [{ corporationId: pId, shares: 1000 }],
+    } as Partial<CorpWealthSlice>);
+    const v = sumLookThroughStockValueByCharacter([parent, sub], idSet, noFx);
+    expect(v.get(key)).toBe(0.4 * 10000);
+    const total = sumStockValueByCharacter([parent, sub], idSet, noFx);
+    expect(total.get(key)).toBe(2000 + 0.4 * 10000);
+  });
+
+  it("is empty when no corporation holds a stake", () => {
+    expect(sumLookThroughStockValueByCharacter([corp({})], idSet, noFx).size).toBe(0);
   });
 });
 
