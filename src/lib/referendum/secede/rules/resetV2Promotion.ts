@@ -24,7 +24,9 @@ export function buildSuccessorMetricRows(input: {
   fiscal?: FiscalOwnerInput;
 }): ResetMetricSnapshot[] {
   const { aggregate, countryId, regions } = input;
-  const national = input.national;
+  // Strip regionId entirely: an explicit undefined is stored as null by the driver,
+  // and the national-board readers require the field to be absent.
+  const { regionId: _inheritedRegionId, ...national } = input.national;
   if (national.scope !== "national")
     throw new Error("Successor national metrics require a national board");
   if (aggregate.scope !== "regional" || regions.length === 0) {
@@ -73,7 +75,6 @@ export function buildSuccessorMetricRows(input: {
       _id: `${countryId}:national`,
       countryId,
       scope: "national",
-      regionId: undefined,
       sourceTurn: turn,
       asOfTurn: turn,
       observations,

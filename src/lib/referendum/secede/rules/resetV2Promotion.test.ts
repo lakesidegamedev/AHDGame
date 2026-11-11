@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { BSON } from "mongodb";
 import type { ResetRegionalOpeningBoard } from "@/lib/resetFinance/rules/regionalOpeningBoard";
 import type { OpeningLawReference } from "@/lib/resetLegislation/openingLaw";
 import type { ResetMetricSnapshot } from "@/lib/resetMetrics/rules/snapshot";
@@ -56,6 +57,10 @@ describe("successor reset v2 promotion rules", () => {
     expect(rows.map((row) => row._id)).toEqual(["SCO:national", "SCO:LOT", "SCO:HGL"]);
     expect(rows[0]).toMatchObject({ countryId: "SCO", scope: "national" });
     expect(rows[0]!.regionId).toBeUndefined();
+    expect("regionId" in rows[0]!).toBe(false);
+    // Round-trip through BSON as the driver would: no null regionId may be stored.
+    const stored = BSON.deserialize(BSON.serialize(rows[0]!));
+    expect("regionId" in stored).toBe(false);
     expect(rows[0].observations.inflation.value).toBe(4);
     expect(rows.slice(1).every((row) => row.observations.unemployment!.value === 8)).toBe(true);
   });
