@@ -3,7 +3,8 @@ import { defineChamberSpec } from "@/lib/elections/scheduling/chamberSpec";
 /**
  * House of Commons: regional contests sized by each region's seeded
  * `houseDistricts` (343 seats across 13 provinces and territories), on a fixed
- * four-year term. A snap election restarts the clock.
+ * four-year term. A snap election restarts the clock. A seat vacated mid-term
+ * is refilled by a `special_caCommons` by-election.
  */
 export const CA_COMMONS_SPEC = defineChamberSpec({
   chamberId: "caCommons",
@@ -16,7 +17,7 @@ export const CA_COMMONS_SPEC = defineChamberSpec({
   gate: "countryLive",
   lateJoiners: "ownCycle",
   openPrimaryImmediately: true,
-  byElections: "none",
+  byElections: "special",
   snap: "shiftsCycle",
   healLiveSeats: false,
 });

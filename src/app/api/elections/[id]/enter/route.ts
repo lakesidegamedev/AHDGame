@@ -10,6 +10,7 @@ import {
   hu1991FilingMessages,
 } from "@/lib/countries/hu/playerFiling1991";
 import { NextResponse } from "next/server";
+import { isSpecialCommonsElection, officeKeyForElectionType } from "@/lib/utils/electionLabels";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
@@ -438,8 +439,8 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     // A sitting Commons MP in this state already holds a seat not on the by-election ballot; seating them would double-seat them (additive resolution never sweeps). The race fills only vacated seats.
     if (
-      election.electionType === "special_commons" &&
-      heldOffice?.type === "commons" &&
+      isSpecialCommonsElection(election.electionType) &&
+      heldOffice?.type === officeKeyForElectionType(election.electionType) &&
       "state" in heldOffice &&
       heldOffice.state === election.state
     ) {

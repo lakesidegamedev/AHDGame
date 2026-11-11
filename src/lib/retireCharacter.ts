@@ -35,6 +35,7 @@ import { listCharacterPositions } from "@/lib/indexFunds/fundQueries";
 import { closeCeoTenure } from "@/lib/corporations/ceoHistory";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { createCommonsVacancy } from "@/lib/countries/uk/elections/commonsVacancyShell";
+import { commonsChamberForCountry } from "@/lib/elections/rules/commonsByElectionChambers";
 import { releaseCorporationHeldSharesToFloat } from "@/lib/corporations/releaseHeldSharesToFloat";
 import { stampSubjectDeleted } from "@/lib/financialTxLog/stampDeleted";
 import { deriveHighestOffice } from "@/lib/character/deriveHighestOffice";
@@ -269,11 +270,16 @@ export async function retireCharacter(
     });
   }
 
-  // UK Commons vacancies: capture seats BEFORE the tombstone below clears
-  // them, so each vacated seat gets a durable vacancy the by-election watcher
-  // can fill. `create` dedupes per official row, so concurrent hooks or retries
+  // Commons vacancies: capture seats BEFORE the tombstone below clears them,
+  // so each vacated seat gets a durable vacancy the by-election watcher can
+  // fill. `create` dedupes per official row, so concurrent hooks or retries
   // never double the seat.
-  const ukCommonsSeats = countryHasFeature("ukLib", character.countryId)
+  const commonsChamber = countryHasFeature("ukLib", character.countryId)
+    ? commonsChamberForCountry("UK")
+    : character.countryId
+      ? commonsChamberForCountry(character.countryId)
+      : null;
+  const ukCommonsSeats = commonsChamber
     ? await electedOfficialsCollection<{
         _id: ObjectId;
         state?: string;
@@ -282,8 +288,12 @@ export async function retireCharacter(
       }>(db)
         .find({
           characterId,
-          officeType: "commons",
-          $or: [{ countryId: "UK" }, { countryId: { $exists: false } }],
+          officeType: commonsChamber.officeType,
+          ...(commonsChamber.claimsUnscopedRows
+            ? {
+                $or: [{ countryId: commonsChamber.countryId }, { countryId: { $exists: false } }],
+              }
+            : { countryId: commonsChamber.countryId }),
         })
         .project<{ _id: ObjectId; state?: string; countryId?: string; seatsHeld?: number }>({
           _id: 1,
@@ -326,6 +336,7 @@ export async function retireCharacter(
     for (const seat of ukCommonsSeats) {
       if (typeof seat.state !== "string" || seat.state.length === 0) continue;
       await createCommonsVacancy(db, {
+        countryId: commonsChamber?.countryId,
         officialId: seat._id,
         state: seat.state,
         seats: seat.seatsHeld ?? 1,

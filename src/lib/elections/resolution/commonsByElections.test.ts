@@ -472,3 +472,121 @@ describe("commonsByElectionGate", () => {
     expect(gate([], TURN - COMMONS_BY_ELECTION_RETRY_COOLDOWN_TURNS)).toEqual({ kind: "spawn" });
   });
 });
+
+describe("Canadian Commons by-elections", () => {
+  function caWorld() {
+    const fake = createFakeCommonsDb();
+    fake.seed("gameState", [{ _id: "current", preset: "2027-default" }]);
+    fake.seed("states", [
+      { id: "CA_ON", countryId: "CA", houseDistricts: 122 },
+      { id: "CA_QC", countryId: "CA", houseDistricts: 78 },
+    ]);
+    return fake;
+  }
+
+  function caSeat(over: Record<string, unknown> = {}) {
+    return tombstone({ officeType: "caCommons", countryId: "CA", state: "CA_ON", ...over });
+  }
+
+  it("records a Canadian vacancy and spawns a special_caCommons race sized from the region", async () => {
+    const { processCommonsByElectionWatcher } = await import("./commonsByElections");
+    const fake = caWorld();
+    fake.seed("electedOfficials", [
+      {
+        ...seatedMp().official,
+        officeType: "caCommons",
+        countryId: "CA",
+        state: "CA_ON",
+        seatsHeld: 119,
+      },
+      caSeat(),
+    ]);
+
+    const result = await processCommonsByElectionWatcher(fake.db, TURN, NOW);
+    expect(result.vacanciesEnsured).toBe(1);
+    expect(result.spawned).toBe(1);
+
+    const [vacancy] = fake.read<Record<string, unknown>>("ukCommonsVacancies");
+    expect(vacancy).toMatchObject({
+      countryId: "CA",
+      state: "CA_ON",
+      seats: 3,
+      status: "scheduled",
+    });
+
+    const [race] = fake.read<Record<string, unknown>>("elections");
+    expect(race).toMatchObject({
+      countryId: "CA",
+      electionType: "special_caCommons",
+      state: "CA_ON",
+      totalSeats: 3,
+      seatId: "CA-special_caCommons-CA_ON",
+    });
+    expect(race.byElectionCarve as number).toBeCloseTo(3 / 122, 9);
+  });
+
+  it("opens no recall petitions for Canadian MPs", async () => {
+    const { processCommonsByElectionWatcher } = await import("./commonsByElections");
+    const fake = caWorld();
+    const { official, character } = seatedMp();
+    fake.seed("electedOfficials", [
+      { ...official, officeType: "caCommons", countryId: "CA", state: "CA_ON" },
+    ]);
+    fake.seed("characters", [{ ...character, countryId: "CA", favorability: 5, infamy: 100 }]);
+
+    const result = await processCommonsByElectionWatcher(fake.db, TURN, NOW);
+    expect(result.petitionsAdvanced).toBe(0);
+    expect(fake.read("ukRecallPetitions")).toHaveLength(0);
+  });
+
+  it("keeps each country's vacancies to its own races", async () => {
+    const { processCommonsByElectionWatcher } = await import("./commonsByElections");
+    const fake = caWorld();
+    fake.seed("ukCommonsVacancies", [
+      openVacancy(),
+      openVacancy({ _id: new ObjectId(), countryId: "CA", state: "CA_QC" }),
+    ]);
+    // A live UK general in London must not hold back Quebec's by-election.
+    fake.seed("elections", [
+      {
+        _id: new ObjectId(),
+        countryId: "UK",
+        state: "LON",
+        electionType: "snap_commons",
+        status: "active",
+        endTurn: TURN + 10,
+      },
+    ]);
+
+    const result = await processCommonsByElectionWatcher(fake.db, TURN, NOW);
+    expect(result.spawned).toBe(1);
+    const specials = fake
+      .read<Record<string, unknown>>("elections")
+      .filter((e) => String(e.electionType).startsWith("special_"));
+    expect(specials).toHaveLength(1);
+    expect(specials[0]).toMatchObject({
+      countryId: "CA",
+      state: "CA_QC",
+      electionType: "special_caCommons",
+    });
+    expect(specials[0].byElectionCarve as number).toBeCloseTo(1 / 78, 9);
+  });
+
+  it("does not spawn while a Canadian general is about to fill the seats", async () => {
+    const { processCommonsByElectionWatcher } = await import("./commonsByElections");
+    const fake = caWorld();
+    fake.seed("ukCommonsVacancies", [openVacancy({ countryId: "CA", state: "CA_QC" })]);
+    fake.seed("elections", [
+      {
+        _id: new ObjectId(),
+        countryId: "CA",
+        state: "CA_QC",
+        electionType: "snap_caCommons",
+        status: "active",
+        endTurn: TURN + 10,
+      },
+    ]);
+    const result = await processCommonsByElectionWatcher(fake.db, TURN, NOW);
+    expect(result.spawned).toBe(0);
+  });
+});

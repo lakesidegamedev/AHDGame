@@ -53,6 +53,7 @@ const SNAP_PREFIX = "snap_";
  */
 const SPECIAL_TO_REGULAR: Readonly<Record<string, string>> = {
   special_commons: "commons",
+  special_caCommons: "caCommons",
 };
 
 function chambersOf(countryId: CountryId): CountryOfficeChamberConfig[] {
