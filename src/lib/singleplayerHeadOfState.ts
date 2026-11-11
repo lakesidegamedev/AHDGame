@@ -16,6 +16,7 @@ import {
 import { getGameState } from "@/lib/gameState";
 import { SINGLEPLAYER_USER_ID, isSingleplayer } from "@/lib/singleplayer";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export function mayRuleByDecree(
   character: Pick<Character, "countryId" | "singleplayerHeadOfState">,
@@ -203,7 +204,7 @@ export async function seatSingleplayerHeadOfState(
       ? getExecutiveOfficialFilter(args.countryId, "president")
       : { countryId: args.countryId, officeType };
 
-  await db.collection<ElectedOfficial>("electedOfficials").updateMany(
+  await electedOfficialsCollection(db).updateMany(
     { countryId: args.countryId, officeType, characterId: { $ne: args.characterId } },
     {
       $set: {
@@ -228,7 +229,7 @@ export async function seatSingleplayerHeadOfState(
     },
     { $set: { currentOffice: null, updatedAt: args.now } }
   );
-  await db.collection<ElectedOfficial>("electedOfficials").updateOne(
+  await electedOfficialsCollection(db).updateOne(
     filter,
     {
       $set: {

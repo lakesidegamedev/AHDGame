@@ -51,6 +51,7 @@ import { applyExperimentalUiCookie } from "@/lib/api/experimentalUiCookie";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 /**
  * Whether to show the "Campaign Manager" navbar link. Returns true for: admins,
@@ -440,7 +441,7 @@ export async function GET() {
       // Governor / Minister-President office lookup (strictly office-holder).
       if (character.countryId) {
         const { getRegionalExecutiveOfficeKey } = await import("@/lib/constants/countries");
-        const officeRow = await db.collection<{ state: string }>("electedOfficials").findOne(
+        const officeRow = await electedOfficialsCollection<{ state: string }>(db).findOne(
           {
             officeType: getRegionalExecutiveOfficeKey(character.countryId),
             characterId: character._id,

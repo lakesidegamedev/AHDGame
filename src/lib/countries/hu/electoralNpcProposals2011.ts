@@ -12,6 +12,7 @@ import {
   supportsHu2011NpcAmendment,
 } from "./rules/electoralTransition2011";
 import { calendarTurn } from "@/lib/utils/gameDate";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export async function processHu2011ElectoralNpcProposal(
   db: Db,
@@ -40,8 +41,7 @@ export async function processHu2011ElectoralNpcProposal(
     return false;
   const [leader, officials] = await Promise.all([
     db.collection<NPP>("npps").findOne({ _id: government.pmNppId }, { projection: { party: 1 } }),
-    db
-      .collection<ElectedOfficial>("electedOfficials")
+    electedOfficialsCollection(db)
       .find(
         { countryId: "HU", officeType: "assemblyDelegate" },
         { projection: { characterId: 1, party: 1, seatsHeld: 1 } }

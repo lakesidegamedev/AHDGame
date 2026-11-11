@@ -7,6 +7,7 @@ import {
   type Bg1991ConstituentDisposition,
 } from "./rules/constitutionalDecision1991";
 import { bg1991InitiativeSupport } from "./rules/constitutionalInitiative1991";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export const BG_1991_INITIATIVES_COLLECTION = "bg1991ConstitutionalInitiatives";
 export class Bg1991InitiativeConflict extends Error {}
@@ -26,8 +27,7 @@ function actor(row: Deputy) {
   throw new Error("Constituent deputy has ambiguous financial ownership");
 }
 async function deputies(db: Db, session?: ClientSession) {
-  return db
-    .collection<ElectedOfficial>("electedOfficials")
+  return electedOfficialsCollection(db)
     .find(
       { countryId: "BG", officeType: "assemblyDeputy", seatsHeld: { $ne: 0 } },
       { session, projection: { characterId: 1, nppId: 1, seatsHeld: 1, party: 1 } }

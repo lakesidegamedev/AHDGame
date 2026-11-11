@@ -36,6 +36,7 @@ import { TALLY_WITH_LATEST_SNAPSHOT_ONLY } from "@/lib/elections/engine/tallyPro
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 export const HU_1991_BY_ELECTIONS_COLLECTION = "hu1991ConstituencyByElections";
 export interface Hu1991ByElectionRecord {
   _id: string;
@@ -175,8 +176,7 @@ async function materializeHu1991ByElectionOpening(input: {
   );
   if (ordinary) return [];
   if (prior?.completedAtTurn != null && turn < prior.completedAtTurn + 2) return [];
-  const officials = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const officials = await electedOfficialsCollection(db)
     .find(
       {
         countryId: "HU",
@@ -650,8 +650,7 @@ async function materializeHu1991ByElectionResolution(input: {
   }
   // Candidate custody and every seat are checked together before inserting a
   // replacement. No list compensation or occupied mandate is reallocated.
-  const held = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const held = await electedOfficialsCollection(db)
     .find(
       { countryId: "HU", officeType: "assemblyDelegate" },
       {
@@ -757,8 +756,7 @@ async function materializeHu1991ByElectionResolution(input: {
       officials.some((official) => official.constituencyId === row.constituencyId)
   );
   if (tombstones.length) {
-    const originals = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    const originals = await electedOfficialsCollection(db)
       .find({ _id: { $in: tombstones.map((row) => row._id) } }, { session })
       .toArray();
     await db
@@ -779,15 +777,12 @@ async function materializeHu1991ByElectionResolution(input: {
         })),
         { session }
       );
-    await db
-      .collection<ElectedOfficial>("electedOfficials")
-      .deleteMany(
-        { _id: { $in: tombstones.map((row) => row._id) }, characterId: null, nppId: null },
-        { session }
-      );
+    await electedOfficialsCollection(db).deleteMany(
+      { _id: { $in: tombstones.map((row) => row._id) }, characterId: null, nppId: null },
+      { session }
+    );
   }
-  if (officials.length)
-    await db.collection<ElectedOfficial>("electedOfficials").insertMany(officials, { session });
+  if (officials.length) await electedOfficialsCollection(db).insertMany(officials, { session });
   const ownerSeats = new Map<string, { isNpc: boolean; regionId: string; seats: number }>();
   for (const official of officials) {
     const ownerId = (official.isNPP ? official.nppId! : official.characterId!).toHexString();

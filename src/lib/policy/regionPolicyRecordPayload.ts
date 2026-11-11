@@ -31,6 +31,7 @@ import { loadResetLawProvenance } from "@/lib/policy/resetLawPolicyRecords";
 import type { PolicyProvenance } from "@/lib/policy/policyRecordPayload";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 /**
  * "<Surname> administration", from whichever office actually governs this
@@ -44,12 +45,10 @@ async function resolveRegionalEra(
 ): Promise<{ label: string; sinceDate: string | null; sinceTurn: number | null } | null> {
   const config = resolveExecutiveOffice(countryId, regionId);
   if (!config) return null;
-  const official = await db
-    .collection<ElectedOfficial>("electedOfficials")
-    .findOne(
-      { countryId, state: regionId.toUpperCase(), officeType: config.officeType },
-      { sort: { electedAt: -1 } }
-    );
+  const official = await electedOfficialsCollection(db).findOne(
+    { countryId, state: regionId.toUpperCase(), officeType: config.officeType },
+    { sort: { electedAt: -1 } }
+  );
   if (!official?.characterId) return null;
   const character = await charactersCollection(db).findOne(
     { _id: official.characterId },

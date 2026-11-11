@@ -41,6 +41,7 @@ import { canRebindBg1991PrimaryCohort } from "./rules/primaryHandover1991";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export const BG_1991_PROPOSALS_COLLECTION = "bg1991ConstitutionalProposals";
 const ID = "1991-default:bg-constitutional:constitution1991";
@@ -176,7 +177,7 @@ export async function materializeBg1991ConstitutionalProposal(input: {
       throw new Bg1991ConstitutionalConflict(
         "One hundred constituent deputies must endorse this draft"
       );
-    const deputy = await db.collection("electedOfficials").findOne(
+    const deputy = await electedOfficialsCollection<Document>(db).findOne(
       {
         countryId: "BG",
         characterId: input.sponsor._id,
@@ -210,7 +211,7 @@ export async function materializeBg1991ConstitutionalProposal(input: {
       throw new Bg1991ConstitutionalConflict("The government sponsor changed before introduction");
     sponsorParty = leader.party;
   } else if (input.sponsor) {
-    const office = await db.collection("electedOfficials").findOne(
+    const office = await electedOfficialsCollection<Document>(db).findOne(
       {
         countryId: "BG",
         characterId: input.sponsor._id,

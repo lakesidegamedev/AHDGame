@@ -49,6 +49,7 @@ import type {
 } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export const caucusWhipSchema = z
   .object({
@@ -87,8 +88,7 @@ async function getEligibleCaucusCharactersForWhip(
 ): Promise<ObjectId[]> {
   if (caucusCharacterIds.length === 0) return [];
 
-  const officials = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const officials = await electedOfficialsCollection(db)
     .find({
       isNPP: false,
       party: partyId,
@@ -635,8 +635,7 @@ export async function issueCaucusWhip({
   };
   const insert = await db.collection<BillWhip>("billWhips").insertOne(whipDoc as BillWhip);
 
-  const nppOfficials = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const nppOfficials = await electedOfficialsCollection(db)
     .find({
       isNPP: true,
       // Party sequentialIds collide across countries, so scope officials to this

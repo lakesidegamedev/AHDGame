@@ -2,6 +2,7 @@ import type { Db } from "mongodb";
 import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
 import type { ElectedOfficial, State } from "@/lib/db/types";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 /*
  * RU seeds governmentFormations as FORMED (unlike CN's pending start): a Cold-War
@@ -53,12 +54,14 @@ export async function buildRuGovernmentFormation(
     };
   }
 
-  const premier = await db
-    .collection<ElectedOfficial>("electedOfficials")
-    .findOne({ countryId: "RU", officeType: "premier" });
-  const chairman = await db
-    .collection<ElectedOfficial>("electedOfficials")
-    .findOne({ countryId: "RU", officeType: "chairmanOfPresidium" });
+  const premier = await electedOfficialsCollection(db).findOne({
+    countryId: "RU",
+    officeType: "premier",
+  });
+  const chairman = await electedOfficialsCollection(db).findOne({
+    countryId: "RU",
+    officeType: "chairmanOfPresidium",
+  });
 
   const hasPremier = premier?.nppId != null;
 

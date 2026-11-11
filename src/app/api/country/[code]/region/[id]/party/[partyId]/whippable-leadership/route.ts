@@ -19,6 +19,7 @@ import { isVotingDeadlinePassed } from "@/lib/legislature/billVotingWindow";
 import { getGameState } from "@/lib/gameState";
 import { impeachmentStageChamberKey } from "@/lib/impeachment/impeachmentTally";
 import type { Impeachment } from "@/lib/db/types/impeachment";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; partyId: string }>;
@@ -93,8 +94,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     // governor's trial is held by this state's own legislature. Gating both on
     // one query would hide impeachments from a party with no senators.
     const [cabinetOfficials, stateLegislatureOfficials] = await Promise.all([
-      db
-        .collection<ElectedOfficial>("electedOfficials")
+      electedOfficialsCollection(db)
         .find({
           isNPP: true,
           party: partyKey,
@@ -103,8 +103,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
           officeType: getOfficeTypeForChamber(countryId, cabinetChamber),
         })
         .toArray(),
-      db
-        .collection<ElectedOfficial>("electedOfficials")
+      electedOfficialsCollection(db)
         .find({
           isNPP: true,
           party: partyKey,

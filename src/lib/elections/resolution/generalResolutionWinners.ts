@@ -32,6 +32,7 @@ import { allocateSeats } from "@/lib/elections/resolution/seatAllocation";
 import type { WithId } from "mongodb";
 import type { SurvivingPartyResolver } from "@/lib/parties/survivingParty";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 /** Allocates seats and splits the candidates into winners and losers. */
 export async function selectGeneralElectionWinners({
@@ -406,8 +407,7 @@ export async function selectGeneralElectionWinners({
       // loop below inserts fresh rows for filled seats.
       const seatsFilled = winners.reduce((n, [, s]) => n + s, 0);
       if (seatsFilled > 0) {
-        const vacantRows = await db
-          .collection<ElectedOfficial>("electedOfficials")
+        const vacantRows = await electedOfficialsCollection(db)
           .find(
             {
               officeType: "commons",
@@ -420,15 +420,13 @@ export async function selectGeneralElectionWinners({
           )
           .toArray();
         if (vacantRows.length > 0) {
-          await db
-            .collection<ElectedOfficial>("electedOfficials")
-            .deleteMany({ _id: { $in: vacantRows.map((r) => r._id) } });
+          await electedOfficialsCollection(db).deleteMany({
+            _id: { $in: vacantRows.map((r) => r._id) },
+          });
         }
       }
     } else {
-      await db
-        .collection<ElectedOfficial>("electedOfficials")
-        .deleteMany(multiSeatOfficialFilter(election));
+      await electedOfficialsCollection(db).deleteMany(multiSeatOfficialFilter(election));
     }
     // Class-scoped multi-seat chambers (JP Sangiin): the filter above keys on
     // chamberClass, so councillors seeded WITHOUT a class are invisible to it
@@ -441,8 +439,7 @@ export async function selectGeneralElectionWinners({
     if (multiSeatClass) {
       const seatsFilled = winners.reduce((n, [, s]) => n + s, 0);
       if (seatsFilled > 0) {
-        const legacyRows = await db
-          .collection<ElectedOfficial>("electedOfficials")
+        const legacyRows = await electedOfficialsCollection(db)
           .find(
             {
               officeType: officeKeyForElectionType(election.electionType, election.countryId),
@@ -454,9 +451,9 @@ export async function selectGeneralElectionWinners({
           )
           .toArray();
         if (legacyRows.length > 0) {
-          await db
-            .collection<ElectedOfficial>("electedOfficials")
-            .deleteMany({ _id: { $in: legacyRows.map((r) => r._id) } });
+          await electedOfficialsCollection(db).deleteMany({
+            _id: { $in: legacyRows.map((r) => r._id) },
+          });
         }
       }
     }

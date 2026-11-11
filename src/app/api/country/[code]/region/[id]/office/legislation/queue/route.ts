@@ -26,6 +26,7 @@ import type {
   StateBill,
   StateBillProvision,
 } from "@/lib/db/types";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 // POST /api/country/[code]/region/[id]/office/legislation/queue — Queue a state bill.
 export async function POST(
@@ -122,8 +123,7 @@ export async function GET(
     const officeParty = access.officeParty;
     let eligibleNpps: Array<{ _id: string; name: string; partyAbbreviation?: string }> = [];
     if (officeParty) {
-      const seats = await db
-        .collection<ElectedOfficial>("electedOfficials")
+      const seats = await electedOfficialsCollection(db)
         .find({
           officeType: getSubNationalLegislatureKey(countryId),
           state: stateId,

@@ -25,6 +25,7 @@ import { SCO_GEOGRAPHY } from "@/lib/countries/sco/geography";
 import { WAL_GEOGRAPHY } from "@/lib/countries/wal/geography";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 /**
  * Coerce a Mongo timestamp field to an ISO string for client serialization.
@@ -365,8 +366,7 @@ export async function getRegionNPPs(stateId: string, countryId: CountryId) {
 export async function getRegionOfficials(stateId: string, countryId: CountryId) {
   try {
     const db = await getDb();
-    const officials = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    const officials = await electedOfficialsCollection(db)
       // Region ids are not globally unique across countries, so scope the
       // lookup by country as well as by state (ticket-1107).
       .find({ state: stateId.toUpperCase(), countryId })

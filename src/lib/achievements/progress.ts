@@ -1,5 +1,7 @@
 import type { Db } from "mongodb";
 import type { Achievement, Character } from "@/lib/db/types";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import type { Document } from "mongodb";
 
 export interface AchievementProgress {
   current: number;
@@ -31,9 +33,9 @@ export async function getAchievementProgress(
         const target = Number(config.count);
         if (!Number.isFinite(target)) return null;
         return {
-          current: await db
-            .collection("electedOfficials")
-            .countDocuments({ characterId: character._id }),
+          current: await electedOfficialsCollection<Document>(db).countDocuments({
+            characterId: character._id,
+          }),
           target,
         };
       }

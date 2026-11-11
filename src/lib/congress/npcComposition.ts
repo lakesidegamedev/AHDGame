@@ -13,6 +13,7 @@ import type { Db } from "@/lib/mongodb";
 import type { ElectedOfficial, PoliticalParty } from "@/lib/db/types";
 import { getPartyHex } from "@/lib/utils/politics";
 import { computeBlocsForCountry, type Bloc } from "./blocs";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export interface NpcPartySeats {
   party: string;
@@ -42,8 +43,7 @@ export async function getNpcComposition(
   db: Db,
   partyMap: Map<string, PoliticalParty>
 ): Promise<NpcComposition> {
-  const officials = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const officials = await electedOfficialsCollection(db)
     .find({
       officeType: "npcDelegate",
       countryId: "CN",

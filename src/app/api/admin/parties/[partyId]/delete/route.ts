@@ -24,6 +24,7 @@ import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { notifyGovernorOfSenateVacancy } from "@/lib/governors/senateVacancy";
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export async function POST(request: Request, { params }: { params: Promise<{ partyId: string }> }) {
   try {
@@ -99,15 +100,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ par
       // so deletion — not nulling — is the correct cleanup for every officeType.
       // Read rows first so we can fire senate-vacancy notifications to governors,
       // matching the convention in /api/officials/[id]/resign.
-      const heldOfficials = await db
-        .collection<ElectedOfficial>("electedOfficials")
+      const heldOfficials = await electedOfficialsCollection(db)
         .find({ nppId: { $in: partyNppIds } })
         .toArray();
 
       if (heldOfficials.length > 0) {
-        const offRes = await db
-          .collection<ElectedOfficial>("electedOfficials")
-          .deleteMany({ _id: { $in: heldOfficials.map((o) => o._id) } });
+        const offRes = await electedOfficialsCollection(db).deleteMany({
+          _id: { $in: heldOfficials.map((o) => o._id) },
+        });
         nppOfficialRowsDeleted = offRes.deletedCount;
 
         for (const o of heldOfficials) {

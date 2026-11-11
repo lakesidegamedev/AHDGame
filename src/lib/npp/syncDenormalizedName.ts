@@ -1,4 +1,6 @@
 import type { Db, ObjectId } from "mongodb";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import type { Document } from "mongodb";
 
 /**
  * Collections that denormalize an NPP's display name beside `nppId`.
@@ -12,7 +14,10 @@ export async function syncDenormalizedNppName(
 ): Promise<{ candidaciesUpdated: number; officialsUpdated: number }> {
   const [candidacies, officials] = await Promise.all([
     db.collection("electionCandidates").updateMany({ nppId }, { $set: { characterName: newName } }),
-    db.collection("electedOfficials").updateMany({ nppId }, { $set: { characterName: newName } }),
+    electedOfficialsCollection<Document>(db).updateMany(
+      { nppId },
+      { $set: { characterName: newName } }
+    ),
   ]);
 
   return {

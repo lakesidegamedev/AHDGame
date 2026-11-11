@@ -35,6 +35,7 @@ import {
   PROPOSAL_COOLDOWN_TURNS,
 } from "./proposalConstants";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 // ─── Pure helpers ────────────────────────────────────────────────────────────
 
@@ -924,14 +925,13 @@ export async function mergePartyInto(
       // seat or candidacy row points at a deleted NPP (mirrors the admin NPP delete
       // cascade; senate vacancies notify the governor as in the party-delete route).
       if (cullIds.length > 0) {
-        const heldOfficials = await db
-          .collection<ElectedOfficial>("electedOfficials")
+        const heldOfficials = await electedOfficialsCollection(db)
           .find({ nppId: { $in: cullIds } })
           .toArray();
         if (heldOfficials.length > 0) {
-          await db
-            .collection<ElectedOfficial>("electedOfficials")
-            .deleteMany({ _id: { $in: heldOfficials.map((o) => o._id) } });
+          await electedOfficialsCollection(db).deleteMany({
+            _id: { $in: heldOfficials.map((o) => o._id) },
+          });
           for (const o of heldOfficials) {
             if (o.officeType === "senate") {
               await notifyGovernorOfSenateVacancy(db, o.state, o.senateClass);
@@ -987,12 +987,10 @@ export async function mergePartyInto(
       // 5. Transfer elected seats — re-point all of the absorbed party's elected
       //    officials (any chamber) to the target so its legislative seats move with
       //    it. Country-scoped: `party` (sequentialId) is not globally unique.
-      await db
-        .collection<ElectedOfficial>("electedOfficials")
-        .updateMany(
-          { party: proposingStrId, countryId },
-          { $set: { party: targetStrId, updatedAt: now } }
-        );
+      await electedOfficialsCollection(db).updateMany(
+        { party: proposingStrId, countryId },
+        { $set: { party: targetStrId, updatedAt: now } }
+      );
 
       // 6. Collapse the absorbed party out of any coalitions — transfer its slot to
       //    the target and strip dangling invites/requests addressed to it.

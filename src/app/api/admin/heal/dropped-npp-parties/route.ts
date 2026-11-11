@@ -4,6 +4,7 @@ import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError } from "@/lib/api/errors";
 import type { NPP, ElectedOfficial, PoliticalParty } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 /**
  * Policy signature to party slug mapping.
@@ -238,7 +239,7 @@ export async function POST() {
       results.partyCounts[partyName] = (results.partyCounts[partyName] ?? 0) + 1;
 
       // Update corresponding electedOfficials records
-      const officialResult = await db.collection<ElectedOfficial>("electedOfficials").updateMany(
+      const officialResult = await electedOfficialsCollection(db).updateMany(
         { nppId: npp._id },
         {
           $set: {

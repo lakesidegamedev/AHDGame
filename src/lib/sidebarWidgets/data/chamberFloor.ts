@@ -10,6 +10,7 @@ import {
 } from "@/lib/legislature/chamberOfficeType";
 import { resolveBillVoteField } from "@/lib/congress/billVoteField";
 import { loadViewerCharacter, loadWidgetGameState, turnsUntil } from "./viewerContext";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export type FloorVote = "for" | "against" | "abstain";
 
@@ -56,12 +57,10 @@ export async function loadChamberFloor(
     getOfficeTypeForChamber(countryId, key, preset, config)
   );
 
-  const seat = await db
-    .collection<ElectedOfficial>("electedOfficials")
-    .findOne(
-      { characterId: character._id, officeType: { $in: officeTypes }, countryId },
-      { projection: { officeType: 1 } }
-    );
+  const seat = await electedOfficialsCollection(db).findOne(
+    { characterId: character._id, officeType: { $in: officeTypes }, countryId },
+    { projection: { officeType: 1 } }
+  );
   if (!seat) return null;
   const myChamber = getChamberKeyForOfficeType(countryId, seat.officeType, preset, config);
   const chamberName =

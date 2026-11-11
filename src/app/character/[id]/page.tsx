@@ -91,6 +91,7 @@ import { buildPublicSummary, getCharacterById, type OverviewStatItem } from "./c
 import { raceHref } from "@/lib/campaignManager/links";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 const MIN_BASE_ACTIONS_PER_TURN = 4;
 
@@ -275,7 +276,7 @@ export default async function CharacterPage({ params }: PageProps) {
   const cabinetSeat = cabinetSeats[0] ?? null;
   const electedSeat =
     character.currentOffice && CABINET_OFFICE_TYPES.has(character.currentOffice.type)
-      ? await apDb.collection<ElectedOfficial>("electedOfficials").findOne(
+      ? await electedOfficialsCollection(apDb).findOne(
           { characterId: character._id },
           {
             projection: {

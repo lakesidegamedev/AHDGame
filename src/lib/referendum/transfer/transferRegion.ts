@@ -43,6 +43,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import type { Document } from "mongodb";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export interface TransferRegionArgs {
   regionId: string;
@@ -140,8 +141,7 @@ async function transferRegionInTransaction(
     countryHasFeature("ukLib", fromCountryId) &&
     countryHasFeature("ieLib", toCountryId);
   const carriedMPs = reunifyingNorthernIreland
-    ? await db
-        .collection<ElectedOfficial>("electedOfficials")
+    ? await electedOfficialsCollection(db)
         .find({ countryId: "UK", state: "NIR", officeType: "commons" })
         .toArray()
     : [];
@@ -208,8 +208,7 @@ async function transferRegionInTransaction(
   if (relocateToRegionId === null || reunifyingNorthernIreland) {
     await rescaleRegionDelegations(db, { regionId, countryId: toCountryId, now: new Date() });
     if (reunifyingNorthernIreland) {
-      const seated = await db
-        .collection<ElectedOfficial>("electedOfficials")
+      const seated = await electedOfficialsCollection(db)
         .find({ countryId: "IE", state: "NIR", officeType: "dail" })
         .toArray();
       await mirrorNorthernIrelandMPs(db, seated, new Date());

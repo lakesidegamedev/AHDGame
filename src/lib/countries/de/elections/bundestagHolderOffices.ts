@@ -9,6 +9,7 @@ import { captureOfficeTransition } from "@/lib/analytics/officeTransitionAnalyti
 import { getExecutiveOfficeKeys } from "@/lib/elections/executiveOffice";
 import { preserveExecutiveOffice } from "@/lib/elections/resolution/generalResolutionHelpers";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export async function reconcileBundestagHolderOffices(
   db: Db,
@@ -16,8 +17,7 @@ export async function reconcileBundestagHolderOffices(
   currentTurn?: number,
   telemetryActors?: Map<string, Pick<Character, "userId" | "currentOffice">>
 ): Promise<ElectedOfficial[]> {
-  const officials = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const officials = await electedOfficialsCollection(db)
     .find(
       { countryId: "DE", officeType: "bundestag" },
       { projection: { characterId: 1, nppId: 1, state: 1, seatsHeld: 1, party: 1, seatSource: 1 } }
@@ -111,8 +111,7 @@ export async function reconcileBundestagHolderOffices(
       else characterWrites.push({ updateOne: { filter: { _id: actor._id }, update } });
     }
   }
-  if (vacancyWrites.length)
-    await db.collection<ElectedOfficial>("electedOfficials").bulkWrite(vacancyWrites);
+  if (vacancyWrites.length) await electedOfficialsCollection(db).bulkWrite(vacancyWrites);
   if (characterWrites.length) await charactersCollection(db).bulkWrite(characterWrites);
   if (nppWrites.length) await db.collection<NPP>("npps").bulkWrite(nppWrites);
   await charactersCollection(db).updateMany(departingFilter, {

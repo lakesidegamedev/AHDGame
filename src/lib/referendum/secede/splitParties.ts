@@ -28,6 +28,7 @@ import { remapRecruitmentSlates } from "./remapRecruitmentSlates";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import type { Document } from "mongodb";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 /** Region-party ledger collections dissolved on secession (the new country reseeds). */
 const REGION_PARTY_LEDGERS = [
@@ -56,8 +57,7 @@ export async function splitParties(
   const majorPartyIds = getCountryConfig(toCountryId).majorPartyIds ?? [];
 
   // ── Gather the region's parties + classify region-homed vs UK-wide ──────────
-  const officials = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const officials = await electedOfficialsCollection(db)
     .find({ countryId: fromCountryId })
     .toArray();
   const orgs = await db

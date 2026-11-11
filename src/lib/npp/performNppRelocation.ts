@@ -11,6 +11,7 @@ import { removeWithdrawnCandidateFromTally } from "@/lib/elections/engine/tallyC
 import { notifyGovernorOfSenateVacancy } from "@/lib/governors/senateVacancy";
 import { updatePartyPresence } from "@/lib/turn/partyOrg/presence";
 import { heldBlocRowIds, releaseVacatedBlocSeats } from "@/lib/elections/vacatedBlocSeats";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export interface NppRelocationOutcome {
   /** Office label the NPP was vacated from, or null if they held none. */
@@ -37,7 +38,7 @@ async function vacateNppOffice(
   if (!currentOffice) return { resignedFromOffice: null };
 
   const blocRowIds = await heldBlocRowIds(db, { nppId: npp._id });
-  await db.collection<ElectedOfficial>("electedOfficials").updateOne(
+  await electedOfficialsCollection(db).updateOne(
     { nppId: npp._id },
     {
       $set: { isNPP: false, updatedAt: now },

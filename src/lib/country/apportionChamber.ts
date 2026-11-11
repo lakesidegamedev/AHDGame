@@ -24,6 +24,8 @@ import type { Db, ObjectId } from "mongodb";
 import type { State } from "@/lib/db/types";
 import { apportionSeats } from "./seatApportionment";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import type { Document } from "mongodb";
 
 /** One official as the apportionment reads it. */
 export interface ChamberOfficial {
@@ -115,7 +117,7 @@ export async function apportionOfficialsToChamber(
           )
         : null;
     for (const o of ordered) {
-      await db.collection("electedOfficials").updateOne(
+      await electedOfficialsCollection<Document>(db).updateOne(
         { _id: o._id },
         {
           $set: {
@@ -147,8 +149,7 @@ export async function rescaleRegionDelegations(
   const { regionId, countryId } = params;
   const now = params.now ?? new Date();
 
-  const officials = await db
-    .collection("electedOfficials")
+  const officials = await electedOfficialsCollection<Document>(db)
     .find<ChamberOfficial & { officeType: string }>({ countryId, state: regionId })
     .toArray();
   if (officials.length === 0) return 0;

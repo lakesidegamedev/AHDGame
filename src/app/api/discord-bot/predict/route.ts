@@ -19,6 +19,7 @@ import type {
   ElectionVoteTally,
   PoliticalParty,
 } from "@/lib/db/types";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 interface PredictPartySeats {
   party: string;
@@ -81,8 +82,7 @@ export async function GET(request: Request) {
     const db = await getDb();
 
     const [officials, parties, activeElections] = await Promise.all([
-      db
-        .collection<ElectedOfficial>("electedOfficials")
+      electedOfficialsCollection(db)
         .find({
           officeType,
           // { countryId: null } matches both missing field and explicit null — catches all untagged officials

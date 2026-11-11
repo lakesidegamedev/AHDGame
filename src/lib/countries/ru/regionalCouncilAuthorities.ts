@@ -26,6 +26,7 @@ import {
 } from "./rules/regionalCouncilAppointments";
 import { GAME_STATE_PRE_ITERATION_FIELDS } from "@/lib/db/collections/gameState";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export const RUSSIAN_REGIONAL_AUTHORITIES_COLLECTION = "russianRegionalAuthorities";
 export interface RussianRegionalAuthorityRecord extends RussianCouncilRegionalAuthority {
@@ -60,8 +61,7 @@ export async function loadRussianRegionalNpcProfiles(db: Db, session: ClientSess
   const ids = profiles.map((row) => row._id);
   const incompatible = new Set<string>();
   if (ids.length) {
-    const physical = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    const physical = await electedOfficialsCollection(db)
       .find(
         { nppId: { $in: ids } },
         { session, batchSize: 1000, projection: { nppId: 1, countryId: 1, officeType: 1 } }

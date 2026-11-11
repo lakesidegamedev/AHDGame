@@ -56,6 +56,7 @@ import {
   houseElectionRoleToLeader,
   senateElectionRoleToLeader,
 } from "@/lib/congress/leadership/electionRoleMap";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -164,8 +165,7 @@ export async function handleWhippableLeadership(request: Request, { params }: Ro
 
     // Union of NPP and character officials — bills/leadership items should be shown
     // to chair when EITHER audience has members in the chamber.
-    const allOfficials = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    const allOfficials = await electedOfficialsCollection(db)
       .find({
         party: partyIdStr,
         officeType: { $in: officeTypes },

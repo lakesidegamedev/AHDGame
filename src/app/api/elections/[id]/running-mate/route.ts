@@ -20,6 +20,7 @@ import { isSameCountry } from "@/lib/api/sameCountry";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -142,7 +143,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const electionCountry = (election.countryId ?? COUNTRY_CONFIGS.US.id) as CountryId;
     const countryConfig = getCountryConfig(electionCountry);
 
-    const currentPresident = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+    const currentPresident = await electedOfficialsCollection(db).findOne({
       ...getExecutiveOfficialFilter(electionCountry, "president"),
       characterId: { $ne: null },
     });

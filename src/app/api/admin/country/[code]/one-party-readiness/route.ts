@@ -14,6 +14,8 @@ import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import type { Document } from "mongodb";
 
 interface ReadinessCheck {
   name: string;
@@ -105,7 +107,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     });
 
     // 7. Elected officials
-    const officialCount = await db.collection("electedOfficials").countDocuments({ countryId });
+    const officialCount = await electedOfficialsCollection<Document>(db).countDocuments({
+      countryId,
+    });
     checks.push({
       name: "ElectedOfficials",
       status: officialCount >= expectedNppCount ? "ok" : officialCount > 0 ? "warning" : "missing",

@@ -18,6 +18,7 @@ import {
 import type { ElectedOfficial, PoliticalParty, State } from "@/lib/db/types";
 import { PRIORITY_REGION_LOCKOUT_TURNS } from "@/lib/turn/politicalStrength/strengthConstants";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 /**
  * Returns the state IDs in this country where the given party holds the
@@ -36,8 +37,7 @@ async function listPartyStateExecutives(
   partySequentialId: number
 ): Promise<string[]> {
   const partyIdStr = String(partySequentialId);
-  const rows = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const rows = await electedOfficialsCollection(db)
     .find({
       countryId,
       party: partyIdStr,

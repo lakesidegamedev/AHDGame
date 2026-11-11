@@ -2,6 +2,7 @@ import type { Db } from "mongodb";
 import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
 import type { ElectedOfficial } from "@/lib/db/types";
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 /**
  * Build the BR governmentFormations doc.
@@ -26,9 +27,10 @@ export async function buildBrGovernmentFormation(
   const totalSeats = config.legislature.lowerChamber.seats;
   const majorityThreshold = config.coalitionThreshold;
 
-  const president = await db
-    .collection<ElectedOfficial>("electedOfficials")
-    .findOne({ countryId: "BR", officeType: "president" });
+  const president = await electedOfficialsCollection(db).findOne({
+    countryId: "BR",
+    officeType: "president",
+  });
 
   const hasPresident = Boolean(president?.nppId || president?.characterId);
 

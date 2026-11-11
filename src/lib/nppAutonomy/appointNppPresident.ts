@@ -34,6 +34,7 @@ import { getExecutiveOfficialFilter } from "@/lib/elections/executiveOfficeFilte
 import { tallySeatsByParty } from "@/lib/turn/parliamentaryGovernment";
 import { nppAutonomyAtLeast } from "./featureFlag";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 /**
  * Seat an NPP president for `countryId` when the office is vacant. Returns true
@@ -69,7 +70,7 @@ export async function appointNppPresident(
 
   // Idempotent: only act when no president currently holds the office.
   const presidentFilter = getExecutiveOfficialFilter(countryId, "president");
-  const seated = await db.collection<ElectedOfficial>("electedOfficials").findOne(presidentFilter);
+  const seated = await electedOfficialsCollection(db).findOne(presidentFilter);
   if (seated && (seated.characterId || seated.nppId)) return false;
 
   const govCol = getGovernmentFormationsCollection(db);
@@ -108,7 +109,7 @@ export async function appointNppPresident(
     );
 
   // Upsert the president official record (NPP-held).
-  await db.collection<ElectedOfficial>("electedOfficials").updateOne(
+  await electedOfficialsCollection(db).updateOne(
     presidentFilter,
     {
       $set: {

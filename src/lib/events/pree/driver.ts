@@ -36,6 +36,8 @@ import { sweepExpiredDebates } from "@/lib/debate/debateSessionLifecycle";
 import { makeSeededRng } from "@/lib/events/substrate/rng";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import type { Document } from "mongodb";
 
 /** Eligibility maps are loaded per chunk to bound query sizes; all player characters are processed. */
 const CHARACTER_CHUNK_SIZE = 200;
@@ -81,8 +83,7 @@ async function loadEligibilityMaps(
       .find({ characterId: { $in: characterIds }, status: "active" })
       .project({ characterId: 1 })
       .toArray(),
-    db
-      .collection("electedOfficials")
+    electedOfficialsCollection<Document>(db)
       .find({ characterId: { $in: characterIds } })
       .project({ characterId: 1 })
       .toArray(),

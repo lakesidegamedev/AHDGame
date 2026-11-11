@@ -57,6 +57,7 @@ import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import type { Document } from "mongodb";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export interface ActuationResult {
   actuated: boolean;
@@ -524,8 +525,7 @@ async function retireNationalRemnants(
   const { absorbed, survivor, rulingPartyId } = params;
   const now = new Date();
 
-  const remnants = await db
-    .collection("electedOfficials")
+  const remnants = await electedOfficialsCollection<Document>(db)
     .find<{
       _id: ObjectId;
       officeType: string;
@@ -538,7 +538,7 @@ async function retireNationalRemnants(
   for (const official of remnants) {
     const target = remapOffice(absorbed, survivor, official.officeType);
     if (target === null) {
-      await db.collection("electedOfficials").deleteOne({ _id: official._id });
+      await electedOfficialsCollection<Document>(db).deleteOne({ _id: official._id });
       if (official.characterId || official.nppId) {
         await captureOfficeTransition({
           db,
@@ -552,12 +552,10 @@ async function retireNationalRemnants(
       }
       continue;
     }
-    await db
-      .collection("electedOfficials")
-      .updateOne(
-        { _id: official._id },
-        { $set: { countryId: survivor, officeType: target, updatedAt: now } }
-      );
+    await electedOfficialsCollection<Document>(db).updateOne(
+      { _id: official._id },
+      { $set: { countryId: survivor, officeType: target, updatedAt: now } }
+    );
     if (official.characterId || official.nppId) {
       await captureOfficeTransition({
         db,

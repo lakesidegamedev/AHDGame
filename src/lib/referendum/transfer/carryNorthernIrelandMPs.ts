@@ -7,6 +7,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import type { Document } from "mongodb";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export async function carryNorthernIrelandMPs(
   db: Db,
@@ -23,7 +24,7 @@ export async function carryNorthernIrelandMPs(
     $or: [{ pmCharacterId: holders[0].characterId }, { pmNppId: holders[1].nppId }],
   });
   if (government) await unformGovernmentAndVacatePM(db, "UK", now, { reason: "lost-seat" });
-  await db.collection("electedOfficials").deleteMany({ countryId: "UK", $or: holders });
+  await electedOfficialsCollection<Document>(db).deleteMany({ countryId: "UK", $or: holders });
   await db.collection("cabinetMembers").deleteMany({ countryId: "UK", $or: holders });
   const parties = await db
     .collection("politicalParties")
@@ -50,7 +51,7 @@ export async function carryNorthernIrelandMPs(
     party: target.get(source.get(mp.party ?? "")) ?? "independent",
     updatedAt: now,
   }));
-  await db.collection<ElectedOfficial>("electedOfficials").insertMany(rows);
+  await electedOfficialsCollection(db).insertMany(rows);
   await mirrorNorthernIrelandMPs(db, rows, now);
   const nppIds = rows.flatMap((mp) => (mp.nppId ? [mp.nppId] : []));
   if (nppIds.length)

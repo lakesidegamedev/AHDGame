@@ -26,6 +26,7 @@ import type { ElectedOfficial, NPP } from "@/lib/db/types";
 import { FOMC_TERM_TURNS, type FomcNomination } from "@/lib/db/types/centralBank";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 /** Resolve a player character's owning userId for notifications. */
 async function nomineeUserId(
@@ -181,8 +182,7 @@ export async function processFomcNominationLifecycle(
   async function scopeFor(countryId: CountryId): Promise<CountryScope> {
     const cached = scopeCache.get(countryId);
     if (cached) return cached;
-    const officials = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    const officials = await electedOfficialsCollection(db)
       .find({ countryId, officeType: "senate", isNPP: true, nppId: { $exists: true } })
       .toArray();
     const ids = officials
@@ -194,9 +194,11 @@ export async function processFomcNominationLifecycle(
           .find({ _id: { $in: ids } })
           .toArray()
       : [];
-    const pres = await db
-      .collection<ElectedOfficial>("electedOfficials")
-      .findOne({ countryId, officeType: "president", characterId: { $ne: null } });
+    const pres = await electedOfficialsCollection(db).findOne({
+      countryId,
+      officeType: "president",
+      characterId: { $ne: null },
+    });
     const scope: CountryScope = {
       officials,
       nppMap: new Map(rows.map((n) => [n._id.toString(), n])),

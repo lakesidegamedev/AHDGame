@@ -121,6 +121,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 const MIN_BASE_ACTIONS_PER_TURN = 4;
 
@@ -554,7 +555,7 @@ export default async function ProfilePage() {
   const cabinetSeat = cabinetSeats[0] ?? null;
   const electedSeat =
     character.currentOffice && CABINET_OFFICE_TYPES.has(character.currentOffice.type)
-      ? await apDb.collection<ElectedOfficial>("electedOfficials").findOne(
+      ? await electedOfficialsCollection(apDb).findOne(
           { characterId: character._id },
           {
             projection: {

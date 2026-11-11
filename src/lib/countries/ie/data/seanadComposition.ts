@@ -2,6 +2,7 @@ import type { Db } from "mongodb";
 import type { CabinetMember } from "@/lib/db/types/cabinet";
 import type { ElectedOfficial, PoliticalParty } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 const VOCATIONAL_SEATS = 43;
 const TAOISEACH_PICKS = 11;
@@ -93,8 +94,7 @@ export async function deriveSeanadComposition(
   }
 
   // 1. Vocational — sum Dáil seats per party, allocate 43 via Hamilton.
-  const dailRows = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const dailRows = await electedOfficialsCollection(db)
     .find({ countryId, officeType: "dail" })
     .toArray();
   const dailByParty = new Map<string, number>();

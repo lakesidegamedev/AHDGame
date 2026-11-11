@@ -5,6 +5,7 @@ import { checkWikiDisabled } from "@/lib/api/wikiGuard";
 import type { ElectedOfficial, Election } from "@/lib/db/types";
 import { getGameTime } from "@/lib/time/gameTime";
 import { isPrimaryEnded } from "@/lib/elections/phases";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 // GET /api/wiki/live-stats — Returns live congressional composition counts and active election summaries.
 // Auth: public; blocked when wiki is disabled
@@ -17,16 +18,11 @@ export async function GET() {
 
     // Get Congress makeup
     const [house, senate] = await Promise.all([
-      db
-        .collection<ElectedOfficial>("electedOfficials")
+      electedOfficialsCollection(db)
         .find({ officeType: "house" })
         .project({ party: 1, seatsHeld: 1 })
         .toArray(),
-      db
-        .collection<ElectedOfficial>("electedOfficials")
-        .find({ officeType: "senate" })
-        .project({ party: 1 })
-        .toArray(),
+      electedOfficialsCollection(db).find({ officeType: "senate" }).project({ party: 1 }).toArray(),
     ]);
 
     const houseCounts = house.reduce(

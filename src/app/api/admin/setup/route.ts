@@ -56,6 +56,7 @@ import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export async function GET() {
   try {
@@ -83,7 +84,7 @@ export async function GET() {
       db.collection("policies").countDocuments(),
       db.collection<{ _id: string }>("gameConfig").findOne({ _id: "default" }),
       gameStateCollection(db).findOne({ _id: "current" }),
-      db.collection("electedOfficials").countDocuments(),
+      electedOfficialsCollection<Document>(db).countDocuments(),
       db.collection("elections").countDocuments(),
       db.collection("politicalParties").countDocuments(),
       db.collection("stateDemographics").countDocuments(),
@@ -236,7 +237,7 @@ export async function POST(request: Request) {
     );
 
     log("=== Step 3: Checking elected officials ===");
-    const officialsCount = await db.collection("electedOfficials").countDocuments();
+    const officialsCount = await electedOfficialsCollection<Document>(db).countDocuments();
 
     if (officialsCount === 0) {
       log("No officials found - initializing default vacant-world officials");

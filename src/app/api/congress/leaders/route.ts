@@ -21,6 +21,8 @@ import type { LeadershipRole } from "@/lib/db/types";
 import { fetchBordersByUserIds } from "@/lib/db/patreonBorders";
 import { getEnabledCountryIds } from "@/lib/countryAccess";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import type { Document } from "mongodb";
 
 export interface LeaderDisplay {
   role: LeadershipRole;
@@ -195,7 +197,7 @@ export async function POST(request: Request) {
       return errorResponse(400, "Unknown leadership role");
     }
 
-    const holdsChamberSeat = await db.collection("electedOfficials").findOne({
+    const holdsChamberSeat = await electedOfficialsCollection<Document>(db).findOne({
       characterId: char._id,
       officeType: roleConfig.chamber,
     });

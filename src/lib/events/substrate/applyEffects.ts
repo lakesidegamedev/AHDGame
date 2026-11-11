@@ -38,6 +38,7 @@ import {
 import { applyCivilLibertiesDelta } from "@/lib/politicalMetrics/civilLiberties";
 import type { EventResolveContext } from "./types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 function isCompletedSettlement(result: SettlementResult): boolean {
   return result.status === "applied" || (result.status === "replayed" && !result.error);
@@ -225,12 +226,10 @@ async function applyCountryEffects(
       }
       case "presidentialHealthRelief": {
         if (effect.pct <= 0 || effect.durationTurns <= 0) break;
-        const official = await ctx.db
-          .collection<ElectedOfficial>("electedOfficials")
-          .findOne(
-            { countryId, officeType: "president", characterId: { $ne: null } },
-            { sort: { electedAt: -1 }, projection: { party: 1, characterId: 1 } }
-          );
+        const official = await electedOfficialsCollection(ctx.db).findOne(
+          { countryId, officeType: "president", characterId: { $ne: null } },
+          { sort: { electedAt: -1 }, projection: { party: 1, characterId: 1 } }
+        );
         if (!official?.party || !official.characterId) break;
         await writePresidentialHealthRelief(ctx.db, {
           countryId,

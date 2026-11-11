@@ -34,6 +34,7 @@ import { captureElectionWon } from "@/lib/analytics/electionAnalytics";
 import { reconcileBundestagHolderOffices } from "./bundestagHolderOffices";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 const VOTE_THRESHOLD = BUNDESTAG_VOTE_THRESHOLD;
 
@@ -203,8 +204,7 @@ export function aggregateDirectMandates(officials: ElectedOfficial[]): DirectMan
 
 /** Read DE Bundestag direct-mandate officials (seatSource direct or absent) and aggregate. */
 async function fetchDirectMandates(db: Db): Promise<DirectMandates> {
-  const officials = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const officials = await electedOfficialsCollection(db)
     .find({
       countryId: "DE",
       officeType: "bundestag",
@@ -467,7 +467,7 @@ export async function persistBundestagResult(
   result: BundestagElectionResult,
   now: Date = new Date()
 ): Promise<void> {
-  await db.collection<ElectedOfficial>("electedOfficials").deleteMany({
+  await electedOfficialsCollection(db).deleteMany({
     countryId: "DE",
     officeType: "bundestag",
     seatSource: "list",
@@ -481,7 +481,7 @@ export async function persistBundestagResult(
       updatedAt: now,
     }));
     try {
-      await db.collection<ElectedOfficial>("electedOfficials").insertMany(docs, { ordered: false });
+      await electedOfficialsCollection(db).insertMany(docs, { ordered: false });
     } catch (err) {
       // E11000 = duplicate key: a concurrent run already inserted this bloc set.
       // Any non-duplicate error is real and must propagate.

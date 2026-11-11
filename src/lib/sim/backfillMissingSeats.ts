@@ -14,6 +14,8 @@ import {
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import type { Document } from "mongodb";
 
 /**
  * True when `stateId` is eligible for US federal seat backfill (House,
@@ -287,8 +289,7 @@ async function backfillSubNationalChamber(
 
   // Currently filled seats per state for this office (respecting seatsHeld).
   const currentByState = new Map<string, number>();
-  const existing = await db
-    .collection("electedOfficials")
+  const existing = await electedOfficialsCollection<Document>(db)
     .aggregate<{ _id: string; total: number }>([
       { $match: { countryId, officeType } },
       { $group: { _id: "$state", total: { $sum: { $ifNull: ["$seatsHeld", 1] } } } },
@@ -398,8 +399,7 @@ async function backfillChamber(
   );
   const effectiveTarget = slotCapacity > 0 ? Math.min(targetSeats, slotCapacity) : targetSeats;
 
-  const [current] = await db
-    .collection("electedOfficials")
+  const [current] = await electedOfficialsCollection<Document>(db)
     .aggregate<{ total: number }>([
       { $match: { countryId, officeType } },
       { $group: { _id: null, total: { $sum: { $ifNull: ["$seatsHeld", 1] } } } },
@@ -440,8 +440,7 @@ async function backfillChamber(
   // "incumbents" in England who then auto-defended their seats (1953 sim
   // forensics). Even split survives only for regions with no statePartyOrg
   // data at all.
-  const existingByParty = await db
-    .collection("electedOfficials")
+  const existingByParty = await electedOfficialsCollection<Document>(db)
     .aggregate<{ _id: string; total: number }>([
       { $match: { countryId, officeType } },
       { $group: { _id: "$party", total: { $sum: { $ifNull: ["$seatsHeld", 1] } } } },

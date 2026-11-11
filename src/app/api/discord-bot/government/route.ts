@@ -24,6 +24,7 @@ import { getCabinetPositions } from "@/lib/constants/cabinetMechanics";
 import { resolveSeatName } from "@/lib/cabinet/rosterEra";
 import { getLiveGameYear } from "@/lib/cabinet/liveGameYear";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -104,8 +105,7 @@ export async function GET(request: Request) {
     const directElection = isDirectElection(countryConfig);
 
     const [executives, leaders, cabinetMembers] = await Promise.all([
-      db
-        .collection<ElectedOfficial>("electedOfficials")
+      electedOfficialsCollection(db)
         .find({ countryId: country, officeType: { $in: officeTypes } })
         .toArray(),
       directElection

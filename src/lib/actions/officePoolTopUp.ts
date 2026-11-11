@@ -21,6 +21,7 @@ import {
   type OfficePoolKind,
 } from "./officePoolTopUpRules";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export { OFFICE_POOL_TOP_UP_AP_COST } from "./officePoolTopUpRules";
 export type { OfficePoolKind } from "./officePoolTopUpRules";
@@ -118,18 +119,20 @@ async function resolveVpPool(
   characterId: ObjectId,
   countryId: CountryId
 ): Promise<Resolution> {
-  const vp = await db
-    .collection<ElectedOfficial>("electedOfficials")
-    .findOne({ countryId, officeType: "vicePresident" });
+  const vp = await electedOfficialsCollection(db).findOne({
+    countryId,
+    officeType: "vicePresident",
+  });
   if (!vp) return { ok: false, status: 404, error: "No vice-president office found" };
   if (!sameId(vp.characterId, characterId)) {
     return { ok: false, status: 403, error: "Only the sitting vice-president can buy actions" };
   }
   // Legacy VP docs without a pool are backfilled to the cap, as the action route does.
   if (vp.vpActionsRemaining == null) {
-    await db
-      .collection<ElectedOfficial>("electedOfficials")
-      .updateOne({ _id: vp._id }, { $set: initialVpActionFields() });
+    await electedOfficialsCollection(db).updateOne(
+      { _id: vp._id },
+      { $set: initialVpActionFields() }
+    );
   }
   return {
     ok: true,

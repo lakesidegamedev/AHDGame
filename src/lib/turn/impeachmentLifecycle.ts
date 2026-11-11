@@ -21,6 +21,7 @@ import { IMPEACHMENT_SENATE_VOTING_TURNS } from "@/lib/constants/impeachment";
 import { createNotification } from "@/lib/notifications";
 import { autoVoteNppsForImpeachmentStage } from "@/lib/impeachment/autoVoteNpps";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 /**
  * Advance every open impeachment whose current-stage voting window has closed.
@@ -63,7 +64,7 @@ export async function processImpeachmentLifecycle(
       isGovernor && imp.state
         ? governorOfficialFilter(imp.countryId, imp.state)
         : getExecutiveOfficialFilter(imp.countryId, "president");
-    const holder = await db.collection<ElectedOfficial>("electedOfficials").findOne(holderFilter);
+    const holder = await electedOfficialsCollection(db).findOne(holderFilter);
     const stillHolds =
       holder?.characterId != null &&
       holder.characterId.toString() === imp.targetCharacterId.toString();

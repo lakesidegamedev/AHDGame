@@ -228,6 +228,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import type { Document } from "mongodb";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 async function seedInitialBudgetSnapshots(db: Db, log: (msg: string) => void): Promise<void> {
   const budgets = await federalBudgetCollection(db).find({}).toArray();
@@ -703,7 +704,7 @@ export async function bootstrapGameWorld(options: BootstrapOptions) {
   // historical rosters (US 83rd Congress under 1953-default, every other
   // preset's chambers) stopped being seeded. See historicalSeedGate.ts.
   const [preExistingOfficialsCount, preExistingNppsCount] = await Promise.all([
-    db.collection("electedOfficials").countDocuments(),
+    electedOfficialsCollection<Document>(db).countDocuments(),
     db.collection("npps").countDocuments({ retiredAt: null }),
   ]);
 
@@ -982,7 +983,7 @@ export async function bootstrapGameWorld(options: BootstrapOptions) {
   log(`Bootstrap migrations: ran ${indexFundBootstrap.ranIds.length}`);
 
   const [officialsCount, nppsCount] = await Promise.all([
-    db.collection("electedOfficials").countDocuments(),
+    electedOfficialsCollection<Document>(db).countDocuments(),
     db.collection("npps").countDocuments({ retiredAt: null }),
   ]);
 
@@ -1046,7 +1047,7 @@ export async function bootstrapGameWorld(options: BootstrapOptions) {
         byCountry.set(seat.state, list);
       }
       for (const [countryId, seats] of byCountry) {
-        const existingExecutive = await db.collection("electedOfficials").countDocuments({
+        const existingExecutive = await electedOfficialsCollection<Document>(db).countDocuments({
           officeType: { $in: ["president", "vicePresident"] },
           countryId,
         });
@@ -1066,7 +1067,7 @@ export async function bootstrapGameWorld(options: BootstrapOptions) {
       (s) => s.officeType === "premier" || s.officeType === "chairmanOfPresidium"
     );
     if (ruExecutiveSeats.length > 0) {
-      const existingRuExecutive = await db.collection("electedOfficials").countDocuments({
+      const existingRuExecutive = await electedOfficialsCollection<Document>(db).countDocuments({
         officeType: { $in: ["premier", "chairmanOfPresidium"] },
         countryId: "RU",
       });
@@ -1421,7 +1422,7 @@ export async function bootstrapGameWorld(options: BootstrapOptions) {
     statesCollection<Document>(db).countDocuments(),
     db.collection("seats").countDocuments(),
     db.collection("elections").countDocuments(),
-    db.collection("electedOfficials").countDocuments(),
+    electedOfficialsCollection<Document>(db).countDocuments(),
     db.collection("partyBudget").countDocuments(),
     db.collection("unownedSectors").countDocuments(),
   ]);

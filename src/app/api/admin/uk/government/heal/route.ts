@@ -13,6 +13,7 @@ import {
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
 import type { ElectedOfficial } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 const healActionSchema = z.object({
   action: z.enum(["retrigger_formation", "appoint_pm"]),
@@ -40,8 +41,7 @@ export async function GET(_request: Request) {
 
     // Tally seats
     const lowerChamberKey = COUNTRY_CONFIGS.UK.legislature.lowerChamber.key;
-    const officials = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    const officials = await electedOfficialsCollection(db)
       .find({ officeType: lowerChamberKey, countryId: "UK" })
       .toArray();
     const seatsByParty: Record<string, number> = {};

@@ -9,6 +9,7 @@ import type { ElectedOfficial, PoliticalParty, State, StatePartyOrg } from "@/li
 import { buildProportionalChamberSeats, sumSeatsHeld } from "@/lib/seeds/proportionalChamberSeats";
 import { seedFromSeats, type SeedMode } from "@/lib/npp/seedHistorical";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 const FEDERATIONS = ["CS", "YU"] as const;
 
@@ -130,7 +131,7 @@ export async function seed1991FederationLegislatures(
     const federalOffices = [getLowerChamberOfficeType(countryId, preset), upperOffice].filter(
       (office): office is string => office !== undefined
     );
-    const playerOfficial = await db.collection<ElectedOfficial>("electedOfficials").findOne(
+    const playerOfficial = await electedOfficialsCollection(db).findOne(
       {
         countryId,
         officeType: { $in: federalOffices },

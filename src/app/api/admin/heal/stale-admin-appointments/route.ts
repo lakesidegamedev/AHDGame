@@ -15,6 +15,8 @@ import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError } from "@/lib/api/errors";
 import type { ElectedOfficial, NPP } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import type { Document } from "mongodb";
 
 interface DuplicateSeat {
   seatKey: string;
@@ -74,7 +76,7 @@ export async function GET() {
     const db = await getDb();
 
     // Get all officials
-    const officials = await db.collection<ElectedOfficial>("electedOfficials").find({}).toArray();
+    const officials = await electedOfficialsCollection(db).find({}).toArray();
 
     // Group by seat key
     const bySeat = new Map<string, ElectedOfficial[]>();
@@ -142,7 +144,7 @@ export async function POST() {
     const now = new Date();
 
     // Get all officials
-    const officials = await db.collection<ElectedOfficial>("electedOfficials").find({}).toArray();
+    const officials = await electedOfficialsCollection(db).find({}).toArray();
 
     // Group by seat key
     const bySeat = new Map<string, ElectedOfficial[]>();
@@ -189,7 +191,7 @@ export async function POST() {
         }
 
         // Delete the stale record
-        await db.collection("electedOfficials").deleteOne({ _id: stale._id });
+        await electedOfficialsCollection<Document>(db).deleteOne({ _id: stale._id });
         removedCount++;
         const fillStatus = isFilled(stale) ? "" : " [vacant]";
         removedNames.push(

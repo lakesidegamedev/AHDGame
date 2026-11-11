@@ -11,6 +11,7 @@ import type { ElectedOfficial } from "@/lib/db/types";
 import type { ScotusNomination } from "@/lib/db/types/scotus";
 import { computeCabinetNominationTally } from "@/lib/congress/governmentVoteBreakdown";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 // GET /api/congress/scotus-nominations/[id] — Returns full detail for a single SCOTUS nomination including vote tallies.
 // Auth: public
@@ -42,7 +43,7 @@ export const GET = withNoStore(async function GET(
       ? await charactersCollection(db).findOne({ userId: new ObjectId(authUser.userId) })
       : null;
     const senatorOfficial = myCharacter
-      ? await db.collection<ElectedOfficial>("electedOfficials").findOne({
+      ? await electedOfficialsCollection(db).findOne({
           characterId: myCharacter._id,
           officeType: "senate",
           countryId: nomination.countryId ?? "US",

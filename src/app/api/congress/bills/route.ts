@@ -31,6 +31,7 @@ import { mayRuleByDecree } from "@/lib/singleplayerHeadOfState";
 import { getBillProposalAutoFailWarning } from "@/lib/legislature/billAutoFailWarning";
 import { loadBillLegislationTypes } from "@/lib/legislature/queries/loadBillLegislationTypes";
 import { proposeNationalBill } from "@/lib/legislature/commands/proposeNationalBill";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 export type { BillDisplay, BillsResponse } from "@/lib/legislature/dto/billDisplay";
 
 // GET /api/congress/bills — Returns a paginated list of bills, optionally filtered by chamber and status.
@@ -104,8 +105,7 @@ export async function GET(request: Request) {
     const partyMap = new Map(parties.map((p) => [String(p.sequentialId), p]));
     const legislationTypeMap = await loadBillLegislationTypes(db, bills);
 
-    const chamberOfficials: ScopedVoteOfficial[] = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    const chamberOfficials: ScopedVoteOfficial[] = await electedOfficialsCollection(db)
       .find(
         {
           countryId: "US",
@@ -161,7 +161,7 @@ export async function GET(request: Request) {
       myPolicies = char?.policies ?? null;
       if (myCharacterId) {
         const [official, activeBill] = await Promise.all([
-          db.collection<ElectedOfficial>("electedOfficials").findOne({
+          electedOfficialsCollection(db).findOne({
             characterId: new ObjectId(myCharacterId),
             // Legacy national officials predate countryId and are US rows.
             $or: [{ countryId: "US" }, { countryId: { $exists: false } }],

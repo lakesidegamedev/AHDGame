@@ -47,6 +47,7 @@ import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 // Sync-date bootstrap anchors are now derived from the active preset's
 // `getCycleAnchors(ctx)` inside the POST handler (see ctx-build below).
@@ -160,8 +161,7 @@ export const POST = withAdminRoute(async (_auth) => {
 
   const stateSenateStates = new Set(
     (
-      await db
-        .collection<ElectedOfficial>("electedOfficials")
+      await electedOfficialsCollection(db)
         .find({ officeType: "stateSenate" }, { projection: { state: 1 } })
         .toArray()
     ).map((o) => o.state)

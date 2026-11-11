@@ -4,6 +4,8 @@ import type { Character } from "@/lib/db/types/character";
 import type { SuccessionResident, SuccessionResidencePlan } from "./rules/residency";
 import type { FederationStateTransferPlan } from "./territoryTransferPlan";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import type { Document } from "mongodb";
 
 export const FEDERATION_RESIDENT_HOLDS_COLLECTION = "federationResidentHolds";
 
@@ -124,7 +126,7 @@ export async function materializeFederationResidentHolds(input: {
   const updated = await characters.bulkWrite(updates, { session });
   if (updated.matchedCount !== affected.length)
     throw new Error("Federation resident changed while entering protected relocation");
-  await db.collection("electedOfficials").updateMany(
+  await electedOfficialsCollection<Document>(db).updateMany(
     { characterId: { $in: ids } },
     {
       $set: {

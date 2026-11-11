@@ -1,6 +1,7 @@
 import type { Db } from "mongodb";
 import type { ElectedOfficial, PoliticalParty } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export interface MapSenateSeat {
   party: string;
@@ -37,8 +38,7 @@ export async function computeSenateMap(
   // Query without countryId filter since older records may not have it set
   const [parties, allSenators] = await Promise.all([
     db.collection<PoliticalParty>("politicalParties").find({ countryId }).toArray(),
-    db
-      .collection<ElectedOfficial>("electedOfficials")
+    electedOfficialsCollection(db)
       .find({ officeType: "senate" })
       .sort({ state: 1, senateClass: 1 })
       .toArray(),

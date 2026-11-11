@@ -14,6 +14,7 @@ import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
 import type { SeedPresetId } from "@/lib/constants/turnTime";
 import { dataPresetFor } from "@/lib/seeds/presetSelector";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 /**
  * Default Devolution Policy per (UK region, preset) for newly-seeded First
@@ -93,8 +94,7 @@ export async function seedOfficeStates(
   for (const countryId of countryIds) {
     // Regional executives — one row per filled seat (player or NPP).
     const officeKey = getRegionalExecutiveOfficeKey(countryId);
-    const seats = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    const seats = await electedOfficialsCollection(db)
       .find({ officeType: officeKey, countryId })
       .toArray();
     for (const seat of seats) {

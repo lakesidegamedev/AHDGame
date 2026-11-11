@@ -21,6 +21,7 @@ import {
   loadPartyCoalitions,
 } from "@/lib/elections/resolution/contingentHouseVoteStandings";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export interface ContingentHouseVoteViewCandidate {
   id: string;
@@ -120,12 +121,10 @@ export async function buildContingentHouseVoteView(
   const [standings, seat, viewer, parties, coalitions, partyCoalition] = await Promise.all([
     vote.status === "open" ? loadHouseVoteStandings(db, election, tally, vote) : null,
     viewerCharacterId
-      ? db
-          .collection<ElectedOfficial>("electedOfficials")
-          .findOne(
-            { countryId, officeType: "house", characterId: viewerCharacterId },
-            { projection: { state: 1 } }
-          )
+      ? electedOfficialsCollection(db).findOne(
+          { countryId, officeType: "house", characterId: viewerCharacterId },
+          { projection: { state: 1 } }
+        )
       : Promise.resolve(null),
     viewerCharacterId
       ? charactersCollection(db).findOne({ _id: viewerCharacterId }, { projection: { party: 1 } })

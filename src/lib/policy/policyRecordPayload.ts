@@ -19,6 +19,7 @@ import { getGovernmentFormationsCollection } from "@/lib/db/collections/governme
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 /** Per-law provenance for the statute book's mono sublines + fiscal chips. */
 export interface PolicyProvenance {
@@ -35,9 +36,10 @@ async function resolveCurrentEra(
 ): Promise<{ label: string; sinceDate: string | null; sinceTurn: number | null } | null> {
   const config = COUNTRY_CONFIGS[countryId];
   if (config.governmentType === "presidential") {
-    const presidentOfficial = await db
-      .collection<ElectedOfficial>("electedOfficials")
-      .findOne({ countryId, officeType: "president" });
+    const presidentOfficial = await electedOfficialsCollection(db).findOne({
+      countryId,
+      officeType: "president",
+    });
     if (!presidentOfficial?.characterId) return null;
     const character = await charactersCollection(db).findOne(
       { _id: presidentOfficial.characterId },

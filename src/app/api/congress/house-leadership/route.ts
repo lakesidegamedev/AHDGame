@@ -55,6 +55,7 @@ import type {
   ElectedOfficial,
 } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 const ROLE_TO_LABEL: Record<HouseLeadershipElectionRole, string> = {
   majority_leader: "Majority Leader",
@@ -94,7 +95,7 @@ export async function GET() {
       myCharacterId = char?._id?.toString() ?? null;
       myParty = char?.party ?? null;
       if (myCharacterId) {
-        const off = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+        const off = await electedOfficialsCollection(db).findOne({
           characterId: new ObjectId(myCharacterId),
           officeType: "house",
         });
@@ -248,7 +249,7 @@ export async function POST(request: Request) {
     });
     if (!character) return errorResponse(400, "No character");
 
-    const myOfficial = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+    const myOfficial = await electedOfficialsCollection(db).findOne({
       characterId: character._id,
       officeType: "house",
     });

@@ -14,6 +14,7 @@ import { getOfficeTypeForChamber } from "@/lib/legislature/chamberOfficeType";
 import { getChamberLeaderRole } from "@/lib/partyWhips/constraints";
 import { resolveWhipIssuerRole } from "@/lib/partyWhips/issuerRole";
 import { getBillWhipWindowStart } from "@/lib/congress/billWhipPhase";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export { resolveWhipIssuerRole };
 
@@ -137,8 +138,7 @@ export async function buildBillWhipPanelData(
   const officeTypeByChamberKey = new Map(
     activeChambers.map((key) => [key, getOfficeTypeForChamber(countryId, key, undefined, config)])
   );
-  const officials = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const officials = await electedOfficialsCollection(db)
     .find({
       // Country-scoped: party sequentialIds collide across countries and some
       // office types (e.g. "senate") are shared between countries.

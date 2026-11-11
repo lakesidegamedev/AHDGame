@@ -12,6 +12,7 @@ import type { State, ElectedOfficial, PoliticalParty, Character, NPP } from "@/l
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 // GET /api/country/[code]/region/[id]/legislature — Return the state senate composition and current officials for a region
 // Auth: public
@@ -35,8 +36,7 @@ export async function GET(
       return errorResponse(404, "State not found");
     }
 
-    const officials = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    const officials = await electedOfficialsCollection(db)
       .find({ officeType: getSubNationalLegislatureKey(countryId), state: stateId })
       .toArray();
 
@@ -73,7 +73,7 @@ export async function GET(
 
     let governor = null;
     if (!countryHasFeature("ukApi", countryId)) {
-      governor = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+      governor = await electedOfficialsCollection(db).findOne({
         officeType: "governor",
         state: stateId,
         characterId: { $ne: null },

@@ -49,6 +49,7 @@ import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 /** Read a country's national treasury balance (the unified fiscal cash position). */
 async function getTreasuryBalance(db: Db, countryId: string): Promise<number> {
@@ -148,7 +149,7 @@ export async function resolveCharacterRoles(
       getCountryConfig(character.countryId as CountryId)
     );
     if (hosOfficeType) {
-      const hosRow = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+      const hosRow = await electedOfficialsCollection(db).findOne({
         countryId: character.countryId as CountryId,
         officeType: hosOfficeType,
         characterId: character._id,

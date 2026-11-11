@@ -36,6 +36,7 @@ import type {
   LeadershipRole,
 } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 const LEADERSHIP_ELECTION_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -258,7 +259,7 @@ async function autoNominateIncumbent(
     .findOne({ role: leaderRole });
   if (!leader?.characterId) return;
 
-  const hasSeat = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+  const hasSeat = await electedOfficialsCollection(db).findOne({
     officeType,
     characterId: leader.characterId,
   });
@@ -326,7 +327,7 @@ async function autoNominateStandingIncumbent(
     .findOne({ role: leaderRole });
   if (!speaker?.characterId) return;
 
-  const hasSeat = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+  const hasSeat = await electedOfficialsCollection(db).findOne({
     officeType,
     characterId: speaker.characterId,
   });
@@ -787,8 +788,7 @@ export async function vacateLeadershipForLostSeats(db: Db): Promise<number> {
   const holderIds = leaderDocs.flatMap((doc) => (doc.characterId ? [doc.characterId] : []));
   if (holderIds.length === 0) return 0;
 
-  const seats = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const seats = await electedOfficialsCollection(db)
     .find(
       {
         officeType: { $in: ["house", "senate", "bundestag", "npcDelegate"] },
@@ -817,9 +817,7 @@ export async function vacateLeadershipForLostSeats(db: Db): Promise<number> {
   const chamberHasSeats = async (chamber: string): Promise<boolean> => {
     const cached = chamberSeatCounts.get(chamber);
     if (cached !== undefined) return cached > 0;
-    const count = await db
-      .collection<ElectedOfficial>("electedOfficials")
-      .countDocuments({ officeType: chamber });
+    const count = await electedOfficialsCollection(db).countDocuments({ officeType: chamber });
     chamberSeatCounts.set(chamber, count);
     return count > 0;
   };

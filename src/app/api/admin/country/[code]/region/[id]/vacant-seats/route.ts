@@ -18,6 +18,7 @@ import { subNationalChamberSeats } from "@/lib/constants/states";
 import { getGameStatePreset } from "@/lib/db/collections/gameState";
 import { errorResponse } from "@/lib/api/errors";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 /** A region seat group as rendered/validated by the admin seat appointer. */
 interface SeatGroup {
@@ -71,10 +72,7 @@ export const GET = withAdminRoute(
     }
 
     // Get all elected officials for this state
-    const officials = await db
-      .collection<ElectedOfficial>("electedOfficials")
-      .find({ state: stateId })
-      .toArray();
+    const officials = await electedOfficialsCollection(db).find({ state: stateId }).toArray();
     const isFilled = (o: ElectedOfficial) => Boolean(o.characterId || o.nppId);
 
     // Build the country's region-appointable seat groups from config — no

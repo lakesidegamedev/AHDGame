@@ -17,6 +17,8 @@ import {
 } from "./rules/dumaElectoralLaw";
 import { GAME_STATE_PRE_ITERATION_FIELDS } from "@/lib/db/collections/gameState";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import type { Document } from "mongodb";
 
 const RUSSIAN_DUMA_LAW_PROPOSALS_COLLECTION = "russianDumaLawProposals";
 const ID = "1991-default:ru-duma:law1995";
@@ -90,7 +92,7 @@ export async function materializeRussianDuma1995Proposal(input: {
   if (!allowed.available) throw new RussianConstitutionalDecisionConflict(allowed.reason);
   if (
     input.sponsor &&
-    !(await db.collection("electedOfficials").findOne(
+    !(await electedOfficialsCollection<Document>(db).findOne(
       {
         countryId: "RU",
         characterId: input.sponsor._id,

@@ -24,6 +24,7 @@ import { electionToLarpYear } from "@/lib/utils/formatters";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export async function seedUKRegions(
   db: Db,
@@ -487,9 +488,10 @@ export async function seedUKRegionalCouncil(db: Db, reset: boolean, log: (msg: s
       .collection("elections")
       .deleteMany({ electionType: "regionalCouncil", stateId: { $in: regionIds } });
     // Delete Regional Council elected officials
-    const delOfficials = await db
-      .collection("electedOfficials")
-      .deleteMany({ officeType: "regionalCouncil", state: { $in: regionIds } });
+    const delOfficials = await electedOfficialsCollection<Document>(db).deleteMany({
+      officeType: "regionalCouncil",
+      state: { $in: regionIds },
+    });
     // Retire NPPs that only held Regional Council office
     const rcNpps = await db
       .collection<NPP>("npps")
@@ -605,8 +607,7 @@ export async function seedUKRegionalCouncil(db: Db, reset: boolean, log: (msg: s
 
   for (const [regionId, totalSeats] of Object.entries(UK_REGIONAL_COUNCIL_SEATS)) {
     // Check how many seats are currently filled
-    const existingOfficials = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    const existingOfficials = await electedOfficialsCollection(db)
       .find({ officeType: "regionalCouncil", state: regionId })
       .toArray();
     const filledSeats = existingOfficials.reduce((sum, o) => sum + (o.seatsHeld ?? 1), 0);
@@ -760,12 +761,10 @@ export async function seedUKRegionalCouncil(db: Db, reset: boolean, log: (msg: s
         (o) => o.party === seqId && o.isNPP && o.nppId
       );
       if (existingOfficial) {
-        await db
-          .collection<ElectedOfficial>("electedOfficials")
-          .updateOne(
-            { _id: existingOfficial._id },
-            { $inc: { seatsHeld: newSeats }, $set: { updatedAt: now } }
-          );
+        await electedOfficialsCollection(db).updateOne(
+          { _id: existingOfficial._id },
+          { $inc: { seatsHeld: newSeats }, $set: { updatedAt: now } }
+        );
         // Also update the NPP's currentOffice
         if (existingOfficial.nppId) {
           await db.collection<NPP>("npps").updateOne(
@@ -863,7 +862,7 @@ export async function seedUKRegionalCouncil(db: Db, reset: boolean, log: (msg: s
       nppsCreated += nppsToInsert.length;
     }
     if (officialsToInsert.length > 0) {
-      await db.collection<ElectedOfficial>("electedOfficials").insertMany(officialsToInsert);
+      await electedOfficialsCollection(db).insertMany(officialsToInsert);
       officialsCreated += officialsToInsert.length;
     }
   }
@@ -898,16 +897,17 @@ export async function removeLegacyUKCeremonialIdentity(
  */
 export async function seedUKGovernors2020(db: Db, reset: boolean, log: (msg: string) => void) {
   if (reset) {
-    const officials = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    const officials = await electedOfficialsCollection(db)
       .find({ countryId: "UK", officeType: "governor", isNPP: true })
       .project<{ nppId?: ObjectId }>({ nppId: 1 })
       .toArray();
     const nppIds = officials.map((o) => o.nppId).filter((id): id is ObjectId => id != null);
 
-    await db
-      .collection<ElectedOfficial>("electedOfficials")
-      .deleteMany({ countryId: "UK", officeType: "governor", isNPP: true });
+    await electedOfficialsCollection(db).deleteMany({
+      countryId: "UK",
+      officeType: "governor",
+      isNPP: true,
+    });
 
     if (nppIds.length > 0) {
       await db.collection<NPP>("npps").updateMany(

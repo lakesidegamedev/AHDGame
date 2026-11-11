@@ -22,6 +22,8 @@ import {
 } from "@/lib/auth/apple";
 import { heldBlocRowIds, releaseVacatedBlocSeats } from "@/lib/elections/vacatedBlocSeats";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import type { Document } from "mongodb";
 
 // DELETE /api/auth/delete-account — Permanently deletes the authenticated user's account, character, and clears offices held.
 // Auth: requireBasicAuth
@@ -40,7 +42,7 @@ export const DELETE = withNoStore(async () => {
     const usersCollection = db.collection<User>("users");
     const charactersHandle = charactersCollection(db);
     const actionLogsCollection = db.collection("actionLogs");
-    const officialsCollection = db.collection("electedOfficials");
+    const officialsCollection = electedOfficialsCollection<Document>(db);
 
     // Verify user exists
     const user = await usersCollection.findOne({ _id: objectId });

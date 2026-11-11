@@ -20,6 +20,7 @@ import { createNotifications, type NotificationInput } from "@/lib/notifications
 import { createSystemNewsPost } from "@/lib/news";
 import { logger } from "@/lib/observability/logger";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 type HouseVote = NonNullable<ElectionVoteTally["contingentHouseVote"]>;
 type Role = "member" | "candidate" | "whip";
@@ -39,8 +40,7 @@ async function userIdsFor(db: Db, characterIds: ObjectId[]): Promise<Map<string,
 }
 
 async function loadHouseMemberCharacterIds(db: Db, countryId: string) {
-  const seats = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const seats = await electedOfficialsCollection(db)
     .find({
       countryId: countryId as CountryId,
       officeType: "house",

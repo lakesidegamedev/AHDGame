@@ -24,6 +24,7 @@ import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import type { Document } from "mongodb";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 /**
  * Read-only balance-metric aggregations over a (sandbox) world DB, for the
@@ -638,8 +639,7 @@ async function collectElectoralMetrics(db: Db): Promise<ElectoralMetrics> {
   const contestedCount = candidateCounts.filter((c) => c.count > 1).length;
   const contestedPct = candidateCounts.length > 0 ? contestedCount / candidateCounts.length : 0;
 
-  const officials = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const officials = await electedOfficialsCollection(db)
     .find(FILLED_OFFICE_FILTER, { projection: { party: 1 } })
     .toArray();
   const byParty = new Map<string, number>();
@@ -683,8 +683,7 @@ async function collectElectoralMetrics(db: Db): Promise<ElectoralMetrics> {
 }
 
 async function collectOfficeTurnoverMetrics(db: Db): Promise<OfficeTurnoverMetrics> {
-  const officials = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const officials = await electedOfficialsCollection(db)
     .find(FILLED_OFFICE_FILTER, { projection: { isNPP: 1, electedAt: 1 } })
     .toArray();
   const officeCount = officials.length;

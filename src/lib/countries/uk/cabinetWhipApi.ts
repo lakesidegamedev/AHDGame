@@ -19,6 +19,7 @@ import {
 } from "@/lib/countries/uk/cabinetEligibility";
 import { getGovernmentFormationsCollection } from "@/lib/db/collections/governmentFormation";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 const whipTargetSchema = z.object({
   characterId: z.string().regex(/^[a-f0-9]{24}$/, "Invalid character ID"),
@@ -63,7 +64,7 @@ async function resolveWhipTarget(
   );
 
   const eligibleOfficeTypes = getCabinetEligibleOfficeTypes(countryId);
-  const official = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+  const official = await electedOfficialsCollection(db).findOne({
     characterId: targetChar._id,
     officeType: { $in: eligibleOfficeTypes },
     countryId,
@@ -145,7 +146,7 @@ export async function withdrawWhipHandler(request: Request, countryId: CountryId
     );
 
     const now = new Date();
-    const updated = await db.collection<ElectedOfficial>("electedOfficials").updateOne(
+    const updated = await electedOfficialsCollection(db).updateOne(
       { _id: official._id, whipWithdrawn: { $ne: true } },
       {
         $set: {
@@ -157,9 +158,7 @@ export async function withdrawWhipHandler(request: Request, countryId: CountryId
       }
     );
     if (updated.matchedCount === 0) {
-      const current = await db
-        .collection<ElectedOfficial>("electedOfficials")
-        .findOne({ _id: official._id });
+      const current = await electedOfficialsCollection(db).findOne({ _id: official._id });
       if (current?.whipWithdrawn) {
         throw conflict("The whip has already been withdrawn from this MP");
       }
@@ -222,7 +221,7 @@ export async function restoreWhipHandler(request: Request, countryId: CountryId)
     );
 
     const now = new Date();
-    const updated = await db.collection<ElectedOfficial>("electedOfficials").updateOne(
+    const updated = await electedOfficialsCollection(db).updateOne(
       { _id: official._id, whipWithdrawn: true },
       {
         $set: { updatedAt: now },
@@ -230,9 +229,7 @@ export async function restoreWhipHandler(request: Request, countryId: CountryId)
       }
     );
     if (updated.matchedCount === 0) {
-      const current = await db
-        .collection<ElectedOfficial>("electedOfficials")
-        .findOne({ _id: official._id });
+      const current = await electedOfficialsCollection(db).findOne({ _id: official._id });
       if (current && !current.whipWithdrawn) {
         throw conflict("This MP currently holds the whip");
       }
@@ -277,8 +274,7 @@ export async function getWhipWithdrawnHandler(_request: Request, countryId: Coun
       "Only the Prime Minister can view whip suspensions"
     );
 
-    const withdrawn = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    const withdrawn = await electedOfficialsCollection(db)
       .find({ countryId, whipWithdrawn: true })
       .toArray();
 

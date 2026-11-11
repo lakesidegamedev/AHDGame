@@ -18,6 +18,8 @@ import { admittedStateIdsAsOf } from "@/lib/elections/statehoodAdmission";
 import { electionToLarpYear } from "@/lib/utils/formatters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import type { Document } from "mongodb";
 
 export async function initializeOfficials(db: Db): Promise<{
   message: string;
@@ -25,7 +27,7 @@ export async function initializeOfficials(db: Db): Promise<{
 }> {
   const now = new Date();
 
-  const existingCount = await db.collection("electedOfficials").countDocuments();
+  const existingCount = await electedOfficialsCollection<Document>(db).countDocuments();
   if (existingCount > 0) {
     return {
       message: `Officials already initialized (${existingCount} records)`,
@@ -128,7 +130,7 @@ export async function initializeOfficials(db: Db): Promise<{
     }
   }
 
-  await db.collection("electedOfficials").insertMany(officialsToInsert);
+  await electedOfficialsCollection<Document>(db).insertMany(officialsToInsert);
 
   // Create cycle-1 elections
   const existingElections = await db.collection("elections").countDocuments({ cycle: 1 });

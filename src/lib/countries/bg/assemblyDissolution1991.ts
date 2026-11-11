@@ -20,6 +20,7 @@ import {
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export const BG_CONTINUED_ASSEMBLY_DISSOLUTION_ID =
   "1991-default:bg-constitutional:dissolution1991";
@@ -150,7 +151,7 @@ export async function openBg1991AssemblyDissolution(input: {
           "The continued chamber must retain its 400 mandates"
         );
       const office = sponsor
-        ? await db.collection("electedOfficials").findOne(
+        ? await electedOfficialsCollection<Document>(db).findOne(
             {
               countryId: "BG",
               characterId: sponsor._id,

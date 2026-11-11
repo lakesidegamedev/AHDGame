@@ -28,6 +28,7 @@ import { impeachmentStageChamberKey } from "@/lib/impeachment/impeachmentTally";
 import type { Impeachment } from "@/lib/db/types/impeachment";
 import { isBillWhipInCurrentPhase } from "@/lib/congress/billWhipPhase";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export interface WhipDefianceScope {
   countryId: CountryId;
@@ -581,8 +582,7 @@ async function buildWhipDefianceSnapshotsForScopes(
           .toArray()
       : Promise.resolve([] as NPP[]),
     officialClauses.length
-      ? db
-          .collection<ElectedOfficial>("electedOfficials")
+      ? electedOfficialsCollection(db)
           .find({ officeType: { $in: officeTypes }, $or: officialClauses })
           .project<VoterOfficial>({ characterId: 1, nppId: 1, isNPP: 1, state: 1, officeType: 1 })
           .toArray()

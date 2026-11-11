@@ -54,6 +54,7 @@ import { resolveRegionOfficeBannerImage } from "@/lib/constants/regionBanner";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 interface Props {
   params: Promise<{ code: string; id: string }>;
@@ -215,8 +216,7 @@ export default async function GovernorOfficePage({ params }: Props) {
       .sort({ deliveredAtTurn: -1 })
       .limit(1)
       .toArray(),
-    db
-      .collection<ElectedOfficial>("electedOfficials")
+    electedOfficialsCollection(db)
       .find({
         state: stateId,
         officeType: subNationalOffice,
@@ -492,8 +492,7 @@ export default async function GovernorOfficePage({ params }: Props) {
 
   let eligibleNpps: Array<{ _id: string; name: string }> = [];
   if (officeParty) {
-    const stateSenators = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    const stateSenators = await electedOfficialsCollection(db)
       .find({
         officeType: getSubNationalLegislatureKey(countryId),
         state: stateId,

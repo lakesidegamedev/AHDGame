@@ -34,6 +34,7 @@ import type { ElectedOfficial } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { loadTurnLengthMinutes } from "@/lib/financialTxLog/expiresAt";
 import { regionalExecutiveSignForTenure } from "./regionalExecutiveConstants";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 /** Magnitude band of the regional-executive modifier (low / medium / high). */
 export type RegionalExecutiveSign = 1 | 2 | 3;
@@ -113,7 +114,7 @@ export async function getRegionalExecutive(
   // Match `getRegionOfficials`'s pattern: ElectedOfficial.state is stored
   // upper-cased; uppercase the input defensively in case a caller passes
   // a lowercase region id.
-  const official = await db.collection<ElectedOfficial>("electedOfficials").findOne(
+  const official = await electedOfficialsCollection(db).findOne(
     {
       countryId,
       state: stateId.toUpperCase(),

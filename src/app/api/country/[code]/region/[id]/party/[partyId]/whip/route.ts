@@ -51,6 +51,7 @@ import type { Impeachment } from "@/lib/db/types/impeachment";
 import { getBillWhipWindowStart } from "@/lib/congress/billWhipPhase";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; partyId: string }>;
@@ -259,8 +260,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const result = await db.collection<BillWhip>("billWhips").insertOne(whipDoc as BillWhip);
 
     // Fetch party NPPs in this state/chamber and cast their votes immediately
-    const nppOfficials = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    const nppOfficials = await electedOfficialsCollection(db)
       .find({
         isNPP: true,
         // Country-scope the officials. `state` already implies a country, but party sequentialIds collide across countries, so keep the filter explicit and uniform with the other whip routes.

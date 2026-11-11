@@ -67,6 +67,7 @@ import { getLandtagAnchor } from "@/lib/seeds/de/deLandtag";
 import { getUKRegionalCouncilCycle1EndTurn } from "@/lib/elections/ukRegionalCouncilStagger";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 /**
  * Derive the canonical LARP end-turn, primary-end-turn, and start-turn for
@@ -242,14 +243,13 @@ export const POST = withAdminRoute(async (_auth) => {
         .find({ electionId: { $in: candidateIds }, finalized: true })
         .project({ electionId: 1 })
         .toArray(),
-      db
-        .collection<{
-          officeType: string;
-          state?: string;
-          senateClass?: number;
-          chamberClass?: number;
-          characterId?: import("mongodb").ObjectId | null;
-        }>("electedOfficials")
+      electedOfficialsCollection<{
+        officeType: string;
+        state?: string;
+        senateClass?: number;
+        chamberClass?: number;
+        characterId?: import("mongodb").ObjectId | null;
+      }>(db)
         .find({ characterId: { $ne: null } })
         .project({ officeType: 1, state: 1, senateClass: 1, chamberClass: 1, characterId: 1 })
         .toArray(),

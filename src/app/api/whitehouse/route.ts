@@ -16,6 +16,7 @@ import { getGovernmentFormationsCollection } from "@/lib/db/collections/governme
 import { executiveStatusPayload } from "@/lib/elections/rules/successionFill";
 import { pastRealTimestampToLarpDate } from "@/lib/utils/formatters";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 // GET /api/whitehouse — Returns the current President and Vice President details along with caller admin and president flags.
 // Country-scoped via ?country= (default US) so any presidential country renders the surface.
@@ -45,12 +46,8 @@ export async function GET(request: Request) {
 
     const [presidentOfficial, vicePresidentOfficial, activeVpNomination, govFormation] =
       await Promise.all([
-        db
-          .collection<ElectedOfficial>("electedOfficials")
-          .findOne({ countryId, officeType: "president" }),
-        db
-          .collection<ElectedOfficial>("electedOfficials")
-          .findOne({ countryId, officeType: "vicePresident" }),
+        electedOfficialsCollection(db).findOne({ countryId, officeType: "president" }),
+        electedOfficialsCollection(db).findOne({ countryId, officeType: "vicePresident" }),
         db
           .collection<CabinetNomination>("cabinetNominations")
           .findOne({ countryId, positionId: "vicePresident", status: "active" }),
@@ -194,7 +191,7 @@ export async function GET(request: Request) {
 
     // Check if user is a senator (needed for VP nomination voting controls)
     const isSenator = myCharacter
-      ? !!(await db.collection<ElectedOfficial>("electedOfficials").findOne({
+      ? !!(await electedOfficialsCollection(db).findOne({
           characterId: myCharacter._id,
           countryId,
           officeType: "senate",

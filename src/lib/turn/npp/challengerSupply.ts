@@ -27,6 +27,7 @@ import { isNationwideDirectExecutiveElection } from "@/lib/elections/nationwideE
 import { getAllCountryAccess } from "@/lib/countryAccess";
 import { getChallengerSupplyPolicy } from "./rules/challengerSupply";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 /**
  * Directly-elected SINGLE-SEAT offices that need a bench challenger to be
@@ -257,8 +258,7 @@ export async function processChallengerGeneration(now: Date): Promise<number> {
   // (country:party:home-state) so we can hand one to a primary in its own state.
   const incumbentNppIds = new Set(
     (
-      await db
-        .collection<{ nppId?: unknown }>("electedOfficials")
+      await electedOfficialsCollection<{ nppId?: unknown }>(db)
         .find({ nppId: { $exists: true, $ne: null } }, { projection: { nppId: 1 } })
         .toArray()
     ).map((o) => String(o.nppId))

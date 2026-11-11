@@ -11,6 +11,7 @@ import {
   getLowerChamberOfficeType,
   getUpperChamberOfficeType,
 } from "@/lib/legislature/chamberOfficeType";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export interface ChamberTally {
   for: number;
@@ -66,8 +67,7 @@ export async function tallyImpeachmentChamber(
   votes: Record<string, ImpeachmentVoteValue> | undefined,
   state?: string
 ): Promise<ChamberTally> {
-  const officials = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const officials = await electedOfficialsCollection(db)
     .find(impeachmentChamberOfficialFilter(countryId, officeType, state))
     .project<Pick<ElectedOfficial, "characterId" | "nppId" | "seatsHeld">>({
       characterId: 1,
@@ -105,8 +105,7 @@ export async function countChamberSeats(
   officeType: string,
   state?: string
 ): Promise<number> {
-  const officials = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const officials = await electedOfficialsCollection(db)
     .find(impeachmentChamberOfficialFilter(countryId, officeType, state))
     .project<Pick<ElectedOfficial, "seatsHeld">>({ seatsHeld: 1 })
     .toArray();

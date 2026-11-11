@@ -17,6 +17,7 @@ import { handleBackfillImages } from "./lib/imageBackfill";
 import { handleGenerateNPPs } from "./lib/generate";
 import { handleRemoveNPPs } from "./lib/remove";
 import { handleSpawnNPPs } from "./lib/spawn";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 // GET /api/admin/npps — Returns NPP statistics including totals, counts by state and party, and recent NPPs
 // Auth: requireAdmin
@@ -183,7 +184,7 @@ export async function DELETE(request: Request) {
       let seatsVacated = 0;
       if (retiredNppIds.length > 0) {
         // Find and vacate all seats held by retired NPPs
-        const seatsResult = await db.collection<ElectedOfficial>("electedOfficials").updateMany(
+        const seatsResult = await electedOfficialsCollection(db).updateMany(
           { nppId: { $in: retiredNppIds } },
           {
             $set: { characterId: null, isNPP: false, updatedAt: now },
@@ -285,7 +286,7 @@ export async function DELETE(request: Request) {
 
       // Vacate any seats held by these NPPs
       let seatsVacated = 0;
-      const seatsResult = await db.collection<ElectedOfficial>("electedOfficials").updateMany(
+      const seatsResult = await electedOfficialsCollection(db).updateMany(
         { nppId: { $in: independentNppIds } },
         {
           $set: { characterId: null, isNPP: false, updatedAt: now },
@@ -345,7 +346,7 @@ export async function DELETE(request: Request) {
 
       // Also vacate any seats held by NPPs being retired (or already retired)
       if (nppIdsToRetire.length > 0) {
-        const seatsResult = await db.collection<ElectedOfficial>("electedOfficials").updateMany(
+        const seatsResult = await electedOfficialsCollection(db).updateMany(
           { nppId: { $in: nppIdsToRetire } },
           {
             $set: { characterId: null, isNPP: false, updatedAt: now },
@@ -356,8 +357,7 @@ export async function DELETE(request: Request) {
       }
 
       // Also check for any already-retired NPPs still holding seats
-      const retiredNppsWithSeats = await db
-        .collection<ElectedOfficial>("electedOfficials")
+      const retiredNppsWithSeats = await electedOfficialsCollection(db)
         .find({ isNPP: true, nppId: { $exists: true } })
         .toArray();
 
@@ -370,15 +370,13 @@ export async function DELETE(request: Request) {
 
         if (actuallyRetired.length > 0) {
           const retiredIds = actuallyRetired.map((n) => n._id);
-          const additionalSeatsResult = await db
-            .collection<ElectedOfficial>("electedOfficials")
-            .updateMany(
-              { nppId: { $in: retiredIds } },
-              {
-                $set: { characterId: null, isNPP: false, updatedAt: now },
-                $unset: { nppId: "", characterName: "", party: "" },
-              }
-            );
+          const additionalSeatsResult = await electedOfficialsCollection(db).updateMany(
+            { nppId: { $in: retiredIds } },
+            {
+              $set: { characterId: null, isNPP: false, updatedAt: now },
+              $unset: { nppId: "", characterName: "", party: "" },
+            }
+          );
           seatsVacated += additionalSeatsResult.modifiedCount;
         }
       }

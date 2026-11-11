@@ -23,6 +23,7 @@ import {
   impeachmentStageChamberOfficeType,
 } from "@/lib/impeachment/impeachmentTally";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 /** The all-seats bar a player needs to read a vote in progress. */
 export interface ImpeachmentChamberInfo {
@@ -118,14 +119,12 @@ export async function GET(request: Request) {
           )
         : null;
 
-    const official = await db
-      .collection<ElectedOfficial>("electedOfficials")
-      .findOne(
-        office === "governor"
-          ? governorOfficialFilter(countryId as CountryId, state?.toUpperCase() ?? "")
-          : getExecutiveOfficialFilter(countryId as CountryId, "president"),
-        { projection: { characterId: 1 } }
-      );
+    const official = await electedOfficialsCollection(db).findOne(
+      office === "governor"
+        ? governorOfficialFilter(countryId as CountryId, state?.toUpperCase() ?? "")
+        : getExecutiveOfficialFilter(countryId as CountryId, "president"),
+      { projection: { characterId: 1 } }
+    );
     const target = official?.characterId
       ? await charactersCollection(db).findOne(
           { _id: official.characterId },

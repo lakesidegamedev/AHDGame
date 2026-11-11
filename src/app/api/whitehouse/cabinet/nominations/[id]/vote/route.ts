@@ -16,6 +16,7 @@ import { getGameTime } from "@/lib/time/gameTime";
 import { isVotingDeadlinePassed } from "@/lib/legislature/billVotingWindow";
 import type { CabinetNomination, ElectedOfficial } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 const voteSchema = z.object({
   vote: z.enum(["for", "against", "abstain"]),
@@ -78,7 +79,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       return errorResponse(400, "No character");
     }
 
-    const legislatorOfficial = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+    const legislatorOfficial = await electedOfficialsCollection(db).findOne({
       characterId: myCharacter._id,
       officeType: { $in: ["senate", "house"] },
     });

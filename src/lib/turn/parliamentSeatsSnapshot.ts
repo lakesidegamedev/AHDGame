@@ -1,6 +1,7 @@
 import type { Db } from "mongodb";
 import type { ElectedOfficial } from "@/lib/db/types";
 import { workerConfig } from "@/lib/config/worker";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 /**
  * Turns of seat history retained. 96 (two years at 48 turns/year) is the right
@@ -38,8 +39,7 @@ interface ParliamentSeatsSnapshot {
  * for several seats.
  */
 export async function snapshotParliamentSeats(db: Db, turn: number): Promise<number> {
-  const rows = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const rows = await electedOfficialsCollection(db)
     .aggregate<{
       _id: { countryId: string; officeType: string; party: string };
       seats: number;

@@ -40,6 +40,7 @@ import {
 } from "@/lib/world/countryReadinessContract";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 // ─── Role taxonomy ───────────────────────────────────────────────────────────
 
@@ -335,8 +336,7 @@ export async function exitCountryForPlayers(
   const playerIds = playerChars.map((c) => c._id);
 
   if (playerIds.length > 0) {
-    const officials = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    const officials = await electedOfficialsCollection(db)
       .find({ countryId, characterId: { $in: playerIds }, isNPP: { $ne: true } })
       .toArray();
 
@@ -349,7 +349,7 @@ export async function exitCountryForPlayers(
         classified.role === "head-of-government" || classified.role === "head-of-state";
 
       if (isExecutiveSlot) {
-        await db.collection<ElectedOfficial>("electedOfficials").updateOne(
+        await electedOfficialsCollection(db).updateOne(
           { _id: official._id },
           {
             $set: {
@@ -366,7 +366,7 @@ export async function exitCountryForPlayers(
           }
         );
       } else {
-        await db.collection<ElectedOfficial>("electedOfficials").deleteOne({ _id: official._id });
+        await electedOfficialsCollection(db).deleteOne({ _id: official._id });
       }
 
       vacatedOffices.push({

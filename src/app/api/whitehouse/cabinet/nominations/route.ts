@@ -20,6 +20,7 @@ import { isSeatActive } from "@/lib/cabinet/rosterEra";
 import { getLiveGameYear, getManuallyEnabledSeats } from "@/lib/cabinet/liveGameYear";
 import { resolvePresidentialCountry } from "@/lib/executive/presidentialCountry";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 const VOTING_DURATION_HOURS = 24;
 const VOTING_DURATION_MS = VOTING_DURATION_HOURS * 60 * 60 * 1000;
@@ -79,9 +80,11 @@ export async function POST(request: Request) {
     }
 
     // Must be President (player character only — no NPP)
-    const presidentOfficial = await db
-      .collection<ElectedOfficial>("electedOfficials")
-      .findOne({ countryId, officeType: "president", characterId: { $ne: null } });
+    const presidentOfficial = await electedOfficialsCollection(db).findOne({
+      countryId,
+      officeType: "president",
+      characterId: { $ne: null },
+    });
     if (!presidentOfficial?.characterId) {
       return errorResponse(400, "No President in office");
     }
@@ -226,8 +229,7 @@ export async function POST(request: Request) {
     }
 
     // Notify senators (player characters only)
-    const senators = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    const senators = await electedOfficialsCollection(db)
       .find({ countryId, officeType: "senate", characterId: { $ne: null }, isNPP: { $ne: true } })
       .toArray();
     const senatorCharIds = senators.map((s) => s.characterId!).filter(Boolean);

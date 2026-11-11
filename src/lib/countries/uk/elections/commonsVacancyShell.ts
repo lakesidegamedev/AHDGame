@@ -16,6 +16,7 @@ import type {
   CommonsVacancyStatus,
   UkCommonsVacancy,
 } from "@/lib/db/types/ukByElection";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export interface VacateCommonsSeatInput {
   officialId: ObjectId;
@@ -100,7 +101,7 @@ export async function vacateCommonsSeat(
   const priorNppId = official.nppId ?? undefined;
 
   if (held) {
-    const result = await db.collection<ElectedOfficial>("electedOfficials").updateOne(
+    const result = await electedOfficialsCollection(db).updateOne(
       {
         _id: official._id,
         $or: [{ characterId: { $ne: null } }, { nppId: { $ne: null } }],
@@ -119,9 +120,7 @@ export async function vacateCommonsSeat(
     }
   }
 
-  const officialDoc = (await db
-    .collection<ElectedOfficial>("electedOfficials")
-    .findOne({ _id: official._id })) as
+  const officialDoc = (await electedOfficialsCollection(db).findOne({ _id: official._id })) as
     (ElectedOfficial & { constituency?: string; constituencyId?: string }) | null;
 
   return await createCommonsVacancy(db, {

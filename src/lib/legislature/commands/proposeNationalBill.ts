@@ -56,6 +56,7 @@ import { isResetV2Country, resetSystemVersionsForCountry } from "@/lib/resetVers
 import { getGovernmentFormationsCollection } from "@/lib/db/collections/governmentFormation";
 import { caretakerBlocksBill, CARETAKER_BILL_MESSAGE } from "@/lib/elections/rules/caretaker";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 const VOTING_DURATION_HOURS = 24;
 const VOTING_DURATION_MS = VOTING_DURATION_HOURS * 60 * 60 * 1000;
@@ -206,7 +207,7 @@ export async function proposeNationalBill(
   };
   const official = partySponsor
     ? null
-    : await db.collection<ElectedOfficial>("electedOfficials").findOne(officialFilter);
+    : await electedOfficialsCollection(db).findOne(officialFilter);
   const usingAdminOverride = isAdmin && !official;
   const usingSovereignOverride = !input.proposeViaPartyNpp && mayRuleByDecree(character, countryId);
 

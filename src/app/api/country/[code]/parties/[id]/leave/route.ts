@@ -17,6 +17,8 @@ import { isSameCountry } from "@/lib/api/sameCountry";
 import { emitPartyMembershipEvent, buildPartyEventSnapshots } from "@/lib/parties/membershipEvents";
 import { withPartyTerritoryMutation } from "@/lib/parties/territoryMutation";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import type { Document } from "mongodb";
 
 // POST /api/country/[code]/parties/[id]/leave — Leave a political party and become independent
 // Auth: requireAuthWithCharacter
@@ -81,9 +83,10 @@ export async function POST(
 
         // Update any ElectedOfficial records for this character to reflect the new party
         // This ensures Congress/Parliament and state legislature displays show the correct party
-        await db
-          .collection("electedOfficials")
-          .updateMany({ characterId }, { $set: { party: "independent", updatedAt: now } });
+        await electedOfficialsCollection<Document>(db).updateMany(
+          { characterId },
+          { $set: { party: "independent", updatedAt: now } }
+        );
 
         // Withdraw from any primaries where the character was registered under their old party
         const { withdrawnCount } = await withdrawFromMismatchedPrimaries(

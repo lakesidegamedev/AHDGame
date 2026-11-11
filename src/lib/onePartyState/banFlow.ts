@@ -18,6 +18,8 @@ import type { Db, ObjectId } from "mongodb";
 import type { ElectedOfficial } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import type { Document } from "mongodb";
 
 export interface BanPartyInput {
   countryId: CountryId;
@@ -40,8 +42,7 @@ export async function processBanPartyEffects(
   const { countryId, partyId, partySeqId, reason, currentTurn } = input;
   const now = new Date();
 
-  const officials = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const officials = await electedOfficialsCollection(db)
     .find({ countryId, party: String(partySeqId) })
     .toArray();
 
@@ -52,7 +53,7 @@ export async function processBanPartyEffects(
 
     // Mirror the existing resign pattern (docs/design/vacancy-handling.md):
     // delete the ElectedOfficial doc; clear currentOffice on the holder.
-    await db.collection("electedOfficials").deleteOne({ _id: official._id });
+    await electedOfficialsCollection<Document>(db).deleteOne({ _id: official._id });
 
     if (official.characterId) {
       await charactersCollection(db).updateOne(

@@ -19,6 +19,7 @@ import { resolveWhipIssuerRole } from "@/lib/congress/billWhipPanelData";
 import { getOfficeTypeForChamber } from "@/lib/legislature/chamberOfficeType";
 import { getGameState } from "@/lib/gameState";
 import { isBillWhipInCurrentPhase } from "@/lib/congress/billWhipPhase";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; partyId: string }>;
@@ -160,8 +161,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
           ],
         })
         .toArray(),
-      db
-        .collection<ElectedOfficial>("electedOfficials")
+      electedOfficialsCollection(db)
         .find({
           party: partyKey,
           state: stateId,

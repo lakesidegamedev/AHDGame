@@ -16,6 +16,7 @@ import { getAuthUser } from "@/lib/auth";
 import { getEnabledCountryIds } from "@/lib/countryAccess";
 import type { ElectedOfficial, PoliticalParty } from "@/lib/db/types";
 import type { Crisis } from "@/lib/db/types/crisis";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 // Derive primary legislature officeType from country config — avoids hardcoding per-country strings
 function getPrimaryOfficeType(countryId: CountryId): string {
@@ -44,8 +45,7 @@ export async function GET() {
     const officeTypes = [...new Set(countriesToShow.map(getPrimaryOfficeType))];
 
     const [officials, parties, crises, activeElectionCounts, gameState] = await Promise.all([
-      db
-        .collection<ElectedOfficial>("electedOfficials")
+      electedOfficialsCollection(db)
         .find({ officeType: { $in: officeTypes } })
         .project({ officeType: 1, party: 1, seatsHeld: 1, state: 1 })
         .toArray(),

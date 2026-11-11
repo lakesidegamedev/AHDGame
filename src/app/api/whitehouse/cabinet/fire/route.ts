@@ -14,6 +14,7 @@ import type { CabinetMember, ElectedOfficial } from "@/lib/db/types";
 import { getCabinetPositions } from "@/lib/constants/cabinetMechanics";
 import { resolvePresidentialCountry } from "@/lib/executive/presidentialCountry";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 const fireSchema = z.object({
   // positionId validated against the resolved country's positions in the handler.
@@ -47,9 +48,11 @@ export async function POST(request: Request) {
 
     const db = await getDb();
 
-    const presidentOfficial = await db
-      .collection<ElectedOfficial>("electedOfficials")
-      .findOne({ countryId, officeType: "president", characterId: { $ne: null } });
+    const presidentOfficial = await electedOfficialsCollection(db).findOne({
+      countryId,
+      officeType: "president",
+      characterId: { $ne: null },
+    });
     if (!presidentOfficial?.characterId) {
       return errorResponse(400, "No President in office");
     }

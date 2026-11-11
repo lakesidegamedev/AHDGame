@@ -33,6 +33,7 @@ import { planRussianAssemblyVacancySeating } from "./rules/assemblyVacancySeatin
 import type { RussianCouncilCompositionSeating } from "./councilCompositionSeating";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export async function materializeRussianDumaConvocationSeating(input: {
   db: Db;
@@ -258,8 +259,7 @@ export async function materializeRussianDumaConvocationSeating(input: {
     ...(playerIds.length ? [{ characterId: { $in: playerIds } }] : []),
     ...(npcIds.length ? [{ nppId: { $in: npcIds } }] : []),
   ];
-  const physical = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const physical = await electedOfficialsCollection(db)
     .find({ $or: [{ countryId: "RU" }, ...identities] }, { session, batchSize: 10000 })
     .toArray();
   const cabinet = identities.length
@@ -435,7 +435,7 @@ export async function materializeRussianDumaConvocationSeating(input: {
     ? delta.retire.map((row) => russianAssemblyOfficialId(idPrefix, row.candidateId))
     : currentDuma.map((row) => row._id);
   const retired = physical.filter((row) => retireIds.some((id) => id.equals(row._id)));
-  const officials = db.collection<ElectedOfficial>("electedOfficials");
+  const officials = electedOfficialsCollection(db);
   if (retired.length) {
     await db
       .collection<RussianAssemblyOfficeArchive>(RUSSIAN_ASSEMBLY_ARCHIVES_COLLECTION)

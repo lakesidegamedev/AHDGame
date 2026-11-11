@@ -14,6 +14,8 @@ import { stampSubjectDeleted } from "@/lib/financialTxLog/stampDeleted";
 import { logCharacterDeleted } from "@/lib/db/collections/activityLog";
 import { heldBlocRowIds, releaseVacatedBlocSeats } from "@/lib/elections/vacatedBlocSeats";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import type { Document } from "mongodb";
 
 // POST /api/admin/users/delete — Permanently delete a user account and their character.
 // Auth: requireAdmin
@@ -40,7 +42,7 @@ export const POST = withNoStore(async (request: Request) => {
     const usersCollection = db.collection("users");
     const charactersHandle = charactersCollection(db);
     const actionLogsCollection = db.collection("actionLogs");
-    const officialsCollection = db.collection("electedOfficials");
+    const officialsCollection = electedOfficialsCollection<Document>(db);
 
     // Check if user exists
     const user = await usersCollection.findOne({ _id: objectId });

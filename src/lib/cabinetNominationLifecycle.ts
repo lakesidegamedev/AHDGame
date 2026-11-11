@@ -39,6 +39,7 @@ import { captureOfficeTransition } from "@/lib/analytics/officeTransitionAnalyti
 import { cabinetOfficeTypeForCountry } from "@/lib/actions/officeActionBonus";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 /**
  * NPP vote based on party lines: same party as nominee -> for; opposite -> against.
@@ -89,8 +90,7 @@ async function castNPPCabinetVotes(
 ): Promise<void> {
   const nppOfficials =
     preload?.nppOfficials ??
-    (await db
-      .collection<ElectedOfficial>("electedOfficials")
+    (await electedOfficialsCollection(db)
       .find({
         countryId: nomination.countryId ?? "US",
         officeType: { $in: ["senate", "house"] },
@@ -118,7 +118,7 @@ async function castNPPCabinetVotes(
   const presidentParty =
     preload?.presidentParty ??
     (
-      await db.collection<ElectedOfficial>("electedOfficials").findOne({
+      await electedOfficialsCollection(db).findOne({
         countryId: nomination.countryId ?? "US",
         officeType: "president",
         characterId: { $ne: null },
@@ -198,7 +198,7 @@ async function seatConfirmedVicePresident(
   if (!nom.nomineeCharacterId) return;
 
   // Clear the nominee's other seats so they don't hold two offices simultaneously.
-  await db.collection<ElectedOfficial>("electedOfficials").updateMany(
+  await electedOfficialsCollection(db).updateMany(
     { characterId: nom.nomineeCharacterId, officeType: { $nin: ["president", "vicePresident"] } },
     {
       $set: {
@@ -212,19 +212,18 @@ async function seatConfirmedVicePresident(
   );
 
   // Clear any existing VP holder's currentOffice.
-  const existingVp = await db
-    .collection<ElectedOfficial>("electedOfficials")
-    .findOne(getExecutiveOfficialFilter(countryId, "vicePresident"));
+  const existingVp = await electedOfficialsCollection(db).findOne(
+    getExecutiveOfficialFilter(countryId, "vicePresident")
+  );
   if (existingVp?.characterId) {
-    await charactersCollection(db)
-      .updateOne(
-        { _id: existingVp.characterId },
-        { $set: { currentOffice: null, updatedAt: now } }
-      );
+    await charactersCollection(db).updateOne(
+      { _id: existingVp.characterId },
+      { $set: { currentOffice: null, updatedAt: now } }
+    );
   }
 
   // Seat the nominee as VP in electedOfficials.
-  await db.collection<ElectedOfficial>("electedOfficials").updateOne(
+  await electedOfficialsCollection(db).updateOne(
     getExecutiveOfficialFilter(countryId, "vicePresident"),
     {
       $set: {
@@ -309,8 +308,7 @@ export async function processCabinetNominationLifecycle(
   // country-scoped NPP officials/president inside castNPPCabinetVotes so foreign
   // votes maps are not polluted with US NPP senators.
   const [nppOfficials, president] = await Promise.all([
-    db
-      .collection<ElectedOfficial>("electedOfficials")
+    electedOfficialsCollection(db)
       .find({
         countryId: "US",
         officeType: { $in: ["senate", "house"] },
@@ -318,9 +316,11 @@ export async function processCabinetNominationLifecycle(
         nppId: { $exists: true },
       })
       .toArray(),
-    db
-      .collection<ElectedOfficial>("electedOfficials")
-      .findOne({ countryId: "US", officeType: "president", characterId: { $ne: null } }),
+    electedOfficialsCollection(db).findOne({
+      countryId: "US",
+      officeType: "president",
+      characterId: { $ne: null },
+    }),
   ]);
   const nppIds = nppOfficials
     .map((o) => o.nppId)
@@ -459,8 +459,9 @@ export async function processCabinetNominationLifecycle(
     // Both branches notify the same two people, so read each once per
     // nomination and share the call site: a duplicated read here counts as a
     // new per-row Mongo operation in the turn-code architecture review.
-    const presidentChar = await charactersCollection(db)
-      .findOne({ _id: nom.proposedByPresidentId });
+    const presidentChar = await charactersCollection(db).findOne({
+      _id: nom.proposedByPresidentId,
+    });
     const nomineeChar = nom.nomineeCharacterId
       ? await charactersCollection(db).findOne({ _id: nom.nomineeCharacterId })
       : null;
@@ -596,8 +597,10 @@ export async function processCabinetNominationLifecycle(
             partyCountryId: nom.countryId,
             date: now,
           };
-          await charactersCollection(db)
-            .updateOne({ _id: nom.nomineeCharacterId }, { $push: { careerHistory: careerEvent } });
+          await charactersCollection(db).updateOne(
+            { _id: nom.nomineeCharacterId },
+            { $push: { careerHistory: careerEvent } }
+          );
         }
         const outgoing = new Map(
           [oldSeatHolder, nomineeOldSeat]

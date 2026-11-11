@@ -10,6 +10,7 @@ import {
 } from "./rules/electoralDecision1992";
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 export async function processRo1992ElectoralNpcProposal(
   db: Db,
   game: GameState,
@@ -35,8 +36,7 @@ export async function processRo1992ElectoralNpcProposal(
     return false;
   const [leader, officials, regions] = await Promise.all([
     db.collection<NPP>("npps").findOne({ _id: government.pmNppId }, { projection: { party: 1 } }),
-    db
-      .collection<ElectedOfficial>("electedOfficials")
+    electedOfficialsCollection(db)
       .find(
         { countryId: "RO", officeType: { $in: ["deputy", "senator"] } },
         { projection: { officeType: 1, characterId: 1, party: 1, seatsHeld: 1 } }

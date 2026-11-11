@@ -36,6 +36,7 @@ import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 const PARTY_LEADERSHIP_FIELDS = ["chairId", "viceChairId", "treasurerId"] as const;
 type PartyLeadershipField = (typeof PARTY_LEADERSHIP_FIELDS)[number];
@@ -219,7 +220,7 @@ async function discoverPositions(db: Db, character: Character): Promise<Position
     legacyGovernments,
     banks,
   ] = await Promise.all([
-    db.collection<ElectedOfficial>("electedOfficials").find({ characterId }).toArray(),
+    electedOfficialsCollection(db).find({ characterId }).toArray(),
     db.collection<CabinetMember>("cabinetMembers").find({ characterId }).toArray(),
     db
       .collection<StatePartyOrg>("statePartyOrg")
@@ -426,7 +427,7 @@ async function resignOfficial(
   if (official.officeType === "president" || official.officeType === "vicePresident") {
     await resignExecutiveOffice(db, official, character, now);
   } else {
-    const officials = db.collection<ElectedOfficial>("electedOfficials");
+    const officials = electedOfficialsCollection(db);
     if (options?.preserveSeatRecord) {
       const result = await officials.updateOne(
         { _id: official._id, characterId: character._id },
@@ -785,7 +786,7 @@ export async function resignAllPositions(db: Db, character: Character): Promise<
   const leftoverBlocRowIds = await heldBlocRowIds(db, { characterId: freshCharacter._id });
   const [officialResult, partyResults, statePartyResult, congressResult, cabinetResult, bankRows] =
     await Promise.all([
-      db.collection<ElectedOfficial>("electedOfficials").updateMany(
+      electedOfficialsCollection(db).updateMany(
         { characterId: freshCharacter._id },
         {
           $set: { characterId: null, updatedAt: now },

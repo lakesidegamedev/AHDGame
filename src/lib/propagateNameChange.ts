@@ -1,5 +1,7 @@
 import type { Db, ObjectId } from "mongodb";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import type { Document } from "mongodb";
 
 /**
  * Propagate a character name change to all denormalized collections.
@@ -34,9 +36,10 @@ export async function propagateCharacterNameChange(
 
   // ── 2. Elected officials & leadership ─────────────────────────────────────
   await Promise.all([
-    db
-      .collection("electedOfficials")
-      .updateMany({ characterId }, { $set: { characterName: newName } }),
+    electedOfficialsCollection<Document>(db).updateMany(
+      { characterId },
+      { $set: { characterName: newName } }
+    ),
     db
       .collection("congressLeaders")
       .updateMany({ characterId }, { $set: { characterName: newName } }),

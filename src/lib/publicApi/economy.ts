@@ -20,6 +20,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 const HISTORY_CAP = 12;
@@ -29,7 +30,7 @@ export async function queryCountrySummary(db: Db, country: string) {
   if (!countryConfig) return null;
 
   const [executive, parties, officials, gfDoc] = await Promise.all([
-    db.collection<ElectedOfficial>("electedOfficials").findOne({
+    electedOfficialsCollection(db).findOne({
       countryId: country,
       officeType: {
         $in: ["president", "prime_minister", "primeMinister", "chancellor", "taoiseach"],
@@ -39,8 +40,7 @@ export async function queryCountrySummary(db: Db, country: string) {
       .collection<PoliticalParty>("politicalParties")
       .find({ countryId: country } as Filter<PoliticalParty>)
       .toArray(),
-    db
-      .collection<ElectedOfficial>("electedOfficials")
+    electedOfficialsCollection(db)
       .find({
         countryId: country,
         ...(countryHasFeature("bgAdmin", country) ? { officeType: "assemblyDeputy" } : {}),
@@ -255,8 +255,7 @@ export async function queryLegislature(db: Db, country: string) {
     : null;
 
   const [officials, parties, pendingBills, recentlyPassed] = await Promise.all([
-    db
-      .collection<ElectedOfficial>("electedOfficials")
+    electedOfficialsCollection(db)
       .find({
         countryId: country,
         ...(countryHasFeature("bgAdmin", country) ? { officeType: "assemblyDeputy" } : {}),

@@ -11,6 +11,7 @@ import { governorOfficialFilter } from "@/lib/db/electedOfficialScope";
 import { captureOfficeTransition } from "@/lib/analytics/officeTransitionAnalytics";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 /** Record the "removed" career event and clear the character's office. Shared by
  *  the executive and governor removal paths. */
@@ -72,12 +73,13 @@ export async function removeImpeachedExecutive(
   targetCharacterId: ObjectId,
   now: Date
 ): Promise<void> {
-  await db
-    .collection<ElectedOfficial>("electedOfficials")
-    .updateOne(getExecutiveOfficialFilter(countryId, officeType), {
+  await electedOfficialsCollection(db).updateOne(
+    getExecutiveOfficialFilter(countryId, officeType),
+    {
       $set: { characterId: null, isNPP: false, updatedAt: now },
       $unset: { characterName: "", party: "", nppId: "", electedAt: "" },
-    });
+    }
+  );
 
   await recordRemovalOnCharacter(db, countryId, { type: officeType }, targetCharacterId, now);
 }
@@ -94,12 +96,10 @@ export async function removeImpeachedGovernor(
   targetCharacterId: ObjectId,
   now: Date
 ): Promise<void> {
-  await db
-    .collection<ElectedOfficial>("electedOfficials")
-    .updateOne(governorOfficialFilter(countryId, state), {
-      $set: { characterId: null, isNPP: false, updatedAt: now },
-      $unset: { characterName: "", party: "", nppId: "", electedAt: "" },
-    });
+  await electedOfficialsCollection(db).updateOne(governorOfficialFilter(countryId, state), {
+    $set: { characterId: null, isNPP: false, updatedAt: now },
+    $unset: { characterName: "", party: "", nppId: "", electedAt: "" },
+  });
 
   await recordRemovalOnCharacter(db, countryId, { type: "governor" }, targetCharacterId, now);
 }

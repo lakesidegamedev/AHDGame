@@ -46,6 +46,7 @@ import { captureOfficeTransition } from "@/lib/analytics/officeTransitionAnalyti
 import { captureElectionWon } from "@/lib/analytics/electionAnalytics";
 import { loadSurvivingPartyResolver } from "@/lib/parties/survivingParty";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 function recoverUnitVotesFromSnapshots(
   unitTurnSnapshots: ElectionVoteTally["unitTurnSnapshots"],
@@ -133,7 +134,7 @@ async function vacatePresidency(
     },
     { $set: { currentOffice: null, updatedAt: now } }
   );
-  await db.collection<ElectedOfficial>("electedOfficials").updateMany(
+  await electedOfficialsCollection(db).updateMany(
     { countryId: vacateCountryId, officeType: { $in: ["president", "vicePresident"] } },
     {
       $set: {
@@ -560,8 +561,7 @@ export async function resolvePresidentElection(
 
   const { vpCharId, vpNppId } = await resolveVpIds(db, election, winnerCandidate, contingentResult);
   const nationId = election.countryId ?? "US";
-  const previousPresident = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const previousPresident = await electedOfficialsCollection(db)
     .findOne({
       countryId: nationId,
       officeType: "president",

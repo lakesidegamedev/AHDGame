@@ -13,6 +13,7 @@ import { initElectionVoteTally } from "@/lib/elections/engine/tallyManagement";
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
 import { brazilPresidentialRules, decideBrazilPresidency } from "./rules/presidential";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 const followupId = (source: string) =>
   new ObjectId(
@@ -48,8 +49,7 @@ export async function resolveBrazilPresidentialElection(
   if (mode === "indirect" && !tally?.brazilPresidentialResult) {
     // The game models Congress as the college. Federal-state delegations are
     // not represented; do not label this count a popular ballot.
-    const legislators = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    const legislators = await electedOfficialsCollection(db)
       .find(
         { countryId: "BR", officeType: { $in: ["chamber", "senate"] } },
         { projection: { party: 1, seatsHeld: 1, characterId: 1, nppId: 1 } }

@@ -23,6 +23,7 @@ import { tallySeatsByParty, appointPrimeMinister } from "@/lib/turn/parliamentar
 import { chooseAutonomousCabinet } from "@/lib/government/rules/autonomousSupport";
 import { refusalBlocks } from "@/lib/government/rules/coalitionRefusals";
 import { isNppAutonomyActive } from "./featureFlag";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 /**
  * Seat an NPP Prime Minister for `countryId` when government formation has
@@ -51,8 +52,7 @@ export async function appointNppPrimeMinister(
   // Seated lower-chamber NPP MPs available to lead a viable cabinet. A player-character PM is
   // impossible here (country is not player-enabled), so we pick from NPPs.
   const lowerOfficeType = getLowerChamberOfficeType(countryId, preset);
-  const nppMps = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const nppMps = await electedOfficialsCollection(db)
     .find({
       countryId,
       officeType: lowerOfficeType,

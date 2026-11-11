@@ -21,6 +21,8 @@ import {
 import { captureElectionResultSnapshot } from "@/lib/elections/liveResults/captureResultSnapshot";
 import { captureElectionWon } from "@/lib/analytics/electionAnalytics";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import type { Document } from "mongodb";
 
 /** Minimal candidate shape the decision needs (id + party key). */
 export interface NGPresidentCandidate {
@@ -166,8 +168,7 @@ export async function resolveNGPresidentElection(
     return false;
   }
 
-  const previousPresident = await db
-    .collection("electedOfficials")
+  const previousPresident = await electedOfficialsCollection<Document>(db)
     .findOne({
       countryId: election.countryId ?? "NG",
       officeType: "president",

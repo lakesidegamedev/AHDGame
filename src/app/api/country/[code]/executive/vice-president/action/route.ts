@@ -15,6 +15,7 @@ import {
 } from "@/lib/constants/vicePresidentActions";
 import { z } from "zod";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 const actionSchema = z.object({
   actionId: z.enum(["surrogate_address", "rally_base"]),
@@ -45,7 +46,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const { actionId } = parsed.data;
 
     const db = await getDb();
-    const officialsCol = db.collection<ElectedOfficial>("electedOfficials");
+    const officialsCol = electedOfficialsCollection(db);
     const vpOfficial = await officialsCol.findOne({ countryId, officeType: "vicePresident" });
 
     // Gate: the actor must BE the seated, character-backed vice-president.

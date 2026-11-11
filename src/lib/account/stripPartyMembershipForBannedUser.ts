@@ -16,6 +16,8 @@ import { updatePartyPresence } from "@/lib/turn/partyOrg/presence";
 import { findPartyBySequentialId } from "@/lib/db/partyLookup";
 import { cleanupCaucusParticipationForCharacters } from "@/lib/caucus/cleanupCaucusParticipationForCharacters";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import type { Document } from "mongodb";
 
 export interface StripPartyMembershipResult {
   charactersUpdated: number;
@@ -112,9 +114,10 @@ export async function stripPartyMembershipForBannedUser(
       }
     );
 
-    await db
-      .collection("electedOfficials")
-      .updateMany({ characterId: char._id }, { $set: { party: "independent", updatedAt: now } });
+    await electedOfficialsCollection<Document>(db).updateMany(
+      { characterId: char._id },
+      { $set: { party: "independent", updatedAt: now } }
+    );
 
     await withdrawFromMismatchedPrimaries(char._id, "independent");
     await cleanupPartyPositionsOnSwitch(char._id, oldParty, "independent", countryId);

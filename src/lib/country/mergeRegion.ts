@@ -23,6 +23,8 @@ import { rescaleRegionDelegations } from "./apportionChamber";
 import { statePartyOrgIdFor } from "@/lib/db/partyLookup";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import type { Document } from "mongodb";
 
 /** A unique index that constrains `field`, as the fuse needs to see it. */
 interface UniqueIndexOverField {
@@ -341,12 +343,10 @@ export async function mergeRegion(db: Db, args: MergeRegionArgs): Promise<MergeR
   // the surviving region and then re-apportioned TOGETHER onto its chamber -- the
   // fused region has one chamber, so two delegations arriving with their own seat
   // counts would otherwise sum past its size.
-  await db
-    .collection("electedOfficials")
-    .updateMany(
-      { countryId: source.countryId, state: fromRegionId },
-      { $set: { state: toRegionId, updatedAt: now } }
-    );
+  await electedOfficialsCollection<Document>(db).updateMany(
+    { countryId: source.countryId, state: fromRegionId },
+    { $set: { state: toRegionId, updatedAt: now } }
+  );
   documentsMoved += await rescaleRegionDelegations(db, {
     regionId: toRegionId,
     countryId: String(source.countryId),

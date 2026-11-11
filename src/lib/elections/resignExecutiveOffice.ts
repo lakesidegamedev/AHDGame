@@ -10,6 +10,7 @@ import { captureOfficeTransition } from "@/lib/analytics/officeTransitionAnalyti
 import type { GameState } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 /** Vacate a US executive slot when the seated player resigns. */
 export async function resignExecutiveOffice(
@@ -26,9 +27,9 @@ export async function resignExecutiveOffice(
   const countryId = official.countryId ?? COUNTRY_CONFIGS.US.id;
   const executiveOfficeType = officeType as ExecutiveOfficeType;
 
-  await db
-    .collection<ElectedOfficial>("electedOfficials")
-    .updateOne(getExecutiveOfficialFilter(countryId, executiveOfficeType), {
+  await electedOfficialsCollection(db).updateOne(
+    getExecutiveOfficialFilter(countryId, executiveOfficeType),
+    {
       $set: {
         characterId: null,
         isNPP: false,
@@ -40,7 +41,8 @@ export async function resignExecutiveOffice(
         nppId: "",
         electedAt: "",
       },
-    });
+    }
+  );
 
   const executiveOffice: OfficeType = { type: executiveOfficeType };
   const careerEvent: CareerEvent = {

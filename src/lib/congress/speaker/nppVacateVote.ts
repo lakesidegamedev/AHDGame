@@ -14,6 +14,7 @@ import type { Db } from "@/lib/mongodb";
 import type { ElectedOfficial, NPP, PoliticalParty, SpeakerVacateMotion } from "@/lib/db/types";
 import { resolvePartyTier } from "@/lib/parties/partyTier";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 /**
  * Per-axis stance distance (on the shared -5..+5 economic/social axes) within
@@ -111,12 +112,10 @@ export async function loadVacateSpeakerContext(
   motion: Pick<SpeakerVacateMotion, "targetSpeakerId">
 ): Promise<VacateSpeakerContext> {
   const [speakerOfficial, speakerChar, parties] = await Promise.all([
-    db
-      .collection<ElectedOfficial>("electedOfficials")
-      .findOne(
-        { characterId: motion.targetSpeakerId, officeType: "house" },
-        { projection: { party: 1 } }
-      ),
+    electedOfficialsCollection(db).findOne(
+      { characterId: motion.targetSpeakerId, officeType: "house" },
+      { projection: { party: 1 } }
+    ),
     charactersCollection(db).findOne(
       { _id: motion.targetSpeakerId },
       { projection: { policies: 1 } }

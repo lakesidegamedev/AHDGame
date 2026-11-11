@@ -14,6 +14,7 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import type { CongressMember, CongressMembersResponse } from "@/lib/congress/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 // Re-export for any consumer that still imports types from the route file.
 // New consumers should import from "@/lib/congress/types" directly.
@@ -43,8 +44,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
     }
 
     const [officials, parties] = await Promise.all([
-      db
-        .collection<ElectedOfficial>("electedOfficials")
+      electedOfficialsCollection(db)
         .find(officialFilter)
         .sort({ state: 1, senateClass: 1, district: 1 })
         .toArray(),

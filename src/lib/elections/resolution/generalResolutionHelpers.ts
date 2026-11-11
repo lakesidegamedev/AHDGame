@@ -25,6 +25,7 @@ import { captureOfficeTransition } from "@/lib/analytics/officeTransitionAnalyti
 import type { ElectionNewsOutcome } from "./electionNotifications";
 import { voidDebateSessionsForElection } from "@/lib/debate/debateSessionLifecycle";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export interface OneElectionResult {
   resolved: boolean;
@@ -154,8 +155,7 @@ export async function sweepStaleOffice(
   const officialFilter: Record<string, unknown> = { officeType, state };
   if (chamberClass) officialFilter.chamberClass = chamberClass;
 
-  const current = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const current = await electedOfficialsCollection(db)
     .find(officialFilter, { projection: { characterId: 1, nppId: 1 } })
     .toArray();
 
@@ -228,9 +228,7 @@ export async function resolveElectionWithNoTally(
     !isSpecialCommonsElection(election.electionType) &&
     election.state
   ) {
-    await db
-      .collection<ElectedOfficial>("electedOfficials")
-      .deleteMany(multiSeatOfficialFilter(election));
+    await electedOfficialsCollection(db).deleteMany(multiSeatOfficialFilter(election));
     await sweepStaleOffice(
       db,
       election.electionType,
@@ -249,9 +247,7 @@ export async function resolveElectionWithNoTally(
     if (election.electionType === "senate" && election.senateClass) {
       incumbentFilter.senateClass = election.senateClass;
     }
-    const incumbent = await db
-      .collection<ElectedOfficial>("electedOfficials")
-      .findOne(incumbentFilter);
+    const incumbent = await electedOfficialsCollection(db).findOne(incumbentFilter);
     if (incumbent) {
       const officeFilter: Record<string, unknown> = {
         "currentOffice.type": election.electionType,
@@ -274,7 +270,7 @@ export async function resolveElectionWithNoTally(
             { $set: { currentOffice: null, updatedAt: now } }
           );
       }
-      await db.collection<ElectedOfficial>("electedOfficials").deleteOne({ _id: incumbent._id });
+      await electedOfficialsCollection(db).deleteOne({ _id: incumbent._id });
       if (incumbent.characterId && !incumbent.isNPP)
         await captureOfficeTransition({
           db,
@@ -354,9 +350,7 @@ export async function resolveElectionWithZeroVotes(
     !isSpecialCommonsElection(election.electionType) &&
     election.state
   ) {
-    await db
-      .collection<ElectedOfficial>("electedOfficials")
-      .deleteMany(multiSeatOfficialFilter(election));
+    await electedOfficialsCollection(db).deleteMany(multiSeatOfficialFilter(election));
     await sweepStaleOffice(
       db,
       election.electionType,
@@ -375,9 +369,7 @@ export async function resolveElectionWithZeroVotes(
     if (election.electionType === "senate" && election.senateClass) {
       incumbentFilter.senateClass = election.senateClass;
     }
-    const incumbent = await db
-      .collection<ElectedOfficial>("electedOfficials")
-      .findOne(incumbentFilter);
+    const incumbent = await electedOfficialsCollection(db).findOne(incumbentFilter);
     if (incumbent) {
       const officeFilter: Record<string, unknown> = {
         "currentOffice.type": election.electionType,
@@ -400,7 +392,7 @@ export async function resolveElectionWithZeroVotes(
             { $set: { currentOffice: null, updatedAt: now } }
           );
       }
-      await db.collection<ElectedOfficial>("electedOfficials").deleteOne({ _id: incumbent._id });
+      await electedOfficialsCollection(db).deleteOne({ _id: incumbent._id });
       if (incumbent.characterId && !incumbent.isNPP)
         await captureOfficeTransition({
           db,
@@ -473,9 +465,7 @@ export async function resolveElectionWithNoRankedCandidates(
     !isSpecialCommonsElection(election.electionType) &&
     election.state
   ) {
-    await db
-      .collection<ElectedOfficial>("electedOfficials")
-      .deleteMany(multiSeatOfficialFilter(election));
+    await electedOfficialsCollection(db).deleteMany(multiSeatOfficialFilter(election));
     await sweepStaleOffice(
       db,
       election.electionType,
@@ -497,9 +487,7 @@ export async function resolveElectionWithNoRankedCandidates(
     if (election.electionType === "senate" && election.senateClass) {
       incumbentFilter.senateClass = election.senateClass;
     }
-    const incumbent = await db
-      .collection<ElectedOfficial>("electedOfficials")
-      .findOne(incumbentFilter);
+    const incumbent = await electedOfficialsCollection(db).findOne(incumbentFilter);
     if (incumbent) {
       const officeFilter: Record<string, unknown> = {
         "currentOffice.type": election.electionType,
@@ -522,7 +510,7 @@ export async function resolveElectionWithNoRankedCandidates(
             { $set: { currentOffice: null, updatedAt: now } }
           );
       }
-      await db.collection<ElectedOfficial>("electedOfficials").deleteOne({ _id: incumbent._id });
+      await electedOfficialsCollection(db).deleteOne({ _id: incumbent._id });
       if (incumbent.characterId && !incumbent.isNPP)
         await captureOfficeTransition({
           db,

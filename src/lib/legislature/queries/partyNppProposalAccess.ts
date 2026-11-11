@@ -18,6 +18,7 @@ import { officialsCountryScope } from "@/lib/db/electedOfficialScope";
 import { isSameCountry } from "@/lib/api/sameCountry";
 import { STATE_TERMINAL_STATUSES } from "@/lib/congress/billProposalLimits";
 import { canDirectRegionalPartyNpp, hasPartyNppSeats } from "../rules/partyNppProposal";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export async function resolvePartyNppProposalAccess(
   db: Db,
@@ -60,8 +61,7 @@ export async function resolvePartyNppProposalAccess(
     return denied;
   const officeType = getSubNationalLegislatureKey(countryId);
   if (!officeType) return { authorized: true, npp: null };
-  const seats = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const seats = await electedOfficialsCollection(db)
     .find(
       { ...officialsCountryScope(countryId), state: stateId, officeType, isNPP: true },
       { projection: { nppId: 1, seatsHeld: 1 } }

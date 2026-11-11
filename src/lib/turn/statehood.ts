@@ -32,6 +32,7 @@ import { logger } from "@/lib/observability/logger";
 import { getGameStateCollection } from "@/lib/db/collections/gameState";
 import { getStatesCollection } from "@/lib/db/collections/states";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 /**
  * Canonical US seed name for each seeded abbreviation, used as a fallback when
@@ -254,9 +255,10 @@ export async function seedAdmittedStatePolitics(
 
     // A territory has no officials. Skip if any exist so a re-run (or an
     // admin-seeded delegation) is never duplicated.
-    const existingOfficials = await db
-      .collection<ElectedOfficial>("electedOfficials")
-      .countDocuments({ state: stateId, officeType: { $in: ["senate", "house"] } });
+    const existingOfficials = await electedOfficialsCollection(db).countDocuments({
+      state: stateId,
+      officeType: { $in: ["senate", "house"] },
+    });
     if (existingOfficials > 0) continue;
 
     const officials: Omit<ElectedOfficial, "_id">[] = [];
@@ -282,9 +284,7 @@ export async function seedAdmittedStatePolitics(
         updatedAt: now,
       });
     }
-    await db
-      .collection<ElectedOfficial>("electedOfficials")
-      .insertMany(officials as ElectedOfficial[]);
+    await electedOfficialsCollection(db).insertMany(officials as ElectedOfficial[]);
   }
 }
 

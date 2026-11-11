@@ -14,6 +14,8 @@ import { withPartyTerritoryMutation } from "./territoryMutation";
 import { canCharacterJoinParty } from "./partyFrontier";
 import { PartyTerritoryError } from "./relocationTerritory";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import type { Document } from "mongodb";
 
 export interface ApplyCharacterPartyJoinArgs {
   db: Db;
@@ -114,12 +116,10 @@ export async function applyCharacterPartyJoin(
 
       // Update any ElectedOfficial records for this character to reflect the new party
       // This ensures Congress/Parliament and state legislature displays show the correct party
-      await db
-        .collection("electedOfficials")
-        .updateMany(
-          { characterId: character._id },
-          { $set: { party: partyIdStr, updatedAt: now } }
-        );
+      await electedOfficialsCollection<Document>(db).updateMany(
+        { characterId: character._id },
+        { $set: { party: partyIdStr, updatedAt: now } }
+      );
 
       if (!oldParty || oldParty === "independent") {
         const { transferredCount } = await transferIndependentCandidaciesToParty(

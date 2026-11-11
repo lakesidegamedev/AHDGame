@@ -32,6 +32,7 @@ import type { RussianAssemblySeatingRecord, RussianAssemblyOfficeArchive } from 
 import { GAME_STATE_PRE_ITERATION_FIELDS } from "@/lib/db/collections/gameState";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 const RUSSIAN_COUNCIL_COMPOSITION_SEATINGS_COLLECTION = "russianCouncilCompositionSeatings";
 export interface RussianCouncilCompositionSeating {
@@ -142,8 +143,7 @@ export async function materializeRussianCouncilCompositionSeating(input: {
         .toArray()
     : [];
   const playerById = new Map(players.map((row) => [row._id.toHexString(), row]));
-  const physical = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const physical = await electedOfficialsCollection(db)
     .find(
       {
         $or: [
@@ -285,7 +285,7 @@ export async function materializeRussianCouncilCompositionSeating(input: {
       })),
       { session }
     );
-    const deleted = await db.collection<ElectedOfficial>("electedOfficials").deleteMany(
+    const deleted = await electedOfficialsCollection(db).deleteMany(
       {
         _id: { $in: retiring.map((row) => row._id) },
         countryId: "RU",
@@ -316,8 +316,7 @@ export async function materializeRussianCouncilCompositionSeating(input: {
       ? { termEnds: new Date(now.getTime() + (row.termEndTurn - turn) * MS_PER_TURN) }
       : {}),
   }));
-  if (added.length)
-    await db.collection<ElectedOfficial>("electedOfficials").insertMany(added, { session });
+  if (added.length) await electedOfficialsCollection(db).insertMany(added, { session });
   const affected = new Set(
     [...retiring, ...added].map(
       (row) => `${row.isNPP ? "npc" : "player"}:${row.isNPP ? row.nppId : row.characterId}`

@@ -22,6 +22,7 @@ import { getGameState } from "@/lib/gameState";
 import { snapshotPolicyProvisionsInPlace } from "@/lib/legislature/provisionEnrichment";
 import { validateStateBillProvisions } from "@/lib/legislature/commands/validateStateBillProvisions";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 const VOTING_DURATION_HOURS = 24;
 
@@ -134,7 +135,7 @@ export async function proposeStateBill(
     }
   } else if (!partyNpp) {
     const subNationalOffice = getSubNationalLegislatureKey(countryId);
-    const official = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+    const official = await electedOfficialsCollection(db).findOne({
       officeType: subNationalOffice,
       state: stateId,
       characterId: character._id,

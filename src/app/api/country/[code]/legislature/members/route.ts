@@ -23,6 +23,7 @@ import type { PoliticalParty, ElectedOfficial, State, Character, NPP } from "@/l
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export async function GET(request: Request, { params }: { params: Promise<{ code: string }> }) {
   try {
@@ -84,10 +85,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
       getOfficeTypeForChamber(countryId, chamber);
     const officialFilter: Record<string, unknown> = { officeType: resolvedOfficeType, countryId };
 
-    const allOfficials = await db
-      .collection<ElectedOfficial>("electedOfficials")
-      .find(officialFilter)
-      .toArray();
+    const allOfficials = await electedOfficialsCollection(db).find(officialFilter).toArray();
     const officials = allOfficials.filter(
       (o) =>
         (o.characterId != null || o.nppId != null) &&

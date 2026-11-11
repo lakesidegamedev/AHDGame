@@ -19,6 +19,7 @@ import { appointPrimeMinister } from "@/lib/turn/parliamentaryGovernment";
 import { getGovernmentFormationsCollection } from "@/lib/db/collections/governmentFormation";
 import { getCountryState } from "@/lib/countryState";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 const negotiate: DecisionOption = {
   id: "negotiate",
@@ -90,7 +91,7 @@ const concedeLeadership: DecisionOption = {
 
     // A successor must hold a legislative seat, whether player or NPP.
     const offices = await loadRuntimeCountryOffices(ctx.db, ctx.countryId);
-    const successor = await ctx.db.collection<ElectedOfficial>("electedOfficials").findOne(
+    const successor = await electedOfficialsCollection(ctx.db).findOne(
       {
         party: String(partyId),
         countryId: ctx.countryId,
@@ -202,12 +203,10 @@ async function reMergeDefectors(
     { countryId, party: String(defectedPartyId) },
     { $set: { party: String(runtime.rulingPartyId), updatedAt: now } }
   );
-  await db
-    .collection<ElectedOfficial>("electedOfficials")
-    .updateMany(
-      { countryId, party: String(defectedPartyId) },
-      { $set: { party: String(runtime.rulingPartyId) } }
-    );
+  await electedOfficialsCollection(db).updateMany(
+    { countryId, party: String(defectedPartyId) },
+    { $set: { party: String(runtime.rulingPartyId) } }
+  );
   await db
     .collection<NPP>("npps")
     .updateMany(

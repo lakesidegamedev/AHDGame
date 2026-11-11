@@ -12,6 +12,7 @@ import { BG_FOUNDING_COUNTS_COLLECTION, type BgFoundingAssemblyRecord } from "./
 import { BG_FOUNDING_OFFICE_ARCHIVES_COLLECTION } from "./foundingSeating1990";
 import { planBg1991ListReplacements, type Bg1991ListReplacement } from "./rules/listVacancies1991";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export const BG_1991_LIST_REPLACEMENTS_COLLECTION = "bg1991ListReplacements";
 interface ReplacementReceipt {
@@ -77,7 +78,7 @@ export async function advanceBg1991ListVacancies(
     throw new Error("Invalid Bulgarian list succession time");
   const ready = await readParent(db, turn);
   if (!ready) return 0;
-  const officials = db.collection<ElectedOfficial>("electedOfficials");
+  const officials = electedOfficialsCollection(db);
   const heldList = await officials.countDocuments({
     countryId: "BG",
     officeType: "assemblyDeputy",

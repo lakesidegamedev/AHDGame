@@ -7,6 +7,7 @@ import {
   type ScopedVoteInputs,
   type ScopedVoteOfficial,
 } from "@/lib/congress/billVoting";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export interface ScopedStateVoteResult extends ScopedVoteInputs {
   /** Weighted for/against/abstain totals over the scoped (current-chamber) votes. */
@@ -172,8 +173,7 @@ export async function scopeVotesToCurrentSeatHolders(
           countryId: { $in: [scope.countryId as ElectedOfficial["countryId"]] },
         };
 
-  const officials = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const officials = await electedOfficialsCollection(db)
     .find(chamberFilter)
     .project<ScopedVoteOfficial>({
       characterId: 1,

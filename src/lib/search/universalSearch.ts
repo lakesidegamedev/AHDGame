@@ -29,6 +29,7 @@ import { US_STATE_NAMES } from "@/lib/constants/usStateNames";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 /**
  * Maximum accepted `q` length (after trimming). Longer queries are rejected
@@ -221,11 +222,7 @@ export async function runUniversalSearch({
   if (enabledCountries) {
     officialsQuery.countryId = { $in: enabledCountries };
   }
-  const officials = await db
-    .collection<ElectedOfficial>("electedOfficials")
-    .find(officialsQuery)
-    .limit(5)
-    .toArray();
+  const officials = await electedOfficialsCollection(db).find(officialsQuery).limit(5).toArray();
 
   // Loaded once for the whole result page — the resolver below is pure.
   const officeDefinitions = officials.length > 0 ? await getGeneratedOfficeDefinitions() : [];

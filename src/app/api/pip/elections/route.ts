@@ -18,6 +18,7 @@ import type {
   ElectionVoteTally,
 } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export async function GET() {
   try {
@@ -70,14 +71,12 @@ export async function GET() {
 
     // Legislature composition for the character's country — derived from config, not hardcoded
     const [primaryOfficials, secondaryOfficials] = await Promise.all([
-      db
-        .collection<ElectedOfficial>("electedOfficials")
+      electedOfficialsCollection(db)
         .find({ officeType: primaryOfficeType })
         .project({ party: 1, seatsHeld: 1, state: 1 })
         .toArray() as Promise<ElectedOfficial[]>,
       secondaryOfficeType
-        ? (db
-            .collection<ElectedOfficial>("electedOfficials")
+        ? (electedOfficialsCollection(db)
             .find({ officeType: secondaryOfficeType })
             .project({ party: 1, seatsHeld: 1, state: 1 })
             .toArray() as Promise<ElectedOfficial[]>)

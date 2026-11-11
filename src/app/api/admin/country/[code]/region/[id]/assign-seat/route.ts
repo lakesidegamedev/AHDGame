@@ -23,6 +23,8 @@ import { errorResponse } from "@/lib/api/errors";
 import type { Db } from "mongodb";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import type { Document } from "mongodb";
 
 /** Seat total for a multi-seat group, read from the resolved State field. */
 function totalForSpec(
@@ -46,7 +48,7 @@ function totalForSpec(
  * is now stale and no longer represents a real vacancy.
  */
 async function cleanupVacantRecords(db: Db, stateId: string, officeType: string): Promise<void> {
-  await db.collection("electedOfficials").deleteMany({
+  await electedOfficialsCollection<Document>(db).deleteMany({
     state: stateId,
     officeType,
     characterId: null,
@@ -148,7 +150,7 @@ export const POST = withAdminRoute(
 
     // ── Single-seat upper chamber (US Senate): one holder per class ──────────
     if (spec.kind === "classedUpper") {
-      const existingHolder = await db.collection("electedOfficials").findOne({
+      const existingHolder = await electedOfficialsCollection<Document>(db).findOne({
         state: stateId,
         officeType,
         senateClass,
@@ -157,14 +159,15 @@ export const POST = withAdminRoute(
       if (existingHolder) {
         return errorResponse(400, `This ${spec.label} seat is already filled`);
       }
-      const alreadyHolds = await db
-        .collection("electedOfficials")
-        .findOne({ officeType, ...actorMatch });
+      const alreadyHolds = await electedOfficialsCollection<Document>(db).findOne({
+        officeType,
+        ...actorMatch,
+      });
       if (alreadyHolds) {
         return errorResponse(400, `This politician already holds a ${spec.label} seat`);
       }
 
-      await db.collection("electedOfficials").updateOne(
+      await electedOfficialsCollection<Document>(db).updateOne(
         { state: stateId, officeType, senateClass },
         {
           $set: {
@@ -201,7 +204,7 @@ export const POST = withAdminRoute(
 
     // ── Single-seat regional executive (governor / minister-president) ───────
     if (spec.kind === "executive") {
-      const existingHolder = await db.collection("electedOfficials").findOne({
+      const existingHolder = await electedOfficialsCollection<Document>(db).findOne({
         state: stateId,
         officeType,
         $or: [{ characterId: { $ne: null } }, { nppId: { $ne: null } }],
@@ -209,14 +212,15 @@ export const POST = withAdminRoute(
       if (existingHolder) {
         return errorResponse(400, `${spec.label} seat is already filled`);
       }
-      const alreadyHolds = await db
-        .collection("electedOfficials")
-        .findOne({ officeType, ...actorMatch });
+      const alreadyHolds = await electedOfficialsCollection<Document>(db).findOne({
+        officeType,
+        ...actorMatch,
+      });
       if (alreadyHolds) {
         return errorResponse(400, `This politician already holds a ${spec.label} seat`);
       }
 
-      await db.collection("electedOfficials").updateOne(
+      await electedOfficialsCollection<Document>(db).updateOne(
         { state: stateId, officeType },
         {
           $set: {
@@ -250,8 +254,7 @@ export const POST = withAdminRoute(
       return errorResponse(400, `${state.name} has no ${spec.label} seats`);
     }
 
-    const filledOfficials = (await db
-      .collection("electedOfficials")
+    const filledOfficials = (await electedOfficialsCollection<Document>(db)
       .find({
         state: stateId,
         officeType,
@@ -265,17 +268,17 @@ export const POST = withAdminRoute(
       return errorResponse(400, `Only ${vacantSeats} vacant ${spec.label} seat(s) available`);
     }
 
-    const existingOffice = (await db
-      .collection("electedOfficials")
-      .findOne({ state: stateId, officeType, ...actorMatch })) as ElectedOfficial | null;
+    const existingOffice = (await electedOfficialsCollection<Document>(db).findOne({
+      state: stateId,
+      officeType,
+      ...actorMatch,
+    })) as ElectedOfficial | null;
 
     if (existingOffice) {
-      await db
-        .collection("electedOfficials")
-        .updateOne(
-          { _id: existingOffice._id },
-          { $inc: { seatsHeld: seatsToAssign }, $set: { updatedAt: now } }
-        );
+      await electedOfficialsCollection<Document>(db).updateOne(
+        { _id: existingOffice._id },
+        { $inc: { seatsHeld: seatsToAssign }, $set: { updatedAt: now } }
+      );
       const newSeatsHeld = (existingOffice.seatsHeld ?? 1) + seatsToAssign;
       await setCurrentOffice(
         db,
@@ -290,7 +293,7 @@ export const POST = withAdminRoute(
       });
     }
 
-    await db.collection("electedOfficials").insertOne({
+    await electedOfficialsCollection<Document>(db).insertOne({
       _id: new ObjectId(),
       state: stateId,
       officeType,

@@ -1,6 +1,7 @@
 import type { Db } from "@/lib/mongodb";
 import type { CongressLeader, ElectedOfficial } from "@/lib/db/types";
 import { openSpeakerElection } from "./openSpeakerElection";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 /**
  * If the current Speaker no longer has a House seat, vacate the position and
@@ -14,7 +15,7 @@ export async function vacateSpeakerIfLostSeat(db: Db): Promise<void> {
     .collection<CongressLeader>("congressLeaders")
     .findOne({ role: "speaker_of_the_house" });
   if (!leaderDoc?.characterId) return;
-  const stillHasSeat = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+  const stillHasSeat = await electedOfficialsCollection(db).findOne({
     officeType: "house",
     $or: [{ characterId: leaderDoc.characterId }, { nppId: leaderDoc.characterId }],
   });

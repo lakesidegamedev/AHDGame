@@ -21,6 +21,7 @@ import {
 } from "./rules";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export async function readUKDevolutionState(
   db: Db,
@@ -36,8 +37,7 @@ async function initialStatePreservingLeaders(
   startingYear: number
 ): Promise<UKDevolutionState> {
   const state = initialUKDevolutionState(startingYear);
-  const officials = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const officials = await electedOfficialsCollection(db)
     .find(
       { countryId: "UK", officeType: "governor", state: { $in: [...UK_EXECUTIVE_REGIONS] } },
       { projection: { state: 1, characterId: 1, nppId: 1, _id: 0 } }
@@ -146,8 +146,7 @@ export async function vacateUKRegionalExecutives(
       officeType: "governor",
       state: { $in: [...inactive] },
     };
-    const officials = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    const officials = await electedOfficialsCollection(db)
       .find(filter, {
         projection: { characterId: 1, nppId: 1, party: 1, _id: 0 },
       })
@@ -188,7 +187,7 @@ export async function vacateUKRegionalExecutives(
         },
         { $set: { currentOffice: null, updatedAt: now } }
       );
-    await db.collection<ElectedOfficial>("electedOfficials").updateMany(filter, {
+    await electedOfficialsCollection(db).updateMany(filter, {
       $set: {
         characterId: null,
         nppId: null,

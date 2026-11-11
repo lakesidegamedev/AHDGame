@@ -20,6 +20,7 @@ import type { RussianAssemblySeat } from "./rules/assemblySeating";
 import type { RussianAssemblyVacancyReason } from "./rules/assemblyOwnerEligibility";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 export const RUSSIAN_ASSEMBLY_SEATINGS_COLLECTION = "russianAssemblySeatings";
 export const RUSSIAN_ASSEMBLY_ARCHIVES_COLLECTION = "russianAssemblyOfficeArchives";
 export interface RussianAssemblySeatingRecord {
@@ -128,7 +129,7 @@ export async function materializeRussianAssemblySeating(input: {
         })),
         { session }
       );
-    await db.collection<ElectedOfficial>("electedOfficials").deleteMany(
+    await electedOfficialsCollection(db).deleteMany(
       {
         _id: { $in: congress.map((row) => row._id) },
         countryId: "RU",
@@ -149,7 +150,7 @@ export async function materializeRussianAssemblySeating(input: {
       { $set: { currentOffice: null, updatedAt: now }, $unset: { seatsHeld: "" } },
       { session }
     );
-  await db.collection<ElectedOfficial>("electedOfficials").insertMany(rows, { session });
+  await electedOfficialsCollection(db).insertMany(rows, { session });
   const owners = new Map<
     string,
     {

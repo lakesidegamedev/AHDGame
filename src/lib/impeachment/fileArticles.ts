@@ -21,6 +21,7 @@ import {
   IMPEACHMENT_SENATE_VOTING_TURNS,
 } from "@/lib/constants/impeachment";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export interface FileImpeachmentOpts {
   /** "president" = national two-chamber; "governor" = single state-legislature vote. */
@@ -58,7 +59,7 @@ export async function fileArticlesOfImpeachment(
   }
 
   const currentTurn = (await getGameState(db))?.currentTurn ?? 0;
-  const officials = db.collection<ElectedOfficial>("electedOfficials");
+  const officials = electedOfficialsCollection(db);
 
   const partyAccess = opts.proposeViaPartyNpp
     ? await resolvePartyImpeachmentSponsor(db, countryId, filer, opts.office, opts.state)

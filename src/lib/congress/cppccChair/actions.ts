@@ -25,6 +25,7 @@ import {
   POLICY_BY_ROLE,
 } from "@/lib/congress/leadership/rolePolicy";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 const ELECTION_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -54,7 +55,7 @@ export async function handleCppccChairAction(ctx: ActionContext): Promise<Action
   });
   if (!character) return { success: false, error: "No character", status: 400 };
 
-  const myOfficial = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+  const myOfficial = await electedOfficialsCollection(db).findOne({
     characterId: character._id,
     officeType: "npcDelegate",
     countryId: "CN",

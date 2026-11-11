@@ -21,6 +21,7 @@ import { isFilledOfficial } from "@/lib/governors/senateVacancy";
 import { US_SENATE_2020 } from "@/lib/constants/historicalSeats";
 import type { CountryId } from "@/lib/constants/countries";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export async function getPmAppointmentCandidates(
   db: Db,
@@ -72,8 +73,7 @@ export async function getPmAppointmentCandidates(
 
   const lowerChamberKey = offices.lowerOfficeType;
   const qualifyingPartyIdStrings = eligibility.qualifyingPartyIds.map(String);
-  const lowerChamberMPs = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const lowerChamberMPs = await electedOfficialsCollection(db)
     .find({
       countryId,
       officeType: lowerChamberKey,
@@ -162,8 +162,7 @@ export async function getHosAppointmentCandidates(
   // Joint-sitting deputies of qualifying parties, characters and NPPs alike.
   // The HoS office can go to either kind; the nomineeMode on each candidate
   // tells the appoint route which id field to read.
-  const deputies = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const deputies = await electedOfficialsCollection(db)
     .find({
       countryId,
       officeType: { $in: offices.jointSittingOfficeTypes },
@@ -342,7 +341,7 @@ export async function getEligibleSenateAppointees(
   governorUserId: string,
   senateClass: 1 | 2 | 3
 ): Promise<{ candidates: EligibleSenateAppointeeView[] }> {
-  const officialsCollection = db.collection<ElectedOfficial>("electedOfficials");
+  const officialsCollection = electedOfficialsCollection(db);
   const charactersHandle = charactersCollection(db);
   const nppsCollection = db.collection<NPP>("npps");
 
@@ -427,7 +426,7 @@ export async function getEligibleSenateAppointees(
 export async function getPublicVacancies(
   db: Db
 ): Promise<{ vacancies: Record<string, VacancyView[]> }> {
-  const officialsCollection = db.collection<ElectedOfficial>("electedOfficials");
+  const officialsCollection = electedOfficialsCollection(db);
   const senateOfficials = await officialsCollection.find({ officeType: "senate" }).toArray();
 
   const filledSeats = new Set<string>();

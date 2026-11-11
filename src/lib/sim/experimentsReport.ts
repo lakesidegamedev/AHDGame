@@ -24,6 +24,7 @@ import {
 } from "@/lib/telemetry/longHorizon/telemetry";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 // Static sim-harness parameters — the "conditions we specified" for a run.
 // Source-of-truth lives in scripts/sim/runWorld.ts (country allowlist,
@@ -343,8 +344,7 @@ async function collectWealthLeaders(db: Db, parties: PartyInfo[]): Promise<Wealt
 
   // Attribution — only for the top NPPs, so these are tiny scoped queries.
   const [officials, ceoCorps, stockCorps] = await Promise.all([
-    db
-      .collection<ElectedOfficial>("electedOfficials")
+    electedOfficialsCollection(db)
       .find({ nppId: { $in: topIds } }, { projection: { nppId: 1, officeType: 1 } })
       .toArray(),
     corporationsCollection(db)

@@ -10,6 +10,7 @@ import {
 } from "./impeachmentTally";
 import { resolvePartyTier } from "@/lib/parties/partyTier";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 /**
  * Per-axis stance distance (on the shared -5..+5 economic/social axes) within
@@ -121,9 +122,9 @@ export async function loadImpeachmentFallbackContext(
   impeachment: Impeachment
 ): Promise<ImpeachmentFallbackContext> {
   const [target, targetChar, parties] = await Promise.all([
-    db
-      .collection<ElectedOfficial>("electedOfficials")
-      .findOne(targetOfficialFilter(impeachment), { projection: { party: 1 } }),
+    electedOfficialsCollection(db).findOne(targetOfficialFilter(impeachment), {
+      projection: { party: 1 },
+    }),
     charactersCollection(db).findOne(
       { _id: impeachment.targetCharacterId },
       { projection: { policies: 1 } }
@@ -184,13 +185,12 @@ export async function autoVoteNppsForImpeachmentStage(
     impeachment.stage === "house" ? "houseVotesAbstain" : "senateVotesAbstain";
   const votes = { ...(impeachment[voteField] ?? {}) };
 
-  const target = await db
-    .collection<ElectedOfficial>("electedOfficials")
-    .findOne(targetOfficialFilter(impeachment), { projection: { party: 1 } });
+  const target = await electedOfficialsCollection(db).findOne(targetOfficialFilter(impeachment), {
+    projection: { party: 1 },
+  });
   const targetParty = target?.party;
 
-  const officials = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const officials = await electedOfficialsCollection(db)
     .find({
       ...impeachmentChamberOfficialFilter(
         impeachment.countryId,

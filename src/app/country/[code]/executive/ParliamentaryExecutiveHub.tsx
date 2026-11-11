@@ -57,6 +57,7 @@ import { NhsQualityTile } from "@/components/uk/nhs/NhsQualityTile";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 type PartyRowMeta = {
   seqKey: string;
@@ -243,9 +244,11 @@ export async function ParliamentaryExecutiveHub({ countryId }: { countryId: Coun
   // Viewer is a lower-chamber member — only members may cast votes
   let viewerIsMember = false;
   if (user?.character) {
-    const memberRecord = await db
-      .collection<ElectedOfficial>("electedOfficials")
-      .findOne({ characterId: user.character._id, countryId, officeType: lowerChamberKey });
+    const memberRecord = await electedOfficialsCollection(db).findOne({
+      characterId: user.character._id,
+      countryId,
+      officeType: lowerChamberKey,
+    });
     viewerIsMember = memberRecord != null;
   }
 
@@ -286,8 +289,7 @@ export async function ParliamentaryExecutiveHub({ countryId }: { countryId: Coun
       : null;
 
   // Seat composition from the lower chamber
-  const allLowerOfficials = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const allLowerOfficials = await electedOfficialsCollection(db)
     .find({ officeType: lowerChamberKey, countryId })
     .toArray();
 

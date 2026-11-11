@@ -40,6 +40,7 @@ import {
 import type { BgFoundingMajorityBallot } from "./rules/foundingMajority1990";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export const BG_GRAND_BY_ELECTIONS_COLLECTION = "bgGrandConstituencyByElections";
 export interface BgGrandByElectionRecord {
@@ -192,7 +193,7 @@ export async function openBgGrandConstituencyByElections(
   );
   if (!needsCancellation && (!ready.available || turn >= ready.endTurn! - 24)) return 0;
   if (!needsCancellation) {
-    const held = await db.collection<ElectedOfficial>("electedOfficials").countDocuments({
+    const held = await electedOfficialsCollection(db).countDocuments({
       countryId: "BG",
       officeType: "assemblyDeputy",
       "bulgarianFoundingMandate.receiptId": ready.parent!._id,
@@ -214,8 +215,7 @@ export async function openBgGrandConstituencyByElections(
       await cancelJobs(db, session, stale, turn, now);
       if (!current.available || turn >= current.endTurn! - 24) return 0;
       const parent = current.parent!;
-      const officials = await db
-        .collection<ElectedOfficial>("electedOfficials")
+      const officials = await electedOfficialsCollection(db)
         .find(
           { countryId: "BG", officeType: "assemblyDeputy" },
           {
@@ -502,8 +502,7 @@ export async function resolveBgGrandConstituencyByElections(
           { session, projection: TALLY_WITH_LATEST_SNAPSHOT_ONLY }
         )
         .toArray();
-      const officials = await db
-        .collection<ElectedOfficial>("electedOfficials")
+      const officials = await electedOfficialsCollection(db)
         .find({ countryId: "BG", officeType: "assemblyDeputy" }, { session })
         .toArray();
       const held = officials.filter((row) => row.seatsHeld === 1 && (row.characterId || row.nppId));
@@ -900,12 +899,13 @@ export async function resolveBgGrandConstituencyByElections(
             })),
             { session }
           );
-        await db
-          .collection<ElectedOfficial>("electedOfficials")
-          .deleteMany({ _id: { $in: stubs.map((row) => row._id) } }, { session });
+        await electedOfficialsCollection(db).deleteMany(
+          { _id: { $in: stubs.map((row) => row._id) } },
+          { session }
+        );
       }
       if (additions.length) {
-        await db.collection<ElectedOfficial>("electedOfficials").insertMany(additions, { session });
+        await electedOfficialsCollection(db).insertMany(additions, { session });
         const finalHeld = [...held, ...additions];
         for (const isNpc of [true, false]) {
           const ids = [

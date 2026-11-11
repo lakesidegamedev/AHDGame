@@ -4,6 +4,8 @@ import type { PoliticalParty, Character, Election } from "@/lib/db/types";
 import { getLeanLabel } from "@/lib/utils/demographics";
 import { buildCharacterHref } from "@/lib/utils/profileUrls";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import type { Document } from "mongodb";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -41,7 +43,9 @@ export async function queryParty(
   const skip = (Math.max(membersPage, 1) - 1) * clampedLimit;
 
   const [officials, topMembers, recentElections, allMembersResult] = await Promise.all([
-    db.collection("electedOfficials").find({ party: partySeqStr, countryId: country }).toArray(),
+    electedOfficialsCollection<Document>(db)
+      .find({ party: partySeqStr, countryId: country })
+      .toArray(),
     charactersCollection(db)
       .find({ party: partySeqStr, countryId: country } as Filter<Character>)
       .sort({ nationalInfluence: -1 })
@@ -139,7 +143,7 @@ export async function queryPartyList(db: Db, params: { country: string }) {
   // Seat share per party from the elected-officials roster (same source the
   // legislature widgets aggregate), so seats always reconcile with members.
   const seatCounts = new Map<string, number>();
-  const officials = db.collection("electedOfficials");
+  const officials = electedOfficialsCollection<Document>(db);
   const rows = await officials
     .aggregate([{ $match: { countryId: cid } }, { $group: { _id: "$party", seats: { $sum: 1 } } }])
     .toArray();

@@ -30,6 +30,7 @@ import { SCOTUS_CONFIRMED_SLUG } from "@/lib/scotus/achievementDefinitions";
 import { buildScotusConfirmationCareerEvent } from "@/lib/scotus/careerEvents";
 import { getPoliticalPartiesCollection } from "@/lib/db/collections/politicalParties";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export interface ScotusNominationLifecycleResult {
   nominationsProcessed: number;
@@ -152,8 +153,7 @@ export async function processScotusNominationLifecycle(
   const currentTurn = gameState?.currentTurn ?? 1;
 
   const [nppOfficials, president] = await Promise.all([
-    database
-      .collection<ElectedOfficial>("electedOfficials")
+    electedOfficialsCollection(database)
       .find({
         countryId: "US",
         officeType: "senate",
@@ -161,9 +161,7 @@ export async function processScotusNominationLifecycle(
         nppId: { $exists: true },
       })
       .toArray(),
-    database
-      .collection<ElectedOfficial>("electedOfficials")
-      .findOne({ countryId: "US", officeType: "president" }),
+    electedOfficialsCollection(database).findOne({ countryId: "US", officeType: "president" }),
   ]);
   const nppIds = nppOfficials
     .map((o) => o.nppId)

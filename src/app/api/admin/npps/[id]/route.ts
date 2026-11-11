@@ -11,6 +11,8 @@ import { requireAdmin } from "@/lib/api/requireAdmin";
 import { schemas } from "@/lib/api/validate";
 import { handleRouteError, notFound, errorResponse } from "@/lib/api/errors";
 import type { NPP } from "@/lib/db/types";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import type { Document } from "mongodb";
 
 export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -31,7 +33,7 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
     // historical and don't affect live game state.
     await Promise.all([
       db.collection("npps").deleteOne({ _id: nppId }),
-      db.collection("electedOfficials").deleteMany({ nppId }),
+      electedOfficialsCollection<Document>(db).deleteMany({ nppId }),
       db.collection("electionCandidates").deleteMany({ nppId }),
     ]);
 

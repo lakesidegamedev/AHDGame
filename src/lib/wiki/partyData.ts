@@ -6,6 +6,7 @@ import type { Filter } from "mongodb";
 import type { PoliticalParty, ElectedOfficial } from "@/lib/db/types";
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
 import type { CountryId } from "@/lib/constants/countries";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export interface PartyData {
   id: string;
@@ -52,8 +53,7 @@ export async function getPartyData(
     .findOne({ sequentialId: Number(id), ...partyCountryQuery });
   if (!party) return null;
 
-  const officials = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const officials = await electedOfficialsCollection(db)
     .find({ party: id, ...officialCountryQuery })
     .toArray();
 

@@ -53,6 +53,7 @@ import { getGovernmentFormationsCollection } from "@/lib/db/collections/governme
 import { canReshuffle, getReshuffleIdentity } from "@/lib/countries/uk/cabinet/reshuffleLimit";
 import { captureOfficeTransition } from "@/lib/analytics/officeTransitionAnalytics";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export {
   reselectionRiskFor,
@@ -119,7 +120,7 @@ export async function restoreCharacterOfficeAfterCabinet(
   now: Date
 ): Promise<void> {
   const eligibleOfficeTypes = getCabinetEligibleOfficeTypes(countryId);
-  const lowerOfficial = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+  const lowerOfficial = await electedOfficialsCollection(db).findOne({
     characterId: holderCharacterId,
     officeType: { $in: eligibleOfficeTypes },
     countryId,
@@ -268,7 +269,7 @@ export async function appointCabinetMemberHandler(request: Request, countryId: C
     const isOps = runtime.governmentType === "onePartyState";
 
     const eligibleOfficeTypes = getCabinetEligibleOfficeTypes(countryId);
-    const lowerOfficial = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+    const lowerOfficial = await electedOfficialsCollection(db).findOne({
       characterId: targetChar._id,
       officeType: { $in: eligibleOfficeTypes },
       countryId,
@@ -833,7 +834,7 @@ export async function reshuffleCabinetHandler(request: Request, countryId: Count
         }
       );
 
-      const lowerOfficial = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+      const lowerOfficial = await electedOfficialsCollection(db).findOne({
         characterId: targetChar._id,
         officeType: { $in: eligibleOfficeTypes },
         countryId,

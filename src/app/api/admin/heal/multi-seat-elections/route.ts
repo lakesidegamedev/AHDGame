@@ -17,6 +17,7 @@ import type {
   NPP,
 } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 interface MisallocatedElection {
   electionId: string;
@@ -80,8 +81,7 @@ export async function GET() {
         .collection<ElectionVoteTally>("electionVoteTallies")
         .find({ electionId: { $in: electionIds } })
         .toArray(),
-      db
-        .collection<ElectedOfficial>("electedOfficials")
+      electedOfficialsCollection(db)
         .find({
           officeType: { $in: ["house", "stateSenate"] },
           state: { $in: recentElections.map((e) => e.state) },
@@ -257,7 +257,7 @@ export async function POST() {
       const candidateMap = new Map(electionCandidates.map((c) => [c._id.toString(), c]));
 
       // Remove current officials for this election
-      const removeResult = await db.collection<ElectedOfficial>("electedOfficials").deleteMany({
+      const removeResult = await electedOfficialsCollection(db).deleteMany({
         officeType: election.electionType,
         state: election.state,
       });
@@ -282,7 +282,7 @@ export async function POST() {
           updatedAt: now,
         };
 
-        await db.collection<ElectedOfficial>("electedOfficials").insertOne({
+        await electedOfficialsCollection(db).insertOne({
           _id: new ObjectId(),
           createdAt: now,
           ...officialDoc,

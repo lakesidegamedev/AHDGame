@@ -29,6 +29,7 @@ import { HU_2011_COUNTS_COLLECTION, type Hu2011AssemblyRecord } from "./assembly
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export const HU_2011_BY_ELECTIONS_COLLECTION = "hu2011ConstituencyByElections";
 export interface HuModernByElectionRecord {
@@ -141,8 +142,7 @@ async function materializeHuModernByElectionOpening(input: {
       .filter((row) => row.tier === "constituency")
       .map((row) => ({ id: row.districtId, regionId: row.regionId }));
   if (districts.length !== 106 || new Set(districts.map((row) => row.id)).size !== 106) return [];
-  const held = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const held = await electedOfficialsCollection(db)
     .find(
       {
         countryId: "HU",
@@ -472,8 +472,7 @@ async function materializeHuModernByElectionResolution(input: {
     job.districtIds,
     ballots
   );
-  const held = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const held = await electedOfficialsCollection(db)
     .find(
       { countryId: "HU", officeType: "assemblyDelegate" },
       {
@@ -590,8 +589,7 @@ async function materializeHuModernByElectionResolution(input: {
       officials.some((winner) => winner.constituencyId === row.constituencyId)
   );
   if (tombstones.length) {
-    const originals = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    const originals = await electedOfficialsCollection(db)
       .find({ _id: { $in: tombstones.map((row) => row._id) } }, { session })
       .toArray();
     await db
@@ -612,15 +610,12 @@ async function materializeHuModernByElectionResolution(input: {
         })),
         { session }
       );
-    await db
-      .collection<ElectedOfficial>("electedOfficials")
-      .deleteMany(
-        { _id: { $in: tombstones.map((row) => row._id) }, characterId: null, nppId: null },
-        { session }
-      );
+    await electedOfficialsCollection(db).deleteMany(
+      { _id: { $in: tombstones.map((row) => row._id) }, characterId: null, nppId: null },
+      { session }
+    );
   }
-  if (officials.length)
-    await db.collection<ElectedOfficial>("electedOfficials").insertMany(officials, { session });
+  if (officials.length) await electedOfficialsCollection(db).insertMany(officials, { session });
   const live = [
     ...held.filter((row) => !tombstones.some((old) => old._id.equals(row._id))),
     ...officials,

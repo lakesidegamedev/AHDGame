@@ -49,6 +49,7 @@ import { resolveNgChamberLeadershipElection } from "@/lib/congress/ngChamberLead
 import { handleNgChamberLeadershipAction } from "@/lib/congress/ngChamberLeadership/actions";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 const actionSchema = z.object({
   role: z.enum(["speaker_ng_reps", "president_ng_senate"]),
@@ -76,8 +77,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     let myParty: string | null = null;
     let myCharObjId: ObjectId | null = null;
     if (authUser) {
-      const char = await charactersCollection(db)
-        .findOne({ userId: new ObjectId(authUser.userId) });
+      const char = await charactersCollection(db).findOne({
+        userId: new ObjectId(authUser.userId),
+      });
       if (char) {
         myCharacterId = char._id.toString();
         myParty = char.party ?? null;
@@ -109,9 +111,10 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
         }
 
         const [officerOfficial, election, nominations] = await Promise.all([
-          db
-            .collection<ElectedOfficial>("electedOfficials")
-            .findOne({ officeType: cfg.officerOfficeType, countryId: "NG" }),
+          electedOfficialsCollection(db).findOne({
+            officeType: cfg.officerOfficeType,
+            countryId: "NG",
+          }),
           db.collection<NgChamberLeadershipElection>(NG_ELECTION_COLLECTION).findOne({ _id: role }),
           db
             .collection<NgChamberLeadershipNomination>(NG_NOMINATION_COLLECTION)
@@ -123,7 +126,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
         const leader = await resolveExecutiveHolder(db, officerOfficial);
 
         const isMember = myCharObjId
-          ? !!(await db.collection<ElectedOfficial>("electedOfficials").findOne({
+          ? !!(await electedOfficialsCollection(db).findOne({
               characterId: myCharObjId,
               officeType: cfg.memberOfficeType,
               countryId: "NG",

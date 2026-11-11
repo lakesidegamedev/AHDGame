@@ -11,6 +11,7 @@ import {
 } from "@/lib/constants/countries";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export const migration: Migration = {
   id: "2026-10-04-government-accountability",
@@ -23,8 +24,7 @@ export const migration: Migration = {
         .collection<GovernmentFormation>("governmentFormations")
         .find({ status: "formed" })
         .toArray(),
-      db
-        .collection<ElectedOfficial>("electedOfficials")
+      electedOfficialsCollection(db)
         .find(
           { officeType: "president" },
           { projection: { countryId: 1, party: 1, characterId: 1, nppId: 1, characterName: 1 } }

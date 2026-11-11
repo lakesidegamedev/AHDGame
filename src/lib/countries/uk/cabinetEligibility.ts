@@ -22,6 +22,7 @@ import type {
   PoliticalParty,
 } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export interface CabinetEligibleCharacter {
   _id: string;
@@ -139,8 +140,7 @@ export async function getEligibleCabinetCharacters(
 
   // Eligible-chamber officials drive the non-OPS candidate set and supply
   // chamber/constituency display for legislators in both modes.
-  const eligibleOfficials = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const eligibleOfficials = await electedOfficialsCollection(db)
     .find({
       officeType: { $in: eligibleOfficeTypes },
       countryId,

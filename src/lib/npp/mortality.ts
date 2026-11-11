@@ -35,6 +35,7 @@ import {
 import { NPP_TURNOVER_CONFIG as CONFIG, NPP_TURNOVER_EXEMPT_COUNTRIES } from "./turnoverData";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export {
   annualDeathProbability,
@@ -232,7 +233,7 @@ export async function processNppMortality(
     (row) => ["BG", "HU"].includes(row.countryId ?? "US") && isEligibleNppForMortality(row)
   );
   const nativeOwners = nativeCandidates.length
-    ? await db.collection<ElectedOfficial>("electedOfficials").distinct("nppId", {
+    ? await electedOfficialsCollection(db).distinct("nppId", {
         nppId: { $in: nativeCandidates.map((row) => row._id) },
         seatsHeld: 1,
         $or: [
@@ -315,7 +316,7 @@ export async function processNppMortality(
         { _id: npp._id },
         { $set: { retiredAt: now, currentOffice: null, updatedAt: now } }
       );
-    await db.collection<ElectedOfficial>("electedOfficials").updateMany(
+    await electedOfficialsCollection(db).updateMany(
       { nppId: npp._id },
       {
         $set: {

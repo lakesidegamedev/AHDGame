@@ -19,6 +19,7 @@ import type {
 } from "@/lib/db/types";
 import { NG_ROLE_CONFIG, NG_ELECTION_COLLECTION, NG_NOMINATION_COLLECTION } from "./config";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export async function resolveNgChamberLeadershipElection(
   db: Db,
@@ -89,7 +90,7 @@ export async function resolveNgChamberLeadershipElection(
       { $set: { status: "failed", updatedAt: now } }
     );
 
-    const officials = db.collection<ElectedOfficial>("electedOfficials");
+    const officials = electedOfficialsCollection(db);
     const prior = await officials.findOne(
       { officeType: cfg.officerOfficeType, countryId: "NG" },
       { projection: { _id: 1, electedAt: 1 } }
