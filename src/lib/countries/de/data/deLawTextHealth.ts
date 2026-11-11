@@ -21,8 +21,14 @@ export const DE_LAW_TEXT_HEALTH: Record<string, DeLawText> = {
       ["No Social Insurance", "Old age and sickness are a private matter."],
       ["Foundation Insurance", "A basic contributory pension exists for employees."],
       ["Expanded Insurance", "Unemployment and care insurance join the pension."],
-      ["Full Contributory System", "Wage linked pensions and benefits cover most of the workforce."],
-      ["Full Social Insurance", "Every resident is covered from cradle to grave with generous replacement rates."],
+      [
+        "Full Contributory System",
+        "Wage linked pensions and benefits cover most of the workforce.",
+      ],
+      [
+        "Full Social Insurance",
+        "Every resident is covered from cradle to grave with generous replacement rates.",
+      ],
     ],
   ],
   "health.prevention.primary": [
@@ -45,8 +51,14 @@ export const DE_LAW_TEXT_HEALTH: Record<string, DeLawText> = {
       ["No Investment", "Quality is left to individual hospitals."],
       ["Hospital Planning", "Land plans set hospital capacity."],
       ["Quality Reporting", "Hospitals publish results and meet minimum volumes."],
-      ["National Health Campaign", "Targeted campaigns tackle cancer, heart disease and chronic illness."],
-      ["Outcomes Guarantee", "Funding is tied to results and every patient has access to specialist care."],
+      [
+        "National Health Campaign",
+        "Targeted campaigns tackle cancer, heart disease and chronic illness.",
+      ],
+      [
+        "Outcomes Guarantee",
+        "Funding is tied to results and every patient has access to specialist care.",
+      ],
     ],
   ],
   "health.responsibility.primary": [
@@ -70,7 +82,10 @@ export const DE_LAW_TEXT_HEALTH: Record<string, DeLawText> = {
       ["Private Practice", "Doctors may take private patients beside the public scheme."],
       ["Dual System", "Higher earners may opt for full private insurance."],
       ["Choice Protections", "Patients choose any doctor, hospital or insurer freely."],
-      ["Open Market Charter", "A competitive market of insurers and providers operates with light regulation."],
+      [
+        "Open Market Charter",
+        "A competitive market of insurers and providers operates with light regulation.",
+      ],
     ],
   ],
   "health.systemEfficiency.primary": [
@@ -82,7 +97,10 @@ export const DE_LAW_TEXT_HEALTH: Record<string, DeLawText> = {
       ["Cost Reporting", "Providers report costs to a central body."],
       ["Efficiency Review", "A committee reviews prices and suggests savings."],
       ["Performance Funding", "Payments reward efficient providers."],
-      ["Lean Service Mandate", "A standing mandate forces efficiency across insurers and hospitals."],
+      [
+        "Lean Service Mandate",
+        "A standing mandate forces efficiency across insurers and hospitals.",
+      ],
     ],
   ],
   "sec.pensionCoverageExtension": [

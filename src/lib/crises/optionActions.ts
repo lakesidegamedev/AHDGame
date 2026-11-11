@@ -321,8 +321,10 @@ async function emergencyNationalizeBill(
   const now = new Date();
   const VOTING_DURATION_HOURS = 24;
 
-  const sponsor = await charactersCollection(db)
-    .findOne({ _id: ctx.characterId }, { projection: { name: 1 } });
+  const sponsor = await charactersCollection(db).findOne(
+    { _id: ctx.characterId },
+    { projection: { name: 1 } }
+  );
 
   const provision: NationalizeProvision = {
     type: "nationalize",
@@ -395,8 +397,10 @@ async function concessionBill(
   const now = new Date();
   const VOTING_DURATION_HOURS = 24;
 
-  const sponsor = await charactersCollection(db)
-    .findOne({ _id: ctx.characterId }, { projection: { name: 1 } });
+  const sponsor = await charactersCollection(db).findOne(
+    { _id: ctx.characterId },
+    { projection: { name: 1 } }
+  );
 
   const bill: Omit<Bill, "_id"> = {
     countryId: country,

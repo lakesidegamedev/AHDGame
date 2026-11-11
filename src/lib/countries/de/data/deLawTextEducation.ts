@@ -9,8 +9,14 @@ export const DE_LAW_TEXT_EDUCATION: Record<string, DeLawText> = {
       ["No National Settlement", "Schooling is left to families and local bodies."],
       ["Compulsory Primary", "Every child attends primary school."],
       ["Compulsory Secondary", "Attendance runs through lower secondary school."],
-      ["Full Secondary Guarantee", "Every young person is guaranteed a place through upper secondary or vocational training."],
-      ["Comprehensive Guarantee", "Free schooling from early years to completion, with support for every learner."],
+      [
+        "Full Secondary Guarantee",
+        "Every young person is guaranteed a place through upper secondary or vocational training.",
+      ],
+      [
+        "Comprehensive Guarantee",
+        "Free schooling from early years to completion, with support for every learner.",
+      ],
     ],
   ],
   "education.teacherCorps.primary": [
@@ -21,8 +27,14 @@ export const DE_LAW_TEXT_EDUCATION: Record<string, DeLawText> = {
       ["No Programmes", "Schools hire and build as they can."],
       ["Emergency Hiring", "Lateral entry and short courses fill the worst vacancies."],
       ["Teachers and Buildings", "Training places and a school renovation fund run side by side."],
-      ["National Teaching Service", "Competitive pay and a state-wide training pipeline keep classrooms staffed."],
-      ["Full Staffing Guarantee", "Every classroom is staffed and every building is kept to standard."],
+      [
+        "National Teaching Service",
+        "Competitive pay and a state-wide training pipeline keep classrooms staffed.",
+      ],
+      [
+        "Full Staffing Guarantee",
+        "Every classroom is staffed and every building is kept to standard.",
+      ],
     ],
   ],
   "education.adultSkills.primary": [
@@ -33,8 +45,14 @@ export const DE_LAW_TEXT_EDUCATION: Record<string, DeLawText> = {
       ["No Provision", "Training is left to employers."],
       ["Evening Courses", "Adult education centres offer evening courses."],
       ["Dual Training System", "Apprenticeships combine firm placement with vocational school."],
-      ["National Training System", "Chambers, firms and the state run certified training for every trade."],
-      ["Universal Skills Guarantee", "Every worker has a right to retraining throughout working life."],
+      [
+        "National Training System",
+        "Chambers, firms and the state run certified training for every trade.",
+      ],
+      [
+        "Universal Skills Guarantee",
+        "Every worker has a right to retraining throughout working life.",
+      ],
     ],
   ],
   "education.attainment.primary": [
@@ -46,7 +64,10 @@ export const DE_LAW_TEXT_EDUCATION: Record<string, DeLawText> = {
       ["Literacy Campaigns", "Reading and numeracy campaigns target weak schools."],
       ["Completion Programmes", "Support keeps pupils from leaving without a certificate."],
       ["Attainment Standards", "National standards and extra funds lift low performing schools."],
-      ["Universal Attainment Drive", "Every school is held to and funded for a high common standard."],
+      [
+        "Universal Attainment Drive",
+        "Every school is held to and funded for a high common standard.",
+      ],
     ],
   ],
   "education.research.primary": [
@@ -56,8 +77,14 @@ export const DE_LAW_TEXT_EDUCATION: Record<string, DeLawText> = {
     [
       ["No Funding", "Research depends on private money alone."],
       ["Research Grants", "A national research foundation awards competitive grants."],
-      ["Research Institutes", "Max Planck, Fraunhofer and Helmholtz style institutes receive steady funds."],
-      ["National Research Drive", "Excellence initiatives concentrate funds in leading universities."],
+      [
+        "Research Institutes",
+        "Max Planck, Fraunhofer and Helmholtz style institutes receive steady funds.",
+      ],
+      [
+        "National Research Drive",
+        "Excellence initiatives concentrate funds in leading universities.",
+      ],
       ["Scientific Mobilization", "Science is a national priority with large long term budgets."],
     ],
   ],
@@ -70,7 +97,10 @@ export const DE_LAW_TEXT_EDUCATION: Record<string, DeLawText> = {
       ["School Inspection", "Inspectors visit schools and report."],
       ["Common Examinations", "A shared final examination gives certificates the same meaning."],
       ["Certificate Regime", "National standards and regular testing apply at every stage."],
-      ["Rigorous National Regime", "Strict national standards, testing and consequences bind every school."],
+      [
+        "Rigorous National Regime",
+        "Strict national standards, testing and consequences bind every school.",
+      ],
     ],
   ],
   "education.choice.primary": [
@@ -80,8 +110,14 @@ export const DE_LAW_TEXT_EDUCATION: Record<string, DeLawText> = {
     [
       ["Assigned Places Only", "Pupils attend the school assigned by catchment."],
       ["Recognized Independents", "Independent schools may operate with limited support."],
-      ["Subsidized Independents", "The state pays part of the cost of recognized independent schools."],
-      ["Broad Choice Support", "Families may pick among public, church and independent schools with funds following."],
+      [
+        "Subsidized Independents",
+        "The state pays part of the cost of recognized independent schools.",
+      ],
+      [
+        "Broad Choice Support",
+        "Families may pick among public, church and independent schools with funds following.",
+      ],
       ["Full Choice System", "Funding follows every pupil to the school the family chooses."],
     ],
   ],
@@ -93,8 +129,14 @@ export const DE_LAW_TEXT_EDUCATION: Record<string, DeLawText> = {
       ["No Scheme", "People leaving work or service get no organized help."],
       ["Transition Payments", "Short payments bridge the gap to a new job."],
       ["Training and Placement", "Retraining and job placement are offered to those who qualify."],
-      ["Full Reintegration Programme", "Personal case workers, training and subsidized work run together."],
-      ["Lifelong Programme", "A standing guarantee of retraining and placement applies at every stage of life."],
+      [
+        "Full Reintegration Programme",
+        "Personal case workers, training and subsidized work run together.",
+      ],
+      [
+        "Lifelong Programme",
+        "A standing guarantee of retraining and placement applies at every stage of life.",
+      ],
     ],
   ],
   "sec.universityPact": [
@@ -118,7 +160,10 @@ export const DE_LAW_TEXT_EDUCATION: Record<string, DeLawText> = {
       ["Meals in Schools", "Some schools offer subsidized lunches."],
       ["Meals and Care Service", "Lunch and after school care are widely available."],
       ["Universal Free Provision", "Every pupil is entitled to a free lunch and a day care place."],
-      ["Full Welfare in Schools", "Meals, care, health checks and support are part of every school day."],
+      [
+        "Full Welfare in Schools",
+        "Meals, care, health checks and support are part of every school day.",
+      ],
     ],
   ],
   "sec.vocationalStandards": [
@@ -129,7 +174,10 @@ export const DE_LAW_TEXT_EDUCATION: Record<string, DeLawText> = {
       ["No Standards", "Qualifications mean what the issuer says."],
       ["Model Standards", "Model curricula guide the chambers."],
       ["Certificate System", "Recognized certificates carry the same weight across the country."],
-      ["National Qualification Framework", "Every qualification is placed on a national scale and recognized abroad."],
+      [
+        "National Qualification Framework",
+        "Every qualification is placed on a national scale and recognized abroad.",
+      ],
       ["Universal Standards", "One standard governs all vocational and academic credentials."],
     ],
   ],
