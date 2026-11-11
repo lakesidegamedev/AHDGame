@@ -1,6 +1,6 @@
 /**
  * Canada's provincial and territorial legislatures: seats at each one's last
- * general election before 2027 (780 in total, from each provincial elections
+ * general election before 2027 (778 in total, from each provincial elections
  * agency), and the year of its next fixed-date general election after January
  * 2027. NWT and Nunavut run consensus government; the game contests them by
  * party like the rest.
@@ -18,7 +18,7 @@ export const CA_PROVINCIAL_LEGISLATURES: Readonly<
   CA_NB: { seats: 49, nextElectionYear: 2028 },
   CA_NL: { seats: 40, nextElectionYear: 2029 },
   CA_PE: { seats: 27, nextElectionYear: 2027 },
-  CA_YT: { seats: 21, nextElectionYear: 2029 },
+  CA_YT: { seats: 19, nextElectionYear: 2029 },
   CA_NT: { seats: 19, nextElectionYear: 2027 },
   CA_NU: { seats: 22, nextElectionYear: 2029 },
 };
