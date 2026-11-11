@@ -85,7 +85,6 @@ export {
   seedDEStateMetrics,
   seedDEBaselines,
   seedDEGovernmentFormation,
-  seedDELegislation,
   seedDEElections,
   seedDEBundestag2021,
   seedDEMinisterPresidents2020,

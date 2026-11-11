@@ -42,7 +42,6 @@ describe("legislation era resolvers", () => {
 
   it("era-universal types are explicit 'always', not gaps", () => {
     expect(LEGISLATION_ERA.jp_pension).toBe("always");
-    expect(LEGISLATION_ERA.de_public_health).toBe("always");
     expect(isLegislationTypeActive("jp_pension", 1900)).toBe(true);
   });
 });

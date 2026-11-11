@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { LegislationType } from "@/lib/db/types";
 import { legislationTypes } from "./legislationTypes";
-import { deLegislationTypes } from "../de/deLegislationTypes";
 import { cnLegislationTypes } from "../cn/cnLegislationTypes";
 import { ieLegislationTypes } from "../ie/ieLegislationTypes";
 import { jpLegislationTypes } from "@/lib/countries/jp/data/jpLegislationTypes";
@@ -74,7 +73,6 @@ function readoutHits(lt: LegislationType): string[] {
 describe("§4.7 infrastructure spending sweep", () => {
   const all = [
     ...legislationTypes,
-    ...deLegislationTypes,
     ...cnLegislationTypes,
     ...ieLegislationTypes,
     ...jpLegislationTypes,

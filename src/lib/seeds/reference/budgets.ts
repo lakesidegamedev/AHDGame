@@ -126,7 +126,6 @@ import { legislationTypes } from "./legislationTypes";
 import { SEED_FISCAL_LEVERS } from "./seedFiscalLadders";
 import { OPENING_PROGRAM_SPENDING } from "./openingProgramSpending";
 import { jpLegislationTypes } from "@/lib/countries/jp/data/jpLegislationTypes";
-import { deLegislationTypes } from "@/lib/seeds/de/deLegislationTypes";
 import { ieLegislationTypes } from "@/lib/seeds/ie/ieLegislationTypes";
 import { cnLegislationTypes } from "@/lib/seeds/cn/cnLegislationTypes";
 import { brLegislationTypes } from "@/lib/seeds/br/brLegislationTypes";
@@ -250,7 +249,6 @@ export const SOVEREIGN_CORP_LEGAL_STRUCTURE: Partial<Record<CountryId, LegalStru
 const budgetLegislationTypes = [
   ...legislationTypes,
   ...jpLegislationTypes,
-  ...deLegislationTypes,
   ...ieLegislationTypes,
   ...cnLegislationTypes,
   ...brLegislationTypes,
@@ -665,22 +663,6 @@ const BASELINE_OVERRIDE_CATEGORIES = ["defense", "healthcare", "health"] as cons
  * "social" similarly replaces the authored "socialSecurity" key, which never
  * matched any JP legislation type's actual `budgetCategory` ("social").
  *
- * DE: "welfare" and "transport" — same class of bug as JP's rename, found
- * while auditing DE's +13.1%-of-GDP day-26 surplus (fiscal-scale audit,
- * DE's authored 1953 baseline (see the DE 1953 config below) used
- * "socialSecurity" and "infrastructure", but none of `deLegislationTypes.ts`'s
- * ~40 budgetCategory-bearing laws use those literal strings — DE's Bismarckian
- * pensions/unemployment-insurance laws are categorized "welfare" and its
- * Wirtschaftswunder rail/reconstruction law ("Federal Rail Transport Act") is
- * categorized "transport". The baseline keys below are renamed to match, and
- * both — plus "education" and "other", whose modern-catalog policy costs
- * likewise undershot the authored 1953 figures — are pinned here. Real West
- * German 1953 government spending ran ~30% of GDP (high-tax, high-transfer
- * Adenauer-era Sozialstaat, occupation costs, and Kriegsopferversorgung
- * war-victim pensions); the full authored baseline (14+6+3+3+8+9 = 43B DEM,
- * ≈31.2% GDP before state grants) lands in that range, which the previous
- * partial pin (defense/healthcare only) never reached.
- *
  * BR: "socialSecurity", "infrastructure", "education", "other" — Brazil's
  * legislation module (brLegislationTypes.ts) authors exactly one spending law
  * per budget category (plus a grant law, see GRANT_OVERRIDE_COUNTRIES), so
@@ -696,7 +678,7 @@ const BASELINE_OVERRIDE_CATEGORIES = ["defense", "healthcare", "health"] as cons
  * costed spending law per category: the
  * welfare-state law for socialSecurity, plus new health/education/
  * infrastructure/defense/other/grant laws. Pinning the four non-defense/
- * non-healthcare categories here is the same safety net DE/BR use — the
+ * non-healthcare categories here is the same safety net BR uses — the
  * per-country ladders are calibrated to reconcile exactly already, so this
  * only guards against rounding drift in the seed snapshot, not the runtime
  * per-turn cost (which reads the authored `gdpPerCapitaMultiplier` directly).
@@ -704,7 +686,6 @@ const BASELINE_OVERRIDE_CATEGORIES = ["defense", "healthcare", "health"] as cons
 const EXTRA_OVERRIDE_CATEGORIES_BY_COUNTRY: Partial<Record<string, readonly string[]>> = {
   CN: ["infrastructure"],
   JP: JP_EXTRA_OVERRIDE_CATEGORIES,
-  DE: ["welfare", "transport", "education", "other"],
   BR: ["socialSecurity", "infrastructure", "education", "other"],
   AT: ["socialSecurity", "education", "infrastructure", "other"],
   FI: ["socialSecurity", "education", "infrastructure", "other"],
@@ -1501,6 +1482,15 @@ const NATIONAL_BUDGET_SEED_CONFIGS: NationalBudgetSeedConfig[] = [
     baselineStateGrants: 125_000_000_000,
     policyDefaults: COUNTRY_POLICY_CONFIGS.de.defaults,
     policyOptionOverrides: COUNTRY_POLICY_CONFIGS.de.optionIndexes,
+    taxRateOverrides: {
+      incomeTax: 42,
+      domesticCorporateTax: 15,
+      foreignCorporateTax: 15,
+      payrollTax: 20,
+      tariffs: 0,
+      salesTax: 19,
+      solidaritySurcharge: 5.5,
+    },
     taxPolicyIds: {
       incomeTax: "de_income_tax_rate",
       domesticCorporateTax: "de_domestic_corporate_tax_rate",

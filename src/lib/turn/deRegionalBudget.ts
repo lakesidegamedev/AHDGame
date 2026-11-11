@@ -5,9 +5,9 @@
  * federalism:
  *
  *   1. Income Tax Share (Einkommensteueranteil): 42.5% of federal income tax
- *      collected in-territory, scaled by the enacted de_income_tax_rate.
+ *      collected in-territory, scaled by the enacted income tax rate.
  *   2. VAT Share (Umsatzsteueranteil): 46.5% of VAT revenue distributed by
- *      population, scaled by the enacted de_vat_rate.
+ *      population, scaled by the enacted VAT rate.
  *   3. Federal Equalization Grant (BEZ): Finance Minister allocation or an
  *      equal per-capita split of the grant pool.
  *
@@ -47,14 +47,14 @@ const TAX_SLIDER_ID_PREFIX = "rate:";
 /**
  * Which national tax laws drive each country's Länder revenue shares.
  *
- * Per country because the catalogues differ: DE runs the legacy `de_*` option
- * ladders, while DD's national tax book is the v2 `dd.tax.*` slider set. Reading
- * DE's ids against DD returns nothing, so both shares would compute to zero and
- * every Land's budget collapses to the equalization grant alone. The per-Land
- * trade tax stays `de_trade_tax` for both, the id DD's own regions carry.
+ * Per country because each country's tax book has its own ids. Reading DE's ids
+ * against DD returns nothing, so both shares would compute to zero and every
+ * Land's budget collapses to the equalization grant alone. The per-Land trade
+ * tax stays `de_trade_tax`, the id DD's own regions carry; DE has no such lever
+ * in its law book, so its Länder use the statutory Hebesatz.
  */
 export const TAX_TYPE_IDS = {
-  DE: { incomeTax: "de_income_tax_rate", vat: "de_vat_rate" },
+  DE: { incomeTax: "de.tax.incomeTax", vat: "de.tax.salesTax" },
   DD: { incomeTax: "dd.tax.incomeTax", vat: "dd.tax.salesTax" },
 } as const satisfies Partial<Record<CountryId, { incomeTax: string; vat: string }>>;
 

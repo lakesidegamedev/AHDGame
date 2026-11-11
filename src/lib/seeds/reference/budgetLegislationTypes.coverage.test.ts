@@ -19,7 +19,6 @@ import { describe, expect, it } from "vitest";
 import { legislationTypes } from "./legislationTypes";
 import { SEED_FISCAL_LEVERS } from "./seedFiscalLadders";
 import { jpLegislationTypes } from "@/lib/countries/jp/data/jpLegislationTypes";
-import { deLegislationTypes } from "@/lib/seeds/de/deLegislationTypes";
 import { ieLegislationTypes } from "@/lib/seeds/ie/ieLegislationTypes";
 import { cnLegislationTypes } from "@/lib/seeds/cn/cnLegislationTypes";
 
@@ -28,7 +27,6 @@ import { getNationalBudgetSeedConfigsForPreset, generateDefaultEnactedLaws } fro
 const allBudgetLegislationTypes = [
   ...legislationTypes,
   ...jpLegislationTypes,
-  ...deLegislationTypes,
   ...ieLegislationTypes,
   ...cnLegislationTypes,
 ];
@@ -45,7 +43,7 @@ const PRESETS = ["2019-default", "1991-default"] as const;
  * Excludes coming-soon countries that have preset references but no
  * corresponding `*LegislationTypes.ts` file yet (BR, NG).
  */
-const COVERED_COUNTRIES = new Set(["US", "UK", "JP", "DE", "IE", "CN"]);
+const COVERED_COUNTRIES = new Set(["US", "UK", "JP", "IE", "CN"]);
 
 describe("budgetLegislationTypes coverage", () => {
   for (const preset of PRESETS) {

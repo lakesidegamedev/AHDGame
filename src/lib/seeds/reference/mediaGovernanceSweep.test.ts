@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { LegislationType } from "@/lib/db/types";
 import { legislationTypes } from "./legislationTypes";
-import { deLegislationTypes } from "../de/deLegislationTypes";
 import { cnLegislationTypes } from "../cn/cnLegislationTypes";
 import { ieLegislationTypes } from "../ie/ieLegislationTypes";
 import { jpLegislationTypes } from "@/lib/countries/jp/data/jpLegislationTypes";
@@ -49,7 +48,6 @@ function lawTargets(lt: LegislationType): Array<{ cat: string; id: string }> {
 describe("§4.7 governance/media root-vs-readout sweep", () => {
   const all = [
     ...legislationTypes,
-    ...deLegislationTypes,
     ...cnLegislationTypes,
     ...ieLegislationTypes,
     ...jpLegislationTypes,

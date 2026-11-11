@@ -307,13 +307,6 @@ const SEED_TARGETS: SeedTarget[] = [
     scope: "DE",
   },
   {
-    id: "deLegislation",
-    label: "DE legislation",
-    description: "DE-scoped legislation types (tax, labor, energy, immigration)",
-    destructiveWarning: "Deletes and re-inserts all DE legislation types",
-    scope: "DE",
-  },
-  {
     id: "deElections",
     label: "DE elections",
     description: "Spawn missing Bundestag elections for every Land",

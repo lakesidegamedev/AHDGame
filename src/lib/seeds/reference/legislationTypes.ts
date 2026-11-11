@@ -3,7 +3,6 @@ import { successorTaxTypes } from "@/lib/resetLegislation/successorTaxTypes";
 import { expandIncomeTaxTypes } from "@/lib/budget/incomeTaxCatalog";
 import { withEraCosts } from "@/lib/era/legislationCostCatalog";
 import { jpLegislationTypes } from "@/lib/countries/jp/data/jpLegislationTypes";
-import { deLegislationTypes } from "../de/deLegislationTypes";
 import { ieLegislationTypes } from "../ie/ieLegislationTypes";
 import { cnLegislationTypes } from "../cn/cnLegislationTypes";
 import { ngLegislationTypes } from "../ng/ngLegislationTypes";
@@ -36,8 +35,6 @@ const rawLegislationTypes: LegislationType[] = [
   ...redistrictingLegislationTypes,
   // ── Japan legislation types ───────────────────────────────────────────────
   ...jpLegislationTypes,
-  // ── Germany legislation types ─────────────────────────────────────────────
-  ...deLegislationTypes,
   // ── Ireland legislation types ─────────────────────────────────────────────
   ...ieLegislationTypes,
   // ── China legislation types ───────────────────────────────────────────────

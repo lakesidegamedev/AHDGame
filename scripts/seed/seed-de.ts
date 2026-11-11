@@ -34,7 +34,6 @@ import type {
 } from "../../src/lib/db/types";
 import type { StateMetricBaseline } from "../../src/lib/db/types/statePolicy";
 import type { GovernmentFormation } from "../../src/lib/db/types/governmentFormation";
-import type { LegislationType } from "../../src/lib/db/types/legislation";
 import { deRegions } from "../../src/lib/seeds/de/deRegions";
 import { deParties } from "../../src/lib/seeds/de/deParties";
 import { deRegionDemographics } from "../../src/lib/seeds/de/deRegionDemographics";
@@ -43,7 +42,6 @@ import { calculateDEStatePartyOrgs } from "../../src/lib/seeds/de/deStatePartyOr
 import { deStateMetrics } from "../../src/lib/seeds/de/deStateMetrics";
 import { deStateBaselines } from "../../src/lib/seeds/de/deStateBaselines";
 import { deGovernmentFormation } from "../../src/lib/seeds/de/deGovernmentFormation";
-import { deLegislationTypes } from "../../src/lib/seeds/de/deLegislationTypes";
 import { calculateStateLeanForCache } from "../../src/lib/demographics/cachedStateLean";
 import { ObjectId } from "mongodb";
 import { getNextSequentialId } from "../../src/lib/db/sequentialId";
@@ -181,25 +179,11 @@ async function main() {
   );
   console.log("   ✓ DE government formation upserted (status: pending).");
 
-  // ── 10. DE Legislation Types ──────────────────────────────────────────────
-  console.log("10. Seeding DE legislation types (tier-1 subset)...");
-  for (const type of deLegislationTypes) {
-    await db
-      .collection<LegislationType>("legislationTypes")
-      .updateOne(
-        { _id: type._id },
-        { $set: { ...type, source: "seed" as const, updatedAt: now } },
-        { upsert: true }
-      );
-  }
-  console.log(`   ✓ Upserted ${deLegislationTypes.length} DE legislation types.`);
-
   console.log("\n=== DE Seed Complete ===");
   console.log(
     `Bundesländer: ${deRegions.length}, Parties: ${deParties.length}, ` +
       `Party Orgs: ${deStatePartyOrgs.length}, ` +
-      `Metrics: ${deStateMetrics.length}, Baselines: ${deStateBaselines.length}, ` +
-      `Legislation Types: ${deLegislationTypes.length}`
+      `Metrics: ${deStateMetrics.length}, Baselines: ${deStateBaselines.length}`
   );
 }
 
