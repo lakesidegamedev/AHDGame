@@ -6,7 +6,7 @@ summary: >-
   party organization, Commons seats, Premiers, approval, lean, sectors and
   logistics views.
 tags: [map, canada]
-badges: [feature]
+badges: [minor]
 areas: [frontend]
 ---
 

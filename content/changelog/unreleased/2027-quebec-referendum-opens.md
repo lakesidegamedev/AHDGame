@@ -7,7 +7,7 @@ summary: >-
   country.
 tags: [canada, quebec, referendum]
 badges: [major]
-areas: [gameplay]
+areas: [engine]
 ---
 
 ## What changed
