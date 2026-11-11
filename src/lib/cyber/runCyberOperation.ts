@@ -210,6 +210,11 @@ function exposureTemplate(targetName: string): CrisisTemplate {
   };
 }
 
+/** One Cyber Attack crisis per target per turn, claimed through the crisis key index. */
+export function cyberAttackCrisisKey(targetId: string, turn: number): string {
+  return `cyber-attack:${targetId}:${turn}`;
+}
+
 export const CYBER_OPERATIONS_CLOSED_TEXT = "Cyber operations are not open in this world yet.";
 
 export type LaunchCyberResult =
@@ -298,10 +303,11 @@ export async function launchCyberOperation(args: LaunchCyberArgs): Promise<Launc
         : "The operation was repelled. Nobody can prove who ran it.";
 
   const key = `cyber-op:${attackerId}:${targetId}:${turn}`;
+  const logId = new ObjectId();
+  const log = await getIntelligenceOpLogCollection(db);
   try {
-    const log = await getIntelligenceOpLogCollection(db);
     await log.insertOne({
-      _id: new ObjectId(),
+      _id: logId,
       ownerCountryId: attackerId,
       targetCountryId: targetId,
       domain: "cyber",
@@ -337,17 +343,27 @@ export async function launchCyberOperation(args: LaunchCyberArgs): Promise<Launc
   }
 
   if (resolution.outcome === "success") {
-    await createCrisisFromTemplate(db, {
-      template: CYBER_ATTACK_TEMPLATE,
-      templateKey: CYBER_ATTACK_TEMPLATE_KEY,
-      scope: "country",
-      countryIds: [targetId],
-      regionIds: [],
-      currentTurn: turn,
-      autoSource: "random",
-      effects: cyberOperationEffects(resolution.severity),
-      livingConflictEventId: key,
-    });
+    try {
+      await createCrisisFromTemplate(db, {
+        template: CYBER_ATTACK_TEMPLATE,
+        templateKey: CYBER_ATTACK_TEMPLATE_KEY,
+        scope: "country",
+        countryIds: [targetId],
+        regionIds: [],
+        currentTurn: turn,
+        autoSource: "random",
+        effects: cyberOperationEffects(resolution.severity),
+        // Keyed by target and turn, so the unique index lets one of two
+        // simultaneous attackers open the target's crisis.
+        livingConflictEventId: cyberAttackCrisisKey(targetId, turn),
+      });
+    } catch (error) {
+      if ((error as { code?: number }).code !== 11000) throw error;
+      // Another attacker opened the crisis after our check: refuse as the check would have.
+      await log.deleteOne({ _id: logId });
+      if (args.chargeAppropriation) await creditIntelligenceAppropriation(db, attackerId, cost);
+      return { ok: false, status: 409, error: CYBER_REFUSAL_TEXT.crisis_active };
+    }
   }
 
   if (resolution.attributed) {
