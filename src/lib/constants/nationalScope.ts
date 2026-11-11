@@ -16,6 +16,8 @@ export const NATIONAL_SCOPE: Record<string, CountryId> = {
   ie_national: "IE",
   cn_national: "CN",
   ng_national: "NG",
+  ca_national: "CA",
+  qc_national: "QC",
   // RU became playable with the political-legislation 1953 reset. The Soviet
   // pseudo-state id is su_national (the seeds' + NATIONAL_POLICY_STATE_IDS
   // convention) — NOT ru_national, which nothing else reads.
