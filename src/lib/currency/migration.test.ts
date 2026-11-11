@@ -484,7 +484,9 @@ describe("updateCentralBanks", () => {
     // Only a bank outside the era's roster (Canada before 2027) is removed.
     const deleted = db
       .collection("centralBanks")
-      .deleteMany.mock.calls.flatMap(([filter]) => (filter as { _id: { $in: string[] } })._id.$in);
+      .deleteMany.mock.calls.flatMap(
+        (call: unknown[]) => (call[0] as { _id: { $in: string[] } })._id.$in
+      );
     expect(deleted).toEqual(["CA"]);
   });
 });
