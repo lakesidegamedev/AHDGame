@@ -36,6 +36,8 @@ import type { ElectedOfficial } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { loadTurnLengthMinutes } from "@/lib/financialTxLog/expiresAt";
 import { regionalExecutiveSignForTenure } from "./regionalExecutiveConstants";
+import { CA_REGIONAL_EXECUTIVE } from "@/lib/countries/ca/regionalExecutive";
+import { QC_REGIONAL_EXECUTIVE } from "@/lib/countries/qc/regionalExecutive";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 /** Magnitude band of the regional-executive modifier (low / medium / high). */
@@ -50,6 +52,18 @@ export interface RegionalExecutive {
   label: string;
 }
 
+/** Countries where every region has the same executive office. */
+const UNIFORM_EXECUTIVE_OFFICES: Readonly<
+  Partial<Record<CountryId, { officeType: string; label: string }>>
+> = {
+  US: { officeType: "governor", label: "Governor" },
+  DE: { officeType: "ministerPresident", label: "Ministerpräsident" },
+  JP: { officeType: "governor", label: "Governor" },
+  CN: { officeType: "governor", label: "Governor" },
+  CA: CA_REGIONAL_EXECUTIVE,
+  QC: QC_REGIONAL_EXECUTIVE,
+};
+
 /** UK regions whose devolved executive is a "First Minister". */
 const UK_FIRST_MINISTER_REGIONS = new Set(["SCO", "WAL", "NIR"]);
 
@@ -62,20 +76,10 @@ export function resolveExecutiveOffice(
   countryId: CountryId,
   stateId: string
 ): { officeType: string; label: string } | null {
+  const uniform = UNIFORM_EXECUTIVE_OFFICES[countryId];
+  if (uniform) return { officeType: uniform.officeType, label: uniform.label };
   const upper = stateId.toUpperCase();
   switch (countryId) {
-    case "US":
-      return { officeType: "governor", label: "Governor" };
-    case "DE":
-      return { officeType: "ministerPresident", label: "Ministerpräsident" };
-    case "JP":
-      return { officeType: "governor", label: "Governor" };
-    case "CN":
-      return { officeType: "governor", label: "Governor" };
-    case "CA":
-      return { officeType: "governor", label: "Premier" };
-    case "QC":
-      return { officeType: "governor", label: "Prefect" };
     case "UK":
       if (upper === "LON") return { officeType: "governor", label: "Mayor of London" };
       if (UK_FIRST_MINISTER_REGIONS.has(upper)) {
