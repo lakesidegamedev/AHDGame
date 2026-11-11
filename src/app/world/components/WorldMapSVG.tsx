@@ -39,6 +39,7 @@ import { useActivePreset, useCountryDisplayName } from "@/contexts/RegisteredCou
 import type { WorldEntityMapSnapshot } from "@/lib/world/worldEntityMap";
 import { backgroundMacroFeatureIds } from "@/lib/world/worldEntityMapInspection";
 import BackgroundMacroInspector from "./BackgroundMacroInspector";
+import CountryComparePanel from "./CountryComparePanel";
 
 export default function WorldMapSVG({
   countryAccess,
@@ -61,8 +62,17 @@ export default function WorldMapSVG({
   }, [inspectableFeatureIds]);
   const preset = useActivePreset();
   const countryName = useCountryDisplayName();
-  const { metricFilter, setMetricFilter, worldMetrics, partyData, corpsData, countryIdToIso } =
-    useWorldMetricFilter();
+  const {
+    metricFilter,
+    setMetricFilter,
+    worldMetrics,
+    partyData,
+    corpsData,
+    countryIdToIso,
+    compareMode,
+    setCompareMode,
+    toggleCompareCountry,
+  } = useWorldMetricFilter();
   const blocsAvailable = hasBlocData(preset, blocMapData.customBlocs.length);
 
   useEffect(() => {
@@ -1057,6 +1067,20 @@ export default function WorldMapSVG({
 
   const handleCountryClick = (id: string) => {
     if (isAnimatingRef.current) return;
+
+    // Comparison mode turns the globe into a picker: a click chooses a side
+    // instead of opening the nation, so two countries can be read side by side
+    // without leaving the map.
+    if (compareMode) {
+      const picked = id.startsWith("bi:")
+        ? (id.slice(3).split(":")[0] as CountryId)
+        : (ISO_TO_COUNTRY_ID[id] as CountryId | undefined);
+      if (picked) {
+        toggleCompareCountry(picked);
+        return;
+      }
+    }
+
     if (inspectableFeatureIds.has(id)) {
       selectMacro(worldEntities.byFeatureId[id].entityId);
       return;
@@ -1154,14 +1178,16 @@ export default function WorldMapSVG({
         }
       : tooltipFilterHighlight;
 
-  const showTooltipClickHint = Boolean(
-    hoveredMapped?.path &&
-    hoveredIsoCountryId &&
-    // Latent world-map countries (e.g. RU) render on the globe via
-    // WORLD_COUNTRY_ISO_TO_ID but are absent from the registered countryAccess
-    // map — guard so hovering them doesn't throw.
-    hoveredIsoCountryId in countryAccess
-  );
+  const showTooltipClickHint = compareMode
+    ? Boolean(hoveredIsoCountryId)
+    : Boolean(
+        hoveredMapped?.path &&
+        hoveredIsoCountryId &&
+        // Latent world-map countries (e.g. RU) render on the globe via
+        // WORLD_COUNTRY_ISO_TO_ID but are absent from the registered countryAccess
+        // map — guard so hovering them doesn't throw.
+        hoveredIsoCountryId in countryAccess
+      );
 
   // Only the DATA heatmaps count as an active filter. Blocs and Tiers are
   // structural views handled by tierLookup/blocLookup, not by getCountryColor.
@@ -1195,6 +1221,8 @@ export default function WorldMapSVG({
           viewMode={viewMode}
           isAnimating={isAnimating}
           isFullscreen={isFullscreen}
+          compareMode={compareMode}
+          onCompareToggle={() => setCompareMode(!compareMode)}
           onViewChange={startTransition}
           onFullscreenToggle={() => setIsFullscreen((v) => !v)}
           zoomRef={zoomRef}
@@ -1257,6 +1285,7 @@ export default function WorldMapSVG({
                 : undefined
             }
             showClickHint={showTooltipClickHint}
+            clickHint={compareMode ? "Click to compare" : undefined}
           />
         )}
 
@@ -1270,6 +1299,7 @@ export default function WorldMapSVG({
           blocPalette={blocPalette}
         />
       </div>
+      <CountryComparePanel fullscreen={isFullscreen} />
       <BackgroundMacroInspector
         snapshot={worldEntities}
         selectedEntityId={selectedMacro}

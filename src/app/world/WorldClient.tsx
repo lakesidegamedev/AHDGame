@@ -91,6 +91,13 @@ export default function WorldClient({
       href: "/world/trade",
     },
     {
+      heading: "Nations ranked",
+      title: "Every nation, ranked",
+      description:
+        "Order every nation by any national statistic, and compare any of them across a whole category.",
+      href: "/world/rankings",
+    },
+    {
       heading: "Hall of fame",
       title: "Every player, ranked",
       description:

@@ -15,6 +15,8 @@ import type { CountryId } from "@/lib/constants/countriesCore";
 import type { MetricFilter } from "./components/GlobeMetricPanel";
 import { hasBlocData } from "./worldBlocs";
 import { useActivePreset } from "@/contexts/RegisteredCountriesContext";
+import { rankNations, type RankingSelection } from "@/lib/world/rankings";
+import { toggleComparePair } from "@/lib/world/countryCompare";
 
 /** ISO numeric codes used by the world map TopoJSON */
 const COUNTRY_ID_TO_ISO: Record<CountryId, string> = {
@@ -49,19 +51,22 @@ const COUNTRY_ID_TO_ISO: Record<CountryId, string> = {
   WAL: "826", // shares GB code; not rendered until secession (absent from COUNTRY_ORDER)
 };
 
+/** One nation as the world metrics API returns it. */
+export interface WorldMetricsCountry {
+  countryId: string;
+  name: string;
+  hasData: boolean;
+  categories: Record<string, Record<string, { value: number; score: number | null }>>;
+  categoryScores: Record<string, number | null>;
+  overallScore: number | null;
+}
+
 /** World metrics API response shape (subset used by map + nation cards) */
 export interface WorldMetricsData {
-  countries: Record<
-    string,
-    {
-      countryId: string;
-      name: string;
-      hasData: boolean;
-      categories: Record<string, Record<string, { value: number; score: number | null }>>;
-      categoryScores: Record<string, number | null>;
-      overallScore: number | null;
-    }
-  >;
+  /** Keyed by ISO-numeric, which is what the map's features are keyed by. */
+  countries: Record<string, WorldMetricsCountry>;
+  /** Every national document keyed by country id; the ISO map above covers four. */
+  countriesById?: Record<string, WorldMetricsCountry>;
   availableCategories: MetricCategoryId[];
   availableMetrics: Record<string, string[]>;
 }
@@ -73,6 +78,15 @@ type WorldMetricFilterContextValue = {
   partyData: Record<string, { partyName: string; partyColor: string; count: number }>;
   corpsData: { countries: Record<string, { count: number }>; maxCount: number } | null;
   countryIdToIso: (id: CountryId) => string | undefined;
+  /** World rank for the active metric filter, or null when the filter has no rank. */
+  rankFor: (id: CountryId) => number | null;
+  /** Whether a click on the map selects a nation for comparison instead of opening it. */
+  compareMode: boolean;
+  setCompareMode: (on: boolean) => void;
+  /** The two nations picked on the map, left to right. */
+  compareCountryIds: CountryId[];
+  toggleCompareCountry: (id: CountryId) => void;
+  clearCompare: () => void;
 };
 
 const WorldMetricFilterContext = createContext<WorldMetricFilterContextValue | null>(null);
@@ -98,6 +112,8 @@ export function WorldMetricFilterProvider({ children }: { children: ReactNode })
     countries: Record<string, { count: number }>;
     maxCount: number;
   } | null>(null);
+  const [compareMode, setCompareMode] = useState(false);
+  const [compareCountryIds, setCompareCountryIds] = useState<CountryId[]>([]);
 
   useEffect(() => {
     fetchJson<WorldMetricsData>("/api/world/metrics", { feature: "world-metrics" })
@@ -125,6 +141,45 @@ export function WorldMetricFilterProvider({ children }: { children: ReactNode })
 
   const countryIdToIso = useCallback((id: CountryId) => COUNTRY_ID_TO_ISO[id], []);
 
+  // World rank per nation for whatever the globe is filtered on, so the nation
+  // table can show position and not only a raw figure. Overall, category and
+  // metric views rank; blocs, parties and corporation counts do not.
+  const ranks = useMemo(() => {
+    if (!worldMetrics) return null;
+    if (
+      metricFilter.type !== "overall" &&
+      metricFilter.type !== "category" &&
+      metricFilter.type !== "metric"
+    ) {
+      return null;
+    }
+    const selection: RankingSelection =
+      metricFilter.type === "overall"
+        ? { kind: "overall" }
+        : metricFilter.type === "category"
+          ? { kind: "category", category: metricFilter.categoryId }
+          : { kind: "metric", category: metricFilter.categoryId, metric: metricFilter.metricId };
+    const ranking = rankNations(
+      Object.values(worldMetrics.countriesById ?? worldMetrics.countries),
+      selection
+    );
+    return new Map(
+      ranking.filter((row) => row.rank !== null).map((row) => [row.countryId, row.rank!])
+    );
+  }, [metricFilter, worldMetrics]);
+  const rankFor = useCallback((id: CountryId) => ranks?.get(id) ?? null, [ranks]);
+
+  const toggleCompareCountry = useCallback((id: CountryId) => {
+    setCompareCountryIds((current) => toggleComparePair(current, id) as CountryId[]);
+  }, []);
+  const clearCompare = useCallback(() => setCompareCountryIds([]), []);
+
+  // Leaving comparison mode drops the picks. Coming back should start a fresh
+  // pair, not silently reopen the last one the player has stopped thinking about.
+  useEffect(() => {
+    if (!compareMode) setCompareCountryIds([]);
+  }, [compareMode]);
+
   const value = useMemo(
     () => ({
       metricFilter,
@@ -133,8 +188,25 @@ export function WorldMetricFilterProvider({ children }: { children: ReactNode })
       partyData,
       corpsData,
       countryIdToIso,
+      rankFor,
+      compareMode,
+      setCompareMode,
+      compareCountryIds,
+      toggleCompareCountry,
+      clearCompare,
     }),
-    [metricFilter, worldMetrics, partyData, corpsData, countryIdToIso]
+    [
+      metricFilter,
+      worldMetrics,
+      partyData,
+      corpsData,
+      countryIdToIso,
+      rankFor,
+      compareMode,
+      compareCountryIds,
+      toggleCompareCountry,
+      clearCompare,
+    ]
   );
 
   return (
